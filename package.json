@@ -1,7 +1,7 @@
 {
   "name": "zenith-gp",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zenith GP — a 3v3 mech racing/combat browser game (working title)",
   "type": "module",
   "engines": {

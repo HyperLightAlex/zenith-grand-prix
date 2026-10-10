@@ -401,24 +401,27 @@ export class Game {
         break;
       }
       case 'raceEnd':
-        if (inRace) {
-          this.resultsAt = this.time + 2.8;
-          const me = race.mechs[local];
-          // Bank the round. A round restarted from the pause menu never gets here.
-          if (this.match && !this.roundScored) {
-            this.roundScored = true;
-            const round = recordRound(this.match, race);
-            A.play(round.winner === me.team ? 'win' : 'lose');
-          }
-          this.view.cam.mode = 'orbit';
-          this.view.cam.clock = 0;
-        } else if (this.state === 'title') {
-          this.attractTimer = -3;
-        }
+        if (inRace) this.finishRound();
+        else if (this.state === 'title') this.attractTimer = -3;
         break;
       default:
         break;
     }
+  }
+
+  /** The flag has fallen: bank the round and bring the results up in a moment. */
+  private finishRound(): void {
+    if (this.resultsAt > 0) return;
+    const race = this.session.race;
+    this.resultsAt = this.time + 2.8;
+    // Bank the round. A round restarted from the pause menu never gets here.
+    if (this.match && !this.roundScored) {
+      this.roundScored = true;
+      const round = recordRound(this.match, race);
+      this.audio.play(round.winner === race.mechs[this.session.localId].team ? 'win' : 'lose');
+    }
+    this.view.cam.mode = 'orbit';
+    this.view.cam.clock = 0;
   }
 
   /** Point the camera at the next mech worth watching. */
@@ -503,6 +506,8 @@ export class Game {
         if (!flying && pressed & BTN.LOCK) this.cycleFocus();
         if (flying) this.view.focusId = local;
         if (flying) this.roadRumble(dt);
+        // The race can also end while nobody is watching (a dev skip past the flag).
+        if (race.phase === PHASE.FINISHED && this.resultsAt < 0) this.finishRound();
         if (this.resultsAt > 0 && this.time >= this.resultsAt) {
           this.resultsAt = -1;
           this.state = 'results';

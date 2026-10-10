@@ -379,7 +379,7 @@ export class RaceView {
     const speedFrac = Math.min(1.5, focus.speed / FULL_SPEED);
     // A fight is carried along at racing speed, so it keeps (by default all of) the speed effects.
     const fxScale = focus.retired ? 0.2 : focus.mode === MODE.BATTLE ? F.lockSpeedFx : 1;
-    const surging = focus.overdriveT > 0 && !focus.retired;
+    const surging = focus.overdriveT > 0 && !focus.retired && focus.mode === MODE.SPEED;
     u.uSpeed.value = toward(u.uSpeed.value, speedFrac * speedFrac * 1.15 * fxScale, 4, dt);
     u.uBoost.value = toward(u.uBoost.value, surging ? 1.5 : focus.boosting ? 1 : focus.ramT > 0 ? 0.5 : 0, 6, dt);
     u.uBlurK.value = F.speedBlur;

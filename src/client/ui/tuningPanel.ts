@@ -26,7 +26,7 @@ export class TuningPanel {
   private tabs: HTMLElement[] = [];
   private body = h('div.tune-body');
   private rows: Row[] = [];
-  private count = h('span.count', '');
+  private count = h('span.changed', '');
   private text = h<'textarea'>('textarea');
   private textBox = h('div.tune-text');
   private status = h('div.status', '');
