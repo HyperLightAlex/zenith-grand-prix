@@ -56,6 +56,7 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (e.repeat) return;
+      if (e.code === 'KeyF') this.toggleFullscreen();
       this.keys.add(e.code);
       this.tapped.add(e.code);
       this.touch('keys');
@@ -75,6 +76,16 @@ export class Input {
       this.padName = e.gamepad.id;
       this.touch('pad');
     });
+  }
+
+  /** Full screen on and off. Some embedded views refuse it; that is fine. */
+  private toggleFullscreen(): void {
+    try {
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+      else void document.documentElement.requestFullscreen().catch(() => {});
+    } catch {
+      /* not available here */
+    }
   }
 
   private gesture(): void {

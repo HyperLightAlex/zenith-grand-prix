@@ -16,6 +16,8 @@
   --team1: #ff3d5a;
   --ally: #49f0c0;
   --slant: 0.55em;
+  /* One committed look: dark panels over the 3D scene, in any host theme. */
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }

@@ -49,6 +49,7 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Look around', 'Right stick', ''],
       ['Look back', 'R3', 'V'],
       ['Pause', 'Start', 'Esc'],
+      ['Full screen', '', 'F'],
     ],
   ],
   [

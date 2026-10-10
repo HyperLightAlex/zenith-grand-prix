@@ -45,6 +45,7 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 | Look around / look back | Right stick / R3 | V |
 | Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 |
 | Pause | Start | Esc |
+| Full screen | | F |
 
 While you are free you steer like any racer. Lock on and the track carries
 you: the stick now moves you around your target (toward it, away from it,
