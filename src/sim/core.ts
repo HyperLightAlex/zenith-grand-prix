@@ -34,9 +34,12 @@ export function addVelocity(m: MechState, dvs: number, dvd: number): void {
   m.vs += dvs;
   m.vd += dvd;
   if (m.mode === MODE.SPEED) {
-    const sp = Math.hypot(m.vs, m.vd);
+    // Free steering has no reverse: a shove from the front can stop a mech
+    // dead but never turns into speed down the road.
+    const fwd = Math.max(m.vs, 0);
+    const sp = Math.hypot(fwd, m.vd);
     if (sp > 1) {
-      m.heading = clamp(Math.atan2(m.vd, Math.max(m.vs, 0.01)), -MAX_HEADING, MAX_HEADING);
+      m.heading = clamp(Math.atan2(m.vd, Math.max(fwd, 0.01)), -MAX_HEADING, MAX_HEADING);
     }
     m.speed = sp;
     syncFromSpeed(m);

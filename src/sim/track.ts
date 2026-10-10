@@ -407,7 +407,9 @@ export function buildTrack(def: TrackDef): Track {
 export function wrapS(track: Track, s: number): number {
   const L = track.length;
   s = s % L;
-  return s < 0 ? s + L : s;
+  if (s < 0) s += L;
+  // A hair behind the line, s + L rounds up to L itself.
+  return s >= L ? 0 : s;
 }
 
 /** Shortest signed distance along the track from b to a (a - b), wrapped. */

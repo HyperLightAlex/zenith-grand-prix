@@ -1,0 +1,332 @@
+// The continuous sounds of a mech at speed: turbine, wind, afterburner, charge
+// strip, slipstream, barrier scrape and the low-armour alarm. Every node is
+// made once. Each frame only moves AudioParams; the one exception is that a
+// layer is unplugged from the mix a moment after it falls silent and plugged
+// back in when it is next needed, because an unplugged layer costs no CPU.
+
+import type { AudioScene } from './audio';
+import type { Ctx } from './dsp';
+import { PACE } from '../../sim/config';
+import { clamp, Patch, perBlock } from './dsp';
+
+/** Mix levels. The audio check prints what each layer measures at the output. */
+const LEVEL = {
+  engine: 0.19,
+  whine: 0.032,
+  wind: 0.27,
+  road: 0.155,
+  draft: 1,
+  boostNoise: 0.75,
+  boostTone: 0.11,
+  strip: 0.12,
+  scrape: 1.6,
+  alarm: 0.12,
+};
+
+/** Speed at the limiter; the scene's speed is divided by this. */
+const LIMIT_SPEED = PACE;
+
+/**
+ * Turbine pitch at rest, in hertz. Chosen so that flat out at the limiter,
+ * where most of a race is spent, the fundamental sits on A2 (110 Hz) and the
+ * two whine partials on E5 and B5: in tune with the race music's A minor
+ * rather than a semitone off its bass.
+ */
+const IDLE_HZ = 43.2;
+
+/** How long a layer stays plugged in after it is asked to stop, so its fade can finish. */
+const TAIL = 1.5;
+
+/** An AudioParam that glides to its target and ignores changes too small to hear. */
+class Glide {
+  private last: number;
+  constructor(
+    private readonly p: AudioParam,
+    private readonly tau: number,
+    initial: number,
+  ) {
+    p.value = initial;
+    this.last = initial;
+  }
+  to(v: number, now: number, tau = this.tau): void {
+    const d = Math.abs(v - this.last);
+    if (d <= 0.002 * Math.max(Math.abs(v), Math.abs(this.last)) || d < 1e-5) return;
+    this.last = v;
+    this.p.setTargetAtTime(v, now, tau);
+  }
+}
+
+export class EngineLayers {
+  /** Each layer's own output, so the audio check can measure them one by one. */
+  readonly taps: Record<string, AudioNode>;
+
+  private readonly srcs: AudioScheduledSourceNode[] = [];
+  /** Everything passes through this gain, which closes when no race is on screen. */
+  private readonly out: GainNode;
+  private readonly gate: Glide;
+  private readonly all: Patch;
+  private readonly f0: Glide[];
+  private readonly ratios: number[];
+  private readonly engCut: Glide;
+  private readonly engGain: Glide;
+  private readonly whineGain: Glide;
+  private readonly windCut: Glide;
+  private readonly windGain: Glide;
+  private readonly roadGain: Glide;
+  private readonly draftGain: Glide;
+  private readonly draftPatch: Patch;
+  private readonly boostCut: Glide;
+  private readonly boostNoise: Glide;
+  private readonly boostFreq: Glide;
+  private readonly boostTone: Glide;
+  private readonly boostPatch: Patch;
+  private readonly stripFreq: Glide[];
+  private readonly stripGain: Glide;
+  private readonly stripPatch: Patch;
+  private readonly scrapeGain: Glide;
+  private readonly scrapePatch: Patch;
+  private readonly alarmGain: AudioParam;
+  private readonly alarmPatch: Patch;
+
+  private boostT = 0;
+  private stripT = 0;
+  private alarmOn = false;
+  private alarmNext = 0;
+
+  constructor(
+    private readonly ctx: Ctx,
+    white: AudioBuffer,
+    pink: AudioBuffer,
+    dest: AudioNode,
+  ) {
+    const out = (this.out = ctx.createGain());
+    this.gate = new Glide(out.gain, 0.12, 0);
+    this.all = new Patch(out, dest);
+
+    // --- turbine: two detuned saws and a sub through a lowpass, plus two
+    // sine partials well up the series for the whine.
+    const engLp = this.filter('lowpass', 200, 1.1);
+    this.engCut = new Glide(engLp.frequency, 0.1, 200);
+    const engG = this.gain(0, out);
+    this.engGain = new Glide(engG.gain, 0.12, 0);
+    engLp.connect(engG);
+    const whineG = this.gain(0, out);
+    this.whineGain = new Glide(whineG.gain, 0.15, 0);
+
+    const parts: Array<[OscillatorType, number, number, number, AudioNode]> = [
+      // wave, frequency ratio, level, pan, destination
+      // Unequal levels, so the slow beating between the saws never cancels
+      // completely; the louder one sits nearer the middle to keep the sides even.
+      ['sawtooth', 1, 0.56, -0.2, engLp],
+      ['sawtooth', 1.007, 0.38, 0.5, engLp],
+      ['sine', 0.5, 0.22, 0, engLp],
+      ['sine', 6, 1, -0.2, whineG],
+      ['sine', 9.03, 0.55, 0.2, whineG],
+    ];
+    this.f0 = [];
+    this.ratios = [];
+    for (const [wave, ratio, level, pan, to] of parts) {
+      const o = this.osc(wave, IDLE_HZ * ratio);
+      o.connect(this.gain(level, this.pan(pan, to)));
+      this.f0.push(new Glide(o.frequency, 0.09, IDLE_HZ * ratio));
+      this.ratios.push(ratio);
+    }
+
+    // --- air and road: one pink loop feeding three filters.
+    const air = this.loop(pink);
+    const windHp = this.filter('highpass', 160, 0.7);
+    const windLp = this.filter('lowpass', 300, 0.6);
+    this.windCut = new Glide(windLp.frequency, 0.15, 300);
+    const windG = this.gain(0, out);
+    this.windGain = new Glide(windG.gain, 0.15, 0);
+    air.connect(windHp);
+    windHp.connect(windLp);
+    windLp.connect(windG);
+
+    const roadLp = this.filter('lowpass', 210, 0.7);
+    const roadG = this.gain(0, out);
+    this.roadGain = new Glide(roadG.gain, 0.2, 0);
+    air.connect(roadLp);
+    roadLp.connect(roadG);
+
+    // Slipstream: a narrow, slowly wandering band, like wind across a pipe.
+    const draftBp = this.filter('bandpass', 390, 4.5);
+    this.osc('sine', 0.7).connect(this.gain(70, draftBp.frequency));
+    const draftG = this.gain(0, null);
+    this.draftGain = new Glide(draftG.gain, 0.2, 0);
+    this.draftPatch = new Patch(draftG, out);
+    air.connect(draftBp);
+    draftBp.connect(draftG);
+
+    // --- afterburner: a fluttering band of white noise and a tone that climbs while it burns.
+    const hiss = this.loop(white);
+    const boostOut = this.gain(1, null);
+    this.boostPatch = new Patch(boostOut, out);
+    const boostBp = this.filter('bandpass', 500, 0.8);
+    this.boostCut = new Glide(boostBp.frequency, 0.1, 500);
+    const boostNG = this.gain(0, boostOut);
+    this.boostNoise = new Glide(boostNG.gain, 0.04, 0);
+    // A fast flutter on the noise sets it apart from plain wind.
+    const flutter = this.gain(0.7, boostNG);
+    this.osc('triangle', 34).connect(this.gain(0.3, flutter.gain));
+    hiss.connect(boostBp);
+    boostBp.connect(flutter);
+    const boostOsc = this.osc('sawtooth', 130);
+    this.boostFreq = new Glide(boostOsc.frequency, 0.08, 130);
+    const boostLp = this.filter('lowpass', 1100, 0.7);
+    const boostTG = this.gain(0, boostOut);
+    this.boostTone = new Glide(boostTG.gain, 0.04, 0);
+    boostOsc.connect(boostLp);
+    boostLp.connect(boostTG);
+
+    // --- charge strip: two partials with a fast tremolo, pitch rising while you ride it.
+    const trem = this.gain(0.65, null);
+    this.osc('triangle', 12).connect(this.gain(0.35, trem.gain));
+    const stripG = this.gain(0, null);
+    this.stripGain = new Glide(stripG.gain, 0.06, 0);
+    this.stripPatch = new Patch(stripG, out);
+    trem.connect(stripG);
+    const s1 = this.osc('triangle', 587);
+    const s2 = this.osc('sine', 587 * 2.007);
+    s1.connect(this.gain(1, this.pan(-0.4, trem)));
+    s2.connect(this.gain(0.5, this.pan(0.4, trem)));
+    this.stripFreq = [new Glide(s1.frequency, 0.08, 587), new Glide(s2.frequency, 0.08, 587 * 2.007)];
+
+    // --- barrier scrape: two bands of white noise chopped at a rough rate.
+    const rough = this.gain(0.55, null);
+    this.osc('sawtooth', 53).connect(this.gain(0.45, rough.gain));
+    const scrapeG = this.gain(0, null);
+    this.scrapeGain = new Glide(scrapeG.gain, 0.04, 0);
+    this.scrapePatch = new Patch(scrapeG, out);
+    rough.connect(scrapeG);
+    for (const [f, q, g] of [[2100, 2.5, 1], [760, 3, 0.8]]) {
+      const bp = this.filter('bandpass', f, q);
+      hiss.connect(bp);
+      bp.connect(this.gain(g, rough));
+    }
+
+    // --- low-armour alarm: a soft beep, scheduled ahead like the music.
+    const alarmG = this.gain(0, null);
+    this.alarmGain = alarmG.gain;
+    this.alarmPatch = new Patch(alarmG, out);
+    this.osc('sine', 659.3).connect(alarmG);
+    this.osc('sine', 1318.5).connect(this.gain(0.25, alarmG));
+
+    this.taps = { engine: engG, whine: whineG, wind: windG, road: roadG, draft: draftG, boostNoise: boostNG, boostTone: boostTG, strip: stripG, scrape: scrapeG, alarm: alarmG };
+  }
+
+  /** Pitches here only ever glide, so one value per render block is plenty. */
+  private osc(type: OscillatorType, freq: number): OscillatorNode {
+    const o = this.ctx.createOscillator();
+    o.type = type;
+    o.frequency.value = freq;
+    perBlock(o.frequency);
+    o.start();
+    this.srcs.push(o);
+    return o;
+  }
+
+  private loop(buf: AudioBuffer): AudioBufferSourceNode {
+    const s = this.ctx.createBufferSource();
+    s.buffer = buf;
+    s.loop = true;
+    s.start();
+    this.srcs.push(s);
+    return s;
+  }
+
+  private filter(type: BiquadFilterType, freq: number, q: number): BiquadFilterNode {
+    const f = this.ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    f.Q.value = q;
+    perBlock(f.frequency);
+    return f;
+  }
+
+  private gain(value: number, dest: AudioNode | AudioParam | null): GainNode {
+    const g = this.ctx.createGain();
+    g.gain.value = value;
+    if (dest instanceof AudioParam) g.connect(dest);
+    else if (dest) g.connect(dest);
+    return g;
+  }
+
+  /** A node that pans whatever is connected to it on its way to `dest`. */
+  private pan(p: number, dest: AudioNode): AudioNode {
+    if (p === 0 || typeof this.ctx.createStereoPanner !== 'function') return dest;
+    const n = this.ctx.createStereoPanner();
+    n.pan.value = p;
+    n.connect(dest);
+    return n;
+  }
+
+  /** `ahead` is how far past `now` timed events (the alarm beeps) should be queued. */
+  update(now: number, dt: number, s: AudioScene, ahead: number): void {
+    const on = s.racing;
+    const x = clamp(Number.isFinite(s.speed) ? s.speed : 0, 0, 200) / LIMIT_SPEED;
+    const x1 = Math.min(1, x);
+    const thr = clamp(Number.isFinite(s.throttle) ? s.throttle : 0, 0, 1);
+
+    this.all.set(on, now, TAIL);
+    this.gate.to(on ? 1 : 0, now, on ? 0.1 : 0.22);
+
+    this.boostT = s.boosting && on ? this.boostT + dt : Math.max(0, this.boostT - dt * 3);
+    this.stripT = s.onStrip && on ? this.stripT + dt : Math.max(0, this.stripT - dt * 2);
+
+    // Turbine. Pitch climbs an octave and a bit from rest to the limiter and
+    // keeps going under boost; the filter opens with speed and throttle.
+    // Locked on and fighting, it is turned down and darkened.
+    const f0 = IDLE_HZ * 2 ** (1.3 * x) * (1 + 0.035 * thr);
+    for (let i = 0; i < this.f0.length; i++) this.f0[i].to(f0 * this.ratios[i], now);
+    this.engCut.to((170 + 950 * x ** 1.2 * (0.5 + 0.5 * thr)) * (s.battle ? 0.6 : 1), now);
+    this.engGain.to(on ? LEVEL.engine * (0.45 + 0.35 * thr + 0.2 * x1) * (s.battle ? 0.68 : 1) : 0, now);
+    this.whineGain.to(on ? LEVEL.whine * x1 ** 1.5 * (0.5 + 0.5 * thr) * (s.battle ? 0.5 : 1) : 0, now);
+
+    // Air and road. In a slipstream the broad rush drops and a hollow band takes over.
+    const draft = on && s.drafting;
+    this.windCut.to((300 + 1700 * x) * (draft ? 0.7 : 1), now);
+    this.windGain.to(on ? LEVEL.wind * Math.min(1.6, x) ** 1.8 * (draft ? 0.6 : 1) : 0, now);
+    this.roadGain.to(on ? LEVEL.road * Math.min(1.3, x) : 0, now);
+    this.draftPatch.set(draft, now, TAIL);
+    this.draftGain.to(draft ? LEVEL.draft * x1 ** 1.2 : 0, now);
+
+    // Afterburner.
+    const burn = on && s.boosting;
+    this.boostPatch.set(burn, now, TAIL);
+    this.boostCut.to(500 + 900 * Math.min(1, this.boostT / 1.2), now);
+    this.boostFreq.to(130 * 2 ** Math.min(1, this.boostT / 2), now);
+    this.boostNoise.to(burn ? LEVEL.boostNoise : 0, now, burn ? 0.04 : 0.25);
+    this.boostTone.to(burn ? LEVEL.boostTone : 0, now, burn ? 0.05 : 0.2);
+
+    // Charge strip.
+    const strip = on && s.onStrip;
+    this.stripPatch.set(strip, now, TAIL);
+    const sf = 587 * (1 + 0.7 * (1 - Math.exp(-this.stripT)));
+    this.stripFreq[0].to(sf, now);
+    this.stripFreq[1].to(sf * 2.007, now);
+    this.stripGain.to(strip ? LEVEL.strip : 0, now, strip ? 0.06 : 0.18);
+
+    // Scrape.
+    const scrape = on && s.scraping;
+    this.scrapePatch.set(scrape, now, TAIL);
+    this.scrapeGain.to(scrape ? LEVEL.scrape * (0.5 + 0.5 * x1) : 0, now, scrape ? 0.03 : 0.08);
+
+    // Alarm: two soft beeps a second, queued ahead of the clock like the music.
+    const alarm = on && s.critical;
+    this.alarmPatch.set(alarm, now, TAIL);
+    if (alarm) {
+      if (!this.alarmOn || this.alarmNext < now - 0.05) this.alarmNext = now + 0.03;
+      while (this.alarmNext < now + ahead) {
+        const t = this.alarmNext;
+        this.alarmGain.setTargetAtTime(LEVEL.alarm, t, 0.008);
+        this.alarmGain.setTargetAtTime(0, t + 0.1, 0.03);
+        this.alarmNext += 0.5;
+      }
+    } else if (this.alarmOn) {
+      this.alarmGain.cancelScheduledValues(now);
+      this.alarmGain.setTargetAtTime(0, now, 0.03);
+    }
+    this.alarmOn = alarm;
+  }
+}

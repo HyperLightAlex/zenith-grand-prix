@@ -14,6 +14,7 @@ import {
   BATTLE_MIN,
   BOOST_ACCEL,
   BOOST_COST,
+  BOOST_MIN_START,
   BOOST_MULT,
   BTN,
   CLASSES,
@@ -38,6 +39,7 @@ import {
   LOCK_BREAK,
   LOCK_BREAK_TICKS,
   MAX_HEADING,
+  MAX_RACE_TICKS,
   MODE,
   OVERCAP_DRAG,
   PACE,
@@ -47,6 +49,8 @@ import {
   PERFECT_START_WINDOW,
   PHASE,
   POINTS,
+  SPEED_CEILING,
+  SPLAT_CREDIT_TICKS,
   STAGGER_DRAG,
   STEER_RATE,
   TACTIC,
@@ -118,9 +122,11 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       guarding: false,
       guardT: 0,
       guardIdle: 0,
+      guardRest: 1000,
       iframes: 0,
       chain: 0,
       chainT: 0,
+      chainTick: -1,
       cdPrimary: 0,
       cdSecondary: 0,
       cdDash: 0,
@@ -140,6 +146,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       prevCmd: 0,
       prevThrottle: 0,
       throttleTick: -9999,
+      throttleRest: 0,
       lastHitBy: -1,
       lastHitTick: -9999,
       deniedTick: -9999,
@@ -201,7 +208,10 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   let cap = speedCap(race, m, c);
   const wasBoosting = m.boosting;
   m.boosting = false;
-  if (!staggered && !m.finished && (input.buttons & BTN.A) !== 0 && m.drive > 0 && input.throttle > 0.2) {
+  // A tick of boost has to be paid for in full: with `drive > 0` the passive
+  // trickle alone kept an empty gauge boosting for as long as A was held.
+  const fuel = wasBoosting ? BOOST_COST * DT : BOOST_MIN_START;
+  if (!staggered && !m.finished && (input.buttons & BTN.A) !== 0 && m.drive >= fuel && input.throttle > 0.2) {
     m.boosting = true;
     cap *= BOOST_MULT;
     m.drive = Math.max(0, m.drive - BOOST_COST * DT);
@@ -223,6 +233,9 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   if (brake > 0) m.speed -= brake * c.brake * DT;
   if (staggered) m.speed -= STAGGER_DRAG * DT;
   if (m.speed < 0) m.speed = 0;
+  // Whatever threw the mech forward (a dash carried out of a lock, a shove),
+  // free steering tops out a little above the cap.
+  if (m.speed > cap * SPEED_CEILING) m.speed = cap * SPEED_CEILING;
 
   // Steering fights the bend of the road: hold a line or run wide.
   const omegaMax = Math.min(c.turnMax, c.grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12);
@@ -331,7 +344,8 @@ function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): vo
           m.dmgTaken += dmg;
           setStagger(m, 20);
           race.events.push({ type: 'splat', mech: m.id, damage: dmg });
-          if (m.hp <= 0.001) retire(race, m, m.lastHitBy >= 0 ? race.mechs[m.lastHitBy] : null);
+          const credit = m.lastHitBy >= 0 && race.tick - m.lastHitTick <= SPLAT_CREDIT_TICKS;
+          if (m.hp <= 0.001) retire(race, m, credit ? race.mechs[m.lastHitBy] : null);
         }
       }
       if (m.mode === MODE.SPEED) {
@@ -379,6 +393,11 @@ function collide(race: RaceState, track: Track): void {
       a.d += nd * overlap * wa;
       b.s -= ns * overlap * wb;
       b.d -= nd * overlap * wb;
+      // A shove must not leave either mech through the barrier.
+      const la = track.halfWidth - ca.radius;
+      const lb = track.halfWidth - cb.radius;
+      a.d = clamp(a.d, -la, la);
+      b.d = clamp(b.d, -lb, lb);
       const rv = (a.vs - b.vs) * ns + (a.vd - b.vd) * nd;
       if (rv < 0) {
         const j2 = -rv * 1.15;
@@ -489,6 +508,8 @@ function finalize(race: RaceState): void {
       // Still running when the flag fell: classified by distance covered.
       m.finished = true;
       m.finishTime = 1e9 - m.s;
+      m.act = ACT.NONE;
+      m.guarding = false;
       if (m.target >= 0) setTarget(race, m, -1);
     }
   }
@@ -499,8 +520,25 @@ function finalize(race: RaceState): void {
   race.events.push({ type: 'raceEnd' });
 }
 
+// Scratch storage reused every tick. stepRace never keeps a reference to a
+// caller's input object: human inputs are copied (and cleaned) into here.
 const scratch: MechInput[] = [];
 const controls: MechInput[] = [];
+/** Ticks the throttle must be up before a press can earn the launch bonus. */
+const LAUNCH_REST = 30;
+
+const fin = (v: number, lo: number, hi: number): number => (Number.isFinite(v) ? clamp(v, lo, hi) : 0);
+
+/** Copy a controller state into `out`, discarding anything out of range or not a number. */
+function sanitize(inp: MechInput, out: MechInput): MechInput {
+  out.mx = fin(inp.mx, -1, 1);
+  out.my = fin(inp.my, -1, 1);
+  out.throttle = fin(inp.throttle, 0, 1);
+  out.brake = fin(inp.brake, 0, 1);
+  out.buttons = Number.isFinite(inp.buttons) ? inp.buttons & 0xff : 0;
+  out.cmd = Number.isFinite(inp.cmd) && inp.cmd >= 0 && inp.cmd <= 4 ? inp.cmd | 0 : 0;
+  return out;
+}
 
 /**
  * Advance the race one tick. `inputs[id]` is the controller state for a
@@ -518,9 +556,23 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     const remaining = COUNTDOWN_TICKS - tick;
     for (const m of ms) {
       const inp = m.human ? inputs[m.id] : null;
-      const th = inp ? inp.throttle : 0;
-      if (th > 0.5 && m.prevThrottle <= 0.5) m.throttleTick = tick;
+      const th = inp && Number.isFinite(inp.throttle) ? inp.throttle : 0;
+      if (th > 0.5) {
+        if (m.prevThrottle <= 0.5) {
+          // Only a press after a proper pause counts; blipping the throttle
+          // through the countdown is a jump start, not a launch.
+          m.throttleTick = m.throttleRest >= LAUNCH_REST ? tick : -9999;
+        }
+        m.throttleRest = 0;
+      } else {
+        m.throttleRest++;
+      }
       m.prevThrottle = th;
+      // Buttons held through the countdown are not presses on the GO tick.
+      if (inp) {
+        m.prevButtons = inp.buttons | 0;
+        m.prevCmd = inp.cmd | 0;
+      }
     }
     if (remaining > 0) {
       if (remaining % TICK_RATE === 0) race.events.push({ type: 'countdown', n: remaining / TICK_RATE });
@@ -545,7 +597,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   // 1. Gather controls. AI fills every seat without a live input.
   for (const m of ms) {
     const inp = m.human ? inputs[m.id] : null;
-    controls[m.id] = inp ?? aiControl(race, track, m, scratch[m.id]);
+    controls[m.id] = inp ? sanitize(inp, scratch[m.id]) : aiControl(race, track, m, scratch[m.id]);
   }
   if (race.phase === PHASE.RACING) {
     for (let team = 0; team < 2; team++) aiCaptain(race, track, team);
@@ -583,7 +635,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
         m.lap = lap;
         if (lap >= race.laps) {
           const line = race.laps * track.length;
-          const frac = m.s > sBefore ? (line - sBefore) / (m.s - sBefore) : 1;
+          const frac = m.s > sBefore ? clamp((line - sBefore) / (m.s - sBefore), 0, 1) : 1;
           m.finished = true;
           m.finishTime = (tick - 1 + frac) * DT;
           if (m.target >= 0) setTarget(race, m, -1);
@@ -598,6 +650,9 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
       }
     }
   }
+  // Mechs that cross the line on the same tick are ranked by time, not by
+  // seat, so a place announced earlier in the loop may have moved.
+  for (const e of race.events) if (e.type === 'finish') e.place = ms[e.mech].place;
 
   // 4. Bodies and bullets.
   collide(race, track);
@@ -655,8 +710,10 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   for (const m of ms) if (isActive(m) && m.s > leaderS) leaderS = m.s;
   if (leaderS > -1e8) race.leaderS = leaderS;
   if (race.phase === PHASE.RACING) {
+    // First lap is formation, last lap is the speed lap, anything between is
+    // a battle lap. A finisher counts as being on the last lap, not beyond it.
     let leaderLap = 0;
-    for (const m of ms) if (!m.retired && m.lap > leaderLap) leaderLap = m.lap;
+    for (const m of ms) if (!m.retired) leaderLap = Math.max(leaderLap, Math.min(m.lap, race.laps - 1));
     const phase = leaderLap <= 0 ? 1 : leaderLap >= race.laps - 1 ? 3 : 2;
     if (phase > race.lapPhase) {
       race.lapPhase = phase;
@@ -670,5 +727,6 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     }
     if (race.firstFinishTick >= 0 && tick >= race.firstFinishTick + FINISH_GRACE_TICKS) finalize(race);
     else if (race.endTick >= 0 && tick >= race.endTick) finalize(race);
+    else if (tick >= MAX_RACE_TICKS) finalize(race);
   }
 }

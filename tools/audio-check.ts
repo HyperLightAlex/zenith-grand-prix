@@ -1,0 +1,1187 @@
+// Measures the synthesiser in a real browser, since nobody can listen to a CI
+// run. Loaded by tools/audio-check.mjs through the Vite dev server:
+//
+//   node tools/audio-check.mjs            full run, about two minutes
+//   node tools/audio-check.mjs --quick    offline renders only, a few seconds
+//   node tools/audio-check.mjs --dump d   also write the renders to d/ as WAV
+//
+// Two passes. The real-time pass drives a live AudioContext exactly as the game
+// does (nothing before unlock(), then every sound, layer and music state) and
+// reads levels from AnalyserNodes on the engine's output. The offline pass
+// renders the same things through an OfflineAudioContext, which is faster than
+// real time and sample-exact, and looks closer: duration, spectrum, limiter
+// gain, bar-line timing.
+
+import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio';
+import { SFX_NAMES } from '../src/client/audio/sfx';
+import { MASTER, MAX_VOICES, SynthAudio } from '../src/client/audio/synth';
+
+type Cell = string | number;
+type Row = Record<string, Cell>;
+
+export interface Report {
+  done: boolean;
+  failures: string[];
+  notes: string[];
+  tables: Record<string, Row[]>;
+}
+
+declare global {
+  interface Window {
+    __audioReport?: Report;
+    __audioDump?: (name: string, base64: string) => Promise<void>;
+  }
+}
+
+const params = new URLSearchParams(location.search);
+const QUICK = params.has('quick');
+const DUMP = params.has('dump');
+
+const report: Report = { done: false, failures: [], notes: [], tables: {} };
+window.__audioReport = report;
+
+const logEl = document.getElementById('log');
+function log(msg: string): void {
+  console.log(msg);
+  if (logEl) logEl.textContent += `\n${msg}`;
+}
+function fail(msg: string): void {
+  report.failures.push(msg);
+  log(`FAIL ${msg}`);
+}
+function table(name: string): Row[] {
+  return (report.tables[name] ??= []);
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+const db = (x: number): number => (x > 1e-9 ? Math.round(200 * Math.log10(x)) / 10 : -180);
+const r3 = (x: number): number => Math.round(x * 1000) / 1000;
+
+/** Sounds quieter than this at the output count as silent, louder than CLIP as clipped. */
+const SILENT = 0.01;
+const CLIP = 1.0;
+/** Default volumes: what the engine uses when setVolumes() is never called. */
+const VOL = { master: 0.8, music: 0.45, sfx: 0.9 };
+
+// ---- scenes -------------------------------------------------------------------
+
+const BASE: AudioScene = { racing: true, speed: 96, throttle: 1, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
+const OFF: AudioScene = { ...BASE, racing: false, speed: 0, throttle: 0 };
+
+interface LayerCase {
+  name: string;
+  scene: AudioScene;
+  /** Name of the case this one adds a layer to, for measuring that layer alone. */
+  vs?: string;
+  silent?: boolean;
+}
+
+const LAYER_CASES: LayerCase[] = [
+  { name: 'off', scene: OFF, silent: true },
+  { name: 'idle (speed 0)', scene: { ...BASE, speed: 0, throttle: 0 } },
+  { name: 'cruise (48)', scene: { ...BASE, speed: 48 } },
+  { name: 'limiter (96)', scene: BASE },
+  { name: 'coast (96, throttle 0)', scene: { ...BASE, throttle: 0 } },
+  { name: 'pre-battle (80, 0.6)', scene: { ...BASE, speed: 80, throttle: 0.6 } },
+  { name: '+battle', scene: { ...BASE, speed: 80, throttle: 0.6, battle: true }, vs: 'pre-battle (80, 0.6)' },
+  { name: 'flat out (150)', scene: { ...BASE, speed: 150 } },
+  { name: '+boosting', scene: { ...BASE, speed: 150, boosting: true }, vs: 'flat out (150)' },
+  { name: '+onStrip', scene: { ...BASE, onStrip: true }, vs: 'limiter (96)' },
+  { name: '+drafting', scene: { ...BASE, drafting: true }, vs: 'limiter (96)' },
+  { name: '+scraping', scene: { ...BASE, scraping: true }, vs: 'limiter (96)' },
+  { name: '+critical', scene: { ...BASE, speed: 0, throttle: 0, critical: true }, vs: 'idle (speed 0)' },
+  { name: 'everything', scene: { ...BASE, speed: 150, boosting: true, onStrip: true, drafting: true, scraping: true, critical: true } },
+  { name: 'off again', scene: OFF, silent: true },
+];
+
+// ---- real-time pass -----------------------------------------------------------
+
+class Meter {
+  private readonly ans: AnalyserNode[];
+  private readonly buf: Float32Array<ArrayBuffer>;
+  peak = 0;
+  private sum = 0;
+  private count = 0;
+
+  constructor(ctx: AudioContext, node: AudioNode) {
+    // One analyser per channel: a single analyser would fold stereo to mono
+    // and under-read anything wide by up to 3 dB.
+    const stereo = ctx.createGain();
+    stereo.channelCount = 2;
+    stereo.channelCountMode = 'explicit';
+    const split = ctx.createChannelSplitter(2);
+    node.connect(stereo);
+    stereo.connect(split);
+    // Analysers are pulled on their own, but a silent path to the output makes sure of it.
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
+    mute.connect(ctx.destination);
+    this.ans = [0, 1].map((ch) => {
+      const an = ctx.createAnalyser();
+      an.fftSize = 4096;
+      split.connect(an, ch);
+      an.connect(mute);
+      return an;
+    });
+    this.buf = new Float32Array(4096);
+  }
+
+  /** Peak of the last 85 ms or so; also folds it into the running peak and RMS. */
+  poll(): number {
+    let p = 0;
+    for (const an of this.ans) {
+      an.getFloatTimeDomainData(this.buf);
+      let s = 0;
+      for (let i = 0; i < this.buf.length; i++) {
+        const v = this.buf[i];
+        const a = v < 0 ? -v : v;
+        if (a > p) p = a;
+        s += v * v;
+      }
+      this.sum += s / this.buf.length;
+      this.count++;
+    }
+    if (p > this.peak) this.peak = p;
+    return p;
+  }
+
+  reset(): void {
+    this.peak = 0;
+    this.sum = 0;
+    this.count = 0;
+  }
+
+  get rms(): number {
+    return this.count ? Math.sqrt(this.sum / this.count) : 0;
+  }
+}
+
+async function realtime(): Promise<void> {
+  log('--- real-time pass ---');
+  // Count every AudioContext the page opens, and every warning the engine swallows.
+  let created = 0;
+  const Real = window.AudioContext;
+  class Counting extends Real {
+    constructor(o?: AudioContextOptions) {
+      super(o);
+      created++;
+    }
+  }
+  (window as unknown as { AudioContext: typeof AudioContext }).AudioContext = Counting;
+  let warnings = 0;
+  const warn = console.warn.bind(console);
+  console.warn = (...args: unknown[]): void => {
+    if (typeof args[0] === 'string' && args[0].startsWith('[audio]')) warnings++;
+    warn(...args);
+  };
+
+  // 1. Everything must be a silent no-op before unlock().
+  const scene: AudioScene = { ...OFF };
+  const probe = new SynthAudio();
+  const audio = new SynthAudio();
+  try {
+    probe.setVolumes(0.3, 0.2, 0.1);
+    probe.setVolumes(Number.NaN, -4, 9);
+    probe.update(0.016, scene);
+    probe.update(0.016, { ...BASE, critical: true, boosting: true });
+    for (const n of SFX_NAMES) probe.play(n, { volume: 0.5, pan: 0.3, pitch: 1.2 });
+    probe.play('ko');
+    probe.setMusic('menu');
+    probe.setMusic('race');
+    probe.setMusic(null);
+    // The real instance is asked for menu music now and should start it once unlocked.
+    audio.setMusic('menu');
+    audio.update(0.016, scene);
+    audio.play('ui_select');
+  } catch (err) {
+    fail(`a method threw before unlock(): ${String(err)}`);
+  }
+  if (created !== 0) fail(`${created} AudioContext(s) were created before unlock()`);
+  if (audio.context !== null || audio.output !== null) fail('engine exposes a context before unlock()');
+  const row: Row = { 'contexts before unlock': created };
+
+  // 2. unlock(), twice.
+  audio.unlock();
+  audio.unlock();
+  row['contexts after unlock x2'] = created;
+  if (created !== 1) fail(`unlock() twice created ${created} AudioContexts, expected 1`);
+  const ctx = audio.context as AudioContext | null;
+  const out = audio.output;
+  const preNode = audio.preLimiter;
+  if (!ctx || !out || !preNode) {
+    fail('no context after unlock()');
+    return;
+  }
+  for (let i = 0; i < 60 && ctx.state !== 'running'; i++) await sleep(50);
+  row['state'] = ctx.state;
+  row['sample rate'] = ctx.sampleRate;
+  if (ctx.state !== 'running') {
+    fail(`AudioContext is "${ctx.state}" after unlock()`);
+    return;
+  }
+
+  const post = new Meter(ctx, out);
+  const pre = new Meter(ctx, preNode);
+  let lastLoud = 0;
+  const poller = setInterval(() => {
+    pre.poll();
+    if (post.poll() > 0.004) lastLoud = performance.now();
+  }, 8);
+  let prev = performance.now();
+  const frames = setInterval(() => {
+    const now = performance.now();
+    audio.update(Math.min(0.1, (now - prev) / 1000), scene);
+    prev = now;
+  }, 16);
+  const quiet = async (ms = 200, limit = 6000): Promise<boolean> => {
+    const t0 = performance.now();
+    while (performance.now() - t0 < limit) {
+      if (performance.now() - lastLoud > ms) return true;
+      await sleep(20);
+    }
+    return false;
+  };
+
+  try {
+    // Music asked for before unlock should now be playing.
+    await sleep(1800);
+    const info0 = audio.debugInfo();
+    row['music asked for before unlock'] = `${info0.music?.name ?? 'none'}, peak ${r3(post.peak)}`;
+    if (info0.music?.name !== 'menu' || post.peak < 0.003) fail('menu music requested before unlock() did not start after it');
+    audio.setMusic(null);
+    await sleep(1500);
+    if (!(await quiet())) fail('music did not fade to silence after setMusic(null)');
+
+    // 3. A context suspended later must come back on the next play() or unlock().
+    await ctx.suspend();
+    audio.play('ui_move');
+    for (let i = 0; i < 40 && ctx.state !== 'running'; i++) await sleep(25);
+    row['resumed by play()'] = ctx.state;
+    if (ctx.state !== 'running') fail('play() did not resume a suspended context');
+    await ctx.suspend();
+    audio.unlock();
+    for (let i = 0; i < 40 && ctx.state !== 'running'; i++) await sleep(25);
+    row['resumed by unlock()'] = ctx.state;
+    if (ctx.state !== 'running') fail('unlock() did not resume a suspended context');
+    if (created !== 1) fail('a second AudioContext was created while resuming');
+    table('startup').push(row);
+    await quiet();
+
+    // 4. Every sound effect.
+    for (const name of SFX_NAMES) {
+      await quiet();
+      await sleep(60);
+      post.reset();
+      pre.reset();
+      const t0 = performance.now();
+      lastLoud = 0;
+      audio.play(name);
+      await sleep(120);
+      while (performance.now() - t0 < 5000 && performance.now() - lastLoud < 260) await sleep(20);
+      const peak = post.peak;
+      table('sfx (real time)').push({ name, peak: r3(peak), dBFS: db(peak), 'pre-limiter': r3(pre.peak), 'heard for (s)': r3(Math.max(0, (lastLoud - t0) / 1000 - 0.085)) });
+      if (peak < SILENT) fail(`sfx ${name} is silent in real time (peak ${peak.toFixed(4)})`);
+      if (peak >= CLIP) fail(`sfx ${name} clips in real time (peak ${peak.toFixed(3)})`);
+    }
+
+    // 5. The continuous layer, one scene at a time.
+    const seen = new Map<string, number>();
+    for (const c of LAYER_CASES) {
+      Object.assign(scene, c.scene);
+      await sleep(c.name === 'off again' ? 1400 : 900);
+      post.reset();
+      pre.reset();
+      await sleep(c.vs === 'idle (speed 0)' ? 2000 : 900);
+      seen.set(c.name, post.rms);
+      const base = c.vs ? (seen.get(c.vs) ?? 0) : 0;
+      table('continuous layer (real time)').push({
+        scene: c.name,
+        peak: r3(post.peak),
+        'rms dBFS': db(post.rms),
+        'layer alone dBFS': c.vs ? db(Math.sqrt(Math.max(0, post.rms ** 2 - base ** 2))) : '',
+      });
+      if (c.silent && post.peak > 0.003) fail(`continuous layer not silent when racing is false (${c.name}: peak ${post.peak.toFixed(4)})`);
+      if (!c.silent && post.rms < 0.002) fail(`continuous layer inaudible in scene "${c.name}"`);
+      if (post.peak >= CLIP) fail(`continuous layer clips in scene "${c.name}"`);
+    }
+    Object.assign(scene, OFF);
+
+    // 6. Music: menu, race through its three phases, then nothing.
+    const musicCases: Array<[string, 'menu' | 'race' | null, number, number]> = [
+      ['menu', 'menu', 1, 6000],
+      ['race, phase 1', 'race', 1, 8000],
+      ['race, phase 2', 'race', 2, 8000],
+      ['race, phase 3', 'race', 3, 8000],
+      ['null', null, 1, 1600],
+    ];
+    for (const [name, track, phase, ms] of musicCases) {
+      audio.setMusic(track);
+      scene.lapPhase = phase;
+      // Let the cross-fade or the bar-line change happen before measuring.
+      await sleep(track === null ? 1500 : 2200);
+      post.reset();
+      pre.reset();
+      await sleep(ms);
+      const info = audio.debugInfo().music;
+      table('music (real time)').push({ state: name, peak: r3(post.peak), 'rms dBFS': db(post.rms), playing: info ? `${info.name} phase ${info.phase} bar ${info.bar}` : 'nothing' });
+      if (track === null) {
+        if (post.peak > 0.003) fail(`music still audible 1.5 s after setMusic(null) (peak ${post.peak.toFixed(4)})`);
+      } else {
+        if (post.rms < 0.004) fail(`music state "${name}" is inaudible`);
+        if (info?.name !== track || (track === 'race' && info.phase !== phase)) fail(`music state "${name}" is not what is playing`);
+      }
+      if (post.peak >= CLIP) fail(`music state "${name}" clips`);
+    }
+
+    // 7. Pile-up: far more sounds than the voice limit in a single frame.
+    await quiet();
+    post.reset();
+    pre.reset();
+    let most = 0;
+    for (let k = 0; k < 3; k++) for (const n of SFX_NAMES) audio.play(n);
+    most = audio.debugInfo().voices;
+    await sleep(1500);
+    const pilePeak = post.peak;
+    const pilePre = pre.peak;
+    await quiet(300, 8000);
+    // The longest sounds are three seconds; they should all have been let go by then.
+    for (let i = 0; i < 60 && audio.debugInfo().voices > 0; i++) await sleep(100);
+    table('pile-up (real time)').push({ 'plays in one frame': SFX_NAMES.length * 3, 'voices kept': most, 'voice limit': MAX_VOICES, peak: r3(pilePeak), 'pre-limiter': r3(pilePre), 'voices after': audio.debugInfo().voices });
+    if (most > MAX_VOICES) fail(`${most} voices alive, limit is ${MAX_VOICES}`);
+    if (pilePeak >= CLIP) fail(`pile-up clips (peak ${pilePeak.toFixed(3)})`);
+    if (audio.debugInfo().voices !== 0) fail('voices were not released after the pile-up');
+    if (ctx.state !== 'running') fail(`context ended the run "${ctx.state}"`);
+  } finally {
+    clearInterval(poller);
+    clearInterval(frames);
+    console.warn = warn;
+    if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) in real time (see [audio] warnings)`);
+    await ctx.close().catch(() => {});
+  }
+}
+
+// ---- offline pass -------------------------------------------------------------
+
+const SR = 48000;
+const STEP = 0.05;
+
+interface Cue {
+  t: number;
+  run: (a: SynthAudio) => void;
+}
+
+interface Render {
+  buf: AudioBuffer;
+  audio: SynthAudio;
+  warnings: number;
+}
+
+/**
+ * Render `seconds` of the engine. Channels 0-1 are its output, 2-3 the mix
+ * before the limiter. `sceneAt` is asked for the scene every 50 ms, like a slow
+ * game loop, and `each` runs after every update.
+ */
+async function render(
+  seconds: number,
+  cues: Cue[],
+  sceneAt: (t: number) => AudioScene,
+  each?: (t: number, a: SynthAudio, ctx: OfflineAudioContext) => void,
+  vol?: [number, number, number],
+  preTap = true,
+): Promise<Render> {
+  const ctx = new OfflineAudioContext(preTap ? 4 : 2, Math.ceil(seconds * SR), SR);
+  const audio = new SynthAudio();
+  if (vol) audio.setVolumes(vol[0], vol[1], vol[2]);
+  audio.debugAttach(ctx);
+  const tap = audio.preLimiter;
+  if (!tap) throw new Error('debugAttach did not build a graph');
+  if (preTap) {
+    const split = ctx.createChannelSplitter(2);
+    const merge = ctx.createChannelMerger(4);
+    tap.connect(split);
+    split.connect(merge, 0, 2);
+    split.connect(merge, 1, 3);
+    merge.connect(ctx.destination);
+  }
+
+  let warnings = 0;
+  const warn = console.warn.bind(console);
+  console.warn = (...args: unknown[]): void => {
+    if (typeof args[0] === 'string' && args[0].startsWith('[audio]')) warnings++;
+    warn(...args);
+  };
+  const sorted = [...cues].sort((x, y) => x.t - y.t);
+  let ci = 0;
+  const tick = (t: number): void => {
+    while (ci < sorted.length && sorted[ci].t <= t + 1e-6) sorted[ci++].run(audio);
+    audio.update(STEP, sceneAt(t));
+    each?.(t, audio, ctx);
+  };
+  try {
+    tick(0);
+    for (let k = 1; k * STEP < seconds; k++) {
+      void ctx.suspend(k * STEP).then(() => {
+        try {
+          tick(ctx.currentTime);
+        } finally {
+          void ctx.resume();
+        }
+      });
+    }
+    const buf = await ctx.startRendering();
+    return { buf, audio, warnings };
+  } finally {
+    console.warn = warn;
+  }
+}
+
+/**
+ * Loudness of the engine's individual layers and music parts during an
+ * offline render, read from analysers at every 50 ms update. Each reading
+ * covers the last 43 ms, so nearly every sample is seen once.
+ */
+class TapMeters {
+  private readonly meters = new Map<string, { node: AudioNode; ans: AnalyserNode[]; sum: number; n: number; peak: number }>();
+  private readonly buf = new Float32Array(2048);
+
+  /** Read every tap the engine currently exposes; `keep` says whether this moment counts. */
+  poll(a: SynthAudio, ctx: OfflineAudioContext, keep: boolean): void {
+    for (const [name, node] of Object.entries(a.debugTaps())) {
+      let m = this.meters.get(name);
+      if (!m || m.node !== node) {
+        // Force stereo so a mono part reads the same on both sides, as it does at the output.
+        const st = ctx.createGain();
+        st.channelCount = 2;
+        st.channelCountMode = 'explicit';
+        const split = ctx.createChannelSplitter(2);
+        node.connect(st);
+        st.connect(split);
+        const ans = [0, 1].map((ch) => {
+          const an = ctx.createAnalyser();
+          an.fftSize = 2048;
+          split.connect(an, ch);
+          return an;
+        });
+        m = { node, ans, sum: m?.sum ?? 0, n: m?.n ?? 0, peak: m?.peak ?? 0 };
+        this.meters.set(name, m);
+        continue;
+      }
+      if (!keep) continue;
+      for (const an of m.ans) {
+        an.getFloatTimeDomainData(this.buf);
+        let sq = 0;
+        for (let i = 0; i < this.buf.length; i++) {
+          const v = this.buf[i];
+          sq += v * v;
+          if (v > m.peak) m.peak = v;
+          else if (-v > m.peak) m.peak = -v;
+        }
+        m.sum += sq / this.buf.length;
+        m.n++;
+      }
+    }
+  }
+
+  /** RMS and peak of each tap since the last call, scaled by `gain`, then start again. */
+  take(gain: number, prefix: string): Record<string, { rms: number; peak: number }> {
+    const out: Record<string, { rms: number; peak: number }> = {};
+    for (const [name, m] of this.meters) {
+      if (!name.startsWith(prefix)) continue;
+      out[name.slice(prefix.length)] = { rms: m.n ? Math.sqrt(m.sum / m.n) * gain : 0, peak: m.peak * gain };
+      m.sum = 0;
+      m.n = 0;
+      m.peak = 0;
+    }
+    return out;
+  }
+}
+
+function fft(re: Float64Array, im: Float64Array): void {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      const tr = re[i];
+      re[i] = re[j];
+      re[j] = tr;
+      const ti = im[i];
+      im[i] = im[j];
+      im[j] = ti;
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (-2 * Math.PI) / len;
+    const wr = Math.cos(ang);
+    const wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1;
+      let ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k;
+        const b = a + len / 2;
+        const xr = re[b] * cr - im[b] * ci;
+        const xi = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - xr;
+        im[b] = im[a] - xi;
+        re[a] += xr;
+        im[a] += xi;
+        const t = cr * wr - ci * wi;
+        ci = cr * wi + ci * wr;
+        cr = t;
+      }
+    }
+  }
+}
+
+interface Stats {
+  peak: number;
+  prePeak: number;
+  rms: number;
+  /** Seconds between the first and last sample within 30 dB of the peak. */
+  dur: number;
+  /** Seconds from the start of the window to the first of those samples. */
+  onset: number;
+  /** Spectral centre of gravity in hertz. */
+  centroid: number;
+  /** Share of the energy below 250 Hz, 250-2500 Hz and above. */
+  low: number;
+  mid: number;
+  high: number;
+  left: number;
+  right: number;
+  rmsLeft: number;
+  rmsRight: number;
+}
+
+function analyse(buf: AudioBuffer, t0: number, t1: number): Stats {
+  const i0 = Math.max(0, Math.floor(t0 * SR));
+  const i1 = Math.min(buf.length, Math.floor(t1 * SR));
+  const L = buf.getChannelData(0);
+  const R = buf.getChannelData(1);
+  const pL = buf.getChannelData(2);
+  const pR = buf.getChannelData(3);
+  let peak = 0;
+  let prePeak = 0;
+  let left = 0;
+  let right = 0;
+  for (let i = i0; i < i1; i++) {
+    const a = Math.abs(L[i]);
+    const b = Math.abs(R[i]);
+    if (a > left) left = a;
+    if (b > right) right = b;
+    const c = Math.max(Math.abs(pL[i]), Math.abs(pR[i]));
+    if (c > prePeak) prePeak = c;
+  }
+  peak = Math.max(left, right);
+  const floor = Math.max(0.0004, peak * 0.0316);
+  let first = -1;
+  let last = -1;
+  for (let i = i0; i < i1; i++) {
+    if (Math.abs(L[i]) > floor || Math.abs(R[i]) > floor) {
+      if (first < 0) first = i;
+      last = i;
+    }
+  }
+  if (first < 0) return { peak, prePeak, rms: 0, dur: 0, onset: 0, centroid: 0, low: 0, mid: 0, high: 0, left, right, rmsLeft: 0, rmsRight: 0 };
+  let sumL = 0;
+  let sumR = 0;
+  for (let i = first; i <= last; i++) {
+    sumL += L[i] * L[i];
+    sumR += R[i] * R[i];
+  }
+  const span = last - first + 1;
+  const rms = Math.sqrt((sumL + sumR) / 2 / span);
+
+  // Averaged power spectrum of the active part.
+  const N = 4096;
+  const power = new Float64Array(N / 2);
+  const re = new Float64Array(N);
+  const im = new Float64Array(N);
+  let frames = 0;
+  for (let s = first; s <= last && frames < 1200; s += N / 2) {
+    for (let i = 0; i < N; i++) {
+      const j = s + i;
+      const x = j < i1 ? (L[j] + R[j]) / 2 : 0;
+      re[i] = x * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N));
+      im[i] = 0;
+    }
+    fft(re, im);
+    for (let k = 0; k < N / 2; k++) power[k] += re[k] * re[k] + im[k] * im[k];
+    frames++;
+  }
+  let total = 0;
+  let weighted = 0;
+  let low = 0;
+  let mid = 0;
+  let high = 0;
+  for (let k = 1; k < N / 2; k++) {
+    const f = (k * SR) / N;
+    const p = power[k];
+    total += p;
+    weighted += p * f;
+    if (f < 250) low += p;
+    else if (f < 2500) mid += p;
+    else high += p;
+  }
+  total = Math.max(total, 1e-30);
+  return { peak, prePeak, rms, dur: span / SR, onset: (first - i0) / SR, centroid: weighted / total, low: low / total, mid: mid / total, high: high / total, left, right, rmsLeft: Math.sqrt(sumL / span), rmsRight: Math.sqrt(sumR / span) };
+}
+
+/** Amplitude of one frequency over a short stretch of the output (Goertzel). Only for steady tones. */
+function toneLevel(buf: AudioBuffer, t0: number, t1: number, freq: number): number {
+  const i0 = Math.max(0, Math.floor(t0 * SR));
+  const i1 = Math.min(buf.length, Math.floor(t1 * SR));
+  const L = buf.getChannelData(0);
+  const R = buf.getChannelData(1);
+  const w = (2 * Math.PI * freq) / SR;
+  const c = 2 * Math.cos(w);
+  let s1 = 0;
+  let s2 = 0;
+  for (let i = i0; i < i1; i++) {
+    const s = (L[i] + R[i]) / 2 + c * s1 - s2;
+    s2 = s1;
+    s1 = s;
+  }
+  const n = Math.max(1, i1 - i0);
+  return (2 * Math.sqrt(Math.max(0, s1 * s1 + s2 * s2 - c * s1 * s2))) / n;
+}
+
+/**
+ * RMS of the output between two frequencies, from averaged spectra. Unlike
+ * toneLevel this does not care about phase, so it works on notes that stop
+ * and start.
+ */
+function bandLevel(buf: AudioBuffer, t0: number, t1: number, fLo: number, fHi: number): number {
+  const i0 = Math.max(0, Math.floor(t0 * SR));
+  const i1 = Math.min(buf.length, Math.floor(t1 * SR));
+  const L = buf.getChannelData(0);
+  const R = buf.getChannelData(1);
+  const N = 16384;
+  const re = new Float64Array(N);
+  const im = new Float64Array(N);
+  let power = 0;
+  let frames = 0;
+  for (let s = i0; s + N <= i1; s += N / 4) {
+    for (let i = 0; i < N; i++) {
+      re[i] = ((L[s + i] + R[s + i]) / 2) * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N));
+      im[i] = 0;
+    }
+    fft(re, im);
+    for (let k = Math.ceil((fLo * N) / SR); k <= Math.floor((fHi * N) / SR); k++) power += re[k] * re[k] + im[k] * im[k];
+    frames++;
+  }
+  // Scale so a full-scale sine inside the band reads about 0.707: the Hann window
+  // has a coherent gain of N/2 and spreads a tone over a few bins (sum of squares 1.5).
+  return frames ? Math.sqrt((power / frames) * (2 / 1.5)) / (N / 2) : 0;
+}
+
+function base64(bytes: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+/** Hand a stretch of the output to the runner as a 16-bit stereo WAV. */
+async function dump(name: string, buf: AudioBuffer, t0: number, t1: number): Promise<void> {
+  if (!DUMP || !window.__audioDump) return;
+  const i0 = Math.max(0, Math.floor(t0 * SR));
+  const n = Math.min(buf.length, Math.floor(t1 * SR)) - i0;
+  const bytes = new Uint8Array(44 + n * 4);
+  const v = new DataView(bytes.buffer);
+  const text = (o: number, s: string): void => {
+    for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
+  };
+  text(0, 'RIFF');
+  v.setUint32(4, 36 + n * 4, true);
+  text(8, 'WAVEfmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 2, true);
+  v.setUint32(24, SR, true);
+  v.setUint32(28, SR * 4, true);
+  v.setUint16(32, 4, true);
+  v.setUint16(34, 16, true);
+  text(36, 'data');
+  v.setUint32(40, n * 4, true);
+  const L = buf.getChannelData(0);
+  const R = buf.getChannelData(1);
+  for (let i = 0; i < n; i++) {
+    v.setInt16(44 + i * 4, Math.round(Math.max(-1, Math.min(1, L[i0 + i])) * 32767), true);
+    v.setInt16(46 + i * 4, Math.round(Math.max(-1, Math.min(1, R[i0 + i])) * 32767), true);
+  }
+  await window.__audioDump(name, base64(bytes));
+}
+
+async function offlineSfx(): Promise<void> {
+  log('--- offline: sound effects ---');
+  const SLOT = 3.6;
+  const extras: Array<[string, SfxName, SfxOptions]> = [
+    ['hit_light pan -1', 'hit_light', { pan: -1 }],
+    ['hit_light pan +1', 'hit_light', { pan: 1 }],
+    ['block volume 0.5', 'block', { volume: 0.5 }],
+    ['lock pitch 2', 'lock', { pitch: 2 }],
+    ['lock pitch 0.5', 'lock', { pitch: 0.5 }],
+    ['bump volume 0', 'bump', { volume: 0 }],
+  ];
+  const plays: Array<[string, SfxName, SfxOptions | undefined]> = [...SFX_NAMES.map((n): [string, SfxName, undefined] => [n, n, undefined]), ...extras];
+  // The carbine is fired three times, 5 ticks apart.
+  // The compressor takes a moment to settle when a context starts; begin after that.
+  const LEAD = 1;
+  const burstAt = LEAD + plays.length * SLOT;
+  const cues: Cue[] = plays.map(([, name, opts], i) => ({ t: LEAD + i * SLOT + 0.1, run: (a) => a.play(name, opts) }));
+  for (let k = 0; k < 3; k++) cues.push({ t: burstAt + 0.1 + k * 0.1, run: (a) => a.play('shot_carbine') });
+  let maxVoices = 0;
+  const { buf, warnings, audio } = await render(burstAt + SLOT, cues, () => OFF, (_t, a) => {
+    maxVoices = Math.max(maxVoices, a.debugInfo().voices);
+  });
+  if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) while rendering sound effects`);
+  if (audio.debugInfo().voices !== 0) fail('voices still alive at the end of the sound-effect render');
+
+  const stats = new Map<string, Stats>();
+  for (let i = 0; i < plays.length; i++) {
+    const [label, name] = plays[i];
+    const at = LEAD + i * SLOT;
+    const s = analyse(buf, at, at + SLOT);
+    stats.set(label, s);
+    if (i < SFX_NAMES.length) {
+      // Gain through the limiter: 0 dB means it was left alone.
+      const through = s.prePeak > 1e-6 ? db(s.peak / (s.prePeak * VOL.master)) : 0;
+      table('sfx (offline, default volumes)').push({
+        name,
+        peak: r3(s.peak),
+        dBFS: db(s.peak),
+        'rms dBFS': db(s.rms),
+        'pre-limiter': r3(s.prePeak),
+        'limiter dB': through,
+        'length (s)': r3(s.dur),
+        'centre (Hz)': Math.round(s.centroid),
+        'low/mid/high %': `${Math.round(s.low * 100)}/${Math.round(s.mid * 100)}/${Math.round(s.high * 100)}`,
+      });
+      if (s.peak < SILENT) fail(`sfx ${name} is silent offline (peak ${s.peak.toFixed(4)})`);
+      if (s.peak >= CLIP) fail(`sfx ${name} clips offline (peak ${s.peak.toFixed(3)})`);
+      if (s.prePeak < 0.3 && Math.abs(through) > 0.3) fail(`limiter is not unity for quiet sound ${name}: ${through} dB`);
+      await dump(`sfx-${name}`, buf, at, at + Math.min(SLOT, s.onset + s.dur + 0.5));
+    }
+  }
+  const get = (k: string): Stats => stats.get(k) as Stats;
+
+  // Options.
+  const pl = get('hit_light pan -1');
+  const pr = get('hit_light pan +1');
+  const half = get('block volume 0.5');
+  const up = get('lock pitch 2');
+  const down = get('lock pitch 0.5');
+  table('sfx options (offline)').push(
+    { option: 'pan -1', result: `left ${r3(pl.left)}, right ${r3(pl.right)}` },
+    { option: 'pan +1', result: `left ${r3(pr.left)}, right ${r3(pr.right)}` },
+    { option: 'volume 0.5', result: `peak ${r3(half.peak)} against ${r3(get('block').peak)} at full` },
+    { option: 'pitch 2', result: `centre ${Math.round(up.centroid)} Hz, length ${r3(up.dur)} s (plain: ${Math.round(get('lock').centroid)} Hz, ${r3(get('lock').dur)} s)` },
+    { option: 'pitch 0.5', result: `centre ${Math.round(down.centroid)} Hz, length ${r3(down.dur)} s` },
+    { option: 'volume 0', result: `peak ${r3(get('bump volume 0').peak)}` },
+    { option: 'carbine burst x3', result: `peak ${r3(analyse(buf, burstAt, burstAt + SLOT).peak)} against ${r3(get('shot_carbine').peak)} for one shot` },
+    { option: 'most voices at once', result: maxVoices },
+  );
+  if (!(pl.left > pl.right * 8)) fail('pan -1 does not put the sound on the left');
+  if (!(pr.right > pr.left * 8)) fail('pan +1 does not put the sound on the right');
+  const ratio = half.prePeak / get('block').prePeak;
+  if (Math.abs(ratio - 0.5) > 0.08) fail(`volume 0.5 scales the pre-limiter peak by ${ratio.toFixed(2)}, expected 0.5`);
+  if (!(up.centroid > get('lock').centroid * 1.5 && down.centroid < get('lock').centroid / 1.5)) fail('pitch option does not move the spectrum');
+  if (get('bump volume 0').peak > 0.0005) fail('volume 0 is not silent');
+
+  // Every sound should be recognisably its own: no two alike in length, pitch and balance at once.
+  for (let i = 0; i < SFX_NAMES.length; i++) {
+    for (let j = i + 1; j < SFX_NAMES.length; j++) {
+      const a = get(SFX_NAMES[i]);
+      const b = get(SFX_NAMES[j]);
+      const dLen = Math.abs(Math.log2((a.dur + 0.01) / (b.dur + 0.01)));
+      const dCen = Math.abs(Math.log2((a.centroid + 1) / (b.centroid + 1)));
+      const dBal = Math.abs(a.low - b.low) + Math.abs(a.high - b.high);
+      if (dLen < 0.12 && dCen < 0.12 && dBal < 0.08) report.notes.push(`sfx ${SFX_NAMES[i]} and ${SFX_NAMES[j]} measure alike (length, spectral centre and balance all within about 8%); tell them apart by ear`);
+    }
+  }
+}
+
+async function offlineLayers(): Promise<void> {
+  log('--- offline: continuous layer ---');
+  const SLOT = 3.2;
+  const caseAt = (t: number): number => Math.min(LAYER_CASES.length - 1, Math.floor(t / SLOT + 1e-9));
+  const sceneAt = (t: number): AudioScene => LAYER_CASES[caseAt(t)].scene;
+  // Each layer on its own, read from the engine's taps and scaled to the output.
+  const meters = new TapMeters();
+  const scale = VOL.sfx * VOL.master;
+  let current = 0;
+  const { buf, warnings } = await render(LAYER_CASES.length * SLOT, [], sceneAt, (t, a, ctx) => {
+    const i = caseAt(t);
+    if (i !== current) {
+      const got = meters.take(scale, 'layer.');
+      const row: Row = { scene: LAYER_CASES[current].name };
+      for (const [k, v] of Object.entries(got)) row[k] = v.rms > 1e-5 ? db(v.rms) : '-';
+      table('continuous layer, each part alone (offline, rms dBFS at the output)').push(row);
+      current = i;
+    }
+    meters.poll(a, ctx, t - i * SLOT >= 1.6);
+  });
+  if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) while rendering the continuous layer`);
+  const seen = new Map<string, Stats>();
+  LAYER_CASES.forEach((c, i) => {
+    const s = analyse(buf, i * SLOT + 1.6, (i + 1) * SLOT);
+    seen.set(c.name, s);
+    const base = c.vs ? seen.get(c.vs) : undefined;
+    const row: Row = {
+      scene: c.name,
+      peak: r3(s.peak),
+      'rms dBFS': db(s.rms),
+      'layer alone dBFS': base ? db(Math.sqrt(Math.max(0, s.rms ** 2 - base.rms ** 2))) : '',
+      'change dB': base ? Math.round((db(s.rms) - db(base.rms)) * 10) / 10 : '',
+      'centre (Hz)': Math.round(s.centroid),
+      'low/mid/high %': `${Math.round(s.low * 100)}/${Math.round(s.mid * 100)}/${Math.round(s.high * 100)}`,
+      'left-right dB': c.silent ? '' : Math.round((db(s.rmsLeft) - db(s.rmsRight)) * 10) / 10,
+    };
+    table('continuous layer (offline, default volumes)').push(row);
+    if (!c.silent && Math.abs(db(s.rmsLeft) - db(s.rmsRight)) > 2) fail(`continuous layer leans to one side in scene "${c.name}"`);
+    if (c.silent && s.peak > 0.002) fail(`continuous layer not silent when racing is false (${c.name}: peak ${s.peak.toFixed(4)})`);
+    if (!c.silent && s.rms < 0.002) fail(`continuous layer inaudible in scene "${c.name}"`);
+    if (s.peak >= CLIP) fail(`continuous layer clips in scene "${c.name}"`);
+    if (base && c.name !== '+battle' && c.name !== '+drafting' && !(s.rms > base.rms * 1.03)) fail(`flag ${c.name} adds nothing measurable`);
+  });
+  const battle = seen.get('+battle') as Stats;
+  const before = seen.get('pre-battle (80, 0.6)') as Stats;
+  if (!(battle.rms < before.rms * 0.95)) fail('battle does not duck the engine');
+  const draft = seen.get('+drafting') as Stats;
+  const clean = seen.get('limiter (96)') as Stats;
+  if (Math.abs(draft.centroid - clean.centroid) < 15 && Math.abs(db(draft.rms) - db(clean.rms)) < 0.5) fail('drafting changes nothing measurable');
+  // Engine pitch should rise with speed.
+  const idle = seen.get('idle (speed 0)') as Stats;
+  const fast = seen.get('flat out (150)') as Stats;
+  if (!(fast.centroid > idle.centroid * 1.5)) fail('engine does not get brighter with speed');
+
+  // The alarm: count beeps over the three seconds of the critical scene.
+  const ci = LAYER_CASES.findIndex((c) => c.name === '+critical');
+  let beeps = 0;
+  let on = false;
+  let top = 0;
+  const env: number[] = [];
+  for (let t = ci * SLOT; t < (ci + 1) * SLOT - 0.02; t += 0.02) {
+    const v = toneLevel(buf, t, t + 0.02, 659.3);
+    env.push(v);
+    top = Math.max(top, v);
+  }
+  for (const v of env) {
+    if (!on && v > top * 0.5) {
+      on = true;
+      beeps++;
+    } else if (on && v < top * 0.2) on = false;
+  }
+  const rate = beeps / SLOT;
+  table('alarm (offline)').push({ 'beeps in 3.2 s': beeps, 'per second': r3(rate), 'beep level': r3(top) });
+  if (rate < 1.5 || rate > 2.6) fail(`critical alarm beeps ${rate.toFixed(2)} times a second, expected about 2`);
+  await dump('layers', buf, 0, LAYER_CASES.length * SLOT);
+}
+
+async function offlineMusic(): Promise<void> {
+  log('--- offline: music ---');
+  // Menu, then a race whose lap phase changes in the middle of a bar, then silence.
+  const T_RACE = 30;
+  const T_P2 = T_RACE + 37.3;
+  const T_P3 = T_P2 + 37.4;
+  const T_NULL = T_P3 + 37.2;
+  const T_END = T_NULL + 3;
+  const sceneAt = (t: number): AudioScene => ({ ...OFF, lapPhase: t >= T_P3 ? 3 : t >= T_P2 ? 2 : 1 });
+  const cues: Cue[] = [
+    { t: 0, run: (a) => a.setMusic('menu') },
+    { t: T_RACE, run: (a) => a.setMusic('race') },
+    { t: T_NULL, run: (a) => a.setMusic(null) },
+  ];
+  interface Change {
+    phase: number;
+    at: number;
+    start: number;
+    bar: number;
+  }
+  const changes: Change[] = [];
+  let lastPhase = 1;
+  let tracksLeft = -1;
+  const meters = new TapMeters();
+  const scale = VOL.music * VOL.master;
+  const marks: Array<[number, string]> = [[T_RACE, 'menu'], [T_P2, 'race, phase 1'], [T_P3, 'race, phase 2'], [T_NULL, 'race, phase 3']];
+  let mark = 0;
+  const { buf, warnings } = await render(T_END, cues, sceneAt, (t, a, ctx) => {
+    if (mark < marks.length && t >= marks[mark][0] - 1e-6) {
+      const got = meters.take(scale, 'music.');
+      const row: Row = { state: marks[mark][1] };
+      for (const [k, v] of Object.entries(got)) row[k] = v.rms > 1e-5 ? `${db(v.rms)} (${r3(v.peak)})` : '-';
+      table('music, each part alone (offline, rms dBFS and peak at the output)').push(row);
+      mark++;
+    }
+    // Skip the first bars after each change so cross-fades are not counted.
+    const since = t - (mark > 0 ? marks[mark - 1][0] : 0);
+    meters.poll(a, ctx, since > 4);
+    const d = a.debugInfo();
+    const m = d.music;
+    if (m && m.name === 'race' && m.phase !== lastPhase) {
+      lastPhase = m.phase;
+      changes.push({ phase: m.phase, at: m.changeAt, start: m.startTime, bar: m.barDur });
+    }
+    if (t > T_END - 0.2) tracksLeft = (m ? 1 : 0) + d.fadingTracks;
+  });
+  if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) while rendering music`);
+  if (tracksLeft !== 0) fail(`${tracksLeft} music track(s) still alive 3 s after setMusic(null)`);
+
+  const p2 = changes.find((c) => c.phase === 2);
+  const p3 = changes.find((c) => c.phase === 3);
+  const sections: Array<[string, number, number]> = [
+    ['menu', 2, T_RACE],
+    ['race, phase 1', T_RACE + 2, T_P2],
+    ['race, phase 2', (p2?.at ?? T_P2 + 2) + 0.05, T_P3],
+    ['race, phase 3', (p3?.at ?? T_P3 + 2) + 0.05, T_NULL],
+  ];
+  const got = new Map<string, Stats>();
+  for (const [name, t0, t1] of sections) {
+    const s = analyse(buf, t0, t1);
+    got.set(name, s);
+    table('music (offline, default volumes)').push({
+      state: name,
+      peak: r3(s.peak),
+      'rms dBFS': db(s.rms),
+      'pre-limiter peak': r3(s.prePeak),
+      'centre (Hz)': Math.round(s.centroid),
+      'low/mid/high %': `${Math.round(s.low * 100)}/${Math.round(s.mid * 100)}/${Math.round(s.high * 100)}`,
+      'left-right dB': Math.round((db(s.rmsLeft) - db(s.rmsRight)) * 10) / 10,
+    });
+    if (s.rms < 0.004) fail(`music state "${name}" is inaudible`);
+    if (s.peak >= CLIP) fail(`music state "${name}" clips`);
+    if (Math.abs(db(s.rmsLeft) - db(s.rmsRight)) > 2) fail(`music state "${name}" leans to one side by ${(db(s.rmsLeft) - db(s.rmsRight)).toFixed(1)} dB`);
+  }
+  const cross = analyse(buf, T_RACE, T_RACE + 1.5);
+  const gone = analyse(buf, T_NULL + 1.5, T_END);
+  table('music (offline, default volumes)').push(
+    { state: 'menu to race cross-fade (1.5 s)', peak: r3(cross.peak), 'rms dBFS': db(cross.rms), 'pre-limiter peak': r3(cross.prePeak), 'centre (Hz)': '', 'low/mid/high %': '', 'left-right dB': '' },
+    { state: 'null, 1.5 s after the call', peak: r3(gone.peak), 'rms dBFS': db(gone.rms), 'pre-limiter peak': r3(gone.prePeak), 'centre (Hz)': '', 'low/mid/high %': '', 'left-right dB': '' },
+  );
+  if (gone.peak > 0.003) fail(`music still audible 1.5 s after setMusic(null) (peak ${gone.peak.toFixed(4)})`);
+  if (cross.rms < 0.002) fail('silence between menu and race music: the cross-fade has a hole');
+
+  // Arrangement changes must land on bar lines, soon after they are asked for.
+  for (const [want, asked] of [[2, T_P2], [3, T_P3]]) {
+    const c = changes.find((x) => x.phase === want);
+    if (!c) {
+      fail(`race music never reached phase ${want}`);
+      continue;
+    }
+    const bars = (c.at - c.start) / c.bar;
+    const wait = c.at - asked;
+    const lowBefore = bandLevel(buf, c.at - c.bar, c.at, 35, 110);
+    const lowAfter = bandLevel(buf, c.at, c.at + c.bar, 35, 110);
+    // The first chord of every phase is the tonic: A before the speed lap, B after.
+    const a2 = Math.hypot(bandLevel(buf, c.at, c.at + c.bar, 107, 113), bandLevel(buf, c.at, c.at + c.bar, 216, 224));
+    const b2 = Math.hypot(bandLevel(buf, c.at, c.at + c.bar, 120.5, 126.5), bandLevel(buf, c.at, c.at + c.bar, 243, 251));
+    table('race music phase changes (offline)').push({
+      'to phase': want,
+      'asked at (s)': r3(asked),
+      'changed at (s)': r3(c.at),
+      'bars from start': r3(bars),
+      'wait (bars)': r3(wait / c.bar),
+      'below 110 Hz, bar before / after': `${db(lowBefore)} / ${db(lowAfter)} dBFS`,
+      'bass on A / B in first bar': `${db(a2)} / ${db(b2)} dBFS`,
+    });
+    if (Math.abs(bars - Math.round(bars)) > 1e-3) fail(`phase ${want} began ${bars.toFixed(3)} bars in: not on a bar line`);
+    // Steps are queued a fraction of a second ahead, so a request can just miss the next bar line.
+    if (wait < -0.5 || wait > c.bar + 0.5) fail(`phase ${want} began ${wait.toFixed(2)} s after it was asked for`);
+    if (want === 2 && !(lowAfter > lowBefore * 2)) fail('no kick drum energy arrives with the battle lap');
+    if (want === 2 && !(a2 > b2 * 1.5)) fail('the battle lap is not in A minor (bass not on A)');
+    if (want === 3 && !(b2 > a2 * 1.5)) fail('the speed lap does not lift the key (bass still on A)');
+  }
+  const s1 = got.get('race, phase 1') as Stats;
+  const s2 = got.get('race, phase 2') as Stats;
+  const s3 = got.get('race, phase 3') as Stats;
+  if (!(s2.rms > s1.rms && s3.rms >= s2.rms * 0.95)) fail('race music does not build with the lap phase');
+
+  // Loudness bar by bar, to see the arrangement breathe.
+  const barDur = p2?.bar ?? 60 / 138;
+  const start = p2?.start ?? T_RACE + 0.1;
+  const bars: number[] = [];
+  for (let t = start; t + barDur <= T_NULL; t += barDur) bars.push(Math.round(db(analyse(buf, t, t + barDur).rms)));
+  report.notes.push(`race music, RMS dBFS per bar: ${bars.join(' ')}`);
+  const menuBars: number[] = [];
+  for (let t = 0.1; t + 2.4 <= T_RACE; t += 2.4) menuBars.push(Math.round(db(analyse(buf, t, t + 2.4).rms)));
+  report.notes.push(`menu music, RMS dBFS per bar: ${menuBars.join(' ')}`);
+  await dump('music-menu', buf, 0, T_RACE);
+  await dump('music-race-1', buf, T_RACE, T_P2 + 2);
+  await dump('music-race-2', buf, T_P2 + 2, T_P3 + 2);
+  await dump('music-race-3', buf, T_P3 + 2, T_END);
+}
+
+async function offlineStack(): Promise<void> {
+  log('--- offline: worst case ---');
+  // The speed lap at full boost with everything going wrong, and a burst of
+  // the eight loudest sounds landing together every 0.4 s.
+  const loud: SfxName[] = ['ko', 'hit_heavy', 'shot_scatter', 'guard_break', 'wall', 'parry', 'block', 'lap_phase'];
+  const scene: AudioScene = { ...BASE, speed: 150, boosting: true, onStrip: true, scraping: true, critical: true, lapPhase: 3 };
+  for (const [label, vol] of [['default volumes', undefined], ['all volumes at 1', [1, 1, 1]]] as Array<[string, [number, number, number] | undefined]>) {
+    const cues: Cue[] = [{ t: 0, run: (a) => a.setMusic('race') }];
+    for (let t = 3; t < 11; t += 0.4) cues.push({ t, run: (a) => loud.forEach((n) => a.play(n)) });
+    // Then twice the voice limit in one frame.
+    cues.push({ t: 11.5, run: (a) => { for (let k = 0; k < 2; k++) for (const n of SFX_NAMES) a.play(n, { pan: k ? 0.5 : -0.5 }); } });
+    let most = 0;
+    const { buf, warnings, audio } = await render(18, cues, () => scene, (_t, a) => {
+      most = Math.max(most, a.debugInfo().voices);
+    }, vol);
+    if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) in the worst-case render`);
+    const calm = analyse(buf, 1, 3);
+    const s = analyse(buf, 3, 18);
+    const master = vol ? vol[0] : VOL.master;
+    // How often the soft clipper had to work.
+    const L = buf.getChannelData(0);
+    const R = buf.getChannelData(1);
+    let bent = 0;
+    const knee = MASTER.clipKnee * master;
+    for (let i = 3 * SR; i < buf.length; i++) if (Math.abs(L[i]) > knee || Math.abs(R[i]) > knee) bent++;
+    table('worst case (offline)').push({
+      volumes: label,
+      'music + engine only: peak': r3(calm.peak),
+      'rms dBFS': db(calm.rms),
+      'with bursts: peak': r3(s.peak),
+      'burst rms dBFS': db(s.rms),
+      'pre-limiter peak': r3(s.prePeak),
+      'ceiling': r3(MASTER.clipCeiling * master),
+      'samples in the clipper %': Math.round((bent / (buf.length - 3 * SR)) * 10000) / 100,
+      'most voices': most,
+      'voices at end': audio.debugInfo().voices,
+    });
+    if (s.peak >= CLIP) fail(`worst case clips with ${label} (peak ${s.peak.toFixed(3)})`);
+    if (s.peak > MASTER.clipCeiling * master + 1e-3) fail(`output passed the limiter ceiling with ${label}`);
+    if (most > MAX_VOICES) fail(`${most} voices alive in the worst case, limit is ${MAX_VOICES}`);
+    if (audio.debugInfo().voices !== 0) fail('voices were not released after the worst case');
+    if (!vol) await dump('worst-case', buf, 0, 18);
+  }
+}
+
+/** A whole five-minute race, start lights to results screen, to catch anything that only shows up over time. */
+async function offlineRace(): Promise<void> {
+  log('--- offline: a five-minute race ---');
+  const LAP = 96;
+  const T_GO = 4;
+  const T_FINISH = T_GO + LAP * 3;
+  const T_RESULTS = T_FINISH + 5;
+  const T_END = T_RESULTS + 5;
+  // A cheap repeatable random source for the script of events.
+  let seed = 12345;
+  const rnd = (): number => {
+    seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+    return seed / 4294967296;
+  };
+  const lapAt = (t: number): number => Math.max(1, Math.min(3, 1 + Math.floor((t - T_GO) / LAP)));
+  const cues: Cue[] = [{ t: 0, run: (a) => a.setMusic('race') }];
+  for (let n = 3; n >= 1; n--) cues.push({ t: T_GO - n, run: (a) => a.play('count_beep') });
+  cues.push({ t: T_GO, run: (a) => a.play('count_go') }, { t: T_GO + 0.05, run: (a) => a.play('launch') });
+  cues.push({ t: T_GO + LAP, run: (a) => a.play('lap_phase') }, { t: T_GO + LAP + 0.4, run: (a) => a.play('lap') });
+  cues.push({ t: T_GO + LAP * 2, run: (a) => a.play('final_lap') }, { t: T_GO + LAP * 2 + 0.4, run: (a) => a.play('lap') });
+  cues.push({ t: T_FINISH, run: (a) => a.play('finish') }, { t: T_FINISH + 2.2, run: (a) => a.play('win') }, { t: T_RESULTS, run: (a) => a.setMusic('menu') });
+  const calm: SfxName[] = ['dash', 'bump', 'boost', 'comms', 'command', 'wall'];
+  const fight: SfxName[] = ['lock', 'swing_light', 'swing_heavy', 'hit_light', 'hit_heavy', 'block', 'parry', 'shot_carbine', 'shot_carbine', 'shot_scatter', 'bullet_hit', 'bullet_hit', 'guard_break', 'dash', 'bump', 'wall', 'unlock', 'denied', 'ko', 'critical'];
+  let plays = 0;
+  for (let t = T_GO + 1; t < T_FINISH; ) {
+    const lap = lapAt(t);
+    const pool = lap === 2 ? fight : calm;
+    const name = pool[Math.floor(rnd() * pool.length)];
+    const opts: SfxOptions = { volume: 0.3 + 0.7 * rnd(), pan: rnd() * 2 - 1 };
+    cues.push({ t, run: (a) => a.play(name, opts) });
+    plays++;
+    t += (lap === 2 ? 0.16 : lap === 3 ? 0.6 : 1.5) * (0.3 + 1.4 * rnd());
+  }
+  const sceneAt = (t: number): AudioScene => {
+    if (t < T_GO || t >= T_RESULTS) return { ...OFF, lapPhase: t < T_GO ? 1 : 3 };
+    const lap = lapAt(t);
+    const u = t - T_GO;
+    const boosting = lap !== 2 && u % 23 < 2.5;
+    const battle = lap === 2 && u % 17 < 9;
+    return {
+      racing: true,
+      speed: Math.min(150, (lap === 3 ? 120 : 88) + 10 * Math.sin(u * 0.7) + (boosting ? 35 : 0) - (battle ? 20 : 0)) * Math.min(1, u / 4),
+      throttle: battle ? 0.6 : 0.6 + 0.4 * Math.sin(u * 1.3) ** 2,
+      boosting,
+      battle,
+      lapPhase: lap,
+      onStrip: u % 31 < 1.5,
+      drafting: u % 13 > 9,
+      scraping: u % 41 > 40.2,
+      critical: lap === 3 && u > LAP * 2 + 60,
+    };
+  };
+  let most = 0;
+  let voiceSum = 0;
+  let ticks = 0;
+  const t0 = performance.now();
+  const { buf, warnings, audio } = await render(T_END, cues, sceneAt, (_t, a) => {
+    const v = a.debugInfo().voices;
+    most = Math.max(most, v);
+    voiceSum += v;
+    ticks++;
+  }, undefined, false);
+  const took = (performance.now() - t0) / 1000;
+  if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) during the long race`);
+  const L = buf.getChannelData(0);
+  const R = buf.getChannelData(1);
+  const span = (name: string, a: number, b: number): void => {
+    let peak = 0;
+    let sum = 0;
+    let bent = 0;
+    const i0 = Math.floor(a * SR);
+    const i1 = Math.min(buf.length, Math.floor(b * SR));
+    const knee = MASTER.clipKnee * VOL.master;
+    for (let i = i0; i < i1; i++) {
+      const x = Math.abs(L[i]);
+      const y = Math.abs(R[i]);
+      if (x > peak) peak = x;
+      if (y > peak) peak = y;
+      if (x > knee || y > knee) bent++;
+      sum += (x * x + y * y) / 2;
+    }
+    table('five-minute race (offline, default volumes)').push({ part: name, peak: r3(peak), 'rms dBFS': db(Math.sqrt(sum / Math.max(1, i1 - i0))), 'samples in the clipper %': Math.round((bent / Math.max(1, i1 - i0)) * 100000) / 1000 });
+    if (peak >= CLIP) fail(`the long race clips during ${name} (peak ${peak.toFixed(3)})`);
+  };
+  span('countdown', 0, T_GO);
+  span('lap 1, formation', T_GO, T_GO + LAP);
+  span('lap 2, battle', T_GO + LAP, T_GO + LAP * 2);
+  span('lap 3, speed', T_GO + LAP * 2, T_FINISH);
+  span('finish and win jingle', T_FINISH, T_RESULTS);
+  span('results (menu music)', T_RESULTS, T_END);
+  const d = audio.debugInfo();
+  table('five-minute race, engine load (offline)').push({
+    'sounds played': plays,
+    'most voices': most,
+    'mean voices': r3(voiceSum / Math.max(1, ticks)),
+    'voices at end': d.voices,
+    'music at end': d.music ? d.music.name : 'none',
+    'old tracks alive': d.fadingTracks,
+    'rendered (s)': Math.round(T_END),
+    'took (s)': r3(took),
+    'times real time': Math.round(T_END / took),
+  });
+  if (most > MAX_VOICES) fail(`${most} voices alive in the long race, limit is ${MAX_VOICES}`);
+  if (d.voices !== 0) fail('voices still alive at the end of the long race');
+  if (d.fadingTracks !== 0 || d.music?.name !== 'menu') fail('music tracks were not handed over cleanly at the end of the long race');
+  await dump('race-lap1-start', buf, 0, 40);
+  await dump('race-lap2-start', buf, T_GO + LAP - 5, T_GO + LAP + 35);
+  await dump('race-lap3-start', buf, T_GO + LAP * 2 - 5, T_GO + LAP * 2 + 35);
+  await dump('race-finish', buf, T_FINISH - 10, T_END);
+}
+
+async function main(): Promise<void> {
+  try {
+    await offlineSfx();
+    await offlineLayers();
+    await offlineMusic();
+    await offlineStack();
+    await offlineRace();
+    if (!QUICK) await realtime();
+  } catch (err) {
+    fail(`audio check crashed: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
+  }
+  report.done = true;
+  log(report.failures.length ? `${report.failures.length} failure(s)` : 'all checks passed');
+}
+
+void main();

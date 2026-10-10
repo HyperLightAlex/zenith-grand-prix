@@ -76,6 +76,8 @@ export class Game {
     this.world = buildWorld(track);
     this.renderer.scene.add(this.trackVis.group, this.world.group);
     this.hud = new Hud(uiRoot);
+    this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
+    this.hud.onCritical = () => this.audio.play('critical');
     this.menus = new Menus(uiRoot, {
       onStart: (c) => this.startRace(c),
       onPreview: (c) => this.showGarage(c),

@@ -16,6 +16,8 @@ import {
   DRIVE_PER_DAMAGE_TAKEN,
   DT,
   ESCAPE_IFRAMES,
+  ESCAPE_SHOVE_RANGE,
+  PARRY_REARM,
   GUARD_ARC,
   GUARD_BREAK_STAGGER,
   GUARD_REDUCTION,
@@ -46,9 +48,17 @@ export function weaponsFree(race: RaceState): boolean {
 }
 
 function beginAttack(race: RaceState, m: MechState, idx: number): void {
+  const a = ATTACKS[idx];
   m.act = ACT.ATTACK;
   m.actT = 0;
-  m.actDur = attackTotal(ATTACKS[idx]);
+  m.actDur = attackTotal(a);
+  // The cooldown starts with the move, so being knocked out of it does not
+  // hand the move straight back.
+  if (a.cooldown > 0) {
+    const cd = m.actDur + a.cooldown;
+    if (isInChain(classOf(m).primary, idx)) m.cdPrimary = Math.max(m.cdPrimary, cd);
+    else m.cdSecondary = Math.max(m.cdSecondary, cd);
+  }
   m.attack = idx;
   m.attackStart = race.tick;
   m.attackHit = false;
@@ -155,9 +165,9 @@ export function retire(race: RaceState, m: MechState, by: MechState | null): voi
 }
 
 /**
- * Land an attack. Returns true if it connected (even on a guard).
- * `fromS`/`fromD` are where the blow came from, which sets knockback and
- * whether the victim's guard faces it.
+ * Land an attack. Returns true if it connected (even on a guard). Knockback
+ * and whether the victim's guard faces the blow both come from where the
+ * attacker is standing.
  */
 export function applyHit(
   race: RaceState,
@@ -216,14 +226,18 @@ export function applyHit(
     if (armored) {
       addVelocity(victim, us * a.knockback * 0.3, ud * a.knockback * 0.3);
     } else {
-      victim.chain++;
+      // One count per tick: a scatter blast is one hit for this purpose.
+      if (victim.chainTick !== race.tick) {
+        victim.chainTick = race.tick;
+        victim.chain++;
+      }
       victim.chainT = CHAIN_TICKS;
       if (victim.chain > CHAIN_LIMIT) {
         // Enough: the victim bursts free rather than being juggled forever.
         victim.chain = 0;
         victim.iframes = ESCAPE_IFRAMES;
         victim.act = ACT.NONE;
-        addVelocity(att, -us * 22, -ud * 22);
+        if (dist < ESCAPE_SHOVE_RANGE) addVelocity(att, -us * 22, -ud * 22);
         race.events.push({ type: 'escape', mech: victim.id });
       } else {
         setStagger(victim, Math.max(4, Math.round(a.stagger * Math.pow(0.88, victim.chain - 1))));
@@ -343,12 +357,19 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
   if (m.iframes > 0) m.iframes--;
   if (m.chainT > 0 && --m.chainT === 0) m.chain = 0;
 
+  // A parry needs a deliberate press: the button down this tick after a real
+  // pause, with the mech free to raise its guard at that moment. Holding the
+  // button through a stagger, or fluttering it, only ever gives a block.
+  const guardHeld = (input.buttons & BTN.GUARD) !== 0;
+  const freshPress = (pressed & BTN.GUARD) !== 0 && m.guardRest >= PARRY_REARM;
+  m.guardRest = guardHeld ? 0 : m.guardRest + 1;
+
   // Guard: battle mode only, and not in the middle of something else.
   const wantGuard = (input.buttons & BTN.GUARD) !== 0 && m.mode === MODE.BATTLE && m.act === ACT.NONE && m.guard > 0;
   if (wantGuard) {
     if (!m.guarding) {
       m.guarding = true;
-      m.guardT = 0;
+      m.guardT = freshPress ? 0 : PARRY_WINDOW + 1;
     } else {
       m.guardT++;
     }
@@ -384,10 +405,6 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
         beginAttack(race, m, a.next);
       } else if (m.actT >= m.actDur) {
         m.act = ACT.NONE;
-        // The whole chain shares the slot's cooldown.
-        const chainOfPrimary = isInChain(c.primary, m.attack);
-        if (chainOfPrimary) m.cdPrimary = Math.max(m.cdPrimary, a.cooldown);
-        else m.cdSecondary = Math.max(m.cdSecondary, a.cooldown);
       }
       break;
     }

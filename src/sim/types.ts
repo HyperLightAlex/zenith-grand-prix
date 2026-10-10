@@ -83,9 +83,13 @@ export interface MechState {
   guarding: boolean;
   guardT: number;
   guardIdle: number;
+  /** Ticks the guard button has been up, for re-arming the parry. */
+  guardRest: number;
   iframes: number;
   chain: number;
   chainT: number;
+  /** Tick the chain counter last went up (one count per tick, however many pellets land). */
+  chainTick: number;
   cdPrimary: number;
   cdSecondary: number;
   cdDash: number;
@@ -112,6 +116,8 @@ export interface MechState {
   prevThrottle: number;
   /** Tick the throttle last went down, for the launch bonus. */
   throttleTick: number;
+  /** Ticks the throttle had been up before that press. */
+  throttleRest: number;
   lastHitBy: number;
   lastHitTick: number;
   deniedTick: number;

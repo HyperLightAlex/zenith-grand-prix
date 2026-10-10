@@ -26,6 +26,8 @@ export const COUNTDOWN_TICKS = 4 * TICK_RATE;
 export const PERFECT_START_WINDOW = 22;
 /** Seconds the race stays open after the winner crosses the line. */
 export const FINISH_GRACE_TICKS = 25 * TICK_RATE;
+/** Hard stop: a race that somehow has no finisher is flagged after this long. */
+export const MAX_RACE_TICKS = 10 * 60 * TICK_RATE;
 
 export const ROLE = { FW: 0, MF: 1, DF: 2 } as const;
 export type Role = (typeof ROLE)[keyof typeof ROLE];
@@ -71,6 +73,10 @@ export const DRIVE_PER_DAMAGE_TAKEN = 0.05;
 export const BOOST_MULT = 1.16;
 export const BOOST_ACCEL = 1.6;
 export const BOOST_COST = 15; // per second
+/** Drive needed to light the boost; once lit it burns to empty. */
+export const BOOST_MIN_START = 6;
+/** Nothing free-steering goes faster than this multiple of its current cap. */
+export const SPEED_CEILING = 1.22;
 export const DRAFT_MULT = 1.04;
 export const DRAFT_MIN = 4;
 export const DRAFT_MAX = 46;
@@ -103,6 +109,8 @@ export const GUARD_ARC = 1.9; // radians either side of facing
 export const GUARD_REGEN_DELAY = 50;
 export const GUARD_BREAK_STAGGER = 70;
 export const PARRY_WINDOW = 8; // ticks after raising guard
+/** The guard must have been down this long for the next raise to parry. */
+export const PARRY_REARM = 30;
 export const PARRY_STAGGER = 36;
 export const DASH_TICKS = 14;
 export const DASH_COOLDOWN = 36;
@@ -110,6 +118,9 @@ export const COMBO_CANCEL_DELAY = 4;
 export const CHAIN_LIMIT = 4; // hits in one stagger chain before a free escape
 export const CHAIN_TICKS = 75;
 export const ESCAPE_IFRAMES = 50;
+export const ESCAPE_SHOVE_RANGE = 14;
+/** A wall splat is credited to whoever landed a hit this recently. */
+export const SPLAT_CREDIT_TICKS = 150;
 export const COUNTER_HIT = 1.15; // damage bonus for hitting a wind-up
 export const WALL_SPLAT_MIN = 14;
 export const WALL_SPLAT_DAMAGE = 1.6; // per u/s of lateral speed

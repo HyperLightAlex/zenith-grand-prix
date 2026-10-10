@@ -140,6 +140,9 @@ export class Hud {
   private lastHp: number[] = [];
   private spoke: number[] = [];
   private seq = 0;
+  /** Hooks for sound: a radio line was shown, the armour warning fired. */
+  onRadio: () => void = () => {};
+  onCritical: () => void = () => {};
 
   constructor(parent: HTMLElement) {
     const R = this.root;
@@ -524,6 +527,7 @@ export class Hud {
         const mate = race.mechs.find((o) => o.team === me.team && o.id !== me.id && !o.retired);
         if (mate) this.say(mate, pick(LINES.warnYou, this.seq++));
         this.showNotice('Armour critical', true, 2.5);
+        this.onCritical();
       }
     }
   }
@@ -560,6 +564,7 @@ export class Hud {
   say(from: MechState | null, text: string): void {
     const el = h('div.msg' + (from ? (from.team ? '.t1' : '') : '.ctl'), h('b', from ? from.name : 'Race control'), text);
     this.comms.append(el);
+    this.onRadio();
     while (this.comms.children.length > 3) this.comms.firstElementChild!.remove();
     window.setTimeout(() => el.classList.add('fade'), 4200);
     window.setTimeout(() => el.remove(), 4800);
