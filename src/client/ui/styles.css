@@ -334,6 +334,7 @@ html, body {
 .logo .rule { height: 0.5em; width: 21em; margin-top: 0.9em; background: repeating-linear-gradient(-55deg, var(--paper) 0 0.7em, transparent 0.7em 1.4em); }
 .tagline { font-size: 1.6em; font-weight: 500; max-width: 22em; line-height: 1.2; }
 .press { font-size: 1.7em; margin-top: 1.4em; display: flex; align-items: center; animation: blink 1.2s steps(2) infinite; }
+.sound-hint { font-size: 1.1em; font-weight: 500; opacity: 0.85; max-width: 24em; line-height: 1.25; }
 .small-print { position: absolute; left: 5.5em; bottom: 2em; font-size: 1em; font-weight: 500; opacity: 0.7; }
 
 .menu h1 { margin: 0 0 0.2em; font-size: 4.2em; font-weight: 800; line-height: 0.9; }

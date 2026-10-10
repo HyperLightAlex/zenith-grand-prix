@@ -7,6 +7,7 @@ import { aiCaptain, aiControl } from './ai';
 import { retire, setStagger, stepAction, stepProjectiles } from './combat';
 import {
   ACT,
+  ALIGN_RATE,
   ATTACKS,
   ATTACK_MOVE_SCALE,
   BATTLE_CAP_LAP3,
@@ -17,6 +18,7 @@ import {
   BOOST_MIN_START,
   BOOST_MULT,
   BTN,
+  BUMP_TURN,
   CLASSES,
   COAST_DRAG,
   COUNTDOWN_TICKS,
@@ -241,7 +243,8 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   const omegaMax = Math.min(c.turnMax, c.grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12);
   const kappa = kappaAt(track, m.s);
   const sdot = (m.speed * Math.cos(m.heading)) / Math.max(0.35, 1 - kappa * m.d);
-  m.heading = clamp(m.heading + (m.steer * omegaMax - kappa * sdot) * DT, -MAX_HEADING, MAX_HEADING);
+  const align = -m.heading * ALIGN_RATE * (1 - Math.abs(m.steer));
+  m.heading = clamp(m.heading + (m.steer * omegaMax - kappa * sdot + align) * DT, -MAX_HEADING, MAX_HEADING);
   m.facing = m.heading;
   syncFromSpeed(m);
 }
@@ -401,8 +404,11 @@ function collide(race: RaceState, track: Track): void {
       const rv = (a.vs - b.vs) * ns + (a.vd - b.vd) * nd;
       if (rv < 0) {
         const j2 = -rv * 1.15;
-        addVelocity(a, ns * j2 * wa, nd * j2 * wa);
-        addVelocity(b, -ns * j2 * wb, -nd * j2 * wb);
+        // Racing contact moves a mech over more than it turns it.
+        const ta = a.mode === MODE.SPEED ? BUMP_TURN : 1;
+        const tb = b.mode === MODE.SPEED ? BUMP_TURN : 1;
+        addVelocity(a, ns * j2 * wa, nd * j2 * wa * ta);
+        addVelocity(b, -ns * j2 * wb, -nd * j2 * wb * tb);
         if (-rv > 9) race.events.push({ type: 'bump', a: a.id, b: b.id, intensity: -rv });
       }
     }
@@ -652,7 +658,18 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   }
   // Mechs that cross the line on the same tick are ranked by time, not by
   // seat, so a place announced earlier in the loop may have moved.
-  for (const e of race.events) if (e.type === 'finish') e.place = ms[e.mech].place;
+  let finishers = 0;
+  for (const e of race.events) {
+    if (e.type !== 'finish') continue;
+    e.place = ms[e.mech].place;
+    finishers++;
+  }
+  if (finishers > 1) {
+    // ...and announce them in finishing order.
+    const fin = race.events.filter((e) => e.type === 'finish').sort((x, y) => (x.type === 'finish' && y.type === 'finish' ? x.place - y.place : 0));
+    let k = 0;
+    for (let i = 0; i < race.events.length; i++) if (race.events[i].type === 'finish') race.events[i] = fin[k++];
+  }
 
   // 4. Bodies and bullets.
   collide(race, track);

@@ -86,6 +86,14 @@ export const OVERCAP_DRAG = 30;
 export const STAGGER_DRAG = 26;
 export const STEER_RATE = 7; // how fast steering input ramps, per second
 export const WALL_DRAG = 22;
+/**
+ * With the stick centred a mech straightens up along the road at this rate
+ * (per second). It still runs wide in a bend unless steered, but a nudge or
+ * a tap of steering does not send it into the far wall.
+ */
+export const ALIGN_RATE = 1.6;
+/** Share of a sideways shove that turns a free-steering mech's heading. */
+export const BUMP_TURN = 0.4;
 export const MAX_HEADING = 1.2;
 /** Lap 3 top speed scales with remaining armour: from this, up to 1. */
 export const HP_SPEED_FLOOR = 0.86;

@@ -87,10 +87,15 @@ export class Renderer {
     this.scene.fog = new THREE.FogExp2(COLORS.fog, 0.00011);
 
     const size = new THREE.Vector2(canvas.clientWidth || 1280, canvas.clientHeight || 720);
-    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+    // Bright things (thrusters, light strips) are drawn brighter than white
+    // and bloom picks them out. That needs a float target; where the device
+    // cannot render to one, fall back to 8-bit and a lower bloom threshold.
+    const ext = this.renderer.extensions;
+    const hdr = this.renderer.capabilities.isWebGL2 && (ext.has('EXT_color_buffer_float') || ext.has('EXT_color_buffer_half_float'));
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4 });
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.42, 0.55, 1.0);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.42, 0.55, hdr ? 1.0 : 0.9);
     this.composer.addPass(this.bloom);
     this.speedPass = new ShaderPass(SpeedShader);
     this.composer.addPass(this.speedPass);

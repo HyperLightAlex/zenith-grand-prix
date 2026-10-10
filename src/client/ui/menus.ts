@@ -174,6 +174,8 @@ export class Menus {
       h('div.tagline', 'Three mechs a side. Three laps. First across the line takes fifteen points, and nobody said you had to let them get there.'),
       h('div.press', this.key('A', 'Enter'), 'Start'),
     );
+    // Browsers only allow sound after a click or key press; a pad button does not count.
+    if (this.device === 'pad') col.append(h('div.sound-hint', 'On a gamepad? Click the page once so the browser lets the sound through.'));
     this.root.append(h('div.shade'), col, h('div.small-print', 'Working title. Version 0.1, solo play against computer pilots.'));
     this.root.onclick = () => {
       if (this.screen === 'title') this.confirm();
@@ -361,7 +363,7 @@ export class Menus {
       if (!this.screen) return;
       const horizontal = this.screen === 'results';
       if (m === 'confirm') this.confirm();
-      else if (m === 'back') this.back();
+      else if (m === 'back' || (m === 'pause' && this.screen === 'pause')) this.back();
       else if (m === (horizontal ? 'left' : 'up')) this.select(this.sel - 1);
       else if (m === (horizontal ? 'right' : 'down')) this.select(this.sel + 1);
       else if (!horizontal && (m === 'left' || m === 'right')) {

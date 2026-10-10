@@ -184,6 +184,14 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     dWant = o.d + side * 9.5;
     break;
   }
+  // ... or lean on someone running alongside.
+  for (const o of race.mechs) {
+    if (o === m || o.retired || chase === o) continue;
+    if (Math.abs(deltaS(track, o.s, m.s)) > 7) continue;
+    const dd = o.d - m.d;
+    const room = c.radius + classOf(o).radius + 2.5;
+    if (Math.abs(dd) < room) dWant += (dd > 0 ? -1 : 1) * (room - Math.abs(dd)) * 1.5;
+  }
   const lim = track.halfWidth - c.radius - 2.5;
   dWant = clamp(dWant, -lim, lim);
 

@@ -61,6 +61,16 @@ On lap 3 top speed is the frame's own, scaled from 86% to 100% by remaining
 armour. A forward at full health does 128 u/s (384 mph); a forward down to a
 quarter of its armour is slower than a healthy defender.
 
+### Free steering
+
+- The stick turns the mech. How hard it can turn falls with speed, so every
+  corner is flat at the limiter but the hairpin needs a lift on the speed lap.
+- The inside line really is shorter, and worth taking.
+- With the stick centred the mech straightens up along the road on its own.
+  It will still run wide in a bend unless you steer.
+- Barriers scrub speed. Racing contact shoves a mech sideways more than it
+  spins it.
+
 ### Drive
 
 One gauge, 0 to 100, starting at 35. It pays for boost, dashes and the
@@ -192,11 +202,11 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 
 | Measure | Value |
 |---|---|
-| Team wins | 94 / 106 |
+| Team wins | 110 / 90 |
 | Average race | 4:35 |
-| Knockouts per race | 0.49 (91 forwards, 8 midfielders, 0 defenders) |
-| Winner's role | Forward 78%, midfielder 20%, defender 2% |
-| Armour left at the flag | Forward 46%, midfielder 61%, defender 59% |
+| Knockouts per race | 0.56 (106 forwards, 5 midfielders, 0 defenders) |
+| Winner's role | Forward 75%, midfielder 23%, defender 2% |
+| Armour left at the flag | Forward 40%, midfielder 63%, defender 62% |
 
 Forwards take the most punishment because they are worth the most. The
 intended counter is the Shield play and a defender doing its job.
