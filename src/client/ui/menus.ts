@@ -278,7 +278,7 @@ export class Menus {
       h('h2.cells', 'Abilities, one Cell each'),
       h('div.cellkit', this.key('B', 'R'), h('b', free.name + ' '), h('i', '(free steering). '), free.blurb),
       h('div.cellkit', this.key('B', 'R'), h('b', locked.name + ' '), h('i', '(locked on). '), locked.blurb),
-      h('div.note', 'Cells come from the gold gates on the formation lap. Thread them.'),
+      h('div.note', 'Cells come from the gold gates. They are lit on every lap, so a spent Cell can be earned back.'),
     );
     if (preview) this.cb.onPreview({ ...this.choice });
   }

@@ -81,6 +81,8 @@ interface Summary {
   timerBreak: string | null;
   /** Gates threaded, per mech. */
   gates: number[];
+  /** Gates scored on each mech's formation lap only. */
+  gatesLap1: number[];
   /** Cells each mech held when the battle lap began. */
   cellsAtLap2: number[];
   /** Uses of each ability, by ABILITY index. */
@@ -139,6 +141,7 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
     cellBreak: null,
     timerBreak: null,
     gates: new Array<number>(n).fill(0),
+    gatesLap1: new Array<number>(n).fill(0),
     cellsAtLap2: [],
     abilityUses: ABILITIES.map(() => 0),
     abilitiesByMech: new Array<number>(n).fill(0),
@@ -162,19 +165,22 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
     if (race.lapPhase < lastPhase) sum.phaseWentBack = true;
     lastPhase = race.lapPhase;
 
-    // Cells: every change is accounted for by a gate (+rules.gateValue, up to
-    // the cap, on the mech's first lap, each gate once) or an ability (-1,
-    // only with weapons free and a whole Cell in hand).
+    // Cells: every change is accounted for by a gate (+rules.gateValue on the
+    // mech's first lap, +rules.gateValueLater after it, up to the cap, each
+    // gate once a lap) or an ability (-1, only with weapons free and a whole
+    // Cell in hand).
     for (const e of race.events) {
       if (e.type === 'gate') {
         sum.gates[e.mech]++;
+        if (lapBefore[e.mech] <= 0) sum.gatesLap1[e.mech]++;
+        const worth = lapBefore[e.mech] <= 0 ? rules.gateValue : rules.gateValueLater;
         const bit = 1 << e.gate;
         if (!sum.cellBreak) {
           if (lapBefore[e.mech] >= rules.gateLaps) sum.cellBreak = `tick ${tick}: mech ${e.mech} scored gate ${e.gate} on lap ${lapBefore[e.mech] + 1}`;
           else if (e.gate < 0 || e.gate >= TRACK.gates.length) sum.cellBreak = `tick ${tick}: gate ${e.gate} does not exist`;
           else if (gateSeen[e.mech] & bit) sum.cellBreak = `tick ${tick}: mech ${e.mech} scored gate ${e.gate} twice`;
           else if (cells[e.mech] >= rules.cellMax) sum.cellBreak = `tick ${tick}: mech ${e.mech} scored a gate with its Cells already full`;
-          else if (e.cells !== Math.min(rules.cellMax, cells[e.mech] + rules.gateValue)) sum.cellBreak = `tick ${tick}: gate event says ${e.cells} cells after ${cells[e.mech]}`;
+          else if (e.cells !== Math.min(rules.cellMax, cells[e.mech] + worth)) sum.cellBreak = `tick ${tick}: gate event says ${e.cells} cells after ${cells[e.mech]}`;
         }
         gateSeen[e.mech] |= bit;
         cells[e.mech] = e.cells;
@@ -208,7 +214,7 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
         sum.towTicks++;
         if (!m.drafting) sum.slingshotTicks++;
       }
-      // A new lap wipes the gate record (the gates are only lit on lap 1 anyway).
+      // A new lap wipes the gate record: every gate can be scored once a lap.
       if (m.lap > lapBefore[m.id]) {
         gateSeen[m.id] = 0;
         if (!sum.cellBreak && m.gateMask !== 0) sum.cellBreak = `tick ${tick}: mech ${m.id} started lap ${m.lap + 1} with gateMask ${m.gateMask}`;
@@ -521,9 +527,10 @@ describe(`${RACES} all-AI races`, () => {
   it('AI pilots thread gates on the formation lap and start the battle lap with Cells in hand', () => {
     each((s) => {
       expect(s.cellsAtLap2.length).toBe(6);
-      // Every gate scored was scored before that mech's first lap was out.
+      // No more than the six there are on the formation lap, nor than six a lap after it.
       for (let id = 0; id < 6; id++) {
-        expect(s.gates[id]).toBeLessThanOrEqual(TRACK.gates.length);
+        expect(s.gatesLap1[id]).toBeLessThanOrEqual(TRACK.gates.length);
+        expect(s.gates[id]).toBeLessThanOrEqual(TRACK.gates.length * 3);
         expect(s.cellsAtLap2[id]).toBeLessThanOrEqual(RULES.cellMax);
         expect(s.cellsAtLap2[id]).toBeGreaterThanOrEqual(0);
       }
@@ -535,7 +542,7 @@ describe(`${RACES} all-AI races`, () => {
     const perMech = mean(results.map((s) => mean(s.cellsAtLap2)));
     expect(perMech).toBeGreaterThan(1.0);
     expect(perMech).toBeLessThan(2.0);
-    const gatesPerMech = mean(results.map((s) => mean(s.gates)));
+    const gatesPerMech = mean(results.map((s) => mean(s.gatesLap1)));
     expect(gatesPerMech).toBeGreaterThan(2.0);
     expect(gatesPerMech).toBeLessThan(4.0);
     // Nobody has had a chance to spend one yet, so Cells held = gates x value.
@@ -549,7 +556,7 @@ describe(`${RACES} all-AI races`, () => {
       for (let id = 0; id < 6; id++) {
         const k = skill[s.team[id]];
         if (!bySkill.has(k)) bySkill.set(k, []);
-        bySkill.get(k)!.push(s.gates[id]);
+        bySkill.get(k)!.push(s.gatesLap1[id]);
       }
     });
     const avg = (k: number) => mean(bySkill.get(k)!);

@@ -169,8 +169,10 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   } else if (!m.finished) {
     const ws = wrapS(track, m.s);
     let found = false;
-    // A Cell gate this pilot means to take.
-    if (m.lap < rules.gateLaps && m.cells < rules.cellMax) {
+    // A Cell gate this pilot means to take. The formation lap is for filling
+    // up; after it a detour is only worth it to a pilot with no charge left.
+    const gateWorth = m.lap <= 0 ? rules.gateValue : rules.gateValueLater;
+    if (m.lap < rules.gateLaps && gateWorth > 0 && m.cells < (m.lap <= 0 ? rules.cellMax : Math.min(1, rules.cellMax))) {
       let nearest = 320;
       for (let g = 0; g < track.gates.length; g++) {
         const bit = 1 << g;

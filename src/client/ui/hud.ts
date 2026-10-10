@@ -374,7 +374,8 @@ export class Hud {
     }
     // Cell gates still open to the player.
     const pilot = race.mechs[this.localId];
-    if (pilot.lap < race.rules.gateLaps && !pilot.retired && pilot.cells < race.rules.cellMax) {
+    const gateWorth = pilot.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
+    if (pilot.lap < race.rules.gateLaps && gateWorth > 0 && !pilot.retired && !pilot.finished && pilot.cells < race.rules.cellMax) {
       g.fillStyle = '#ffc93a';
       this.track.gates.forEach((gt, i) => {
         if (pilot.gateMask & (1 << i)) return;
@@ -681,9 +682,11 @@ export class Hud {
           this.showCount('GO', true);
           window.setTimeout(() => (this.count.hidden = true), 900);
           if (this.track.gates.length > 0 && race.rules.gateLaps >= 1 && race.rules.gateValue > 0) {
-            const laps = race.rules.gateLaps;
+            // Later laps only count if a gate is worth something on them.
+            const laps = race.rules.gateValueLater > 0 ? Math.min(race.rules.gateLaps, race.laps) : 1;
             const worth = race.rules.gateValue === 0.5 ? 'half a Cell' : race.rules.gateValue === 1 ? 'a Cell' : `${race.rules.gateValue} of a Cell`;
-            const text = `Gates are lit ${laps <= 1 ? 'this lap only' : `for ${Math.min(laps, race.laps)} laps`}. Gold arches, ${worth} each.`;
+            const when = laps <= 1 ? 'this lap only' : laps >= race.laps ? 'on every lap' : `for ${laps} laps`;
+            const text = `Gates are lit ${when}. Gold arches, ${worth} each.`;
             window.setTimeout(() => this.say(null, text), 1400);
           }
         }
@@ -726,7 +729,7 @@ export class Hud {
         break;
       case 'denied':
         if (e.mech === this.localId) {
-          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 ? 'No Cells. The gates only light on the formation lap' : 'No Cells' }[e.reason];
+          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 || race.rules.gateValueLater <= 0 ? 'No Cells. The gates only light on the formation lap' : 'No Cells. Thread a gold gate to earn one back' }[e.reason];
           this.showNotice(why, e.reason === 'weapons');
         }
         break;

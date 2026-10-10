@@ -54,9 +54,11 @@ export interface Rules {
   // --- Cells and gates
   cellMax: number;
   cellStart: number;
-  /** Cells for threading one gate. */
+  /** Cells for threading one gate on the formation lap. */
   gateValue: number;
-  /** Gates are lit for this many laps from the start. */
+  /** Cells for threading one gate on any later lap. */
+  gateValueLater: number;
+  /** Gates are lit for this many laps from the start. 3 is the whole race. */
   gateLaps: number;
 
   // --- abilities (each costs one cell)
@@ -107,7 +109,8 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   cellMax: 3,
   cellStart: 0,
   gateValue: 0.5,
-  gateLaps: 1,
+  gateValueLater: 0.5,
+  gateLaps: 3,
 
   overdriveMult: 1.3,
   overdriveSecs: 4,
@@ -160,6 +163,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   cellMax: [0, 6],
   cellStart: [0, 6],
   gateValue: [0, 6],
+  gateValueLater: [0, 6],
   gateLaps: [0, 99],
 
   overdriveMult: [1, 3],

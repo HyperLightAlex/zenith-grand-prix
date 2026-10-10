@@ -115,8 +115,9 @@ describe('the limiter (laps 1 and 2) and the speed lap', () => {
       expect(max[3]).toBeLessThanOrEqual(c.topSpeed + EPS);
       const lap3 = (lapStart[2] - lapStart[1]) * DT;
       expect(lap3).toBeLessThan(lap2 - 5);
-      // Alone on the racing line it threads no gate and so earns no Cell.
-      expect(me.cells).toBe(0);
+      // The gates sit off the racing line: three laps of just driving round
+      // pick up one by accident at most.
+      expect(me.cells).toBeLessThanOrEqual(race.rules.gateValue);
     });
   }
 

@@ -446,13 +446,13 @@ describe('the Cell cap', () => {
     expect(newRace(1, { rules: { cellStart: 2, cellMax: 0 } }).mechs.every((m) => m.cells === 0)).toBe(true);
   });
 
-  it('gateValue 0 threads gates for nothing (the gate is still marked)', () => {
+  it('a gate worth nothing is dark: no Cell, no event, and it is not marked', () => {
     const a = new Arena(1, 1, { gateValue: 0 });
     const m = approach(a, FW0, 0);
     a.step(4);
     expect(m.cells).toBe(0);
-    expect(m.gateMask).toBe(1);
-    expect(a.events('gate')).toMatchObject([{ gate: 0, cells: 0 }]);
+    expect(m.gateMask).toBe(0);
+    expect(a.events('gate')).toEqual([]);
   });
 });
 
@@ -467,19 +467,49 @@ describe('which laps the gates are lit', () => {
     return m.cells;
   }
 
-  it('by default only on the formation lap', () => {
-    expect(DEFAULT_RULES.gateLaps).toBe(1);
+  it('by default on every lap, so a spent Cell can be earned back', () => {
+    expect(DEFAULT_RULES.gateLaps).toBe(3);
+    expect(DEFAULT_RULES.gateValueLater).toBe(DEFAULT_RULES.gateValue);
     expect(onLap(0)).toBe(0.5);
-    expect(onLap(1)).toBe(0);
-    expect(onLap(2)).toBe(0);
+    expect(onLap(1)).toBe(0.5);
+    expect(onLap(2)).toBe(0.5);
   });
 
-  it('rules.gateLaps 2 lights them for the battle lap as well; 3 for the whole race; 0 never', () => {
+  it('rules.gateLaps 1 is the formation lap only; 2 adds the battle lap; 0 never', () => {
+    expect(onLap(0, { gateLaps: 1 })).toBe(0.5);
+    expect(onLap(1, { gateLaps: 1 })).toBe(0);
+    expect(onLap(2, { gateLaps: 1 })).toBe(0);
     expect(onLap(0, { gateLaps: 2 })).toBe(0.5);
     expect(onLap(1, { gateLaps: 2 })).toBe(0.5);
     expect(onLap(2, { gateLaps: 2 })).toBe(0);
     expect(onLap(2, { gateLaps: 3 })).toBe(0.5);
     expect(onLap(0, { gateLaps: 0 })).toBe(0);
+  });
+
+  it('rules.gateValueLater sets what a gate is worth after the formation lap', () => {
+    expect(onLap(0, { gateValueLater: 0.25 })).toBe(0.5);
+    expect(onLap(1, { gateValueLater: 0.25 })).toBe(0.25);
+    expect(onLap(2, { gateValueLater: 0.25 })).toBe(0.25);
+    expect(onLap(1, { gateValueLater: 1 })).toBe(1);
+    // Nothing: the gates are out after lap 1, however many laps they are "lit" for.
+    expect(onLap(1, { gateValueLater: 0 })).toBe(0);
+    expect(onLap(2, { gateValueLater: 0 })).toBe(0);
+    expect(onLap(0, { gateValueLater: 0 })).toBe(0.5);
+  });
+
+  it('a Cell spent on the battle lap can be won back at the next two gates', () => {
+    const a = new Arena(2);
+    const m = giveCells(a.put(FW0, 0, 0), 1);
+    a.ability(FW0);
+    expect(m.cells).toBe(0);
+    for (const g of [0, 1]) {
+      m.s = a.base + GATES[g].s - 3;
+      m.d = GATES[g].d;
+      m.heading = 0;
+      a.step(5);
+    }
+    expect(m.cells).toBe(1);
+    expect(a.events('gate').length).toBe(2);
   });
 
   it('it is the mech\'s own lap that counts, not the leader\'s', () => {

@@ -26,7 +26,7 @@ Four decisions shape everything else:
   the whole battle lap.
 - **Every lap asks a different question.** Lap 1: what do you collect, Drive
   or Cells? Lap 2: who do you fight, and what do you spend? Lap 3: can you
-  get to the front, or stay there, with what you have left?
+  get to the front, or stay there, and is a Cell worth leaving the line for?
 
 ## 2. Rules
 
@@ -106,12 +106,20 @@ One gauge, 0 to 100. It pays for boost, dashes and the forward's Lance Dash.
 
 A second resource, 0 to 3, starting at none, that pays for abilities.
 
-- Six gold gates stand on the circuit and are lit on the formation lap only.
-  Thread one (your centre has to pass between the posts) for half a Cell.
+- Six gold gates stand on the circuit. Thread one (your centre has to pass
+  between the posts) for half a Cell. Each gate scores once a lap.
 - Each sits where taking it costs something: across the road from a charge
   strip, on the outside of a corner, or on the long way round the hairpin.
-  A clean lap fills you; computer pilots average about one and a half.
-- Nothing refills them later. Three uses at most for the whole race.
+  A clean formation lap fills you; computer pilots average about one and a
+  half.
+- The gates stay lit for the whole race. In the first build of 0.2 they went
+  out after lap 1, which meant one Cell spent in defence on lap 2 left a
+  forward with no Overdrive and no way back on lap 3. Now a spent Cell can be
+  earned back, and the cost is position: two gates off the racing line for
+  one more use.
+- What a gate is worth after lap 1 is its own rule (`gateValueLater`), so the
+  later laps can be made stingier, or switched off, from the tuning panel.
+  Computer pilots only go back for gates when they have no Cell left.
 
 ### Abilities
 
@@ -275,13 +283,13 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 |---|---|
 | Average race | 3:37 (laps of about 79, 73 and 57 s) |
 | Knockouts per race | 0.28 (54 forwards, 1 midfielder, 0 defenders) |
-| Winner's role | Forward 88%, midfielder 12% |
+| Winner's role | Forward 96%, midfielder 4% |
 | Armour left at the flag | Forward 45%, midfielder 65%, defender 64% |
 | Entering lap 2 | 1.5 Cells and 50 Drive per mech |
-| Abilities used per race | About one of each |
+| Abilities used per race | One to three of each (Overdrive and Ram most) |
 | Battle-lap pace | 347 mph against a 375 limiter |
-| Leader at the start of lap 3 goes on to win | 41% |
-| First finisher's team loses the round anyway | 1% |
+| Leader at the start of lap 3 goes on to win | 40% |
+| First finisher's team loses the round anyway | Under 1% |
 
 And the case that prompted the lap 3 changes, two forwards alone on the
 speed lap, the one behind on 50% armour and the leader on 90%:
@@ -314,9 +322,10 @@ person with a gamepad, and all of them are on the tuning panel:
    finish between equal pilots is a coin toss. If leading feels pointless,
    lower "Tow, lap 3" or shorten the slingshot; if catching up is still too
    hard, raise them.
-4. **Gates.** Whether six half-Cells is the right economy, whether the gates
-   are too easy or too hard to thread at 330 mph, and whether lap 1 now has
-   enough to do.
+4. **Gates.** Whether six half-Cells a lap is the right economy now that the
+   gates stay lit (abilities are used about twice as often as when they went
+   out after lap 1), whether they are too easy or too hard to thread, and
+   whether lap 1 has enough to do.
 5. **Ability strength.** Durations and sizes were set by reasoning and by
    computer pilots using them, not by play.
 6. **Rival skill, the pack rule, how lethal lap 2 is against you**: as in 0.1.
@@ -334,7 +343,7 @@ plays, gamepad and keyboard, HUD, sound.
 
 **M1.5, done (this version): rules pass.** Speed ramp, lap 1 economy, Cells
 and abilities, a lap 3 you can come back in, knockout points, match formats,
-feel pass, tuning panel. 716 simulation tests.
+feel pass, tuning panel. 718 simulation tests.
 
 **Next: the track system.** Loops, corkscrews, jumps, open edges, narrow
 sections and splits. This means giving the track a full 3D frame at every

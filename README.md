@@ -58,9 +58,9 @@ circling it) and your mech faces it, even if that means skating backwards.
 
 1. **Formation lap.** Weapons are locked and a limiter holds everyone to
    330 mph. Your Drive gauge starts empty and fills only on the cyan charge
-   strips. Six gold gates are lit for this lap only: thread one for half a
-   Cell. The gates sit across the road from the strips or on the long way
-   round a corner, so you cannot have everything.
+   strips. Six gold gates stand around the lap: thread one for half a Cell.
+   The gates sit across the road from the strips or on the long way round a
+   corner, so you cannot have everything.
 2. **Battle lap.** Weapons and abilities free, limiter up to 375 mph. It
    opens further for anyone who drops off the back, so the field stays
    together and there is nowhere to hide. Damage is permanent, and a mech
@@ -76,8 +76,10 @@ again to cancel it.
 ## Cells and abilities
 
 Each frame has two abilities on one button: one while free steering, another
-while locked on. Each use burns one Cell, you can hold three, and the only
-place to get them is the gates on lap 1.
+while locked on. Each use burns one Cell and you can hold three. Cells come
+from the gold gates, which are lit on every lap (each gate once a lap), so a
+Cell spent defending yourself on lap 2 can be earned back, at the price of
+leaving the racing line to do it.
 
 | Frame | Free steering | Locked on |
 |---|---|---|
@@ -123,7 +125,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then build to `dist/` |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Simulation test suite (716 tests) |
+| `npm test` | Simulation test suite (718 tests) |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |

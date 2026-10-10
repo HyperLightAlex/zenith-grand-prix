@@ -353,7 +353,8 @@ export class RaceView {
 
     // ---- Cell gates: lit while the mech being followed can still score them
     const gates = this.trackVis.gates;
-    const open = race.phase !== PHASE.FINISHED && focus.lap < race.rules.gateLaps && !focus.retired;
+    const gateWorth = focus.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
+    const open = race.phase !== PHASE.FINISHED && focus.lap < race.rules.gateLaps && gateWorth > 0 && !focus.retired && !focus.finished;
     for (let i = 0; i < track.gates.length; i++) {
       const taken = (focus.gateMask & (1 << i)) !== 0;
       gates.setLit(i, open && !taken ? (focus.cells < race.rules.cellMax ? 1 : 0.35) : 0);

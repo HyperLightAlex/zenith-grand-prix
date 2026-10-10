@@ -381,7 +381,7 @@ export class Game {
           // Each gate rings a step higher up the scale; the last one resolves.
           if (e.cells >= race.rules.cellMax) A.play('cells_full');
           else {
-            const n = Math.max(0, Math.round(e.cells / Math.max(0.01, race.rules.gateValue)) - 1);
+            const n = Math.max(0, Math.round(e.cells / Math.max(0.25, race.rules.gateValue)) - 1);
             A.play('gate', { pitch: 2 ** (GATE_STEPS[Math.min(n, GATE_STEPS.length - 1)] / 12) });
           }
         }

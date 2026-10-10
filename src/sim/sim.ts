@@ -773,8 +773,9 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   if (race.phase === PHASE.RACING) stepProjectiles(race, track);
 
   // Cell gates. Checked over everything a mech moved this tick, shoves
-  // included, so being shunted through an arch still counts. Lit for the
-  // first lap or two, and a full mech takes nothing.
+  // included, so being shunted through an arch still counts. Lit for as many
+  // laps as the rules say (the whole race by default), each gate once a lap,
+  // and a full mech takes nothing.
   if (race.phase === PHASE.RACING && track.gates.length > 0) {
     for (const m of ms) {
       if (!isActive(m) || m.lap >= race.rules.gateLaps || m.cells >= race.rules.cellMax) continue;
@@ -784,8 +785,10 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
       let g = gateCrossed(track, startS[m.id], m.s, m.d, m.gateMask);
       if (g < 0) g = gateCrossed(track, startS[m.id], Math.min(movedS[m.id], m.s), movedD[m.id], m.gateMask);
       if (g < 0) continue;
+      const worth = m.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
+      if (worth <= 0) continue;
       m.gateMask |= 1 << g;
-      m.cells = Math.min(race.rules.cellMax, m.cells + race.rules.gateValue);
+      m.cells = Math.min(race.rules.cellMax, m.cells + worth);
       race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
     }
   }
