@@ -5,7 +5,7 @@ import type { TrackDef } from '../track';
 export const MERIDIAN: TrackDef = {
   id: 'meridian',
   name: 'Meridian Skyway',
-  length: 8640, // 90 s at the 96 u/s pace limit
+  length: 8640, // about 80 s on the formation-lap limiter
   halfWidth: 28,
   bankGain: 75,
   maxBank: 0.32,
@@ -56,4 +56,16 @@ export const MERIDIAN: TrackDef = {
     { at: 0.86, len: 220, d: 12, halfW: 5 }, // before Final Sweep
     { at: 0.955, len: 200, d: 16, halfW: 5 }, // Grand Straight run-in, right
   ],
+  // Cell gates: thread one for half a Cell. Each sits where taking it costs
+  // something: across the road from a charge strip, or on the long way round
+  // a corner.
+  gates: [
+    { at: 0.0463, d: 17, halfW: 4.5 }, // Grand Straight, right: the strip is on the left
+    { at: 0.2025, d: 18, halfW: 4.5 }, // outside of the first Ess
+    { at: 0.3056, d: -17, halfW: 4.5 }, // Crest Straight, left: the strip is on the right
+    { at: 0.4375, d: 18, halfW: 4.5 }, // inside of the Carousel, just past the outside strip
+    { at: 0.698, d: -19, halfW: 4.5 }, // the long way round the Harbour Hairpin
+    { at: 0.7998, d: 16, halfW: 4.5 }, // outside of the chicane's first half
+  ],
+
 };

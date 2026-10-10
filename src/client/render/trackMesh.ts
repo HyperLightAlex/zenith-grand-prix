@@ -4,9 +4,11 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { frameAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
+import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
 
 const MAX_STRIPS = 12;
+const MAX_GATES = 8;
 
 const roadVertex = /* glsl */ `
 attribute float aKappa;
@@ -36,6 +38,8 @@ uniform vec3 uSunColor;
 uniform vec3 uSkyColor;
 uniform vec3 uChargeColor;
 uniform vec4 uStrips[${MAX_STRIPS}];
+uniform vec4 uGates[${MAX_GATES}];
+uniform vec3 uCellColor;
 uniform float uWeapons;
 varying vec2 vTc;
 varying float vKappa;
@@ -81,6 +85,11 @@ void main() {
   float lanes = (band(d, uHalfW * 0.5, 0.22) + band(d, -uHalfW * 0.5, 0.22)) * dash;
   float centre = band(ad, 0.55, 0.16);
   col = mix(col, vec3(0.93, 0.95, 0.98), clamp(lanes * 0.85 + centre * 0.7, 0.0, 1.0) * mix(0.55, 1.0, detail));
+
+  // Rumble ticks inside each edge line: the nearest thing to the mech's feet,
+  // so they are what tells the eye how fast the road is going by.
+  float tick = box(ad, uHalfW - 6.4, uHalfW - 3.7) * step(fract(s / 7.0), 0.2);
+  col = mix(col, vec3(0.86, 0.88, 0.93), tick * 0.5 * mix(0.35, 1.0, detail));
 
   // Edge lines and the shoulder beyond them.
   float edge = box(ad, uHalfW - 3.1, uHalfW - 2.5);
@@ -139,6 +148,22 @@ void main() {
     lit = mix(lit, lit * 0.35, m * 0.8);
     glow += uChargeColor * m * (0.22 + arrows * 0.95 + rim * 1.5);
   }
+  // Cell gates: a gold run-in painted on the road, chevrons flowing to the arch.
+  for (int i = 0; i < ${MAX_GATES}; i++) {
+    vec4 gt = uGates[i];
+    if (gt.z <= 0.0) continue;
+    float ga = gt.x - s;
+    if (ga < -3.0 || ga > 110.0) continue;
+    float ld = (d - gt.y) / gt.z;
+    float across = 1.0 - smoothstep(0.9, 1.0, abs(ld));
+    float rim = smoothstep(0.7, 0.86, abs(ld)) * across;
+    float chev = fract((s - abs(ld) * 5.0 - uTime * 30.0) / 9.0);
+    float arrows = smoothstep(0.0, 0.1, chev) * (1.0 - smoothstep(0.4, 0.5, chev));
+    float fade = (1.0 - smoothstep(70.0, 110.0, ga)) * smoothstep(-3.0, 0.0, ga);
+    float m = across * fade;
+    lit = mix(lit, lit * 0.45, m * 0.6 * gt.w);
+    glow += uCellColor * m * (0.08 + arrows * 0.7 + rim * 1.2) * mix(0.12, 1.0, gt.w);
+  }
   lit += glow;
 
   gl_FragColor = vec4(lit, 1.0);
@@ -150,6 +175,7 @@ void main() {
 export interface TrackVisual {
   group: THREE.Group;
   road: THREE.ShaderMaterial;
+  gates: GateVisual;
   /** The five start lights, left to right. */
   lights: THREE.Mesh[];
   update(time: number): void;
@@ -272,6 +298,11 @@ export function buildTrackVisual(track: Track): TrackVisual {
       const st = track.strips[i];
       strips.push(st ? new THREE.Vector4(st.s0, st.s1, st.d, st.halfW) : new THREE.Vector4(0, 0, 0, 0));
     }
+    const gates: THREE.Vector4[] = [];
+    for (let i = 0; i < MAX_GATES; i++) {
+      const gt = track.gates[i];
+      gates.push(gt ? new THREE.Vector4(gt.s, gt.d, gt.halfW, 1) : new THREE.Vector4(0, 0, 0, 0));
+    }
     const road = new THREE.ShaderMaterial({
       vertexShader: roadVertex,
       fragmentShader: roadFragment,
@@ -286,6 +317,8 @@ export function buildTrackVisual(track: Track): TrackVisual {
           uSkyColor: { value: new THREE.Color(COLORS.skyLight) },
           uChargeColor: { value: new THREE.Color(COLORS.charge) },
           uStrips: { value: strips },
+          uGates: { value: gates },
+          uCellColor: { value: new THREE.Color(COLORS.cell) },
           uWeapons: { value: 0 },
         },
       ]),
@@ -326,7 +359,7 @@ export function buildTrackVisual(track: Track): TrackVisual {
     const colors = [W, A, D, D, W, U, K, K, K, U, W, D, D, A, W];
     // Alternate the inner wall panels so speed reads against them.
     const g = extrude(track, profile, colors, 2, (ring, seg, base, out) => {
-      if (seg === 0 || seg === 14) return out.copy(base).multiplyScalar(ring % 6 < 3 ? 1 : 0.86);
+      if (seg === 0 || seg === 14) return out.copy(base).multiplyScalar(ring % 4 < 2 ? 1 : 0.76);
       return out.copy(base);
     });
     const mesh = new THREE.Mesh(g, toonMaterial({ side: THREE.DoubleSide }));
@@ -351,6 +384,42 @@ export function buildTrackVisual(track: Track): TrackVisual {
       sm.frustumCulled = false;
       group.add(sm);
     }
+  }
+
+  // ---- fence posts ---------------------------------------------------------
+  // A post on top of each barrier every 20 units, with a lit cap. They are
+  // at eye level and close, so they strobe past and sell the speed.
+  {
+    const every = 5; // samples
+    const count = Math.floor(track.n / every);
+    const postGeo = new THREE.BoxGeometry(0.32, 3.4, 0.32);
+    postGeo.translate(0, 1.7, 0);
+    const capGeo = new THREE.BoxGeometry(0.5, 0.34, 1.5);
+    capGeo.translate(0, 3.55, 0);
+    const posts = new THREE.InstancedMesh(postGeo, new THREE.MeshLambertMaterial({ color: 0x39414f }), count * 2);
+    const caps = new THREE.InstancedMesh(capGeo, new THREE.MeshBasicMaterial({ toneMapped: false }), count * 2);
+    const m = new THREE.Matrix4();
+    const cool = new THREE.Color(0x4fe6ff).multiplyScalar(1.3);
+    const warm = new THREE.Color(0xff8a1f).multiplyScalar(1.5);
+    const c = new THREE.Color();
+    let k = 0;
+    for (let i = 0; i < count; i++) {
+      const idx = i * every;
+      const turn = THREE.MathUtils.smoothstep(track.kappaAhead[idx], 0.0016, 0.003);
+      for (const side of [-1, 1]) {
+        trackMatrix(track, idx * track.ds, side * (hw + 1.1), 3.0, 0, m);
+        posts.setMatrixAt(k, m);
+        caps.setMatrixAt(k, m);
+        caps.setColorAt(k, c.copy(cool).lerp(warm, turn).multiplyScalar(i % 2 === 0 ? 1 : 0.55));
+        k++;
+      }
+    }
+    posts.instanceMatrix.needsUpdate = true;
+    caps.instanceMatrix.needsUpdate = true;
+    if (caps.instanceColor) caps.instanceColor.needsUpdate = true;
+    posts.frustumCulled = false;
+    caps.frustumCulled = false;
+    group.add(posts, caps);
   }
 
   // ---- support pylons ------------------------------------------------------
@@ -537,12 +606,19 @@ export function buildTrackVisual(track: Track): TrackVisual {
     }
   }
 
+  const gateVis = buildGates(track);
+  group.add(gateVis.group);
+  const gateUniforms = road.uniforms.uGates.value as THREE.Vector4[];
+
   return {
     group,
     road,
+    gates: gateVis,
     lights,
     update(time: number) {
       road.uniforms.uTime.value = time;
+      for (let i = 0; i < track.gates.length && i < MAX_GATES; i++) gateUniforms[i].w = gateVis.lit[i];
+      gateVis.update(time);
     },
   };
 }

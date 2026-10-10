@@ -2,28 +2,36 @@
 // menus, input and audio, and moves between title, garage, race and results.
 import * as THREE from 'three';
 import {
+  ABILITY,
+  ATK,
   ATTACKS,
   BTN,
+  CLASSES,
   MERIDIAN,
   MODE,
   PHASE,
   ROLE,
   buildTrack,
+  createMatch,
   deltaS,
-  teamPoints,
+  recordRound,
+  type MatchState,
   type Role,
   type SeatConfig,
   type SimEvent,
 } from '../../sim/index';
-import { NullAudio, type AudioEngine, type AudioScene } from '../audio/audio';
+import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
 import { Input } from '../input/input';
 import { RaceView } from '../render/raceView';
 import { Renderer } from '../render/renderer';
 import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
 import { buildWorld, type World } from '../render/world';
+import { LIVERIES } from '../render/palette';
 import { Hud } from '../ui/hud';
-import { Menus, type GarageChoice } from '../ui/menus';
+import { MATCH_OPTIONS, Menus, type GarageChoice } from '../ui/menus';
+import { TuningPanel } from '../ui/tuningPanel';
 import { LocalSession } from './session';
+import { Tuning } from './tuning';
 
 type State = 'title' | 'garage' | 'race' | 'paused' | 'results';
 
@@ -43,21 +51,33 @@ export interface GameOptions {
   seed?: number;
   team?: number;
   rivals?: number;
+  /** Match format, an index into MATCH_OPTIONS. */
+  match?: number;
+  /** Open the tuning panel at once. */
+  tune?: boolean;
   audio?: AudioEngine;
 }
+
+const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
 
 export class Game {
   readonly renderer: Renderer;
   readonly input = new Input();
   readonly hud: Hud;
   readonly menus: Menus;
+  readonly tuning = new Tuning();
+  readonly panel: TuningPanel;
   audio: AudioEngine;
   private trackVis: TrackVisual;
   private world: World;
   private session!: LocalSession;
   private view!: RaceView;
   private state: State = 'title';
-  private choice: GarageChoice = { role: ROLE.FW, team: 0, rivals: 1 };
+  private choice: GarageChoice = { role: ROLE.FW, team: 0, rivals: 1, match: 1 };
+  /** The match being played: one or more rounds between the same two teams. */
+  private match: MatchState | null = null;
+  private roundScored = false;
+  private rumbleT = 0;
   private time = 0;
   private last = performance.now();
   private attractTimer = 0;
@@ -79,16 +99,28 @@ export class Game {
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
     this.hud.onCritical = () => this.audio.play('critical');
     this.menus = new Menus(uiRoot, {
-      onStart: (c) => this.startRace(c),
+      onStart: (c) => this.startMatch(c),
       onPreview: (c) => this.showGarage(c),
       onResume: () => this.resume(),
-      onRestart: () => this.startRace(this.choice),
+      onRestart: () => this.startRound(),
+      onNext: () => (this.match && this.match.winner < 0 ? this.startRound() : this.startMatch(this.choice)),
+      onTuning: () => this.panel.show(),
       onQuit: () => this.showTitle(),
       onGarage: () => {
         this.menus.show('garage');
       },
       onSound: (n) => this.audio.play(n),
     });
+    this.panel = new TuningPanel(uiRoot, this.tuning, {
+      onClose: () => {},
+      onSound: (n) => this.audio.play(n),
+    });
+    // A rule changed on the panel reaches the race in progress as well as the next one.
+    this.tuning.onChange = (kind) => {
+      if (kind !== 'feel' && this.session) Object.assign(this.session.race.rules, this.tuning.rules);
+      this.input.rumbleScale = this.tuning.feel.rumble;
+    };
+    this.input.rumbleScale = this.tuning.feel.rumble;
     this.input.onDeviceChange = (d) => {
       this.hud.setDevice(d);
       this.menus.setDevice(d);
@@ -100,12 +132,16 @@ export class Game {
     });
     if (opts.team !== undefined) this.choice.team = opts.team;
     if (opts.rivals !== undefined) this.choice.rivals = opts.rivals;
+    if (opts.match !== undefined && MATCH_OPTIONS[opts.match]) this.choice.match = opts.match;
+    else if (opts.auto !== undefined) this.choice.match = 0;
+    this.menus.choice = { ...this.choice };
     if (opts.auto !== undefined) {
       this.choice.role = opts.auto;
-      this.startRace(this.choice);
+      this.startMatch(this.choice);
     } else {
       this.showTitle();
     }
+    if (opts.tune) this.panel.show();
     requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -125,11 +161,11 @@ export class Game {
     return { seats, localId };
   }
 
-  private setSession(choice: GarageChoice | null, seed: number): void {
+  private setSession(choice: GarageChoice | null, seed: number, gridFlip = false): void {
     this.view?.dispose();
     const { seats, localId } = this.seats(choice);
-    this.session = new LocalSession(MERIDIAN, { seed, seats }, localId);
-    this.view = new RaceView(this.renderer, this.session, this.trackVis);
+    this.session = new LocalSession(MERIDIAN, { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
+    this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel);
     this.view.onImpact = (strength) => {
       this.input.rumble(strength, 90 + strength * 160);
       if (strength >= 0.8) this.session.freeze(0.05);
@@ -150,7 +186,7 @@ export class Game {
   /** A race between computer pilots running behind the title screen. */
   private startAttract(): void {
     this.setSession(null, (Math.random() * 1e9) | 0);
-    this.session.fastForward(92 + Math.random() * 20);
+    this.session.fastForward(88 + Math.random() * 24);
     this.view.focusId = (Math.random() * 6) | 0;
     this.view.cam.mode = 'play';
     this.attractTimer = 0;
@@ -166,14 +202,38 @@ export class Game {
     this.view.cam.reset();
   }
 
-  private startRace(choice: GarageChoice): void {
+  /** A new match in the format picked in the garage, starting with round one. */
+  private startMatch(choice: GarageChoice): void {
     this.choice = choice;
+    this.match = createMatch((MATCH_OPTIONS[choice.match] ?? MATCH_OPTIONS[0]).cfg);
+    this.startRound();
+  }
+
+  /** What the HUD shows under the score: the format, the round, and how the match stands. */
+  private matchLabel(): string {
+    const m = this.match;
+    if (!m || (m.cfg.mode === 'series' && m.cfg.bestOf === 1)) return '';
+    const a = LIVERIES[0].name.replace('Team ', '');
+    const b = LIVERIES[1].name.replace('Team ', '');
+    const round = `Round ${m.rounds.length + 1}`;
+    if (m.cfg.mode === 'series') return `Best of ${m.cfg.bestOf} · ${round} · ${a} ${m.wins[0]}–${m.wins[1]} ${b}`;
+    return `First to ${m.cfg.target} · ${round} · ${a} ${m.totals[0]}–${m.totals[1]} ${b}`;
+  }
+
+  /** Start (or restart) the next unscored round of the match. */
+  private startRound(): void {
+    const choice = this.choice;
+    if (!this.match) this.match = createMatch(MATCH_OPTIONS[choice.match]?.cfg);
+    this.roundScored = false;
     this.state = 'race';
     this.menus.show(null);
-    this.setSession(choice, this.opts.seed ?? (Math.random() * 1e9) | 0);
+    // The teams swap sides of the grid from one round to the next.
+    const round = this.match.rounds.length;
+    this.setSession(choice, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
     if (this.opts.demo) this.session.race.mechs[this.session.localId].human = false;
     if (this.opts.skip) this.session.fastForward(this.opts.skip);
     this.hud.begin(this.session.race, this.session.track, this.session.localId);
+    this.hud.setMatch(this.matchLabel());
     this.hud.setDevice(this.input.device);
     this.view.cam.reset();
     this.view.cam.mode = this.session.race.phase === PHASE.COUNTDOWN ? 'intro' : 'play';
@@ -236,9 +296,9 @@ export class Game {
         break;
       }
       case 'shot': {
-        // A scatter blast raises one event per pellet; play it once.
+        // A scatter blast raises one event per pellet; play it once. The Snare has its own sound.
         const key = `${race.tick}:${e.mech}`;
-        if (key !== this.lastShotKey) {
+        if (e.attack !== ATK.MF_SNARE && key !== this.lastShotKey) {
           this.lastShotKey = key;
           const h = this.heard(e.mech);
           if (h.volume > 0.02) A.play(ATTACKS[e.attack].shot!.pellets > 1 ? 'shot_scatter' : 'shot_carbine', { volume: h.volume * quiet, pan: h.pan });
@@ -299,13 +359,33 @@ export class Game {
       case 'tactic':
         if (inRace && local >= 0 && e.team === race.mechs[local].team) A.play('command');
         break;
+      case 'gate':
+        if (e.mech === local && inRace) A.play(e.cells >= race.rules.cellMax ? 'cells_full' : 'gate', { pitch: 1 + Math.min(0.5, e.cells * 0.12) });
+        else {
+          const h = this.heard(e.mech);
+          if (h.volume > 0.05) A.play('gate', { volume: h.volume * 0.35 * quiet, pan: h.pan });
+        }
+        break;
+      case 'ability': {
+        const h = this.heard(e.mech);
+        A.play(ABILITY_SFX[e.ability], { volume: Math.max(e.ability === ABILITY.OVERDRIVE ? 0.3 : 0.15, h.volume) * quiet, pan: h.pan });
+        break;
+      }
+      case 'snared': {
+        const h = this.heard(e.mech);
+        A.play('snared', { volume: Math.max(e.by === local ? 0.6 : 0.1, h.volume) * quiet, pan: h.pan });
+        break;
+      }
       case 'raceEnd':
         if (inRace) {
           this.resultsAt = this.time + 2.8;
           const me = race.mechs[local];
-          const mine = teamPoints(race, me.team);
-          const theirs = teamPoints(race, 1 - me.team);
-          A.play(mine >= theirs ? 'win' : 'lose');
+          // Bank the round. A round restarted from the pause menu never gets here.
+          if (this.match && !this.roundScored) {
+            this.roundScored = true;
+            const round = recordRound(this.match, race);
+            A.play(round.winner === me.team ? 'win' : 'lose');
+          }
           this.view.cam.mode = 'orbit';
           this.view.cam.clock = 0;
         } else if (this.state === 'title') {
@@ -341,7 +421,20 @@ export class Game {
     this.last = now;
     this.time += dt;
     this.input.poll();
-    const menu = this.input.consumeMenu();
+    let menu = this.input.consumeMenu();
+    // The tuning panel opens over anything. While a race is running it is
+    // worked with the mouse only, so the pad and keys keep flying the mech.
+    if (menu.includes('tune')) {
+      if (this.state === 'race' || !this.panel.open) {
+        this.panel.toggle();
+        this.audio.play('ui_select');
+        menu = menu.filter((m) => m !== 'tune');
+      }
+    }
+    if (this.panel.open && this.state !== 'race') {
+      this.panel.handle(menu);
+      menu = [];
+    }
     const race = this.session.race;
     const local = this.session.localId;
     let simDt = dt;
@@ -385,10 +478,12 @@ export class Game {
         this.prevButtons = this.input.state.buttons;
         if (!flying && pressed & BTN.LOCK) this.cycleFocus();
         if (flying) this.view.focusId = local;
+        if (flying) this.roadRumble(dt);
         if (this.resultsAt > 0 && this.time >= this.resultsAt) {
           this.resultsAt = -1;
           this.state = 'results';
           this.hud.hide();
+          this.menus.match = this.match;
           this.menus.show('results', race, local);
           this.audio.setMusic('menu');
         }
@@ -418,16 +513,38 @@ export class Game {
     sc.racing = (this.state === 'race' || this.state === 'results') && cur.phase !== PHASE.COUNTDOWN && !f.retired;
     sc.speed = f.speed;
     sc.throttle = this.state === 'race' && f.id === local ? Math.max(this.input.state.throttle, f.mode === MODE.BATTLE ? 0.6 : 0) : 0.8;
-    sc.boosting = f.boosting;
+    sc.boosting = f.boosting || f.overdriveT > 0;
     sc.battle = f.mode === MODE.BATTLE;
     sc.lapPhase = cur.lapPhase;
     sc.onStrip = f.onStrip;
     sc.drafting = f.drafting;
     sc.scraping = f.wall > 0 && f.speed > 20;
-    sc.critical = f.hp > 0 && f.hp < 0.25 * 1600 && !f.retired && this.state === 'race';
+    sc.critical = f.hp > 0 && f.hp < 0.25 * CLASSES[f.role].maxHp && !f.retired && this.state === 'race';
     this.audio.update(dt, sc);
 
     this.renderer.render(dt, this.time);
+  }
+
+  /** A low rumble that follows the road: speed, charge strips, the wall, boost and Overdrive. */
+  private roadRumble(dt: number): void {
+    this.rumbleT -= dt;
+    if (this.rumbleT > 0) return;
+    this.rumbleT = 0.09;
+    const m = this.session.race.mechs[this.session.localId];
+    if (this.session.race.phase !== PHASE.RACING) return;
+    const sf = Math.min(1.4, m.speed / 160);
+    let weak = Math.max(0, sf - 0.35) * 0.16;
+    let strong = 0;
+    if (m.onStrip) weak += 0.12;
+    if (m.boosting) weak += 0.14;
+    if (m.overdriveT > 0) {
+      weak += 0.25;
+      strong += 0.2;
+    }
+    if (m.ramT > 0) strong += 0.18;
+    if (m.wall > 0 && m.speed > 20) strong += 0.4;
+    if (m.mode === MODE.SPEED && Math.abs(m.steer) > 0.6) weak += (Math.abs(m.steer) - 0.6) * 0.3 * sf;
+    if (weak + strong > 0.015) this.input.rumbleRoad(strong, weak, 130);
   }
 
   /** For automated checks. */
@@ -435,11 +552,12 @@ export class Game {
     const r = this.session.race;
     return {
       state: this.state,
+      match: this.match ? { mode: this.match.cfg.mode, rounds: this.match.rounds.length, wins: this.match.wins, totals: this.match.totals, winner: this.match.winner } : null,
       tick: r.tick,
       phase: r.phase,
       lapPhase: r.lapPhase,
       focus: this.view.focusId,
-      mechs: r.mechs.map((m) => ({ name: m.name, s: Math.round(m.s), speed: Math.round(m.speed), hp: Math.round(m.hp), place: m.place, mode: m.mode, retired: m.retired, finished: m.finished })),
+      mechs: r.mechs.map((m) => ({ name: m.name, s: Math.round(m.s), speed: Math.round(m.speed), hp: Math.round(m.hp), drive: Math.round(m.drive), cells: m.cells, place: m.place, mode: m.mode, retired: m.retired, finished: m.finished })),
     };
   }
 }

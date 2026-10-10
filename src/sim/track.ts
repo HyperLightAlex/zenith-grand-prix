@@ -24,6 +24,15 @@ export interface StripDef {
   halfW: number;
 }
 
+export interface GateDef {
+  /** Position as a fraction of the lap (0..1). */
+  at: number;
+  /** Lateral centre of the gate. */
+  d: number;
+  /** A mech scores the gate if its centre passes within this of the middle. */
+  halfW: number;
+}
+
 /** One piece of the plan: a straight, or an arc (positive angle turns right). */
 export type Segment = { straight: number } | { arc: [radius: number, degrees: number] };
 
@@ -46,6 +55,8 @@ export interface TrackDef {
   /** Height keys as [fraction of lap, height]. Linear, then smoothed. */
   heights: Array<[number, number]>;
   strips: StripDef[];
+  /** Cell gates: thread one for a share of an ability charge. At most 30. */
+  gates?: GateDef[];
   /** Radians of bank per unit of curvature, and the cap. */
   bankGain: number;
   maxBank: number;
@@ -54,6 +65,12 @@ export interface TrackDef {
 export interface Strip {
   s0: number;
   s1: number;
+  d: number;
+  halfW: number;
+}
+
+export interface Gate {
+  s: number;
   d: number;
   halfW: number;
 }
@@ -90,6 +107,7 @@ export interface Track {
   /** Largest |curvature| over the next ~200 units, for AI braking. */
   kappaAhead: Float32Array;
   strips: Strip[];
+  gates: Gate[];
 }
 
 type V3 = [number, number, number];
@@ -377,6 +395,8 @@ export function buildTrack(def: TrackDef): Track {
     halfW: sd.halfW,
   }));
 
+  const gates: Gate[] = (def.gates ?? []).slice(0, 30).map((g) => ({ s: g.at * total, d: g.d, halfW: g.halfW }));
+
   return {
     def,
     length: total,
@@ -400,6 +420,7 @@ export function buildTrack(def: TrackDef): Track {
     line,
     kappaAhead,
     strips,
+    gates,
   };
 }
 
@@ -456,6 +477,23 @@ export function onStrip(track: Track, s: number, d: number): boolean {
     if (st.s1 > track.length && ws <= st.s1 - track.length) return true;
   }
   return false;
+}
+
+/**
+ * Index of a gate whose line lies in (s0, s1] and whose opening covers d, or
+ * -1. Gates with a bit set in `skip` are ignored.
+ */
+export function gateCrossed(track: Track, s0: number, s1: number, d: number, skip: number): number {
+  if (s1 <= s0 || track.gates.length === 0) return -1;
+  const w0 = wrapS(track, s0);
+  const w1 = wrapS(track, s1);
+  for (let i = 0; i < track.gates.length; i++) {
+    if (skip & (1 << i)) continue;
+    const g = track.gates[i];
+    const through = w1 >= w0 ? g.s > w0 && g.s <= w1 : g.s > w0 || g.s <= w1;
+    if (through && Math.abs(d - g.d) <= g.halfW) return i;
+  }
+  return -1;
 }
 
 export interface Frame {

@@ -10,7 +10,9 @@ export type SfxName =
   | 'shot_carbine' | 'shot_scatter' | 'bullet_hit'
   | 'wall' | 'bump' | 'ko' | 'critical'
   | 'lap' | 'lap_phase' | 'final_lap' | 'finish' | 'win' | 'lose'
-  | 'command' | 'comms';
+  | 'command' | 'comms'
+  | 'gate' | 'cells_full'
+  | 'overdrive' | 'breakaway' | 'snare_shot' | 'snared' | 'pulse' | 'ram' | 'aegis';
 
 export interface SfxOptions {
   /** 0..1, default 1. */

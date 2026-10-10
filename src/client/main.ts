@@ -12,6 +12,7 @@ import { Game } from './game/game';
 //   &skip=95        start that many seconds in    &seed=7   repeatable race
 //   &team=1         fly for Vanta                 &rivals=0..2
 //   &mute=1         no sound                      ?debug=mechs  model viewer
+//   &match=0..4     match format                  &tune=1   tuning panel open
 const q = new URLSearchParams(location.search);
 
 async function boot(): Promise<void> {
@@ -50,6 +51,8 @@ async function boot(): Promise<void> {
     seed: q.has('seed') ? Number(q.get('seed')) : undefined,
     team: q.has('team') ? Number(q.get('team')) : undefined,
     rivals: q.has('rivals') ? Number(q.get('rivals')) : undefined,
+    match: q.has('match') ? Number(q.get('match')) : undefined,
+    tune: q.has('tune'),
     audio,
   });
   (window as unknown as { game: Game }).game = game;

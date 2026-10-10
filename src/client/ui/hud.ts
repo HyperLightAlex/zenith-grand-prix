@@ -1,6 +1,8 @@
 // The race HUD: place, running order, team score, map, gauges, speed,
 // tactics, radio, target and banners. Plain DOM over the canvas.
 import {
+  ABILITIES,
+  ABILITY,
   CLASSES,
   CRITICAL_HP,
   DRIVE_MAX,
@@ -8,14 +10,17 @@ import {
   LOCK_BREAK,
   MODE,
   MPH_PER_UNIT,
-  PACE,
   PHASE,
   ROLE_KEYS,
   ROLE_NAMES,
   TACTIC,
+  TICK_RATE,
+  abilityFor,
   deltaS,
+  limiterOf,
   packBonus,
   teamPoints,
+  weaponsFree,
   wrapS,
   type MechState,
   type RaceState,
@@ -33,8 +38,8 @@ const TACTIC_LABEL = ['Free', 'Blitz', 'Run', 'Shield', 'Mark'];
 type Device = 'pad' | 'keys';
 
 const KEYS: Record<Device, Record<string, string>> = {
-  pad: { accel: 'RT', brake: 'LT', boost: 'A', dash: 'A', lock: 'LB', ally: 'B', x: 'X', y: 'Y', guard: 'RB', swap: 'R stick', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
-  keys: { accel: 'W', brake: 'S', boost: 'Space', dash: 'Space', lock: 'Q', ally: 'E', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
+  pad: { accel: 'RT', brake: 'LT', boost: 'A', dash: 'A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'RB', swap: 'R stick', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
+  keys: { accel: 'W', brake: 'S', boost: 'Space', dash: 'Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
 };
 
 /** Radio lines. {t} is replaced by a target's callsign. */
@@ -54,7 +59,18 @@ const LINES = {
   warnYou: ['You are smoking. Get out of there!', 'Your armour is nearly gone. Back off!'],
   marked: ['They have marked {t}. Watch out.', 'Heads up, they are all going for {t}.'],
   finish: ['Across the line. Bring it home.', 'I am in. Go get them.'],
+  overdrive: ['Overdrive! Hold on!', 'Lighting it up!'],
+  breakaway: ['Not today. Breaking away!', 'I am out of here!'],
+  snare: ['Snare away!', 'Slowing {t} down for you.'],
+  snared: ['Got {t}. Go, go!', '{t} is snared!'],
+  pulse: ['Disruptor! Back off, all of you!', 'Pulse out!'],
+  ram: ['Ramming speed!', 'Coming through!'],
+  aegis: ['Aegis up! Stay close!', 'Shield is on you!'],
 };
+
+function me0(race: RaceState, id: number): number {
+  return race.mechs[id]?.cells ?? 0;
+}
 
 function pick(list: string[], seed: number): string {
   return list[Math.abs(seed) % list.length];
@@ -88,6 +104,7 @@ export class Hud {
   private nameA = h('span.name', '');
   private nameB = h('span.name', '');
   private clock = h('div.mid', '0:00.0');
+  private matchLine = h('div.matchline', '');
   // top right
   private map = h<'canvas'>('canvas');
   private mapPath: Float32Array = new Float32Array(0);
@@ -100,6 +117,17 @@ export class Hud {
   private drive = h('div.line.drive');
   private driveFill = h('i');
   private driveVal = h('span.val', '');
+  private cellsLine = h('div.line.cells');
+  private cellPips = h('div.pips');
+  private pipFills: HTMLElement[] = [];
+  private cellsVal = h('span.val', '');
+  private abilityTag = h('span.ability');
+  private abilityKey = h('span.key', 'B');
+  private abilityName = h('span', '');
+  private chipAbility = h('span.chip.cell', '');
+  private chipSnared = h('span.chip.snared', 'Snared');
+  private chipSling = h('span.chip.draft', 'Slingshot');
+  private lastCells = 0;
   private chipLocked = h('span.chip.locked', 'Weapons locked');
   private chipMode = h('span.chip.battle', '');
   private chipCharge = h('span.chip.charge', 'Charging');
@@ -110,7 +138,7 @@ export class Hud {
   // speed
   private speedBox = h('div.speed');
   private mph = h('span.mph', '0');
-  private limiter = h('div.limiter', 'Limiter 288');
+  private limiter = h('div.limiter', 'Limiter 330');
   // tactics
   private tacticEls: HTMLElement[] = [];
   private tacticHub = h('div.hub', 'Team play');
@@ -150,13 +178,16 @@ export class Hud {
       h('div.hud-place', h('div', this.placeNum, this.placeOrd), h('div.hud-lap', this.lapNum, this.phase)),
       this.tower,
       h('div.score', h('div.side.a', this.nameA, this.ptsA), this.clock, h('div.side.b', this.nameB, this.ptsB)),
+      this.matchLine,
       h('div.mapbox', this.map),
     );
     this.armour.append(h('span.label', 'Armour'), h('div.bar', this.armourGhost, this.armourFill), this.armourVal);
     this.drive.append(h('span.label', 'Drive'), h('div.bar', this.driveFill), this.driveVal);
+    this.abilityTag.append(this.abilityKey, this.abilityName);
+    this.cellsLine.append(h('span.label', 'Cells'), h('div.cellrow', this.cellPips, this.abilityTag), this.cellsVal);
     R.append(
-      h('div.chips', this.chipLocked, this.chipMode, this.chipCharge, this.chipDraft, this.chipLink),
-      h('div.gauges', this.armour, h('div.line.guard', h('span.label', 'Guard'), h('div.bar', this.guardFill), h('span.val', '')), this.drive),
+      h('div.chips', this.chipLocked, this.chipMode, this.chipAbility, this.chipSnared, this.chipCharge, this.chipDraft, this.chipSling, this.chipLink),
+      h('div.gauges', this.armour, h('div.line.guard', h('span.label', 'Guard'), h('div.bar', this.guardFill), h('span.val', '')), this.drive, this.cellsLine),
       this.hints,
     );
     this.speedBox.append(h('div', this.mph, h('span.unit', 'mph')), this.limiter);
@@ -230,6 +261,14 @@ export class Hud {
       this.root.prepend(plate);
       this.plates.push({ el: plate, hp: php });
     }
+    this.cellPips.replaceChildren();
+    this.pipFills = [];
+    for (let i = 0; i < Math.ceil(race.rules.cellMax); i++) {
+      const fill = h('i');
+      this.pipFills.push(fill);
+      this.cellPips.append(h('div.pip', fill));
+    }
+    this.lastCells = me0(race, localId);
     this.comms.replaceChildren();
     this.banner.hidden = true;
     this.count.hidden = true;
@@ -242,6 +281,12 @@ export class Hud {
 
   hide(): void {
     this.root.hidden = true;
+  }
+
+  /** One line under the score: which round of what, and how the match stands. */
+  setMatch(text: string): void {
+    setText(this.matchLine, text);
+    this.matchLine.hidden = text === '';
   }
 
   // ---- map ----------------------------------------------------------------
@@ -320,6 +365,23 @@ export class Hud {
       }
       g.stroke();
     }
+    // Cell gates still open to the player.
+    const pilot = race.mechs[this.localId];
+    if (pilot.lap < race.rules.gateLaps && !pilot.retired && pilot.cells < race.rules.cellMax) {
+      g.fillStyle = '#ffc93a';
+      this.track.gates.forEach((gt, i) => {
+        if (pilot.gateMask & (1 << i)) return;
+        const [x, y] = this.mapPoint(gt.s);
+        const r = size * 0.034;
+        g.beginPath();
+        g.moveTo(x * size, y * size - r);
+        g.lineTo(x * size + r, y * size);
+        g.lineTo(x * size, y * size + r);
+        g.lineTo(x * size - r, y * size);
+        g.closePath();
+        g.fill();
+      });
+    }
     // Start line.
     const [sx, sy] = this.mapPoint(0);
     g.fillStyle = '#ff7a1a';
@@ -373,6 +435,23 @@ export class Hud {
     setText(this.driveVal, String(Math.floor(me.drive)));
     setClass(this.drive, 'gain', me.onStrip || me.linked);
 
+    // Cells and the ability they pay for.
+    for (let i = 0; i < this.pipFills.length; i++) {
+      this.pipFills[i].style.transform = `scaleX(${Math.max(0, Math.min(1, me.cells - i)).toFixed(2)})`;
+    }
+    setText(this.cellsVal, String(Math.round(me.cells * 10) / 10));
+    if (me.cells > this.lastCells + 0.01) {
+      this.cellsLine.classList.remove('gain');
+      void this.cellsLine.offsetWidth;
+      this.cellsLine.classList.add('gain');
+    }
+    this.lastCells = me.cells;
+    const ab = abilityFor(me);
+    const shown = ab === -1 ? c.abilityFree : ab;
+    setText(this.abilityKey, k.ability);
+    setText(this.abilityName, ABILITIES[shown].name);
+    setClass(this.abilityTag, 'ready', ab !== -1 && me.cells >= 1 && weaponsFree(race) && !me.retired && !me.finished);
+
     // Chips.
     const battle = me.mode === MODE.BATTLE && me.target >= 0;
     this.chipLocked.hidden = !(race.phase === PHASE.RACING && race.lapPhase < 2);
@@ -385,7 +464,19 @@ export class Hud {
     }
     this.chipCharge.hidden = !me.onStrip;
     this.chipDraft.hidden = !me.drafting;
+    this.chipSling.hidden = !(me.tow > 0.05 && !me.drafting && me.mode === MODE.SPEED && !me.retired);
     this.chipLink.hidden = !me.linked;
+    // Whichever ability effect is running, with the seconds left.
+    const left = (ticks: number) => (ticks / TICK_RATE).toFixed(1);
+    let effect = '';
+    if (me.overdriveT > 0) effect = `Overdrive ${left(me.overdriveT)}`;
+    else if (me.ramT > 0) effect = `Ram ${left(me.ramT)}`;
+    else if (me.shieldT > 0) effect = `Aegis ${left(me.shieldT)}`;
+    else if (me.cloakT > 0) effect = 'Clear';
+    this.chipAbility.hidden = effect === '' || me.retired;
+    if (effect) setText(this.chipAbility, effect);
+    this.chipSnared.hidden = !(me.snareT > 0) || me.retired;
+    if (me.snareT > 0) setText(this.chipSnared, `Snared ${left(me.snareT)}`);
 
     // Speed and limiter.
     setText(this.mph, String(Math.round(me.speed * MPH_PER_UNIT)));
@@ -399,7 +490,7 @@ export class Hud {
         setText(this.limiter, `Limiter +${Math.round(bonus * 100)}% to catch the pack`);
         this.limiter.className = 'limiter pack';
       } else {
-        setText(this.limiter, `Limiter ${Math.round(PACE * MPH_PER_UNIT)}`);
+        setText(this.limiter, `Limiter ${Math.round(limiterOf(race) * MPH_PER_UNIT)}`);
         this.limiter.className = 'limiter';
       }
     }
@@ -410,17 +501,17 @@ export class Hud {
     setText(this.tacticHub, tactic === TACTIC.FREE ? 'Team play' : TACTIC_LABEL[tactic]);
 
     // Hints: only what matters right now.
-    const hintKey = `${this.device}|${me.retired ? 'r' : battle ? 'b' : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}`;
+    const hintKey = `${this.device}|${me.retired ? 'r' : battle ? 'b' : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}|${shown}`;
     if (hintKey !== this.hintKey) {
       this.hintKey = hintKey;
       const items: Array<[string, string]> = [];
       if (me.retired || me.finished) {
         items.push([k.lock, 'Next camera'], [k.pause, 'Pause']);
       } else if (battle) {
-        items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash'], [k.swap, 'Switch target'], [k.lock, 'Let go']);
+        items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], [k.lock, 'Let go']);
       } else {
         items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);
-        if (race.lapPhase >= 2) items.push([k.x, 'Attack']);
+        if (race.lapPhase >= 2) items.push([k.x, 'Attack'], [k.ability, ABILITIES[shown].name]);
       }
       this.hints.replaceChildren(...items.map(([key, label]) => h('span', h('span.key', key), label)));
     }
@@ -488,7 +579,7 @@ export class Hud {
         if (m.retired) gap = 'OUT';
         else if (m.finished) gap = 'FIN';
         else if (m === leader) gap = 'Lead';
-        else if (!leader.finished) gap = `+${((leader.s - m.s) / PACE).toFixed(1)}`;
+        else if (!leader.finished) gap = `+${((leader.s - m.s) / Math.max(60, leader.speed, limiterOf(race))).toFixed(1)}`;
         setText(row.gap, gap);
       }
       this.drawMap(race);
@@ -581,11 +672,37 @@ export class Hud {
         else {
           this.showCount('GO', true);
           window.setTimeout(() => (this.count.hidden = true), 900);
+          if (this.track.gates.length > 0 && race.rules.gateLaps >= 1) {
+            window.setTimeout(() => this.say(null, 'Gates are lit this lap only. Gold arches, half a Cell each.'), 1400);
+          }
         }
         break;
       case 'launch':
         if (e.mech === this.localId) this.showNotice('Perfect launch');
         break;
+      case 'gate':
+        if (e.mech === this.localId) {
+          const full = e.cells >= race.rules.cellMax;
+          this.showNotice(full ? 'Cells full' : Number.isInteger(e.cells) ? `Cell banked: ${e.cells} of ${race.rules.cellMax}` : 'Half a Cell', false, 1.3);
+        }
+        break;
+      case 'ability': {
+        const who = race.mechs[e.mech];
+        const key = (['overdrive', 'breakaway', 'snare', 'pulse', 'ram', 'aegis'] as const)[e.ability];
+        if (e.mech === this.localId) this.showNotice(ABILITIES[e.ability].name, false, 1.4);
+        else if (who.team === me.team) this.say(who, pick(LINES[key], this.seq++).replace('{t}', 'them'));
+        else if (e.ability === ABILITY.OVERDRIVE) this.say(null, `${who.name} is in Overdrive.`);
+        if (e.ability === ABILITY.AEGIS && who.team === me.team && e.mech !== this.localId && me.shieldT > 0) this.showNotice('Aegis: you are shielded', false, 1.6);
+        break;
+      }
+      case 'snared': {
+        const victim = race.mechs[e.mech];
+        const by = race.mechs[e.by];
+        if (e.mech === this.localId) this.showNotice('Snared: speed cut, no boost', true, 2.2);
+        else if (e.by === this.localId) this.showNotice(`${victim.name} is snared`, false, 1.6);
+        else if (by.team === me.team) this.say(by, pick(LINES.snared, this.seq++).replace('{t}', victim.name));
+        break;
+      }
       case 'lapPhase':
         if (e.lap === 2) {
           this.showBanner('Battle lap', 'Weapons free', 'p2', 3);
@@ -597,7 +714,8 @@ export class Hud {
         break;
       case 'denied':
         if (e.mech === this.localId) {
-          this.showNotice(e.reason === 'weapons' ? 'Weapons are locked until the battle lap' : e.reason === 'drive' ? 'Not enough Drive' : 'No target in range', e.reason === 'weapons');
+          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: 'No Cells. Gates only light on the formation lap' }[e.reason];
+          this.showNotice(why, e.reason === 'weapons');
         }
         break;
       case 'tactic': {
@@ -625,7 +743,7 @@ export class Hud {
         } else if (victim.team === me.team) {
           this.say(victim, pick(LINES.out, this.seq++));
         } else if (by && by.id === this.localId) {
-          this.showBanner('Knockout', `${victim.name} is out`, '', 2.4);
+          this.showBanner('Knockout', race.rules.koPoints > 0 ? `${victim.name} is out · +${race.rules.koPoints} points` : `${victim.name} is out`, '', 2.4);
           if (mates[0]) this.say(mates[0], pick(LINES.praise, this.seq++).replace('{t}', victim.name));
         } else if (by && by.team === me.team) {
           this.say(by, pick(LINES.kill, this.seq++).replace('{t}', victim.name));

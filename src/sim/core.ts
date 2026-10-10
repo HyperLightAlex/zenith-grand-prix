@@ -1,6 +1,6 @@
 // Helpers shared by movement, combat and AI.
 
-import { CLASSES, LOCK_RANGE, MAX_HEADING, MODE, type ClassDef } from './config';
+import { CLASSES, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, type ClassDef } from './config';
 import { clamp, wrapAngle } from './math';
 import { deltaS, type Track } from './track';
 import type { MechState, RaceState } from './types';
@@ -21,6 +21,50 @@ export function distance(track: Track, a: MechState, b: MechState): number {
 
 export function hpFraction(m: MechState): number {
   return m.hp / classOf(m).maxHp;
+}
+
+/** The limiter in force: one figure for the formation lap, another for the battle laps. */
+export function limiterOf(race: RaceState): number {
+  return race.lapPhase <= 1 ? race.rules.limiter1 : race.rules.limiter2;
+}
+
+/** How far the limiter opens for a mech that has dropped off the pack. */
+export function packBonus(race: RaceState, m: MechState): number {
+  const gap = race.leaderS - m.s;
+  return clamp((gap - PACK_SLACK) / (PACK_FULL - PACK_SLACK), 0, 1) * PACK_BONUS;
+}
+
+/** A frame's own top speed on the speed lap, cut a little for missing armour. */
+export function ownTopSpeed(race: RaceState, m: MechState, c: ClassDef): number {
+  const floor = race.rules.armourFloor;
+  // Overdrive runs the engine past what the damage would allow.
+  const armour = m.overdriveT > 0 ? 1 : floor + (1 - floor) * hpFraction(m);
+  return c.topSpeed * race.rules.topScale * armour;
+}
+
+/** Top speed available to a mech in speed mode, before boost and slipstream. */
+export function speedCap(race: RaceState, m: MechState, c: ClassDef): number {
+  if (m.finished) return limiterOf(race) * 0.75;
+  let cap = race.lapPhase < 3 ? limiterOf(race) * (1 + packBonus(race, m)) : ownTopSpeed(race, m, c);
+  if (m.overdriveT > 0) cap *= race.rules.overdriveMult;
+  if (m.ramT > 0) cap *= race.rules.ramMult;
+  if (m.snareT > 0) cap *= race.rules.snareMult;
+  return cap;
+}
+
+/**
+ * Extra top speed the slipstream is giving this mech, as a fraction. The
+ * charge builds while tucked in behind someone and drains after pulling out,
+ * but the bonus stays at full strength for the first half of the drain: that
+ * held burst is the slingshot, and it is long enough to finish a pass.
+ */
+export function towBonus(race: RaceState, m: MechState): number {
+  return (race.lapPhase >= 3 ? race.rules.tow3 : race.rules.tow) * Math.min(1, m.tow * 2);
+}
+
+/** Can `by` take a lock on `o`? A forward that has just broken away cannot be locked by enemies. */
+export function lockable(o: MechState, by: MechState): boolean {
+  return isActive(o) && (o.team === by.team || o.cloakT <= 0);
 }
 
 /** Keep speed/heading and vs/vd in agreement after the speed-mode values change. */
@@ -81,7 +125,7 @@ export function pickTarget(
   let best = -1;
   let bestScore = Infinity;
   for (const o of race.mechs) {
-    if (o.id === m.id || o.id === exclude || !isActive(o)) continue;
+    if (o.id === m.id || o.id === exclude || !lockable(o, m)) continue;
     if ((o.team === m.team) !== ally) continue;
     const ds = deltaS(track, o.s, m.s);
     const dd = o.d - m.d;
@@ -103,7 +147,7 @@ export function cycleTarget(race: RaceState, track: Track, m: MechState, dir: nu
   const ally = cur ? cur.team === m.team : false;
   const list: Array<{ id: number; ang: number }> = [];
   for (const o of race.mechs) {
-    if (o.id === m.id || !isActive(o)) continue;
+    if (o.id === m.id || !lockable(o, m)) continue;
     if ((o.team === m.team) !== ally) continue;
     const ds = deltaS(track, o.s, m.s);
     const dd = o.d - m.d;

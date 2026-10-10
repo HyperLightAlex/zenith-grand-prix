@@ -4,38 +4,33 @@
 // the browser for solo play and on a server for online play.
 
 import { aiCaptain, aiControl } from './ai';
-import { retire, setStagger, stepAction, stepProjectiles } from './combat';
+import { applyHit, retire, setStagger, stepAction, stepProjectiles, weaponsFree } from './combat';
 import {
   ACT,
   ALIGN_RATE,
+  ATK,
   ATTACKS,
   ATTACK_MOVE_SCALE,
   BATTLE_CAP_LAP3,
   BATTLE_CAP_MULT,
-  BATTLE_MIN,
+  BATTLE_MIN_FRAC,
+  BATTLE_STAGGER_DRAG,
   BOOST_ACCEL,
   BOOST_COST,
   BOOST_MIN_START,
-  BOOST_MULT,
   BTN,
+  BTN_MASK,
   BUMP_TURN,
   CLASSES,
   COAST_DRAG,
   COUNTDOWN_TICKS,
-  DRAFT_MAX,
   DRAFT_MIN,
-  DRAFT_MULT,
   DRAFT_WIDTH,
-  DRIVE_DRAFT,
   DRIVE_LINK,
   DRIVE_MAX,
-  DRIVE_PASSIVE,
-  DRIVE_START,
-  DRIVE_STRIP,
   DT,
   FACE_RATE,
   FINISH_GRACE_TICKS,
-  HP_SPEED_FLOOR,
   LAPS,
   LINK_RANGE,
   LOCK_BREAK,
@@ -44,35 +39,55 @@ import {
   MAX_RACE_TICKS,
   MODE,
   OVERCAP_DRAG,
-  PACE,
-  PACK_BONUS,
-  PACK_FULL,
-  PACK_SLACK,
+  OVERDRIVE_ACCEL,
   PERFECT_START_WINDOW,
   PHASE,
   POINTS,
+  RAM_MASS,
+  RAM_MIN_CLOSING,
+  RAM_SHOVE,
   SPEED_CEILING,
   SPLAT_CREDIT_TICKS,
   STAGGER_DRAG,
   STEER_RATE,
   TACTIC,
   TICK_RATE,
+  TOW_FAR,
+  TOW_NEAR,
   WALL_DRAG,
   WALL_SPLAT_DAMAGE,
   WALL_SPLAT_MIN,
   type ClassDef,
   type Tactic,
 } from './config';
-import { addVelocity, classOf, cycleTarget, distance, hpFraction, isActive, pickTarget, setTarget, syncFromSpeed } from './core';
-import { approach, approachAngle, clamp, rngNext } from './math';
-import { deltaS, kappaAt, onStrip, type Track } from './track';
+import {
+  addVelocity,
+  classOf,
+  cycleTarget,
+  distance,
+  isActive,
+  limiterOf,
+  ownTopSpeed,
+  packBonus,
+  pickTarget,
+  setTarget,
+  speedCap,
+  syncFromSpeed,
+  towBonus,
+} from './core';
+import { approach, approachAngle, clamp, lerp, rngNext } from './math';
+import { makeRules } from './rules';
+import { deltaS, gateCrossed, kappaAt, onStrip, type Track } from './track';
 import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceState } from './types';
+
+export { packBonus, speedCap } from './core';
 
 export function createRace(track: Track, cfg: RaceConfig): RaceState {
   const race: RaceState = {
     tick: 0,
     phase: PHASE.COUNTDOWN,
     rng: cfg.seed | 0,
+    rules: makeRules(cfg.rules),
     laps: cfg.laps ?? LAPS,
     lapPhase: 1,
     leaderS: 0,
@@ -90,9 +105,15 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
   cfg.seats.forEach((seat, id) => {
     const c = CLASSES[seat.role];
     // Grid: forwards on the front row, defenders at the back. The teams swap
-    // sides row by row so neither owns the inside line into turn one.
+    // sides row by row so neither owns the inside line into turn one, and a
+    // match flips the whole grid from one round to the next.
     const s = -(10 + seat.role * 12);
-    const d = (seat.team === 0) !== (seat.role === 1) ? -9 : 9;
+    const d = ((seat.team === 0) !== (seat.role === 1) ? -9 : 9) * (cfg.gridFlip ? -1 : 1);
+    // Which gates an AI pilot will bother with: the better the pilot, the more.
+    let gates = 0;
+    for (let g = 0; g < track.gates.length; g++) {
+      if (rngNext(race) < lerp(0.3, 0.95, seat.skill)) gates |= 1 << g;
+    }
     race.mechs.push({
       id,
       team: seat.team,
@@ -113,7 +134,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       outOfRange: 0,
       hp: c.maxHp,
       guard: c.guardMax,
-      drive: DRIVE_START,
+      drive: clamp(race.rules.driveStart, 0, DRIVE_MAX),
       act: ACT.NONE,
       actT: 0,
       actDur: 0,
@@ -132,9 +153,19 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       cdPrimary: 0,
       cdSecondary: 0,
       cdDash: 0,
+      cells: clamp(race.rules.cellStart, 0, race.rules.cellMax),
+      gateMask: 0,
+      cdAbility: 0,
+      overdriveT: 0,
+      ramT: 0,
+      ramHits: 0,
+      shieldT: 0,
+      snareT: 0,
+      cloakT: 0,
       boosting: false,
       onStrip: false,
       drafting: false,
+      tow: 0,
       linked: false,
       wall: 0,
       lap: 0,
@@ -171,6 +202,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
         boostUntil: 0,
         boutUntil: 0,
         restUntil: 0,
+        gates,
+        abilityAt: 0,
       },
     });
   });
@@ -178,25 +211,16 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
   return race;
 }
 
-/** Top speed available to a mech in speed mode, before boost and slipstream. */
-export function speedCap(race: RaceState, m: MechState, c: ClassDef): number {
-  if (m.finished) return PACE * 0.75;
-  if (race.lapPhase < 3) return PACE * (1 + packBonus(race, m));
-  return c.topSpeed * (HP_SPEED_FLOOR + (1 - HP_SPEED_FLOOR) * hpFraction(m));
-}
-
-/** How far the limiter opens for a mech that has dropped off the pack. */
-export function packBonus(race: RaceState, m: MechState): number {
-  const gap = race.leaderS - m.s;
-  return clamp((gap - PACK_SLACK) / (PACK_FULL - PACK_SLACK), 0, 1) * PACK_BONUS;
-}
-
 function battleCap(race: RaceState, m: MechState, c: ClassDef, targetAhead: boolean): number {
+  let cap: number;
   if (race.lapPhase < 3) {
-    const pack = PACE * (1 + packBonus(race, m));
-    return targetAhead ? Math.max(PACE * BATTLE_CAP_MULT, pack) : pack;
+    const limiter = limiterOf(race);
+    const pack = limiter * (1 + packBonus(race, m));
+    cap = targetAhead ? Math.max(limiter * BATTLE_CAP_MULT, pack) : pack;
+  } else {
+    cap = ownTopSpeed(race, m, c) * BATTLE_CAP_LAP3;
   }
-  return c.topSpeed * (HP_SPEED_FLOOR + (1 - HP_SPEED_FLOOR) * hpFraction(m)) * BATTLE_CAP_LAP3;
+  return m.snareT > 0 ? cap * race.rules.snareMult : cap;
 }
 
 // --------------------------------------------------------------------------
@@ -209,17 +233,21 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
 
   let cap = speedCap(race, m, c);
   const wasBoosting = m.boosting;
+  const overdrive = m.overdriveT > 0;
   m.boosting = false;
   // A tick of boost has to be paid for in full: with `drive > 0` the passive
   // trickle alone kept an empty gauge boosting for as long as A was held.
+  // Overdrive takes the place of boost, and a snared mech cannot light it.
   const fuel = wasBoosting ? BOOST_COST * DT : BOOST_MIN_START;
-  if (!staggered && !m.finished && (input.buttons & BTN.A) !== 0 && m.drive >= fuel && input.throttle > 0.2) {
+  if (!staggered && !m.finished && !overdrive && m.snareT <= 0 && (input.buttons & BTN.A) !== 0 && m.drive >= fuel && input.throttle > 0.2) {
     m.boosting = true;
-    cap *= BOOST_MULT;
+    cap *= race.rules.boostMult;
     m.drive = Math.max(0, m.drive - BOOST_COST * DT);
     if (!wasBoosting) race.events.push({ type: 'boost', mech: m.id });
   }
-  if (m.drafting) cap *= DRAFT_MULT;
+  // The tow: full strength after a moment behind someone, and it lingers for
+  // a moment after pulling out, which is what makes a slingshot pass.
+  cap *= 1 + towBonus(race, m);
 
   const throttle = staggered ? 0 : clamp(input.throttle, 0, 1);
   const brake = staggered ? 0 : clamp(input.brake, 0, 1);
@@ -227,7 +255,7 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   if (m.speed < want) {
     // Acceleration tails off toward the cap.
     const room = clamp(1.2 - m.speed / cap, 0.18, 1);
-    m.speed = Math.min(want, m.speed + c.accel * (m.boosting ? BOOST_ACCEL : 1) * room * DT);
+    m.speed = Math.min(want, m.speed + c.accel * (overdrive ? OVERDRIVE_ACCEL : m.boosting ? BOOST_ACCEL : 1) * room * DT);
   } else if (m.speed > want) {
     const drag = COAST_DRAG + (m.speed > cap ? OVERCAP_DRAG : 0);
     m.speed = Math.max(want, m.speed - drag * DT);
@@ -259,10 +287,13 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
   m.facing = approachAngle(m.facing, Math.atan2(ud, us), FACE_RATE * DT);
   m.steer = approach(m.steer, 0, STEER_RATE * DT);
   m.boosting = false;
+  const limiter = limiterOf(race);
+  const floor = limiter * BATTLE_MIN_FRAC;
+  const move = race.rules.battleMove;
 
   if (m.act === ACT.STAGGER) {
     // Tumbling: no control, bleed speed.
-    m.vs = approach(m.vs, BATTLE_MIN, STAGGER_DRAG * DT);
+    m.vs = approach(m.vs, floor, BATTLE_STAGGER_DRAG * DT);
     m.vd *= 0.955;
   } else if (m.act === ACT.DASH) {
     // The dash impulse was applied when it started; just let it run out.
@@ -288,17 +319,18 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
       }
     }
     if (m.guarding) scale *= 0.5;
+    scale *= move;
     const rs = (us * my * c.approach - ud * mx * c.strafe) * scale + us * advance;
     const rd = (ud * my * c.approach + us * mx * c.strafe) * scale + ud * advance;
 
     // The track carries you at your target's pace, easing toward the
     // limiter so a long fight does not grind to a halt.
-    const ref = race.lapPhase < 3 ? PACE : battleCap(race, m, c, true);
+    const ref = race.lapPhase < 3 ? limiter : battleCap(race, m, c, true);
     const carry = t.vs * 0.88 + ref * 0.12;
     const cap = battleCap(race, m, c, ds > 2) + advance * 0.6;
-    const wantVs = clamp(carry + rs, BATTLE_MIN, cap);
+    const wantVs = clamp(carry + rs, Math.min(floor, cap), cap);
     const wantVd = rd;
-    const acc = c.battleAccel * (advance > 0 ? 2.2 : 1) * DT;
+    const acc = c.battleAccel * move * (advance > 0 ? 2.2 : 1) * DT;
     let dvs = wantVs - m.vs;
     let dvd = wantVd - m.vd;
     const dm = Math.hypot(dvs, dvd);
@@ -390,7 +422,10 @@ function collide(race: RaceState, track: Track): void {
       const ns = ds / dist;
       const nd = dd / dist;
       const overlap = minD - dist;
-      const wa = cb.mass / (ca.mass + cb.mass);
+      // A ramming mech carries through whatever it hits.
+      const ma = ca.mass * (a.ramT > 0 ? RAM_MASS : 1);
+      const mb = cb.mass * (b.ramT > 0 ? RAM_MASS : 1);
+      const wa = mb / (ma + mb);
       const wb = 1 - wa;
       a.s += ns * overlap * wa;
       a.d += nd * overlap * wa;
@@ -410,9 +445,28 @@ function collide(race: RaceState, track: Track): void {
         addVelocity(a, ns * j2 * wa, nd * j2 * wa * ta);
         addVelocity(b, -ns * j2 * wb, -nd * j2 * wb * tb);
         if (-rv > 9) race.events.push({ type: 'bump', a: a.id, b: b.id, intensity: -rv });
+        if (a.team !== b.team && -rv >= RAM_MIN_CLOSING) {
+          if (a.ramT > 0) ram(race, track, a, b);
+          if (b.ramT > 0 && isActive(a) && isActive(b)) ram(race, track, b, a);
+          if (!isActive(a)) break;
+        }
       }
     }
   }
+}
+
+/** A ramming defender has run into `vic`: one heavy hit per target, and a shove toward the wall. */
+function ram(race: RaceState, track: Track, att: MechState, vic: MechState): void {
+  const bit = 1 << vic.id;
+  if (att.ramHits & bit || !weaponsFree(race)) return;
+  att.ramHits |= bit;
+  const def = { ...ATTACKS[ATK.DF_RAM], damage: race.rules.ramDamage };
+  const braced = vic.shieldT > 0 || vic.ramT > 0 || vic.guarding;
+  if (!applyHit(race, track, att, vic, def, ATK.DF_RAM) || !isActive(vic)) return;
+  // Sideways, away from the attacker; from dead astern, toward the nearer wall.
+  const dd = vic.d - att.d;
+  const side = Math.abs(dd) > 0.5 ? Math.sign(dd) : vic.d >= 0 ? 1 : -1;
+  addVelocity(vic, 0, side * RAM_SHOVE * (braced ? 0.3 : 1));
 }
 
 // --------------------------------------------------------------------------
@@ -497,14 +551,19 @@ export function updatePlaces(race: RaceState): void {
   for (let i = 0; i < order.length; i++) order[i].place = i + 1;
 }
 
-/** Points each mech would bank if the race ended in the current order. */
+/** Placing points a mech would bank if the race ended in the current order. */
 export function pointsFor(m: MechState): number {
   return m.retired ? 0 : (POINTS[m.place - 1] ?? 0);
 }
 
+/** Points a mech has earned for its team by knocking rivals out. They survive its own retirement. */
+export function koBonus(race: RaceState, m: MechState): number {
+  return m.kos * race.rules.koPoints;
+}
+
 export function teamPoints(race: RaceState, team: number): number {
   let sum = 0;
-  for (const m of race.mechs) if (m.team === team) sum += pointsFor(m);
+  for (const m of race.mechs) if (m.team === team) sum += pointsFor(m) + koBonus(race, m);
   return sum;
 }
 
@@ -520,7 +579,7 @@ function finalize(race: RaceState): void {
     }
   }
   updatePlaces(race);
-  for (const m of race.mechs) m.points = pointsFor(m);
+  for (const m of race.mechs) m.points = pointsFor(m) + koBonus(race, m);
   race.phase = PHASE.FINISHED;
   race.projectiles.length = 0;
   race.events.push({ type: 'raceEnd' });
@@ -541,7 +600,7 @@ function sanitize(inp: MechInput, out: MechInput): MechInput {
   out.my = fin(inp.my, -1, 1);
   out.throttle = fin(inp.throttle, 0, 1);
   out.brake = fin(inp.brake, 0, 1);
-  out.buttons = Number.isFinite(inp.buttons) ? inp.buttons & 0xff : 0;
+  out.buttons = Number.isFinite(inp.buttons) ? inp.buttons & BTN_MASK : 0;
   out.cmd = Number.isFinite(inp.cmd) && inp.cmd >= 0 && inp.cmd <= 4 ? inp.cmd | 0 : 0;
   return out;
 }
@@ -592,7 +651,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
         ? m.prevThrottle > 0.5 && tick - m.throttleTick <= PERFECT_START_WINDOW
         : rngNext(race) < m.skill * 0.6;
       if (good) {
-        m.speed = 38;
+        m.speed = 44;
         m.drive = Math.min(DRIVE_MAX, m.drive + 10);
         syncFromSpeed(m);
         race.events.push({ type: 'launch', mech: m.id });
@@ -634,11 +693,22 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     const sBefore = m.s;
     integrate(race, track, m, c);
 
-    // Laps and the finish line.
     if (isActive(m) && race.phase === PHASE.RACING) {
+      // Cell gates: lit for the first lap or two, and a full mech takes nothing.
+      if (m.lap < race.rules.gateLaps && m.cells < race.rules.cellMax) {
+        const g = gateCrossed(track, sBefore, m.s, m.d, m.gateMask);
+        if (g >= 0) {
+          m.gateMask |= 1 << g;
+          m.cells = Math.min(race.rules.cellMax, m.cells + race.rules.gateValue);
+          race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
+        }
+      }
+
+      // Laps and the finish line.
       const lap = Math.floor(m.s / track.length);
       if (lap > m.lap) {
         m.lap = lap;
+        m.gateMask = 0;
         if (lap >= race.laps) {
           const line = race.laps * track.length;
           const frac = m.s > sBefore ? clamp((line - sBefore) / (m.s - sBefore), 0, 1) : 1;
@@ -676,6 +746,9 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   if (race.phase === PHASE.RACING) stepProjectiles(race, track);
 
   // 5. Gauges, slipstream, links, and locks that have drifted out of range.
+  const rules = race.rules;
+  const towRange = Math.max(DRAFT_MIN + 1, race.lapPhase >= 3 ? rules.towRange3 : rules.towRange);
+  const towNear = Math.min(towRange - 1, Math.max(TOW_NEAR, towRange * 0.4));
   for (const m of ms) {
     m.linked = false;
   }
@@ -683,20 +756,25 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     if (!isActive(m)) {
       m.onStrip = false;
       m.drafting = false;
+      m.tow = 0;
       continue;
     }
     m.onStrip = m.speed > 30 && onStrip(track, m.s, m.d);
+    // Slipstream: how well tucked in behind somebody this mech is. Close up
+    // the tow is at full strength; at the far end of its reach it is a third.
     m.drafting = false;
+    let strength = 0;
     if (m.speed > 50) {
       for (const o of ms) {
         if (o === m || !isActive(o) || o.speed < 50) continue;
         const ahead = deltaS(track, o.s, m.s);
-        if (ahead >= DRAFT_MIN && ahead <= DRAFT_MAX && Math.abs(o.d - m.d) < DRAFT_WIDTH) {
-          m.drafting = true;
-          break;
-        }
+        if (ahead < DRAFT_MIN || ahead > towRange || Math.abs(o.d - m.d) >= DRAFT_WIDTH) continue;
+        m.drafting = true;
+        strength = Math.max(strength, ahead <= towNear ? 1 : lerp(1, TOW_FAR, (ahead - towNear) / (towRange - towNear)));
       }
     }
+    if (m.tow < strength) m.tow = Math.min(strength, m.tow + DT / Math.max(0.05, rules.towBuild));
+    else m.tow = Math.max(strength, m.tow - DT / Math.max(0.05, rules.slingshot));
     if (m.target >= 0) {
       const t = race.mechs[m.target];
       const dist = distance(track, m, t);
@@ -714,9 +792,13 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     }
   }
   if (race.phase === PHASE.RACING) {
+    // On the formation lap Drive comes from the charge strips and nowhere else.
+    const lap1 = race.lapPhase <= 1;
+    const trickle = lap1 && rules.lap1Trickle < 0.5 ? 0 : 1;
+    const strip = lap1 ? rules.driveStripLap1 : rules.driveStrip;
     for (const m of ms) {
       if (!isActive(m)) continue;
-      const gain = DRIVE_PASSIVE + (m.onStrip ? DRIVE_STRIP : 0) + (m.drafting ? DRIVE_DRAFT : 0) + (m.linked ? DRIVE_LINK : 0);
+      const gain = (m.onStrip ? strip : 0) + trickle * (rules.drivePassive + (m.drafting ? rules.driveDraft : 0) + (m.linked ? DRIVE_LINK : 0));
       m.drive = Math.min(DRIVE_MAX, m.drive + gain * DT);
     }
   }

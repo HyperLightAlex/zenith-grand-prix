@@ -8,8 +8,12 @@ export const LAPS = 3;
 /** Points by finishing position. A retired mech scores nothing. */
 export const POINTS = [15, 7, 5, 3, 2, 1];
 
-/** The limiter: nobody outruns this on laps 1 and 2 without boost. */
-export const PACE = 96;
+/**
+ * Reference pace: the default formation-lap limiter. The live limiters are
+ * rules (race.rules.limiter1 and limiter2); this is for presentation code
+ * that needs a "normal racing speed" to scale against.
+ */
+export const PACE = 110;
 /**
  * The limiter is tied to the race leader: fall more than PACK_SLACK behind
  * and it lets go a little, up to PACK_BONUS, so the field stays one pack
@@ -18,7 +22,7 @@ export const PACE = 96;
 export const PACK_SLACK = 40;
 export const PACK_FULL = 300;
 export const PACK_BONUS = 0.14;
-/** Display scale only: 96 u/s reads as 288 mph, a 128 u/s forward as 384. */
+/** Display scale only: 110 u/s reads as 330 mph, a 160 u/s forward as 480. */
 export const MPH_PER_UNIT = 3;
 
 export const COUNTDOWN_TICKS = 4 * TICK_RATE;
@@ -58,29 +62,31 @@ export const BTN = {
   ALLY: 32, // lock on to a teammate / release
   TNEXT: 64,
   TPREV: 128,
+  ABILITY: 256, // role ability: one move free, another locked on
 } as const;
+/** Every bit a controller may send. */
+export const BTN_MASK = 0x1ff;
 
 // ---- Drive gauge ---------------------------------------------------------
+// How fast it fills (strips, slipstream, the trickle) is in rules.ts.
 export const DRIVE_MAX = 100;
-export const DRIVE_START = 35;
-export const DRIVE_STRIP = 10; // per second on a charge strip
-export const DRIVE_DRAFT = 3; // per second in a slipstream
-export const DRIVE_PASSIVE = 0.8;
 export const DRIVE_PER_DAMAGE_DEALT = 0.07;
 export const DRIVE_PER_DAMAGE_TAKEN = 0.05;
 
 // ---- Speed mode ----------------------------------------------------------
-export const BOOST_MULT = 1.16;
 export const BOOST_ACCEL = 1.6;
+export const OVERDRIVE_ACCEL = 2.4;
 export const BOOST_COST = 15; // per second
 /** Drive needed to light the boost; once lit it burns to empty. */
 export const BOOST_MIN_START = 6;
 /** Nothing free-steering goes faster than this multiple of its current cap. */
 export const SPEED_CEILING = 1.22;
-export const DRAFT_MULT = 1.04;
 export const DRAFT_MIN = 4;
-export const DRAFT_MAX = 46;
-export const DRAFT_WIDTH = 5.5;
+export const DRAFT_WIDTH = 6;
+/** Inside this distance (or 40% of the tow's reach) the slipstream is at full strength... */
+export const TOW_NEAR = 40;
+/** ...and at the far end of its reach it charges to this share. */
+export const TOW_FAR = 0.3;
 export const COAST_DRAG = 14;
 export const OVERCAP_DRAG = 30;
 export const STAGGER_DRAG = 26;
@@ -95,17 +101,17 @@ export const ALIGN_RATE = 1.6;
 /** Share of a sideways shove that turns a free-steering mech's heading. */
 export const BUMP_TURN = 0.4;
 export const MAX_HEADING = 1.2;
-/** Lap 3 top speed scales with remaining armour: from this, up to 1. */
-export const HP_SPEED_FLOOR = 0.86;
 
 // ---- Battle mode ---------------------------------------------------------
 export const LOCK_RANGE = 95;
 export const LOCK_BREAK = 125;
 export const LOCK_BREAK_TICKS = 40;
 export const AUTO_LOCK_RANGE = 45;
-export const BATTLE_CAP_MULT = 1.04; // of PACE on laps 1-2, closing on a target ahead
+export const BATTLE_CAP_MULT = 1.04; // of the limiter on laps 1-2, closing on a target ahead
 export const BATTLE_CAP_LAP3 = 0.93; // of the class top speed on lap 3
-export const BATTLE_MIN = PACE * 0.55;
+export const BATTLE_MIN_FRAC = 0.7; // of the limiter: the slowest a fight is carried
+/** A stagger bleeds less speed in a lock than at racing speed, so a fight keeps moving. */
+export const BATTLE_STAGGER_DRAG = 15;
 export const FACE_RATE = 12;
 export const ATTACK_MOVE_SCALE = 0.35;
 export const LINK_RANGE = 26; // escorting an ally inside this shares Drive
@@ -136,6 +142,32 @@ export const HIT_SLOW_MAX = 0.35;
 export const HIT_SLOW_PER_DAMAGE = 1 / 400;
 export const CRITICAL_HP = 0.25;
 
+// ---- Abilities -----------------------------------------------------------
+// Each frame has two, on one button: one while free steering, one while
+// locked on. Each use burns a Cell. Durations and strengths are in rules.ts.
+export const ABILITY = { OVERDRIVE: 0, BREAKAWAY: 1, SNARE: 2, PULSE: 3, RAM: 4, AEGIS: 5 } as const;
+export type Ability = (typeof ABILITY)[keyof typeof ABILITY];
+export interface AbilityDef {
+  key: string;
+  name: string;
+  blurb: string;
+}
+export const ABILITIES: AbilityDef[] = [
+  { key: 'overdrive', name: 'Overdrive', blurb: 'A few seconds far past top speed. Ignores armour damage.' },
+  { key: 'breakaway', name: 'Break Away', blurb: 'Works even mid-hit: shake every lock and burst clear.' },
+  { key: 'snare', name: 'Snare', blurb: 'A bolt that drags a rival\'s top speed down and kills its boost.' },
+  { key: 'pulse', name: 'Disruptor', blurb: 'A pulse that interrupts everyone close by and drains their Drive.' },
+  { key: 'ram', name: 'Ram', blurb: 'An unstoppable charge. Whatever it hits is thrown aside.' },
+  { key: 'aegis', name: 'Aegis', blurb: 'A shield over you and teammates nearby.' },
+];
+/** Ticks between ability uses, so one press cannot burn two Cells. */
+export const ABILITY_COOLDOWN = 45;
+export const BREAKAWAY_IFRAMES = 40;
+/** A ram only lands with at least this much closing speed, u/s. */
+export const RAM_MIN_CLOSING = 3;
+export const RAM_SHOVE = 30;
+export const RAM_MASS = 3;
+
 export interface ClassDef {
   role: Role;
   /** Frame (mech model) name. */
@@ -163,6 +195,9 @@ export interface ClassDef {
   secondary: number;
   /** Range the AI likes to fight at (centre to centre). */
   aiRange: number;
+  /** Ability while free steering, and while locked on. Indices into ABILITIES. */
+  abilityFree: Ability;
+  abilityLocked: Ability;
 }
 
 export interface ShotDef {
@@ -203,6 +238,8 @@ export interface AttackDef {
   /** Combo follow-up, or -1. */
   next: number;
   heavy: boolean;
+  /** A guard blocks it but cannot turn it. */
+  noParry?: boolean;
   shot?: ShotDef;
 }
 
@@ -233,6 +270,10 @@ export const ATK = {
   DF_HAMMER1: 6,
   DF_HAMMER2: 7,
   DF_SCATTER: 8,
+  // Ability hits. Not reachable from the attack buttons.
+  MF_SNARE: 9,
+  MF_PULSE: 10,
+  DF_RAM: 11,
 } as const;
 
 export const ATTACKS: AttackDef[] = [
@@ -262,6 +303,18 @@ export const ATTACKS: AttackDef[] = [
     guardBreak: false, armor: true, advance: 0, driveCost: 0, cooldown: 200, next: -1, heavy: true,
     shot: { count: 1, interval: 1, pellets: 6, speed: 210, spread: 0.22, range: 30 },
   },
+  // Midfielder abilities: the Snare bolt and the Disruptor pulse.
+  {
+    key: 'mf_snare', name: 'Snare', kind: 'shot',
+    windup: 0, active: 1, recovery: 0,
+    reach: 0, arc: 0.55,
+    damage: 18, guardDamage: 10, stagger: 6, knockback: 2,
+    guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 0, next: -1, heavy: false,
+    shot: { count: 1, interval: 1, pellets: 1, speed: 320, spread: 0.008, range: 100 },
+  },
+  melee({ key: 'mf_pulse', name: 'Disruptor', windup: 0, active: 1, recovery: 0, damage: 26, guardDamage: 40, stagger: 40, knockback: 30, advance: 0, heavy: true, noParry: true }),
+  // Defender ability: the Ram. Damage comes from the rules.
+  melee({ key: 'df_ram', name: 'Ram', windup: 0, active: 1, recovery: 0, damage: 80, guardDamage: 50, stagger: 34, knockback: 34, advance: 0, heavy: true, noParry: true }),
 ];
 
 export const CLASSES: ClassDef[] = [
@@ -269,28 +322,31 @@ export const CLASSES: ClassDef[] = [
     role: ROLE.FW, frame: 'Swift',
     blurb: 'Lightest and fastest. Wins the sprint if it survives the fight.',
     maxHp: 1600, radius: 3.0, mass: 0.8,
-    topSpeed: 128, accel: 36, brake: 70, grip: 100, turnMax: 2.2,
+    topSpeed: 160, accel: 45, brake: 90, grip: 100, turnMax: 2.2,
     battleAccel: 80, strafe: 30, approach: 34,
     guardMax: 80, guardRegen: 18, dash: 78, dashCost: 10, dashIframes: 13,
     primary: ATK.FW_SLASH1, secondary: ATK.FW_LANCE, aiRange: 0,
+    abilityFree: ABILITY.OVERDRIVE, abilityLocked: ABILITY.BREAKAWAY,
   },
   {
     role: ROLE.MF, frame: 'Vector',
     blurb: 'Balanced all-rounder. Controls space with carbine fire.',
     maxHp: 1800, radius: 3.4, mass: 1.0,
-    topSpeed: 122, accel: 32, brake: 70, grip: 90, turnMax: 2.0,
+    topSpeed: 152.5, accel: 40, brake: 90, grip: 90, turnMax: 2.0,
     battleAccel: 68, strafe: 26, approach: 30,
     guardMax: 100, guardRegen: 18, dash: 68, dashCost: 15, dashIframes: 10,
     primary: ATK.MF_BURST, secondary: ATK.MF_KICK, aiRange: 30,
+    abilityFree: ABILITY.SNARE, abilityLocked: ABILITY.PULSE,
   },
   {
     role: ROLE.DF, frame: 'Bulwark',
     blurb: 'Heavy bruiser. Breaks guards and shrugs off light hits.',
     maxHp: 2200, radius: 4.0, mass: 1.45,
-    topSpeed: 116, accel: 28, brake: 70, grip: 80, turnMax: 1.8,
+    topSpeed: 145, accel: 35, brake: 90, grip: 80, turnMax: 1.8,
     battleAccel: 56, strafe: 22, approach: 26,
     guardMax: 130, guardRegen: 20, dash: 58, dashCost: 18, dashIframes: 8,
     primary: ATK.DF_HAMMER1, secondary: ATK.DF_SCATTER, aiRange: 0,
+    abilityFree: ABILITY.RAM, abilityLocked: ABILITY.AEGIS,
   },
 ];
 

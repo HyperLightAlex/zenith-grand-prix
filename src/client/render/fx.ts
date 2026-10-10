@@ -239,6 +239,10 @@ export class Trail {
     this.count = 0;
   }
 
+  setColor(color: THREE.Color): void {
+    this.color.copy(color);
+  }
+
   /** `head` is the heel position, `right` the across-road direction there. */
   update(head: THREE.Vector3, right: THREE.Vector3, intensity: number, width: number): void {
     const p = this.pts;
@@ -496,44 +500,72 @@ export function makeLockRing(): THREE.Mesh {
   return mesh;
 }
 
-/** Curved energy shield shown while a mech guards. */
-export function makeShield(color: number): THREE.Mesh {
-  const geo = new THREE.SphereGeometry(4.2, 10, 8, Math.PI * 0.24, Math.PI * 0.52, Math.PI * 0.22, Math.PI * 0.5);
-  const mat = new THREE.ShaderMaterial({
+const shieldVertex = /* glsl */ `
+  varying vec3 vN;
+  varying vec3 vV;
+  varying vec3 vP;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    vP = position;
+    gl_Position = projectionMatrix * mv;
+  }`;
+
+const shieldFragment = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uPower, uTime;
+  varying vec3 vN;
+  varying vec3 vV;
+  varying vec3 vP;
+  void main() {
+    float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+    // Hex-ish lattice from three sets of stripes.
+    vec2 p = vP.xy * 1.4 + vec2(0.0, uTime * 0.6);
+    float l = max(max(abs(sin(p.x * 2.0)), abs(sin(p.x + p.y * 1.73))), abs(sin(p.x - p.y * 1.73)));
+    float grid = smoothstep(0.93, 1.0, l);
+    float a = (0.05 + fres * 0.45 + grid * 0.4) * uPower;
+    gl_FragColor = vec4(uColor * a * 1.5, a);
+  }`;
+
+function shieldMaterial(color: number): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(color) }, uPower: { value: 0 }, uTime: { value: 0 } },
-    vertexShader: /* glsl */ `
-      varying vec3 vN;
-      varying vec3 vV;
-      varying vec3 vP;
-      void main() {
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vN = normalize(normalMatrix * normal);
-        vV = normalize(-mv.xyz);
-        vP = position;
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: /* glsl */ `
-      uniform vec3 uColor;
-      uniform float uPower, uTime;
-      varying vec3 vN;
-      varying vec3 vV;
-      varying vec3 vP;
-      void main() {
-        float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
-        // Hex-ish lattice from three sets of stripes.
-        vec2 p = vP.xy * 1.4;
-        float l = max(max(abs(sin(p.x * 2.0)), abs(sin(p.x + p.y * 1.73))), abs(sin(p.x - p.y * 1.73)));
-        float grid = smoothstep(0.93, 1.0, l);
-        float a = (0.05 + fres * 0.45 + grid * 0.4) * uPower;
-        gl_FragColor = vec4(uColor * a * 1.5, a);
-      }`,
+    vertexShader: shieldVertex,
+    fragmentShader: shieldFragment,
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
-  const mesh = new THREE.Mesh(geo, mat);
+}
+
+/** Curved energy shield shown while a mech guards (and, in amber, while it rams). */
+export function makeShield(color: number): THREE.Mesh {
+  const geo = new THREE.SphereGeometry(4.2, 10, 8, Math.PI * 0.24, Math.PI * 0.52, Math.PI * 0.22, Math.PI * 0.5);
+  const mesh = new THREE.Mesh(geo, shieldMaterial(color));
   mesh.position.set(0, 4.2, 0.6);
+  mesh.visible = false;
+  mesh.renderOrder = 7;
+  return mesh;
+}
+
+/** The Aegis: a full bubble around a shielded mech. */
+export function makeBubble(color: number, radius: number): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 18, 12), shieldMaterial(color));
+  mesh.position.set(0, radius * 0.78, 0);
+  mesh.scale.set(1, 1.08, 1);
+  mesh.visible = false;
+  mesh.renderOrder = 7;
+  return mesh;
+}
+
+/** A hoop that rides up and down a snared mech. */
+export function makeSnareRing(color: number): THREE.Mesh {
+  const geo = new THREE.TorusGeometry(1, 0.07, 6, 28);
+  geo.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(1.8), toneMapped: false, transparent: true, opacity: 0.95, depthWrite: false }));
+  mesh.matrixAutoUpdate = false;
   mesh.visible = false;
   mesh.renderOrder = 7;
   return mesh;

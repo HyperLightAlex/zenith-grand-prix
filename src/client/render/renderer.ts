@@ -16,6 +16,9 @@ const SpeedShader = {
     uBoost: { value: 0 },
     uFlash: { value: 0 }, // white impact flash
     uHurt: { value: 0 }, // red edge when hit
+    uBlurK: { value: 1 }, // tuning multipliers
+    uLineK: { value: 1 },
+    uTint: { value: new THREE.Vector3(1, 1, 1) }, // colour of the speed lines
     uTime: { value: 0 },
     uAspect: { value: 1 },
     uFocus: { value: new THREE.Vector2(0.5, 0.5) },
@@ -25,8 +28,9 @@ const SpeedShader = {
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
-    uniform float uSpeed, uBoost, uFlash, uHurt, uTime, uAspect;
+    uniform float uSpeed, uBoost, uFlash, uHurt, uTime, uAspect, uBlurK, uLineK;
     uniform vec2 uFocus;
+    uniform vec3 uTint;
     varying vec2 vUv;
     float hash(float n) { return fract(sin(n) * 43758.5453); }
     void main() {
@@ -34,7 +38,7 @@ const SpeedShader = {
       vec2 asp = vec2(to.x * uAspect, to.y);
       float r = length(asp);
       // Radial blur that grows toward the edges of the frame.
-      float amt = (uSpeed * 0.035 + uBoost * 0.05) * smoothstep(0.12, 0.85, r);
+      float amt = (uSpeed * 0.04 + uBoost * 0.05) * uBlurK * smoothstep(0.12, 0.85, r);
       vec3 col = vec3(0.0);
       float tw = 0.0;
       for (int i = 0; i < 8; i++) {
@@ -55,7 +59,7 @@ const SpeedShader = {
       float line = smoothstep(0.82, 1.0, rnd) * smoothstep(0.30 + hash(seg) * 0.25, 0.95, r);
       float fa = fract(ang * 34.0);
       line *= smoothstep(0.0, 0.25, fa) * smoothstep(1.0, 0.75, fa);
-      col += vec3(1.0) * line * (uSpeed * 0.10 + uBoost * 0.35);
+      col += uTint * line * (uSpeed * 0.12 + uBoost * 0.35) * uLineK;
       // Vignette, hurt tint, flash.
       float vig = smoothstep(0.55, 1.15, r);
       col *= 1.0 - vig * (0.22 + uSpeed * 0.12);
@@ -102,6 +106,11 @@ export class Renderer {
     this.composer.addPass(new OutputPass());
     this.resize();
     window.addEventListener('resize', () => this.resize());
+  }
+
+  /** Bloom strength, from the tuning panel. */
+  setBloom(strength: number): void {
+    this.bloom.strength = strength;
   }
 
   setQuality(q: Quality): void {

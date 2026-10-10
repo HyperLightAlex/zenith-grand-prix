@@ -18,6 +18,8 @@ export const COLORS = {
   wallDark: 0x39414f,
   accent: 0xff7a1a,
   charge: 0x35f0ff,
+  cell: 0xffc93a,
+  snare: 0xff7a2a,
   outline: 0x141a2a,
 };
 

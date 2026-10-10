@@ -39,7 +39,8 @@ export class MechAnimator {
     const battle = m.mode === MODE.BATTLE && !m.retired;
     this.battleW = toward(this.battleW, battle ? 1 : 0, 9, dt);
     this.guardW = toward(this.guardW, m.guarding ? 1 : 0, 22, dt);
-    this.boostW = toward(this.boostW, m.boosting ? 1 : 0, 7, dt);
+    const surging = m.boosting || m.overdriveT > 0 || (m.ramT > 0 && !battle);
+    this.boostW = toward(this.boostW, surging ? 1 : 0, 7, dt);
     this.koW = toward(this.koW, m.retired ? 1 : 0, 4, dt);
     this.winW = toward(this.winW, m.finished && !m.retired ? 1 : 0, 2.5, dt);
     const speedFrac = clamp01(m.speed / (PACE * 1.25));
@@ -146,7 +147,7 @@ export class MechAnimator {
     let want = 0;
     if (!m.retired) {
       want = battle ? 0.28 : 0.22 + speedFrac * 0.45;
-      if (m.boosting) want = 1.15;
+      if (surging) want = m.overdriveT > 0 ? 1.45 : 1.15;
       if (m.act === ACT.DASH) want = 1.0;
       if (m.finished) want = 0.25;
     }
@@ -154,7 +155,7 @@ export class MechAnimator {
     setFlameTime(this.rig, this.time);
     const flick = 0.9 + Math.sin(this.time * 47) * 0.1;
     for (const f of this.rig.flames) {
-      const power = f.bank === 'main' ? this.thrust : this.thrust * (battle || m.boosting ? 0.9 : 0.35);
+      const power = f.bank === 'main' ? this.thrust : this.thrust * (battle || surging ? 0.9 : 0.35);
       f.mesh.scale.set(f.width * (0.8 + power * 0.5), f.width * (0.8 + power * 0.5), Math.max(0.01, f.length * power * flick));
       f.mesh.visible = power > 0.03;
     }

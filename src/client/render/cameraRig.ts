@@ -2,8 +2,12 @@
 // stays behind the mech through bends, and swings to frame both fighters
 // when the pilot locks on.
 import * as THREE from 'three';
-import { MODE, PACE, deltaS, type MechState, type Track } from '../../sim/index';
+import { MODE, deltaS, type MechState, type Track } from '../../sim/index';
+import type { Feel } from '../game/tuning';
 import { trackPoint, trackUp } from './trackSpace';
+
+/** Speed the camera treats as "flat out": a forward's top speed on the speed lap. */
+const FULL_SPEED = 160;
 
 const toward = (v: number, target: number, rate: number, dt: number) => v + (target - v) * (1 - Math.exp(-rate * dt));
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
@@ -31,7 +35,9 @@ export class CameraRig {
   private battleW = 0;
   private dSmooth = 0;
   private fov = 64;
-  private dist = 16;
+  private dist = 14;
+  private surgeW = 0;
+  private rumbleT = 0;
   private lookBackW = 0;
   private pan = 0;
   private tilt = 0;
@@ -45,10 +51,10 @@ export class CameraRig {
   private b = new THREE.Vector3();
   private up = new THREE.Vector3();
 
-  constructor(readonly camera: THREE.PerspectiveCamera, readonly track: Track) {}
+  constructor(readonly camera: THREE.PerspectiveCamera, readonly track: Track, readonly feel: Feel) {}
 
   shake(amount: number): void {
-    this.trauma = Math.min(1, this.trauma + amount);
+    this.trauma = Math.min(1, this.trauma + amount * this.feel.camShake);
   }
 
   reset(): void {
@@ -62,10 +68,12 @@ export class CameraRig {
     const m = sub.mech;
     const hw = track.halfWidth;
     this.clock += dt;
-    const speedFrac = Math.min(1.4, m.speed / PACE);
+    const F = this.feel;
+    const speedFrac = Math.min(1.45, m.speed / FULL_SPEED);
     const inBattle = m.mode === MODE.BATTLE && sub.target !== null && !m.retired;
     this.battleW = toward(this.battleW, inBattle ? 1 : 0, 6, dt);
     this.boostW = toward(this.boostW, m.boosting ? 1 : 0, 5, dt);
+    this.surgeW = toward(this.surgeW, m.overdriveT > 0 ? 1 : 0, 5, dt);
     this.lookBackW = toward(this.lookBackW, lookBack ? 1 : 0, 14, dt);
     this.pan = toward(this.pan, inBattle ? 0 : panX * 1.15, 9, dt);
     this.tilt = toward(this.tilt, panY * 0.5, 9, dt);
@@ -80,14 +88,17 @@ export class CameraRig {
     const heading = m.mode === MODE.SPEED ? m.heading : 0;
     this.yaw = toward(this.yaw, heading * 0.55, 6, dt);
     const yaw = this.yaw + this.pan + this.lookBackW * Math.PI;
-    this.dist = toward(this.dist, 15 + speedFrac * 2.6 - this.boostW * 2.2, 3, dt);
+    // The camera drops back as the mech gathers speed and is dragged in again
+    // under boost, while the field of view opens: the road pours past.
+    this.dist = toward(this.dist, F.camDist + speedFrac * F.camDistSpeed - (this.boostW + this.surgeW) * 1.5, 3, dt);
     const dist = this.dist;
-    const height = 9.4 + this.tilt * 6;
+    const height = F.camHeight + this.tilt * 6;
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
     const camD = THREE.MathUtils.clamp(this.dSmooth - sy * dist, -(hw + 4), hw + 4);
     trackPoint(track, sub.s - cy * dist, camD, height, this.chasePos);
-    trackPoint(track, sub.s + cy * 20, sub.d + sy * 20, 3.2 - this.tilt * 4, this.chaseLook);
+    const ahead = F.camLookAhead;
+    trackPoint(track, sub.s + cy * ahead, sub.d + sy * ahead, F.camLookHeight - this.tilt * 4, this.chaseLook);
 
     // ---- battle view: over the shoulder, both fighters in frame
     if (sub.target && this.battleW > 0.001) {
@@ -102,10 +113,10 @@ export class CameraRig {
       this.battleYaw += diff * (1 - Math.exp(-(this.battleW < 0.5 ? 30 : 5.5) * dt));
       const us = Math.cos(this.battleYaw);
       const ud = Math.sin(this.battleYaw);
-      const back = 15 + Math.min(10, sep * 0.22);
+      const back = F.camLockDist + Math.min(10, sep * 0.22);
       const side = 3.6;
       const bd = THREE.MathUtils.clamp(sub.d - ud * back + us * side, -(hw + 7), hw + 7);
-      trackPoint(track, sub.s - us * back - ud * side, bd, 9.6 + Math.min(4, sep * 0.08), this.battlePos);
+      trackPoint(track, sub.s - us * back - ud * side, bd, F.camLockHeight + Math.min(4, sep * 0.08), this.battlePos);
       const f = Math.min(0.6, 8 / sep + 0.35);
       trackPoint(track, sub.s + ds * f, sub.d + dd * f, 3.8, this.battleLook);
     } else if (!sub.target) {
@@ -115,7 +126,7 @@ export class CameraRig {
     const w = this.battleW * this.battleW * (3 - 2 * this.battleW);
     const pos = this.a.copy(this.chasePos).lerp(this.battlePos, sub.target ? w : 0);
     const look = this.b.copy(this.chaseLook).lerp(this.battleLook, sub.target ? w : 0);
-    let fov = 62 + Math.min(1.25, speedFrac) * 13 + this.boostW * 11 - w * 8;
+    let fov = Math.min(112, F.camFov + speedFrac * F.camFovSpeed + (this.boostW + this.surgeW * 1.2) * F.camFovBoost - w * 3);
 
     // ---- scripted moves
     if (this.mode === 'intro') {
@@ -123,10 +134,10 @@ export class CameraRig {
       const k = Math.min(1, this.clock / this.introLength);
       const e = k * k * (3 - 2 * k);
       const ang = (1 - e) * 2.75;
-      const r = 15 + (1 - e) * 16;
-      const h = 9.4 + (1 - e) * 3;
+      const r = F.camDist + (1 - e) * 16;
+      const h = F.camHeight + (1 - e) * 4;
       trackPoint(track, sub.s - Math.cos(ang) * r, sub.d - Math.sin(ang) * r * 0.8, h, pos);
-      trackPoint(track, sub.s + e * 20, sub.d, 3.4, look);
+      trackPoint(track, sub.s + e * ahead, sub.d, 3.4, look);
       fov = 50 + e * 12;
     } else if (this.mode === 'orbit') {
       const ang = this.clock * 0.35 + 2.4;
@@ -147,6 +158,14 @@ export class CameraRig {
       cam.position.y += (Math.random() - 0.5) * 1.3 * t2;
       cam.rotateZ((Math.random() - 0.5) * 0.07 * t2);
       this.trauma = Math.max(0, this.trauma - dt * 2.2);
+    }
+    // Road rumble: a fine tremble that grows with speed, so pace is felt even on a straight.
+    if (this.mode === 'play' && F.camRumble > 0 && !m.retired) {
+      this.rumbleT += dt * (38 + speedFrac * 30);
+      const amp = Math.max(0, speedFrac - 0.45) * (0.035 + this.boostW * 0.03 + this.surgeW * 0.05) * F.camRumble;
+      cam.position.y += Math.sin(this.rumbleT) * amp;
+      cam.position.x += Math.sin(this.rumbleT * 1.7 + 1.3) * amp * 0.6;
+      cam.rotateZ(Math.sin(this.rumbleT * 0.63) * amp * 0.012);
     }
     this.fov = toward(this.fov, fov, 6, dt);
     if (Math.abs(cam.fov - this.fov) > 0.01) {

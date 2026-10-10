@@ -1,9 +1,13 @@
 // Attacks, hits, guards and projectiles.
 
 import {
+  ABILITY,
+  ABILITY_COOLDOWN,
   ACT,
+  ATK,
   ATTACKS,
   AUTO_LOCK_RANGE,
+  BREAKAWAY_IFRAMES,
   BTN,
   CHAIN_LIMIT,
   CHAIN_TICKS,
@@ -30,14 +34,16 @@ import {
   PHASE,
   TICK_RATE,
   attackTotal,
+  type Ability,
   type AttackDef,
 } from './config';
-import { addVelocity, classOf, isActive, pickTarget, setTarget, syncFromSpeed } from './core';
+import { addVelocity, classOf, isActive, pickTarget, setTarget, speedCap, syncFromSpeed } from './core';
+import { ticks } from './rules';
 import { rngNext, wrapAngle } from './math';
 import { deltaS, type Track } from './track';
 import type { MechInput, MechState, RaceState } from './types';
 
-function deny(race: RaceState, m: MechState, reason: 'weapons' | 'drive' | 'target'): void {
+function deny(race: RaceState, m: MechState, reason: 'weapons' | 'drive' | 'target' | 'cells'): void {
   if (race.tick - m.deniedTick < 30) return;
   m.deniedTick = race.tick;
   race.events.push({ type: 'denied', mech: m.id, reason });
@@ -135,14 +141,117 @@ export function tryDash(race: RaceState, track: Track, m: MechState, input: Mech
   return true;
 }
 
-export function setStagger(m: MechState, ticks: number): void {
+/** Which ability the button would fire right now, or -1 if the mech is in no state to use one. */
+export function abilityFor(m: MechState): Ability | -1 {
+  const c = classOf(m);
+  const locked = m.mode === MODE.BATTLE && m.target >= 0;
   if (m.act === ACT.STAGGER) {
-    m.actDur = Math.max(m.actDur - m.actT, ticks);
+    // Only a Break Away can be thrown while reeling from a hit.
+    return c.abilityLocked === ABILITY.BREAKAWAY ? ABILITY.BREAKAWAY : -1;
+  }
+  return locked ? c.abilityLocked : c.abilityFree;
+}
+
+/** Spend a Cell on the frame's ability: one move free steering, another locked on. */
+export function tryAbility(race: RaceState, track: Track, m: MechState): boolean {
+  if (m.cdAbility > 0) return false;
+  const ab = abilityFor(m);
+  if (ab === -1) return false;
+  if (!weaponsFree(race)) {
+    deny(race, m, 'weapons');
+    return false;
+  }
+  if (m.cells < 1) {
+    deny(race, m, 'cells');
+    return false;
+  }
+  const rules = race.rules;
+  // Attacks that would hit nothing are refused rather than wasted.
+  if (ab === ABILITY.SNARE && !shotTarget(race, track, m, ATTACKS[ATK.MF_SNARE])) {
+    deny(race, m, 'target');
+    return false;
+  }
+  if (ab === ABILITY.PULSE) {
+    let any = false;
+    for (const o of race.mechs) {
+      if (o.team !== m.team && isActive(o) && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) <= rules.pulseRange) any = true;
+    }
+    if (!any) {
+      deny(race, m, 'target');
+      return false;
+    }
+  }
+  m.cells -= 1;
+  m.cdAbility = ABILITY_COOLDOWN;
+  race.events.push({ type: 'ability', mech: m.id, ability: ab });
+
+  switch (ab) {
+    case ABILITY.OVERDRIVE: {
+      m.overdriveT = ticks(rules.overdriveSecs);
+      // The surge burns a Snare off, so a forward with a Cell always has an answer to one.
+      m.snareT = 0;
+      break;
+    }
+    case ABILITY.BREAKAWAY: {
+      m.act = ACT.NONE;
+      m.actT = 0;
+      m.chain = 0;
+      m.chainT = 0;
+      m.guarding = false;
+      m.comboQueued = false;
+      m.snareT = 0;
+      m.iframes = Math.max(m.iframes, BREAKAWAY_IFRAMES);
+      m.cloakT = ticks(rules.breakawaySecs);
+      for (const o of race.mechs) {
+        if (o.team !== m.team && o.target === m.id) setTarget(race, o, -1);
+      }
+      if (m.target >= 0) setTarget(race, m, -1);
+      // Thrown clear: straightened up and a little over the cap.
+      m.heading *= 0.3;
+      m.facing = m.heading;
+      m.speed = Math.max(m.speed, speedCap(race, m, classOf(m)) * 1.1);
+      syncFromSpeed(m);
+      break;
+    }
+    case ABILITY.SNARE: {
+      fireShot(race, track, m, ATTACKS[ATK.MF_SNARE], ATK.MF_SNARE);
+      break;
+    }
+    case ABILITY.PULSE: {
+      const a = ATTACKS[ATK.MF_PULSE];
+      for (const o of race.mechs) {
+        if (o.team === m.team || !isActive(o)) continue;
+        if (Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) > rules.pulseRange) continue;
+        if (applyHit(race, track, m, o, a, ATK.MF_PULSE)) o.drive = Math.max(0, o.drive - rules.pulseDrain);
+      }
+      break;
+    }
+    case ABILITY.RAM: {
+      m.ramT = ticks(rules.ramSecs);
+      m.ramHits = 0;
+      break;
+    }
+    case ABILITY.AEGIS: {
+      const dur = ticks(rules.aegisSecs);
+      for (const o of race.mechs) {
+        if (o.team !== m.team || !isActive(o)) continue;
+        if (o !== m && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) > rules.aegisRange) continue;
+        o.shieldT = Math.max(o.shieldT, dur);
+      }
+      break;
+    }
+  }
+  return true;
+}
+
+export function setStagger(m: MechState, dur: number): void {
+  if (m.act === ACT.STAGGER) {
+    m.actDur = Math.max(m.actDur - m.actT, dur);
     m.actT = 0;
   } else {
     m.act = ACT.STAGGER;
     m.actT = 0;
-    m.actDur = ticks;
+    m.actDur = dur;
   }
   m.guarding = false;
   m.comboQueued = false;
@@ -193,9 +302,13 @@ export function applyHit(
   const front = Math.abs(wrapAngle(toAttacker - victim.facing)) <= GUARD_ARC;
   let dmg = a.damage;
   let blocked = false;
+  // Under an Aegis, or mid-ram, nothing staggers or slows the mech.
+  const shielded = victim.shieldT > 0;
+  const unstoppable = shielded || victim.ramT > 0;
+  if (shielded) dmg *= race.rules.aegisDamage;
 
   if (victim.guarding && front) {
-    if (a.kind === 'melee' && victim.guardT <= PARRY_WINDOW && !a.guardBreak) {
+    if (a.kind === 'melee' && victim.guardT <= PARRY_WINDOW && !a.guardBreak && !a.noParry) {
       // A guard raised at the last moment turns the blow.
       setStagger(att, PARRY_STAGGER);
       addVelocity(att, -us * 14, -ud * 14);
@@ -208,7 +321,7 @@ export function applyHit(
     if (a.guardBreak || victim.guard <= 0) {
       victim.guard = classOf(victim).guardMax * 0.4;
       dmg *= 0.6;
-      setStagger(victim, GUARD_BREAK_STAGGER);
+      if (!unstoppable) setStagger(victim, GUARD_BREAK_STAGGER);
       addVelocity(victim, us * a.knockback, ud * a.knockback);
       race.events.push({ type: 'guardBreak', mech: victim.id, by: att.id });
     } else {
@@ -217,11 +330,11 @@ export function applyHit(
       addVelocity(victim, us * a.knockback * 0.25, ud * a.knockback * 0.25);
     }
   } else {
-    let armored = false;
+    let armored = unstoppable;
     if (victim.act === ACT.ATTACK) {
       const va = ATTACKS[victim.attack];
       if (victim.actT < va.windup) dmg *= COUNTER_HIT;
-      armored = va.armor && !a.heavy && victim.actT < va.windup + va.active;
+      armored = armored || (va.armor && !a.heavy && victim.actT < va.windup + va.active);
     }
     if (armored) {
       addVelocity(victim, us * a.knockback * 0.3, ud * a.knockback * 0.3);
@@ -244,7 +357,7 @@ export function applyHit(
         addVelocity(victim, us * a.knockback, ud * a.knockback);
       }
     }
-    if (victim.mode === MODE.SPEED) {
+    if (victim.mode === MODE.SPEED && !unstoppable) {
       // A hit at racing speed costs pace.
       victim.speed *= 1 - Math.min(HIT_SLOW_MAX, dmg * HIT_SLOW_PER_DAMAGE);
       syncFromSpeed(victim);
@@ -271,6 +384,11 @@ export function applyHit(
     d: victim.d,
   });
   if (victim.hp <= 0.001) retire(race, victim, att);
+  else if (attackIdx === ATK.MF_SNARE && !blocked && !shielded) {
+    victim.snareT = ticks(race.rules.snareSecs);
+    victim.boosting = false;
+    race.events.push({ type: 'snared', mech: victim.id, by: att.id });
+  }
   return true;
 }
 
@@ -297,30 +415,33 @@ function resolveMelee(race: RaceState, track: Track, m: MechState, a: AttackDef)
   }
 }
 
-function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef): void {
+/** Who a shot would be aimed at: the locked enemy, else whoever sits in the sights. */
+function shotTarget(race: RaceState, track: Track, m: MechState, a: AttackDef): MechState | null {
   const sh = a.shot!;
-  const c = classOf(m);
-  // Aim at the locked enemy, or at whoever sits in the sights.
+  if (m.target >= 0 && race.mechs[m.target].team !== m.team) return race.mechs[m.target];
   let t: MechState | null = null;
-  if (m.target >= 0 && race.mechs[m.target].team !== m.team) {
-    t = race.mechs[m.target];
-  } else {
-    let best = Infinity;
-    for (const o of race.mechs) {
-      if (o.team === m.team || !isActive(o)) continue;
-      const ds = deltaS(track, o.s, m.s);
-      const dd = o.d - m.d;
-      const dist = Math.hypot(ds, dd);
-      if (dist > sh.range + 8) continue;
-      const ang = Math.abs(wrapAngle(Math.atan2(dd, ds) - m.facing));
-      if (ang > a.arc) continue;
-      const score = dist + ang * 30;
-      if (score < best) {
-        best = score;
-        t = o;
-      }
+  let best = Infinity;
+  for (const o of race.mechs) {
+    if (o.team === m.team || !isActive(o)) continue;
+    const ds = deltaS(track, o.s, m.s);
+    const dd = o.d - m.d;
+    const dist = Math.hypot(ds, dd);
+    if (dist > sh.range + 8) continue;
+    const ang = Math.abs(wrapAngle(Math.atan2(dd, ds) - m.facing));
+    if (ang > a.arc) continue;
+    const score = dist + ang * 30;
+    if (score < best) {
+      best = score;
+      t = o;
     }
   }
+  return t;
+}
+
+function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef, idx: number): void {
+  const sh = a.shot!;
+  const c = classOf(m);
+  const t = shotTarget(race, track, m, a);
   let aim = m.facing;
   if (t) {
     const ds = deltaS(track, t.s, m.s);
@@ -337,14 +458,14 @@ function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef): vo
       id,
       owner: m.id,
       team: m.team,
-      attack: m.attack,
+      attack: idx,
       s: m.s + cs * (c.radius + 0.5),
       d: m.d + sn * (c.radius + 0.5),
       vs: m.vs + cs * sh.speed,
       vd: m.vd + sn * sh.speed,
       life: Math.ceil((sh.range / sh.speed) * TICK_RATE),
     });
-    race.events.push({ type: 'shot', mech: m.id, attack: m.attack, proj: id });
+    race.events.push({ type: 'shot', mech: m.id, attack: idx, proj: id });
   }
 }
 
@@ -354,8 +475,17 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
   if (m.cdPrimary > 0) m.cdPrimary--;
   if (m.cdSecondary > 0) m.cdSecondary--;
   if (m.cdDash > 0) m.cdDash--;
+  if (m.cdAbility > 0) m.cdAbility--;
   if (m.iframes > 0) m.iframes--;
   if (m.chainT > 0 && --m.chainT === 0) m.chain = 0;
+  if (m.overdriveT > 0) m.overdriveT--;
+  if (m.ramT > 0) m.ramT--;
+  if (m.shieldT > 0) m.shieldT--;
+  if (m.snareT > 0) m.snareT--;
+  if (m.cloakT > 0) m.cloakT--;
+
+  // The ability comes first: a forward can break away in the middle of a hit.
+  if (pressed & BTN.ABILITY) tryAbility(race, track, m);
 
   // A parry needs a deliberate press: the button down this tick after a real
   // pause, with the mech free to raise its guard at that moment. Holding the
@@ -396,7 +526,7 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
         if (t >= a.windup && t < a.windup + a.active && !m.attackHit) resolveMelee(race, track, m, a);
       } else if (a.shot) {
         for (let k = 0; k < a.shot.count; k++) {
-          if (t === a.windup + k * a.shot.interval) fireShot(race, track, m, a);
+          if (t === a.windup + k * a.shot.interval) fireShot(race, track, m, a, m.attack);
         }
       }
       m.actT++;

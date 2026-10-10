@@ -5,21 +5,22 @@
 
 import { weaponsFree } from './combat';
 import {
+  ABILITY,
   ACT,
+  ATK,
   ATTACKS,
   BTN,
   LOCK_RANGE,
   MODE,
-  PACE,
   PHASE,
   ROLE,
   TACTIC,
   type Tactic,
 } from './config';
-import { classOf, distance, hpFraction, isActive, setTarget } from './core';
+import { classOf, distance, hpFraction, isActive, lockable, setTarget, speedCap } from './core';
 import { clamp, lerp, rngNext, wrapAngle } from './math';
-import { setTactic, speedCap } from './sim';
-import { deltaS, kappaAt, lineAt, wrapS, type Track } from './track';
+import { setTactic } from './sim';
+import { deltaS, kappaAheadAt, kappaAt, lineAt, wrapS, type Track } from './track';
 import type { MechInput, MechState, RaceState } from './types';
 
 const INTENT = { RACE: 0, ENGAGE: 1, ESCORT: 2 } as const;
@@ -152,22 +153,75 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   let throttle = 1;
   let wantBoost = tick < ai.boostUntil;
 
+  const rules = race.rules;
+  const lap3 = race.lapPhase >= 3;
+  // Lining up a gate: hold the line and follow others through in single file.
+  let threading = false;
+  // A ramming defender steers at this mech instead of around it.
+  let ramAt: MechState | null = null;
+
   const chase = ai.intentTarget >= 0 ? race.mechs[ai.intentTarget] : null;
   if (chase && isActive(chase)) {
     const ds = deltaS(track, chase.s, m.s);
     if (Math.abs(ds) < 160) dWant = lerp(dWant, chase.d, 0.6);
     if (ds > 20) wantBoost = wantBoost || m.drive > 30;
     else if (ds < -12) throttle = 0.72; // let them come to us
-  } else if (m.drive < 85 && !m.finished) {
-    // Top up on a charge strip if one is coming.
+  } else if (!m.finished) {
     const ws = wrapS(track, m.s);
-    for (const st of track.strips) {
-      let ahead = st.s0 - ws;
-      if (ahead < -(st.s1 - st.s0)) ahead += track.length;
-      if (ahead < 190 && ahead > -(st.s1 - st.s0) + 10) {
-        dWant = st.d;
-        break;
+    let found = false;
+    // A Cell gate this pilot means to take.
+    if (m.lap < rules.gateLaps && m.cells < rules.cellMax) {
+      let nearest = 320;
+      for (let g = 0; g < track.gates.length; g++) {
+        const bit = 1 << g;
+        if ((ai.gates & bit) === 0 || (m.gateMask & bit) !== 0) continue;
+        let ahead = track.gates[g].s - ws;
+        if (ahead < -4) ahead += track.length;
+        if (ahead < nearest) {
+          nearest = ahead;
+          dWant = track.gates[g].d;
+          threading = ahead < 150;
+          found = true;
+        }
       }
+    }
+    // Otherwise top up on a charge strip if one is coming.
+    if (!found && m.drive < 85) {
+      for (const st of track.strips) {
+        let ahead = st.s0 - ws;
+        if (ahead < -(st.s1 - st.s0)) ahead += track.length;
+        if (ahead < 190 && ahead > -(st.s1 - st.s0) + 10) {
+          dWant = st.d;
+          found = true;
+          break;
+        }
+      }
+    }
+    // On the speed lap, tuck in behind whoever is ahead and take the tow.
+    if (!found && lap3) {
+      let nearest = rules.towRange3 + 40;
+      for (const o of race.mechs) {
+        if (o === m || !isActive(o)) continue;
+        const ahead = deltaS(track, o.s, m.s);
+        if (ahead < 30 || ahead > nearest || Math.abs(o.d - m.d) > 26) continue;
+        nearest = ahead;
+        dWant = o.d;
+      }
+    }
+  }
+  if (m.ramT > 0) {
+    // Mid-ram: aim the charge at the nearest rival it has not hit yet.
+    let nearest = 70;
+    for (const e of race.mechs) {
+      if (e.team === m.team || !isActive(e) || (m.ramHits & (1 << e.id)) !== 0) continue;
+      const ahead = deltaS(track, e.s, m.s);
+      if (ahead < -8 || ahead > nearest) continue;
+      nearest = ahead;
+      ramAt = e;
+    }
+    if (ramAt) {
+      dWant = ramAt.d;
+      wantBoost = wantBoost || m.drive > 10;
     }
   }
 
@@ -175,18 +229,22 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   for (const o of race.mechs) {
     if (o === m || o.retired) continue;
     const ahead = deltaS(track, o.s, m.s);
-    if (ahead < 3 || ahead > 34) continue;
+    // On the speed lap, stay in the tow until the last moment so the
+    // slingshot is spent on the pass and not on the run up to it.
+    const pullOut = lap3 ? clamp(8 + (m.speed - o.speed) * 0.9, 12, 34) : 34;
+    if (ahead < 3 || ahead > pullOut) continue;
     const dd = o.d - m.d;
     if (Math.abs(dd) > 7.5) continue;
     if (o.speed > m.speed + 4) continue;
-    if (chase === o) continue;
+    if (chase === o || ramAt === o) continue;
+    if (threading && ahead > 7) continue;
     const side = dd === 0 ? (o.id < m.id ? 1 : -1) : dd > 0 ? -1 : 1;
     dWant = o.d + side * 9.5;
     break;
   }
   // ... or lean on someone running alongside.
   for (const o of race.mechs) {
-    if (o === m || o.retired || chase === o) continue;
+    if (o === m || o.retired || chase === o || ramAt === o) continue;
     if (Math.abs(deltaS(track, o.s, m.s)) > 7) continue;
     const dd = o.d - m.d;
     const room = c.radius + classOf(o).radius + 2.5;
@@ -205,7 +263,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
 
   // --- slow for corners that are too tight for this speed
   let kMax = 0;
-  const reach = 24 + m.speed * 0.6;
+  const reach = 24 + m.speed * 0.75;
   for (let a = 0; a <= reach; a += 12) kMax = Math.max(kMax, Math.abs(kappaAt(track, m.s + a)));
   const vCorner = kMax > 1e-5 ? Math.sqrt((c.grip * 0.95) / kMax) * 1.04 : 999;
   if (m.speed > vCorner + 3) {
@@ -222,6 +280,12 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   if (m.drive > 97 && kMax < 0.0015 && race.lapPhase >= 2) wantBoost = true;
   if (wantBoost && m.drive > 3 && throttle >= 1) out.buttons |= BTN.A;
   out.throttle = throttle;
+
+  // --- the free-steering ability
+  if (weaponsFree(race) && m.cells >= 1 && m.cdAbility === 0 && m.act !== ACT.STAGGER && tick >= ai.abilityAt) {
+    ai.abilityAt = tick + 12;
+    if (wantFreeAbility(race, track, m, throttle >= 1) && rngNext(race) < 0.3 + 0.6 * m.skill) press(out, m, BTN.ABILITY);
+  }
 
   // --- guns work at racing speed: take the shot if someone is in the sights
   if (weaponsFree(race) && m.act === ACT.NONE && tick >= ai.attackAt && (m.role === ROLE.MF || m.role === ROLE.DF)) {
@@ -241,6 +305,114 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
         break;
       }
     }
+  }
+}
+
+/** Should this pilot spend a Cell on its free-steering ability right now? */
+function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: boolean): boolean {
+  const c = classOf(m);
+  const rules = race.rules;
+  const lap3 = race.lapPhase >= 3;
+  switch (c.abilityFree) {
+    case ABILITY.OVERDRIVE: {
+      // The speed lap is what Overdrive is for. Use it on a straight, to run
+      // someone down, to hold them off, or to shake a Snare.
+      if (!lap3 || m.overdriveT > 0 || !flatOut || kappaAheadAt(track, m.s) > 0.0019) return false;
+      if (m.snareT > 30) return true;
+      const toGo = race.laps * track.length - m.s;
+      let chasing = false;
+      let hunted = false;
+      for (const e of race.mechs) {
+        if (e.team === m.team || !isActive(e)) continue;
+        const ahead = deltaS(track, e.s, m.s);
+        if (ahead > 10 && ahead < 380) chasing = true;
+        if (ahead < 0 && ahead > -70) hunted = true;
+      }
+      return chasing || (hunted && (m.cells >= 2 || toGo < 1500));
+    }
+    case ABILITY.SNARE: {
+      // Drag back a rival who is getting away. On the battle lap only a marked target is worth a Cell.
+      const a = ATTACKS[ATK.MF_SNARE];
+      const ts = race.teams[m.team];
+      for (const e of race.mechs) {
+        if (e.team === m.team || !isActive(e) || e.snareT > 0 || e.shieldT > 0 || e.iframes > 0) continue;
+        const ds = deltaS(track, e.s, m.s);
+        const dd = e.d - m.d;
+        const dist = Math.hypot(ds, dd);
+        if (ds < 6 || dist > a.shot!.range - 12) continue;
+        if (Math.abs(wrapAngle(Math.atan2(dd, ds) - m.facing)) > a.arc * 0.7) continue;
+        if (lap3 ? e.role === ROLE.FW || e.place <= 2 : ts.tactic === TACTIC.MARK && ts.mark === e.id && m.cells >= 2) return true;
+      }
+      return false;
+    }
+    case ABILITY.RAM: {
+      if (m.ramT > 0) return false;
+      for (const e of race.mechs) {
+        if (e.team === m.team || !isActive(e) || e.shieldT > 0) continue;
+        const ds = deltaS(track, e.s, m.s);
+        if (ds < -6 || ds > 42 || Math.abs(e.d - m.d) > 18) continue;
+        // The rival forward is always worth it; on the speed lap so is anyone near the front.
+        if (e.role === ROLE.FW ? lap3 || m.cells >= 2 : lap3 && e.place <= 3) return true;
+      }
+      return false;
+    }
+    default:
+      void rules;
+      return false;
+  }
+}
+
+/** Should this pilot spend a Cell on its locked-on ability (or, for a forward, break away)? */
+function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean {
+  const c = classOf(m);
+  const rules = race.rules;
+  const lap3 = race.lapPhase >= 3;
+  const hp = hpFraction(m);
+  switch (c.abilityLocked) {
+    case ABILITY.BREAKAWAY: {
+      const staggered = m.act === ACT.STAGGER;
+      let hunters = 0;
+      for (const e of race.mechs) {
+        if (e.team !== m.team && isActive(e) && e.target === m.id && distance(track, e, m) < 34) hunters++;
+      }
+      // On the speed lap any hit is the race. Before that a Cell is worth
+      // more as an Overdrive later, so only a spare one, or real danger, goes.
+      if (lap3) return staggered;
+      if (staggered && hp < 0.35) return true;
+      return m.cells >= 2 && ((staggered && m.chain >= 2 && hp < 0.6) || (hunters >= 2 && hp < 0.5));
+    }
+    case ABILITY.PULSE: {
+      let near = 0;
+      let swinging = false;
+      let pressing = false;
+      for (const e of race.mechs) {
+        if (e.team === m.team || !isActive(e)) continue;
+        const dist = distance(track, e, m);
+        if (dist > rules.pulseRange * 0.9) continue;
+        near++;
+        if (e.act === ACT.ATTACK && ATTACKS[e.attack].kind === 'melee' && e.actT < ATTACKS[e.attack].windup) {
+          swinging = true;
+          if (dist < 16) pressing = true;
+        }
+      }
+      if (pressing && hp < 0.35) return true;
+      if (lap3) return near >= 2 || pressing;
+      return m.cells >= 2 && near >= 2 && swinging;
+    }
+    case ABILITY.AEGIS: {
+      if (m.shieldT > 0) return false;
+      const hot = (o: MechState) => race.tick - o.lastHitTick < 50;
+      if (hp < (lap3 ? 0.4 : 0.3) && hot(m)) return true;
+      for (const f of race.mechs) {
+        if (f.team !== m.team || f === m || !isActive(f) || f.shieldT > 0 || f.role !== ROLE.FW) continue;
+        if (distance(track, f, m) > rules.aegisRange * 0.9 || !hot(f)) continue;
+        const fhp = hpFraction(f);
+        if (lap3 || fhp < 0.35 || (fhp < 0.55 && m.cells >= 2)) return true;
+      }
+      return false;
+    }
+    default:
+      return false;
   }
 }
 
@@ -400,7 +572,7 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
     let want = -1;
     if (ai.intent !== INTENT.RACE && ai.intentTarget >= 0) {
       const t = race.mechs[ai.intentTarget];
-      if (isActive(t)) {
+      if (lockable(t, m)) {
         const dist = distance(track, m, t);
         if (dist < LOCK_RANGE - 6 || (m.target === t.id && dist < LOCK_RANGE + 20)) want = t.id;
       }
@@ -410,6 +582,17 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
 
   if (m.mode === MODE.BATTLE && m.target >= 0) fight(race, track, m, out);
   else race_(race, track, m, out);
+
+  // The locked-on ability. A forward's Break Away also works from a stagger at racing speed.
+  const breaker = classOf(m).abilityLocked === ABILITY.BREAKAWAY;
+  const inFight = m.mode === MODE.BATTLE && m.target >= 0;
+  if (
+    isActive(m) && weaponsFree(race) && m.cells >= 1 && m.cdAbility === 0 && race.tick >= ai.abilityAt &&
+    (m.act === ACT.STAGGER ? breaker : inFight)
+  ) {
+    ai.abilityAt = race.tick + 10;
+    if (wantLockedAbility(race, track, m) && rngNext(race) < 0.25 + 0.6 * m.skill) press(out, m, BTN.ABILITY);
+  }
   return out;
 }
 
@@ -457,5 +640,4 @@ export function aiCaptain(race: RaceState, track: Track, team: number): void {
   }
   if (tactic !== ts.tactic || mark !== ts.mark) setTactic(race, team, tactic, -1, mark);
   void track;
-  void PACE;
 }

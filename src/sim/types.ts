@@ -1,4 +1,5 @@
-import type { Act, Mode, Phase, Role, Tactic } from './config';
+import type { Ability, Act, Mode, Phase, Role, Tactic } from './config';
+import type { Rules } from './rules';
 
 /** What a controller (pad, keyboard, network client or AI) asks for each tick. */
 export interface MechInput {
@@ -37,6 +38,10 @@ export interface AiState {
   /** AI fights in bouts: engaged until boutUntil, then rests until restUntil. */
   boutUntil: number;
   restUntil: number;
+  /** Gates this pilot means to go for on the formation lap, one bit each. */
+  gates: number;
+  /** Next tick the pilot will consider using an ability. */
+  abilityAt: number;
 }
 
 export interface MechState {
@@ -94,10 +99,28 @@ export interface MechState {
   cdSecondary: number;
   cdDash: number;
 
+  // --- Cells and abilities
+  /** Ability charges. A gate gives a fraction of one; an ability burns one. */
+  cells: number;
+  /** Gates already threaded this lap, one bit each. */
+  gateMask: number;
+  cdAbility: number;
+  /** Ticks left of each effect. */
+  overdriveT: number;
+  ramT: number;
+  /** Mechs this ram has already hit, one bit each. */
+  ramHits: number;
+  shieldT: number;
+  snareT: number;
+  /** While this runs no enemy can lock on. */
+  cloakT: number;
+
   // --- flags for presentation
   boosting: boolean;
   onStrip: boolean;
   drafting: boolean;
+  /** Slipstream charge 0..1: builds in a tow, lingers after pulling out. */
+  tow: number;
   linked: boolean;
   wall: number;
 
@@ -171,7 +194,10 @@ export type SimEvent =
   | { type: 'unlock'; mech: number }
   | { type: 'dash'; mech: number }
   | { type: 'boost'; mech: number }
-  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' }
+  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' }
+  | { type: 'gate'; mech: number; gate: number; cells: number }
+  | { type: 'ability'; mech: number; ability: Ability }
+  | { type: 'snared'; mech: number; by: number }
   | { type: 'tactic'; team: number; tactic: Tactic; by: number; mark: number }
   | { type: 'projEnd'; proj: number; hit: boolean };
 
@@ -179,6 +205,8 @@ export interface RaceState {
   tick: number;
   phase: Phase;
   rng: number;
+  /** Tunable rules for this race. Plain numbers, part of the state. */
+  rules: Rules;
   laps: number;
   /** 1 formation, 2 battle, 3 speed. Follows the race leader. */
   lapPhase: number;
@@ -206,4 +234,8 @@ export interface RaceConfig {
   seed: number;
   seats: SeatConfig[];
   laps?: number;
+  /** Overrides for the default rules. */
+  rules?: Partial<Rules>;
+  /** Swap the two teams' sides of the grid (alternated round by round). */
+  gridFlip?: boolean;
 }

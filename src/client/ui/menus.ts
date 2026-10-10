@@ -1,6 +1,6 @@
 // Menus: title, garage (pick your frame), controls, pause and results.
 // Driven by the same MenuInput from pad or keyboard; items also take clicks.
-import { ATTACKS, CLASSES, ROLE_NAMES, type RaceState, type Role } from '../../sim/index';
+import { ABILITIES, ATTACKS, CLASSES, ROLE_NAMES, roundsToWin, type MatchConfig, type MatchState, type RaceState, type Role } from '../../sim/index';
 import type { MenuInput } from '../input/input';
 import { LIVERIES } from '../render/palette';
 import { h, setClass, setText } from './dom';
@@ -13,13 +13,28 @@ export interface GarageChoice {
   team: number;
   /** 0 rookie, 1 pro, 2 ace. */
   rivals: number;
+  /** Index into MATCH_OPTIONS. */
+  match: number;
 }
+
+/** The match formats on offer. A single race is a series of one. */
+export const MATCH_OPTIONS: Array<{ label: string; blurb: string; cfg: MatchConfig }> = [
+  { label: 'Single race', blurb: 'One race. Most points wins.', cfg: { mode: 'series', bestOf: 1, target: 50 } },
+  { label: 'Series, best of 3', blurb: 'Win two rounds. A round level on points goes to whoever came home first.', cfg: { mode: 'series', bestOf: 3, target: 50 } },
+  { label: 'Series, best of 5', blurb: 'Win three rounds. A round level on points goes to whoever came home first.', cfg: { mode: 'series', bestOf: 5, target: 50 } },
+  { label: 'Points race to 50', blurb: 'Points carry over. First team to 50 at the end of a round wins.', cfg: { mode: 'points', bestOf: 3, target: 50 } },
+  { label: 'Points race to 80', blurb: 'Points carry over. First team to 80 at the end of a round wins.', cfg: { mode: 'points', bestOf: 3, target: 80 } },
+];
 
 export interface MenuCallbacks {
   onStart(choice: GarageChoice): void;
   onPreview(choice: GarageChoice): void;
   onResume(): void;
+  /** Run the current round again from the grid. */
   onRestart(): void;
+  /** From the results: the next round, or a fresh match if this one is over. */
+  onNext(): void;
+  onTuning(): void;
   onQuit(): void;
   onGarage(): void;
   onSound(name: 'ui_move' | 'ui_select' | 'ui_back'): void;
@@ -46,9 +61,11 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Accelerate', 'RT', 'W'],
       ['Brake', 'LT', 'S'],
       ['Boost (uses Drive)', 'A', 'Space'],
+      ['Ability (uses a Cell)', 'B', 'R'],
       ['Look around', 'Right stick', ''],
       ['Look back', 'R3', 'V'],
       ['Pause', 'Start', 'Esc'],
+      ['Tuning panel', 'Back', 'T'],
       ['Full screen', '', 'F'],
     ],
   ],
@@ -61,13 +78,14 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Special', 'Y', 'K'],
       ['Guard (tap late to parry)', 'RB', 'L'],
       ['Dash', 'A', 'Space'],
+      ['Ability (a different one)', 'B', 'R'],
       ['Switch target', 'Right stick', 'Z C'],
     ],
   ],
   [
     'Team',
     [
-      ['Escort a teammate', 'B', 'E'],
+      ['Escort a teammate', 'L3', 'E'],
       ['Blitz: everyone attacks', 'D-pad up', '1'],
       ['Run: avoid fights, race', 'D-pad right', '2'],
       ['Shield: protect our forward', 'D-pad down', '3'],
@@ -79,7 +97,9 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
 export class Menus {
   readonly root = h('div.ui.menu');
   screen: Screen = null;
-  choice: GarageChoice = { role: 0, team: 0, rivals: 1 };
+  choice: GarageChoice = { role: 0, team: 0, rivals: 1, match: 1 };
+  /** The match the results screen reports on. */
+  match: MatchState | null = null;
   private items: Item[] = [];
   private sel = 0;
   private device: Device = 'keys';
@@ -177,7 +197,7 @@ export class Menus {
     );
     // Browsers only allow sound after a click or key press; a pad button does not count.
     if (this.device === 'pad') col.append(h('div.sound-hint', 'On a gamepad? Click the page once so the browser lets the sound through.'));
-    this.root.append(h('div.shade'), col, h('div.small-print', 'Working title. Version 0.1, solo play against computer pilots.'));
+    this.root.append(h('div.shade'), col, h('div.small-print', 'Working title. Version 0.2, solo play against computer pilots.'));
     this.root.onclick = () => {
       if (this.screen === 'title') this.confirm();
     };
@@ -188,6 +208,8 @@ export class Menus {
   private frameLabel = h('span.choice', '');
   private teamLabel = h('span.choice', '');
   private rivalLabel = h('span.choice', '');
+  private matchLabel = h('span.choice', '');
+  private matchBlurb = h('div.match-blurb', '');
   private blurb = h('p', '');
   private kit = h('div.kit');
 
@@ -198,6 +220,8 @@ export class Menus {
     this.frameLabel = h('span.choice', '');
     this.teamLabel = h('span.choice', '');
     this.rivalLabel = h('span.choice', '');
+    this.matchLabel = h('span.choice', '');
+    this.matchBlurb = h('div.match-blurb', '');
     this.addItem(list, h('div.item', h('span', 'Frame'), this.frameLabel), undefined, (dir) => {
       this.choice.role = ((this.choice.role + dir + 3) % 3) as Role;
       this.refreshGarage(true);
@@ -210,7 +234,12 @@ export class Menus {
       this.choice.rivals = (this.choice.rivals + dir + 3) % 3;
       this.refreshGarage(false);
     });
-    this.addItem(list, h('div.item.go', h('span', 'Start race')), () => this.cb.onStart({ ...this.choice }));
+    this.addItem(list, h('div.item', h('span', 'Match'), this.matchLabel), undefined, (dir) => {
+      const n = MATCH_OPTIONS.length;
+      this.choice.match = (this.choice.match + dir + n) % n;
+      this.refreshGarage(false);
+    });
+    this.addItem(list, h('div.item.go', h('span', 'Start')), () => this.cb.onStart({ ...this.choice }));
     this.addItem(list, h('div.item', h('span', 'Controls')), () => this.show('controls'));
 
     this.blurb = h('p', '');
@@ -222,9 +251,8 @@ export class Menus {
       this.frameInfo.append(h('div.stat', h('span', name), h('div.bar', fill)));
     }
     this.kit = h('div.kit');
-    this.frameInfo.append(this.kit);
-    col.append(h('h1', 'Garage'), this.blurb, list, this.frameInfo);
-    this.root.append(h('div.shade'), col, this.footer(['D-pad', '↑ ↓', 'Choose'], ['◀ ▶', '← →', 'Change'], ['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Back']));
+    col.append(h('h1', 'Garage'), this.blurb, list, this.matchBlurb, this.frameInfo);
+    this.root.append(h('div.shade'), col, this.kit, this.footer(['D-pad', '↑ ↓', 'Choose'], ['◀ ▶', '← →', 'Change'], ['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Back']));
     this.refreshGarage(true);
   }
 
@@ -233,16 +261,25 @@ export class Menus {
     setText(this.frameLabel, `${c.frame}, ${ROLE_NAMES[c.role].toLowerCase()}`);
     setText(this.teamLabel, LIVERIES[this.choice.team].name.replace('Team ', ''));
     setText(this.rivalLabel, RIVALS[this.choice.rivals]);
+    const opt = MATCH_OPTIONS[this.choice.match] ?? MATCH_OPTIONS[0];
+    setText(this.matchLabel, opt.label);
+    setText(this.matchBlurb, opt.blurb);
     setText(this.blurb, c.blurb);
     const power = [0.6, 0.55, 1][c.role];
-    const stats = [(c.topSpeed - 104) / 24, c.maxHp / 2200, (c.grip - 60) / 40, power];
+    const stats = [(c.topSpeed - 130) / 30, c.maxHp / 2200, (c.grip - 60) / 40, power];
     stats.forEach((v, i) => (this.statEls[i].style.transform = `scaleX(${Math.max(0.08, Math.min(1, v)).toFixed(2)})`));
     const [p, s] = KIT_TEXT[c.role];
+    const free = ABILITIES[c.abilityFree];
+    const locked = ABILITIES[c.abilityLocked];
     this.kit.replaceChildren(
+      h('h2', `${c.frame}: weapons`),
       h('div', this.key('X', 'J'), h('b', ATTACKS[c.primary].name + '. '), p),
       h('div', this.key('Y', 'K'), h('b', ATTACKS[c.secondary].name + '. '), s),
+      h('h2.cells', 'Abilities, one Cell each'),
+      h('div.cellkit', this.key('B', 'R'), h('b', free.name + ' '), h('i', '(free steering). '), free.blurb),
+      h('div.cellkit', this.key('B', 'R'), h('b', locked.name + ' '), h('i', '(locked on). '), locked.blurb),
+      h('div.note', 'Cells come from the gold gates on the formation lap: half a Cell each, three at most.'),
     );
-    (this.kit.children[1] as HTMLElement).style.marginTop = '0.35em';
     if (preview) this.cb.onPreview({ ...this.choice });
   }
 
@@ -271,7 +308,8 @@ export class Menus {
     const col = h('div.col');
     const list = h('div.list');
     this.addItem(list, h('div.item', h('span', 'Resume')), () => this.cb.onResume());
-    this.addItem(list, h('div.item', h('span', 'Restart race')), () => this.cb.onRestart());
+    this.addItem(list, h('div.item', h('span', 'Restart this race')), () => this.cb.onRestart());
+    this.addItem(list, h('div.item', h('span', 'Tuning')), () => this.cb.onTuning());
     this.addItem(list, h('div.item', h('span', 'Controls')), () => this.show('controls'));
     this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
     this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());
@@ -284,17 +322,62 @@ export class Menus {
     const race = this.lastRace;
     if (!race) return;
     const me = race.mechs[this.lastLocal];
-    const pts = [0, 0];
-    for (const m of race.mechs) pts[m.team] += m.points;
+    const match = this.match;
+    const round = match && match.rounds.length ? match.rounds[match.rounds.length - 1] : null;
+    const pts = round ? round.points : [0, 0];
+    if (!round) for (const m of race.mechs) pts[m.team] += m.points;
     const mine = pts[me.team];
     const theirs = pts[1 - me.team];
+    const names = LIVERIES.map((l) => l.name.replace('Team ', ''));
+    const myTeam = names[me.team];
     const box = h('div.results');
-    const myTeam = LIVERIES[me.team].name.replace('Team ', '');
-    const headline = mine > theirs ? `${myTeam} win ` : mine < theirs ? `${myTeam} lose ` : 'Dead heat ';
-    box.append(h('div.headline', headline, h('span.pts', `${mine}–${theirs}`)));
+    const single = !match || (match.cfg.mode === 'series' && match.cfg.bestOf === 1);
+    const over = !match || match.winner >= 0;
+    const roundWinner = round ? round.winner : mine >= theirs ? me.team : 1 - me.team;
+
+    // Headline: the match if it has just been decided, otherwise the round.
+    if (match && !single && over) {
+      const won = match.winner === me.team;
+      const tally = match.cfg.mode === 'series' ? `${match.wins[me.team]}–${match.wins[1 - me.team]}` : `${match.totals[me.team]}–${match.totals[1 - me.team]}`;
+      box.append(h('div.headline', `${myTeam} ${won ? 'win' : 'lose'} the match `, h('span.pts', tally)));
+    } else if (single) {
+      box.append(h('div.headline', `${myTeam} ${roundWinner === me.team ? 'win' : 'lose'} `, h('span.pts', `${mine}–${theirs}`)));
+    } else {
+      box.append(h('div.headline', `${names[roundWinner]} take round ${round ? round.round : 1} `, h('span.pts', `${mine}–${theirs}`)));
+    }
+
     const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
-    const own = me.retired ? 'You were knocked out and scored nothing.' : `You finished ${ord[me.place - 1]} for ${me.points} point${me.points === 1 ? '' : 's'}.`;
-    box.append(h('div.subline', own));
+    const own = me.retired
+      ? `You were knocked out${me.points > 0 ? `, but your knockouts still score ${me.points}` : ' and scored nothing'}.`
+      : `You finished ${ord[me.place - 1]} for ${me.points} point${me.points === 1 ? '' : 's'}.`;
+    const lines = [own];
+    if (round) {
+      if (round.ko[0] + round.ko[1] > 0) lines.push(`Placing ${round.place[me.team]}–${round.place[1 - me.team]}, knockouts ${round.ko[me.team]}–${round.ko[1 - me.team]}.`);
+      if (round.tied) lines.push(`Level on points, so the round goes to ${names[round.winner]}, who came home first.`);
+    }
+    box.append(h('div.subline', lines.join(' ')));
+
+    // How the match stands.
+    if (match && !single) {
+      const strip = h('div.matchstrip');
+      if (match.cfg.mode === 'series') {
+        const need = roundsToWin(match.cfg);
+        for (const team of [me.team, 1 - me.team]) {
+          const pips = h('span.pips');
+          for (let i = 0; i < need; i++) pips.append(h('i' + (i < match.wins[team] ? '.on' : '')));
+          strip.append(h('span.side' + (team ? '.t1' : ''), h('b', names[team]), pips));
+        }
+        strip.append(h('span.note', over ? `Best of ${match.cfg.bestOf}, decided in ${match.rounds.length}` : `Best of ${match.cfg.bestOf}. Round ${match.rounds.length + 1} next`));
+      } else {
+        for (const team of [me.team, 1 - me.team]) {
+          const fill = h('i');
+          fill.style.transform = `scaleX(${Math.min(1, match.totals[team] / match.cfg.target).toFixed(3)})`;
+          strip.append(h('span.side' + (team ? '.t1' : ''), h('b', names[team]), h('span.total', String(match.totals[team])), h('div.bar', fill)));
+        }
+        strip.append(h('span.note', over ? `First to ${match.cfg.target}, after ${match.rounds.length} round${match.rounds.length === 1 ? '' : 's'}` : `First to ${match.cfg.target}. Round ${match.rounds.length + 1} next`));
+      }
+      box.append(strip);
+    }
 
     const table = h<'table'>('table');
     const head = h<'tr'>('tr');
@@ -327,7 +410,7 @@ export class Menus {
     }
     box.append(table);
     const list = h('div.list');
-    this.addItem(list, h('div.item.go', h('span', 'Race again')), () => this.cb.onRestart());
+    this.addItem(list, h('div.item.go', h('span', over ? (single ? 'Race again' : 'New match') : 'Next round')), () => this.cb.onNext());
     this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
     this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());
     box.append(list);

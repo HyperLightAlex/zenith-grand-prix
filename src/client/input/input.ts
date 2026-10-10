@@ -3,7 +3,7 @@
 import { BTN, emptyInput, type MechInput } from '../../sim/index';
 
 /** One menu press. Presses are queued, so none are lost on a slow frame. */
-export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause';
+export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune';
 
 const KEY_BUTTONS: Record<string, number> = {
   Space: BTN.A,
@@ -15,6 +15,7 @@ const KEY_BUTTONS: Record<string, number> = {
   KeyQ: BTN.LOCK,
   Tab: BTN.LOCK,
   KeyE: BTN.ALLY,
+  KeyR: BTN.ABILITY,
   KeyC: BTN.TNEXT,
   KeyZ: BTN.TPREV,
 };
@@ -68,6 +69,7 @@ export class Input {
       if (e.code === 'Enter' || e.code === 'Space') m.push('confirm');
       if (e.code === 'Escape' || e.code === 'Backspace') m.push('back');
       if (e.code === 'Escape' || e.code === 'KeyP') m.push('pause');
+      if (e.code === 'KeyT' || e.code === 'Backquote') m.push('tune');
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -153,7 +155,8 @@ export class Input {
       if (b(PAD.Y)) pb |= BTN.Y;
       if (b(PAD.RB)) pb |= BTN.GUARD;
       if (b(PAD.LB)) pb |= BTN.LOCK;
-      if (b(PAD.B)) pb |= BTN.ALLY;
+      if (b(PAD.B)) pb |= BTN.ABILITY;
+      if (b(PAD.LS)) pb |= BTN.ALLY;
       // Flick the right stick to change target.
       const flick = Math.abs(rx) > 0.7 ? Math.sign(rx) : 0;
       if (flick !== 0 && flick !== this.prevFlick) this.flickHold = 3;
@@ -188,6 +191,7 @@ export class Input {
       if (edge(PAD.A)) m.push('confirm');
       if (edge(PAD.B)) m.push('back');
       if (edge(PAD.START)) m.push('pause');
+      if (edge(PAD.BACK)) m.push('tune');
       this.prevStickX = sx;
       this.prevStickY = sy;
       for (let i = 0; i < p.buttons.length; i++) this.prevPad[i] = b(i);
@@ -218,13 +222,30 @@ export class Input {
     return m;
   }
 
+  /** Scales every rumble. Set from the tuning panel. */
+  rumbleScale = 1;
+  /** Until when (performance.now) a hit's rumble should not be overwritten by the road's. */
+  private rumbleBusyUntil = 0;
+
   /** Rumble the pad if it can. Strength 0..1. */
   rumble(strength: number, ms: number): void {
-    if (this.device !== 'pad') return;
+    this.rumbleBusyUntil = performance.now() + ms;
+    this.pulse(Math.min(1, strength), Math.min(1, strength * 0.6), ms);
+  }
+
+  /** Low continuous rumble (road, strips, scraping). Gives way to a hit that is still playing. */
+  rumbleRoad(strong: number, weak: number, ms: number): void {
+    if (performance.now() < this.rumbleBusyUntil) return;
+    this.pulse(strong, weak, ms);
+  }
+
+  private pulse(strong: number, weak: number, ms: number): void {
+    if (this.device !== 'pad' || this.rumbleScale <= 0) return;
     const p = this.pad() as (Gamepad & { vibrationActuator?: { playEffect?: (type: string, params: object) => Promise<unknown> } }) | null;
     const act = p?.vibrationActuator;
     if (act?.playEffect) {
-      act.playEffect('dual-rumble', { duration: ms, strongMagnitude: Math.min(1, strength), weakMagnitude: Math.min(1, strength * 0.6) }).catch(() => {});
+      const k = this.rumbleScale;
+      act.playEffect('dual-rumble', { duration: ms, strongMagnitude: Math.min(1, strong * k), weakMagnitude: Math.min(1, weak * k) }).catch(() => {});
     }
   }
 }
