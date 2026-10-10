@@ -1,0 +1,17 @@
+{
+  // The simulation must stay free of DOM and rendering code so the exact same
+  // files can run on the server. This config type-checks it with no DOM lib.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "types": []
+  },
+  "include": ["src/sim"]
+}

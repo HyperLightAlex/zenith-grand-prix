@@ -1,0 +1,58 @@
+import '@fontsource/barlow-condensed/latin-500.css';
+import '@fontsource/barlow-condensed/latin-500-italic.css';
+import '@fontsource/barlow-condensed/latin-700-italic.css';
+import '@fontsource/barlow-condensed/latin-800-italic.css';
+import './ui/styles.css';
+import { ROLE, type Role } from '../sim/index';
+import { NullAudio, type AudioEngine } from './audio/audio';
+import { Game } from './game/game';
+
+// Dev shortcuts, all optional:
+//   ?auto=FW|MF|DF  jump straight into a race     &demo=1   computer flies your mech
+//   &skip=95        start that many seconds in    &seed=7   repeatable race
+//   &team=1         fly for Vanta                 &rivals=0..2
+//   &mute=1         no sound                      ?debug=mechs  model viewer
+const q = new URLSearchParams(location.search);
+
+async function boot(): Promise<void> {
+  if (q.get('debug') === 'mechs') {
+    const { runMechDebug } = await import('./debugMechs');
+    runMechDebug();
+    return;
+  }
+  // The trackside boards and number decals draw text to canvases, so the
+  // font has to be ready first.
+  try {
+    await Promise.all([document.fonts.load('italic 800 40px "Barlow Condensed"'), document.fonts.load('italic 700 20px "Barlow Condensed"')]);
+  } catch {
+    /* fall back to system fonts */
+  }
+  const canvas = document.createElement('canvas');
+  canvas.id = 'stage';
+  const ui = document.getElementById('app')!;
+  document.body.prepend(canvas);
+
+  let audio: AudioEngine = new NullAudio();
+  if (!q.has('mute')) {
+    try {
+      const { SynthAudio } = await import('./audio/synth');
+      audio = new SynthAudio();
+    } catch (err) {
+      console.warn('Audio unavailable', err);
+    }
+  }
+  const roles: Record<string, Role> = { FW: ROLE.FW, MF: ROLE.MF, DF: ROLE.DF };
+  const auto = q.get('auto')?.toUpperCase();
+  const game = new Game(canvas, ui, {
+    auto: auto && auto in roles ? roles[auto] : undefined,
+    demo: q.has('demo'),
+    skip: q.has('skip') ? Number(q.get('skip')) : undefined,
+    seed: q.has('seed') ? Number(q.get('seed')) : undefined,
+    team: q.has('team') ? Number(q.get('team')) : undefined,
+    rivals: q.has('rivals') ? Number(q.get('rivals')) : undefined,
+    audio,
+  });
+  (window as unknown as { game: Game }).game = game;
+}
+
+boot();
