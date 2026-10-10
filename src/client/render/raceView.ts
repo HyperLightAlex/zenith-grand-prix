@@ -99,6 +99,7 @@ export class RaceView {
   private time = 0;
   private flashUniform = 0;
   private hurt = 0;
+  private fxFov = 0;
 
   constructor(
     private renderer: Renderer,
@@ -151,7 +152,8 @@ export class RaceView {
   }
 
   resize(): void {
-    this.fx.resize(this.renderer.canvas.clientHeight || window.innerHeight, this.renderer.camera.fov);
+    this.fxFov = this.renderer.camera.fov;
+    this.fx.resize(this.renderer.canvas.clientHeight || window.innerHeight, this.fxFov);
   }
 
   dispose(): void {
@@ -159,7 +161,19 @@ export class RaceView {
     this.group.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
+      if (mesh.userData.ownMaterial) {
+        const mat = mesh.material as THREE.MeshBasicMaterial;
+        mat.map?.dispose();
+        mat.dispose();
+      }
     });
+    // Materials this view made for itself. The armour and glow materials of
+    // the mech kit are shared between views and stay, as does the shadow texture.
+    for (const v of this.mechs) {
+      for (const mesh of [v.shield, v.bubble, v.snare, v.shadow, v.trails[0].mesh, v.trails[1].mesh]) (mesh.material as THREE.Material).dispose();
+    }
+    (this.ring.material as THREE.Material).dispose();
+    this.fx.dispose();
   }
 
   /** World position of a mech's chest, for the HUD. */
@@ -349,6 +363,8 @@ export class RaceView {
     const fv = this.mechs[this.focusId];
     const tgt = focus.target >= 0 ? this.mechs[focus.target] : null;
     this.cam.update(dt, { s: fv.s, d: fv.d, mech: focus, target: tgt ? { s: tgt.s, d: tgt.d } : null }, panX, panY, lookBack);
+    // Sparks are sized in pixels from the field of view, which now swings with speed.
+    if (Math.abs(this.renderer.camera.fov - this.fxFov) > 1.5) this.resize();
     this.fx.update(dt, this.renderer.camera);
 
     // A mech right on top of the lens would fill the frame: drop it for a moment.

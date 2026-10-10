@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACT,
   BATTLE_CAP_MULT,
+  BATTLE_MIN_FRAC,
+  BATTLE_STAGGER_DRAG,
   BTN,
   CLASSES,
   DRIVE_LINK,
-  DRIVE_PASSIVE,
   DT,
   LINK_RANGE,
   LOCK_BREAK,
   LOCK_BREAK_TICKS,
   LOCK_RANGE,
   MODE,
-  PACE,
+  RULE_LIMITS,
   cycleTarget,
   pickTarget,
 } from '../src/sim/index';
@@ -185,11 +187,12 @@ describe('ally lock', () => {
     expect(a.events('denied').map((e) => e.reason)).toEqual(['target']);
   });
 
-  it('escorting a team-mate inside LINK_RANGE links the pair and shares Drive', () => {
-    const a = new Arena(1);
+  /** An escort and its charge inside LINK_RANGE, and a team-mate out on its own, off every tow line. */
+  function escort(lapPhase: 1 | 2, rules?: ConstructorParameters<typeof Arena>[2]) {
+    const a = new Arena(lapPhase, 1, rules);
     const me = a.put(MF0, 0, 0);
     const mate = a.put(FW0, 18, 6);
-    const loner = a.put(DF0, 80, 0);
+    const loner = a.put(DF0, 80, -8);
     me.drive = mate.drive = loner.drive = 10;
     a.tap(MF0, BTN.ALLY);
     expect(me.target).toBe(FW0);
@@ -200,10 +203,31 @@ describe('ally lock', () => {
       expect(me.linked).toBe(true);
       expect(mate.linked).toBe(true);
       expect(loner.linked).toBe(false);
+      expect(me.drafting || mate.drafting || loner.drafting).toBe(false);
     });
-    expect(me.drive - d0[0]).toBeCloseTo(n * (DRIVE_PASSIVE + DRIVE_LINK) * DT, 6);
-    expect(mate.drive - d0[1]).toBeCloseTo(n * (DRIVE_PASSIVE + DRIVE_LINK) * DT, 6);
-    expect(loner.drive - d0[2]).toBeCloseTo(n * DRIVE_PASSIVE * DT, 6);
+    return { a, n, gained: [me.drive - d0[0], mate.drive - d0[1], loner.drive - d0[2]] };
+  }
+
+  it('escorting a team-mate inside LINK_RANGE links the pair and shares Drive', () => {
+    // From the battle lap on: the trickle for everyone, and the link on top for the pair.
+    const { a, n, gained } = escort(2);
+    const passive = a.race.rules.drivePassive;
+    expect(gained[0]).toBeCloseTo(n * (passive + DRIVE_LINK) * DT, 6);
+    expect(gained[1]).toBeCloseTo(n * (passive + DRIVE_LINK) * DT, 6);
+    expect(gained[2]).toBeCloseTo(n * passive * DT, 6);
+  });
+
+  it('on the formation lap the pair still links, but no Drive comes of it', () => {
+    const { gained } = escort(1);
+    expect(gained).toEqual([0, 0, 0]);
+  });
+
+  it('...unless rules.lap1Trickle turns the formation-lap trickle back on', () => {
+    const { a, n, gained } = escort(1, { lap1Trickle: 1 });
+    const passive = a.race.rules.drivePassive;
+    expect(gained[0]).toBeCloseTo(n * (passive + DRIVE_LINK) * DT, 6);
+    expect(gained[1]).toBeCloseTo(n * (passive + DRIVE_LINK) * DT, 6);
+    expect(gained[2]).toBeCloseTo(n * passive * DT, 6);
   });
 
   it('no link beyond LINK_RANGE, and none from an enemy lock', () => {
@@ -416,7 +440,8 @@ describe('battle mode movement', () => {
     a.step(90);
     expect(foe.s - me.s).toBeCloseTo(gap, 1);
     expect(me.d).toBeCloseTo(0, 6);
-    expect(me.vs).toBeCloseTo(PACE, 3);
+    expect(me.vs).toBeCloseTo(a.pace, 3);
+    expect(me.vs).toBeCloseTo(foe.vs, 3);
     expect(me.facing).toBeCloseTo(Math.atan2(foe.d - me.d, foe.s - me.s), 6);
     // The target, in speed mode, still faces down the road.
     expect(foe.facing).toBeCloseTo(0, 9);
@@ -432,8 +457,9 @@ describe('battle mode movement', () => {
     a.step(60);
     const gap1 = foe.s - me.s;
     expect(gap1).toBeLessThan(gap0 - 2);
-    // Chasing a target ahead tops out a little over the limiter.
-    expect(me.vs).toBeLessThanOrEqual(PACE * BATTLE_CAP_MULT + 1e-9);
+    // Chasing a target ahead tops out a little over the (live) limiter.
+    expect(me.vs).toBeLessThanOrEqual(a.pace * BATTLE_CAP_MULT + 1e-9);
+    expect(me.vs).toBeGreaterThan(a.pace);
     a.inputs[FW0].my = -1;
     a.step(60);
     expect(foe.s - me.s).toBeGreaterThan(gap1 + 15);
@@ -446,7 +472,9 @@ describe('battle mode movement', () => {
     a.tap(FW0, BTN.LOCK);
     a.inputs[FW0].my = 1;
     a.step(45);
-    expect(me.vs).toBeLessThan(PACE - 10);
+    expect(me.vs).toBeLessThan(a.pace - 10);
+    // ...but never below the slowest a fight is carried.
+    expect(me.vs).toBeGreaterThanOrEqual(a.pace * BATTLE_MIN_FRAC - 1e-9);
     expect(me.s - foe.s).toBeLessThan(30);
     expect(me.s - foe.s).toBeGreaterThan(0);
   });
@@ -494,10 +522,104 @@ describe('battle mode movement', () => {
     a.step(30);
     a.tap(FW0, BTN.LOCK);
     expect(me.mode).toBe(MODE.SPEED);
-    expect(me.speed).toBeCloseTo(PACE, 2);
+    expect(me.speed).toBeCloseTo(a.pace, 2);
     expect(me.heading).toBeCloseTo(0, 6);
     a.step(60);
-    expect(me.speed).toBeCloseTo(PACE, 6);
+    expect(me.speed).toBeCloseTo(a.pace, 6);
+  });
+
+  it('approach, strafe and acceleration around a lock all scale with rules.battleMove', () => {
+    // Circle a target for half a second at several settings of the rule.
+    // (`live`: written into the running race, as the tuning panel does,
+    // rather than given in the config, where it is held to RULE_LIMITS.)
+    const strafeAfter = (battleMove: number, ticks: number, live = false) => {
+      const a = new Arena(2, 1, live ? undefined : { battleMove });
+      if (live) a.race.rules.battleMove = battleMove;
+      const me = a.put(FW0, 0, 0);
+      a.put(FW1, 30, 0);
+      a.tap(FW0, BTN.LOCK);
+      a.inputs[FW0].mx = 1;
+      a.step(ticks);
+      return Math.abs(me.vd);
+    };
+    const c = CLASSES[0];
+    // Early on it is the acceleration that shows: battleAccel x battleMove.
+    expect(strafeAfter(1, 3)).toBeCloseTo(3 * c.battleAccel * DT, 1);
+    expect(strafeAfter(2, 3)).toBeCloseTo(3 * c.battleAccel * 2 * DT, 1);
+    // Once it has settled, the strafe speed itself: strafe x battleMove (the
+    // target is still nearly dead ahead).
+    const slow = strafeAfter(1, 30);
+    const quick = strafeAfter(2, 30);
+    expect(slow).toBeGreaterThan(c.strafe * 0.9);
+    expect(slow).toBeLessThanOrEqual(c.strafe + 1e-9);
+    expect(quick).toBeGreaterThan(c.strafe * 2 * 0.8);
+    expect(quick).toBeLessThanOrEqual(c.strafe * 2 + 1e-9);
+    // The rule has a floor: a race cannot be set up with locked mechs frozen
+    // in place. Asking for zero gets the slowest setting there is...
+    const floor = RULE_LIMITS.battleMove[0];
+    expect(floor).toBeGreaterThan(0);
+    expect(strafeAfter(0, 30)).toBeCloseTo(strafeAfter(floor, 30), 12);
+    expect(strafeAfter(0, 30)).toBeGreaterThan(c.strafe * floor * 0.9);
+    expect(strafeAfter(0, 30)).toBeLessThanOrEqual(c.strafe * floor + 1e-9);
+    // ...while a zero written straight into a running race is a mech that
+    // can only be carried along: no closing, no circling.
+    expect(strafeAfter(0, 30, true)).toBe(0);
+  });
+
+  it('closing speed scales with rules.battleMove too', () => {
+    const closed = (battleMove: number, live = false) => {
+      // (No tow, and a gap inside PACK_SLACK, or the target behind would
+      // speed up as it came into the slipstream or fell off the pack.)
+      const a = new Arena(2, 1, live ? { tow: 0 } : { battleMove, tow: 0 });
+      if (live) a.race.rules.battleMove = battleMove;
+      const me = a.put(FW0, 38, 0);
+      const foe = a.put(FW1, 0, 0); // behind: closing means dropping back to it, clear of the cap
+      a.tap(FW0, BTN.LOCK);
+      const gap0 = me.s - foe.s;
+      a.inputs[FW0].my = 1;
+      a.step(40);
+      return gap0 - (me.s - foe.s);
+    };
+    // (Kept to settings where the closing speed stays clear of the slowest a
+    // fight is carried, BATTLE_MIN_FRAC of the limiter, which would cut it
+    // short. Dropping back to a target behind is all under the battle cap, so
+    // the scrub that takes off speed OVER the cap plays no part here.)
+    const half = closed(0.5);
+    const one = closed(1);
+    expect(half).toBeGreaterThan(5);
+    // Both the approach speed and the acceleration toward it scale, so the ground made up does exactly.
+    expect(one).toBeCloseTo(half * 2, 6);
+    expect(closed(0.25)).toBeCloseTo(half / 2, 6);
+    // At the floor of the rule's range it still closes, a tenth as fast; a
+    // zero written in live does not close at all.
+    expect(closed(0)).toBeCloseTo(closed(RULE_LIMITS.battleMove[0]), 12);
+    expect(closed(0)).toBeCloseTo(one * RULE_LIMITS.battleMove[0], 6);
+    expect(closed(0, true)).toBeCloseTo(0, 6);
+  });
+
+  it('a stagger in a lock bleeds speed toward BATTLE_MIN_FRAC of the limiter at BATTLE_STAGGER_DRAG', () => {
+    for (const lapPhase of [1, 2] as const) {
+      const a = new Arena(lapPhase);
+      const me = a.put(FW0, 0, 0);
+      const foe = a.put(FW1, 30, 9);
+      a.tap(FW0, BTN.LOCK);
+      a.step(5);
+      const floor = a.pace * BATTLE_MIN_FRAC;
+      const v0 = me.vs;
+      expect(v0).toBeCloseTo(a.pace, 3);
+      setStagger(me, 600);
+      a.step(30);
+      expect(me.act).toBe(ACT.STAGGER);
+      expect(me.vs).toBeCloseTo(v0 - 30 * BATTLE_STAGGER_DRAG * DT, 6);
+      // It stops bleeding at the floor, and stays there (the target is kept
+      // in range by hand, so the lock, and battle mode with it, holds).
+      a.step(400, () => {
+        foe.s = me.s + 30;
+        expect(me.vs).toBeGreaterThanOrEqual(floor - 1e-9);
+      });
+      expect(me.mode).toBe(MODE.BATTLE);
+      expect(me.vs).toBeCloseTo(floor, 9);
+    }
   });
 });
 

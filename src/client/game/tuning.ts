@@ -168,7 +168,7 @@ export function showValue(item: TuneItem, v: number): string {
     case 'pct':
       return `${Math.round(v * 100)}%`;
     case 'bonus':
-      return `+${Math.round((item.kind === 'rule' && item.key.startsWith('tow') ? v : v - 1) * 100)}%`;
+      return `+${((item.kind === 'rule' && item.key.startsWith('tow') ? v : v - 1) * 100).toFixed(1).replace(/\.0$/, '')}%`;
     case 'x':
       return `${v.toFixed(2)}×`;
     case 'sec':
@@ -243,19 +243,28 @@ export class Tuning {
   /** Apply text produced by exportText. Returns false if it is not that. */
   importText(text: string): boolean {
     try {
-      const data = JSON.parse(text) as { rules?: Partial<Rules>; feel?: Partial<Feel> };
-      if (typeof data !== 'object' || data === null) return false;
+      const data = JSON.parse(text) as { zenithTuning?: unknown; rules?: Partial<Rules>; feel?: Partial<Feel> };
+      if (typeof data !== 'object' || data === null || Array.isArray(data) || typeof data.zenithTuning !== 'number') return false;
       this.rules = makeRules(data.rules);
-      Object.assign(this.feel, DEFAULT_FEEL);
-      for (const k of FEEL_KEYS) {
-        const v = data.feel?.[k];
-        if (typeof v === 'number' && Number.isFinite(v)) this.feel[k] = v;
-      }
+      this.takeFeel(data.feel);
       this.save();
       this.onChange('all');
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /** Feel values from outside (storage, pasted text): defaults first, then whatever is a number, held to its slider's range. */
+  private takeFeel(src: Partial<Feel> | undefined): void {
+    Object.assign(this.feel, DEFAULT_FEEL);
+    if (typeof src !== 'object' || src === null) return;
+    for (const group of TUNE_GROUPS) {
+      for (const item of group.items) {
+        if (item.kind !== 'feel') continue;
+        const v = src[item.key as FeelKey];
+        if (typeof v === 'number' && Number.isFinite(v)) this.feel[item.key as FeelKey] = Math.min(item.max, Math.max(item.min, v));
+      }
     }
   }
 
@@ -267,10 +276,7 @@ export class Tuning {
       if (!raw) return;
       const data = JSON.parse(raw) as { rules?: Partial<Rules>; feel?: Partial<Feel> };
       this.rules = makeRules(data.rules);
-      for (const k of FEEL_KEYS) {
-        const v = data.feel?.[k];
-        if (typeof v === 'number' && Number.isFinite(v)) this.feel[k] = v;
-      }
+      this.takeFeel(data.feel);
     } catch {
       /* start from the defaults */
     }

@@ -1,8 +1,9 @@
 // Runs tools/audio-check.html in headless Chromium and prints what it measured.
 //
-//   node tools/audio-check.mjs [--quick] [--dump <dir>] [--url <page url>]
+//   node tools/audio-check.mjs [--quick] [--only <parts>] [--dump <dir>] [--url <page url>]
 //
-// --quick  skip the real-time pass (offline renders only, a few seconds)
+// --quick  skip the real-time pass (offline renders only, under a minute)
+// --only   run just some parts, comma separated: sfx, layers, speeds, music, stack, race, realtime
 // --dump   write the offline renders to <dir> as WAV files, for listening
 //
 // Uses the Vite dev server on http://localhost:5173 (or the local port in
@@ -23,9 +24,10 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
 const quick = flag('--quick');
+const only = value('--only');
 const dumpDir = value('--dump');
 const base = value('--url') ?? 'http://localhost:5173/tools/audio-check.html';
-const query = [quick ? 'quick=1' : '', dumpDir ? 'dump=1' : ''].filter(Boolean).join('&');
+const query = [quick ? 'quick=1' : '', only ? `only=${encodeURIComponent(only)}` : '', dumpDir ? 'dump=1' : ''].filter(Boolean).join('&');
 const url = query ? `${base}?${query}` : base;
 
 async function reachable() {
@@ -123,4 +125,4 @@ if (failures.length) {
   for (const f of failures) console.log(`  - ${f}`);
   process.exit(1);
 }
-console.log('\nOK: every sound is audible, nothing clips, no errors.');
+console.log(only ? `\nOK: no failures in ${only} (a partial run).` : '\nOK: every sound is audible, nothing clips, no errors.');

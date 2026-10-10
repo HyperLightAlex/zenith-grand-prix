@@ -48,6 +48,8 @@ export class Input {
   private prevStickY = 0;
   private prevFlick = 0;
   private flickHold = 0;
+  /** Buttons that were down when a menu closed: ignored until they are let go. */
+  private swallow = 0;
   onDeviceChange: (d: 'pad' | 'keys') => void = () => {};
   /** Called on the first key, click or button: browsers need a gesture before audio. */
   onFirstGesture: () => void = () => {};
@@ -198,6 +200,9 @@ export class Input {
     }
 
     this.tapped = new Set();
+    // A button still held from closing a menu is not a press in the race.
+    this.swallow &= buttons;
+    buttons &= ~this.swallow;
     s.mx = mx;
     s.my = my;
     s.throttle = throttle;
@@ -213,6 +218,18 @@ export class Input {
   private prevFlickDir(flick: number): number {
     if (flick !== 0) this.lastFlickDir = flick;
     return this.lastFlickDir;
+  }
+
+  /**
+   * Call when a menu closes and play resumes. Whatever is held at that moment
+   * (the button that picked "Resume", say) is ignored until it is released,
+   * so it cannot fire a boost, a dash or an ability.
+   */
+  swallowHeld(): void {
+    this.poll();
+    this.swallow = this.state.buttons | this.swallow;
+    this.state.buttons = 0;
+    this.menu = [];
   }
 
   /** Menu presses since the last call, oldest first. */

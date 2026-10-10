@@ -74,9 +74,14 @@ export function scoreRound(race: RaceState, round = 1): RoundResult {
   return { round, points, place, ko, first, tied, winner };
 }
 
-/** Add a finished race to the match and work out whether the match is over. */
+/**
+ * Add a finished race to the match and work out whether the match is over.
+ * A match that has been decided stays decided: a further race is scored and
+ * returned, but not recorded.
+ */
 export function recordRound(match: MatchState, race: RaceState): RoundResult {
   const r = scoreRound(race, match.rounds.length + 1);
+  if (match.winner >= 0) return r;
   match.rounds.push(r);
   match.wins[r.winner]++;
   match.totals[0] += r.points[0];

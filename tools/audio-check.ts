@@ -1,8 +1,9 @@
 // Measures the synthesiser in a real browser, since nobody can listen to a CI
 // run. Loaded by tools/audio-check.mjs through the Vite dev server:
 //
-//   node tools/audio-check.mjs            full run, about two minutes
-//   node tools/audio-check.mjs --quick    offline renders only, a few seconds
+//   node tools/audio-check.mjs            full run, about three minutes
+//   node tools/audio-check.mjs --quick    offline renders only, under a minute
+//   node tools/audio-check.mjs --only sfx just the named parts (see main() below)
 //   node tools/audio-check.mjs --dump d   also write the renders to d/ as WAV
 //
 // Two passes. The real-time pass drives a live AudioContext exactly as the game
@@ -13,6 +14,7 @@
 // gain, bar-line timing.
 
 import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio';
+import { mtof } from '../src/client/audio/dsp';
 import { SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, SynthAudio } from '../src/client/audio/synth';
 
@@ -36,6 +38,8 @@ declare global {
 const params = new URLSearchParams(location.search);
 const QUICK = params.has('quick');
 const DUMP = params.has('dump');
+/** Parts to run, or null for all of them. */
+const ONLY = params.get('only')?.split(',') ?? null;
 
 const report: Report = { done: false, failures: [], notes: [], tables: {} };
 window.__audioReport = report;
@@ -65,7 +69,8 @@ const VOL = { master: 0.8, music: 0.45, sfx: 0.9 };
 
 // ---- scenes -------------------------------------------------------------------
 
-const BASE: AudioScene = { racing: true, speed: 96, throttle: 1, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
+/** Flat out at the formation lap's limiter. Every field is spelled out, the optional one too, because the real-time pass copies scenes over one another. */
+const BASE: AudioScene = { racing: true, speed: 110, throttle: 1, boosting: false, surge: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
 const OFF: AudioScene = { ...BASE, racing: false, speed: 0, throttle: 0 };
 
 interface LayerCase {
@@ -79,18 +84,23 @@ interface LayerCase {
 const LAYER_CASES: LayerCase[] = [
   { name: 'off', scene: OFF, silent: true },
   { name: 'idle (speed 0)', scene: { ...BASE, speed: 0, throttle: 0 } },
-  { name: 'cruise (48)', scene: { ...BASE, speed: 48 } },
-  { name: 'limiter (96)', scene: BASE },
-  { name: 'coast (96, throttle 0)', scene: { ...BASE, throttle: 0 } },
-  { name: 'pre-battle (80, 0.6)', scene: { ...BASE, speed: 80, throttle: 0.6 } },
-  { name: '+battle', scene: { ...BASE, speed: 80, throttle: 0.6, battle: true }, vs: 'pre-battle (80, 0.6)' },
-  { name: 'flat out (150)', scene: { ...BASE, speed: 150 } },
-  { name: '+boosting', scene: { ...BASE, speed: 150, boosting: true }, vs: 'flat out (150)' },
-  { name: '+onStrip', scene: { ...BASE, onStrip: true }, vs: 'limiter (96)' },
-  { name: '+drafting', scene: { ...BASE, drafting: true }, vs: 'limiter (96)' },
-  { name: '+scraping', scene: { ...BASE, scraping: true }, vs: 'limiter (96)' },
+  { name: 'cruise (55)', scene: { ...BASE, speed: 55 } },
+  { name: 'limiter (110)', scene: BASE },
+  { name: 'coast (110, throttle 0)', scene: { ...BASE, throttle: 0 } },
+  { name: 'pre-battle (100, 0.6)', scene: { ...BASE, speed: 100, throttle: 0.6 } },
+  { name: '+battle', scene: { ...BASE, speed: 100, throttle: 0.6, battle: true }, vs: 'pre-battle (100, 0.6)' },
+  { name: 'flat out (160)', scene: { ...BASE, speed: 160 } },
+  { name: '+boosting', scene: { ...BASE, speed: 160, boosting: true }, vs: 'flat out (160)' },
+  { name: '+surge', scene: { ...BASE, speed: 160, boosting: true, surge: true }, vs: '+boosting' },
+  { name: 'boost (192)', scene: { ...BASE, speed: 192, boosting: true } },
+  { name: 'overdrive (208)', scene: { ...BASE, speed: 208, boosting: true, surge: true } },
+  { name: 'overdrive peak (250)', scene: { ...BASE, speed: 250, boosting: true, surge: true } },
+  { name: '+onStrip', scene: { ...BASE, onStrip: true }, vs: 'limiter (110)' },
+  { name: '+drafting', scene: { ...BASE, drafting: true }, vs: 'limiter (110)' },
+  { name: 'flat out, drafting (160)', scene: { ...BASE, speed: 160, drafting: true } },
+  { name: '+scraping', scene: { ...BASE, scraping: true }, vs: 'limiter (110)' },
   { name: '+critical', scene: { ...BASE, speed: 0, throttle: 0, critical: true }, vs: 'idle (speed 0)' },
-  { name: 'everything', scene: { ...BASE, speed: 150, boosting: true, onStrip: true, drafting: true, scraping: true, critical: true } },
+  { name: 'everything', scene: { ...BASE, speed: 250, boosting: true, surge: true, onStrip: true, drafting: true, scraping: true, critical: true } },
   { name: 'off again', scene: OFF, silent: true },
 ];
 
@@ -724,6 +734,10 @@ async function offlineSfx(): Promise<void> {
     ['lock pitch 2', 'lock', { pitch: 2 }],
     ['lock pitch 0.5', 'lock', { pitch: 0.5 }],
     ['bump volume 0', 'bump', { volume: 0 }],
+    // The game raises the pitch of the gate chimes as charges are banked.
+    ['gate pitch 1.25', 'gate', { pitch: 1.25 }],
+    ['gate pitch 1.5', 'gate', { pitch: 1.5 }],
+    ['cells_full pitch 1.5', 'cells_full', { pitch: 1.5 }],
   ];
   const plays: Array<[string, SfxName, SfxOptions | undefined]> = [...SFX_NAMES.map((n): [string, SfxName, undefined] => [n, n, undefined]), ...extras];
   // The carbine is fired three times, 5 ticks apart.
@@ -763,6 +777,8 @@ async function offlineSfx(): Promise<void> {
       if (s.peak >= CLIP) fail(`sfx ${name} clips offline (peak ${s.peak.toFixed(3)})`);
       if (s.prePeak < 0.3 && Math.abs(through) > 0.3) fail(`limiter is not unity for quiet sound ${name}: ${through} dB`);
       await dump(`sfx-${name}`, buf, at, at + Math.min(SLOT, s.onset + s.dur + 0.5));
+    } else if (label.includes('pitch')) {
+      await dump(`sfx-${label.replace(/ /g, '-')}`, buf, at, at + Math.min(SLOT, s.onset + s.dur + 0.5));
     }
   }
   const get = (k: string): Stats => stats.get(k) as Stats;
@@ -779,6 +795,11 @@ async function offlineSfx(): Promise<void> {
     { option: 'volume 0.5', result: `peak ${r3(half.peak)} against ${r3(get('block').peak)} at full` },
     { option: 'pitch 2', result: `centre ${Math.round(up.centroid)} Hz, length ${r3(up.dur)} s (plain: ${Math.round(get('lock').centroid)} Hz, ${r3(get('lock').dur)} s)` },
     { option: 'pitch 0.5', result: `centre ${Math.round(down.centroid)} Hz, length ${r3(down.dur)} s` },
+    ...['gate pitch 1.25', 'gate pitch 1.5', 'cells_full pitch 1.5'].map((k) => {
+      const hi = get(k);
+      const plain = get(k.split(' ')[0]);
+      return { option: k, result: `peak ${r3(hi.peak)}, centre ${Math.round(hi.centroid)} Hz, ${Math.round(hi.high * 100)}% above 2.5 kHz, length ${r3(hi.dur)} s (plain: ${r3(plain.peak)}, ${Math.round(plain.centroid)} Hz, ${Math.round(plain.high * 100)}%, ${r3(plain.dur)} s)` };
+    }),
     { option: 'volume 0', result: `peak ${r3(get('bump volume 0').peak)}` },
     { option: 'carbine burst x3', result: `peak ${r3(analyse(buf, burstAt, burstAt + SLOT).peak)} against ${r3(get('shot_carbine').peak)} for one shot` },
     { option: 'most voices at once', result: maxVoices },
@@ -789,6 +810,11 @@ async function offlineSfx(): Promise<void> {
   if (Math.abs(ratio - 0.5) > 0.08) fail(`volume 0.5 scales the pre-limiter peak by ${ratio.toFixed(2)}, expected 0.5`);
   if (!(up.centroid > get('lock').centroid * 1.5 && down.centroid < get('lock').centroid / 1.5)) fail('pitch option does not move the spectrum');
   if (get('bump volume 0').peak > 0.0005) fail('volume 0 is not silent');
+  // Raised in pitch, the gate chimes should be as loud as they are plain: no louder, no weaker.
+  for (const k of ['gate pitch 1.25', 'gate pitch 1.5', 'cells_full pitch 1.5']) {
+    const change = db(get(k).peak) - db(get(k.split(' ')[0]).peak);
+    if (Math.abs(change) > 2) fail(`${k} peaks ${change.toFixed(1)} dB away from the plain sound`);
+  }
 
   // Every sound should be recognisably its own: no two alike in length, pitch and balance at once.
   for (let i = 0; i < SFX_NAMES.length; i++) {
@@ -847,14 +873,14 @@ async function offlineLayers(): Promise<void> {
     if (base && c.name !== '+battle' && c.name !== '+drafting' && !(s.rms > base.rms * 1.03)) fail(`flag ${c.name} adds nothing measurable`);
   });
   const battle = seen.get('+battle') as Stats;
-  const before = seen.get('pre-battle (80, 0.6)') as Stats;
+  const before = seen.get('pre-battle (100, 0.6)') as Stats;
   if (!(battle.rms < before.rms * 0.95)) fail('battle does not duck the engine');
   const draft = seen.get('+drafting') as Stats;
-  const clean = seen.get('limiter (96)') as Stats;
+  const clean = seen.get('limiter (110)') as Stats;
   if (Math.abs(draft.centroid - clean.centroid) < 15 && Math.abs(db(draft.rms) - db(clean.rms)) < 0.5) fail('drafting changes nothing measurable');
   // Engine pitch should rise with speed.
   const idle = seen.get('idle (speed 0)') as Stats;
-  const fast = seen.get('flat out (150)') as Stats;
+  const fast = seen.get('flat out (160)') as Stats;
   if (!(fast.centroid > idle.centroid * 1.5)) fail('engine does not get brighter with speed');
 
   // The alarm: count beeps over the three seconds of the critical scene.
@@ -878,6 +904,173 @@ async function offlineLayers(): Promise<void> {
   table('alarm (offline)').push({ 'beeps in 3.2 s': beeps, 'per second': r3(rate), 'beep level': r3(top) });
   if (rate < 1.5 || rate > 2.6) fail(`critical alarm beeps ${rate.toFixed(2)} times a second, expected about 2`);
   await dump('layers', buf, 0, LAYER_CASES.length * SLOT);
+}
+
+/**
+ * Frequency of a steady tone between two frequencies, to a fraction of a hertz:
+ * the strongest one, or with `lowest` the first that is at least a quarter as
+ * strong as the strongest. Needs 1.4 s of signal.
+ */
+function toneFreq(buf: AudioBuffer, t0: number, fLo: number, fHi: number, lowest = false): number {
+  const N = 65536;
+  const i0 = Math.max(0, Math.min(buf.length - N, Math.floor(t0 * SR)));
+  const L = buf.getChannelData(0);
+  const R = buf.getChannelData(1);
+  const re = new Float64Array(N);
+  const im = new Float64Array(N);
+  for (let i = 0; i < N; i++) re[i] = ((L[i0 + i] + R[i0 + i]) / 2) * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N));
+  fft(re, im);
+  const mag = (k: number): number => Math.hypot(re[k], im[k]);
+  const k0 = Math.max(2, Math.ceil((fLo * N) / SR));
+  const k1 = Math.floor((fHi * N) / SR);
+  let best = k0;
+  for (let k = k0; k <= k1; k++) if (mag(k) > mag(best)) best = k;
+  if (lowest) {
+    const floor = mag(best) * 0.25;
+    for (let k = k0; k < best; k++) {
+      if (mag(k) > floor && mag(k) >= mag(k - 1) && mag(k) >= mag(k + 1)) {
+        best = k;
+        break;
+      }
+    }
+  }
+  // A parabola through the peak and its neighbours, on a log scale, finds the true top between bins.
+  const a = Math.log(mag(best - 1) + 1e-30);
+  const b = Math.log(mag(best) + 1e-30);
+  const c = Math.log(mag(best + 1) + 1e-30);
+  const off = a - 2 * b + c < 0 ? (0.5 * (a - c)) / (a - 2 * b + c) : 0;
+  return ((best + off) * SR) / N;
+}
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+/** Nearest note and how far off it is, such as "A2 +5c". */
+function noteName(freq: number): string {
+  const midi = 69 + 12 * Math.log2(freq / 440);
+  const near = Math.round(midi);
+  const cents = Math.round((midi - near) * 100);
+  return `${NOTE_NAMES[((near % 12) + 12) % 12]}${Math.floor(near / 12) - 1} ${cents < 0 ? '' : '+'}${cents}c`;
+}
+
+/**
+ * Speeds worth looking at: rest, half pace, the two limiters, a defender and a
+ * forward flat out on the speed lap, a forward boosting, then Overdrive and the
+ * brief peak it can reach with a tow.
+ */
+const SPEEDS: Array<[number, string]> = [
+  [0, 'rest'],
+  [55, 'half pace'],
+  [110, 'lap 1 limiter'],
+  [125, 'lap 2 limiter'],
+  [145, 'defender, lap 3'],
+  [160, 'forward, lap 3'],
+  [192, 'forward boosting'],
+  [200, ''],
+  [208, 'Overdrive'],
+  [250, 'Overdrive peak'],
+];
+
+const PARTS = ['engine', 'whine', 'wind', 'road'];
+
+/** How the turbine, wind and road follow speed alone: full throttle, no boost, nothing else going on. */
+async function offlineSpeeds(): Promise<void> {
+  log('--- offline: speed sweep ---');
+  const SLOT = 3.2;
+  const slot = (t: number): number => Math.min(SPEEDS.length - 1, Math.floor(t / SLOT + 1e-9));
+  const meters = new TapMeters();
+  const scale = VOL.sfx * VOL.master;
+  const parts: Array<Record<string, { rms: number; peak: number }>> = [];
+  let current = 0;
+  const { buf, warnings } = await render(SPEEDS.length * SLOT + 0.1, [], (t) => ({ ...BASE, speed: SPEEDS[slot(t)][0] }), (t, a, ctx) => {
+    const i = t >= SPEEDS.length * SLOT - 1e-6 ? SPEEDS.length : slot(t);
+    if (i !== current) {
+      parts.push(meters.take(scale, 'layer.'));
+      current = i;
+    }
+    meters.poll(a, ctx, i < SPEEDS.length && t - i * SLOT >= 1.6);
+  });
+  if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) while rendering the speed sweep`);
+  interface Point {
+    speed: number;
+    f0: number;
+    whine: number[];
+    s: Stats;
+    /** Level above 2.5 kHz and above 5 kHz, as RMS. */
+    harsh: number;
+    hiss: number;
+    parts: Record<string, { rms: number; peak: number }>;
+  }
+  const points: Point[] = [];
+  SPEEDS.forEach(([speed, what], i) => {
+    const t0 = i * SLOT + 1.6;
+    const s = analyse(buf, t0, (i + 1) * SLOT);
+    // The two saws beat against each other, so the turbine's pitch is read from
+    // the sine an octave under them: the lowest partial, and the one that never wavers.
+    const f0 = 2 * toneFreq(buf, t0, 15, 400, true);
+    const whine = [toneFreq(buf, t0, f0 * 5.6, f0 * 6.4), toneFreq(buf, t0, f0 * 8.6, f0 * 9.4)];
+    const harsh = bandLevel(buf, t0, (i + 1) * SLOT, 2500, 20000);
+    const hiss = bandLevel(buf, t0, (i + 1) * SLOT, 5000, 20000);
+    points.push({ speed, f0, whine, s, harsh, hiss, parts: parts[i] ?? {} });
+    const ref = points.find((p) => p.speed === BASE.speed);
+    const row: Row = {
+      'speed (u/s)': speed,
+      what,
+      'turbine (Hz)': r3(f0),
+      note: noteName(f0),
+      'whine (Hz)': speed > 0 ? `${Math.round(whine[0])}, ${Math.round(whine[1])}` : '',
+      peak: r3(s.peak),
+      'rms dBFS': db(s.rms),
+      'against lap 1 dB': ref ? Math.round((db(s.rms) - db(ref.s.rms)) * 10) / 10 : '',
+      'centre (Hz)': Math.round(s.centroid),
+      'low/mid/high %': `${Math.round(s.low * 100)}/${Math.round(s.mid * 100)}/${Math.round(s.high * 100)}`,
+      'above 2.5 kHz dBFS': db(harsh),
+      'above 5 kHz dBFS': db(hiss),
+    };
+    for (const k of PARTS) {
+      const v = parts[i]?.[k];
+      row[k] = v && v.rms > 1e-5 ? db(v.rms) : '-';
+    }
+    table('speed sweep (offline, default volumes; full throttle, nothing else on; parts are rms dBFS at the output)').push(row);
+    if (s.peak >= CLIP) fail(`continuous layer clips at ${speed} u/s`);
+  });
+  const at = (speed: number): Point => points.find((p) => p.speed === speed) as Point;
+  const cents = (freq: number, midi: number): number => 1200 * Math.log2(freq / mtof(midi));
+
+  // The notes the turbine is tuned to (see IDLE_HZ in layers.ts): A2 at the
+  // first limiter with the whine on E5 and B5, then B2, D3, E3 and A3.
+  for (const [speed, midi] of [[110, 45], [125, 47], [145, 50], [160, 52], [208, 57]]) {
+    const off = cents(at(speed).f0, midi);
+    if (Math.abs(off) > 25) fail(`turbine at ${speed} u/s is ${Math.round(off)} cents from ${noteName(mtof(midi)).split(' ')[0]}: ${noteName(at(speed).f0)}`);
+  }
+  const lim = at(BASE.speed);
+  if (Math.abs(cents(lim.whine[0], 76)) > 25 || Math.abs(cents(lim.whine[1], 83)) > 25) fail(`whine at the limiter is not on E5 and B5: ${noteName(lim.whine[0])}, ${noteName(lim.whine[1])}`);
+
+  // Each step up in speed has to be heard: higher, louder and brighter.
+  const steps = [110, 125, 160, 200, 250];
+  for (let i = 1; i < steps.length; i++) {
+    const a = at(steps[i - 1]);
+    const b = at(steps[i]);
+    const louder = db(b.s.rms) - db(a.s.rms);
+    const higher = 12 * Math.log2(b.f0 / a.f0);
+    if (louder < 0.5 || higher < 1.5 || b.s.centroid <= a.s.centroid) fail(`no clear step from ${a.speed} to ${b.speed} u/s: ${louder.toFixed(1)} dB louder, ${higher.toFixed(1)} semitones higher, centre ${Math.round(a.s.centroid)} to ${Math.round(b.s.centroid)} Hz`);
+  }
+  // And no part may stop growing at the first limiter, or anywhere short of a boost.
+  for (const [lo, hi] of [[110, 160], [160, 200]]) {
+    for (const k of PARTS) {
+      const gain = db(at(hi).parts[k]?.rms ?? 0) - db(at(lo).parts[k]?.rms ?? 0);
+      if (gain < 0.5) fail(`${k} does not grow from ${lo} to ${hi} u/s (${gain.toFixed(1)} dB)`);
+    }
+  }
+
+  // The top end must not turn shrill: the whine stays under 2.5 kHz and what
+  // there is above that sits well below the body of the sound.
+  for (const speed of [200, 250]) {
+    const p = at(speed);
+    const top = db(p.harsh) - db(p.s.rms);
+    const air = db(p.hiss) - db(p.s.rms);
+    if (top > -9 || air > -18) fail(`continuous layer is too bright at ${speed} u/s: ${top.toFixed(1)} dB above 2.5 kHz and ${air.toFixed(1)} dB above 5 kHz, against the whole`);
+    if (p.whine[1] > 2500) fail(`turbine whine reaches ${Math.round(p.whine[1])} Hz at ${speed} u/s`);
+  }
+  await dump('speeds', buf, 0, SPEEDS.length * SLOT);
 }
 
 async function offlineMusic(): Promise<void> {
@@ -1015,10 +1208,10 @@ async function offlineMusic(): Promise<void> {
 
 async function offlineStack(): Promise<void> {
   log('--- offline: worst case ---');
-  // The speed lap at full boost with everything going wrong, and a burst of
-  // the eight loudest sounds landing together every 0.4 s.
-  const loud: SfxName[] = ['ko', 'hit_heavy', 'shot_scatter', 'guard_break', 'wall', 'parry', 'block', 'lap_phase'];
-  const scene: AudioScene = { ...BASE, speed: 150, boosting: true, onStrip: true, scraping: true, critical: true, lapPhase: 3 };
+  // The speed lap at the peak of an Overdrive with everything going wrong, and
+  // a burst of the ten loudest sounds landing together every 0.4 s.
+  const loud: SfxName[] = ['ko', 'hit_heavy', 'shot_scatter', 'guard_break', 'wall', 'parry', 'block', 'lap_phase', 'overdrive', 'pulse'];
+  const scene: AudioScene = { ...BASE, speed: 250, boosting: true, surge: true, onStrip: true, scraping: true, critical: true, lapPhase: 3 };
   for (const [label, vol] of [['default volumes', undefined], ['all volumes at 1', [1, 1, 1]]] as Array<[string, [number, number, number] | undefined]>) {
     const cues: Cue[] = [{ t: 0, run: (a) => a.setMusic('race') }];
     for (let t = 3; t < 11; t += 0.4) cues.push({ t, run: (a) => loud.forEach((n) => a.play(n)) });
@@ -1079,14 +1272,18 @@ async function offlineRace(): Promise<void> {
   cues.push({ t: T_GO + LAP, run: (a) => a.play('lap_phase') }, { t: T_GO + LAP + 0.4, run: (a) => a.play('lap') });
   cues.push({ t: T_GO + LAP * 2, run: (a) => a.play('final_lap') }, { t: T_GO + LAP * 2 + 0.4, run: (a) => a.play('lap') });
   cues.push({ t: T_FINISH, run: (a) => a.play('finish') }, { t: T_FINISH + 2.2, run: (a) => a.play('win') }, { t: T_RESULTS, run: (a) => a.setMusic('menu') });
-  const calm: SfxName[] = ['dash', 'bump', 'boost', 'comms', 'command', 'wall'];
-  const fight: SfxName[] = ['lock', 'swing_light', 'swing_heavy', 'hit_light', 'hit_heavy', 'block', 'parry', 'shot_carbine', 'shot_carbine', 'shot_scatter', 'bullet_hit', 'bullet_hit', 'guard_break', 'dash', 'bump', 'wall', 'unlock', 'denied', 'ko', 'critical'];
+  // Gates are lit on the formation lap; the abilities they pay for are spent in the fights and the sprint.
+  const calm: SfxName[] = ['dash', 'bump', 'boost', 'comms', 'command', 'wall', 'gate', 'gate', 'cells_full'];
+  const fight: SfxName[] = ['lock', 'swing_light', 'swing_heavy', 'hit_light', 'hit_heavy', 'block', 'parry', 'shot_carbine', 'shot_carbine', 'shot_scatter', 'bullet_hit', 'bullet_hit', 'guard_break', 'dash', 'bump', 'wall', 'unlock', 'denied', 'ko', 'critical', 'snare_shot', 'snared', 'pulse', 'ram', 'aegis', 'breakaway'];
+  const sprint: SfxName[] = ['dash', 'bump', 'boost', 'boost', 'comms', 'command', 'wall', 'overdrive', 'snare_shot', 'snared', 'ram'];
   let plays = 0;
   for (let t = T_GO + 1; t < T_FINISH; ) {
     const lap = lapAt(t);
-    const pool = lap === 2 ? fight : calm;
+    const pool = lap === 2 ? fight : lap === 3 ? sprint : calm;
     const name = pool[Math.floor(rnd() * pool.length)];
     const opts: SfxOptions = { volume: 0.3 + 0.7 * rnd(), pan: rnd() * 2 - 1 };
+    // The gate chimes are played higher as charges are banked.
+    if (name === 'gate' || name === 'cells_full') opts.pitch = 1 + 0.5 * rnd();
     cues.push({ t, run: (a) => a.play(name, opts) });
     plays++;
     t += (lap === 2 ? 0.16 : lap === 3 ? 0.6 : 1.5) * (0.3 + 1.4 * rnd());
@@ -1095,13 +1292,18 @@ async function offlineRace(): Promise<void> {
     if (t < T_GO || t >= T_RESULTS) return { ...OFF, lapPhase: t < T_GO ? 1 : 3 };
     const lap = lapAt(t);
     const u = t - T_GO;
-    const boosting = lap !== 2 && u % 23 < 2.5;
+    // Four seconds of Overdrive now and then on the speed lap, a short boost every so often otherwise.
+    const surge = lap === 3 && u % 43 > 39;
+    const boosting = surge || (lap !== 2 && u % 23 < 2.5);
     const battle = lap === 2 && u % 17 < 9;
+    // The limiters of the first two laps, then a forward's top speed.
+    const cap = lap === 1 ? 110 : lap === 2 ? 125 : 160;
     return {
       racing: true,
-      speed: Math.min(150, (lap === 3 ? 120 : 88) + 10 * Math.sin(u * 0.7) + (boosting ? 35 : 0) - (battle ? 20 : 0)) * Math.min(1, u / 4),
+      speed: (Math.min(cap, cap - 6 + 10 * Math.sin(u * 0.7)) * (surge ? 1.3 + 0.2 * Math.sin(u * 2) ** 2 : boosting ? 1.2 : 1) - (battle ? 25 : 0)) * Math.min(1, u / 4),
       throttle: battle ? 0.6 : 0.6 + 0.4 * Math.sin(u * 1.3) ** 2,
       boosting,
+      surge,
       battle,
       lapPhase: lap,
       onStrip: u % 31 < 1.5,
@@ -1170,13 +1372,19 @@ async function offlineRace(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const parts: Array<[string, () => Promise<void>]> = [
+    ['sfx', offlineSfx],
+    ['layers', offlineLayers],
+    ['speeds', offlineSpeeds],
+    ['music', offlineMusic],
+    ['stack', offlineStack],
+    ['race', offlineRace],
+    ['realtime', realtime],
+  ];
   try {
-    await offlineSfx();
-    await offlineLayers();
-    await offlineMusic();
-    await offlineStack();
-    await offlineRace();
-    if (!QUICK) await realtime();
+    for (const [name, run] of parts) {
+      if (ONLY ? ONLY.includes(name) : !(QUICK && name === 'realtime')) await run();
+    }
   } catch (err) {
     fail(`audio check crashed: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
   }

@@ -24,6 +24,8 @@ import {
   CLASSES,
   COAST_DRAG,
   COUNTDOWN_TICKS,
+  DASH_BLEED,
+  DASH_OVER,
   DRAFT_MIN,
   DRAFT_WIDTH,
   DRIVE_LINK,
@@ -43,6 +45,7 @@ import {
   PERFECT_START_WINDOW,
   PHASE,
   POINTS,
+  RAM_ARC,
   RAM_MASS,
   RAM_MIN_CLOSING,
   RAM_SHOVE,
@@ -63,6 +66,7 @@ import {
 import {
   addVelocity,
   classOf,
+  clearEffects,
   cycleTarget,
   distance,
   isActive,
@@ -75,7 +79,7 @@ import {
   syncFromSpeed,
   towBonus,
 } from './core';
-import { approach, approachAngle, clamp, lerp, rngNext } from './math';
+import { approach, approachAngle, clamp, lerp, rngNext, wrapAngle } from './math';
 import { makeRules } from './rules';
 import { deltaS, gateCrossed, kappaAt, onStrip, type Track } from './track';
 import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceState } from './types';
@@ -297,7 +301,15 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     m.vd *= 0.955;
   } else if (m.act === ACT.DASH) {
     // The dash impulse was applied when it started; just let it run out.
+    // Down the road it only counts for part of its speed over the cap, or
+    // dash after dash would be a quicker way round the lap than the boost.
     m.vd *= 0.985;
+    const over = battleCap(race, m, c, true) + c.dash * DASH_OVER;
+    if (m.vs > over) m.vs = over;
+    // The same the other way: a hop back takes only so much off, so hop
+    // after hop cannot stop a mech dead or send it backwards down the road.
+    const under = Math.min(over, floor) - c.dash * DASH_OVER;
+    if (m.vs < under) m.vs = under;
   } else {
     let mx = clamp(input.mx, -1, 1);
     let my = clamp(input.my, -1, 1);
@@ -328,6 +340,11 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     const ref = race.lapPhase < 3 ? limiter : battleCap(race, m, c, true);
     const carry = t.vs * 0.88 + ref * 0.12;
     const cap = battleCap(race, m, c, ds > 2) + advance * 0.6;
+    // Whatever a dash (or a shove) left over the cap, or under the slowest a
+    // fight is carried, is made up at once.
+    const low = Math.min(floor, cap);
+    if (m.vs > cap) m.vs = Math.max(cap, m.vs - DASH_BLEED * DT);
+    else if (m.vs < low) m.vs = Math.min(low, m.vs + DASH_BLEED * DT);
     const wantVs = clamp(carry + rs, Math.min(floor, cap), cap);
     const wantVd = rd;
     const acc = c.battleAccel * move * (advance > 0 ? 2.2 : 1) * DT;
@@ -446,8 +463,11 @@ function collide(race: RaceState, track: Track): void {
         addVelocity(b, -ns * j2 * wb, -nd * j2 * wb * tb);
         if (-rv > 9) race.events.push({ type: 'bump', a: a.id, b: b.id, intensity: -rv });
         if (a.team !== b.team && -rv >= RAM_MIN_CLOSING) {
-          if (a.ramT > 0) ram(race, track, a, b);
-          if (b.ramT > 0 && isActive(a) && isActive(b)) ram(race, track, b, a);
+          // Two rams meeting head on: who lands first alternates tick by tick, like every other trade.
+          const first = race.tick & 1 ? b : a;
+          const second = first === a ? b : a;
+          if (first.ramT > 0) ram(race, track, first, second);
+          if (second.ramT > 0 && isActive(a) && isActive(b)) ram(race, track, second, first);
           if (!isActive(a)) break;
         }
       }
@@ -459,12 +479,17 @@ function collide(race: RaceState, track: Track): void {
 function ram(race: RaceState, track: Track, att: MechState, vic: MechState): void {
   const bit = 1 << vic.id;
   if (att.ramHits & bit || !weaponsFree(race)) return;
-  att.ramHits |= bit;
+  // The prow is at the front: something that runs into the back of a ramming mech is not rammed.
+  const dd = vic.d - att.d;
+  if (Math.abs(wrapAngle(Math.atan2(dd, deltaS(track, vic.s, att.s)) - att.facing)) > RAM_ARC) return;
+  // A rival mid-dodge slips it for now; the ram is not used up on them.
+  if (vic.iframes > 0) return;
   const def = { ...ATTACKS[ATK.DF_RAM], damage: race.rules.ramDamage };
   const braced = vic.shieldT > 0 || vic.ramT > 0 || vic.guarding;
-  if (!applyHit(race, track, att, vic, def, ATK.DF_RAM) || !isActive(vic)) return;
+  if (!applyHit(race, track, att, vic, def, ATK.DF_RAM)) return;
+  att.ramHits |= bit;
+  if (!isActive(vic)) return;
   // Sideways, away from the attacker; from dead astern, toward the nearer wall.
-  const dd = vic.d - att.d;
   const side = Math.abs(dd) > 0.5 ? Math.sign(dd) : vic.d >= 0 ? 1 : -1;
   addVelocity(vic, 0, side * RAM_SHOVE * (braced ? 0.3 : 1));
 }
@@ -575,6 +600,7 @@ function finalize(race: RaceState): void {
       m.finishTime = 1e9 - m.s;
       m.act = ACT.NONE;
       m.guarding = false;
+      clearEffects(m);
       if (m.target >= 0) setTarget(race, m, -1);
     }
   }
@@ -589,6 +615,13 @@ function finalize(race: RaceState): void {
 // caller's input object: human inputs are copied (and cleaned) into here.
 const scratch: MechInput[] = [];
 const controls: MechInput[] = [];
+/**
+ * Where each mech was when this tick's movement began, and where its own
+ * movement took it before collisions. Filled and used within one stepRace call.
+ */
+const startS: number[] = [];
+const movedS: number[] = [];
+const movedD: number[] = [];
 /** Ticks the throttle must be up before a press can earn the launch bonus. */
 const LAUNCH_REST = 30;
 
@@ -691,19 +724,12 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     else if (m.mode === MODE.BATTLE && m.target >= 0) stepBattleMode(race, track, m, c, controls[m.id]);
     else stepSpeedMode(race, track, m, c, controls[m.id]);
     const sBefore = m.s;
+    startS[m.id] = sBefore;
     integrate(race, track, m, c);
+    movedS[m.id] = m.s;
+    movedD[m.id] = m.d;
 
     if (isActive(m) && race.phase === PHASE.RACING) {
-      // Cell gates: lit for the first lap or two, and a full mech takes nothing.
-      if (m.lap < race.rules.gateLaps && m.cells < race.rules.cellMax) {
-        const g = gateCrossed(track, sBefore, m.s, m.d, m.gateMask);
-        if (g >= 0) {
-          m.gateMask |= 1 << g;
-          m.cells = Math.min(race.rules.cellMax, m.cells + race.rules.gateValue);
-          race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
-        }
-      }
-
       // Laps and the finish line.
       const lap = Math.floor(m.s / track.length);
       if (lap > m.lap) {
@@ -717,6 +743,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
           if (m.target >= 0) setTarget(race, m, -1);
           for (const o of ms) if (o.target === m.id) setTarget(race, o, -1);
           m.act = ACT.NONE;
+          clearEffects(m);
           if (race.firstFinishTick < 0) race.firstFinishTick = tick;
           updatePlaces(race);
           race.events.push({ type: 'finish', mech: m.id, place: m.place });
@@ -744,6 +771,24 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   // 4. Bodies and bullets.
   collide(race, track);
   if (race.phase === PHASE.RACING) stepProjectiles(race, track);
+
+  // Cell gates. Checked over everything a mech moved this tick, shoves
+  // included, so being shunted through an arch still counts. Lit for the
+  // first lap or two, and a full mech takes nothing.
+  if (race.phase === PHASE.RACING && track.gates.length > 0) {
+    for (const m of ms) {
+      if (!isActive(m) || m.lap >= race.rules.gateLaps || m.cells >= race.rules.cellMax) continue;
+      // The line has to be behind the mech when the tick ends. The opening is
+      // judged on where it ended up, or on where it was when it crossed under
+      // its own power, so contact cannot take a gate away.
+      let g = gateCrossed(track, startS[m.id], m.s, m.d, m.gateMask);
+      if (g < 0) g = gateCrossed(track, startS[m.id], Math.min(movedS[m.id], m.s), movedD[m.id], m.gateMask);
+      if (g < 0) continue;
+      m.gateMask |= 1 << g;
+      m.cells = Math.min(race.rules.cellMax, m.cells + race.rules.gateValue);
+      race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
+    }
+  }
 
   // 5. Gauges, slipstream, links, and locks that have drifted out of range.
   const rules = race.rules;

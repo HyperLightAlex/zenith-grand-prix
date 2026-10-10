@@ -499,6 +499,113 @@ const RECIPES: Record<SfxName, Recipe> = {
     v.tone({ w: 'square', f: 95, d: 0.012, g: 0.5 });
     v.noise({ t: 0.225, d: 0.014, g: 0.9, ft: 'bandpass', ff: 1500, fq: 1 });
   },
+
+  // -- cells and gates --
+  gate: (v) => {
+    // A up to E. The game raises the pitch as charges are banked, by as much
+    // as a fifth, which carries the pair up to the lap chime's E and B. The
+    // bells' overtones are octaves, so it stays sweet wherever in between it lands.
+    v.noise({ d: 0.1, g: 0.6, s: 'swell', a: 0.035, ft: 'bandpass', ff: 2400, ff2: 7000, fq: 1.4 });
+    v.bell({ f: 880, ratio: 3, idx: 0.6, d: 0.14, g: 0.5 });
+    v.bell({ f: 1318.5, ratio: 3, idx: 0.6, t: 0.06, d: 0.32, g: 0.6 });
+    v.tone({ f: 2637, t: 0.06, d: 0.18, g: 0.1 });
+  },
+  cells_full: (v) => {
+    // The gate's A and E, then the A above to bring it home. The last note
+    // rings over the held fifth, with a quick beat high up for the shimmer.
+    v.noise({ d: 0.12, g: 0.6, s: 'swell', a: 0.04, ft: 'bandpass', ff: 2400, ff2: 7000, fq: 1.4 });
+    v.bell({ f: 880, ratio: 3, idx: 0.6, d: 0.16, g: 0.5 });
+    v.bell({ f: 1318.5, ratio: 3, idx: 0.6, t: 0.07, d: 0.2, g: 0.5 });
+    v.bell({ f: 1760, ratio: 3, idx: 0.8, t: 0.14, d: 0.8, g: 0.6 });
+    v.tone({ w: 'triangle', f: 440, d: 0.4, g: 0.22, a: 0.004, h: 0.1 });
+    v.tone({ f: 1318.5, t: 0.14, d: 0.7, g: 0.22 });
+    v.tone({ f: 3520, t: 0.14, d: 0.6, g: 0.1, dt: 3 });
+    v.tone({ f: 3520, t: 0.14, d: 0.6, g: 0.1, dt: -3 });
+    v.noise({ t: 0.14, d: 0.5, g: 0.1, ft: 'highpass', ff: 7000, wide: true });
+  },
+
+  // -- abilities --
+  overdrive: (v) => {
+    // Ignition, the turbine spooling up two octaves to E, a note in every key
+    // the race music uses, then the rush of air it leaves behind.
+    v.tone({ f: 150, f2: 42, d: 0.34, g: 1, a: 0.003 });
+    v.noise({ k: 'p', d: 0.22, g: 1.8, a: 0.002, ft: 'lowpass', ff: 1800, ff2: 250, fq: 0.8 });
+    v.noise({ d: 0.03, g: 0.5, ft: 'highpass', ff: 3000 });
+    v.tone({ w: 'sawtooth', f: 82.4, f2: 329.6, ft: 0.55, d: 0.6, g: 0.3, s: 'swell', a: 0.25, lp: 1200 });
+    v.tone({ w: 'sawtooth', f: 164.8, f2: 659.3, ft: 0.55, d: 0.72, g: 0.26, s: 'swell', a: 0.55, lp: 2000, dt: 9 });
+    v.tone({ w: 'sawtooth', f: 164.8, f2: 659.3, ft: 0.55, d: 0.72, g: 0.26, s: 'swell', a: 0.55, lp: 2000, dt: -9 });
+    v.tone({ f: 659.3, f2: 2637, ft: 0.55, d: 0.7, g: 0.06, s: 'swell', a: 0.55 });
+    v.noise({ k: 'p', d: 0.64, g: 2, s: 'swell', a: 0.56, ft: 'bandpass', ff: 300, ff2: 3200, fq: 1.1, wide: true });
+    v.noise({ k: 'p', t: 0.52, d: 0.8, g: 4, a: 0.05, ft: 'bandpass', ff: 3600, ff2: 600, fs: 0.5, fq: 0.6, wide: true });
+  },
+  breakaway: (v) => {
+    // "Shing": air drawn up through a narrow band into a bright ring on E and B, then let go.
+    v.noise({ d: 0.13, g: 2.4, s: 'swell', a: 0.085, ft: 'bandpass', ff: 1400, ff2: 9000, fq: 3 });
+    v.tone({ f: 2637, t: 0.085, d: 0.6, g: 0.3, a: 0.001 });
+    v.tone({ f: 3951, t: 0.085, d: 0.55, g: 0.2, a: 0.001, dt: 6 });
+    v.tone({ f: 5274, t: 0.085, d: 0.35, g: 0.1 });
+    v.bell({ f: 3951, ratio: 1.5, idx: 1.2, t: 0.085, d: 0.2, g: 0.2 });
+    v.noise({ t: 0.085, d: 0.7, g: 0.5, ft: 'bandpass', ff: 7000, ff2: 2500, fq: 0.9, wide: true });
+    v.tone({ f: 260, f2: 110, d: 0.09, g: 0.3 });
+  },
+  snare_shot: (v) => {
+    // The carbine's falling zap an octave and more lower, on a thump; then the
+    // cable going taut: the partials of a struck bar, sagging as they ring,
+    // and a rattle that settles.
+    v.tone({ w: 'sawtooth', f: 900, f2: 100, ft: 0.12, d: 0.18, g: 0.6, a: 0.001, lp: 2600 });
+    v.tone({ w: 'square', f: 450, f2: 60, d: 0.15, g: 0.3, lp: 1600 });
+    v.noise({ d: 0.035, g: 0.6, ft: 'highpass', ff: 2600 });
+    v.tone({ f: 150, f2: 50, d: 0.16, g: 0.7 });
+    for (const [ratio, g, d] of [[1, 0.45, 0.7], [2.76, 0.3, 0.6], [5.4, 0.16, 0.4]]) {
+      v.tone({ w: 'triangle', f: 220 * 1.14 * ratio, f2: 220 * ratio, ft: 0.07, t: 0.01, d, g, a: 0.001 });
+    }
+    v.bell({ f: 607, ratio: 0.09, idx: 2.2, t: 0.01, d: 0.5, g: 0.3 });
+  },
+  snared: (v) => {
+    // The clamp biting and latching, then a saw and a square a semitone apart
+    // wound down together onto the notes of `denied`. The beat between them
+    // slows as they fall, like the speed being dragged off.
+    v.bell({ f: 240, ratio: 3.53, idx: 5, d: 0.12, g: 0.6 });
+    v.noise({ d: 0.03, g: 1, ft: 'bandpass', ff: 1900, fq: 1.5 });
+    v.noise({ t: 0.05, d: 0.02, g: 0.6, ft: 'bandpass', ff: 3000, fq: 2 });
+    v.tone({ f: 190, f2: 80, d: 0.08, g: 0.6 });
+    v.tone({ w: 'sawtooth', f: 440, f2: 146.8, ft: 0.55, t: 0.04, d: 0.7, g: 0.45, a: 0.01, h: 0.35, lp: 1500 });
+    v.tone({ w: 'square', f: 466.2, f2: 155.6, ft: 0.55, t: 0.04, d: 0.7, g: 0.28, a: 0.01, h: 0.35, lp: 1100 });
+    v.noise({ t: 0.04, d: 0.6, g: 0.7, h: 0.25, ft: 'bandpass', ff: 2400, ff2: 700, fq: 2, am: 48 });
+  },
+  pulse: (v, r) => {
+    // A dull thud, the ring spreading (noise and a tone swept down four octaves) and stray sparks.
+    v.tone({ f: 105, f2: 36, d: 0.32, g: 1, a: 0.004 });
+    v.noise({ k: 'p', d: 0.2, g: 2, a: 0.004, ft: 'lowpass', ff: 420, ff2: 120 });
+    v.noise({ k: 'p', d: 0.7, g: 1.8, s: 'swell', a: 0.05, ft: 'bandpass', ff: 5200, ff2: 180, fq: 1.6, wide: true });
+    v.tone({ w: 'sawtooth', f: 1320, f2: 82, d: 0.6, g: 0.2, a: 0.01, lp: 2600 });
+    v.noise({ t: 0.03, d: 0.45, g: 0.5, ft: 'bandpass', ff: 3400, fq: 3, am: 53 });
+    for (let i = 0; i < 6; i++) v.noise({ t: r.range(0.04, 0.42), d: r.range(0.01, 0.03), g: r.range(0.3, 0.7), ft: 'highpass', ff: r.range(3500, 8000) });
+  },
+  ram: (v) => {
+    // A horn on an open fifth over A, bent up into pitch like a rev, above a growl that climbs an octave.
+    const horn = (f: number, g: number, dt: number): void => v.tone({ w: 'sawtooth', f: f * 0.84, f2: f, ft: 0.1, d: 0.64, g, a: 0.015, h: 0.3, lp: 1500, dt });
+    horn(110, 0.4, -8);
+    horn(110, 0.4, 8);
+    horn(164.8, 0.3, 6);
+    horn(220, 0.22, -6);
+    v.tone({ w: 'sawtooth', f: 55, f2: 110, d: 0.6, g: 0.35, s: 'swell', a: 0.4, lp: 500 });
+    v.noise({ k: 'p', d: 0.6, g: 5, s: 'swell', a: 0.35, ft: 'bandpass', ff: 70, ff2: 150, fq: 5 });
+    v.tone({ f: 120, f2: 50, d: 0.14, g: 0.7 });
+  },
+  aegis: (v) => {
+    // Rising air, then G major built up from the bottom: the one major triad
+    // that A minor, B minor and the menu's D major all contain.
+    v.noise({ k: 'p', d: 0.45, g: 1.2, s: 'swell', a: 0.28, ft: 'bandpass', ff: 500, ff2: 3000, fq: 1.2, wide: true });
+    v.tone({ f: 196, f2: 392, ft: 0.25, d: 0.45, g: 0.25, s: 'swell', a: 0.25 });
+    [67, 71, 74, 79].forEach((midi, i) => {
+      const t = 0.06 + i * 0.055;
+      v.tone({ w: 'triangle', f: mtof(midi), t, d: 0.68 - t, g: 0.4, a: 0.03, h: 0.2 });
+    });
+    v.tone({ w: 'triangle', f: mtof(55), t: 0.06, d: 0.6, g: 0.3, a: 0.04, h: 0.2 });
+    for (const [midi, dt] of [[86, 5], [86, -5], [91, 5], [91, -5]]) v.tone({ f: mtof(midi), t: 0.2, d: 0.45, g: 0.05, a: 0.04, dt });
+    v.noise({ t: 0.2, d: 0.45, g: 0.08, ft: 'highpass', ff: 6000, wide: true });
+  },
 };
 
 // ---- mixing notes -----------------------------------------------------------
@@ -554,6 +661,16 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   lose: m(0.4, 0.35, 2, 0, 1, [0.75, 2.8]),
   command: m(0.41, 0.03, 2),
   comms: m(0.41, 0, 2),
+  // No gap for the gate: a rival threading it in the same frame must not swallow the player's own chime.
+  gate: m(0.4, 0.15, 1, 0, 0),
+  cells_full: m(0.39, 0.3, 2),
+  overdrive: m(0.53, 0.15, 2, 0, 0.03, [0.25, 0.9]),
+  breakaway: m(0.5, 0.15, 2, 0.02),
+  snare_shot: m(0.41, 0.08, 1, 0.04),
+  snared: m(0.4, 0.1, 2, 0.03),
+  pulse: m(0.55, 0.2, 2, 0.04),
+  ram: m(0.38, 0.12, 2),
+  aegis: m(0.28, 0.35, 2),
 };
 
 export const SFX_NAMES = Object.keys(RECIPES) as SfxName[];

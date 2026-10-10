@@ -90,7 +90,10 @@ export class CameraRig {
     const yaw = this.yaw + this.pan + this.lookBackW * Math.PI;
     // The camera drops back as the mech gathers speed and is dragged in again
     // under boost, while the field of view opens: the road pours past.
-    this.dist = toward(this.dist, F.camDist + speedFrac * F.camDistSpeed - (this.boostW + this.surgeW) * 1.5, 3, dt);
+    // (Paused, dt is zero; the distance and field of view still follow the
+    // tuning sliders so a change made from the pause menu shows at once.)
+    const sdt = dt > 0 ? dt : 1 / 20;
+    this.dist = toward(this.dist, F.camDist + speedFrac * F.camDistSpeed - (this.boostW + this.surgeW) * 1.5, 3, sdt);
     const dist = this.dist;
     const height = F.camHeight + this.tilt * 6;
     const cy = Math.cos(yaw);
@@ -152,7 +155,7 @@ export class CameraRig {
     cam.position.copy(pos);
     cam.up.copy(this.up);
     cam.lookAt(look);
-    if (this.trauma > 0.001) {
+    if (this.trauma > 0.001 && dt > 0) {
       const t2 = this.trauma * this.trauma;
       cam.position.x += (Math.random() - 0.5) * 1.3 * t2;
       cam.position.y += (Math.random() - 0.5) * 1.3 * t2;
@@ -160,14 +163,14 @@ export class CameraRig {
       this.trauma = Math.max(0, this.trauma - dt * 2.2);
     }
     // Road rumble: a fine tremble that grows with speed, so pace is felt even on a straight.
-    if (this.mode === 'play' && F.camRumble > 0 && !m.retired) {
+    if (this.mode === 'play' && F.camRumble > 0 && !m.retired && dt > 0) {
       this.rumbleT += dt * (38 + speedFrac * 30);
       const amp = Math.max(0, speedFrac - 0.45) * (0.035 + this.boostW * 0.03 + this.surgeW * 0.05) * F.camRumble;
       cam.position.y += Math.sin(this.rumbleT) * amp;
       cam.position.x += Math.sin(this.rumbleT * 1.7 + 1.3) * amp * 0.6;
       cam.rotateZ(Math.sin(this.rumbleT * 0.63) * amp * 0.012);
     }
-    this.fov = toward(this.fov, fov, 6, dt);
+    this.fov = toward(this.fov, fov, 6, sdt);
     if (Math.abs(cam.fov - this.fov) > 0.01) {
       cam.fov = this.fov;
       cam.updateProjectionMatrix();

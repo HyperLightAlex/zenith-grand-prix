@@ -337,6 +337,17 @@ export class Fx {
     this.smoke.setScale(scale);
   }
 
+  /** Free what this effects set made for itself. Geometries are freed by the owner's traversal. */
+  dispose(): void {
+    (this.sparks.points.material as THREE.Material).dispose();
+    (this.smoke.points.material as THREE.Material).dispose();
+    for (const f of this.flashes) f.mat.dispose();
+    this.star.dispose();
+    this.ring.dispose();
+    (this.tracers.material as THREE.Material).dispose();
+    this.tracers.dispose();
+  }
+
   /** Shower of sparks. `base` is the velocity of whatever they come off. */
   burst(at: THREE.Vector3, base: THREE.Vector3, count: number, speed: number, color: THREE.Color | number, size = 0.5, life = 0.45): void {
     const c = typeof color === 'number' ? this.tmpColor.set(color) : color;

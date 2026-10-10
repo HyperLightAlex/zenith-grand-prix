@@ -61,8 +61,10 @@ export class TuningPanel {
 
     this.text.rows = 6;
     this.text.spellcheck = false;
-    // Typing in the box must not fly the mech.
-    for (const ev of ['keydown', 'keyup'] as const) this.text.addEventListener(ev, (e) => e.stopPropagation());
+    // Typing in the box must not fly the mech. Only key presses are held back:
+    // a release still has to reach the game, or a key held when the box took
+    // the focus would stay down for good.
+    this.text.addEventListener('keydown', (e) => e.stopPropagation());
     this.textBox.append(this.text);
     this.textBox.hidden = true;
 
@@ -87,6 +89,7 @@ export class TuningPanel {
     this.open = false;
     this.root.hidden = true;
     this.textBox.hidden = true;
+    this.text.blur();
     this.cb.onClose();
   }
 
@@ -115,9 +118,10 @@ export class TuningPanel {
         this.tuning.set(item, Number(input.value));
         this.paint(row);
       });
-      // Let go of the slider so the arrow keys go back to the game.
-      input.addEventListener('change', () => input.blur());
-      for (const ev of ['keydown', 'keyup'] as const) input.addEventListener(ev, (e) => e.stopPropagation());
+      // Let go of the slider the moment the mouse does, so every key goes on
+      // reaching the game. (The pad and keys work the panel through handle().)
+      for (const ev of ['change', 'pointerup', 'pointercancel'] as const) input.addEventListener(ev, () => input.blur());
+      input.addEventListener('keydown', (e) => e.preventDefault());
       reset.addEventListener('click', () => {
         this.tuning.set(item, this.tuning.defaultOf(item));
         this.paint(row);
@@ -157,7 +161,10 @@ export class TuningPanel {
     this.say('Select the text and copy it if it was not copied for you.');
     try {
       void navigator.clipboard.writeText(text).then(
-        () => this.say('Copied. Paste it into the chat to make these the defaults.'),
+        () => {
+          this.say('Copied. Paste it into the chat to make these the defaults.');
+          this.text.blur();
+        },
         () => {},
       );
     } catch {
@@ -176,6 +183,7 @@ export class TuningPanel {
     if (this.tuning.importText(this.text.value)) {
       this.say('Loaded.');
       this.textBox.hidden = true;
+      this.text.blur();
       this.refresh();
     } else {
       this.say('That does not look like a block of tuning values.');

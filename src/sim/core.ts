@@ -59,12 +59,24 @@ export function speedCap(race: RaceState, m: MechState, c: ClassDef): number {
  * held burst is the slingshot, and it is long enough to finish a pass.
  */
 export function towBonus(race: RaceState, m: MechState): number {
-  return (race.lapPhase >= 3 ? race.rules.tow3 : race.rules.tow) * Math.min(1, m.tow * 2);
+  return (race.lapPhase >= 3 ? race.rules.tow3 : race.rules.tow) * Math.min(1, Math.max(0, m.tow) * 2);
 }
 
 /** Can `by` take a lock on `o`? A forward that has just broken away cannot be locked by enemies. */
 export function lockable(o: MechState, by: MechState): boolean {
   return isActive(o) && (o.team === by.team || o.cloakT <= 0);
+}
+
+/** Ability effects end with the mech's race: called when it finishes or is knocked out. */
+export function clearEffects(m: MechState): void {
+  m.overdriveT = 0;
+  m.ramT = 0;
+  m.ramHits = 0;
+  m.shieldT = 0;
+  m.snareT = 0;
+  m.cloakT = 0;
+  m.cdAbility = 0;
+  m.tow = 0;
 }
 
 /** Keep speed/heading and vs/vd in agreement after the speed-mode values change. */

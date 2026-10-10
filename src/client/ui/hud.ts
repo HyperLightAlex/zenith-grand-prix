@@ -261,13 +261,7 @@ export class Hud {
       this.root.prepend(plate);
       this.plates.push({ el: plate, hp: php });
     }
-    this.cellPips.replaceChildren();
-    this.pipFills = [];
-    for (let i = 0; i < Math.ceil(race.rules.cellMax); i++) {
-      const fill = h('i');
-      this.pipFills.push(fill);
-      this.cellPips.append(h('div.pip', fill));
-    }
+    this.buildPips(race.rules.cellMax);
     this.lastCells = me0(race, localId);
     this.comms.replaceChildren();
     this.banner.hidden = true;
@@ -281,6 +275,19 @@ export class Hud {
 
   hide(): void {
     this.root.hidden = true;
+  }
+
+  /** One pip per whole Cell the rules allow (the tuning panel can change that mid-race). */
+  private buildPips(cellMax: number): void {
+    const n = Math.max(0, Math.min(6, Math.ceil(cellMax)));
+    if (n === this.pipFills.length) return;
+    this.cellPips.replaceChildren();
+    this.pipFills = [];
+    for (let i = 0; i < n; i++) {
+      const fill = h('i');
+      this.pipFills.push(fill);
+      this.cellPips.append(h('div.pip', fill));
+    }
   }
 
   /** One line under the score: which round of what, and how the match stands. */
@@ -436,6 +443,7 @@ export class Hud {
     setClass(this.drive, 'gain', me.onStrip || me.linked);
 
     // Cells and the ability they pay for.
+    this.buildPips(race.rules.cellMax);
     for (let i = 0; i < this.pipFills.length; i++) {
       this.pipFills[i].style.transform = `scaleX(${Math.max(0, Math.min(1, me.cells - i)).toFixed(2)})`;
     }
@@ -672,8 +680,11 @@ export class Hud {
         else {
           this.showCount('GO', true);
           window.setTimeout(() => (this.count.hidden = true), 900);
-          if (this.track.gates.length > 0 && race.rules.gateLaps >= 1) {
-            window.setTimeout(() => this.say(null, 'Gates are lit this lap only. Gold arches, half a Cell each.'), 1400);
+          if (this.track.gates.length > 0 && race.rules.gateLaps >= 1 && race.rules.gateValue > 0) {
+            const laps = race.rules.gateLaps;
+            const worth = race.rules.gateValue === 0.5 ? 'half a Cell' : race.rules.gateValue === 1 ? 'a Cell' : `${race.rules.gateValue} of a Cell`;
+            const text = `Gates are lit ${laps <= 1 ? 'this lap only' : `for ${Math.min(laps, race.laps)} laps`}. Gold arches, ${worth} each.`;
+            window.setTimeout(() => this.say(null, text), 1400);
           }
         }
         break;
@@ -683,7 +694,8 @@ export class Hud {
       case 'gate':
         if (e.mech === this.localId) {
           const full = e.cells >= race.rules.cellMax;
-          this.showNotice(full ? 'Cells full' : Number.isInteger(e.cells) ? `Cell banked: ${e.cells} of ${race.rules.cellMax}` : 'Half a Cell', false, 1.3);
+          const amount = Math.round(e.cells * 100) / 100;
+          this.showNotice(full ? 'Cells full' : Number.isInteger(e.cells) ? `Cell banked: ${amount} of ${race.rules.cellMax}` : e.cells === 0.5 ? 'Half a Cell' : `Cells: ${amount} of ${race.rules.cellMax}`, false, 1.3);
         }
         break;
       case 'ability': {
@@ -714,7 +726,7 @@ export class Hud {
         break;
       case 'denied':
         if (e.mech === this.localId) {
-          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: 'No Cells. Gates only light on the formation lap' }[e.reason];
+          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 ? 'No Cells. The gates only light on the formation lap' : 'No Cells' }[e.reason];
           this.showNotice(why, e.reason === 'weapons');
         }
         break;

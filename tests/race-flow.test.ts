@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   BTN,
+  BTN_MASK,
   CLASSES,
   COUNTDOWN_TICKS,
-  DRIVE_START,
+  DEFAULT_RULES,
+  DRIVE_MAX,
   DT,
   FINISH_GRACE_TICKS,
   LAPS,
@@ -16,10 +18,15 @@ import {
   emptyInput,
   stepRace,
 } from '../src/sim/index';
-import type { RaceState, SimEvent } from '../src/sim/index';
+import type { MechState, RaceState, SimEvent } from '../src/sim/index';
 import { retire } from '../src/sim/combat';
-import { DF0, DF1, FW0, FW1, MF0, MF1, TRACK, makeInputs, newRace, runCountdown, runToEnd } from './helpers';
+import { DF0, DF1, FW0, FW1, MF0, MF1, TRACK, effectTimers, makeInputs, newRace, runCountdown, runToEnd, snapshot } from './helpers';
 import type { Inputs } from './helpers';
+
+/** Speed a perfect launch leaves the line at (set in stepRace on the GO tick). */
+const LAUNCH_SPEED = 44;
+/** Drive a perfect launch adds. */
+const LAUNCH_DRIVE = 10;
 
 const L = TRACK.length;
 
@@ -41,12 +48,22 @@ describe('the grid', () => {
       expect(m.speed).toBe(0);
       expect(m.hp).toBe(c.maxHp);
       expect(m.guard).toBe(c.guardMax);
-      expect(m.drive).toBe(DRIVE_START);
+      // The Drive gauge and the Cells start where the rules say: both empty by default.
+      expect(m.drive).toBe(race.rules.driveStart);
+      expect(m.drive).toBe(0);
+      expect(m.cells).toBe(race.rules.cellStart);
+      expect(m.cells).toBe(0);
+      expect(m.gateMask).toBe(0);
+      expect(m.cdAbility).toBe(0);
+      expect(effectTimers(m)).toEqual([0, 0, 0, 0, 0]);
+      expect(m.ramHits).toBe(0);
+      expect(m.tow).toBe(0);
       expect(m.mode).toBe(MODE.SPEED);
       expect(m.target).toBe(-1);
       expect(m.lap).toBe(0);
       expect(m.finished || m.retired).toBe(false);
     }
+    expect(race.rules).toEqual({ ...DEFAULT_RULES });
     // Forwards on the front row, defenders at the back.
     const s = (id: number) => race.mechs[id].s;
     expect(s(FW0)).toBe(s(FW1));
@@ -74,6 +91,70 @@ describe('the grid', () => {
     expect(newRace(1, { laps: 1 }).laps).toBe(1);
     expect(newRace(1, { laps: 5 }).laps).toBe(5);
   });
+
+  it('starts the gauges where the rules say, clamped to what the gauge can hold', () => {
+    const race = newRace(1, { rules: { driveStart: 35, cellStart: 2 } });
+    for (const m of race.mechs) {
+      expect(m.drive).toBe(35);
+      expect(m.cells).toBe(2);
+    }
+    const over = newRace(1, { rules: { driveStart: 5000, cellStart: 99, cellMax: 4 } });
+    for (const m of over.mechs) {
+      expect(m.drive).toBe(DRIVE_MAX);
+      expect(m.cells).toBe(4);
+    }
+    const under = newRace(1, { rules: { driveStart: -20, cellStart: -3 } });
+    for (const m of under.mechs) {
+      expect(m.drive).toBe(0);
+      expect(m.cells).toBe(0);
+    }
+  });
+});
+
+describe('gridFlip', () => {
+  const plain = newRace(77);
+  const flipped = newRace(77, { gridFlip: true });
+
+  it('mirrors every mech across the centreline and leaves the rows alone', () => {
+    for (const m of plain.mechs) {
+      const f = flipped.mechs[m.id];
+      expect(f.d).toBe(-m.d);
+      expect(f.d).not.toBe(0);
+      expect(f.s).toBe(m.s);
+    }
+    // So the team that had the left of the front row now has the right.
+    expect(Math.sign(flipped.mechs[FW0].d)).toBe(Math.sign(plain.mechs[FW1].d));
+    expect(Math.sign(flipped.mechs[MF0].d)).toBe(Math.sign(plain.mechs[MF1].d));
+    expect(Math.sign(flipped.mechs[DF0].d)).toBe(Math.sign(plain.mechs[DF1].d));
+  });
+
+  it('changes nothing else: same seats, same pilots, same random numbers', () => {
+    const strip = (race: RaceState) => {
+      const copy = JSON.parse(snapshot(race)) as RaceState;
+      for (const m of copy.mechs) m.d = Math.abs(m.d);
+      return JSON.stringify(copy);
+    };
+    expect(strip(flipped)).toBe(strip(plain));
+    expect(flipped.rng).toBe(plain.rng);
+    expect(flipped.mechs.map((m) => m.ai.gates)).toEqual(plain.mechs.map((m) => m.ai.gates));
+    expect(flipped.mechs.map((m) => m.ai.lane)).toEqual(plain.mechs.map((m) => m.ai.lane));
+  });
+
+  it('false, or left out, is the standard grid', () => {
+    expect(snapshot(newRace(77, { gridFlip: false }))).toBe(snapshot(plain));
+  });
+
+  it('a flipped race is a different race, and a complete one', () => {
+    const a = newRace(77, { laps: 1 });
+    const b = newRace(77, { laps: 1, gridFlip: true });
+    expect(runToEnd(a)).toBe(true);
+    expect(runToEnd(b)).toBe(true);
+    expect(snapshot(b)).not.toBe(snapshot(a));
+    for (const race of [a, b]) {
+      expect(race.mechs.every((m: MechState) => m.finished && !m.retired)).toBe(true);
+      expect(race.mechs.map((m) => m.place).sort()).toEqual([1, 2, 3, 4, 5, 6]);
+    }
+  });
 });
 
 describe('countdown', () => {
@@ -100,20 +181,21 @@ describe('countdown', () => {
   it('nobody moves, and nothing happens, before GO - whatever the pilots press', () => {
     const race = newRace(3, { humans: [FW0, MF1] });
     const inputs = makeInputs(race);
-    const before = JSON.stringify(race.mechs.map((m) => [m.s, m.d, m.speed, m.vs, m.vd, m.hp, m.drive, m.guard, m.target, m.mode, m.act]));
+    const frozen = (m: MechState) => [m.s, m.d, m.speed, m.vs, m.vd, m.hp, m.drive, m.guard, m.target, m.mode, m.act, m.cells, m.gateMask, m.cdAbility, m.tow, ...effectTimers(m)];
+    const before = JSON.stringify(race.mechs.map(frozen));
     for (let i = 1; i < COUNTDOWN_TICKS; i++) {
       for (const id of [FW0, MF1]) {
         const inp = inputs[id]!;
         inp.throttle = 1;
         inp.mx = i % 2 ? 1 : -1;
         inp.my = 1;
-        inp.buttons = (i * 37) & 255;
+        inp.buttons = (i * 37) & BTN_MASK; // every button, the ability button included
         inp.cmd = (i >> 3) % 5;
       }
       stepRace(race, TRACK, inputs);
       expect(race.phase).toBe(PHASE.COUNTDOWN);
       expect(race.events.every((e) => e.type === 'countdown')).toBe(true);
-      expect(JSON.stringify(race.mechs.map((m) => [m.s, m.d, m.speed, m.vs, m.vd, m.hp, m.drive, m.guard, m.target, m.mode, m.act]))).toBe(before);
+      expect(JSON.stringify(race.mechs.map(frozen))).toBe(before);
     }
     expect(race.teams.map((t) => t.tactic)).toEqual([TACTIC.FREE, TACTIC.FREE]);
     expect(race.projectiles.length).toBe(0);
@@ -151,9 +233,25 @@ describe('perfect launch', () => {
     const { race, launched } = launch(COUNTDOWN_TICKS - 10);
     expect(launched).toBe(true);
     const m = race.mechs[FW0];
-    expect(m.speed).toBeGreaterThanOrEqual(38);
-    expect(m.drive).toBeGreaterThan(DRIVE_START + 9.9);
-    expect(m.drive).toBeLessThan(DRIVE_START + 10.1);
+    // Off the line at the launch speed (and already pulling: the GO tick is a racing tick).
+    expect(m.speed).toBeGreaterThanOrEqual(LAUNCH_SPEED);
+    expect(m.speed).toBeLessThan(LAUNCH_SPEED + CLASSES[m.role].accel * DT + 1e-9);
+    // +10 Drive, even though nothing else feeds the gauge on the formation lap.
+    expect(m.drive).toBe(race.rules.driveStart + LAUNCH_DRIVE);
+  });
+
+  it('adds its Drive on top of rules.driveStart, up to a full gauge', () => {
+    const run = (driveStart: number) => {
+      const race = newRace(5, { humans: [FW0], skill: 0, rules: { driveStart } });
+      const inputs = makeInputs(race);
+      for (let t = 1; t <= COUNTDOWN_TICKS; t++) {
+        inputs[FW0]!.throttle = t >= COUNTDOWN_TICKS - 10 ? 1 : 0;
+        stepRace(race, TRACK, inputs);
+      }
+      return race.mechs[FW0].drive;
+    };
+    expect(run(35)).toBe(35 + LAUNCH_DRIVE);
+    expect(run(95)).toBe(DRIVE_MAX);
   });
 
   it('covers exactly the last PERFECT_START_WINDOW ticks, GO tick included', () => {
@@ -166,7 +264,7 @@ describe('perfect launch', () => {
     const { race, launched } = launch(1);
     expect(launched).toBe(false);
     expect(race.mechs[FW0].speed).toBeLessThan(5);
-    expect(race.mechs[FW0].drive).toBeLessThan(DRIVE_START + 0.1);
+    expect(race.mechs[FW0].drive).toBe(race.rules.driveStart);
   });
 
   it('is not given for a throttle let go again before GO, or never pressed', () => {
@@ -435,7 +533,7 @@ describe('who flies the mech', () => {
   it('inputs offered for an AI seat are ignored', () => {
     const a = newRace(9, { laps: 1 });
     const b = newRace(9, { laps: 1 });
-    const rogue: Inputs = b.mechs.map(() => ({ ...emptyInput(), brake: 1, buttons: 255, cmd: TACTIC.BLITZ }));
+    const rogue: Inputs = b.mechs.map(() => ({ ...emptyInput(), brake: 1, buttons: BTN_MASK, cmd: TACTIC.BLITZ }));
     for (let i = 0; i < 1200; i++) {
       stepRace(a, TRACK, []);
       stepRace(b, TRACK, rogue);

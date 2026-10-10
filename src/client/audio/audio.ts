@@ -27,10 +27,20 @@ export interface SfxOptions {
 export interface AudioScene {
   /** True while a race is on screen; engines are silent otherwise. */
   racing: boolean;
-  /** Player speed in units per second (about 0..150). */
+  /**
+   * Player speed in units per second (about 0..250): 110 and 125 at the
+   * limiters of the first two laps, up to 160 flat out on the speed lap,
+   * 190 with boost, 210 in Overdrive and for a moment as much as 250.
+   */
   speed: number;
   throttle: number;
+  /** The afterburner is lit: a boost, or an Overdrive. */
   boosting: boolean;
+  /**
+   * An Overdrive is running. The afterburner then burns louder, brighter and
+   * higher than for a boost. Optional: left out, an Overdrive sounds like a boost.
+   */
+  surge?: boolean;
   /** Locked on and fighting rather than racing. */
   battle: boolean;
   /** 1 formation, 2 battle, 3 speed. Music intensity follows it. */

@@ -129,13 +129,70 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
 export type RuleKey = keyof Rules;
 export const RULE_KEYS = Object.keys(DEFAULT_RULES) as RuleKey[];
 
-/** A full rule set from defaults plus overrides. Anything not a finite number is ignored. */
+/**
+ * The range each rule is held to. Rules can arrive from a saved tuning, a
+ * pasted block of text or, one day, a host's match settings, so nothing is
+ * taken on trust: a value outside its range is pulled back to the nearest end.
+ */
+export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> = Object.freeze({
+  limiter1: [40, 400],
+  limiter2: [40, 400],
+  topScale: [0.25, 3],
+  boostMult: [1, 3],
+  armourFloor: [0.2, 1],
+
+  tow: [0, 1],
+  tow3: [0, 1],
+  towRange: [0, 1000],
+  towRange3: [0, 1000],
+  towBuild: [0, 30],
+  slingshot: [0, 30],
+
+  driveStart: [0, 100],
+  drivePassive: [0, 100],
+  driveStrip: [0, 1000],
+  driveStripLap1: [0, 1000],
+  driveDraft: [0, 100],
+  lap1Trickle: [0, 1],
+
+  battleMove: [0.1, 5],
+
+  cellMax: [0, 6],
+  cellStart: [0, 6],
+  gateValue: [0, 6],
+  gateLaps: [0, 99],
+
+  overdriveMult: [1, 3],
+  overdriveSecs: [0, 60],
+  breakawaySecs: [0, 60],
+  snareMult: [0.1, 1],
+  snareSecs: [0, 60],
+  pulseRange: [0, 500],
+  pulseDrain: [0, 100],
+  ramMult: [1, 3],
+  ramSecs: [0, 60],
+  ramDamage: [0, 100000],
+  aegisSecs: [0, 60],
+  aegisRange: [0, 500],
+  aegisDamage: [0, 1],
+
+  koPoints: [0, 100],
+});
+
+/** One rule value, held to its range. Not a finite number: the default. */
+export function clampRule(key: RuleKey, v: unknown): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return DEFAULT_RULES[key];
+  const [lo, hi] = RULE_LIMITS[key];
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+/** A full rule set from defaults plus overrides. Anything not a finite number is ignored; the rest is held to RULE_LIMITS. */
 export function makeRules(over?: Partial<Rules> | null): Rules {
   const r: Rules = { ...DEFAULT_RULES };
   if (over) {
     for (const k of RULE_KEYS) {
       const v = over[k];
-      if (typeof v === 'number' && Number.isFinite(v)) r[k] = v;
+      if (typeof v === 'number' && Number.isFinite(v)) r[k] = clampRule(k, v);
     }
   }
   return r;

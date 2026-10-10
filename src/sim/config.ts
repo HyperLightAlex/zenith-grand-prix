@@ -83,10 +83,14 @@ export const BOOST_MIN_START = 6;
 export const SPEED_CEILING = 1.22;
 export const DRAFT_MIN = 4;
 export const DRAFT_WIDTH = 6;
-/** Inside this distance (or 40% of the tow's reach) the slipstream is at full strength... */
+/** Inside this distance (or 40% of the tow's reach) the slipstream charges fully... */
 export const TOW_NEAR = 40;
-/** ...and at the far end of its reach it charges to this share. */
-export const TOW_FAR = 0.3;
+/**
+ * ...and at the far end of its reach it settles at this charge. The bonus is
+ * full from half charge up, so this is 30% of the bonus at the far end,
+ * rising to all of it about three-quarters of the way in.
+ */
+export const TOW_FAR = 0.15;
 export const COAST_DRAG = 14;
 export const OVERCAP_DRAG = 30;
 export const STAGGER_DRAG = 26;
@@ -127,6 +131,13 @@ export const PARRY_WINDOW = 8; // ticks after raising guard
 export const PARRY_REARM = 30;
 export const PARRY_STAGGER = 36;
 export const DASH_TICKS = 14;
+/**
+ * A dash down the road only carries this share of its speed over the battle
+ * cap, and what is left over is scrubbed off as soon as the dash ends. A dash
+ * is for moving around a fight; it is not a second, cheaper boost.
+ */
+export const DASH_OVER = 0.45;
+export const DASH_BLEED = 220;
 export const DASH_COOLDOWN = 36;
 export const COMBO_CANCEL_DELAY = 4;
 export const CHAIN_LIMIT = 4; // hits in one stagger chain before a free escape
@@ -165,6 +176,8 @@ export const ABILITY_COOLDOWN = 45;
 export const BREAKAWAY_IFRAMES = 40;
 /** A ram only lands with at least this much closing speed, u/s. */
 export const RAM_MIN_CLOSING = 3;
+/** ...and only on something in front of the rammer: radians either side of its facing. */
+export const RAM_ARC = 1.9;
 export const RAM_SHOVE = 30;
 export const RAM_MASS = 3;
 

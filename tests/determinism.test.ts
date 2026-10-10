@@ -1,7 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ATTACKS, CLASSES, MERIDIAN, PHASE, POINTS, createRace, emptyInput, rngNext, stepRace } from '../src/sim/index';
-import type { MechInput, RaceState } from '../src/sim/index';
-import { FW0, MF1, TRACK, findNonFinite, hash, makeInputs, makeRandom, makeSeats, mash, newRace, snapshot, stateHash } from './helpers';
+import {
+  ABILITIES,
+  ATTACKS,
+  BTN,
+  BTN_MASK,
+  CLASSES,
+  DEFAULT_RULES,
+  MERIDIAN,
+  PHASE,
+  POINTS,
+  RULE_KEYS,
+  createRace,
+  emptyInput,
+  rngNext,
+  stepRace,
+} from '../src/sim/index';
+import type { MechInput, RaceState, Rules, SimEvent } from '../src/sim/index';
+import { DF0, FW0, MF0, MF1, TRACK, findNonFinite, hash, makeInputs, makeRandom, makeSeats, mash, newRace, snapshot, stateHash } from './helpers';
 import type { Inputs, RaceOpts } from './helpers';
 
 afterEach(() => {
@@ -50,21 +65,38 @@ function scriptedHumans(race: RaceState, humans: number[], seed: number): (tick:
   };
 }
 
-const tables = () => JSON.stringify([ATTACKS, CLASSES, MERIDIAN, POINTS]);
+const tables = () => JSON.stringify([ATTACKS, CLASSES, MERIDIAN, POINTS, ABILITIES, DEFAULT_RULES, RULE_KEYS]);
 const trackPrint = () =>
-  hash(JSON.stringify([TRACK.length, TRACK.strips, Array.from(TRACK.kappa), Array.from(TRACK.line), Array.from(TRACK.px), Array.from(TRACK.bank), Array.from(TRACK.kappaAhead)]));
+  hash(JSON.stringify([TRACK.length, TRACK.strips, TRACK.gates, Array.from(TRACK.kappa), Array.from(TRACK.line), Array.from(TRACK.px), Array.from(TRACK.bank), Array.from(TRACK.kappaAhead)]));
+
+/** How many events of each type a run raised, to show a run really exercised a system. */
+type Counts = Partial<Record<SimEvent['type'], number>>;
+function counter(): { counts: Counts; onTick: (race: RaceState) => void } {
+  const counts: Counts = {};
+  return {
+    counts,
+    onTick: (race) => {
+      for (const e of race.events) counts[e.type] = (counts[e.type] ?? 0) + 1;
+    },
+  };
+}
 
 // Two reference runs the tests below share: a complete all-AI race, and the
-// first 9000 ticks (into the battle lap) of a race with two scripted humans.
+// first 9000 ticks (well into the battle lap) of a race with two scripted
+// humans. The humans start with a full set of Cells (rules.cellStart), so
+// the ability button in their input stream really does something.
 const AI_SEED = 4242;
 const HUMAN_SEED = 606;
-const humanRace = () => newRace(HUMAN_SEED, { humans: [FW0, MF1] });
+const HUMAN_RULES: Partial<Rules> = { cellStart: 3 };
+const humanRace = () => newRace(HUMAN_SEED, { humans: [FW0, MF1], rules: HUMAN_RULES });
 const tablesBefore = tables();
 const trackBefore = trackPrint();
-const aiRun = trace(newRace(AI_SEED), 30000, noInputs);
+const aiCount = counter();
+const aiRun = trace(newRace(AI_SEED), 30000, noInputs, aiCount.onTick);
+const humanCount = counter();
 const humanRun = (() => {
   const race = humanRace();
-  return trace(race, 9000, scriptedHumans(race, [FW0, MF1], 31337));
+  return trace(race, 9000, scriptedHumans(race, [FW0, MF1], 31337), humanCount.onTick);
 })();
 
 describe('the random number generator', () => {
@@ -99,9 +131,54 @@ describe('the random number generator', () => {
 
 describe('same seed, same race', () => {
   it('two all-AI runs agree at every checkpoint, to the flag, events included', () => {
-    expect(aiRun.at.size).toBeGreaterThan(30); // a checkpoint every 500 ticks of a ~16000 tick race
+    expect(aiRun.at.size).toBeGreaterThan(22); // a checkpoint every 500 ticks of a ~13000 tick race
     const again = trace(newRace(AI_SEED), 30000, noInputs);
     expect(flat(again)).toEqual(flat(aiRun));
+  });
+
+  it('and that reference race has the new systems in play: gates, Cells, abilities, the tow', () => {
+    // Otherwise "identical" would say nothing about them.
+    const c = aiCount.counts;
+    expect(c.gate ?? 0).toBeGreaterThan(6);
+    expect(c.ability ?? 0).toBeGreaterThan(2);
+    expect(c.hit ?? 0).toBeGreaterThan(50);
+    expect(c.raceEnd).toBe(1);
+    // The same race again, watching the state the events do not show.
+    const race = newRace(AI_SEED);
+    const seen = { tow: 0, slingshot: 0, cells: 0, timers: 0, gateMask: 0 };
+    while (race.phase !== PHASE.FINISHED && race.tick < 30000) {
+      stepRace(race, TRACK, []);
+      for (const m of race.mechs) {
+        if (m.tow > 0) seen.tow++;
+        if (m.tow > 0 && !m.drafting) seen.slingshot++;
+        if (m.cells > 0) seen.cells++;
+        if (m.gateMask !== 0) seen.gateMask++;
+        if (m.overdriveT + m.ramT + m.shieldT + m.snareT + m.cloakT > 0) seen.timers++;
+      }
+    }
+    expect(stateHash(race)).toBe(aiRun.end);
+    for (const [what, ticks] of Object.entries(seen)) {
+      if (ticks < 100) throw new Error(`the reference race hardly touched '${what}' (${ticks} mech-ticks)`);
+    }
+  });
+
+  it('the rules are part of the race: same seed with another rule is another race', () => {
+    const base = trace(newRace(AI_SEED), 1500, noInputs);
+    for (const [tick, h] of base.at) expect(h).toBe(aiRun.at.get(tick));
+    // Spelling the defaults out changes nothing...
+    const spelled = trace(newRace(AI_SEED, { rules: { ...DEFAULT_RULES } }), 1500, noInputs);
+    expect(flat(spelled)).toEqual(flat(base));
+    // ...one different number does, from the first snapshot (it is in the state)...
+    const other = trace(newRace(AI_SEED, { rules: { limiter1: 111 } }), 1500, noInputs);
+    for (const [tick, h] of other.at) expect(h).not.toBe(base.at.get(tick));
+    // ...and that race is just as repeatable.
+    expect(flat(trace(newRace(AI_SEED, { rules: { limiter1: 111 } }), 1500, noInputs))).toEqual(flat(other));
+  });
+
+  it('a mirrored grid is another race, and just as repeatable', () => {
+    const flipped = trace(newRace(AI_SEED, { gridFlip: true }), 1500, noInputs);
+    expect(flipped.end).not.toBe(trace(newRace(AI_SEED), 1500, noInputs).end);
+    expect(flat(trace(newRace(AI_SEED, { gridFlip: true }), 1500, noInputs))).toEqual(flat(flipped));
   });
 
   it('holds for other seeds, skills and lap counts', () => {
@@ -131,6 +208,66 @@ describe('same seed, same race', () => {
     const again = trace(race, 9000, scriptedHumans(race, [FW0, MF1], 31337));
     expect(humanRun.endTick).toBe(9000);
     expect(flat(again)).toEqual(flat(humanRun));
+  });
+
+  it('...and the script includes the ability button, pressed to effect', () => {
+    // The mashers' own presses: abilities fired by the two human seats.
+    const race = humanRace();
+    const script = scriptedHumans(race, [FW0, MF1], 31337);
+    let pressed = 0;
+    const byHumans: number[] = [];
+    const denied = new Set<string>();
+    for (let i = 0; i < 9000; i++) {
+      const inputs = script(race.tick + 1);
+      for (const id of [FW0, MF1]) if (inputs[id]!.buttons & BTN.ABILITY) pressed++;
+      stepRace(race, TRACK, inputs);
+      for (const e of race.events) {
+        if (e.type === 'ability' && (e.mech === FW0 || e.mech === MF1)) byHumans.push(e.ability);
+        if (e.type === 'denied' && (e.mech === FW0 || e.mech === MF1)) denied.add(e.reason);
+      }
+    }
+    expect(stateHash(race)).toBe(humanRun.end);
+    expect(pressed).toBeGreaterThan(1000);
+    expect(byHumans.length).toBeGreaterThan(0);
+    expect(byHumans.length).toBeLessThanOrEqual(2 * 3); // three Cells each, and no way to more
+    expect(denied.has('weapons')).toBe(true); // mashing it on the formation lap
+    expect(humanCount.counts.ability ?? 0).toBeGreaterThanOrEqual(byHumans.length);
+  });
+
+  it('a recorded input stream, ability presses and all, replays to the identical race', () => {
+    // Record what three humans (one of each frame) send, tick by tick, then
+    // feed the recording to a fresh race: a replay file, or a server
+    // re-simulating a client's race.
+    const make = () => newRace(909, { humans: [FW0, MF0, DF0], rules: { cellStart: 3 } });
+    const live = make();
+    const script = scriptedHumans(live, [FW0, MF0, DF0], 2718);
+    const tape: string[] = [];
+    const liveEvents: string[] = [];
+    const liveMarks: string[] = [];
+    const abilities = new Set<number>();
+    for (let i = 0; i < 7500; i++) {
+      const inputs = script(live.tick + 1);
+      tape.push(JSON.stringify(inputs));
+      stepRace(live, TRACK, inputs);
+      if (live.events.length) liveEvents.push(live.tick + JSON.stringify(live.events));
+      if (live.tick % 250 === 0) liveMarks.push(stateHash(live));
+      for (const e of live.events) if (e.type === 'ability' && live.mechs[e.mech].human) abilities.add(e.ability);
+    }
+    // The humans' own presses fired abilities (and of more than one kind).
+    expect(abilities.size).toBeGreaterThan(1);
+    expect(tape.some((t) => (JSON.parse(t) as Inputs).some((inp) => inp !== null && (inp.buttons & BTN.ABILITY) !== 0))).toBe(true);
+    const replay = make();
+    const replayEvents: string[] = [];
+    const replayMarks: string[] = [];
+    for (const frame of tape) {
+      stepRace(replay, TRACK, JSON.parse(frame) as Inputs);
+      if (replay.events.length) replayEvents.push(replay.tick + JSON.stringify(replay.events));
+      if (replay.tick % 250 === 0) replayMarks.push(stateHash(replay));
+    }
+    expect(replayMarks).toEqual(liveMarks);
+    expect(replayMarks.length).toBe(30);
+    expect(snapshot(replay)).toBe(snapshot(live));
+    expect(replayEvents).toEqual(liveEvents);
   });
 
   it('and it is the inputs that matter: another script, another race', () => {
@@ -163,14 +300,63 @@ describe('no hidden state: a race is its RaceState and nothing else', () => {
     const race = newRace(AI_SEED);
     const at = 6500; // well into the battle lap
     for (let i = 0; i < at; i++) stepRace(race, TRACK, []);
+    expect(race.lapPhase).toBe(2);
     expect(stateHash(race)).toBe(aiRun.at.get(at));
     const copies = [structuredClone(race), JSON.parse(JSON.stringify(race)) as RaceState];
     for (const copy of copies) {
       expect(snapshot(copy)).toBe(snapshot(race));
+      // A copy shares nothing with the original: not the mechs, not the rules.
+      expect(copy.rules).not.toBe(race.rules);
+      expect(copy.rules).toEqual(race.rules);
       const t = trace(copy, 3000, noInputs);
       expect(t.endTick).toBe(at + 3000);
       for (const [tick, h] of t.at) expect(h).toBe(aiRun.at.get(tick));
     }
+  });
+
+  it('a copy taken on the speed lap, effects running, finishes the same race as the original', () => {
+    // Copy the race at the first moment on lap 3 when an ability effect is
+    // live and somebody is in a slingshot, then run both to the flag.
+    const race = newRace(AI_SEED);
+    let found = false;
+    while (race.phase !== PHASE.FINISHED && race.tick < 30000) {
+      stepRace(race, TRACK, []);
+      if (race.lapPhase < 3) continue;
+      const effect = race.mechs.some((m) => m.overdriveT > 0 || m.ramT > 0 || m.shieldT > 0 || m.snareT > 0 || m.cloakT > 0);
+      const slingshot = race.mechs.some((m) => m.tow > 0 && !m.drafting);
+      if (effect && slingshot) {
+        found = true;
+        break;
+      }
+    }
+    expect(found).toBe(true);
+    const copy = structuredClone(race);
+    expect(snapshot(copy)).toBe(snapshot(race));
+    const rest = (r: RaceState) => {
+      let events = '';
+      while (r.phase !== PHASE.FINISHED && r.tick < 30000) {
+        stepRace(r, TRACK, []);
+        if (r.events.length) events += r.tick + JSON.stringify(r.events);
+      }
+      return hash(events);
+    };
+    const eventsOriginal = rest(race);
+    const eventsCopy = rest(copy);
+    expect(eventsCopy).toBe(eventsOriginal);
+    expect(snapshot(copy)).toBe(snapshot(race));
+    expect(stateHash(copy)).toBe(aiRun.end);
+  });
+
+  it('stepping a copy does not touch the original', () => {
+    const race = newRace(AI_SEED);
+    for (let i = 0; i < 5600; i++) stepRace(race, TRACK, []);
+    const before = snapshot(race);
+    const copy = structuredClone(race);
+    copy.rules.limiter2 = 60; // retune the copy only
+    for (let i = 0; i < 600; i++) stepRace(copy, TRACK, []);
+    expect(snapshot(race)).toBe(before);
+    expect(race.rules.limiter2).toBe(DEFAULT_RULES.limiter2);
+    expect(snapshot(copy)).not.toBe(before);
   });
 
   it('races stepped side by side in one process do not disturb each other', () => {
@@ -248,6 +434,8 @@ describe('the test suite\'s own NaN detector', () => {
       }
     };
     poison('race', race);
+    poison('rules', race.rules);
+    expect(Object.keys(race.rules).sort()).toEqual([...RULE_KEYS].sort());
     for (const m of race.mechs) {
       poison(`mech ${m.id}`, m);
       poison(`mech ${m.id}.ai`, m.ai);
@@ -255,7 +443,30 @@ describe('the test suite\'s own NaN detector', () => {
     for (const p of race.projectiles) poison('projectile', p);
     for (const t of race.teams) poison('team', t);
     expect(findNonFinite(race)).toBe(null);
-    expect(poisoned).toBeGreaterThan(6 * 60);
+    expect(poisoned).toBeGreaterThan(6 * 70 + RULE_KEYS.length);
+  });
+
+  it('knows the v0.2 fields by name', () => {
+    const race = newRace(3);
+    const m = race.mechs[2] as unknown as Record<string, number>;
+    for (const key of ['cells', 'gateMask', 'cdAbility', 'overdriveT', 'ramT', 'ramHits', 'shieldT', 'snareT', 'cloakT', 'tow']) {
+      expect(typeof m[key]).toBe('number');
+      const keep = m[key];
+      m[key] = NaN;
+      expect(findNonFinite(race)).toContain(`mech 2.${key}`);
+      m[key] = keep;
+    }
+    const ai = race.mechs[2].ai as unknown as Record<string, number>;
+    for (const key of ['gates', 'abilityAt']) {
+      const keep = ai[key];
+      ai[key] = Infinity;
+      expect(findNonFinite(race)).toContain(`mech 2.ai.${key}`);
+      ai[key] = keep;
+    }
+    race.rules.towBuild = NaN;
+    expect(findNonFinite(race)).toContain('rules.towBuild');
+    race.rules.towBuild = DEFAULT_RULES.towBuild;
+    expect(findNonFinite(race)).toBe(null);
   });
 });
 
@@ -287,7 +498,7 @@ describe('the sim only reads what it is given', () => {
         inp.throttle = 1;
         inp.mx = rnd() * 2 - 1;
         inp.my = rnd() * 2 - 1;
-        inp.buttons = Math.floor(rnd() * 256);
+        inp.buttons = Math.floor(rnd() * (BTN_MASK + 1));
         inp.cmd = Math.floor(rnd() * 5);
         return Object.freeze(inp); // a write would throw: modules are strict
       });
@@ -295,6 +506,26 @@ describe('the sim only reads what it is given', () => {
     }
     expect(race.tick).toBe(2500);
     expect(cfg.seats.length).toBe(6);
+  });
+
+  it('copies the rules it is given: the config\'s object is never written to, or kept', () => {
+    const given: Partial<Rules> = Object.freeze({ limiter1: 100, cellStart: 2, towBuild: 0.5 });
+    const cfg = Object.freeze({ seed: 5, seats: makeSeats(), laps: 1, rules: given });
+    const race = createRace(TRACK, cfg);
+    expect(race.rules).not.toBe(given);
+    expect(race.rules.limiter1).toBe(100);
+    for (let i = 0; i < 1500; i++) stepRace(race, TRACK, []);
+    expect(given).toEqual({ limiter1: 100, cellStart: 2, towBuild: 0.5 });
+    // Retuning the race afterwards does not reach back into the config either,
+    // and never into the shared defaults.
+    race.rules.limiter1 = 90;
+    expect(given.limiter1).toBe(100);
+    expect(DEFAULT_RULES.limiter1).toBe(110);
+    expect(Object.isFrozen(DEFAULT_RULES)).toBe(true);
+    // Two races made from one config do not share a rules object.
+    const other = createRace(TRACK, cfg);
+    expect(other.rules).not.toBe(race.rules);
+    expect(other.rules.limiter1).toBe(100);
   });
 
   it('does not write to the track or the tuning tables', () => {

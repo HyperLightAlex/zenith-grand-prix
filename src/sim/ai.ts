@@ -572,7 +572,8 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
     let want = -1;
     if (ai.intent !== INTENT.RACE && ai.intentTarget >= 0) {
       const t = race.mechs[ai.intentTarget];
-      if (lockable(t, m)) {
+      // Having just broken away, stay away: no enemy lock until the cloak has run out.
+      if (lockable(t, m) && !(m.cloakT > 0 && t.team !== m.team)) {
         const dist = distance(track, m, t);
         if (dist < LOCK_RANGE - 6 || (m.target === t.id && dist < LOCK_RANGE + 20)) want = t.id;
       }
@@ -591,7 +592,16 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
     (m.act === ACT.STAGGER ? breaker : inFight)
   ) {
     ai.abilityAt = race.tick + 10;
-    if (wantLockedAbility(race, track, m) && rngNext(race) < 0.25 + 0.6 * m.skill) press(out, m, BTN.ABILITY);
+    if (wantLockedAbility(race, track, m) && rngNext(race) < 0.25 + 0.6 * m.skill) {
+      press(out, m, BTN.ABILITY);
+      if (breaker && (out.buttons & BTN.ABILITY) !== 0) {
+        // Breaking away means leaving: race on, boost clear, and do not come straight back.
+        ai.intent = INTENT.RACE;
+        ai.intentTarget = -1;
+        ai.boostUntil = race.tick + 120;
+        ai.restUntil = Math.max(ai.restUntil, race.tick + 300);
+      }
+    }
   }
   return out;
 }

@@ -37,7 +37,7 @@ import {
   type Ability,
   type AttackDef,
 } from './config';
-import { addVelocity, classOf, isActive, pickTarget, setTarget, speedCap, syncFromSpeed } from './core';
+import { addVelocity, classOf, clearEffects, isActive, pickTarget, setTarget, speedCap, syncFromSpeed } from './core';
 import { ticks } from './rules';
 import { rngNext, wrapAngle } from './math';
 import { deltaS, type Track } from './track';
@@ -174,7 +174,8 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
   if (ab === ABILITY.PULSE) {
     let any = false;
     for (const o of race.mechs) {
-      if (o.team !== m.team && isActive(o) && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) <= rules.pulseRange) any = true;
+      // Somebody it would actually reach: a rival mid-dodge does not count.
+      if (o.team !== m.team && isActive(o) && o.iframes <= 0 && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) <= rules.pulseRange) any = true;
     }
     if (!any) {
       deny(race, m, 'target');
@@ -265,6 +266,7 @@ export function retire(race: RaceState, m: MechState, by: MechState | null): voi
   m.act = ACT.NONE;
   m.guarding = false;
   m.boosting = false;
+  clearEffects(m);
   if (m.target >= 0) setTarget(race, m, -1);
   for (const o of race.mechs) {
     if (o.target === m.id) setTarget(race, o, -1);
@@ -302,7 +304,7 @@ export function applyHit(
   const front = Math.abs(wrapAngle(toAttacker - victim.facing)) <= GUARD_ARC;
   let dmg = a.damage;
   let blocked = false;
-  // Under an Aegis, or mid-ram, nothing staggers or slows the mech.
+  // Under an Aegis, or mid-ram, nothing staggers, slows or snares the mech.
   const shielded = victim.shieldT > 0;
   const unstoppable = shielded || victim.ramT > 0;
   if (shielded) dmg *= race.rules.aegisDamage;
@@ -384,7 +386,7 @@ export function applyHit(
     d: victim.d,
   });
   if (victim.hp <= 0.001) retire(race, victim, att);
-  else if (attackIdx === ATK.MF_SNARE && !blocked && !shielded) {
+  else if (attackIdx === ATK.MF_SNARE && !blocked && !unstoppable) {
     victim.snareT = ticks(race.rules.snareSecs);
     victim.boosting = false;
     race.events.push({ type: 'snared', mech: victim.id, by: att.id });

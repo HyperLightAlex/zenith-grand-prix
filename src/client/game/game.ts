@@ -59,6 +59,8 @@ export interface GameOptions {
 }
 
 const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
+/** Semitones above the gate chime's home note for each gate banked: steps of A minor. */
+const GATE_STEPS = [0, 2, 3, 5, 7];
 
 export class Game {
   readonly renderer: Renderer;
@@ -102,8 +104,9 @@ export class Game {
       onStart: (c) => this.startMatch(c),
       onPreview: (c) => this.showGarage(c),
       onResume: () => this.resume(),
-      onRestart: () => this.startRound(),
-      onNext: () => (this.match && this.match.winner < 0 ? this.startRound() : this.startMatch(this.choice)),
+      // Once a round has been banked, "restart" can only mean moving on.
+      onRestart: () => (this.roundScored ? this.next() : this.startRound()),
+      onNext: () => this.next(),
       onTuning: () => this.panel.show(),
       onQuit: () => this.showTitle(),
       onGarage: () => {
@@ -134,9 +137,9 @@ export class Game {
     if (opts.rivals !== undefined) this.choice.rivals = opts.rivals;
     if (opts.match !== undefined && MATCH_OPTIONS[opts.match]) this.choice.match = opts.match;
     else if (opts.auto !== undefined) this.choice.match = 0;
+    if (opts.auto !== undefined) this.choice.role = opts.auto;
     this.menus.choice = { ...this.choice };
     if (opts.auto !== undefined) {
-      this.choice.role = opts.auto;
       this.startMatch(this.choice);
     } else {
       this.showTitle();
@@ -202,6 +205,12 @@ export class Game {
     this.view.cam.reset();
   }
 
+  /** From the results (or a restart after the flag): the next round, or a fresh match if this one is decided. */
+  private next(): void {
+    if (this.match && this.match.winner < 0) this.startRound();
+    else this.startMatch(this.choice);
+  }
+
   /** A new match in the format picked in the garage, starting with round one. */
   private startMatch(choice: GarageChoice): void {
     this.choice = choice;
@@ -227,6 +236,7 @@ export class Game {
     this.roundScored = false;
     this.state = 'race';
     this.menus.show(null);
+    this.input.swallowHeld();
     // The teams swap sides of the grid from one round to the next.
     const round = this.match.rounds.length;
     this.setSession(choice, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
@@ -250,6 +260,8 @@ export class Game {
   private resume(): void {
     this.state = 'race';
     this.menus.show(null);
+    // The button that chose "Resume" must not also fire a boost, a dash or an ability.
+    this.input.swallowHeld();
   }
 
   // ---- events -------------------------------------------------------------
@@ -328,7 +340,12 @@ export class Game {
         A.play('ko', { volume: Math.max(0.35, h.volume) * quiet, pan: h.pan });
         if (inRace && (e.mech === local || e.by === local)) this.slowmo = 0.9;
         // Lost the mech we were riding with: move the camera to a teammate.
-        if (e.mech === this.view.focusId) window.setTimeout(() => this.cycleFocus(), 2200);
+        if (e.mech === this.view.focusId) {
+          const session = this.session;
+          window.setTimeout(() => {
+            if (this.session === session) this.cycleFocus();
+          }, 2200);
+        }
         break;
       }
       case 'wall': {
@@ -360,7 +377,14 @@ export class Game {
         if (inRace && local >= 0 && e.team === race.mechs[local].team) A.play('command');
         break;
       case 'gate':
-        if (e.mech === local && inRace) A.play(e.cells >= race.rules.cellMax ? 'cells_full' : 'gate', { pitch: 1 + Math.min(0.5, e.cells * 0.12) });
+        if (e.mech === local && inRace) {
+          // Each gate rings a step higher up the scale; the last one resolves.
+          if (e.cells >= race.rules.cellMax) A.play('cells_full');
+          else {
+            const n = Math.max(0, Math.round(e.cells / Math.max(0.01, race.rules.gateValue)) - 1);
+            A.play('gate', { pitch: 2 ** (GATE_STEPS[Math.min(n, GATE_STEPS.length - 1)] / 12) });
+          }
+        }
         else {
           const h = this.heard(e.mech);
           if (h.volume > 0.05) A.play('gate', { volume: h.volume * 0.35 * quiet, pan: h.pan });
@@ -514,6 +538,7 @@ export class Game {
     sc.speed = f.speed;
     sc.throttle = this.state === 'race' && f.id === local ? Math.max(this.input.state.throttle, f.mode === MODE.BATTLE ? 0.6 : 0) : 0.8;
     sc.boosting = f.boosting || f.overdriveT > 0;
+    sc.surge = f.overdriveT > 0;
     sc.battle = f.mode === MODE.BATTLE;
     sc.lapPhase = cur.lapPhase;
     sc.onStrip = f.onStrip;

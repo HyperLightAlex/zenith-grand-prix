@@ -59,7 +59,9 @@ export function buildGates(track: Track): GateVisual {
     // Model space here is (left, up, forward).
     trackMatrix(track, g.s, g.d, 0, 0, m);
     node.matrix.copy(m);
-    const half = g.halfW + 1.5;
+    // The inner faces of the posts stand just outside what scores, so a mech
+    // whose centre passes between them has threaded the gate.
+    const half = g.halfW + 0.6;
     const top = 10.5;
 
     for (const side of [-1, 1]) {
@@ -92,7 +94,7 @@ export function buildGates(track: Track): GateVisual {
       side: THREE.DoubleSide,
     });
     films.push(film);
-    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(half * 2 - 0.9, top - 0.4), film);
+    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(g.halfW * 2, top - 0.4), film);
     sheet.position.set(0, (top - 0.4) / 2, 0);
     sheet.renderOrder = 5;
     node.add(sheet);

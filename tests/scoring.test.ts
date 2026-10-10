@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { DT, FINISH_GRACE_TICKS, PHASE, POINTS, pointsFor, stepRace, teamPoints, updatePlaces } from '../src/sim/index';
-import type { SimEvent } from '../src/sim/index';
-import { retire } from '../src/sim/combat';
+import {
+  ATK,
+  ATTACKS,
+  BTN,
+  DEFAULT_RULES,
+  DT,
+  FINISH_GRACE_TICKS,
+  PHASE,
+  POINTS,
+  SPLAT_CREDIT_TICKS,
+  koBonus,
+  pointsFor,
+  scoreRound,
+  stepRace,
+  teamPoints,
+  updatePlaces,
+} from '../src/sim/index';
+import type { MechState, Rules, SimEvent } from '../src/sim/index';
+import { applyHit, retire, setStagger } from '../src/sim/combat';
 import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, newRace, runCountdown, runToEnd } from './helpers';
 
 const L = TRACK.length;
@@ -11,8 +27,8 @@ const L = TRACK.length;
  * units apart and spread across the road. Everyone else stays parked far
  * behind (still "running", so they get flagged when the grace period ends).
  */
-function runIn(order: number[]): Arena {
-  const a = new Arena(3);
+function runIn(order: number[], rules?: Partial<Rules>): Arena {
+  const a = new Arena(3, 1, rules);
   const lanes = [-20, -12, -4, 4, 12, 20];
   order.forEach((id, k) => a.put(id, L - 20 - 15 * k, lanes[id]));
   return a;
@@ -154,8 +170,242 @@ describe('retirements', () => {
     expect(a.events('ko')).toMatchObject([{ mech: FW1, by: FW0 }]);
     expect(a.mech(FW1).place).toBe(6);
     expect(a.mech(FW1).points).toBe(0);
-    expect(a.race.mechs.filter((m) => !m.retired).map((m) => m.points).sort((x, y) => y - x)).toEqual([15, 7, 5, 3, 2]);
+    // For the victim and for the placings, that is: the five runners take
+    // 15-7-5-3-2 as after any retirement...
+    const placing = (m: MechState) => m.points - koBonus(a.race, m);
+    expect(a.race.mechs.filter((m) => !m.retired).map(placing).sort((x, y) => y - x)).toEqual([15, 7, 5, 3, 2]);
+    // ...and the pilot who scored it has the knock-out bonus on top.
     expect(a.mech(FW0).kos).toBe(1);
+    expect(a.mech(FW0).place).toBe(1);
+    expect(a.mech(FW0).points).toBe(15 + a.race.rules.koPoints);
+    expect(a.race.mechs.filter((m) => m.id !== FW0).every((m) => m.kos === 0 && koBonus(a.race, m) === 0)).toBe(true);
+  });
+});
+
+describe('knock-out points', () => {
+  const ORDER = [FW0, FW1, MF1, DF1, MF0, DF0];
+
+  it('each credited knock-out is worth rules.koPoints (3) to the scorer, live and at the flag', () => {
+    expect(DEFAULT_RULES.koPoints).toBe(3);
+    const a = runIn(ORDER);
+    const scorer = a.mech(MF1);
+    expect(koBonus(a.race, scorer)).toBe(0);
+    a.step(1); // so the running order is the one on the road
+    expect(ORDER.map((id) => a.mech(id).place)).toEqual([1, 2, 3, 4, 5, 6]);
+    const before = [teamPoints(a.race, 0), teamPoints(a.race, 1)];
+    expect(before).toEqual([15 + 2 + 1, 7 + 5 + 3]);
+    retire(a.race, a.mech(DF0), scorer); // DF0 was last on the road: nobody's place changes
+    expect(a.race.events.filter((e) => e.type === 'ko')).toEqual([{ type: 'ko', mech: DF0, by: MF1 }]);
+    a.step(1);
+    expect(scorer.kos).toBe(1);
+    expect(koBonus(a.race, scorer)).toBe(3);
+    // The live team total moves at once: the victim's team loses its placing
+    // point, the scorer's team gains the bonus.
+    expect(teamPoints(a.race, 0)).toBe(before[0] - POINTS[5]);
+    expect(teamPoints(a.race, 1)).toBe(before[1] + 3);
+    expect(a.race.mechs.map((m) => m.points)).toEqual([0, 0, 0, 0, 0, 0]); // nothing is banked yet
+    toFlag(a);
+    expect(scorer.place).toBe(3);
+    expect(scorer.points).toBe(POINTS[2] + 3);
+    expect(a.mech(DF0).points).toBe(0);
+    for (const m of a.race.mechs) expect(m.points).toBe(pointsFor(m) + koBonus(a.race, m));
+    expect(teamPoints(a.race, 0)).toBe(15 + 2);
+    expect(teamPoints(a.race, 1)).toBe(7 + 5 + 3 + 3);
+    for (const team of [0, 1]) {
+      expect(teamPoints(a.race, team)).toBe(a.race.mechs.filter((m) => m.team === team).reduce((s, m) => s + m.points, 0));
+    }
+  });
+
+  it('several knock-outs by one pilot add up', () => {
+    const a = runIn(ORDER);
+    retire(a.race, a.mech(DF0), a.mech(DF1));
+    retire(a.race, a.mech(MF0), a.mech(DF1));
+    toFlag(a);
+    expect(a.mech(DF1).kos).toBe(2);
+    expect(a.mech(DF1).points).toBe(POINTS[3] + 6);
+    expect(koBonus(a.race, a.mech(DF1))).toBe(6);
+  });
+
+  it('the bonus survives the scorer being knocked out later', () => {
+    const a = runIn(ORDER);
+    const scorer = a.mech(MF1);
+    retire(a.race, a.mech(DF0), scorer);
+    a.step(2);
+    retire(a.race, scorer, a.mech(FW0)); // and then it is taken out itself
+    toFlag(a);
+    expect(scorer.retired).toBe(true);
+    expect(pointsFor(scorer)).toBe(0);
+    expect(scorer.kos).toBe(1);
+    expect(scorer.points).toBe(3); // no placing points, but the knock-out still counts
+    expect(a.mech(FW0).points).toBe(15 + 3);
+    expect(teamPoints(a.race, 1)).toBe(7 + 5 + 3); // FW1 2nd, DF1 3rd, MF1's bonus
+    expect(teamPoints(a.race, 0)).toBe(15 + 3 + 3); // FW0 1st and its bonus, MF0 4th
+  });
+
+  it('a whole team knocked out still keeps the knock-outs it scored', () => {
+    const a = runIn(ORDER);
+    retire(a.race, a.mech(DF0), a.mech(FW1));
+    for (const id of [FW1, MF1, DF1]) retire(a.race, a.mech(id), null);
+    toFlag(a);
+    expect(teamPoints(a.race, 1)).toBe(3);
+    expect(a.mech(FW1).points).toBe(3);
+    expect(teamPoints(a.race, 0)).toBe(15 + 7);
+  });
+
+  it('an uncredited retirement gives nobody a bonus', () => {
+    const a = runIn(ORDER);
+    retire(a.race, a.mech(DF0), null);
+    expect(a.race.events.filter((e) => e.type === 'ko')).toEqual([{ type: 'ko', mech: DF0, by: -1 }]);
+    toFlag(a);
+    expect(a.race.mechs.map((m) => m.kos)).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(a.race.mechs.reduce((s, m) => s + m.points, 0)).toBe(15 + 7 + 5 + 3 + 2);
+    for (const m of a.race.mechs) expect(m.points).toBe(pointsFor(m));
+  });
+
+  it('retiring the same mech twice credits one knock-out, to whoever got there first', () => {
+    const a = runIn(ORDER);
+    retire(a.race, a.mech(DF0), a.mech(MF1));
+    retire(a.race, a.mech(DF0), a.mech(DF1));
+    retire(a.race, a.mech(DF0), a.mech(MF1));
+    expect(a.mech(MF1).kos).toBe(1);
+    expect(a.mech(DF1).kos).toBe(0);
+  });
+
+  /** A staggered mech with 5 armour left, flung at the right-hand wall two units away. */
+  function flungAtWall(lastHitBy: number, ticksSinceHit: number) {
+    const a = new Arena(2);
+    const vic = a.put(FW1, 300, 23);
+    a.put(MF0, 300, 0);
+    a.step(1);
+    vic.hp = 5;
+    vic.lastHitBy = lastHitBy;
+    vic.lastHitTick = a.race.tick - ticksSinceHit;
+    setStagger(vic, 40);
+    vic.heading = 0.6; // about 70 u/s sideways
+    a.step(6);
+    expect(a.events('splat').length).toBe(1);
+    expect(vic.retired).toBe(true);
+    return a;
+  }
+
+  it('a wall splat with no attacker behind it is nobody\'s knock-out', () => {
+    const a = flungAtWall(-1, 0);
+    expect(a.events('ko')).toMatchObject([{ mech: FW1, by: -1 }]);
+    expect(a.race.mechs.map((m) => m.kos)).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(teamPoints(a.race, 0) - a.race.mechs.filter((m) => m.team === 0).reduce((s, m) => s + pointsFor(m), 0)).toBe(0);
+  });
+
+  it('a wall splat is credited to the last attacker for SPLAT_CREDIT_TICKS, and to nobody after that', () => {
+    const fresh = flungAtWall(MF0, SPLAT_CREDIT_TICKS - 10);
+    expect(fresh.events('ko')).toMatchObject([{ mech: FW1, by: MF0 }]);
+    expect(fresh.mech(MF0).kos).toBe(1);
+    expect(koBonus(fresh.race, fresh.mech(MF0))).toBe(fresh.race.rules.koPoints);
+
+    const stale = flungAtWall(MF0, SPLAT_CREDIT_TICKS + 10);
+    expect(stale.events('ko')).toMatchObject([{ mech: FW1, by: -1 }]);
+    expect(stale.mech(MF0).kos).toBe(0);
+  });
+
+  it('rules.koPoints sets the price; 0 switches the bonus off', () => {
+    for (const koPoints of [0, 1, 5, 10]) {
+      const a = runIn(ORDER, { koPoints });
+      retire(a.race, a.mech(DF0), a.mech(MF1));
+      retire(a.race, a.mech(MF0), a.mech(MF1));
+      expect(koBonus(a.race, a.mech(MF1))).toBe(2 * koPoints);
+      toFlag(a);
+      expect(a.mech(MF1).points).toBe(POINTS[2] + 2 * koPoints);
+      expect(teamPoints(a.race, 1)).toBe(7 + 5 + 3 + 2 * koPoints);
+      expect(teamPoints(a.race, 0)).toBe(15);
+    }
+  });
+
+  it('the bonus follows the rule live: changing race.rules.koPoints changes the standings at once', () => {
+    const a = runIn(ORDER);
+    retire(a.race, a.mech(DF0), a.mech(MF1));
+    a.step(1);
+    const base = teamPoints(a.race, 1) - 3;
+    a.race.rules.koPoints = 8;
+    expect(teamPoints(a.race, 1)).toBe(base + 8);
+    a.race.rules.koPoints = 0;
+    expect(teamPoints(a.race, 1)).toBe(base);
+  });
+
+  it('a knock-out landed by a real blow, and one by a bullet, both pay', () => {
+    const a = new Arena(2, 1, { driveStart: 35 });
+    const fw = a.put(FW0, 300, -10);
+    const foe = a.put(FW1, 309, -10);
+    const gun = a.put(MF0, 300, 10);
+    const target = a.put(MF1, 330, 10);
+    foe.hp = 1;
+    target.hp = 1;
+    a.tap(FW0, BTN.X);
+    a.tap(MF0, BTN.X);
+    a.step(30);
+    expect(a.events('ko').map((e) => [e.mech, e.by]).sort()).toEqual([
+      [FW1, FW0],
+      [MF1, MF0],
+    ]);
+    expect(koBonus(a.race, fw)).toBe(3);
+    expect(koBonus(a.race, gun)).toBe(3);
+    expect(teamPoints(a.race, 0)).toBe(a.race.mechs.filter((m) => m.team === 0).reduce((s, m) => s + pointsFor(m), 0) + 6);
+  });
+
+  it('applyHit on the last of the armour is the knock-out: the attacker in the call gets it', () => {
+    const a = new Arena(2);
+    const att = a.put(DF0, 300, 0);
+    const vic = a.put(FW1, 308, 0);
+    vic.hp = 10;
+    expect(applyHit(a.race, TRACK, att, vic, ATTACKS[ATK.DF_HAMMER1], ATK.DF_HAMMER1)).toBe(true);
+    expect(vic.retired).toBe(true);
+    expect(att.kos).toBe(1);
+    expect(koBonus(a.race, att)).toBe(a.race.rules.koPoints);
+  });
+});
+
+describe('the round the designer cares about', () => {
+  // Team 0's forward wins the race, but both its team-mates are knocked out
+  // by team 1, which brings all three home behind the winner.
+  function headline(rules?: Partial<Rules>): Arena {
+    const a = runIn([FW0, FW1, MF1, DF1, MF0, DF0], rules);
+    retire(a.race, a.mech(MF0), a.mech(MF1));
+    retire(a.race, a.mech(DF0), a.mech(DF1));
+    toFlag(a);
+    expect([FW0, FW1, MF1, DF1].map((id) => a.mech(id).place)).toEqual([1, 2, 3, 4]);
+    expect(a.mech(MF0).retired && a.mech(DF0).retired).toBe(true);
+    return a;
+  }
+
+  it('winning the race is not enough: 15 loses to 2nd + 3rd + 4th with two knock-outs', () => {
+    const a = headline();
+    expect(teamPoints(a.race, 0)).toBe(15);
+    expect(teamPoints(a.race, 1)).toBe(7 + 5 + 3 + 2 * 3);
+    expect(teamPoints(a.race, 1)).toBeGreaterThan(teamPoints(a.race, 0));
+    expect(a.race.mechs.map((m) => m.points)).toEqual([15, 7, 0, 5 + 3, 0, 3 + 3]);
+    const round = scoreRound(a.race);
+    expect(round).toEqual({ round: 1, points: [15, 21], place: [15, 15], ko: [0, 6], first: 0, tied: false, winner: 1 });
+  });
+
+  it('one knock-out is already enough to turn it', () => {
+    const a = runIn([FW0, FW1, MF1, DF1, MF0, DF0]);
+    retire(a.race, a.mech(MF0), a.mech(MF1));
+    retire(a.race, a.mech(DF0), null); // the other wreck was nobody's doing
+    toFlag(a);
+    expect(scoreRound(a.race)).toMatchObject({ points: [15, 18], place: [15, 15], ko: [0, 3], first: 0, tied: false, winner: 1 });
+  });
+
+  it('without the knock-out bonus the same race is level, and goes to the winner\'s team', () => {
+    const a = headline({ koPoints: 0 });
+    expect(teamPoints(a.race, 0)).toBe(15);
+    expect(teamPoints(a.race, 1)).toBe(15);
+    expect(scoreRound(a.race)).toMatchObject({ points: [15, 15], ko: [0, 0], first: 0, tied: true, winner: 0 });
+  });
+
+  it('if the wrecks were nobody\'s knock-outs it is level too', () => {
+    const a = runIn([FW0, FW1, MF1, DF1, MF0, DF0]);
+    retire(a.race, a.mech(MF0), null);
+    retire(a.race, a.mech(DF0), null);
+    toFlag(a);
+    expect(scoreRound(a.race)).toMatchObject({ points: [15, 15], tied: true, winner: 0 });
   });
 });
 
@@ -267,6 +517,10 @@ describe('ties and running order', () => {
     // Provisional points follow the running order.
     expect([e, b, c, a, d, f].map((m) => pointsFor(m))).toEqual([15, 7, 5, 3, 2, 0]);
     expect(teamPoints(race, 0) + teamPoints(race, 1)).toBe(32);
+    // Knock-outs on the books show in the provisional team totals as well.
+    d.kos = 2;
+    expect(teamPoints(race, 0) + teamPoints(race, 1)).toBe(32 + 2 * race.rules.koPoints);
+    expect(teamPoints(race, d.team)).toBe(race.mechs.filter((m) => m.team === d.team).reduce((s, m) => s + pointsFor(m), 0) + 2 * race.rules.koPoints);
   });
 
   it('points are banked only when the race is over', () => {

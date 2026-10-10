@@ -61,7 +61,10 @@ function numberDecal(text: string, livery: Livery): THREE.Mesh {
   g.fillText(text, 62, 70);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  const decal = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  // Made for this one mech, unlike the shared kit materials, so it is freed with it.
+  decal.userData.ownMaterial = true;
+  return decal;
 }
 
 export function buildFrame(role: Role, livery: Livery, number: string): MechRig {

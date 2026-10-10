@@ -11,8 +11,6 @@ import {
   COUNTER_HIT,
   DASH_COOLDOWN,
   DASH_TICKS,
-  DRIVE_DRAFT,
-  DRIVE_PASSIVE,
   DRIVE_PER_DAMAGE_DEALT,
   DRIVE_PER_DAMAGE_TAKEN,
   DT,
@@ -23,7 +21,6 @@ import {
   GUARD_REGEN_DELAY,
   HIT_SLOW_PER_DAMAGE,
   MODE,
-  PACE,
   PARRY_STAGGER,
   PARRY_WINDOW,
   PHASE,
@@ -46,9 +43,23 @@ function meleeRange(att: MechState, vic: MechState, a: AttackDef): number {
   return a.reach + CLASSES[att.role].radius + CLASSES[vic.role].radius;
 }
 
+/**
+ * Drive every pilot in a fight scenario arrives with. The default rules start
+ * the gauge empty (rules.driveStart is 0), and an empty gauge would refuse the
+ * Lance and the dash before the thing under test ever happened.
+ */
+const FIGHT_DRIVE = 35;
+
+/** A battle-lap (by default) arena whose pilots all have FIGHT_DRIVE in the gauge. */
+function arena(lapPhase: 1 | 2 | 3 = 2): Arena {
+  const a = new Arena(lapPhase, 1, { driveStart: FIGHT_DRIVE });
+  for (const m of a.race.mechs) expect(m.drive).toBe(FIGHT_DRIVE);
+  return a;
+}
+
 /** Attacker `gap` units behind the victim on the Grand Straight, both at pace. */
 function duel(attId: number, vicId: number, gap: number, lapPhase: 1 | 2 | 3 = 2) {
-  const a = new Arena(lapPhase);
+  const a = arena(lapPhase);
   const att = a.put(attId, 300, 0);
   const vic = a.put(vicId, 300 + gap, 0);
   return { a, att, vic };
@@ -227,7 +238,7 @@ describe('melee attacks: range, timing and damage', () => {
   }
 
   it('melee needs a target: with no enemy near, the press is refused', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const att = a.put(FW0, 300, 0);
     a.put(FW1, 300 + 60, 0); // beyond the automatic lock
     a.put(MF0, 310, 5); // a team-mate close by is not a target
@@ -238,7 +249,7 @@ describe('melee attacks: range, timing and damage', () => {
   });
 
   it('an attack locked on an ally retargets the nearest enemy', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const att = a.put(FW0, 300, 0);
     a.put(MF0, 320, 8);
     const foe = a.put(FW1, 309, 0);
@@ -255,7 +266,7 @@ describe('melee attacks: range, timing and damage', () => {
 
   it('a hit costs the victim pace and feeds both Drive gauges', () => {
     // Side by side, so that neither is in the other's slipstream.
-    const a = new Arena(2);
+    const a = arena(2);
     const att = a.put(FW0, 300, -4);
     const vic = a.put(FW1, 300, 4);
     a.tap(FW0, BTN.LOCK);
@@ -265,14 +276,15 @@ describe('melee attacks: range, timing and damage', () => {
     a.step(6);
     expect(a.events('hit').length).toBe(1);
     const ticks = 7;
-    expect(att.drive - before.att).toBeCloseTo(20 * DRIVE_PER_DAMAGE_DEALT + ticks * DRIVE_PASSIVE * DT, 6);
-    expect(vic.drive - before.vic).toBeCloseTo(20 * DRIVE_PER_DAMAGE_TAKEN + ticks * DRIVE_PASSIVE * DT, 6);
-    expect(vic.speed).toBeLessThan(PACE * (1 - 20 * HIT_SLOW_PER_DAMAGE) + 1e-6);
+    const passive = a.race.rules.drivePassive; // the battle-lap trickle, for both
+    expect(att.drive - before.att).toBeCloseTo(20 * DRIVE_PER_DAMAGE_DEALT + ticks * passive * DT, 6);
+    expect(vic.drive - before.vic).toBeCloseTo(20 * DRIVE_PER_DAMAGE_TAKEN + ticks * passive * DT, 6);
+    expect(vic.speed).toBeLessThan(a.pace * (1 - 20 * HIT_SLOW_PER_DAMAGE) + 1e-6);
 
     // The slow-down itself, on its own: 20 damage takes 5% off.
     const b = duel(FW0, FW1, 8);
     applyHit(b.a.race, TRACK, b.att, b.vic, ATTACKS[ATK.FW_SLASH1], ATK.FW_SLASH1);
-    expect(b.vic.speed).toBeCloseTo(Math.hypot(PACE + 0.25 * 8, 0) * (1 - 20 * HIT_SLOW_PER_DAMAGE), 9);
+    expect(b.vic.speed).toBeCloseTo(Math.hypot(b.a.pace + 0.25 * 8, 0) * (1 - 20 * HIT_SLOW_PER_DAMAGE), 9);
   });
 
   it('a mech cannot act while staggered', () => {
@@ -419,7 +431,7 @@ describe('shots and projectiles', () => {
   });
 
   it('an enemy beside the muzzle, outside the sights, is missed', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     a.put(MF0, 300, 0);
     const vic = a.put(FW1, 320, 16); // about 39 degrees off the nose; the sights cover 23
     a.tap(MF0, BTN.X);
@@ -430,7 +442,7 @@ describe('shots and projectiles', () => {
   });
 
   it('a locked gunner leads a target that is off the nose', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     a.put(MF0, 300, 0);
     const vic = a.put(FW1, 320, 16);
     a.tap(MF0, BTN.LOCK);
@@ -442,16 +454,16 @@ describe('shots and projectiles', () => {
   });
 
   it('rounds that leave the road are removed', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     a.put(MF0, 300, 0);
-    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, s: a.base + 300, d: 26, vs: PACE, vd: 240, life: 30 });
+    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, s: a.base + 300, d: 26, vs: a.pace, vd: 240, life: 30 });
     a.step(1);
     expect(a.events('projEnd')).toMatchObject([{ proj: 900, hit: false }]);
     expect(a.race.projectiles.length).toBe(0);
   });
 
   it('there is no friendly fire: rounds pass through team-mates', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     a.put(MF0, 300, 0);
     const mate = a.put(FW0, 320, 0);
     const foe = a.put(FW1, 345, 0);
@@ -504,12 +516,15 @@ describe('shots and projectiles', () => {
 
 describe('drive costs and cooldowns', () => {
   it('only the Lance Dash costs Drive: 12, taken when it starts', () => {
+    // (The ability moves in the table cost a Cell, never Drive.)
     for (const a of ATTACKS) expect(a.driveCost).toBe(a.key === 'fw_lance' ? 12 : 0);
     const { a, att } = duel(FW0, FW1, 11);
+    const { drivePassive, driveDraft } = a.race.rules;
     att.drive = 30;
     a.tap(FW0, BTN.Y);
     // (One tick of trickle and of slipstream charge came in as well.)
-    expect(att.drive).toBeCloseTo(30 - 12 + (DRIVE_PASSIVE + DRIVE_DRAFT) * DT, 9);
+    expect(att.drafting).toBe(true);
+    expect(att.drive).toBeCloseTo(30 - 12 + (drivePassive + driveDraft) * DT, 9);
   });
 
   it('the Lance is refused, and nothing is charged, without 12 Drive', () => {
@@ -518,7 +533,7 @@ describe('drive costs and cooldowns', () => {
     a.tap(FW0, BTN.Y);
     expect(att.act).toBe(ACT.NONE);
     expect(a.events('denied').map((e) => e.reason)).toEqual(['drive']);
-    expect(att.drive).toBeCloseTo(11.5 + (DRIVE_PASSIVE + DRIVE_DRAFT) * DT, 9);
+    expect(att.drive).toBeCloseTo(11.5 + (a.race.rules.drivePassive + a.race.rules.driveDraft) * DT, 9);
     a.step(40);
     expect(vic.hp).toBe(CLASSES[vic.role].maxHp);
     // The primary is free and still works.
@@ -567,7 +582,7 @@ describe('drive costs and cooldowns', () => {
   // cooldown: here a Scatter Cannon (200 ticks) is back 47 ticks after the
   // first shot because a kick landed during its recovery.
   it('a move interrupted after it has fired still goes on cooldown', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const df = a.put(DF0, 300, 0);
     const foe = a.put(FW1, 315, 0);
     a.put(MF1, 300, 9); // an enemy alongside the defender
@@ -658,7 +673,7 @@ describe('guard', () => {
 
   it('does nothing against a blow from behind', () => {
     // The victim guards facing an enemy ahead of it; the attacker is behind.
-    const a = new Arena(2);
+    const a = arena(2);
     a.put(FW0, 300, 0);
     const vic = a.put(FW1, 310, 0);
     a.put(MF0, 340, 0);
@@ -753,8 +768,10 @@ describe('guard', () => {
     guarded.a.inputs[FW1].mx = 1;
     guarded.a.step(40);
     // Strafing circles the target, so the sideways speed is the class
-    // strafe speed times how square-on the target still is.
-    const strafe = CLASSES[free.vic.role].strafe;
+    // strafe speed (scaled by rules.battleMove, like all movement around a
+    // lock) times how square-on the target still is.
+    const strafe = CLASSES[free.vic.role].strafe * free.a.race.rules.battleMove;
+    expect(free.a.race.rules.battleMove).toBeGreaterThan(0);
     const squareOn = (d: { att: MechState; vic: MechState }) => Math.abs(d.att.s - d.vic.s) / dist(d.att, d.vic);
     expect(Math.abs(free.vic.vd) / squareOn(free)).toBeGreaterThan(strafe * 0.95);
     expect(Math.abs(free.vic.vd) / squareOn(free)).toBeLessThan(strafe * 1.05);
@@ -784,7 +801,7 @@ describe('parry', () => {
     expect(vic.guard).toBe(CLASSES[vic.role].guardMax);
     expect(att.act).toBe(ACT.STAGGER);
     expect(att.actDur).toBe(PARRY_STAGGER);
-    expect(vic.drive - drive0).toBeCloseTo(12 + (hitTick - tick0) * DRIVE_PASSIVE * DT, 6);
+    expect(vic.drive - drive0).toBeCloseTo(12 + (hitTick - tick0) * a.race.rules.drivePassive * DT, 6);
     // The attacker's string is over; the defender is free to answer.
     a.step(20);
     expect(att.act).toBe(ACT.STAGGER);
@@ -874,7 +891,7 @@ describe('dash', () => {
     for (const id of [FW0, MF0, DF0]) {
       /** Dash, then press again `offset` ticks later. How many dashes happened? */
       const dashTwice = (offset: number): number => {
-        const a = new Arena(2);
+        const a = arena(2);
         const me = a.put(id, 300, 0);
         a.put(FW1, 330, 0);
         const c = CLASSES[me.role];
@@ -883,7 +900,10 @@ describe('dash', () => {
         me.drive = 50;
         const T = a.tap(id, BTN.A);
         expect(a.events('dash')).toEqual([{ type: 'dash', mech: id, tick: T }]);
-        expect(me.drive).toBeCloseTo(50 - c.dashCost + DRIVE_PASSIVE * DT, 9);
+        // (One tick of trickle came in as well, and of slipstream charge for
+        // the heavier frames, whose shorter hop back leaves them in the tow.)
+        const { drivePassive, driveDraft } = a.race.rules;
+        expect(me.drive).toBeCloseTo(50 - c.dashCost + (drivePassive + (me.drafting ? driveDraft : 0)) * DT, 9);
         expect(me.act).toBe(ACT.DASH);
         expect(me.iframes).toBe(c.dashIframes);
         expect(me.cdDash).toBe(DASH_COOLDOWN);
@@ -903,7 +923,7 @@ describe('dash', () => {
   });
 
   it('is refused without the Drive for it', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const me = a.put(DF0, 300, 0);
     a.put(FW1, 330, 0);
     a.tap(DF0, BTN.LOCK);
@@ -916,7 +936,7 @@ describe('dash', () => {
 
   it('goes where the stick points, relative to the target; no stick hops straight back', () => {
     const run = (mx: number, my: number) => {
-      const a = new Arena(2);
+      const a = arena(2);
       const me = a.put(FW0, 300, 0);
       const foe = a.put(FW1, 330, 0);
       a.tap(FW0, BTN.LOCK);
@@ -1034,7 +1054,7 @@ describe('counter hits and armour', () => {
     // blow can land (it staggers the other pilot); who gets it must not
     // depend on the team, only on the parity of the tick.
     const winner = (delay: number): number => {
-      const a = new Arena(2);
+      const a = arena(2);
       a.put(FW0, 300, 0);
       a.put(FW1, 309, 0);
       a.tap(FW0, BTN.LOCK);
@@ -1139,7 +1159,7 @@ describe('stagger chains', () => {
 
 describe('knock-outs', () => {
   it('armour at zero retires the mech, credits the attacker and frees every lock on it', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const att = a.put(FW0, 300, 0);
     const vic = a.put(FW1, 310, 0);
     const mate = a.put(MF0, 285, 8);
@@ -1216,7 +1236,7 @@ describe('knock-outs', () => {
 
 describe('wall splat', () => {
   it('a staggered mech knocked into the barrier takes extra damage by impact speed', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const vic = a.put(FW1, 300, 23); // two units off the right-hand wall
     const att = a.put(MF0, 300, 15); // alongside, on its left
     a.tap(MF0, BTN.LOCK);
@@ -1241,7 +1261,7 @@ describe('wall splat', () => {
   });
 
   it('the wall can finish the job, and the last attacker gets the knock-out', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const vic = a.put(FW1, 300, 23);
     const att = a.put(MF0, 300, 15);
     a.tap(MF0, BTN.LOCK);
@@ -1257,7 +1277,7 @@ describe('wall splat', () => {
   });
 
   it('driving into the wall under control is not a splat', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const m = a.put(FW0, 300, 15);
     a.inputs[FW0].mx = 1;
     a.step(120);
@@ -1269,13 +1289,15 @@ describe('wall splat', () => {
 
 describe('knockback', () => {
   it('pushes the victim away from the attacker, sideways at full strength', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const att = a.put(MF0, 300, 0);
     const vic = a.put(FW1, 300, 8); // level, to the attacker's right
     a.step(1);
     applyHit(a.race, TRACK, att, vic, ATTACKS[ATK.MF_KICK], ATK.MF_KICK);
     expect(vic.vd).toBeGreaterThan(30);
-    expect(vic.heading).toBeGreaterThan(0.3);
+    // Thrown sideways at the kick's 38 u/s while still doing the limiter down the road.
+    expect(vic.heading).toBeCloseTo(Math.atan2(ATTACKS[ATK.MF_KICK].knockback, a.pace), 6);
+    expect(vic.heading).toBeGreaterThan(0.25);
   });
 
   it('a shove from behind is mostly swallowed: it is not a free push down the road', () => {
@@ -1290,12 +1312,12 @@ describe('knockback', () => {
   });
 
   it('a blow from the front knocks a racing mech back', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const vic = a.put(FW1, 300, 0);
     const att = a.put(MF0, 308, 0); // the attacker is ahead of its victim
     a.step(1);
     applyHit(a.race, TRACK, att, vic, ATTACKS[ATK.MF_KICK], ATK.MF_KICK);
-    expect(vic.vs).toBeLessThan(PACE - 38);
+    expect(vic.vs).toBeLessThan(a.pace - 38);
     expect(vic.vs).toBeGreaterThan(0);
   });
 
@@ -1306,7 +1328,7 @@ describe('knockback', () => {
   // a crawling mech hit head-on by the Breaker Slam leaves at ~30 u/s
   // towards the mech that hit it.
   it('a blow from the front never throws a slow mech forwards', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const vic = a.put(FW1, 300, 0, 10);
     a.inputs[FW1].throttle = 0.1;
     const att = a.put(DF0, 308, 0);
@@ -1319,7 +1341,7 @@ describe('knockback', () => {
 
 describe('who can be hurt', () => {
   it('finished mechs are out of the fight: blows and bullets pass them by', () => {
-    const a = new Arena(3);
+    const a = arena(3);
     const done = a.put(FW1, L - 20, 0);
     a.until(() => done.finished, 60);
     const att = a.put(FW0, 0, 0);
@@ -1340,7 +1362,7 @@ describe('who can be hurt', () => {
   });
 
   it('team-mates are never hit by a melee swing', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     a.put(FW0, 300, 0);
     const mate = a.put(MF0, 308, 3);
     const foe = a.put(FW1, 309, -3);
@@ -1352,7 +1374,7 @@ describe('who can be hurt', () => {
   });
 
   it('a swing prefers the locked target over a nearer enemy', () => {
-    const a = new Arena(2);
+    const a = arena(2);
     const att = a.put(FW0, 300, 0);
     const far = a.put(FW1, 309, 3.5);
     const near = a.put(MF1, 307, -3.5);
@@ -1372,7 +1394,7 @@ describe('who can be hurt', () => {
     expect(near.hp).toBe(CLASSES[near.role].maxHp);
 
     // Without a lock on either, the nearer enemy takes it.
-    const b = new Arena(2);
+    const b = arena(2);
     b.put(FW0, 300, 0);
     b.put(FW1, 309, 3.5);
     b.put(MF1, 307, -3.5);

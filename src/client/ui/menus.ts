@@ -278,7 +278,7 @@ export class Menus {
       h('h2.cells', 'Abilities, one Cell each'),
       h('div.cellkit', this.key('B', 'R'), h('b', free.name + ' '), h('i', '(free steering). '), free.blurb),
       h('div.cellkit', this.key('B', 'R'), h('b', locked.name + ' '), h('i', '(locked on). '), locked.blurb),
-      h('div.note', 'Cells come from the gold gates on the formation lap: half a Cell each, three at most.'),
+      h('div.note', 'Cells come from the gold gates on the formation lap. Thread them.'),
     );
     if (preview) this.cb.onPreview({ ...this.choice });
   }
@@ -343,7 +343,8 @@ export class Menus {
     } else if (single) {
       box.append(h('div.headline', `${myTeam} ${roundWinner === me.team ? 'win' : 'lose'} `, h('span.pts', `${mine}–${theirs}`)));
     } else {
-      box.append(h('div.headline', `${names[roundWinner]} take round ${round ? round.round : 1} `, h('span.pts', `${mine}–${theirs}`)));
+      // The winner's score first, to match the name in front of it.
+      box.append(h('div.headline', `${names[roundWinner]} take round ${round ? round.round : 1} `, h('span.pts', `${pts[roundWinner]}–${pts[1 - roundWinner]}`)));
     }
 
     const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th'];

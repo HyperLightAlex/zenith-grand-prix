@@ -1,10 +1,11 @@
 // Shared helpers for the simulation tests. Not a test file itself.
 
 import {
+  BTN,
+  BTN_MASK,
   CLASSES,
   COUNTDOWN_TICKS,
   MERIDIAN,
-  PACE,
   PHASE,
   ROLE,
   buildTrack,
@@ -12,10 +13,11 @@ import {
   createRace,
   emptyInput,
   kappaAt,
+  limiterOf,
   rngNext,
   stepRace,
 } from '../src/sim/index';
-import type { MechInput, MechState, RaceState, SeatConfig, SimEvent, Track } from '../src/sim/index';
+import type { MechInput, MechState, RaceState, Rules, SeatConfig, SimEvent, Track } from '../src/sim/index';
 
 /** The one circuit. A built track is read-only, so every test can share it. */
 export const TRACK: Track = buildTrack(MERIDIAN);
@@ -57,10 +59,20 @@ export interface RaceOpts {
   humans?: readonly number[] | 'all';
   skill?: number | readonly [number, number];
   laps?: number;
+  /** Overrides for the default rules (race.rules). */
+  rules?: Partial<Rules>;
+  /** Mirror the grid, as a match does on every other round. */
+  gridFlip?: boolean;
 }
 
 export function newRace(seed: number, opts: RaceOpts = {}): RaceState {
-  return createRace(TRACK, { seed, seats: makeSeats(opts.humans ?? [], opts.skill ?? 0.6), laps: opts.laps });
+  return createRace(TRACK, {
+    seed,
+    seats: makeSeats(opts.humans ?? [], opts.skill ?? 0.6),
+    laps: opts.laps,
+    rules: opts.rules,
+    gridFlip: opts.gridFlip,
+  });
 }
 
 /** One input slot per seat: an idle controller for humans, null (AI) otherwise. */
@@ -128,24 +140,36 @@ function mechSum(m: MechState): number {
     m.hp + m.guard + m.drive +
     m.act + m.actT + m.actDur + m.attack + m.attackStart + m.guardT + m.guardIdle + m.guardRest +
     m.iframes + m.chain + m.chainT + m.chainTick + m.cdPrimary + m.cdSecondary + m.cdDash +
-    m.wall +
+    m.cells + m.gateMask + m.cdAbility + m.overdriveT + m.ramT + m.ramHits + m.shieldT + m.snareT + m.cloakT +
+    m.tow + m.wall +
     m.lap + m.finishTime + m.retireTick + m.place + m.points +
     m.prevButtons + m.prevCmd + m.prevThrottle + m.throttleTick + m.throttleRest +
     m.lastHitBy + m.lastHitTick + m.deniedTick + m.dmgDealt + m.dmgTaken + m.kos +
     ai.intent + ai.intentTarget + ai.nextThink + ai.lane + ai.orbit + ai.orbitUntil +
     ai.attackAt + ai.guardFrom + ai.guardUntil + ai.dodgeAt + ai.reactedTo + ai.comboLeft +
-    ai.boostUntil + ai.boutUntil + ai.restUntil
+    ai.boostUntil + ai.boutUntil + ai.restUntil + ai.gates + ai.abilityAt
   );
 }
 
 /**
  * Name of the first state field holding NaN or +-Infinity, or null when the
  * whole race state is finite. Looks at every numeric field of every mech
- * (AI state included), every projectile, every team and the race itself.
+ * (AI state included), every projectile, every team, the rules and the race
+ * itself.
  */
 export function findNonFinite(race: RaceState): string | null {
   if (!Number.isFinite(race.tick + race.phase + race.rng + race.laps + race.leaderS + race.lapPhase + race.firstFinishTick + race.endTick + race.nextProjId)) {
     return `race header (tick ${race.tick})`;
+  }
+  // The rules are part of the state (and the tuning panel writes to them
+  // live), so a bad number there is as bad as one in a mech. Looped rather
+  // than written out: a rule added later is covered without touching this.
+  const rules = race.rules as unknown as Record<string, number>;
+  let ruleSum = 0;
+  for (const k in rules) ruleSum += rules[k];
+  if (!Number.isFinite(ruleSum)) {
+    for (const k in rules) if (!Number.isFinite(rules[k])) return `rules.${k} = ${rules[k]} (tick ${race.tick})`;
+    return `rules (tick ${race.tick})`;
   }
   for (const m of race.mechs) {
     if (Number.isFinite(mechSum(m))) continue;
@@ -213,8 +237,32 @@ export function mash(rnd: () => number, inp: MechInput): void {
   }
   if (rnd() < 0.03) inp.throttle = rnd() < 0.8 ? 1 : rnd();
   if (rnd() < 0.02) inp.brake = rnd() < 0.8 ? 0 : rnd();
-  if (rnd() < 0.2) inp.buttons = Math.floor(rnd() * 256);
+  // Every button a controller has, the ability button included.
+  if (rnd() < 0.2) inp.buttons = Math.floor(rnd() * (BTN_MASK + 1));
   if (rnd() < 0.01) inp.cmd = Math.floor(rnd() * 5);
+}
+
+// ---- Cells, lap phases and effects -------------------------------------------
+
+/** Hand a mech ability charges (three, a full set, unless told otherwise). */
+export function giveCells(m: MechState, n = 3): MechState {
+  m.cells = n;
+  return m;
+}
+
+/**
+ * Put a race on a lap phase by hand (1 formation, 2 battle, 3 speed). The sim
+ * only ever moves the phase forwards, so this sticks unless the leader's own
+ * lap count calls for a later one.
+ */
+export function setLapPhase(race: RaceState, phase: 1 | 2 | 3): RaceState {
+  race.lapPhase = phase;
+  return race;
+}
+
+/** Every effect timer a mech carries, for "nothing is running" checks. */
+export function effectTimers(m: MechState): number[] {
+  return [m.overdriveT, m.ramT, m.shieldT, m.snareT, m.cloakT];
 }
 
 // ---- controlled scenarios --------------------------------------------------
@@ -235,8 +283,12 @@ export class Arena {
   /** s of the start line on the lap the scenario plays on. */
   readonly base: number;
 
-  constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1) {
-    this.race = createRace(TRACK, { seed, seats: makeSeats('all') });
+  /**
+   * `rules` overrides the default rules for this arena, so a test about one
+   * mechanism can pin (or switch off) the others.
+   */
+  constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1, rules?: Partial<Rules>) {
+    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules });
     this.inputs = this.race.mechs.map(() => emptyInput());
     runCountdown(this.race, this.inputs);
     this.base = (lapPhase - 1) * TRACK.length;
@@ -246,14 +298,27 @@ export class Arena {
       m.d = 0;
       m.speed = m.vs = m.vd = m.heading = m.facing = 0;
     }
+    // The race's idea of where the leader is still dates from the grid;
+    // bring it in line with the parked field, so the first mech put on stage
+    // is not handed a tick of pack bonus for being "behind" a leader that is
+    // no longer there.
+    this.race.leaderS = this.base - 1500;
   }
 
   mech(id: number): MechState {
     return this.race.mechs[id];
   }
 
-  /** Place a mech `s` units past the start line at lateral `d`, cruising at `speed`. */
-  put(id: number, s: number, d = 0, speed: number = PACE): MechState {
+  /** The limiter in force right now: what a mech on stage cruises at on laps 1 and 2. */
+  get pace(): number {
+    return limiterOf(this.race);
+  }
+
+  /**
+   * Place a mech `s` units past the start line at lateral `d`, cruising at
+   * `speed` (by default the live limiter, so on laps 1 and 2 it just holds it).
+   */
+  put(id: number, s: number, d = 0, speed: number = this.pace): MechState {
     const m = this.race.mechs[id];
     m.s = this.base + s;
     m.lap = Math.round(this.base / TRACK.length);
@@ -287,6 +352,28 @@ export class Arena {
   tap(id: number, buttons: number): number {
     this.hold(id, buttons).step(1).release(id, buttons);
     return this.race.tick;
+  }
+
+  /** Tap the ability button. Returns the tick on which the press landed. */
+  ability(id: number): number {
+    return this.tap(id, BTN.ABILITY);
+  }
+
+  /**
+   * For runs longer than the Grand Straight (it is dead straight from about
+   * 250 units before the line to 600 after it): call this every tick, and
+   * whenever the first of the given mechs gets `past` units beyond the line
+   * the whole group is moved back `back` units together. Gaps, speeds and
+   * lap counts are untouched; the race's leader reference moves with them.
+   */
+  recenter(ids: readonly number[], past = 300, back = 500): void {
+    let front = -Infinity;
+    for (const id of ids) front = Math.max(front, this.race.mechs[id].s);
+    if (front - this.base <= past) return;
+    for (const id of ids) this.race.mechs[id].s -= back;
+    let leader = -Infinity;
+    for (const m of this.race.mechs) if (!m.retired && !m.finished) leader = Math.max(leader, m.s);
+    if (leader > -Infinity) this.race.leaderS = leader;
   }
 
   clearLog(): this {

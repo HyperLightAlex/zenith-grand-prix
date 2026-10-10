@@ -23,14 +23,36 @@ const LEVEL = {
   alarm: 0.12,
 };
 
-/** Speed at the limiter; the scene's speed is divided by this. */
+/**
+ * Speed at the formation lap's limiter; the scene's speed is divided by this.
+ * On that scale the battle lap's limiter is 1.14, a defender flat out on the
+ * speed lap 1.32 and a forward 1.45. A boost takes a forward to 1.75, an
+ * Overdrive to 1.9, and one with a tow and a shove behind it to 2.3 for a moment.
+ */
 const LIMIT_SPEED = PACE;
 
+/** Fastest speed the layers follow, in units per second. Anything beyond sounds the same. */
+const MAX_SPEED = 260;
+
 /**
- * Turbine pitch at rest, in hertz. Chosen so that flat out at the limiter,
- * where most of a race is spent, the fundamental sits on A2 (110 Hz) and the
- * two whine partials on E5 and B5: in tune with the race music's A minor
- * rather than a semitone off its bass.
+ * A forward's top speed on the speed lap, on that scale: the most any mech
+ * holds for long. Up to here every layer follows speed directly. Beyond it
+ * lie boost and Overdrive, and there each extra unit of speed counts for less
+ * than the one before, adding no more than EASE in all, so the top end still
+ * climbs but nothing runs away into a shriek.
+ */
+const TOP = 1.45;
+const EASE = 0.6;
+
+/**
+ * Turbine pitch at rest, in hertz. Chosen so that flat out at the formation
+ * lap's limiter the fundamental sits on A2 (110 Hz) and the two whine partials
+ * on E5 and B5: in tune with the race music's A minor rather than a semitone
+ * off its bass. From there the same law puts the battle lap's limiter a whole
+ * tone up, close to B2, a defender flat out on the speed lap on D3 and a
+ * forward on E3, all notes that A minor shares with the speed lap's B minor,
+ * and brings a forward in Overdrive to rest an octave up, on A3. The audio
+ * check's speed sweep prints the pitch at each of these.
  */
 const IDLE_HZ = 43.2;
 
@@ -264,40 +286,49 @@ export class EngineLayers {
   /** `ahead` is how far past `now` timed events (the alarm beeps) should be queued. */
   update(now: number, dt: number, s: AudioScene, ahead: number): void {
     const on = s.racing;
-    const x = clamp(Number.isFinite(s.speed) ? s.speed : 0, 0, 200) / LIMIT_SPEED;
+    const x = clamp(Number.isFinite(s.speed) ? s.speed : 0, 0, MAX_SPEED) / LIMIT_SPEED;
     const x1 = Math.min(1, x);
+    // Speed as the layers hear it: the real thing up to TOP, easing off above (see TOP).
+    const xs = x <= TOP ? x : TOP + EASE * (1 - Math.exp(-(x - TOP) / EASE));
     const thr = clamp(Number.isFinite(s.throttle) ? s.throttle : 0, 0, 1);
 
     this.all.set(on, now, TAIL);
     this.gate.to(on ? 1 : 0, now, on ? 0.1 : 0.22);
 
-    this.boostT = s.boosting && on ? this.boostT + dt : Math.max(0, this.boostT - dt * 3);
+    const surge = on && s.surge === true;
+    const burn = on && (s.boosting || surge);
+    this.boostT = burn ? this.boostT + dt : Math.max(0, this.boostT - dt * 3);
     this.stripT = s.onStrip && on ? this.stripT + dt : Math.max(0, this.stripT - dt * 2);
 
     // Turbine. Pitch climbs an octave and a bit from rest to the limiter and
-    // keeps going under boost; the filter opens with speed and throttle.
+    // a fifth more to a forward's top speed, then eases off under boost and
+    // Overdrive; the filter opens with speed and throttle. Below the limiter
+    // the level follows throttle more than speed. Above it the turbine goes
+    // on getting louder, the body by half the extra speed and the whine by
+    // all of it, or the wind would bury them both.
     // Locked on and fighting, it is turned down and darkened.
-    const f0 = IDLE_HZ * 2 ** (1.3 * x) * (1 + 0.035 * thr);
+    const f0 = IDLE_HZ * 2 ** (1.3 * xs) * (1 + 0.035 * thr);
     for (let i = 0; i < this.f0.length; i++) this.f0[i].to(f0 * this.ratios[i], now);
-    this.engCut.to((170 + 950 * x ** 1.2 * (0.5 + 0.5 * thr)) * (s.battle ? 0.6 : 1), now);
-    this.engGain.to(on ? LEVEL.engine * (0.45 + 0.35 * thr + 0.2 * x1) * (s.battle ? 0.68 : 1) : 0, now);
-    this.whineGain.to(on ? LEVEL.whine * x1 ** 1.5 * (0.5 + 0.5 * thr) * (s.battle ? 0.5 : 1) : 0, now);
+    const over = Math.max(0, xs - 1);
+    this.engCut.to((170 + 950 * xs ** 1.2 * (0.5 + 0.5 * thr)) * (s.battle ? 0.6 : 1), now);
+    this.engGain.to(on ? LEVEL.engine * (0.45 + 0.35 * thr + 0.2 * x1) * (1 + 0.5 * over) * (s.battle ? 0.68 : 1) : 0, now);
+    this.whineGain.to(on ? LEVEL.whine * x1 ** 1.5 * (1 + over) * (0.5 + 0.5 * thr) * (s.battle ? 0.5 : 1) : 0, now);
 
     // Air and road. In a slipstream the broad rush drops and a hollow band takes over.
     const draft = on && s.drafting;
-    this.windCut.to((300 + 1700 * x) * (draft ? 0.7 : 1), now);
-    this.windGain.to(on ? LEVEL.wind * Math.min(1.6, x) ** 1.8 * (draft ? 0.6 : 1) : 0, now);
-    this.roadGain.to(on ? LEVEL.road * Math.min(1.3, x) : 0, now);
+    this.windCut.to((300 + 1700 * xs) * (draft ? 0.7 : 1), now);
+    this.windGain.to(on ? LEVEL.wind * xs ** 1.8 * (draft ? 0.6 : 1) : 0, now);
+    this.roadGain.to(on ? LEVEL.road * xs : 0, now);
     this.draftPatch.set(draft, now, TAIL);
-    this.draftGain.to(draft ? LEVEL.draft * x1 ** 1.2 : 0, now);
+    this.draftGain.to(draft ? LEVEL.draft * xs ** 1.2 : 0, now);
 
-    // Afterburner.
-    const burn = on && s.boosting;
+    // Afterburner. An Overdrive burns louder and brighter than a boost, and
+    // its tone climbs a third further, to E above the boost's C.
     this.boostPatch.set(burn, now, TAIL);
-    this.boostCut.to(500 + 900 * Math.min(1, this.boostT / 1.2), now);
-    this.boostFreq.to(130 * 2 ** Math.min(1, this.boostT / 2), now);
-    this.boostNoise.to(burn ? LEVEL.boostNoise : 0, now, burn ? 0.04 : 0.25);
-    this.boostTone.to(burn ? LEVEL.boostTone : 0, now, burn ? 0.05 : 0.2);
+    this.boostCut.to(500 + (surge ? 1300 : 900) * Math.min(1, this.boostT / 1.2), now);
+    this.boostFreq.to(130 * 2 ** ((surge ? 1.34 : 1) * Math.min(1, this.boostT / 2)), now);
+    this.boostNoise.to(burn ? LEVEL.boostNoise * (surge ? 1.3 : 1) : 0, now, burn ? 0.04 : 0.25);
+    this.boostTone.to(burn ? LEVEL.boostTone * (surge ? 1.3 : 1) : 0, now, burn ? 0.05 : 0.2);
 
     // Charge strip.
     const strip = on && s.onStrip;
