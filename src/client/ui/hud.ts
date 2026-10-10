@@ -226,7 +226,8 @@ export class Hud {
       const php = h('i');
       const plate = h('div.plate' + (m.team ? '.t1' : ''), h('span.tag', `${m.name} ${ROLE_KEYS[m.role]}`), h('div.bar', php));
       plate.hidden = true;
-      this.root.append(plate);
+      // Under the panels, so a name never covers the running order.
+      this.root.prepend(plate);
       this.plates.push({ el: plate, hp: php });
     }
     this.comms.replaceChildren();

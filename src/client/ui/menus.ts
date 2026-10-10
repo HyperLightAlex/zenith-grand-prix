@@ -355,19 +355,21 @@ export class Menus {
     else if (this.screen === 'pause') this.cb.onResume();
   }
 
-  /** Feed navigation presses. */
-  handle(m: MenuInput): void {
-    if (!this.screen) return;
-    const horizontal = this.screen === 'results';
-    if (m.confirm) this.confirm();
-    else if (m.back || (m.pause && this.screen === 'pause')) this.back();
-    else if (horizontal ? m.left : m.up) this.select(this.sel - 1);
-    else if (horizontal ? m.right : m.down) this.select(this.sel + 1);
-    else if (!horizontal && (m.left || m.right)) {
-      const it = this.items[this.sel];
-      if (it?.change) {
-        it.change(m.left ? -1 : 1);
-        this.cb.onSound('ui_move');
+  /** Feed navigation presses, in the order they happened. */
+  handle(presses: MenuInput[]): void {
+    for (const m of presses) {
+      if (!this.screen) return;
+      const horizontal = this.screen === 'results';
+      if (m === 'confirm') this.confirm();
+      else if (m === 'back') this.back();
+      else if (m === (horizontal ? 'left' : 'up')) this.select(this.sel - 1);
+      else if (m === (horizontal ? 'right' : 'down')) this.select(this.sel + 1);
+      else if (!horizontal && (m === 'left' || m === 'right')) {
+        const it = this.items[this.sel];
+        if (it?.change) {
+          it.change(m === 'left' ? -1 : 1);
+          this.cb.onSound('ui_move');
+        }
       }
     }
   }

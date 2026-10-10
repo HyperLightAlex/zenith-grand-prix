@@ -365,7 +365,7 @@ export class Game {
         simDt = dt;
         break;
       case 'race': {
-        if (menu.pause) {
+        if (menu.includes('pause')) {
           this.pause();
           break;
         }

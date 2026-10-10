@@ -2,15 +2,8 @@
 // MechInput the simulation wants, plus menu navigation and camera controls.
 import { BTN, emptyInput, type MechInput } from '../../sim/index';
 
-export interface MenuInput {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-  confirm: boolean;
-  back: boolean;
-  pause: boolean;
-}
+/** One menu press. Presses are queued, so none are lost on a slow frame. */
+export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause';
 
 const KEY_BUTTONS: Record<string, number> = {
   Space: BTN.A,
@@ -41,12 +34,14 @@ export class Input {
   camX = 0;
   camY = 0;
   lookBack = false;
-  /** Menu presses since the last consumeMenu(). */
-  private menu: MenuInput = { up: false, down: false, left: false, right: false, confirm: false, back: false, pause: false };
+  /** Menu presses since the last consumeMenu(), in order. */
+  private menu: MenuInput[] = [];
   /** Which device was touched last; the HUD shows matching button hints. */
   device: 'pad' | 'keys' = 'keys';
   padName = '';
   private keys = new Set<string>();
+  /** Keys pressed since the last poll, so a tap shorter than a frame still counts. */
+  private tapped = new Set<string>();
   private prevPad: boolean[] = [];
   private prevStickX = 0;
   private prevStickY = 0;
@@ -62,15 +57,16 @@ export class Input {
       if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (e.repeat) return;
       this.keys.add(e.code);
+      this.tapped.add(e.code);
       this.touch('keys');
       const m = this.menu;
-      if (e.code === 'ArrowUp' || e.code === 'KeyW') m.up = true;
-      if (e.code === 'ArrowDown' || e.code === 'KeyS') m.down = true;
-      if (e.code === 'ArrowLeft' || e.code === 'KeyA') m.left = true;
-      if (e.code === 'ArrowRight' || e.code === 'KeyD') m.right = true;
-      if (e.code === 'Enter' || e.code === 'Space') m.confirm = true;
-      if (e.code === 'Escape' || e.code === 'Backspace') m.back = true;
-      if (e.code === 'Escape' || e.code === 'KeyP') m.pause = true;
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') m.push('up');
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') m.push('down');
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') m.push('left');
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') m.push('right');
+      if (e.code === 'Enter' || e.code === 'Space') m.push('confirm');
+      if (e.code === 'Escape' || e.code === 'Backspace') m.push('back');
+      if (e.code === 'Escape' || e.code === 'KeyP') m.push('pause');
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -105,7 +101,9 @@ export class Input {
   /** Read the devices. Call once per frame before using `state`. */
   poll(): void {
     const s = this.state;
-    const k = this.keys;
+    // Held keys plus anything tapped since the last frame.
+    const k = this.tapped;
+    for (const code of this.keys) k.add(code);
     // ---- keyboard
     let mx = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
     let my = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
@@ -172,18 +170,19 @@ export class Input {
       const edge = (i: number) => b(i) && !this.prevPad[i];
       const sx = Math.abs(lx) > 0.6 ? Math.sign(lx) : 0;
       const sy = Math.abs(ly) > 0.6 ? Math.sign(ly) : 0;
-      if (edge(PAD.UP) || (sy < 0 && this.prevStickY >= 0)) m.up = true;
-      if (edge(PAD.DOWN) || (sy > 0 && this.prevStickY <= 0)) m.down = true;
-      if (edge(PAD.LEFT) || (sx < 0 && this.prevStickX >= 0)) m.left = true;
-      if (edge(PAD.RIGHT) || (sx > 0 && this.prevStickX <= 0)) m.right = true;
-      if (edge(PAD.A)) m.confirm = true;
-      if (edge(PAD.B)) m.back = true;
-      if (edge(PAD.START)) m.pause = true;
+      if (edge(PAD.UP) || (sy < 0 && this.prevStickY >= 0)) m.push('up');
+      if (edge(PAD.DOWN) || (sy > 0 && this.prevStickY <= 0)) m.push('down');
+      if (edge(PAD.LEFT) || (sx < 0 && this.prevStickX >= 0)) m.push('left');
+      if (edge(PAD.RIGHT) || (sx > 0 && this.prevStickX <= 0)) m.push('right');
+      if (edge(PAD.A)) m.push('confirm');
+      if (edge(PAD.B)) m.push('back');
+      if (edge(PAD.START)) m.push('pause');
       this.prevStickX = sx;
       this.prevStickY = sy;
       for (let i = 0; i < p.buttons.length; i++) this.prevPad[i] = b(i);
     }
 
+    this.tapped = new Set();
     s.mx = mx;
     s.my = my;
     s.throttle = throttle;
@@ -201,10 +200,10 @@ export class Input {
     return this.lastFlickDir;
   }
 
-  /** Menu presses since the last call. */
-  consumeMenu(): MenuInput {
+  /** Menu presses since the last call, oldest first. */
+  consumeMenu(): MenuInput[] {
     const m = this.menu;
-    this.menu = { up: false, down: false, left: false, right: false, confirm: false, back: false, pause: false };
+    this.menu = [];
     return m;
   }
 
