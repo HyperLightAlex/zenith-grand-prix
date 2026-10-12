@@ -29,6 +29,7 @@ import {
   HIT_SLOW_MAX,
   HIT_SLOW_PER_DAMAGE,
   MODE,
+  MOMENTUM_STAGGER,
   PARRY_STAGGER,
   PARRY_WINDOW,
   PHASE,
@@ -68,9 +69,15 @@ function beginAttack(race: RaceState, m: MechState, idx: number): void {
   m.attack = idx;
   m.attackStart = race.tick;
   m.attackHit = false;
+  // Momentum from a boost or a slipstream goes into the first blow thrown,
+  // not into a whole combo (a follow-up starts from a standing fight), and
+  // only into a blow: guns already work at racing speed, and a gunner sat in
+  // a slipstream would otherwise fire nothing but charged rounds.
+  m.atkCharged = a.kind === 'melee' && m.momentum > 0;
+  if (m.atkCharged) m.momentum = 0;
   m.comboQueued = false;
   m.guarding = false;
-  race.events.push({ type: 'windup', mech: m.id, attack: idx });
+  race.events.push({ type: 'windup', mech: m.id, attack: idx, charged: m.atkCharged });
 }
 
 /** Start the primary (slot 0) or secondary (slot 1) attack if allowed. */
@@ -91,7 +98,7 @@ export function tryAttack(race: RaceState, track: Track, m: MechState, slot: num
     // Melee needs a lock. Pressing attack near an enemy takes one for you.
     const cur = m.target >= 0 ? race.mechs[m.target] : null;
     if (!cur || cur.team === m.team) {
-      const t = pickTarget(race, track, m, false, -1, AUTO_LOCK_RANGE);
+      const t = pickTarget(race, track, m, false, -1, AUTO_LOCK_RANGE, true);
       if (t < 0) {
         deny(race, m, 'target');
         return false;
@@ -215,7 +222,7 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
       break;
     }
     case ABILITY.SNARE: {
-      fireShot(race, track, m, ATTACKS[ATK.MF_SNARE], ATK.MF_SNARE);
+      fireShot(race, track, m, ATTACKS[ATK.MF_SNARE], ATK.MF_SNARE, false);
       break;
     }
     case ABILITY.PULSE: {
@@ -280,7 +287,7 @@ export function retire(race: RaceState, m: MechState, by: MechState | null, trac
 /**
  * Land an attack. Returns true if it connected (even on a guard). Knockback
  * and whether the victim's guard faces the blow both come from where the
- * attacker is standing.
+ * attacker is standing. A `charged` hit is a momentum strike.
  */
 export function applyHit(
   race: RaceState,
@@ -289,49 +296,57 @@ export function applyHit(
   victim: MechState,
   a: AttackDef,
   attackIdx: number,
+  charged = false,
 ): boolean {
   if (victim.iframes > 0) {
     race.events.push({ type: 'evade', mech: victim.id });
     return false;
   }
+  const rules = race.rules;
   const ds = deltaS(track, victim.s, att.s);
   const dd = victim.d - att.d;
   const dist = Math.hypot(ds, dd) || 1e-3;
   // Knockback points from attacker to victim, but a shove from behind must
-  // not work as a free push down the road.
-  let us = ds / dist;
-  const ud = dd / dist;
-  if (us > 0) us *= 0.1;
+  // not work as a free push down the road. Heavy blows throw harder across
+  // the road than along it: stand a rival between you and the barrier.
+  let ux = ds / dist;
+  const uy = dd / dist;
+  if (ux > 0) ux *= 0.1;
+  const kb = a.knockback * (charged ? rules.momentumKnock : 1);
+  const us = ux * kb;
+  const ud = uy * kb * (a.heavy ? rules.ringoutThrow : 1);
   const toAttacker = Math.atan2(-dd, -ds);
   const front = Math.abs(wrapAngle(toAttacker - victim.facing)) <= GUARD_ARC;
-  let dmg = a.damage;
+  let dmg = a.damage * (charged ? rules.momentumDamage : 1);
+  const guardDmg = a.guardDamage * (charged ? rules.momentumDamage : 1);
+  const stagger = a.stagger * (charged ? MOMENTUM_STAGGER : 1);
   let blocked = false;
   // Under an Aegis, or mid-ram, nothing staggers, slows or snares the mech.
   const shielded = victim.shieldT > 0;
   const unstoppable = shielded || victim.ramT > 0;
-  if (shielded) dmg *= race.rules.aegisDamage;
+  if (shielded) dmg *= rules.aegisDamage;
 
   if (victim.guarding && front) {
     if (a.kind === 'melee' && victim.guardT <= PARRY_WINDOW && !a.guardBreak && !a.noParry) {
       // A guard raised at the last moment turns the blow.
       setStagger(att, PARRY_STAGGER);
-      addVelocity(att, -us * 14, -ud * 14);
+      addVelocity(att, -ux * 14, -uy * 14);
       victim.drive = Math.min(DRIVE_MAX, victim.drive + 12);
       race.events.push({ type: 'parry', mech: victim.id, attacker: att.id });
       return true;
     }
-    victim.guard -= a.guardDamage;
+    victim.guard -= guardDmg;
     victim.guardIdle = 0;
     if (a.guardBreak || victim.guard <= 0) {
       victim.guard = classOf(victim).guardMax * 0.4;
       dmg *= 0.6;
       if (!unstoppable) setStagger(victim, GUARD_BREAK_STAGGER);
-      addVelocity(victim, us * a.knockback, ud * a.knockback);
+      addVelocity(victim, us, ud);
       race.events.push({ type: 'guardBreak', mech: victim.id, by: att.id });
     } else {
       dmg *= GUARD_REDUCTION;
       blocked = true;
-      addVelocity(victim, us * a.knockback * 0.25, ud * a.knockback * 0.25);
+      addVelocity(victim, us * 0.25, ud * 0.25);
     }
   } else {
     let armored = unstoppable;
@@ -341,7 +356,7 @@ export function applyHit(
       armored = armored || (va.armor && !a.heavy && victim.actT < va.windup + va.active);
     }
     if (armored) {
-      addVelocity(victim, us * a.knockback * 0.3, ud * a.knockback * 0.3);
+      addVelocity(victim, us * 0.3, ud * 0.3);
     } else {
       // One count per tick: a scatter blast is one hit for this purpose.
       if (victim.chainTick !== race.tick) {
@@ -354,11 +369,11 @@ export function applyHit(
         victim.chain = 0;
         victim.iframes = ESCAPE_IFRAMES;
         victim.act = ACT.NONE;
-        if (dist < ESCAPE_SHOVE_RANGE) addVelocity(att, -us * 22, -ud * 22);
+        if (dist < ESCAPE_SHOVE_RANGE) addVelocity(att, -ux * 22, -uy * 22);
         race.events.push({ type: 'escape', mech: victim.id });
       } else {
-        setStagger(victim, Math.max(4, Math.round(a.stagger * Math.pow(0.88, victim.chain - 1))));
-        addVelocity(victim, us * a.knockback, ud * a.knockback);
+        setStagger(victim, Math.max(4, Math.round(stagger * Math.pow(0.88, victim.chain - 1))));
+        addVelocity(victim, us, ud);
       }
     }
     if (victim.mode === MODE.SPEED && !unstoppable) {
@@ -384,12 +399,13 @@ export function applyHit(
     damage: dmg,
     blocked,
     heavy: a.heavy,
+    charged,
     s: victim.s,
     d: victim.d,
   });
   if (victim.hp <= 0.001) retire(race, victim, att, track);
   else if (attackIdx === ATK.MF_SNARE && !blocked && !unstoppable) {
-    victim.snareT = ticks(race.rules.snareSecs);
+    victim.snareT = ticks(rules.snareSecs);
     victim.boosting = false;
     race.events.push({ type: 'snared', mech: victim.id, by: att.id });
   }
@@ -415,7 +431,7 @@ function resolveMelee(race: RaceState, track: Track, m: MechState, a: AttackDef)
   }
   if (victim) {
     m.attackHit = true;
-    applyHit(race, track, m, victim, a, m.attack);
+    applyHit(race, track, m, victim, a, m.attack, m.atkCharged);
   }
 }
 
@@ -442,7 +458,7 @@ function shotTarget(race: RaceState, track: Track, m: MechState, a: AttackDef): 
   return t;
 }
 
-function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef, idx: number): void {
+function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef, idx: number, charged: boolean): void {
   const sh = a.shot!;
   const c = classOf(m);
   const t = shotTarget(race, track, m, a);
@@ -463,6 +479,7 @@ function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef, idx
       owner: m.id,
       team: m.team,
       attack: idx,
+      charged,
       s: m.s + cs * (c.radius + 0.5),
       d: m.d + sn * (c.radius + 0.5),
       vs: m.vs + cs * sh.speed,
@@ -530,7 +547,7 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
         if (t >= a.windup && t < a.windup + a.active && !m.attackHit) resolveMelee(race, track, m, a);
       } else if (a.shot) {
         for (let k = 0; k < a.shot.count; k++) {
-          if (t === a.windup + k * a.shot.interval) fireShot(race, track, m, a, m.attack);
+          if (t === a.windup + k * a.shot.interval) fireShot(race, track, m, a, m.attack, m.atkCharged);
         }
       }
       m.actT++;
@@ -576,7 +593,7 @@ export function stepProjectiles(race: RaceState, track: Track): void {
         const dd = o.d - p.d;
         const r = classOf(o).radius + 0.9;
         if (ds * ds + dd * dd <= r * r) {
-          applyHit(race, track, race.mechs[p.owner], o, ATTACKS[p.attack], p.attack);
+          applyHit(race, track, race.mechs[p.owner], o, ATTACKS[p.attack], p.attack, p.charged);
           done = true;
           hit = true;
           break;

@@ -70,6 +70,7 @@ let chasers = 0, chasersGained = 0, hurtChasers = 0, hurtChasersGained = 0, hurt
 let firstTeamLost = 0, tiedRounds = 0, passes3 = 0;
 const duel = { n: 0, held: 0, bins: [[0, 0], [0, 0], [0, 0]], hurtBehind: 0, hurtBehindWon: 0 };
 let lap2Speed = 0, lap2Ticks = 0, lockSpeed = 0, lockTicks = 0, gatesTaken = 0;
+let chargedHits = 0, chargedDamage = 0, ringOuts = 0, ringOutsCredited = 0, parries = 0;
 const t0 = Date.now();
 let ticksRun = 0;
 
@@ -96,8 +97,9 @@ for (let r = 0; r < count; r++) {
       }
     }
     for (const e of race.events) {
-      if (e.type === 'hit') { const k = ATTACKS[e.attack].key; dmgByAttack[k] = (dmgByAttack[k] ?? 0) + e.damage; dmgByPhase[race.lapPhase] += e.damage; if (e.blocked) blockedHits++; else cleanHits++; }
-      if (e.type === 'splat') { dmgByAttack.splat = (dmgByAttack.splat ?? 0) + e.damage; dmgByPhase[race.lapPhase] += e.damage; }
+      if (e.type === 'hit') { const k = ATTACKS[e.attack].key; dmgByAttack[k] = (dmgByAttack[k] ?? 0) + e.damage; dmgByPhase[race.lapPhase] += e.damage; if (e.blocked) blockedHits++; else cleanHits++; if (e.charged) { chargedHits++; chargedDamage += e.damage; } }
+      if (e.type === 'splat') { dmgByAttack.splat = (dmgByAttack.splat ?? 0) + e.damage; dmgByPhase[race.lapPhase] += e.damage; ringOuts++; if (e.by >= 0) ringOutsCredited++; }
+      if (e.type === 'parry') parries++;
       if (e.type === 'ko') koTimes.push(race.tick * DT);
       if (e.type === 'ability') abilityUses[e.ability]++;
       if (e.type === 'gate') gatesTaken++;
@@ -135,7 +137,7 @@ for (let r = 0; r < count; r++) {
       else if (e.type === 'tactic') console.log(`${fmt(t)}  team ${e.team} tactic ${TACTIC_NAMES[e.tactic]}${e.mark >= 0 ? ' on ' + n(e.mark) : ''}`);
       else if (e.type === 'guardBreak') console.log(`${fmt(t)}  guard break on ${n(e.mech)}`);
       else if (e.type === 'parry') console.log(`${fmt(t)}  parry by ${n(e.mech)}`);
-      else if (e.type === 'splat') console.log(`${fmt(t)}  wall splat ${n(e.mech)} -${e.damage.toFixed(0)}`);
+      else if (e.type === 'splat') console.log(`${fmt(t)}  ring-out ${n(e.mech)} by ${n(e.by)} -${e.damage.toFixed(0)}`);
       else if (e.type === 'launch') console.log(`${fmt(t)}  perfect launch ${n(e.mech)}`);
       else if (e.type === 'ability') console.log(`${fmt(t)}  ${ABILITIES[e.ability].name} by ${n(e.mech)}  (P${race.mechs[e.mech].place}, ${(race.mechs[e.mech].speed * MPH_PER_UNIT).toFixed(0)} mph)`);
       else if (e.type === 'snared') console.log(`${fmt(t)}  ${n(e.mech)} snared by ${n(e.by)}`);
@@ -216,6 +218,7 @@ console.log(`avg armour left FW ${(hpEnd[0] / N / 2 * 100).toFixed(0)}% MF ${(hp
 console.log(`lap-2 time spent locked on an enemy: ${pct(engagedTicks, activeTicks)}; hits clean ${cleanHits} blocked ${blockedHits}; KO times (s): ${koTimes.slice(0, 30).map((t) => t.toFixed(0)).join(' ')}`);
 console.log(`entering lap 2: cells FW ${avg(cellsAtLap2[0]).toFixed(2)} MF ${avg(cellsAtLap2[1]).toFixed(2)} DF ${avg(cellsAtLap2[2]).toFixed(2)}; Drive FW ${avg(driveAtLap2[0]).toFixed(0)} MF ${avg(driveAtLap2[1]).toFixed(0)} DF ${avg(driveAtLap2[2]).toFixed(0)}`);
 console.log(`battle lap pace: all ${(lap2Speed / Math.max(1, lap2Ticks) * MPH_PER_UNIT).toFixed(0)} mph, while locked on ${(lockSpeed / Math.max(1, lockTicks) * MPH_PER_UNIT).toFixed(0)} mph; gates threaded per mech ${(gatesTaken / N / 6).toFixed(2)}`);
+console.log(`momentum strikes per race ${(chargedHits / N).toFixed(2)} (${(chargedDamage / Math.max(1, chargedHits)).toFixed(0)} damage each); ring-outs per race ${(ringOuts / N).toFixed(2)} (credited ${pct(ringOutsCredited, ringOuts)}); parries per race ${(parries / N).toFixed(2)}`);
 console.log(`abilities per race: ${ABILITIES.map((a, i) => `${a.name} ${(abilityUses[i] / N).toFixed(2)}`).join(', ')}`);
 console.log(`speed lap: leader at its start won ${pct(lap3LeaderWon, lap3Races)}; lead changes per race ${(leadChanges3 / Math.max(1, lap3Races)).toFixed(2)}; places gained per race ${(passes3 / Math.max(1, lap3Races)).toFixed(1)}`);
 console.log(`forwards starting the speed lap behind someone: ${chasers}, gained a place ${pct(chasersGained, chasers)}; of those under 75% armour: ${hurtChasers}, gained ${pct(hurtChasersGained, hurtChasers)}, won ${pct(hurtChasersWon, hurtChasers)}`);

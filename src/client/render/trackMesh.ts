@@ -9,6 +9,65 @@ import { trackMatrix } from './trackSpace';
 
 const MAX_STRIPS = 12;
 const MAX_GATES = 8;
+const MAX_WALL_PULSES = 8;
+
+// The barrier's energy field: invisible until something hits the wall, then
+// a glow at the point of impact and a wave running away along the barrier in
+// both directions. A ring-out burns hotter, bigger and longer.
+const wallVertex = /* glsl */ `
+attribute float aS;
+attribute float aH;
+attribute float aSide;
+varying float vS;
+varying float vH;
+varying float vSide;
+void main() {
+  vS = aS;
+  vH = aH;
+  vSide = aSide;
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+}`;
+
+const wallFragment = /* glsl */ `
+uniform float uLength;
+uniform vec4 uPulse[${MAX_WALL_PULSES}];
+uniform vec3 uCool;
+uniform vec3 uHot;
+varying float vS;
+varying float vH;
+varying float vSide;
+void main() {
+  vec3 col = vec3(0.0);
+  // A force-field grid, only ever seen where a pulse lights it.
+  float gs = abs(fract(vS / 1.8) - 0.5);
+  float gh = abs(fract(vH / 1.8) - 0.5);
+  float grid = 0.3 + 0.7 * smoothstep(0.36, 0.5, max(gs, gh));
+  for (int i = 0; i < ${MAX_WALL_PULSES}; i++) {
+    vec4 p = uPulse[i];
+    float side = p.y > 0.0 ? 1.0 : -1.0;
+    if (p.w <= 0.0 || abs(side - vSide) > 0.5) continue;
+    float hot = step(1.5, abs(p.y));
+    float age = p.z;
+    float life = mix(0.7, 1.2, hot) + 0.15 * p.w;
+    if (age > life) continue;
+    float fade = 1.0 - age / life;
+    float ds = mod(vS - p.x + uLength * 0.5, uLength) - uLength * 0.5;
+    float ad = abs(ds);
+    // The wave front runs away along the wall from the impact.
+    float front = age * mix(60.0, 85.0, hot);
+    float width = 2.5 + 6.0 * age;
+    float wave = exp(-pow((ad - front) / width, 2.0)) * fade * mix(1.0, 1.6, hot);
+    // The impact itself: a burn that spreads a little and dies away.
+    float spread = 4.0 + 20.0 * age;
+    float core = exp(-ad * ad / (spread * spread)) * fade * mix(2.4, 4.0, hot);
+    // Tallest at the impact, dropping toward the barrier top along the wave.
+    float top = mix(3.4, 7.5, exp(-ad / 18.0)) * mix(0.8, 1.0, hot);
+    float hgt = smoothstep(top, top * 0.35, vH) * smoothstep(-0.2, 0.5, vH);
+    float e = (wave + core) * hgt * grid * min(2.0, p.w);
+    col += mix(uCool, uHot, hot) * e;
+  }
+  gl_FragColor = vec4(col, 1.0);
+}`;
 
 const roadVertex = /* glsl */ `
 attribute float aKappa;
@@ -178,6 +237,12 @@ export interface TrackVisual {
   gates: GateVisual;
   /** The five start lights, left to right. */
   lights: THREE.Mesh[];
+  /**
+   * Light the barrier where something hit it: `side` is -1 (left) or 1
+   * (right), `strength` about 0.3 for a glancing touch to 1 for a hard hit,
+   * `ringOut` for a mech thrown into it.
+   */
+  pulseWall(s: number, side: number, strength: number, ringOut: boolean): void;
   update(time: number): void;
 }
 
@@ -385,6 +450,76 @@ export function buildTrackVisual(track: Track): TrackVisual {
       group.add(sm);
     }
   }
+
+  // ---- the barrier's energy field (see wallFragment) ------------------------
+  const wallPulses: THREE.Vector4[] = [];
+  const pulseStart: number[] = [];
+  let wallMat: THREE.ShaderMaterial;
+  {
+    const n = track.n;
+    const H = 7.5;
+    const verts = (n + 1) * 2 * 2;
+    const pos = new Float32Array(verts * 3);
+    const aS = new Float32Array(verts);
+    const aH = new Float32Array(verts);
+    const aSide = new Float32Array(verts);
+    let v = 0;
+    for (let i = 0; i <= n; i++) {
+      const j = i % n;
+      for (const side of [-1, 1]) {
+        const d = side * (hw - 0.06);
+        for (const ht of [0, H]) {
+          pos[v * 3] = track.px[j] + track.rx[j] * d + track.ux[j] * ht;
+          pos[v * 3 + 1] = track.py[j] + track.ry[j] * d + track.uy[j] * ht;
+          pos[v * 3 + 2] = track.pz[j] + track.rz[j] * d + track.uz[j] * ht;
+          aS[v] = i * track.ds;
+          aH[v] = ht;
+          aSide[v] = side;
+          v++;
+        }
+      }
+    }
+    const idx: number[] = [];
+    for (let i = 0; i < n; i++) {
+      for (let k = 0; k < 2; k++) {
+        const a = i * 4 + k * 2;
+        const b = a + 4;
+        idx.push(a, a + 1, b + 1, a, b + 1, b);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aS', new THREE.BufferAttribute(aS, 1));
+    g.setAttribute('aH', new THREE.BufferAttribute(aH, 1));
+    g.setAttribute('aSide', new THREE.BufferAttribute(aSide, 1));
+    g.setIndex(idx);
+    for (let i = 0; i < MAX_WALL_PULSES; i++) {
+      wallPulses.push(new THREE.Vector4(0, 1, 99, 0));
+      pulseStart.push(-99);
+    }
+    wallMat = new THREE.ShaderMaterial({
+      vertexShader: wallVertex,
+      fragmentShader: wallFragment,
+      uniforms: {
+        uLength: { value: track.length },
+        uPulse: { value: wallPulses },
+        uCool: { value: new THREE.Color(0x4fe6ff).multiplyScalar(2.2) },
+        uHot: { value: new THREE.Color(0xff4fa0).multiplyScalar(2.6) },
+      },
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const mesh = new THREE.Mesh(g, wallMat);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 4;
+    group.add(mesh);
+    // Nothing to draw until the first impact.
+    wallMat.visible = false;
+  }
+  let clock = 0;
 
   // ---- fence posts ---------------------------------------------------------
   // A post on top of each barrier every 20 units, with a lit cap. They are
@@ -615,7 +750,25 @@ export function buildTrackVisual(track: Track): TrackVisual {
     road,
     gates: gateVis,
     lights,
+    pulseWall(s: number, side: number, strength: number, ringOut: boolean) {
+      // Reuse the oldest slot.
+      let k = 0;
+      for (let i = 1; i < MAX_WALL_PULSES; i++) if (pulseStart[i] < pulseStart[k]) k = i;
+      pulseStart[k] = clock;
+      wallPulses[k].set(wrapS(track, s), (side >= 0 ? 1 : -1) * (ringOut ? 2 : 1), 0, Math.max(0.05, strength));
+      wallMat.visible = true;
+    },
     update(time: number) {
+      clock = time;
+      let live = false;
+      for (let i = 0; i < MAX_WALL_PULSES; i++) {
+        const p = wallPulses[i];
+        if (p.w <= 0) continue;
+        p.z = time - pulseStart[i];
+        if (p.z > 1.6) p.w = 0;
+        else live = true;
+      }
+      wallMat.visible = live;
       road.uniforms.uTime.value = time;
       for (let i = 0; i < track.gates.length && i < MAX_GATES; i++) gateUniforms[i].w = gateVis.lit[i];
       gateVis.update(time);

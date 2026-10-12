@@ -47,9 +47,19 @@ export interface Rules {
   /** 1 = the formation lap also gives the passive and slipstream trickle. */
   lap1Trickle: number;
 
-  // --- lock-on
+  // --- lock-on and fighting
   /** Scales how fast a mech moves around the thing it is locked on to. */
   battleMove: number;
+  /** Seconds a boost, Overdrive or charged slipstream keeps the next attack primed. 0 turns momentum off. */
+  momentumSecs: number;
+  /** Damage (and guard damage) multiplier for a momentum strike. */
+  momentumDamage: number;
+  /** Knockback multiplier for a momentum strike. */
+  momentumKnock: number;
+  /** Heavy blows throw this much harder across the road, toward the barrier. */
+  ringoutThrow: number;
+  /** Damage for being knocked into the barrier, before the part that grows with the impact. */
+  ringoutDamage: number;
 
   // --- Cells and gates
   cellMax: number;
@@ -105,6 +115,11 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   lap1Trickle: 0,
 
   battleMove: 1.6,
+  momentumSecs: 0.75,
+  momentumDamage: 1.35,
+  momentumKnock: 1.5,
+  ringoutThrow: 1.3,
+  ringoutDamage: 14,
 
   cellMax: 3,
   cellStart: 0,
@@ -159,6 +174,11 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   lap1Trickle: [0, 1],
 
   battleMove: [0.1, 5],
+  momentumSecs: [0, 10],
+  momentumDamage: [1, 5],
+  momentumKnock: [1, 5],
+  ringoutThrow: [0.5, 4],
+  ringoutDamage: [0, 1000],
 
   cellMax: [0, 6],
   cellStart: [0, 6],

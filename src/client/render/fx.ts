@@ -187,6 +187,45 @@ function ringTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/** The wind-up tell: a ring with four notches pointing in, like closing sights. */
+function tellTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+  const g = c.getContext('2d')!;
+  g.strokeStyle = 'rgba(255,255,255,1)';
+  g.fillStyle = 'rgba(255,255,255,1)';
+  g.lineWidth = 6;
+  g.beginPath();
+  g.arc(64, 64, 52, 0, Math.PI * 2);
+  g.stroke();
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + (i * Math.PI) / 2;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    g.beginPath();
+    g.moveTo(64 + ca * 40, 64 + sa * 40);
+    g.lineTo(64 + ca * 60 - sa * 9, 64 + sa * 60 + ca * 9);
+    g.lineTo(64 + ca * 60 + sa * 9, 64 + sa * 60 - ca * 9);
+    g.closePath();
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** A wind-up tell in flight: one ring per blow, keyed so it closes smoothly from frame to frame. */
+interface TellRing {
+  mesh: THREE.Mesh;
+  mat: THREE.MeshBasicMaterial;
+  key: number;
+  /** The frame it was last asked for; anything older is hidden. */
+  seen: number;
+  /** Ticks to impact when first shown, so the ring closes over the whole wind-up. */
+  total: number;
+}
+
 /** A blade arc: a crescent of light swept round a mech for a moment. */
 interface Slash {
   mesh: THREE.Mesh;
@@ -342,6 +381,9 @@ export class Fx {
   readonly smoke = new Particles(260, false);
   private flashes: Flash[] = [];
   private slashes: Slash[] = [];
+  private tells: TellRing[] = [];
+  private tellFrame = 1;
+  private tellTex = tellTexture();
   private star = starTexture();
   private ring = ringTexture();
   private slashTex = slashTexture();
@@ -383,6 +425,17 @@ export class Fx {
       this.slashes.push({ mesh, mat, life: 0, maxLife: 1, flip: 1, size: 1 });
     }
 
+    // Wind-up tells. Drawn over everything: they are a reading aid, and the
+    // mech winding up is often half behind the one it is about to hit.
+    for (let i = 0; i < 6; i++) {
+      const mat = new THREE.MeshBasicMaterial({ map: this.tellTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, toneMapped: false });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+      mesh.visible = false;
+      mesh.renderOrder = 9;
+      this.group.add(mesh);
+      this.tells.push({ mesh, mat, key: -1, seen: 0, total: 1 });
+    }
+
     const tg = new THREE.BoxGeometry(0.22, 0.22, 1);
     tg.translate(0, 0, -0.5);
     this.tracers = new THREE.InstancedMesh(tg, new THREE.MeshBasicMaterial({ toneMapped: false }), MAX_TRACERS);
@@ -403,6 +456,8 @@ export class Fx {
     (this.sparks.points.material as THREE.Material).dispose();
     (this.smoke.points.material as THREE.Material).dispose();
     for (const f of this.flashes) f.mat.dispose();
+    for (const t of this.tells) t.mat.dispose();
+    this.tellTex.dispose();
     for (const s of this.slashes) {
       s.mesh.removeFromParent();
       s.mesh.geometry.dispose();
@@ -516,6 +571,42 @@ export class Fx {
     f.mesh.visible = true;
   }
 
+  /**
+   * A wind-up tell for one heavy blow: a notched ring round the attacker
+   * that closes as the blow comes and meets the body as it lands. `left` is
+   * ticks to impact (fractional, for a smooth close), `now` lights it white
+   * for the moment a guard would parry, `strong` is for a blow aimed at the
+   * player. Call it every frame the blow is coming; returns true on the
+   * first frame, for the glint and the warning sound.
+   */
+  tell(key: number, at: THREE.Vector3, size: number, color: number, left: number, now: boolean, strong: boolean): boolean {
+    let r = this.tells.find((t) => t.key === key);
+    let fresh = false;
+    if (!r) {
+      r = this.tells[0];
+      for (const t of this.tells) {
+        if (t.seen < this.tellFrame - 1) {
+          r = t;
+          break;
+        }
+        if (t.seen < r.seen) r = t;
+      }
+      r.key = key;
+      r.total = Math.max(1, left);
+      fresh = true;
+    }
+    r.seen = this.tellFrame;
+    const k = 1 - Math.min(1, Math.max(0, left / r.total)); // 0 when it starts, 1 at impact
+    r.mesh.position.copy(at);
+    r.mesh.scale.setScalar(size * (1 + 1.7 * (1 - k) * (1 - k)));
+    r.mat.color.set(color);
+    if (now) r.mat.color.lerp(this.white, 0.65);
+    r.mat.color.multiplyScalar(strong ? 2.2 : 1.1);
+    r.mat.opacity = (strong ? 1 : 0.5) * (0.35 + 0.65 * k);
+    r.mesh.visible = true;
+    return fresh;
+  }
+
   beginTracers(): void {
     this.tracerCount = 0;
   }
@@ -536,6 +627,15 @@ export class Fx {
   }
 
   update(dt: number, camera: THREE.Camera): void {
+    for (const t of this.tells) {
+      if (t.seen !== this.tellFrame) {
+        t.mesh.visible = false;
+        t.key = -1;
+        continue;
+      }
+      t.mesh.quaternion.copy(camera.quaternion);
+    }
+    this.tellFrame++;
     for (const s of this.slashes) {
       if (s.life <= 0) {
         s.mesh.visible = false;

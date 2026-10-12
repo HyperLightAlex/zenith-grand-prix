@@ -62,6 +62,10 @@ import {
   WALL_DRAG,
   WALL_SPLAT_DAMAGE,
   WALL_SPLAT_MIN,
+  RINGOUT_BOUNCE,
+  RINGOUT_DRIVE,
+  RINGOUT_STAGGER,
+  MOMENTUM_TOW,
   type ClassDef,
   type Tactic,
 } from './config';
@@ -148,6 +152,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       attack: 0,
       attackStart: 0,
       attackHit: false,
+      atkCharged: false,
       comboQueued: false,
       guarding: false,
       guardT: 0,
@@ -173,6 +178,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       onStrip: false,
       drafting: false,
       tow: 0,
+      momentum: 0,
       linked: false,
       wall: 0,
       lap: 0,
@@ -211,6 +217,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
         restUntil: 0,
         gates,
         abilityAt: 0,
+        hotUntil: 0,
+        hotNext: 0,
       },
     });
   });
@@ -391,29 +399,39 @@ function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): vo
     m.d = side * lim;
     const into = m.vd * side;
     if (into > 0) {
+      let bounce = 0.25;
       if (!m.retired) {
-        if (into > 7 && m.wall === 0) {
-          race.events.push({ type: 'wall', mech: m.id, intensity: into });
+        const ringOut = m.act === ACT.STAGGER && into > WALL_SPLAT_MIN && isActive(m);
+        if (into > 7 && m.wall === 0 && !ringOut) {
+          race.events.push({ type: 'wall', mech: m.id, intensity: into, s: m.s, side });
         }
-        if (m.act === ACT.STAGGER && into > WALL_SPLAT_MIN && isActive(m)) {
-          // Knocked into the barrier: extra damage and a longer tumble.
-          const dmg = Math.min(m.hp, into * WALL_SPLAT_DAMAGE);
+        if (ringOut) {
+          // Knocked into the barrier while reeling: a ring-out. Heavy damage,
+          // a long tumble, and thrown back off the wall into the fight.
+          const dmg = Math.min(m.hp, race.rules.ringoutDamage + into * WALL_SPLAT_DAMAGE);
           m.hp -= dmg;
           m.dmgTaken += dmg;
-          setStagger(m, 20);
-          race.events.push({ type: 'splat', mech: m.id, damage: dmg });
+          setStagger(m, RINGOUT_STAGGER);
           const credit = m.lastHitBy >= 0 && race.tick - m.lastHitTick <= SPLAT_CREDIT_TICKS;
-          if (m.hp <= 0.001) retire(race, m, credit ? race.mechs[m.lastHitBy] : null, track);
+          const by = credit ? race.mechs[m.lastHitBy] : null;
+          if (by) {
+            by.dmgDealt += dmg;
+            by.drive = Math.min(DRIVE_MAX, by.drive + RINGOUT_DRIVE);
+          }
+          race.events.push({ type: 'splat', mech: m.id, by: by ? by.id : -1, damage: dmg, intensity: into, s: m.s, side });
+          if (m.hp <= 0.001) retire(race, m, by, track);
+          else bounce = RINGOUT_BOUNCE;
         }
       }
       if (m.mode === MODE.SPEED) {
         // Scrub speed by how square the impact was, then slide along the wall.
         const sin = Math.min(1, into / Math.max(m.speed, 1));
         m.speed *= 1 - 0.45 * sin;
-        m.heading = -side * 0.03;
+        // Slide along the barrier, or after a ring-out, glance back off it.
+        m.heading = -side * (bounce > 0.25 ? 0.15 : 0.03);
         syncFromSpeed(m);
       } else {
-        m.vd = -m.vd * 0.25;
+        m.vd = -m.vd * bounce;
       }
     }
     if (m.mode === MODE.SPEED && !m.retired) {
@@ -734,6 +752,13 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     if (m.retired) stepRetired(track, m);
     else if (m.mode === MODE.BATTLE && m.target >= 0) stepBattleMode(race, track, m, c, controls[m.id]);
     else stepSpeedMode(race, track, m, c, controls[m.id]);
+    // Momentum: racing hard (a boost, an Overdrive, a charged slipstream)
+    // primes the next attack for a moment. A fight only spends it.
+    if (isActive(m) && m.mode === MODE.SPEED && m.act !== ACT.STAGGER && (m.boosting || m.overdriveT > 0 || m.tow >= MOMENTUM_TOW)) {
+      m.momentum = Math.round(race.rules.momentumSecs * TICK_RATE);
+    } else if (m.momentum > 0) {
+      m.momentum--;
+    }
     const sBefore = m.s;
     startS[m.id] = sBefore;
     integrate(race, track, m, c);

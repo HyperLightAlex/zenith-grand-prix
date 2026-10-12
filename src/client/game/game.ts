@@ -177,6 +177,12 @@ export class Game {
       if (strength >= 0.8) this.session.freeze(0.075);
       else if (strength >= 0.35) this.session.freeze(0.035);
     };
+    // A heavy blow winding up at the mech you are flying: warn by ear as well as by eye.
+    this.view.onTell = (kind, mech, atFocus) => {
+      if (this.state !== 'race' || !atFocus || this.view.focusId !== this.session.localId) return;
+      const h = this.heard(mech);
+      this.audio.play(kind === 'parry' ? 'tell' : 'tell_dodge', { volume: 0.9, pan: h.pan });
+    };
     this.resultsAt = -1;
     this.slowmo = 0;
     this.session.timeScale = 1;
@@ -336,11 +342,17 @@ export class Game {
         }
         break;
       }
+      case 'windup':
+        if (e.charged) {
+          const h = this.heard(e.mech);
+          if (h.volume > 0.02) A.play('momentum', { volume: h.volume * quiet, pan: h.pan });
+        }
+        break;
       case 'hit': {
         const h = this.heard(e.victim);
         if (h.volume > 0.02) {
           const melee = ATTACKS[e.attack].kind === 'melee';
-          const name = e.blocked ? 'block' : melee ? (e.heavy ? 'hit_heavy' : 'hit_light') : 'bullet_hit';
+          const name = e.blocked ? 'block' : e.charged ? 'momentum_hit' : melee ? (e.heavy ? 'hit_heavy' : 'hit_light') : 'bullet_hit';
           A.play(name, { volume: h.volume * (melee ? 1 : 0.6) * quiet, pan: h.pan });
         }
         break;
@@ -351,9 +363,11 @@ export class Game {
       case 'guardBreak':
         A.play('guard_break', { volume: this.heard(e.mech).volume * quiet });
         break;
-      case 'splat':
-        A.play('hit_heavy', { volume: this.heard(e.mech).volume * quiet });
+      case 'splat': {
+        const h = this.heard(e.mech);
+        A.play('ringout', { volume: Math.max(e.by === local ? 0.5 : 0, h.volume) * quiet, pan: h.pan });
         break;
+      }
       case 'ko': {
         const h = this.heard(e.mech);
         A.play('ko', { volume: Math.max(0.35, h.volume) * quiet, pan: h.pan });

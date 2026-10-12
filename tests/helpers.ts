@@ -141,13 +141,13 @@ function mechSum(m: MechState): number {
     m.act + m.actT + m.actDur + m.attack + m.attackStart + m.guardT + m.guardIdle + m.guardRest +
     m.iframes + m.chain + m.chainT + m.chainTick + m.cdPrimary + m.cdSecondary + m.cdDash +
     m.cells + m.gateMask + m.cdAbility + m.overdriveT + m.ramT + m.ramHits + m.shieldT + m.snareT + m.cloakT +
-    m.tow + m.wall +
+    m.tow + m.momentum + m.wall +
     m.lap + m.finishTime + m.retireTick + m.place + m.points +
     m.prevButtons + m.prevCmd + m.prevThrottle + m.throttleTick + m.throttleRest +
     m.lastHitBy + m.lastHitTick + m.deniedTick + m.dmgDealt + m.dmgTaken + m.kos +
     ai.intent + ai.intentTarget + ai.nextThink + ai.lane + ai.orbit + ai.orbitUntil +
     ai.attackAt + ai.guardFrom + ai.guardUntil + ai.dodgeAt + ai.reactedTo + ai.comboLeft +
-    ai.boostUntil + ai.boutUntil + ai.restUntil + ai.gates + ai.abilityAt
+    ai.boostUntil + ai.boutUntil + ai.restUntil + ai.gates + ai.abilityAt + ai.hotUntil + ai.hotNext
   );
 }
 
@@ -285,10 +285,12 @@ export class Arena {
 
   /**
    * `rules` overrides the default rules for this arena, so a test about one
-   * mechanism can pin (or switch off) the others.
+   * mechanism can pin (or switch off) the others. Momentum is off unless a
+   * test asks for it: on stage mechs sit in each other's slipstream, which
+   * would quietly turn the first blow of most tests into a momentum strike.
    */
   constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1, rules?: Partial<Rules>) {
-    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules });
+    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules: { momentumSecs: 0, ...rules } });
     this.inputs = this.race.mechs.map(() => emptyInput());
     runCountdown(this.race, this.inputs);
     this.base = (lapPhase - 1) * TRACK.length;

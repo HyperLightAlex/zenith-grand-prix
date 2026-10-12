@@ -34,7 +34,7 @@ import {
 } from '../src/sim/index';
 import type { AttackDef, MechState } from '../src/sim/index';
 import { applyHit, setStagger } from '../src/sim/combat';
-import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, dist, newRace, runCountdown } from './helpers';
+import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, dist, newRace, runCountdown, wallLimit } from './helpers';
 
 const L = TRACK.length;
 
@@ -170,7 +170,7 @@ describe('melee attacks: range, timing and damage', () => {
       expect(att.act).toBe(ACT.ATTACK);
       expect(att.attack).toBe(mv.atk);
       a.step(def.windup + def.active + 2);
-      expect(a.events('windup')).toEqual([{ type: 'windup', mech: mv.att, attack: mv.atk, tick: T }]);
+      expect(a.events('windup')).toEqual([{ type: 'windup', mech: mv.att, attack: mv.atk, charged: false, tick: T }]);
       expect(a.events('swing')).toEqual([{ type: 'swing', mech: mv.att, attack: mv.atk, tick: T + def.windup + 1 }]);
       const hits = a.events('hit');
       expect(hits.length).toBe(1);
@@ -456,7 +456,7 @@ describe('shots and projectiles', () => {
   it('rounds that leave the road are removed', () => {
     const a = arena(2);
     a.put(MF0, 300, 0);
-    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, s: a.base + 300, d: 26, vs: a.pace, vd: 240, life: 30 });
+    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, charged: false, s: a.base + 300, d: 26, vs: a.pace, vd: 240, life: 30 });
     a.step(1);
     expect(a.events('projEnd')).toMatchObject([{ proj: 900, hit: false }]);
     expect(a.race.projectiles.length).toBe(0);
@@ -1038,8 +1038,12 @@ describe('counter hits and armour', () => {
 
   it('a heavy hit goes straight through armour', () => {
     const { a, vic } = duel(FW0, DF1, 11);
-    a.hold(FW0, BTN.Y).hold(DF1, BTN.X).step(1); // Lance (heavy, 12 wind-up) v Breaker (14)
-    a.release(FW0, BTN.Y).release(DF1, BTN.X);
+    // Lance (heavy, 15 wind-up) v a Breaker (14) thrown three ticks later, so
+    // the lance lands while the Breaker's armour is up.
+    a.hold(FW0, BTN.Y).step(1);
+    a.release(FW0, BTN.Y).step(2);
+    a.hold(DF1, BTN.X).step(1);
+    a.release(DF1, BTN.X);
     a.step(40);
     const hits = a.events('hit');
     expect(hits.length).toBe(1);
@@ -1256,14 +1260,23 @@ describe('wall splat', () => {
     expect(splat.mech).toBe(FW1);
     expect(splat.tick).toBeGreaterThan(hit.tick);
     expect(splat.tick).toBeLessThan(hit.tick + 6);
-    const wall = a.events('wall').find((e) => e.mech === FW1 && e.tick === splat.tick)!;
-    expect(wall.intensity).toBeGreaterThan(WALL_SPLAT_MIN);
-    expect(splat.damage).toBeCloseTo(wall.intensity * WALL_SPLAT_DAMAGE, 9);
+    // A ring-out is reported once, as a splat, not as an ordinary wall hit too.
+    expect(a.events('wall').filter((e) => e.mech === FW1).length).toBe(0);
+    expect(splat.intensity).toBeGreaterThan(WALL_SPLAT_MIN);
+    expect(splat.side).toBe(1);
+    // Where it struck the barrier: down the road from the blow, behind where the mech is now.
+    expect(splat.s).toBeGreaterThan(hit.s);
+    expect(splat.s).toBeLessThan(vic.s);
+    expect(splat.damage).toBeCloseTo(a.race.rules.ringoutDamage + splat.intensity * WALL_SPLAT_DAMAGE, 9);
     expect(a.events('splat').length).toBe(1);
     expect(vic.hp).toBeCloseTo(CLASSES[vic.role].maxHp - 34 - splat.damage, 9);
     expect(vic.dmgTaken).toBeCloseTo(34 + splat.damage, 9);
-    // Splat damage is the wall's, not the attacker's.
-    expect(att.dmgDealt).toBe(34);
+    // The ring-out is credited to the last attacker: the damage, and some Drive.
+    expect(splat.by).toBe(MF0);
+    expect(att.dmgDealt).toBeCloseTo(34 + splat.damage, 9);
+    // A long tumble, and thrown back off the wall rather than pinned to it.
+    expect(vic.act).toBe(ACT.STAGGER);
+    expect(vic.d).toBeLessThan(wallLimit(vic));
   });
 
   it('the wall can finish the job, and the last attacker gets the knock-out', () => {
@@ -1301,9 +1314,17 @@ describe('knockback', () => {
     a.step(1);
     applyHit(a.race, TRACK, att, vic, ATTACKS[ATK.MF_KICK], ATK.MF_KICK);
     expect(vic.vd).toBeGreaterThan(30);
-    // Thrown sideways at the kick's 38 u/s while still doing the limiter down the road.
-    expect(vic.heading).toBeCloseTo(Math.atan2(ATTACKS[ATK.MF_KICK].knockback, a.pace), 6);
+    // Thrown sideways at the kick's 38 u/s, and a heavy blow throws harder
+    // across the road (rules.ringoutThrow), while still doing the limiter down it.
+    expect(vic.heading).toBeCloseTo(Math.atan2(ATTACKS[ATK.MF_KICK].knockback * a.race.rules.ringoutThrow, a.pace), 6);
     expect(vic.heading).toBeGreaterThan(0.25);
+    // A light blow has no extra throw.
+    const b = arena(2);
+    const att2 = b.put(MF0, 300, 0);
+    const vic2 = b.put(FW1, 300, 8);
+    b.step(1);
+    applyHit(b.race, TRACK, att2, vic2, ATTACKS[ATK.FW_SLASH1], ATK.FW_SLASH1);
+    expect(vic2.heading).toBeCloseTo(Math.atan2(ATTACKS[ATK.FW_SLASH1].knockback, b.pace), 6);
   });
 
   it('a shove from behind is mostly swallowed: it is not a free push down the road', () => {
@@ -1387,10 +1408,7 @@ describe('who can be hurt', () => {
     const slash = ATTACKS[ATK.FW_SLASH1];
     expect(dist(att, near)).toBeLessThan(dist(att, far));
     expect(dist(att, far)).toBeLessThan(meleeRange(att, far, slash));
-    a.tap(FW0, BTN.LOCK); // takes the nearer one...
-    expect(att.target).toBe(MF1);
-    a.step(1);
-    a.tap(FW0, BTN.TNEXT); // ...so cycle to the other
+    a.tap(FW0, BTN.LOCK); // the lock goes to the rival forward...
     expect(att.target).toBe(FW1);
     a.step(1);
     a.clearLog();
@@ -1404,7 +1422,7 @@ describe('who can be hurt', () => {
     b.put(FW0, 300, 0);
     b.put(FW1, 309, 3.5);
     b.put(MF1, 307, -3.5);
-    b.tap(FW0, BTN.X); // auto-locks the nearer one
+    b.tap(FW0, BTN.X); // a strike auto-locks the nearer one
     b.step(8);
     expect(b.events('hit').map((e) => e.victim)).toEqual([MF1]);
   });

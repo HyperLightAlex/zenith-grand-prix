@@ -229,6 +229,8 @@ html, body {
 .chip.battle { background: var(--danger); color: #fff; }
 .chip.cell { background: var(--cell); color: var(--ink); font-variant-numeric: tabular-nums; }
 .chip.snared { background: var(--snare); color: var(--ink); font-variant-numeric: tabular-nums; animation: blink 0.4s steps(2) infinite; }
+.chip.momentum { background: linear-gradient(90deg, #ff5a1f, #ffb03a); color: var(--ink); font-weight: 800; animation: momentum 0.5s ease-in-out infinite alternate; }
+@keyframes momentum { from { filter: brightness(1); } to { filter: brightness(1.35); } }
 .chip[hidden] { display: none; }
 
 .hints { position: absolute; left: 50%; bottom: 1.2em; transform: translateX(-50%); display: flex; gap: 1.3em; font-weight: 500; font-size: 1.02em; white-space: nowrap; text-shadow: 0 0.08em 0.1em rgba(15, 21, 36, 0.8); }
@@ -276,12 +278,25 @@ html, body {
 .plate .cue { display: inline-block; margin-right: 0.3em; color: var(--paper); font-style: normal; }
 .plate .cue:empty { display: none; }
 .plate.cand .tag { outline: 0.12em solid var(--paper); }
+.plate.preview .cue { padding: 0 0.35em; background: var(--paper); color: var(--ink); font-weight: 800; font-size: 0.82em; clip-path: polygon(0.25em 0, 100% 0, calc(100% - 0.25em) 100%, 0 100%); }
+/* A heavy blow coming at you, and what answers it. */
+.plate .warn { margin: 0 auto 0.25em; width: max-content; padding: 0.06em 0.6em; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink); clip-path: polygon(0.35em 0, 100% 0, calc(100% - 0.35em) 100%, 0 100%); }
+.plate .warn[hidden] { display: none; }
+.plate .warn.parry { background: var(--hazard); }
+.plate .warn.dodge { background: var(--danger); color: #fff; }
+.plate .warn.block { background: var(--signal); }
+.plate .warn.now { background: #fff; color: var(--ink); transform: scale(1.18); }
 
 .pop { position: absolute; left: 0; top: 0; font-size: 1.6em; font-weight: 800; font-style: italic; color: #fff; text-shadow: 0 0.06em 0 var(--ink), 0 0 0.3em rgba(15, 21, 36, 0.7); white-space: nowrap; will-change: transform, opacity; pointer-events: none; }
 .pop.big { font-size: 2.3em; color: var(--hazard); }
 .pop.taken { color: var(--danger); font-size: 1.35em; }
 .pop.taken.big { font-size: 1.8em; }
 .pop.blocked { color: var(--mute); font-size: 1.1em; }
+.pop small { display: block; font-size: 0.42em; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; }
+.pop.momentum { font-size: 2.5em; color: #ff8a3a; }
+.pop.momentum.taken { font-size: 1.9em; }
+.pop.ring { font-size: 2.4em; color: #ff6ab0; }
+.pop.ring.taken { font-size: 1.9em; }
 .reticle { position: absolute; left: 0; top: 0; width: 7em; height: 7em; margin: -3.5em 0 0 -3.5em; will-change: transform; }
 .reticle[hidden] { display: none; }
 .reticle i { position: absolute; width: 1.5em; height: 1.5em; border: 0.26em solid var(--danger); animation: lock-pulse 0.7s ease-in-out infinite alternate; }
@@ -291,6 +306,9 @@ html, body {
 .reticle i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; }
 .reticle i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; }
 .reticle.snap i { animation: lock-snap 0.25s ease-out, lock-pulse 0.7s ease-in-out 0.25s infinite alternate; }
+/* Who the lock button would take: thin, still and pale, so it never reads as a lock. */
+.reticle.preview { opacity: 0.7; }
+.reticle.preview i { border-color: var(--paper); animation: none; }
 @keyframes lock-pulse { to { opacity: 0.55; } }
 @keyframes lock-snap { from { transform: scale(2.6); opacity: 0; } }
 

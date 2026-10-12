@@ -161,11 +161,19 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   let ramAt: MechState | null = null;
 
   const chase = ai.intentTarget >= 0 ? race.mechs[ai.intentTarget] : null;
+  const hot = tick < ai.hotUntil;
   if (chase && isActive(chase)) {
     const ds = deltaS(track, chase.s, m.s);
-    if (Math.abs(ds) < 160) dWant = lerp(dWant, chase.d, 0.6);
-    if (ds > 20) wantBoost = wantBoost || m.drive > 30;
-    else if (ds < -12) throttle = 0.92; // ease off a touch and let them come
+    if (hot) {
+      // Run up on the infield side, so the blow throws them at their barrier.
+      const inside = chase.d - (chase.d >= 0 ? 1 : -1) * 5;
+      dWant = Math.abs(ds) < 160 ? inside : dWant;
+      if (ds > 3) wantBoost = wantBoost || m.drive > 8;
+    } else {
+      if (Math.abs(ds) < 160) dWant = lerp(dWant, chase.d, 0.6);
+      if (ds > 20) wantBoost = wantBoost || m.drive > 30;
+      else if (ds < -12) throttle = 0.92; // ease off a touch and let them come
+    }
   } else if (!m.finished) {
     const ws = wrapS(track, m.s);
     let found = false;
@@ -558,6 +566,43 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   }
 }
 
+/**
+ * A momentum strike, the computer's way: a melee pilot with its target ahead
+ * sometimes holds off the lock, runs up on a boost or a tow, and swings the
+ * moment it arrives, so the strike lands charged. Returns true while it is
+ * holding off (stay free); on arrival it takes the lock and presses attack.
+ */
+function flyInHot(race: RaceState, track: Track, m: MechState, want: number, out: MechInput): boolean {
+  const ai = m.ai;
+  const tick = race.tick;
+  const c = classOf(m);
+  const t = race.mechs[want];
+  if (t.team === m.team || c.aiRange > 0 || !weaponsFree(race) || m.target >= 0) {
+    ai.hotUntil = 0;
+    return false;
+  }
+  const ahead = deltaS(track, t.s, m.s);
+  const dist = distance(track, m, t);
+  if (tick >= ai.hotUntil) {
+    // Only from behind and with something to run up on.
+    if (tick < ai.hotNext || ahead < 12 || dist > 150 || (m.drive < 25 && m.tow < 0.5 && m.overdriveT <= 0)) return false;
+    ai.hotNext = tick + 240;
+    if (rngNext(race) >= lerp(0.25, 0.7, m.skill)) return false;
+    ai.hotUntil = tick + 240;
+  }
+  if (ahead < -2 || dist > 170) {
+    ai.hotUntil = 0;
+    return false;
+  }
+  const reach = ATTACKS[c.primary].reach + c.radius + classOf(t).radius + 1.5;
+  if (dist > reach) return true;
+  // Arrived: lock and swing in the same tick.
+  ai.hotUntil = 0;
+  setTarget(race, m, want);
+  press(out, m, BTN.X);
+  return false;
+}
+
 export function aiControl(race: RaceState, track: Track, m: MechState, out: MechInput): MechInput {
   out.mx = 0;
   out.my = 0;
@@ -580,6 +625,7 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
         if (dist < LOCK_RANGE - 6 || (m.target === t.id && dist < LOCK_RANGE + 20)) want = t.id;
       }
     }
+    if (want >= 0 && want !== m.target && flyInHot(race, track, m, want, out)) want = m.target;
     if (want !== m.target) setTarget(race, m, want);
   }
 

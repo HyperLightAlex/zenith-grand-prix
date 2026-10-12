@@ -18,6 +18,7 @@ import {
   abilityFor,
   deltaS,
   limiterOf,
+  pickTarget,
   wrapAngle,
   packBonus,
   teamPoints,
@@ -28,6 +29,7 @@ import {
   type SimEvent,
   type Track,
 } from '../../sim/index';
+import { TELL_LABEL, tellOf } from '../game/tells';
 import { LIVERIES } from '../render/palette';
 import type { Plate } from '../render/raceView';
 import { h, setClass, setText } from './dom';
@@ -134,6 +136,7 @@ export class Hud {
   private chipCharge = h('span.chip.charge', 'Charging');
   private chipDraft = h('span.chip.draft', 'Slipstream');
   private chipLink = h('span.chip.link', 'Linked');
+  private chipMomentum = h('span.chip.momentum', 'Momentum');
   private hints = h('div.hints');
   private hintKey = '';
   // speed
@@ -152,7 +155,9 @@ export class Hud {
   private targetHp = h('i');
   private targetGd = h('i');
   private reticle = h('div.reticle', h('i'), h('i'), h('i'), h('i'));
-  private plates: Array<{ el: HTMLElement; hp: HTMLElement; cue: HTMLElement; side: number }> = [];
+  /** Free steering: who the lock button would take, before you press it. */
+  private preview = h('div.reticle.preview', h('i'), h('i'), h('i'), h('i'));
+  private plates: Array<{ el: HTMLElement; hp: HTMLElement; cue: HTMLElement; cueText: string; warn: HTMLElement; warnKey: string }> = [];
   private lastTarget = -1;
   // banners
   private banner = h('div.banner');
@@ -189,7 +194,7 @@ export class Hud {
     this.abilityTag.append(this.abilityKey, this.abilityName);
     this.cellsLine.append(h('span.label', 'Cells'), h('div.cellrow', this.cellPips, this.abilityTag), this.cellsVal);
     R.append(
-      h('div.chips', this.chipLocked, this.chipMode, this.chipAbility, this.chipSnared, this.chipCharge, this.chipDraft, this.chipSling, this.chipLink),
+      h('div.chips', this.chipLocked, this.chipMode, this.chipMomentum, this.chipAbility, this.chipSnared, this.chipCharge, this.chipDraft, this.chipSling, this.chipLink),
       h('div.gauges', this.armour, h('div.line.guard', h('span.label', 'Guard'), h('div.bar', this.guardFill), h('span.val', '')), this.drive, this.cellsLine),
       this.hints,
     );
@@ -204,7 +209,7 @@ export class Hud {
     }
     R.append(tact, this.comms);
     this.target.append(this.targetName, h('div.sub', this.targetRole, this.targetDist), h('div.bar.hp', this.targetHp), h('div.bar.gd', this.targetGd));
-    R.append(this.target, this.reticle);
+    R.append(this.target, this.reticle, this.preview);
     this.banner.append(h('div.strip', this.bannerBig, this.bannerSmall));
     this.notice.append(this.noticeText);
     this.retired.append(h('div.big', 'Retired'), this.retiredSmall);
@@ -215,6 +220,7 @@ export class Hud {
     this.retired.hidden = true;
     this.target.hidden = true;
     this.reticle.hidden = true;
+    this.preview.hidden = true;
     R.hidden = true;
     parent.append(R);
   }
@@ -259,11 +265,13 @@ export class Hud {
       this.rows.push({ el, pos, hp, gap, place: -1 });
       const php = h('i');
       const cue = h('span.cue', '');
-      const plate = h('div.plate' + (m.team ? '.t1' : ''), cue, h('span.tag', `${m.name} ${ROLE_KEYS[m.role]}`), h('div.bar', php));
+      const warn = h('div.warn', '');
+      warn.hidden = true;
+      const plate = h('div.plate' + (m.team ? '.t1' : ''), warn, cue, h('span.tag', `${m.name} ${ROLE_KEYS[m.role]}`), h('div.bar', php));
       plate.hidden = true;
       // Under the panels, so a name never covers the running order.
       this.root.prepend(plate);
-      this.plates.push({ el: plate, hp: php, cue, side: 0 });
+      this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnKey: '' });
     }
     this.buildPips(race.rules.cellMax);
     this.lastCells = me0(race, localId);
@@ -481,6 +489,8 @@ export class Hud {
     this.chipDraft.hidden = !me.drafting;
     this.chipSling.hidden = !(me.tow > 0.05 && !me.drafting && me.mode === MODE.SPEED && !me.retired);
     this.chipLink.hidden = !me.linked;
+    // Momentum: the next blow is primed by the boost or the tow.
+    this.chipMomentum.hidden = !(me.momentum > 0 && weaponsFree(race) && !me.retired && !me.finished);
     // Whichever ability effect is running, with the seconds left.
     const left = (ticks: number) => (ticks / TICK_RATE).toFixed(1);
     let effect = '';
@@ -564,8 +574,21 @@ export class Hud {
       this.lastTarget = -1;
     }
 
+    // Free steering: show who the lock button would take, so pressing it is
+    // never a guess. The same choice the simulation makes.
+    const flying = focusId === this.localId && race.phase === PHASE.RACING && !focus.retired && !focus.finished && focus.mode === MODE.SPEED;
+    const previewId = flying ? pickTarget(race, this.track, focus, false, -1) : -1;
+    const pv = previewId >= 0 ? plates[previewId] : null;
+    this.preview.hidden = !pv || !pv.visible;
+    if (pv && pv.visible) {
+      const sc = Math.max(0.5, Math.min(1.6, 34 / pv.dist + 0.35));
+      this.preview.style.transform = `translate(${pv.cx.toFixed(1)}px, ${pv.cy.toFixed(1)}px) scale(${sc.toFixed(2)})`;
+    }
+
     // Name plates. While locked on to a rival, the others you could switch to
-    // carry an arrow for the way to flick the stick.
+    // carry an arrow for the way to flick the stick; while free, the one the
+    // lock would take carries the lock key. A rival winding up a heavy blow
+    // at you carries a warning: what answers it, lit white when it is time.
     const lockedOn = focus.target >= 0 && !focus.retired ? race.mechs[focus.target] : null;
     const curAng = lockedOn ? wrapAngle(Math.atan2(lockedOn.d - focus.d, deltaS(this.track, lockedOn.s, focus.s)) - focus.facing) : 0;
     for (const m of race.mechs) {
@@ -580,10 +603,22 @@ export class Hud {
           side = wrapAngle(Math.atan2(m.d - focus.d, ds) - focus.facing) >= curAng ? 1 : -1;
         }
       }
-      if (side !== pl.side) {
-        pl.side = side;
-        setText(pl.cue, side > 0 ? '▶' : side < 0 ? '◀' : '');
+      const cueText = side > 0 ? '▶' : side < 0 ? '◀' : m.id === previewId ? k.lock : '';
+      if (cueText !== pl.cueText) {
+        pl.cueText = cueText;
+        setText(pl.cue, cueText);
         setClass(pl.el, 'cand', side !== 0);
+        setClass(pl.el, 'preview', side === 0 && cueText !== '');
+      }
+      const tell = m.target === focusId && m.team !== focus.team && !focus.retired ? tellOf(m, race.tick) : null;
+      const warnKey = tell ? `${tell.kind}${tell.now ? '!' : ''}` : '';
+      if (warnKey !== pl.warnKey) {
+        pl.warnKey = warnKey;
+        pl.warn.hidden = !tell;
+        if (tell) {
+          setText(pl.warn, TELL_LABEL[tell.kind]);
+          pl.warn.className = `warn ${tell.kind}${tell.now ? ' now' : ''}`;
+        }
       }
       if (show) {
         const sc = Math.max(0.62, Math.min(1.05, 60 / p.dist + 0.5));
@@ -707,6 +742,12 @@ export class Hud {
     window.setTimeout(() => el.remove(), 4800);
   }
 
+  private pop(el: HTMLElement, victim: number): void {
+    this.root.append(el);
+    this.pops.push({ el, victim, t: 0, dx: (Math.random() - 0.5) * 50 });
+    while (this.pops.length > 12) this.pops.shift()!.el.remove();
+  }
+
   /** Returns a sound cue name when the event deserves one from the HUD's side. */
   onEvent(e: SimEvent, race: RaceState): void {
     const me = race.mechs[this.localId];
@@ -808,10 +849,17 @@ export class Hud {
           const mine = e.attacker === this.localId;
           const dmg = Math.round(e.damage);
           if (dmg <= 0 && !e.blocked) break;
-          const el = h('div.pop' + (mine ? '' : '.taken') + (e.heavy && !e.blocked ? '.big' : '') + (e.blocked ? '.blocked' : ''), e.blocked ? `${dmg} blocked` : String(dmg));
-          this.root.append(el);
-          this.pops.push({ el, victim: e.victim, t: 0, dx: (Math.random() - 0.5) * 50 });
-          while (this.pops.length > 12) this.pops.shift()!.el.remove();
+          const surge = e.charged && !e.blocked;
+          const cls = 'div.pop' + (mine ? '' : '.taken') + (e.heavy && !e.blocked ? '.big' : '') + (e.blocked ? '.blocked' : '') + (surge ? '.momentum' : '');
+          const el = surge ? h(cls, h('small', 'Momentum'), String(dmg)) : h(cls, e.blocked ? `${dmg} blocked` : String(dmg));
+          this.pop(el, e.victim);
+        }
+        break;
+      case 'splat':
+        if (e.by === this.localId || e.mech === this.localId) {
+          const mine = e.by === this.localId;
+          this.pop(h('div.pop.ring' + (mine ? '' : '.taken'), h('small', 'Ring-out'), String(Math.round(e.damage))), e.mech);
+          if (mine) this.showNotice('Ring-out', false, 1.2);
         }
         break;
       case 'parry':

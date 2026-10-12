@@ -27,6 +27,10 @@ export interface Feel {
   trails: number;
   rumble: number;
   bloom: number;
+  /** Size of the wind-up tells; 0 turns them off. */
+  tells: number;
+  /** Brightness of the barrier's pulse where something hits it. */
+  wallPulse: number;
   // sound
   volMaster: number;
   volMusic: number;
@@ -60,6 +64,8 @@ export const DEFAULT_FEEL: Readonly<Feel> = Object.freeze({
   trails: 1,
   rumble: 1,
   bloom: 0.42,
+  tells: 1,
+  wallPulse: 1,
   volMaster: 0.8,
   volMusic: 0.45,
   volEffects: 0.9,
@@ -104,7 +110,17 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('topScale', 'Top speed, lap 3', 0.7, 1.4, 0.01, 'x', 'Scales every frame. 1.00 puts the forward at 480 mph.'),
       rule('boostMult', 'Boost', 1.05, 1.5, 0.01, 'bonus'),
       rule('armourFloor', 'Speed left with no armour', 0.7, 1, 0.01, 'pct', 'Lap 3 only. 100% means damage never costs speed.'),
+    ],
+  },
+  {
+    title: 'Combat',
+    items: [
       rule('battleMove', 'Movement while locked on', 0.6, 2.2, 0.05, 'x'),
+      rule('momentumSecs', 'Momentum lasts', 0, 2, 0.05, 'sec', 'How long a boost, Overdrive or slipstream keeps your next blow primed. 0 turns momentum off.'),
+      rule('momentumDamage', 'Momentum strike damage', 1, 2, 0.05, 'x'),
+      rule('momentumKnock', 'Momentum strike knockback', 1, 2.5, 0.05, 'x'),
+      rule('ringoutThrow', 'Heavy blows: throw across the road', 0.8, 2, 0.05, 'x', 'How hard heavy blows throw a mech toward the barrier.'),
+      rule('ringoutDamage', 'Ring-out damage', 0, 60, 1, 'int', 'Damage for being thrown into the barrier, before the part that grows with the impact.'),
     ],
   },
   {
@@ -178,6 +194,8 @@ export const TUNE_GROUPS: TuneGroup[] = [
       feel('trails', 'Light trails', 0, 3, 0.1, 'x'),
       feel('rumble', 'Gamepad rumble', 0, 2, 0.05, 'x'),
       feel('bloom', 'Glow', 0, 1.2, 0.02),
+      feel('tells', 'Wind-up tells', 0, 1.6, 0.05, 'x', 'The ring that closes on a mech winding up a heavy blow. 0 turns them off.'),
+      feel('wallPulse', 'Barrier pulse', 0, 2, 0.05, 'x'),
     ],
   },
   {

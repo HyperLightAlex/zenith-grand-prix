@@ -15,7 +15,7 @@ const problems = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') problems.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}\n${e.stack ?? ''}`));
 const state = () => page.evaluate(() => window.game.debugState());
-const mine = () => page.evaluate(() => { const g = window.game; const m = g.session.race.mechs[g.session.localId]; return { speed: Math.round(m.speed), s: Math.round(m.s), d: +m.d.toFixed(1), drive: Math.round(m.drive), cells: m.cells, mode: m.mode, place: m.place, hp: Math.round(m.hp), overdriveT: m.overdriveT, cloakT: m.cloakT, target: m.target, lap: m.lap }; });
+const mine = () => page.evaluate(() => { const g = window.game; const m = g.session.race.mechs[g.session.localId]; return { speed: Math.round(m.speed), s: Math.round(m.s), d: +m.d.toFixed(1), drive: Math.round(m.drive), cells: m.cells, mode: m.mode, act: m.act, place: m.place, hp: Math.round(m.hp), overdriveT: m.overdriveT, cloakT: m.cloakT, target: m.target, lap: m.lap }; });
 const shot = (name) => page.screenshot({ path: `${out}/${name}.png` });
 const log = (...a) => console.log(...a);
 const check = (ok, what) => { log(ok ? '  ok  ' : '  FAIL', what); if (!ok) problems.push('check failed: ' + what); };
@@ -35,7 +35,7 @@ await shot('2-garage');
 // Frame (Swift) -> Team -> Rival pilots -> Match -> Start.
 for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
-await page.waitForTimeout(1000);
+await page.waitForFunction(() => window.game.debugState().state === 'race', null, { timeout: 15000 }).catch(() => {});
 let s = await state();
 log('race started:', s.state, 'tick', s.tick, 'match', JSON.stringify(s.match));
 check(s.state === 'race' && s.match && s.match.mode === 'series', 'a best-of-3 series started from the garage');
@@ -69,9 +69,11 @@ check(m.drive > 10, `Drive came from the strips (drive ${m.drive})`);
 
 // ---- abilities
 await page.evaluate(() => { const g = window.game; g.session.race.mechs[g.session.localId].cells = 3; });
-// (The computer may have handed the mech back mid-fight: let go first.)
+// (The computer may have handed the mech back mid-fight: let go first, and
+// wait out any stagger, when the button would throw a Break Away instead.)
 if ((await mine()).mode !== 0) { await page.keyboard.press('KeyQ'); await ticks(4); }
 await ticks(20);
+for (let i = 0; i < 20; i++) { const x = await mine(); if (x.mode === 0 && x.act !== 2) break; if (x.mode !== 0) await page.keyboard.press('KeyQ'); await ticks(6); }
 await page.keyboard.press('KeyR');
 await ticks(8);
 m = await mine();

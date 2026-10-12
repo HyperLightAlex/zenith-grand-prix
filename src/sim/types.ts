@@ -42,6 +42,10 @@ export interface AiState {
   gates: number;
   /** Next tick the pilot will consider using an ability. */
   abilityAt: number;
+  /** Flying in hot: until this tick, hold off the lock and strike on arrival. */
+  hotUntil: number;
+  /** Next tick a hot approach may be considered. */
+  hotNext: number;
 }
 
 export interface MechState {
@@ -84,6 +88,8 @@ export interface MechState {
   attack: number;
   attackStart: number;
   attackHit: boolean;
+  /** The attack under way is a momentum strike. */
+  atkCharged: boolean;
   comboQueued: boolean;
   guarding: boolean;
   guardT: number;
@@ -121,6 +127,8 @@ export interface MechState {
   drafting: boolean;
   /** Slipstream charge 0..1: builds in a tow, lingers after pulling out. */
   tow: number;
+  /** Ticks the next attack stays primed by a boost, Overdrive or slipstream. */
+  momentum: number;
   linked: boolean;
   wall: number;
 
@@ -155,6 +163,8 @@ export interface Projectile {
   owner: number;
   team: number;
   attack: number;
+  /** Fired as a momentum strike. */
+  charged: boolean;
   s: number;
   d: number;
   vs: number;
@@ -179,16 +189,17 @@ export type SimEvent =
   | { type: 'finish'; mech: number; place: number }
   | { type: 'raceEnd' }
   | { type: 'swing'; mech: number; attack: number }
-  | { type: 'windup'; mech: number; attack: number }
+  | { type: 'windup'; mech: number; attack: number; charged: boolean }
   | { type: 'shot'; mech: number; attack: number; proj: number }
-  | { type: 'hit'; attacker: number; victim: number; attack: number; damage: number; blocked: boolean; heavy: boolean; s: number; d: number }
+  | { type: 'hit'; attacker: number; victim: number; attack: number; damage: number; blocked: boolean; heavy: boolean; charged: boolean; s: number; d: number }
   | { type: 'parry'; mech: number; attacker: number }
   | { type: 'guardBreak'; mech: number; by: number }
   | { type: 'evade'; mech: number }
   | { type: 'escape'; mech: number }
-  | { type: 'splat'; mech: number; damage: number }
+  /** A ring-out: knocked into the barrier while reeling. `by` is the pilot credited, or -1. */
+  | { type: 'splat'; mech: number; by: number; damage: number; intensity: number; s: number; side: number }
   | { type: 'ko'; mech: number; by: number }
-  | { type: 'wall'; mech: number; intensity: number }
+  | { type: 'wall'; mech: number; intensity: number; s: number; side: number }
   | { type: 'bump'; a: number; b: number; intensity: number }
   | { type: 'lock'; mech: number; target: number }
   | { type: 'unlock'; mech: number }

@@ -360,6 +360,45 @@ const RECIPES: Record<SfxName, Recipe> = {
     for (let i = 0; i < 6; i++) v.tone({ f: r.range(2200, 6800), t: r.range(0, 0.16), d: r.range(0.08, 0.25), g: 0.3 });
   },
 
+  // -- reading a fight --
+  // A heavy blow coming at you. Kept soft and mid-range: it has to be heard
+  // over a fight without being one more bright sound on top of it.
+  tell: (v) => {
+    // Parry: two quick rising glints.
+    v.tone({ w: 'triangle', f: 740, d: 0.07, g: 0.7, a: 0.003 });
+    v.tone({ w: 'triangle', f: 988, t: 0.075, d: 0.12, g: 0.75, a: 0.003 });
+    v.tone({ f: 1976, t: 0.075, d: 0.08, g: 0.08 });
+  },
+  tell_dodge: (v) => {
+    // A guard breaker (or a heavy gun): a low double thrum. Get out of the way.
+    for (const t of [0, 0.09]) {
+      v.tone({ w: 'square', f: 196, t, d: 0.075, g: 0.5, s: 'flat', lp: 900 });
+      v.tone({ f: 98, t, d: 0.075, g: 0.6, s: 'flat' });
+    }
+  },
+  momentum: (v) => {
+    // A blow thrown out of a boost: a rising rush, the run-up going into it.
+    v.noise({ d: 0.22, g: 1.4, s: 'swell', a: 0.16, ft: 'bandpass', ff: 500, ff2: 2400, fq: 1.6, wide: true });
+    v.noise({ k: 'p', d: 0.2, g: 1.2, s: 'swell', a: 0.15, ft: 'bandpass', ff: 300, ff2: 900, fq: 1.2 });
+    v.tone({ w: 'triangle', f: 330, f2: 660, d: 0.18, g: 0.12, s: 'swell', a: 0.15 });
+  },
+  momentum_hit: (v) => {
+    // A momentum strike landing: a heavy hit with a boom under it.
+    v.tone({ f: 120, f2: 30, ft: 0.22, d: 0.5, g: 1, a: 0.002 });
+    v.noise({ k: 'p', d: 0.36, g: 2.8, a: 0.001, ft: 'lowpass', ff: 2200, ff2: 180, fq: 0.9, wide: true });
+    v.noise({ d: 0.025, g: 0.6, ft: 'highpass', ff: 2800 });
+    v.bell({ f: 330, ratio: 2.76, idx: 4, d: 0.36, g: 0.45 });
+    v.noise({ t: 0.02, d: 0.2, g: 1.2, ft: 'bandpass', ff: 900, fq: 1.4, am: 60 });
+  },
+  ringout: (v) => {
+    // Thrown into the barrier: a deep clang, the field crackling, a thump.
+    v.bell({ f: 180, ratio: 3.53, idx: 6, d: 0.7, g: 0.8 });
+    v.bell({ f: 412, ratio: 1.83, idx: 3, d: 0.4, g: 0.35 });
+    v.tone({ f: 110, f2: 34, ft: 0.25, d: 0.55, g: 0.9, a: 0.002 });
+    v.noise({ k: 'p', d: 0.3, g: 2, a: 0.001, ft: 'lowpass', ff: 1800, ff2: 200 });
+    v.noise({ t: 0.03, d: 0.45, g: 0.9, s: 'swell', a: 0.05, ft: 'bandpass', ff: 1400, ff2: 700, fq: 2.2, am: 85, wide: true });
+  },
+
   // -- guns --
   shot_carbine: (v) => {
     v.tone({ w: 'sawtooth', f: 2100, f2: 280, ft: 0.08, d: 0.11, g: 0.7, a: 0.001, lp: 5000 });
@@ -647,6 +686,11 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   parry: m(0.4, 0.35, 2, 0.02),
   // Bright sounds trimmed after play: they cut through far more than their peak suggests.
   guard_break: m(0.3, 0.25, 2),
+  tell: m(0.5, 0.05, 2, 0, 0.1),
+  tell_dodge: m(0.26, 0.03, 2, 0, 0.1),
+  momentum: m(0.75, 0.08, 1, 0.04),
+  momentum_hit: m(0.36, 0.12, 2, 0.04),
+  ringout: m(0.4, 0.2, 2, 0.03),
   shot_carbine: m(0.35, 0.06, 1, 0.05),
   shot_scatter: m(0.5, 0.12, 1, 0.04),
   bullet_hit: m(0.2, 0.04, 0, 0.15, 0.08),

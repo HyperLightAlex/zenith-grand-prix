@@ -62,6 +62,9 @@ interface Summary {
   staleFinish: number;
   hitDamage: number;
   splatDamage: number;
+  splatCredited: number;
+  chargedHits: number;
+  ringOuts: number;
   koEvents: number;
   koCredited: number;
   points: number[];
@@ -125,6 +128,9 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
     staleFinish: 0,
     hitDamage: 0,
     splatDamage: 0,
+    splatCredited: 0,
+    chargedHits: 0,
+    ringOuts: 0,
     koEvents: 0,
     koCredited: 0,
     points: [],
@@ -266,9 +272,13 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
           break;
         case 'hit':
           sum.hitDamage += e.damage;
+          if (e.charged) sum.chargedHits++;
           break;
         case 'splat':
-          sum.splatDamage += e.damage;
+          // A ring-out is credited to the last attacker when there is one.
+          if (e.by >= 0) sum.splatCredited += e.damage;
+          else sum.splatDamage += e.damage;
+          sum.ringOuts++;
           break;
         case 'ko':
           sum.koEvents++;
@@ -459,6 +469,18 @@ describe(`${RACES} all-AI races`, () => {
     });
   });
 
+  it('computer pilots land momentum strikes and ring-outs', () => {
+    let charged = 0;
+    let rings = 0;
+    each((s) => {
+      charged += s.chargedHits;
+      rings += s.ringOuts;
+    });
+    // Both happen in most races, neither in every exchange.
+    expect(charged).toBeGreaterThan(40);
+    expect(rings).toBeGreaterThan(40);
+  });
+
   it('damage books balance: dealt + wall damage = taken = armour lost', () => {
     each((s) => {
       for (let id = 0; id < 6; id++) {
@@ -466,7 +488,7 @@ describe(`${RACES} all-AI races`, () => {
       }
       const dealt = s.dmgDealt.reduce((a, b) => a + b, 0);
       const taken = s.dmgTaken.reduce((a, b) => a + b, 0);
-      expect(dealt).toBeCloseTo(s.hitDamage, 6);
+      expect(dealt).toBeCloseTo(s.hitDamage + s.splatCredited, 6);
       expect(dealt + s.splatDamage).toBeCloseTo(taken, 6);
       // There was a real fight on lap 2 in every one of them.
       expect(s.hitDamage).toBeGreaterThan(500);

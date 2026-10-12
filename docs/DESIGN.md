@@ -36,7 +36,7 @@ Four decisions shape everything else:
   last 22 ticks (about a third of a second) before GO for a launch bonus: a
   running start and 10 Drive. Holding it early, or blipping it, earns nothing.
 - Three laps of Meridian Skyway, 8,640 units round. Laps take about 83, 70
-  and 60 seconds; a race runs about 3:33.
+  and 61 seconds; a race runs about 3:33.
 - The lap phase follows the race leader:
 
 | Lap | Name | Weapons and abilities | Speed |
@@ -140,9 +140,18 @@ if there is nobody they would reach.
 
 ### Lock-on
 
-- LB locks the best enemy within 95 units. Clicking the left stick locks a
+- LB locks an enemy within 95 units. Clicking the left stick locks a
   teammate instead (escort). The lock breaks if the target gets more than 125
   units away for two-thirds of a second, retires or finishes.
+- **Which enemy.** The lock takes whoever is nearest the middle of the
+  picture (the way the mech faces, which is where the camera looks), then
+  the nearer, with a pull toward the rival forward: among rivals roughly in
+  front, the forward wins unless it is much further away. A rival behind you
+  is taken only when there is nobody in front. (It used to take the nearest,
+  wherever it was.) While you are free steering, the one the button would
+  take is marked: pale corner brackets, and the lock key beside its name.
+- A strike that takes the lock for you (pressing attack near an enemy) still
+  goes to the nearest rival in reach, since that is who the blow can land on.
 - **Switching target**: flick the right stick left or right while locked on
   and the lock moves to the next enemy that way, as you see it (measured from
   the way the mech faces, so "left" is left on screen), within 125 units.
@@ -186,7 +195,6 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 - **Guns work at racing speed** without a lock. Melee needs a lock; pressing
   attack near an enemy takes one for you.
 - Four hits in a chain and the victim bursts free.
-- Knocked into a barrier while staggered: extra damage.
 - **A hit costs control, not the race.** A clean hit takes about 1% of the
   victim's pace per 9 damage, never more than 12% (it was 1% per 4, up to
   35%). A mech staggered at racing speed keeps 90% of its throttle, and a
@@ -194,10 +202,57 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 - **Tempo.** Recovery frames are about 20% shorter than in the first build of
   0.2, the dash is ready again in 26 ticks (36), the Lance in 2 s (2.5), and
   the carbine, kick and scatter cannon all cycle faster. Computer pilots
-  attack about a third more often and fight longer before backing off.
+  attack about 40% more often, fight longer before backing off, and hardly
+  lift when waiting for a rival to come back to them.
 - **Feedback.** Blade strikes draw an arc in the attacker's colour (gold for
   a finisher), heavy hits freeze the picture for a few hundredths of a
   second, and damage you deal or take rises off the target as a number.
+  A button pressed during that freeze (or on a frame that ran no tick, as on
+  a fast display) is kept for the next tick rather than lost.
+
+#### Momentum strikes
+
+Racing feeds fighting. A boost, an Overdrive, or a slipstream charged to half
+or more (the point where its bonus is at full strength) primes your next blow
+for 0.75 s after it ends; the HUD shows "Momentum" and your trails run hot.
+The first melee blow you throw in that time is a momentum strike: 35% more
+damage and guard damage, 50% more knockback, a quarter longer stagger, and a
+flare and a boom so both pilots know. Only the first blow of a string takes
+it, guns never do (a gunner sat in a slipstream would otherwise fire nothing
+but charged rounds), and battle mode only spends it, never builds it. So the
+way to open a fight is to arrive in it: boost up or tuck into the tow, then
+strike as you get there. Computer pilots fly in hot like this too: a melee
+pilot with its target ahead sometimes holds off the lock, runs up on the
+infield side and swings on arrival.
+
+#### Ring-outs
+
+Heavy blows (the Edge finisher, the Lance, the Stun Kick, the Breaker Slam,
+the scatter cannon, the Disruptor and a Ram) throw 30% harder across the road
+than before, so a
+rival standing between you and the barrier is in danger. A mech knocked into
+the barrier while reeling is rung out: 14 damage plus 1.6 for every unit per
+second it hit at (about 60 for a typical blow), a 36-tick tumble, and it is
+thrown back off the wall into the fight rather than pinned to it. The ring-out
+is credited to whoever last hit it: the damage counts as theirs, they get 8
+Drive, and a ring-out that takes the last of the armour is their knockout.
+The barrier answers every impact: a pulse of light where the mech struck and
+a wave running away along the wall both ways, cyan for a glancing touch,
+hot pink and bigger for a ring-out.
+
+#### Reading a blow
+
+Every heavy blow is telegraphed. As one winds up, a notched ring appears
+round the attacker and closes on it, meeting the body as the blow lands; in
+the last 8 ticks, the parry window, it turns white. The colour says what
+answers it: gold, parry it (raise the guard as the ring turns white); red, a
+guard breaker, so dash out of it; orange, a heavy gun, so guard. A rival
+aiming one at you also gets a label over its name tag (Parry, Dodge or
+Guard) and a sound, a soft rising ping for a parry and a low double thrum
+for the rest. A combo finisher shows from the moment it is queued, not just
+from its own wind-up. To leave time to read them, the heavy wind-ups are a
+few ticks longer: Edge finisher 11 (was 8), Lance 15 (12), Stun Kick 12 (9),
+Breaker Slam 20 (18).
 - Armour at zero: retired. The pilot can still call team plays and ride a
   teammate's camera.
 
@@ -279,7 +334,8 @@ The teams swap sides of the grid from one round to the next.
   gives the same result.
 - **Inputs are data.** A controller is six numbers per tick. Computer pilots
   produce the same six numbers a person does, so any seat can be either.
-  Inputs are cleaned and copied before use.
+  Inputs are cleaned and copied before use. The session keeps any press
+  made between ticks for the next one.
 - **Events.** Each tick reports what happened. Effects, sound and the HUD
   are driven only by events and state.
 - **Match layer.** Pure bookkeeping over finished races. It never touches a
@@ -305,15 +361,18 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 
 | Measure | Value |
 |---|---|
-| Average race | 3:33 (laps of about 83, 70 and 60 s) |
-| Knockouts per race | 0.43 (77 forwards, 4 midfielders, 5 defenders) |
-| Winner's role | Forward 94%, midfielder 6%, defender under 1% |
-| Armour left at the flag | Forward 38%, midfielder 57%, defender 49% |
-| Damage dealt per race | About 5,100 on the battle lap, 1,000 on the speed lap |
+| Average race | 3:33 (laps of about 83, 70 and 61 s) |
+| Knockouts per race | 0.47 (81 forwards, 6 midfielders, 8 defenders) |
+| Winner's role | Forward 94%, midfielder 5.5%, defender under 1% |
+| Armour left at the flag | Forward 40%, midfielder 54%, defender 43% |
+| Damage dealt per race | About 5,300 on the battle lap, 1,000 on the speed lap |
+| Momentum strikes per race | 5.6, about 40 damage each |
+| Ring-outs per race | 7.6, about 66 damage each (500 a race) |
+| Parries per race | 11 |
 | Entering lap 2 | 1.5 Cells and 50 Drive per mech |
 | Abilities used per race | One to three of each (Ram, Overdrive and Snare most) |
-| Battle-lap pace | 369 mph against a 375 limiter (366 while locked on) |
-| Leader at the start of lap 3 goes on to win | 43% |
+| Battle-lap pace | 369 mph against a 375 limiter (365 while locked on) |
+| Leader at the start of lap 3 goes on to win | 51% |
 | First finisher's team loses the round anyway | About 1% |
 
 And the case that prompted the lap 3 changes, two forwards alone on the
@@ -362,10 +421,17 @@ person with a gamepad, and all of them are on the tuning panel:
    hits are quieter. If another sound grates, the Sound tab plays each one by
    name and turns each layer down.
 8. **Combat tempo.** Fights now stay at race pace and every move recovers
-   sooner. Knockouts went up from 0.28 to 0.43 a race even with the forward's
+   sooner. Knockouts went up from 0.28 to 0.47 a race even with the forward's
    armour raised from 1600 to 1800; if lap 2 is now too lethal for a forward,
-   that armour figure (in `config.ts`) is the first thing to raise.
-9. **Real devices.** Rendering has only been checked in a software-rendered
+   that armour figure (in `config.ts`) is the first thing to raise, then
+   "Ring-out damage" on the Combat tab.
+9. **Momentum, ring-outs and tells.** How long momentum lasts (0.75 s), what
+   a momentum strike is worth (x1.35 damage, x1.5 knockback), how hard heavy
+   blows throw toward the barrier (x1.3) and what a ring-out costs are all on
+   the Combat tab. Whether the tells come early enough to parry on a read, and
+   whether the ring is too much on screen ("Wind-up tells" on the Effects tab
+   sizes it or turns it off), needs a person with a pad.
+10. **Real devices.** Rendering has only been checked in a software-rendered
    headless browser. Frame rate on a real GPU, the gamepad code path, Safari
    and Firefox are untested.
 
@@ -376,7 +442,9 @@ plays, gamepad and keyboard, HUD, sound.
 
 **M1.5, done (this version): rules pass.** Speed ramp, lap 1 economy, Cells
 and abilities, a lap 3 you can come back in, knockout points, match formats,
-feel pass, tuning panel. 718 simulation tests.
+feel pass, tuning panel, then combat at race pace, momentum strikes,
+ring-outs, wind-up tells and a lock that takes who you are looking at. 733
+simulation tests.
 
 **Next: the track system.** Loops, corkscrews, jumps, open edges, narrow
 sections and splits. This means giving the track a full 3D frame at every
@@ -408,6 +476,9 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
   the "lose the round despite winning the race" result is possible but rare.
 - Switching target is left and right only. There is no way to pick a target
   behind you, or one further than 125 units, without letting go first.
+- Computer pilots do not set up ring-outs on purpose, beyond running up on the
+  infield side when they fly in hot, and they read tells only by the same
+  reaction-time rule as before (they do not see the ring).
 - The tuning panel's sliders cannot be worked from the pad while a race is
   running, only from the pause menu.
 - A team with a human seat never gets a computer captain, even if that

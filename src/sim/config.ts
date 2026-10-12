@@ -153,7 +153,22 @@ export const ESCAPE_SHOVE_RANGE = 14;
 export const SPLAT_CREDIT_TICKS = 150;
 export const COUNTER_HIT = 1.15; // damage bonus for hitting a wind-up
 export const WALL_SPLAT_MIN = 14;
-export const WALL_SPLAT_DAMAGE = 1.6; // per u/s of lateral speed
+export const WALL_SPLAT_DAMAGE = 1.6; // per u/s of lateral speed, on top of rules.ringoutDamage
+/** A ring-out (knocked into the barrier while staggered) leaves the mech tumbling this long... */
+export const RINGOUT_STAGGER = 36;
+/** ...and throws it back off the barrier at this share of the speed it arrived with. */
+export const RINGOUT_BOUNCE = 0.45;
+/** Drive to the pilot credited with a ring-out. */
+export const RINGOUT_DRIVE = 8;
+/**
+ * Momentum: free steering on a boost, an Overdrive or a charged slipstream
+ * (the tow is at full strength from half charge) primes the next attack for
+ * rules.momentumSecs. Battle mode only spends it, and only a melee blow
+ * takes it.
+ */
+export const MOMENTUM_TOW = 0.5;
+/** A momentum strike's stagger, as a multiple of the move's own. */
+export const MOMENTUM_STAGGER = 1.25;
 /** A clean hit at racing speed costs a little pace: about 1% per 9 damage, never more than 12%. */
 export const HIT_SLOW_MAX = 0.12;
 export const HIT_SLOW_PER_DAMAGE = 1 / 900;
@@ -299,8 +314,8 @@ export const ATTACKS: AttackDef[] = [
   // Forward: fast three-hit blade string, plus a gap-closing lance.
   melee({ key: 'fw_slash1', name: 'Edge', windup: 5, active: 4, recovery: 11, damage: 20, stagger: 14, knockback: 8, advance: 24, next: ATK.FW_SLASH2 }),
   melee({ key: 'fw_slash2', name: 'Edge', windup: 5, active: 4, recovery: 11, damage: 22, stagger: 14, knockback: 8, advance: 24, next: ATK.FW_SLASH3 }),
-  melee({ key: 'fw_slash3', name: 'Edge Finish', windup: 8, active: 5, recovery: 20, damage: 40, stagger: 24, knockback: 30, advance: 28, heavy: true }),
-  melee({ key: 'fw_lance', name: 'Lance Dash', windup: 12, active: 10, recovery: 22, damage: 56, stagger: 28, knockback: 34, reach: 6.5, advance: 75, armor: true, driveCost: 12, cooldown: 120, heavy: true }),
+  melee({ key: 'fw_slash3', name: 'Edge Finish', windup: 11, active: 5, recovery: 20, damage: 40, stagger: 24, knockback: 30, advance: 28, heavy: true }),
+  melee({ key: 'fw_lance', name: 'Lance Dash', windup: 15, active: 10, recovery: 22, damage: 56, stagger: 28, knockback: 34, reach: 6.5, advance: 75, armor: true, driveCost: 12, cooldown: 120, heavy: true }),
   // Midfielder: carbine bursts at range, and a kick to make space.
   {
     key: 'mf_burst', name: 'Carbine', kind: 'shot',
@@ -310,10 +325,10 @@ export const ATTACKS: AttackDef[] = [
     guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 40, next: -1, heavy: false,
     shot: { count: 3, interval: 5, pellets: 1, speed: 240, spread: 0.065, range: 62 },
   },
-  melee({ key: 'mf_kick', name: 'Stun Kick', windup: 9, active: 5, recovery: 18, damage: 34, stagger: 28, knockback: 38, reach: 6, cooldown: 55, heavy: true }),
+  melee({ key: 'mf_kick', name: 'Stun Kick', windup: 12, active: 5, recovery: 18, damage: 34, stagger: 28, knockback: 38, reach: 6, cooldown: 55, heavy: true }),
   // Defender: slow hammer blows that break guards, and a scatter cannon.
   melee({ key: 'df_hammer1', name: 'Breaker', windup: 14, active: 5, recovery: 15, damage: 36, guardDamage: 30, stagger: 20, knockback: 14, reach: 6.5, arc: 1.15, advance: 14, armor: true, next: ATK.DF_HAMMER2 }),
-  melee({ key: 'df_hammer2', name: 'Breaker Slam', windup: 18, active: 6, recovery: 25, damage: 54, guardDamage: 60, stagger: 30, knockback: 44, reach: 6.5, arc: 1.15, advance: 16, armor: true, guardBreak: true, heavy: true }),
+  melee({ key: 'df_hammer2', name: 'Breaker Slam', windup: 20, active: 6, recovery: 25, damage: 54, guardDamage: 60, stagger: 30, knockback: 44, reach: 6.5, arc: 1.15, advance: 16, armor: true, guardBreak: true, heavy: true }),
   {
     key: 'df_scatter', name: 'Scatter Cannon', kind: 'shot',
     windup: 13, active: 2, recovery: 26,

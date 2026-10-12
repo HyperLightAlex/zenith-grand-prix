@@ -46,6 +46,14 @@ export class LocalSession implements Session {
   private acc = 0;
   private hold = 0;
   private inputs: Array<MechInput | null>;
+  /**
+   * Buttons (and a team call) seen on frames that ran no tick: a hit-stop,
+   * or a fast display drawing more frames than the simulation has ticks.
+   * The next tick gets them, so a quick tap is never lost in between.
+   */
+  private latched = 0;
+  private latchedCmd = 0;
+  private first = emptyInput();
 
   constructor(trackDef: TrackDef, cfg: RaceConfig, readonly localId: number) {
     this.track = buildTrack(trackDef);
@@ -72,15 +80,32 @@ export class LocalSession implements Session {
 
   update(dt: number, input: MechInput | null): void {
     this.events.length = 0;
+    if (input) {
+      this.latched |= input.buttons;
+      if (input.cmd) this.latchedCmd = input.cmd;
+    }
     if (this.hold > 0) {
       this.hold -= dt;
       return;
     }
     this.acc += Math.min(dt, 0.1) * this.timeScale;
-    if (this.localId >= 0) this.inputs[this.localId] = input ?? emptyInput();
+    const live = input ?? emptyInput();
     let steps = 0;
     while (this.acc >= DT && steps < 8) {
       this.snapshot();
+      if (this.localId >= 0) {
+        if (steps === 0) {
+          // The first tick of the frame also carries whatever was pressed since the last tick.
+          Object.assign(this.first, live);
+          this.first.buttons = live.buttons | this.latched;
+          this.first.cmd = live.cmd || this.latchedCmd;
+          this.inputs[this.localId] = this.first;
+          this.latched = 0;
+          this.latchedCmd = 0;
+        } else {
+          this.inputs[this.localId] = live;
+        }
+      }
       stepRace(this.race, this.track, this.inputs);
       for (const e of this.race.events) this.events.push(e);
       this.acc -= DT;

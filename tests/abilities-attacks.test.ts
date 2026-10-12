@@ -91,7 +91,7 @@ describe('Snare', () => {
     expect(n).toBeLessThan(12); // 40 units at 320 u/s
     const H = a.race.tick;
     expect(a.events('hit')).toEqual([
-      { type: 'hit', attacker: MF0, victim: FW1, attack: ATK.MF_SNARE, damage: SNARE.damage, blocked: false, heavy: false, s: foe.s, d: foe.d, tick: H },
+      { type: 'hit', attacker: MF0, victim: FW1, attack: ATK.MF_SNARE, damage: SNARE.damage, blocked: false, heavy: false, charged: false, s: foe.s, d: foe.d, tick: H },
     ]);
     expect(a.events('snared')).toEqual([{ type: 'snared', mech: FW1, by: MF0, tick: H }]);
     expect(a.events('projEnd')).toMatchObject([{ proj: shots[0].proj, hit: true, tick: H }]);
@@ -1109,7 +1109,8 @@ describe('Ram', () => {
     expect(splat.mech).toBe(FW1);
     expect(splat.tick).toBeGreaterThan(hitTick);
     expect(splat.damage).toBeGreaterThan(WALL_SPLAT_MIN * WALL_SPLAT_DAMAGE);
-    expect(splat.damage).toBeCloseTo(RAM_SHOVE * WALL_SPLAT_DAMAGE, -1);
+    expect(splat.damage).toBeCloseTo(a.race.rules.ringoutDamage + RAM_SHOVE * WALL_SPLAT_DAMAGE, -1);
+    expect(splat.by).toBe(DF0);
     expect(foe.hp).toBeCloseTo(maxHp(foe) - 80 - splat.damage, 9);
 
     const b = new Arena(2);

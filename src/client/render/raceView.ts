@@ -11,10 +11,12 @@ import {
   DT,
   MODE,
   PHASE,
+  weaponsFree,
   type MechState,
   type SimEvent,
 } from '../../sim/index';
 import type { Session } from '../game/session';
+import { TELL_COLOR, tellOf, type TellKind } from '../game/tells';
 import type { Feel } from '../game/tuning';
 import { CameraRig } from './cameraRig';
 import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareRing } from './fx';
@@ -75,6 +77,9 @@ const ndc = new THREE.Vector3();
 const shadowScale = new THREE.Matrix4();
 const GOLD = new THREE.Color(COLORS.cell);
 const AMBER = new THREE.Color(0xffa030);
+/** Momentum: trails run hot while the next blow is primed, and a momentum strike flares in it. */
+const HOT = new THREE.Color(0xff7a2a);
+const HOT_HEX = 0xff8a3a;
 const WHITE = new THREE.Color(0xffffff);
 const tint = new THREE.Color();
 /** Speed the effects treat as "flat out": a forward's top speed on the speed lap. */
@@ -96,6 +101,8 @@ export class RaceView {
   focusId: number;
   /** Screen shake and hit-stop requests for the game to forward. */
   onImpact: (strength: number) => void = () => {};
+  /** A heavy blow has started winding up (`atFocus`: aimed at the mech the camera follows). */
+  onTell: (kind: TellKind, mech: number, atFocus: boolean) => void = () => {};
   private mechs: MechVisual[] = [];
   private ring = makeLockRing();
   private time = 0;
@@ -195,6 +202,7 @@ export class RaceView {
     const focus = race.mechs[this.focusId];
 
     // ---- place and animate every mech
+    const armed = weaponsFree(race);
     for (const m of race.mechs) {
       const v = this.mechs[m.id];
       v.s = this.session.prevS[m.id] + (m.s - this.session.prevS[m.id]) * alpha;
@@ -216,15 +224,18 @@ export class RaceView {
       v.shadow.matrix.multiplyMatrices(m4, shadowScale);
       v.shadow.matrixWorldNeedsUpdate = true;
 
-      // Light trails off the heels: team colour, gold in Overdrive, amber in a Ram.
+      // Light trails off the heels: team colour, gold in Overdrive, amber in a
+      // Ram, and running hot while momentum has the next blow primed.
       const battle = m.mode === MODE.BATTLE;
       const surge = m.overdriveT > 0 && !m.retired;
       const ramming = m.ramT > 0 && !m.retired;
+      const primed = m.momentum > 0 && !m.retired && armed;
       let glow = Math.min(1, Math.max(0, (m.speed - 25) / 70)) * (battle ? 0.7 : 0.9);
+      if (primed) glow = Math.max(glow, 1.3);
       if (m.boosting) glow = 1.7;
       if (surge) glow = 2.4;
       if (m.retired) glow = 0;
-      v.trailColor.lerp(surge ? GOLD : ramming ? AMBER : v.glow, 1 - Math.exp(-10 * dt));
+      v.trailColor.lerp(surge ? GOLD : ramming ? AMBER : primed ? HOT : v.glow, 1 - Math.exp(-10 * dt));
       trackDir(track, v.s, 0, 1, v2);
       for (let i = 0; i < 2; i++) {
         v.rig.heels[i].getWorldPosition(v1);
@@ -328,6 +339,27 @@ export class RaceView {
       this.ring.visible = true;
     } else {
       this.ring.visible = false;
+    }
+
+    // ---- wind-up tells: a ring closing on any mech winding up a heavy blow
+    if (this.feel.tells > 0) {
+      for (const m of race.mechs) {
+        // Rivals only: a team-mate's wind-up is nothing you need to read.
+        if (m.team === focus.team) continue;
+        const t = tellOf(m, race.tick);
+        if (!t) continue;
+        const v = this.mechs[m.id];
+        const strong = m.target === this.focusId;
+        const color = TELL_COLOR[t.kind];
+        const size = (CLASSES[m.role].radius + 1.2) * this.feel.tells;
+        if (this.fx.tell(t.key, v.pos, size, color, Math.max(0, t.left - alpha), t.now, strong)) {
+          // The glint: a hard little star at the head as the blow is committed.
+          v1.copy(v.pos);
+          v1.y += v.rig.dims.height * 0.35;
+          this.fx.flash(v1, strong ? 7 : 4.5, color, 0.22, v.rig.root);
+          this.onTell(t.kind, m.id, strong);
+        }
+      }
     }
 
     // ---- tracers
@@ -442,14 +474,22 @@ export class RaceView {
           this.fx.flash(v1, big ? 8.5 : melee ? 5.5 : 3.2, melee ? 0xfff2c8 : a.livery.glow, big ? 0.2 : 0.12, v.rig.root);
           if (big) this.fx.flash(v1, 7, 0xffffff, 0.28, v.rig.root, true);
         }
+        // A momentum strike lands with a shockwave in the colour of the heat it carried.
+        const surge = e.charged && !e.blocked;
+        if (surge) {
+          this.fx.flash(v1, 13, HOT_HEX, 0.3, v.rig.root, true);
+          this.fx.flash(v1, 10, 0xffe6c0, 0.18, v.rig.root);
+          this.fx.burst(v1, v.vel, 40, 70, HOT_HEX, 0.6, 0.5);
+        }
         if (e.victim === local) {
-          this.cam.shake(e.blocked ? 0.18 : big ? 0.62 : atk.kind === 'melee' ? 0.38 : 0.16);
-          if (!e.blocked) this.hurt = Math.min(1, this.hurt + (big ? 0.7 : 0.35));
+          this.cam.shake(e.blocked ? 0.18 : surge ? 0.8 : big ? 0.62 : atk.kind === 'melee' ? 0.38 : 0.16);
+          if (!e.blocked) this.hurt = Math.min(1, this.hurt + (big || surge ? 0.7 : 0.35));
           // Gunfire rumbles but does not stop the clock; blades and fists do.
-          this.onImpact(e.blocked ? 0.2 : big ? 1 : atk.kind === 'melee' ? 0.5 : 0.25);
+          this.onImpact(e.blocked ? 0.2 : big || surge ? 1 : atk.kind === 'melee' ? 0.5 : 0.25);
         } else if (e.attacker === local) {
-          this.cam.shake(big ? 0.4 : atk.kind === 'melee' ? 0.2 : 0.04);
-          if (atk.kind === 'melee') this.onImpact(big ? 0.8 : 0.35);
+          this.cam.shake(surge ? 0.55 : big ? 0.4 : atk.kind === 'melee' ? 0.2 : 0.04);
+          if (atk.kind === 'melee') this.onImpact(surge ? 1 : big ? 0.8 : 0.35);
+          if (surge) this.flash(0.25);
         }
         break;
       }
@@ -479,14 +519,21 @@ export class RaceView {
         break;
       }
       case 'splat': {
+        // A ring-out: the barrier flares where the mech struck it and a pulse
+        // runs away along it both ways.
         const v = this.mechs[e.mech];
-        const side = race.mechs[e.mech].d > 0 ? 1 : -1;
-        trackPoint(track, v.s, v.d + side * 3, 3.5, v1);
-        this.fx.flash(v1, 10, 0xffd9a0, 0.24);
-        this.fx.burst(v1, v.vel, 36, 50, 0xffb040, 0.55, 0.5);
-        if (e.mech === local) {
-          this.cam.shake(0.7);
-          this.hurt = 1;
+        const hard = Math.min(1.5, 0.6 + e.intensity / 40);
+        this.trackVis.pulseWall(e.s, e.side, hard * this.feel.wallPulse, true);
+        trackPoint(track, v.s, e.side * (track.halfWidth - 0.3), 3.2, v1);
+        this.fx.flash(v1, 16, 0xff6ab0, 0.32);
+        this.fx.flash(v1, 11, 0xffffff, 0.2, null, true);
+        trackDir(track, v.s, 0.2, -e.side, v3);
+        this.fx.spray(v1, v.vel, v3, 46, 46, 0xffb0d8, 0.5, 0.55);
+        this.fx.burst(v1, v.vel, 30, 50, 0xffb040, 0.55, 0.5);
+        if (e.mech === local || e.by === local) {
+          this.cam.shake(e.mech === local ? 0.85 : 0.55);
+          if (e.mech === local) this.hurt = 1;
+          this.flash(0.3);
           this.onImpact(1);
         }
         break;
@@ -508,7 +555,8 @@ export class RaceView {
       }
       case 'wall': {
         const v = this.mechs[e.mech];
-        const side = race.mechs[e.mech].d > 0 ? 1 : -1;
+        const side = e.side;
+        this.trackVis.pulseWall(e.s, side, Math.min(0.9, Math.max(0.25, e.intensity / 30)) * this.feel.wallPulse, false);
         trackPoint(track, v.s, v.d + side * 3, 1.6, v1);
         trackDir(track, v.s, -1, -side * 0.5, v3);
         this.fx.spray(v1, v.vel, v3, Math.min(30, 6 + e.intensity), 30, 0xffc66e, 0.45, 0.45);
@@ -534,6 +582,15 @@ export class RaceView {
         v.rig.muzzle.getWorldPosition(v1);
         this.fx.flash(v1, ATTACKS[e.attack].shot!.pellets > 1 ? 2.6 : 3.4, v.livery.glow, 0.07, v.rig.root);
         if (e.mech === local) this.cam.shake(ATTACKS[e.attack].shot!.pellets > 1 ? 0.07 : 0.1);
+        break;
+      }
+      case 'windup': {
+        if (!e.charged) break;
+        // Thrown with momentum: the heat in the trails goes into the blow.
+        const v = this.mechs[e.mech];
+        this.fx.flash(v.pos, 11, HOT_HEX, 0.26, v.rig.root, true);
+        this.fx.burst(v.pos, v.vel, 22, 40, HOT_HEX, 0.5, 0.35);
+        if (e.mech === local) this.cam.shake(0.25);
         break;
       }
       case 'swing': {

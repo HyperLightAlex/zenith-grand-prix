@@ -38,7 +38,7 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 | Accelerate / brake | RT / LT | W / S |
 | Boost (uses Drive) | A | Space |
 | Ability (uses a Cell) | B | R |
-| Lock on to an enemy / let go | LB | Q |
+| Lock on to an enemy / let go (the one it would take is marked) | LB | Q |
 | Escort a teammate / let go | Click the left stick | E |
 | Attack / special | X / Y | J / K |
 | Guard (press just before a hit to parry) | RB | L |
@@ -55,10 +55,13 @@ you: the stick now moves you around your target (toward it, away from it,
 circling it) and your mech faces it, even if that means skating backwards.
 A fight is carried at race pace, so locking on never parks you.
 
-Locked on, push the right stick left or right to move the lock to the next
-enemy that way on screen. The name tags of the rivals you can switch to show
-a small ◀ or ▶. If your target is knocked out or finishes, the lock moves on
-to the nearest rival by itself.
+The lock takes whoever is nearest the middle of the screen, leaning toward
+the rival forward, and while you are free steering the one it would take is
+marked with pale corner brackets and the lock key beside its name. Locked on,
+push the right stick left or right to move the lock to the next enemy that
+way on screen. The name tags of the rivals you can switch to show a small ◀
+or ▶. If your target is knocked out or finishes, the lock moves on to the
+nearest rival by itself.
 
 ## How a race goes
 
@@ -96,6 +99,24 @@ leaving the racing line to do it.
 They answer each other. Overdrive and Break Away both burn off a Snare, an
 Aegis shrugs off a Ram and a Snare, a guard blunts a Ram or a Disruptor.
 
+## Fighting
+
+- **Momentum strikes.** A boost, an Overdrive or a charged slipstream primes
+  your next blow for three quarters of a second after it ends ("Momentum" on
+  the HUD, and your trails run hot). Swing in that time and the first blow
+  hits a third harder and throws much further. Arrive in a fight at speed and
+  strike as you get there. Guns do not take it.
+- **Ring-outs.** Heavy blows throw a rival across the road, so get it between
+  you and the barrier. A mech knocked into the barrier while reeling takes
+  heavy damage, tumbles, and bounces back into the fight, and the barrier
+  pulses where it hit. The ring-out is yours: its damage, some Drive, and the
+  knockout if it finishes them.
+- **Reading a blow.** A ring closes on any rival winding up a heavy blow and
+  meets it as the blow lands, turning white for the moment a guard would
+  parry. Gold: parry it. Red: a guard breaker, dash out of it. Orange: a heavy
+  gun, guard. A rival aiming one at you also gets the answer written over its
+  name, and a warning sound.
+
 ## Scoring and matches
 
 Placing points are 15, 7, 5, 3, 2, 1. A mech that is knocked out scores no
@@ -117,8 +138,10 @@ The teams swap sides of the grid each round.
 
 Press T (or Back on a pad) at any time. It has sliders for the limiters, top
 speed, boost, the slipstream, Drive and Cells, every ability, knockout
-points, the camera, the effects and the sound. Changes apply at once, to the
-race you are in, and are remembered in the browser.
+points, combat (lock-on movement, momentum, ring-outs), the camera, the
+effects (including the size of the wind-up tells and the brightness of the
+barrier pulse) and the sound. Changes apply at once, to the race you are in,
+and are remembered in the browser.
 
 The Sound tab sets the master, music and effects volumes and the level of
 each continuous layer (engine, wind, afterburner, strip hum, slipstream,
@@ -137,7 +160,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then build to `dist/` |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Simulation test suite (718 tests) |
+| `npm test` | Simulation test suite (733 tests) |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |

@@ -1,6 +1,6 @@
 // Helpers shared by movement, combat and AI.
 
-import { CLASSES, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, type ClassDef } from './config';
+import { CLASSES, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, ROLE, type ClassDef } from './config';
 import { clamp, wrapAngle } from './math';
 import { deltaS, type Track } from './track';
 import type { MechState, RaceState } from './types';
@@ -77,6 +77,7 @@ export function clearEffects(m: MechState): void {
   m.cloakT = 0;
   m.cdAbility = 0;
   m.tow = 0;
+  m.momentum = 0;
 }
 
 /** Keep speed/heading and vs/vd in agreement after the speed-mode values change. */
@@ -122,8 +123,20 @@ export function setTarget(race: RaceState, m: MechState, id: number): void {
   }
 }
 
+/** Lock-on scoring: points per radian off the line of sight, per unit away, and off for the rival forward. */
+export const LOCK_AIM_WEIGHT = 40;
+export const LOCK_DIST_WEIGHT = 0.25;
+export const LOCK_FORWARD_PULL = 15;
+/** More than this far off the line of sight (about 100 degrees) is behind the pilot: a last resort. */
+export const LOCK_BEHIND = 1.75;
+
 /**
- * Best lock-on candidate: close, and roughly where the pilot is facing.
+ * Best lock-on candidate. Pressing lock takes whoever is nearest the middle
+ * of the picture (the way the mech faces, which is where the camera looks),
+ * then the nearer, with a pull toward the rival forward, the mech that
+ * decides the race. Behind the pilot only counts if nobody is in front.
+ * `near` scores by distance first instead: for a strike, which wants
+ * whoever is in reach, and for moving a lock on after a knockout.
  * `ally` picks teammates instead of enemies.
  */
 export function pickTarget(
@@ -133,6 +146,7 @@ export function pickTarget(
   ally: boolean,
   exclude: number,
   range: number = LOCK_RANGE,
+  near = false,
 ): number {
   let best = -1;
   let bestScore = Infinity;
@@ -144,7 +158,14 @@ export function pickTarget(
     const dist = Math.hypot(ds, dd);
     if (dist > range) continue;
     const ang = Math.abs(wrapAngle(Math.atan2(dd, ds) - m.facing));
-    const score = dist + ang * 14;
+    let score: number;
+    if (near) {
+      score = dist + ang * 14;
+    } else {
+      score = ang * LOCK_AIM_WEIGHT + dist * LOCK_DIST_WEIGHT;
+      if (!ally && o.role === ROLE.FW) score -= LOCK_FORWARD_PULL;
+      if (ang > LOCK_BEHIND) score += 1000;
+    }
     if (score < bestScore) {
       bestScore = score;
       best = o.id;
@@ -186,7 +207,7 @@ export function cycleTarget(race: RaceState, track: Track, m: MechState, dir: nu
  */
 export function retarget(race: RaceState, track: Track, m: MechState, lost: number): void {
   const prev = m.target >= 0 ? race.mechs[m.target] : null;
-  const next = m.human && prev && prev.team !== m.team ? pickTarget(race, track, m, false, lost, RETARGET_RANGE) : -1;
+  const next = m.human && prev && prev.team !== m.team ? pickTarget(race, track, m, false, lost, RETARGET_RANGE, true) : -1;
   setTarget(race, m, next);
 }
 
