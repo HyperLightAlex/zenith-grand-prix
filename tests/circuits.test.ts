@@ -298,6 +298,38 @@ describe('jumps', () => {
     expect(ev.some((e) => e.type === 'ko' && e.mech === 0 && e.by === 1)).toBe(true);
     expect(race.mechs[1].kos).toBe(1);
   });
+
+  it('the Drop is cleared at the formation-lap limiter, and not by much; well short of it, it is not', () => {
+    const t = track(HELIOS);
+    const [g0, g1] = gaps(t).sort((a, b) => b[1] - b[0] - (a[1] - a[0]))[0];
+    expect(g1 - g0).toBeGreaterThanOrEqual(100);
+    const run = (limiter: number) => {
+      const race = createRace(t, { seed: 1, seats: makeSeats('all'), rules: { limiter1: limiter } });
+      const inputs = race.mechs.map(() => emptyInput());
+      while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
+      place(race, t, 0, g0 - 160, 0, limiter);
+      // Everyone else well behind, so the limiter is not opened for a straggler.
+      race.mechs.forEach((o, k) => {
+        if (k) o.s = wrapS(t, g0 - 1500 - k * 30);
+      });
+      inputs[0].throttle = 1;
+      let landed = -1;
+      let fell = false;
+      for (let i = 0; i < 400 && landed < 0 && !fell; i++) {
+        stepRace(race, t, inputs);
+        for (const e of race.events) {
+          if (e.type === 'land' && e.mech === 0 && race.mechs[0].s > g0) landed = race.mechs[0].s;
+          if (e.type === 'fall' && e.mech === 0) fell = true;
+        }
+      }
+      return { landed, fell };
+    };
+    const lap1 = run(110);
+    expect(lap1.fell).toBe(false);
+    expect(lap1.landed).toBeGreaterThan(g1);
+    expect(lap1.landed - g1).toBeLessThan(g1 - g0);
+    expect(run(92).fell).toBe(true);
+  });
 });
 
 describe('open edges', () => {

@@ -38,7 +38,7 @@ Four decisions shape everything else:
 - Three laps of one of three circuits, picked in the garage. On Meridian
   Skyway (8,640 units round) laps take about 83, 70 and 61 seconds and a race
   runs about 3:33; Corkscrew Canyon (8,167) runs about 3:19 and Helios Drop
-  (9,036) about 3:40. See "Circuits" below.
+  (9,296) about 3:47. See "Circuits" below.
 - The lap phase follows the race leader:
 
 | Lap | Name | Weapons and abilities | Speed |
@@ -104,7 +104,13 @@ and whether it holds mechs on.
   gravity (with under a third of its steering) and lands where the road is. A hard
   landing costs up to 12% speed. Jumps are built for one speed: the arc is
   the path a mech at exactly that speed would follow, with the middle of it
-  missing. Faster flies further; slower falls in.
+  missing. Faster flies further; slower falls in. The landing slope can be
+  shallower than the ramp, which catches a fast mech sooner. The Drop is
+  built for 106 u/s with a 120-unit gap and a 10-degree landing slope, so
+  at the formation-lap limiter (110) a mech lands about 57 units past the
+  gap, on the battle lap about 155, and below about 103 it falls in. The
+  Split Decision jump (92 units) needs about 97 u/s; the pad just before it
+  gives most mechs 130. The Hop on Canyon is a short gap built for 78.
 - **Falls.** Below the road with no road under it, a mech has fallen: 70
   armour, out of play for 96 ticks (nobody can lock it, hit it or draft it),
   then the drone sets it down on its own side 12 units past the next road, at
@@ -135,7 +141,7 @@ the busier route.
 |---|---|---|---|---|---|
 | Meridian Skyway | 82.9 s | 3:33 | 0.50 | 0 | 0 |
 | Corkscrew Canyon | 77.5 s | 3:19 | 0.21 to 0.37 | 0.5 | 25 |
-| Helios Drop | 85.7 s | 3:40 | 0.49 to 0.60 | 0 | 40 |
+| Helios Drop | 88.2 s | 3:47 | 0.55 | 0.05 | 39 |
 
 Each circuit has its own setting (Meridian: golden hour over the sea and a
 city; Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
@@ -500,10 +506,11 @@ person with a gamepad, and all of them are on the tuning panel:
 11. **The new circuits.** Whether the Narrows is too narrow, whether the
    Bowl's banking reads, how the camera feels upside down in the loop and
    the corkscrew (it turns over with the road, a little less than fully),
-   whether the jumps are generous enough (the Hop is built for 78 u/s, the
-   Drop for 86, both well under racing pace, so you only fall short when a
-   fight or a Snare has slowed you), and whether 70 armour and a couple of
-   seconds is the right price for a fall.
+   whether the jumps are pitched right (the Drop was made twice as wide
+   after the first play, as it was cleared by a huge margin at any speed;
+   it now needs 103 u/s against the formation-lap limiter of 110), and
+   whether 70 armour and a couple of seconds is the right price for a
+   fall.
 
 ## 6. Roadmap
 
@@ -519,7 +526,7 @@ wind-up tells and a lock that takes who you are looking at.
 point, air time, falls and the recovery drone, open edges, forks with a
 middle wall, loops, corkscrews, banking grip and speed pads, and two
 circuits that use them (Corkscrew Canyon and Helios Drop), each with its own
-scenery and music. Meridian stays as the flat test course. 766 simulation
+scenery and music. Meridian stays as the flat test course. 767 simulation
 tests.
 
 **M2: two browsers in one race.**

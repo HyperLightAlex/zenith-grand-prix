@@ -96,12 +96,15 @@ export interface CircuitDef {
 /**
  * A jump: a ramp of `ramp` degrees, then an arc that a mech doing exactly
  * `speed` would follow in free flight, with the middle `gap` of it missing,
- * a landing slope and a run-out back to level. Faster than `speed` flies
- * longer and lands further down the slope; slower falls into the gap.
+ * a landing slope of `down` degrees (as steep as the ramp unless set) and a
+ * run-out back to level. Faster than `speed` flies longer and lands further
+ * down the slope; slower falls into the gap. A shallower landing slope
+ * catches a fast mech sooner, so it overshoots by less (and lands harder).
  */
-export function jump(o: { ramp: number; speed: number; gap?: number; land?: number; side?: 'left' | 'right'; props?: PieceProps }): Piece[] {
+export function jump(o: { ramp: number; speed: number; gap?: number; land?: number; down?: number; side?: 'left' | 'right'; props?: PieceProps }): Piece[] {
   const gap = o.gap ?? 0.7;
-  const arc = o.ramp * 2;
+  const down = o.down ?? o.ramp;
+  const arc = o.ramp + down;
   const crest = (o.speed * o.speed) / GRAVITY;
   const lip = (arc * (1 - gap)) / 2;
   const p = o.props ?? {};
@@ -111,7 +114,7 @@ export function jump(o: { ramp: number; speed: number; gap?: number; land?: numb
     { ...p, pitch: [crest, -arc * gap], gap: o.side ?? true, name: 'gap' },
     { ...p, pitch: [crest, -lip], name: 'landing' },
     { ...p, straight: o.land ?? 120, name: 'landing slope' },
-    { ...p, pitch: [crest * 1.4, o.ramp], name: 'run-out' },
+    { ...p, pitch: [crest * 1.4, down], name: 'run-out' },
   ];
 }
 

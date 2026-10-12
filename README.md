@@ -95,9 +95,11 @@ race music.
   Crossover (a fork whose two routes swap sides over and under each other),
   the Sky Bridge (no barriers on either side) and the Hop, a short jump.
 - **Helios Drop.** Built for speed and air, above a sea of cloud. The Drop
-  (a jump off the top of a long climb, through the Sun Gate), a full loop,
-  the Carousel (a long banked right), the Skyline crest, and Split Decision:
-  a fork with a speed pad and a second jump on one side and the Drive strip
+  (a wide jump off the top of a long climb, through the Sun Gate: at the
+  formation-lap limiter you clear it by about half its width, and anything
+  much slower falls in), a full loop, the Carousel (a long banked right),
+  the Skyline crest, and Split Decision: a fork with a speed pad and a second
+  jump on one side (take the pad and you clear it easily) and the Drive strip
   and a gate on the other.
 
 What the new circuits add:
@@ -195,7 +197,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then build to `dist/` |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Simulation test suite (766 tests) |
+| `npm test` | Simulation test suite (767 tests) |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |

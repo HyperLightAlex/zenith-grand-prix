@@ -30,8 +30,8 @@ export const HELIOS: CircuitDef = {
     /*  2 */ { straight: 400 },
     /*  3 */ { climb: [560, 70], name: 'the long climb' },
     /*  4 */ { straight: 220, name: 'top of the climb' },
-    ...jump({ ramp: 15, speed: 86, gap: 0.72, land: 220 }), // 5-10 the Drop
-    /* 11 */ { climb: [380, -40], name: 'down off the Drop' },
+    ...jump({ ramp: 22, down: 10, speed: 106, gap: 0.88, land: 200 }), // 5-10 the Drop
+    /* 11 */ { climb: [440, -85], name: 'down off the Drop' },
     /* 12 */ { straight: 240 },
     /* 13 */ { turn: [300, 90], bank: 20, name: 'T2 Overlook' },
     /* 14 */ { straight: 200, name: 'closing A' },
@@ -45,7 +45,7 @@ export const HELIOS: CircuitDef = {
     /* 22 */ { straight: 140 },
     /* 23 */ { turn: [420, -50], bank: 10, name: 'T4 the Unwind' },
     /* 24 */ { straight: 220, ...inSplit, name: 'Split Decision' },
-    ...jump({ ramp: 10, speed: 80, gap: 0.6, land: 110, side: 'left', props: inSplit }), // 25-30
+    ...jump({ ramp: 14, down: 8, speed: 112, gap: 0.88, land: 120, side: 'left', props: inSplit }), // 25-30
     /* 31 */ { straight: 200, ...inSplit },
     /* 32 */ { straight: 300, name: 'closing B' },
     /* 33 */ { climb: [400, -20], name: 'settles the height' },
@@ -72,7 +72,6 @@ export const HELIOS: CircuitDef = {
   ],
   pads: [
     { piece: 24, at: 0.55, len: 60, d: -24, halfW: 6 }, // jump route of Split Decision
-    { piece: 4, at: 0.2, len: 60, d: 0, halfW: 8 }, // run-up to the Drop
     { piece: 16, at: 0.6, len: 60, d: 0, halfW: 8 }, // run-up to the Skyline
   ],
 };
