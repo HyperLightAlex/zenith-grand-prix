@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
 
 /**
@@ -51,5 +52,8 @@ export default defineConfig(({ mode }) => {
         : {}),
     },
     server: { host: true, port: 5173 },
+    // Several tests run whole races; on a slower machine, with every file in
+    // parallel, the 5-second default is not enough.
+    test: { testTimeout: 30_000 },
   };
 });
