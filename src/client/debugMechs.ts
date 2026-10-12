@@ -2,18 +2,16 @@
 //   default            every frame in both liveries, in one pose (&pose=stand)
 //   &poses=a,b,c       one frame (&role=0..2, &team=0..1) in several poses
 //   &turn=1            one frame (&role, &team) turned to front, three-quarter, side and back
-//   &design=racer      which Swift design (classic, racer, wraith, blaze)
 //   &yaw &dist &h &cx &cz &ly   camera
 import * as THREE from 'three';
 import { ROLE } from '../sim/config';
-import { buildFrame, setSwiftDesign } from './render/mech/frames';
+import { buildFrame } from './render/mech/frames';
 import { LIVERIES, COLORS, SUN_DIR } from './render/palette';
 import { makePose, type MechRig } from './render/mech/rig';
 import { POSES } from './render/mech/poses';
 
 export function runMechDebug(): void {
   const q = new URLSearchParams(location.search);
-  setSwiftDesign(q.get('design'));
   const canvas = document.createElement('canvas');
   canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;display:block';
   document.body.style.margin = '0';
