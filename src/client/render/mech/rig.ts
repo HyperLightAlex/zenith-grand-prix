@@ -157,6 +157,15 @@ export class MechRig {
   readonly handR = new THREE.Object3D();
   /** Meshes that carry the team glow colour, for flashing. */
   readonly glowMeshes: THREE.Mesh[] = [];
+  /**
+   * Skirt armour hinged on the hips: the front plates lift with their thigh
+   * as it swings forward, the rear plate as either leg swings back. Frames
+   * place them and hang their armour on them; a frame without skirts leaves
+   * them empty.
+   */
+  readonly skirts = { l: new THREE.Group(), r: new THREE.Group(), back: new THREE.Group() };
+  /** How far each thigh swings forward of straight down, radians (set by apply). */
+  private swing = { l: 0, r: 0 };
 
   constructor(readonly dims: FrameDims) {
     this.root.add(this.body);
@@ -188,6 +197,7 @@ export class MechRig {
       this.heels.push(heel);
       j(L ? 'wingL' : 'wingR', chest, side * 0.55, 0.75, -0.85);
     }
+    hips.add(this.skirts.l, this.skirts.r, this.skirts.back);
   }
 
   /** Put the skeleton into a pose. */
@@ -211,6 +221,10 @@ export class MechRig {
     qInv.copy(qh).invert();
     this.solveLeg(1, p.footL);
     this.solveLeg(-1, p.footR);
+    // Skirts ride up with the legs instead of passing through them.
+    this.skirts.l.rotation.x = -Math.max(0, this.swing.l - 0.08) * 0.95;
+    this.skirts.r.rotation.x = -Math.max(0, this.swing.r - 0.08) * 0.95;
+    this.skirts.back.rotation.x = Math.max(0, -Math.min(this.swing.l, this.swing.r) - 0.08) * 0.9;
   }
 
   private solveLeg(side: 1 | -1, foot: [number, number, number, number, number]): void {
@@ -241,6 +255,10 @@ export class MechRig {
     basis.makeBasis(kx, ky, kz);
     qThigh.setFromRotationMatrix(basis);
     hip.quaternion.copy(qThigh);
+    // The thigh hangs along its own -y: how far forward of straight down it points.
+    const sw = Math.atan2(-ky.z, ky.y);
+    if (side === 1) this.swing.l = sw;
+    else this.swing.r = sw;
     const cosB = (a * a + b * b - len * len) / (2 * a * b);
     const B = Math.acos(Math.min(1, Math.max(-1, cosB)));
     qKnee.setFromAxisAngle(X_AXIS, Math.PI - B);

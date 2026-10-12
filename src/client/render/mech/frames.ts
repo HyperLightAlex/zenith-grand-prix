@@ -5,7 +5,9 @@ import * as THREE from 'three';
 import { ROLE, type Role } from '../../../sim/config';
 import type { Livery } from '../palette';
 import { Kit, glowMaterial } from './kit';
-import { MechRig, type Flame, type FrameDims } from './rig';
+import { frameCtx, numberDecal } from './parts';
+import { MechRig, type FrameDims } from './rig';
+import { buildSwift } from './swift';
 
 const DIMS: Record<Role, FrameDims> = {
   [ROLE.FW]: { hipY: 5.5, hipX: 0.72, hipDrop: 0.25, thigh: 2.35, shin: 2.3, ankleY: 0.6, spineY: 0.4, chestY: 0.8, shoulderX: 1.5, shoulderY: 0.95, headY: 1.5, headZ: 0.15, upperArm: 1.5, foreArm: 1.45, height: 8.8 },
@@ -13,84 +15,21 @@ const DIMS: Record<Role, FrameDims> = {
   [ROLE.DF]: { hipY: 5.05, hipX: 1.0, hipDrop: 0.3, thigh: 2.05, shin: 2.0, ankleY: 0.7, spineY: 0.5, chestY: 0.95, shoulderX: 2.25, shoulderY: 1.05, headY: 1.55, headZ: 0.2, upperArm: 1.55, foreArm: 1.6, height: 8.7 },
 };
 
-const flameGeo = (() => {
-  // Cone with its mouth at the origin, pointing down -z.
-  const g = new THREE.ConeGeometry(1, 1, 8, 1, true);
-  g.rotateX(-Math.PI / 2);
-  g.translate(0, 0, -0.5);
-  return g;
-})();
-
-function flameMaterial(color: number): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(color) }, uTime: { value: 0 }, uPower: { value: 1 } },
-    vertexShader: /* glsl */ `
-      varying float vT;
-      void main() {
-        vT = -position.z;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }`,
-    fragmentShader: /* glsl */ `
-      uniform vec3 uColor;
-      uniform float uTime, uPower;
-      varying float vT;
-      void main() {
-        float core = smoothstep(0.55, 0.0, vT);
-        float fl = 0.82 + 0.18 * sin(uTime * 60.0 + vT * 22.0);
-        vec3 col = mix(uColor, vec3(1.0), core * 0.8) * (1.4 + core * 1.4) * fl;
-        float a = (1.0 - vT) * (1.0 - vT) * uPower;
-        gl_FragColor = vec4(col * a, a);
-      }`,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-}
-
-function numberDecal(text: string, livery: Livery): THREE.Mesh {
-  const c = document.createElement('canvas');
-  c.width = 128;
-  c.height = 128;
-  const g = c.getContext('2d')!;
-  g.clearRect(0, 0, 128, 128);
-  g.fillStyle = `#${new THREE.Color(livery.trim).getHexString()}`;
-  g.font = 'italic 800 104px "Barlow Condensed", "Arial Narrow", sans-serif';
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.fillText(text, 62, 70);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  const decal = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-  // Made for this one mech, unlike the shared kit materials, so it is freed with it.
-  decal.userData.ownMaterial = true;
-  return decal;
-}
-
 export function buildFrame(role: Role, livery: Livery, number: string): MechRig {
   const d = DIMS[role];
   const rig = new MechRig(d);
+  const ctx = frameCtx(rig, livery);
+  if (role === ROLE.FW) {
+    buildSwift(ctx, number);
+    return rig;
+  }
   const J = rig.joints;
-  const FW = role === ROLE.FW;
+  const FW = false as boolean;
   const DF = role === ROLE.DF;
   // Bulk multiplier: how chunky the limbs are.
   const b = FW ? 1 : DF ? 1.42 : 1.16;
-  const flameMat = flameMaterial(livery.glow);
-
-  const put = (joint: THREE.Object3D, k: Kit): void => {
-    const built = k.build();
-    joint.add(built.group);
-    if (built.glow) rig.glowMeshes.push(built.glow);
-  };
-  const flame = (parent: THREE.Object3D, at: [number, number, number], rot: [number, number, number], width: number, length: number, bank: Flame['bank']): void => {
-    const mesh = new THREE.Mesh(flameGeo, flameMat);
-    mesh.position.set(at[0], at[1], at[2]);
-    mesh.rotation.set(rot[0], rot[1], rot[2]);
-    mesh.scale.set(width, width, 0.01);
-    mesh.renderOrder = 5;
-    parent.add(mesh);
-    rig.flames.push({ mesh, length, width, bank });
-  };
+  const put = (joint: THREE.Object3D, k: Kit): void => ctx.put(joint, k);
+  const flame = ctx.flame;
 
   // ---- pelvis --------------------------------------------------------------
   {
@@ -358,7 +297,7 @@ export function buildFrame(role: Role, livery: Livery, number: string): MechRig 
   return rig;
 }
 
-/** Shared flame time uniform is per-material; update all of a rig's flames together. */
+/** The flame time uniform is on the team's shared flame material; update it for a rig's flames. */
 export function setFlameTime(rig: MechRig, t: number): void {
   if (rig.flames.length) (rig.flames[0].mesh.material as THREE.ShaderMaterial).uniforms.uTime.value = t;
 }
