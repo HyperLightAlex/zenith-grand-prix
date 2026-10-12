@@ -6,6 +6,7 @@ import './ui/styles.css';
 import { ROLE, type Role } from '../sim/index';
 import { NullAudio, type AudioEngine } from './audio/audio';
 import { Game } from './game/game';
+import { setSwiftDesign } from './render/mech/frames';
 
 // Dev shortcuts, all optional:
 //   ?auto=FW|MF|DF  jump straight into a race     &demo=1   computer flies your mech
@@ -14,6 +15,7 @@ import { Game } from './game/game';
 //   &mute=1         no sound                      ?debug=mechs  model viewer
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   &track=canyon   circuit: meridian, canyon or helios
+//   &swift=racer    Swift design on trial: classic, racer, wraith, blaze
 const q = new URLSearchParams(location.search);
 
 async function boot(): Promise<void> {
@@ -43,6 +45,7 @@ async function boot(): Promise<void> {
       console.warn('Audio unavailable', err);
     }
   }
+  setSwiftDesign(q.get('swift'));
   const roles: Record<string, Role> = { FW: ROLE.FW, MF: ROLE.MF, DF: ROLE.DF };
   const auto = q.get('auto')?.toUpperCase();
   const game = new Game(canvas, ui, {

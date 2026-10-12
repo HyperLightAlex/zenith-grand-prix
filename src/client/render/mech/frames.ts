@@ -8,6 +8,19 @@ import { Kit, glowMaterial } from './kit';
 import { frameCtx, numberDecal } from './parts';
 import { MechRig, type FrameDims } from './rig';
 import { buildSwift } from './swift';
+import { buildSwiftBlaze } from './swiftBlaze';
+import { buildSwiftRacer } from './swiftRacer';
+import { buildSwiftWraith } from './swiftWraith';
+
+/** The Swift designs on trial: the first rebuild and three concepts. */
+export const SWIFT_DESIGNS = { classic: buildSwift, racer: buildSwiftRacer, wraith: buildSwiftWraith, blaze: buildSwiftBlaze };
+export type SwiftDesign = keyof typeof SWIFT_DESIGNS;
+let swiftDesign: SwiftDesign = 'classic';
+
+/** Pick which Swift design the frames are built with (dev: ?swift= in the game, &design= in the viewer). */
+export function setSwiftDesign(name: string | null | undefined): void {
+  if (name && name in SWIFT_DESIGNS) swiftDesign = name as SwiftDesign;
+}
 
 const DIMS: Record<Role, FrameDims> = {
   [ROLE.FW]: { hipY: 5.5, hipX: 0.72, hipDrop: 0.25, thigh: 2.35, shin: 2.3, ankleY: 0.6, spineY: 0.4, chestY: 0.8, shoulderX: 1.5, shoulderY: 0.95, headY: 1.5, headZ: 0.15, upperArm: 1.5, foreArm: 1.45, height: 8.8 },
@@ -20,7 +33,7 @@ export function buildFrame(role: Role, livery: Livery, number: string): MechRig 
   const rig = new MechRig(d);
   const ctx = frameCtx(rig, livery);
   if (role === ROLE.FW) {
-    buildSwift(ctx, number);
+    SWIFT_DESIGNS[swiftDesign](ctx, number);
     return rig;
   }
   const J = rig.joints;

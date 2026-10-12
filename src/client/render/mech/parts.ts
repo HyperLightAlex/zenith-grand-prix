@@ -119,3 +119,29 @@ export function fist(kit: Kit, s: number, k = 1): void {
   // Thumb across the front, on the inside of the hand.
   kit.box('K', 0.1 * k, 0.24 * k, 0.12 * k, { at: [-s * 0.2 * k, -0.34 * k, 0.24 * k], rot: [0.2, 0, s * 0.5], bevel: 0.015 * k });
 }
+
+/**
+ * A long-fingered hand in wrist space, fingers half curled: a palm, three
+ * jointed fingers and a thumb. For the leaner, stranger frames.
+ */
+export function clawHand(kit: Kit, s: number, k = 1): void {
+  kit.box('K', 0.34 * k, 0.36 * k, 0.4 * k, { at: [0, -0.22 * k, 0.04 * k], taper: [0.9, 1] });
+  kit.box('P', 0.36 * k, 0.26 * k, 0.1 * k, { at: [0, -0.2 * k, -0.15 * k] });
+  for (let i = 0; i < 3; i++) {
+    const x = (i - 1) * 0.11 * k;
+    kit.box('K', 0.08 * k, 0.34 * k, 0.09 * k, { at: [x, -0.52 * k, 0.1 * k], rot: [0.45, 0, 0], bevel: 0.012 * k });
+    kit.box('D', 0.07 * k, 0.26 * k, 0.08 * k, { at: [x, -0.74 * k, 0.28 * k], rot: [1.1, 0, 0], bevel: 0.01 * k });
+  }
+  kit.box('K', 0.08 * k, 0.32 * k, 0.09 * k, { at: [-s * 0.2 * k, -0.36 * k, 0.2 * k], rot: [0.4, 0, s * 0.6], bevel: 0.012 * k });
+}
+
+/**
+ * Wheels and a lit hub for each `z`, under an ankle at `ay` above the road:
+ * the inline skate every frame stands on.
+ */
+export function wheels(kit: Kit, ay: number, zs: number[], r = 0.32, w = 0.36): void {
+  for (const wz of zs) {
+    kit.cyl('D', r, r, w, 12, { axis: 'x', at: [0, -ay + r, wz] });
+    kit.cyl('G', r * 0.42, r * 0.42, w + 0.04, 6, { axis: 'x', at: [0, -ay + r, wz] });
+  }
+}
