@@ -69,6 +69,8 @@ check(m.drive > 10, `Drive came from the strips (drive ${m.drive})`);
 
 // ---- abilities
 await page.evaluate(() => { const g = window.game; g.session.race.mechs[g.session.localId].cells = 3; });
+// (The computer may have handed the mech back mid-fight: let go first.)
+if ((await mine()).mode !== 0) { await page.keyboard.press('KeyQ'); await ticks(4); }
 await ticks(20);
 await page.keyboard.press('KeyR');
 await ticks(8);

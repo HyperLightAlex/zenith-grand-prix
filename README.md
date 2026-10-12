@@ -43,7 +43,7 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 | Attack / special | X / Y | J / K |
 | Guard (press just before a hit to parry) | RB | L |
 | Dash (while locked on) | A | Space |
-| Switch target | Flick right stick | Z C |
+| Switch target (while locked on) | Right stick left / right, hold to keep stepping | Z C |
 | Look around / look back | Right stick / R3 | V |
 | Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 |
 | Pause | Start | Esc |
@@ -53,6 +53,12 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 While you are free you steer like any racer. Lock on and the track carries
 you: the stick now moves you around your target (toward it, away from it,
 circling it) and your mech faces it, even if that means skating backwards.
+A fight is carried at race pace, so locking on never parks you.
+
+Locked on, push the right stick left or right to move the lock to the next
+enemy that way on screen. The name tags of the rivals you can switch to show
+a small ◀ or ▶. If your target is knocked out or finishes, the lock moves on
+to the nearest rival by itself.
 
 ## How a race goes
 
@@ -111,8 +117,14 @@ The teams swap sides of the grid each round.
 
 Press T (or Back on a pad) at any time. It has sliders for the limiters, top
 speed, boost, the slipstream, Drive and Cells, every ability, knockout
-points, the camera and the effects. Changes apply at once, to the race you
-are in, and are remembered in the browser. "Copy values" gives a small block
+points, the camera, the effects and the sound. Changes apply at once, to the
+race you are in, and are remembered in the browser.
+
+The Sound tab sets the master, music and effects volumes and the level of
+each continuous layer (engine, wind, afterburner, strip hum, slipstream,
+barrier scrape, low-armour alarm). Under them, "Sound test" plays any of the
+game's one-shot sounds by name, which is the quickest way to find one that
+grates. "Copy values" gives a small block
 of text with whatever you changed; "Load values" takes one back.
 
 During a race the panel is worked with the mouse so the pad and keys keep

@@ -273,7 +273,15 @@ html, body {
 .plate.t1 .tag { background: var(--team1); }
 .plate .bar { width: 4.6em; height: 0.3em; margin: 0.18em auto 0; }
 .plate[hidden] { display: none; }
+.plate .cue { display: inline-block; margin-right: 0.3em; color: var(--paper); font-style: normal; }
+.plate .cue:empty { display: none; }
+.plate.cand .tag { outline: 0.12em solid var(--paper); }
 
+.pop { position: absolute; left: 0; top: 0; font-size: 1.6em; font-weight: 800; font-style: italic; color: #fff; text-shadow: 0 0.06em 0 var(--ink), 0 0 0.3em rgba(15, 21, 36, 0.7); white-space: nowrap; will-change: transform, opacity; pointer-events: none; }
+.pop.big { font-size: 2.3em; color: var(--hazard); }
+.pop.taken { color: var(--danger); font-size: 1.35em; }
+.pop.taken.big { font-size: 1.8em; }
+.pop.blocked { color: var(--mute); font-size: 1.1em; }
 .reticle { position: absolute; left: 0; top: 0; width: 7em; height: 7em; margin: -3.5em 0 0 -3.5em; will-change: transform; }
 .reticle[hidden] { display: none; }
 .reticle i { position: absolute; width: 1.5em; height: 1.5em; border: 0.26em solid var(--danger); animation: lock-pulse 0.7s ease-in-out infinite alternate; }
@@ -493,4 +501,7 @@ html, body {
 .tune-text[hidden] { display: none; }
 .tune-text textarea { width: 100%; background: rgba(0, 0, 0, 0.35); color: var(--paper); border: 1px solid rgba(243, 245, 250, 0.3); font: 500 0.95em/1.25 ui-monospace, Menlo, Consolas, monospace; padding: 0.5em; resize: vertical; user-select: text; -webkit-user-select: text; }
 .tune .status { min-height: 1.2em; font-size: 0.98em; color: var(--signal); }
+.tune-sub { margin: 0.8em 0 0.3em; font-weight: 700; font-style: italic; color: var(--signal); }
+.sound-test { display: flex; flex-wrap: wrap; gap: 0.3em; }
+.sound-test .btn { font-size: 0.95em; }
 .tune-foot { font-size: 0.88em; opacity: 0.6; line-height: 1.25; }

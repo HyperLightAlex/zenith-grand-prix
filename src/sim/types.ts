@@ -194,7 +194,7 @@ export type SimEvent =
   | { type: 'unlock'; mech: number }
   | { type: 'dash'; mech: number }
   | { type: 'boost'; mech: number }
-  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' }
+  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' }
   | { type: 'gate'; mech: number; gate: number; cells: number }
   | { type: 'ability'; mech: number; ability: Ability }
   | { type: 'snared'; mech: number; by: number }

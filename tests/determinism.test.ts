@@ -229,7 +229,8 @@ describe('same seed, same race', () => {
     expect(stateHash(race)).toBe(humanRun.end);
     expect(pressed).toBeGreaterThan(1000);
     expect(byHumans.length).toBeGreaterThan(0);
-    expect(byHumans.length).toBeLessThanOrEqual(2 * 3); // three Cells each, and no way to more
+    // Three Cells at most at a time, and the gates are lit for three laps: no way past that.
+    expect(byHumans.length).toBeLessThanOrEqual(2 * 3 * 3);
     expect(denied.has('weapons')).toBe(true); // mashing it on the formation lap
     expect(humanCount.counts.ability ?? 0).toBeGreaterThanOrEqual(byHumans.length);
   });

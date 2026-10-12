@@ -50,6 +50,8 @@ interface MechVisual {
   vel: THREE.Vector3;
   smokeT: number;
   sparkT: number;
+  /** Which cut of a combo is next, for the blade arcs. */
+  cut: number;
 }
 
 /** Where a mech sits on screen, for name plates and the lock reticle. */
@@ -143,6 +145,7 @@ export class RaceView {
         vel: new THREE.Vector3(),
         smokeT: 0,
         sparkT: 0,
+        cut: 0,
       });
       this.plates.push({ id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false });
     }
@@ -442,7 +445,8 @@ export class RaceView {
         if (e.victim === local) {
           this.cam.shake(e.blocked ? 0.18 : big ? 0.62 : atk.kind === 'melee' ? 0.38 : 0.16);
           if (!e.blocked) this.hurt = Math.min(1, this.hurt + (big ? 0.7 : 0.35));
-          this.onImpact(e.blocked ? 0.2 : big ? 1 : 0.5);
+          // Gunfire rumbles but does not stop the clock; blades and fists do.
+          this.onImpact(e.blocked ? 0.2 : big ? 1 : atk.kind === 'melee' ? 0.5 : 0.25);
         } else if (e.attacker === local) {
           this.cam.shake(big ? 0.4 : atk.kind === 'melee' ? 0.2 : 0.04);
           if (atk.kind === 'melee') this.onImpact(big ? 0.8 : 0.35);
@@ -536,7 +540,11 @@ export class RaceView {
         const v = this.mechs[e.mech];
         const atk = ATTACKS[e.attack];
         if (atk.kind === 'melee') {
-          // A streak of sparks along the strike.
+          // The blade arc, alternating rising and falling cuts through a
+          // combo, and a streak of sparks along the strike.
+          v.cut = (v.cut + 1) % 4;
+          const tilt = atk.heavy ? 0 : [0.35, -0.3, 0.15, -0.4][v.cut];
+          this.fx.slash(v.rig.root, atk.heavy ? 0xffd27a : v.livery.glow, atk.heavy, tilt, v.cut % 2 === 1);
           trackPoint(track, v.s + Math.cos(v.facing) * 3.5, v.d + Math.sin(v.facing) * 3.5, 4.6, v1);
           this.fx.burst(v1, v.vel, atk.heavy ? 10 : 5, 20, v.livery.glow, 0.35, 0.22);
         }

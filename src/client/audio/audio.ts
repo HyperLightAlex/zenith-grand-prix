@@ -2,6 +2,10 @@
 // synth.ts so it can be swapped for sampled audio later without touching
 // gameplay code.
 
+import type { LayerMix } from './layers';
+
+export type { LayerMix } from './layers';
+
 export type SfxName =
   | 'ui_move' | 'ui_select' | 'ui_back'
   | 'count_beep' | 'count_go' | 'launch'
@@ -57,6 +61,8 @@ export interface AudioEngine {
   /** Must be called from a key press, click or button press before anything can sound. */
   unlock(): void;
   setVolumes(master: number, music: number, sfx: number): void;
+  /** Turn the continuous layers (engine, wind, afterburner...) up or down, 0..1 each. */
+  setLayerMix(mix: Partial<LayerMix>): void;
   update(dt: number, scene: AudioScene): void;
   play(name: SfxName, opts?: SfxOptions): void;
   /** 'menu' is calm, 'race' builds with the lap phase, null fades out. */
@@ -67,6 +73,7 @@ export interface AudioEngine {
 export class NullAudio implements AudioEngine {
   unlock(): void {}
   setVolumes(): void {}
+  setLayerMix(): void {}
   update(): void {}
   play(): void {}
   setMusic(): void {}

@@ -27,6 +27,17 @@ export interface Feel {
   trails: number;
   rumble: number;
   bloom: number;
+  // sound
+  volMaster: number;
+  volMusic: number;
+  volEffects: number;
+  mixEngine: number;
+  mixWind: number;
+  mixAfterburner: number;
+  mixStrip: number;
+  mixSlipstream: number;
+  mixScrape: number;
+  mixAlarm: number;
 }
 
 export const DEFAULT_FEEL: Readonly<Feel> = Object.freeze({
@@ -49,6 +60,16 @@ export const DEFAULT_FEEL: Readonly<Feel> = Object.freeze({
   trails: 1,
   rumble: 1,
   bloom: 0.42,
+  volMaster: 0.8,
+  volMusic: 0.45,
+  volEffects: 0.9,
+  mixEngine: 1,
+  mixWind: 1,
+  mixAfterburner: 1,
+  mixStrip: 1,
+  mixSlipstream: 1,
+  mixScrape: 1,
+  mixAlarm: 1,
 });
 
 export type FeelKey = keyof Feel;
@@ -157,6 +178,21 @@ export const TUNE_GROUPS: TuneGroup[] = [
       feel('trails', 'Light trails', 0, 3, 0.1, 'x'),
       feel('rumble', 'Gamepad rumble', 0, 2, 0.05, 'x'),
       feel('bloom', 'Glow', 0, 1.2, 0.02),
+    ],
+  },
+  {
+    title: 'Sound',
+    items: [
+      feel('volMaster', 'Master volume', 0, 1, 0.05, 'pct'),
+      feel('volMusic', 'Music', 0, 1, 0.05, 'pct'),
+      feel('volEffects', 'Effects and engine', 0, 1, 0.05, 'pct', 'Everything that is not music: hits, shots, abilities and all the layers below.'),
+      feel('mixEngine', 'Engine and turbine whine', 0, 1, 0.05, 'pct'),
+      feel('mixWind', 'Wind and road', 0, 1, 0.05, 'pct'),
+      feel('mixAfterburner', 'Afterburner (boost, Overdrive)', 0, 1, 0.05, 'pct'),
+      feel('mixStrip', 'Charge strip hum', 0, 1, 0.05, 'pct'),
+      feel('mixSlipstream', 'Slipstream', 0, 1, 0.05, 'pct'),
+      feel('mixScrape', 'Barrier scrape', 0, 1, 0.05, 'pct'),
+      feel('mixAlarm', 'Low-armour alarm', 0, 1, 0.05, 'pct'),
     ],
   },
 ];

@@ -13,6 +13,7 @@ import {
   ATTACK_MOVE_SCALE,
   BATTLE_CAP_LAP3,
   BATTLE_CAP_MULT,
+  BATTLE_CARRY_PACE,
   BATTLE_MIN_FRAC,
   BATTLE_STAGGER_DRAG,
   BOOST_ACCEL,
@@ -52,6 +53,7 @@ import {
   SPEED_CEILING,
   SPLAT_CREDIT_TICKS,
   STAGGER_DRAG,
+  STAGGER_THROTTLE,
   STEER_RATE,
   TACTIC,
   TICK_RATE,
@@ -74,6 +76,7 @@ import {
   ownTopSpeed,
   packBonus,
   pickTarget,
+  retarget,
   setTarget,
   speedCap,
   syncFromSpeed,
@@ -253,7 +256,8 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // a moment after pulling out, which is what makes a slingshot pass.
   cap *= 1 + towBonus(race, m);
 
-  const throttle = staggered ? 0 : clamp(input.throttle, 0, 1);
+  // A stagger takes the stick and the boost away, not the pace.
+  const throttle = staggered ? Math.min(clamp(input.throttle, 0, 1), STAGGER_THROTTLE) : clamp(input.throttle, 0, 1);
   const brake = staggered ? 0 : clamp(input.brake, 0, 1);
   const want = cap * throttle;
   if (m.speed < want) {
@@ -338,7 +342,9 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     // The track carries you at your target's pace, easing toward the
     // limiter so a long fight does not grind to a halt.
     const ref = race.lapPhase < 3 ? limiter : battleCap(race, m, c, true);
-    const carry = t.vs * 0.88 + ref * 0.12;
+    // Carried at the target's pace, leaning toward race pace, so a fight
+    // moves down the road as fast as the race does.
+    const carry = lerp(t.vs, ref, BATTLE_CARRY_PACE);
     const cap = battleCap(race, m, c, ds > 2) + advance * 0.6;
     // Whatever a dash (or a shove) left over the cap, or under the slowest a
     // fight is carried, is made up at once.
@@ -397,7 +403,7 @@ function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): vo
           setStagger(m, 20);
           race.events.push({ type: 'splat', mech: m.id, damage: dmg });
           const credit = m.lastHitBy >= 0 && race.tick - m.lastHitTick <= SPLAT_CREDIT_TICKS;
-          if (m.hp <= 0.001) retire(race, m, credit ? race.mechs[m.lastHitBy] : null);
+          if (m.hp <= 0.001) retire(race, m, credit ? race.mechs[m.lastHitBy] : null, track);
         }
       }
       if (m.mode === MODE.SPEED) {
@@ -523,6 +529,11 @@ function handleLock(race: RaceState, track: Track, m: MechState, pressed: number
   } else if (pressed & (BTN.TNEXT | BTN.TPREV) && cur) {
     const t = cycleTarget(race, track, m, pressed & BTN.TNEXT ? 1 : -1);
     if (t >= 0 && t !== m.target) setTarget(race, m, t);
+    else if (race.tick - m.deniedTick > 30) {
+      // Say so, rather than doing nothing: there is nobody else in reach.
+      m.deniedTick = race.tick;
+      race.events.push({ type: 'denied', mech: m.id, reason: 'switch' });
+    }
   }
 }
 
@@ -741,7 +752,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
           m.finished = true;
           m.finishTime = (tick - 1 + frac) * DT;
           if (m.target >= 0) setTarget(race, m, -1);
-          for (const o of ms) if (o.target === m.id) setTarget(race, o, -1);
+          for (const o of ms) if (o.target === m.id) retarget(race, track, o, m.id);
           m.act = ACT.NONE;
           clearEffects(m);
           if (race.firstFinishTick < 0) race.firstFinishTick = tick;

@@ -347,8 +347,8 @@ describe('Snare', () => {
     expect(foe.actDur).toBe(SNARE.stagger);
     expect(SNARE.damage).toBe(18);
     expect(SNARE.kind).toBe('shot');
-    // (A quarter of its small knockback down the road, then the hit-slow.)
-    expect(foe.speed).toBeCloseTo((v0 + SNARE.knockback * 0.25) * (1 - SNARE.damage * HIT_SLOW_PER_DAMAGE), 6);
+    // (A tenth of its small knockback down the road, then the hit-slow.)
+    expect(foe.speed).toBeCloseTo((v0 + SNARE.knockback * 0.1) * (1 - SNARE.damage * HIT_SLOW_PER_DAMAGE), 6);
     a.step(SNARE.stagger + 1);
     expect(foe.act).toBe(ACT.NONE);
   });

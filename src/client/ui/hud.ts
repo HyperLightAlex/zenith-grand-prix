@@ -18,6 +18,7 @@ import {
   abilityFor,
   deltaS,
   limiterOf,
+  wrapAngle,
   packBonus,
   teamPoints,
   weaponsFree,
@@ -38,7 +39,7 @@ const TACTIC_LABEL = ['Free', 'Blitz', 'Run', 'Shield', 'Mark'];
 type Device = 'pad' | 'keys';
 
 const KEYS: Record<Device, Record<string, string>> = {
-  pad: { accel: 'RT', brake: 'LT', boost: 'A', dash: 'A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'RB', swap: 'R stick', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
+  pad: { accel: 'RT', brake: 'LT', boost: 'A', dash: 'A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'RB', swap: 'R stick ◀ ▶', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
   keys: { accel: 'W', brake: 'S', boost: 'Space', dash: 'Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
 };
 
@@ -151,7 +152,7 @@ export class Hud {
   private targetHp = h('i');
   private targetGd = h('i');
   private reticle = h('div.reticle', h('i'), h('i'), h('i'), h('i'));
-  private plates: Array<{ el: HTMLElement; hp: HTMLElement }> = [];
+  private plates: Array<{ el: HTMLElement; hp: HTMLElement; cue: HTMLElement; side: number }> = [];
   private lastTarget = -1;
   // banners
   private banner = h('div.banner');
@@ -165,6 +166,8 @@ export class Hud {
   private retired = h('div.retired');
   private retiredSmall = h('div.small', '');
   private frame = 0;
+  /** Damage numbers over whoever was hit, for blows the player lands or takes. */
+  private pops: Array<{ el: HTMLElement; victim: number; t: number; dx: number }> = [];
   private lastHp: number[] = [];
   private spoke: number[] = [];
   private seq = 0;
@@ -255,15 +258,18 @@ export class Hud {
       this.tower.append(el);
       this.rows.push({ el, pos, hp, gap, place: -1 });
       const php = h('i');
-      const plate = h('div.plate' + (m.team ? '.t1' : ''), h('span.tag', `${m.name} ${ROLE_KEYS[m.role]}`), h('div.bar', php));
+      const cue = h('span.cue', '');
+      const plate = h('div.plate' + (m.team ? '.t1' : ''), cue, h('span.tag', `${m.name} ${ROLE_KEYS[m.role]}`), h('div.bar', php));
       plate.hidden = true;
       // Under the panels, so a name never covers the running order.
       this.root.prepend(plate);
-      this.plates.push({ el: plate, hp: php });
+      this.plates.push({ el: plate, hp: php, cue, side: 0 });
     }
     this.buildPips(race.rules.cellMax);
     this.lastCells = me0(race, localId);
     this.comms.replaceChildren();
+    this.pops.forEach((p) => p.el.remove());
+    this.pops = [];
     this.banner.hidden = true;
     this.count.hidden = true;
     this.notice.hidden = true;
@@ -558,17 +564,47 @@ export class Hud {
       this.lastTarget = -1;
     }
 
-    // Name plates.
+    // Name plates. While locked on to a rival, the others you could switch to
+    // carry an arrow for the way to flick the stick.
+    const lockedOn = focus.target >= 0 && !focus.retired ? race.mechs[focus.target] : null;
+    const curAng = lockedOn ? wrapAngle(Math.atan2(lockedOn.d - focus.d, deltaS(this.track, lockedOn.s, focus.s)) - focus.facing) : 0;
     for (const m of race.mechs) {
       const p = plates[m.id];
       const pl = this.plates[m.id];
       const show = p.visible && m.id !== focusId && !m.retired && p.dist < 330 && p.dist > 14;
       if (pl.el.hidden === show) pl.el.hidden = !show;
+      let side = 0;
+      if (lockedOn && m !== lockedOn && m.id !== focusId && (m.team === focus.team) === (lockedOn.team === focus.team) && !m.retired && !m.finished) {
+        const ds = deltaS(this.track, m.s, focus.s);
+        if (Math.hypot(ds, m.d - focus.d) <= LOCK_BREAK && (m.team === focus.team || m.cloakT <= 0)) {
+          side = wrapAngle(Math.atan2(m.d - focus.d, ds) - focus.facing) >= curAng ? 1 : -1;
+        }
+      }
+      if (side !== pl.side) {
+        pl.side = side;
+        setText(pl.cue, side > 0 ? '▶' : side < 0 ? '◀' : '');
+        setClass(pl.el, 'cand', side !== 0);
+      }
       if (show) {
         const sc = Math.max(0.62, Math.min(1.05, 60 / p.dist + 0.5));
         pl.el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, -100%) scale(${sc.toFixed(2)})`;
         pl.hp.style.transform = `scaleX(${Math.max(0, m.hp / CLASSES[m.role].maxHp).toFixed(2)})`;
       }
+    }
+
+    // Damage numbers: rise and fade over the mech that took the hit.
+    for (let i = this.pops.length - 1; i >= 0; i--) {
+      const pop = this.pops[i];
+      pop.t += dt;
+      const p = plates[pop.victim];
+      if (pop.t > 0.9 || !p || !p.visible) {
+        pop.el.remove();
+        this.pops.splice(i, 1);
+        continue;
+      }
+      const rise = 46 + pop.t * 70;
+      pop.el.style.transform = `translate(${(p.cx + pop.dx).toFixed(1)}px, ${(p.cy - rise).toFixed(1)}px) translate(-50%, -50%) scale(${(pop.t < 0.08 ? 1.5 - pop.t * 6 : 1).toFixed(2)})`;
+      pop.el.style.opacity = String(pop.t < 0.55 ? 1 : Math.max(0, 1 - (pop.t - 0.55) / 0.35));
     }
 
     // Tower and map, a few times a second.
@@ -729,7 +765,7 @@ export class Hud {
         break;
       case 'denied':
         if (e.mech === this.localId) {
-          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 || race.rules.gateValueLater <= 0 ? 'No Cells. The gates only light on the formation lap' : 'No Cells. Thread a gold gate to earn one back' }[e.reason];
+          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 || race.rules.gateValueLater <= 0 ? 'No Cells. The gates only light on the formation lap' : 'No Cells. Thread a gold gate to earn one back', switch: 'No other target in reach' }[e.reason];
           this.showNotice(why, e.reason === 'weapons');
         }
         break;
@@ -767,6 +803,17 @@ export class Hud {
         }
         break;
       }
+      case 'hit':
+        if (e.attacker === this.localId || e.victim === this.localId) {
+          const mine = e.attacker === this.localId;
+          const dmg = Math.round(e.damage);
+          if (dmg <= 0 && !e.blocked) break;
+          const el = h('div.pop' + (mine ? '' : '.taken') + (e.heavy && !e.blocked ? '.big' : '') + (e.blocked ? '.blocked' : ''), e.blocked ? `${dmg} blocked` : String(dmg));
+          this.root.append(el);
+          this.pops.push({ el, victim: e.victim, t: 0, dx: (Math.random() - 0.5) * 50 });
+          while (this.pops.length > 12) this.pops.shift()!.el.remove();
+        }
+        break;
       case 'parry':
         if (e.mech === this.localId) this.showNotice('Parry');
         break;

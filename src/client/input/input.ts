@@ -48,6 +48,8 @@ export class Input {
   private prevStickY = 0;
   private prevFlick = 0;
   private flickHold = 0;
+  /** When the held flick next repeats (performance.now, ms). */
+  private flickNext = 0;
   /** Buttons that were down when a menu closed: ignored until they are let go. */
   private swallow = 0;
   onDeviceChange: (d: 'pad' | 'keys') => void = () => {};
@@ -159,9 +161,17 @@ export class Input {
       if (b(PAD.LB)) pb |= BTN.LOCK;
       if (b(PAD.B)) pb |= BTN.ABILITY;
       if (b(PAD.LS)) pb |= BTN.ALLY;
-      // Flick the right stick to change target.
-      const flick = Math.abs(rx) > 0.7 ? Math.sign(rx) : 0;
-      if (flick !== 0 && flick !== this.prevFlick) this.flickHold = 3;
+      // Flick the right stick left or right to change target; hold it over
+      // and it keeps stepping, a little under three targets a second.
+      const flick = Math.abs(rx) > 0.6 ? Math.sign(rx) : 0;
+      const now = performance.now();
+      if (flick !== 0 && flick !== this.prevFlick) {
+        this.flickHold = 3;
+        this.flickNext = now + 450;
+      } else if (flick !== 0 && now >= this.flickNext) {
+        this.flickHold = 3;
+        this.flickNext = now + 350;
+      }
       if (this.flickHold > 0) {
         pb |= this.prevFlickDir(flick) > 0 ? BTN.TNEXT : BTN.TPREV;
         this.flickHold--;

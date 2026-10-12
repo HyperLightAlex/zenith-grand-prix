@@ -936,7 +936,8 @@ describe('Break Away', () => {
   it('even from a standstill it comes out at 1.1 x the cap', () => {
     const a = new Arena(2);
     const fw = giveCells(a.put(FW0, -200, 0, 0));
-    a.inputs[FW0].throttle = 1;
+    // Off the throttle: a staggered mech still rides on whatever throttle it holds.
+    a.inputs[FW0].throttle = 0;
     setStagger(fw, 60);
     a.step(3);
     expect(fw.speed).toBe(0);

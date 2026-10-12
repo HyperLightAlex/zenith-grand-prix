@@ -37,7 +37,7 @@ import {
   type Ability,
   type AttackDef,
 } from './config';
-import { addVelocity, classOf, clearEffects, isActive, pickTarget, setTarget, speedCap, syncFromSpeed } from './core';
+import { addVelocity, classOf, clearEffects, isActive, pickTarget, retarget, setTarget, speedCap, syncFromSpeed } from './core';
 import { ticks } from './rules';
 import { rngNext, wrapAngle } from './math';
 import { deltaS, type Track } from './track';
@@ -258,7 +258,7 @@ export function setStagger(m: MechState, dur: number): void {
   m.comboQueued = false;
 }
 
-export function retire(race: RaceState, m: MechState, by: MechState | null): void {
+export function retire(race: RaceState, m: MechState, by: MechState | null, track?: Track): void {
   if (m.retired) return;
   m.retired = true;
   m.retireTick = race.tick;
@@ -269,7 +269,9 @@ export function retire(race: RaceState, m: MechState, by: MechState | null): voi
   clearEffects(m);
   if (m.target >= 0) setTarget(race, m, -1);
   for (const o of race.mechs) {
-    if (o.target === m.id) setTarget(race, o, -1);
+    if (o.target !== m.id) continue;
+    if (track && !o.retired && !o.finished) retarget(race, track, o, m.id);
+    else setTarget(race, o, -1);
   }
   if (by) by.kos++;
   race.events.push({ type: 'ko', mech: m.id, by: by ? by.id : -1 });
@@ -299,7 +301,7 @@ export function applyHit(
   // not work as a free push down the road.
   let us = ds / dist;
   const ud = dd / dist;
-  if (us > 0) us *= 0.25;
+  if (us > 0) us *= 0.1;
   const toAttacker = Math.atan2(-dd, -ds);
   const front = Math.abs(wrapAngle(toAttacker - victim.facing)) <= GUARD_ARC;
   let dmg = a.damage;
@@ -385,7 +387,7 @@ export function applyHit(
     s: victim.s,
     d: victim.d,
   });
-  if (victim.hp <= 0.001) retire(race, victim, att);
+  if (victim.hp <= 0.001) retire(race, victim, att, track);
   else if (attackIdx === ATK.MF_SNARE && !blocked && !unstoppable) {
     victim.snareT = ticks(race.rules.snareSecs);
     victim.boosting = false;

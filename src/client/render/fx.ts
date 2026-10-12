@@ -187,6 +187,42 @@ function ringTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/** A blade arc: a crescent of light swept round a mech for a moment. */
+interface Slash {
+  mesh: THREE.Mesh;
+  mat: THREE.MeshBasicMaterial;
+  life: number;
+  maxLife: number;
+  /** -1 for a backhand cut (mirrored), else 1. */
+  flip: number;
+  size: number;
+}
+
+function slashTexture(): THREE.CanvasTexture {
+  // Bright along the outer edge, fading inward and toward both ends.
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 32;
+  const g = c.getContext('2d')!;
+  const along = g.createLinearGradient(0, 0, 256, 0);
+  along.addColorStop(0, 'rgba(255,255,255,0)');
+  along.addColorStop(0.35, 'rgba(255,255,255,0.9)');
+  along.addColorStop(0.75, 'rgba(255,255,255,1)');
+  along.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = along;
+  g.fillRect(0, 0, 256, 32);
+  g.globalCompositeOperation = 'destination-in';
+  const across = g.createLinearGradient(0, 0, 0, 32);
+  across.addColorStop(0, 'rgba(255,255,255,0)');
+  across.addColorStop(0.7, 'rgba(255,255,255,0.7)');
+  across.addColorStop(1, 'rgba(255,255,255,1)');
+  g.fillStyle = across;
+  g.fillRect(0, 0, 256, 32);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 interface Flash {
   mesh: THREE.Mesh;
   mat: THREE.MeshBasicMaterial;
@@ -305,8 +341,10 @@ export class Fx {
   readonly sparks = new Particles(1400, true);
   readonly smoke = new Particles(260, false);
   private flashes: Flash[] = [];
+  private slashes: Slash[] = [];
   private star = starTexture();
   private ring = ringTexture();
+  private slashTex = slashTexture();
   private tracers: THREE.InstancedMesh;
   private tracerCount = 0;
   private tmpColor = new THREE.Color();
@@ -322,6 +360,29 @@ export class Fx {
       this.group.add(mesh);
       this.flashes.push({ mesh, mat, life: 0, maxLife: 1, from: 1, to: 1, follow: null, offset: new THREE.Vector3(), spin: 0 });
     }
+    // Blade arcs: a ring sector around the mech's forward direction (+Z in
+    // its own space), with texture u running along the sweep.
+    for (let i = 0; i < 8; i++) {
+      const arc = 1.25;
+      const geo = new THREE.RingGeometry(2.6, 7, 24, 1, -Math.PI / 2 - arc, arc * 2);
+      geo.rotateX(-Math.PI / 2);
+      // Map u along the sweep, v across it (inner to outer).
+      const pos = geo.attributes.position;
+      const uv = geo.attributes.uv;
+      for (let k = 0; k < pos.count; k++) {
+        const x = pos.getX(k);
+        const z = pos.getZ(k);
+        const r = Math.hypot(x, z);
+        const a = Math.atan2(x, z); // -arc..arc around +Z
+        uv.setXY(k, (a + arc) / (arc * 2), (r - 2.6) / 4.4);
+      }
+      const mat = new THREE.MeshBasicMaterial({ map: this.slashTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.visible = false;
+      mesh.renderOrder = 7;
+      this.slashes.push({ mesh, mat, life: 0, maxLife: 1, flip: 1, size: 1 });
+    }
+
     const tg = new THREE.BoxGeometry(0.22, 0.22, 1);
     tg.translate(0, 0, -0.5);
     this.tracers = new THREE.InstancedMesh(tg, new THREE.MeshBasicMaterial({ toneMapped: false }), MAX_TRACERS);
@@ -342,6 +403,12 @@ export class Fx {
     (this.sparks.points.material as THREE.Material).dispose();
     (this.smoke.points.material as THREE.Material).dispose();
     for (const f of this.flashes) f.mat.dispose();
+    for (const s of this.slashes) {
+      s.mesh.removeFromParent();
+      s.mesh.geometry.dispose();
+      s.mat.dispose();
+    }
+    this.slashTex.dispose();
     this.star.dispose();
     this.ring.dispose();
     (this.tracers.material as THREE.Material).dispose();
@@ -397,6 +464,31 @@ export class Fx {
     }
   }
 
+  /**
+   * A blade arc round a mech: attached to `parent` (the mech's root, which
+   * faces +Z), at chest height, tilted by `tilt` radians for a rising or
+   * falling cut.
+   */
+  slash(parent: THREE.Object3D, color: number, heavy: boolean, tilt: number, flip: boolean): void {
+    let s = this.slashes[0];
+    for (const c of this.slashes) {
+      if (c.life <= 0) {
+        s = c;
+        break;
+      }
+      if (c.life < s.life) s = c;
+    }
+    if (s.mesh.parent !== parent) parent.add(s.mesh);
+    s.life = s.maxLife = heavy ? 0.24 : 0.16;
+    s.mat.color.set(color).multiplyScalar(heavy ? 2.4 : 1.8);
+    s.mesh.position.set(0, heavy ? 4.4 : 4.8, 0.4);
+    s.mesh.rotation.set(0, 0, tilt);
+    s.flip = flip ? -1 : 1;
+    s.size = heavy ? 1.15 : 1;
+    s.mesh.scale.set(s.flip * 0.9 * s.size, 1, 0.9 * s.size);
+    s.mesh.visible = true;
+  }
+
   /** Starburst. Follows `follow` (plus an offset) if given, so it stays on a moving mech. */
   flash(at: THREE.Vector3, size: number, color: number, life = 0.16, follow: THREE.Object3D | null = null, ring = false): void {
     let f = this.flashes[0];
@@ -444,6 +536,18 @@ export class Fx {
   }
 
   update(dt: number, camera: THREE.Camera): void {
+    for (const s of this.slashes) {
+      if (s.life <= 0) {
+        s.mesh.visible = false;
+        continue;
+      }
+      s.life -= dt;
+      const k = 1 - Math.max(0, s.life / s.maxLife);
+      s.mat.opacity = 1 - k * k;
+      // A quick sweep outwards as it fades.
+      const grow = (0.9 + 0.2 * k) * s.size;
+      s.mesh.scale.set(s.flip * grow, 1, grow);
+    }
     this.sparks.update(dt, 0);
     this.smoke.update(dt, 2.2);
     for (const f of this.flashes) {

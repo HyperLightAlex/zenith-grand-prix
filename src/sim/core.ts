@@ -1,6 +1,6 @@
 // Helpers shared by movement, combat and AI.
 
-import { CLASSES, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, type ClassDef } from './config';
+import { CLASSES, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, type ClassDef } from './config';
 import { clamp, wrapAngle } from './math';
 import { deltaS, type Track } from './track';
 import type { MechState, RaceState } from './types';
@@ -153,7 +153,12 @@ export function pickTarget(
   return best;
 }
 
-/** Next candidate clockwise (dir = 1) or anticlockwise from the current target. */
+/**
+ * The next target to the right (dir = 1) or left (dir = -1) of the current
+ * one, as the pilot sees them: by angle from the way the mech is facing, which
+ * in a lock is the way the camera looks. Past the last one it wraps round.
+ * Anything the lock could hold (inside LOCK_BREAK) can be switched to.
+ */
 export function cycleTarget(race: RaceState, track: Track, m: MechState, dir: number): number {
   const cur = m.target >= 0 ? race.mechs[m.target] : null;
   const ally = cur ? cur.team === m.team : false;
@@ -163,8 +168,8 @@ export function cycleTarget(race: RaceState, track: Track, m: MechState, dir: nu
     if ((o.team === m.team) !== ally) continue;
     const ds = deltaS(track, o.s, m.s);
     const dd = o.d - m.d;
-    if (Math.hypot(ds, dd) > LOCK_RANGE) continue;
-    list.push({ id: o.id, ang: Math.atan2(dd, ds) });
+    if (Math.hypot(ds, dd) > LOCK_BREAK) continue;
+    list.push({ id: o.id, ang: wrapAngle(Math.atan2(dd, ds) - m.facing) });
   }
   if (list.length === 0) return -1;
   list.sort((a, b) => a.ang - b.ang || a.id - b.id);
@@ -172,3 +177,18 @@ export function cycleTarget(race: RaceState, track: Track, m: MechState, dir: nu
   if (idx < 0) return list[0].id;
   return list[(idx + dir + list.length) % list.length].id;
 }
+
+/**
+ * When the mech a pilot is locked on to is knocked out or finishes, a person
+ * flying is moved straight on to the nearest other rival close by, so a fight
+ * does not drop them back into free steering mid-combo. Computer pilots pick
+ * their own targets.
+ */
+export function retarget(race: RaceState, track: Track, m: MechState, lost: number): void {
+  const prev = m.target >= 0 ? race.mechs[m.target] : null;
+  const next = m.human && prev && prev.team !== m.team ? pickTarget(race, track, m, false, lost, RETARGET_RANGE) : -1;
+  setTarget(race, m, next);
+}
+
+/** How near another rival must be for a lock to move on to it by itself. */
+export const RETARGET_RANGE = 60;

@@ -15,7 +15,7 @@
 import type { AudioEngine, AudioScene, SfxName, SfxOptions } from './audio';
 import type { Ctx } from './dsp';
 import { clamp, compressorFullRangeGain, makeImpulse, makeNoise, Rng, softClipCurve } from './dsp';
-import { EngineLayers } from './layers';
+import { EngineLayers, type LayerMix } from './layers';
 import type { MusicTrack, TrackInfo, TrackName } from './music';
 import { createTrack } from './music';
 import type { Voice } from './sfx';
@@ -152,6 +152,16 @@ export class SynthAudio implements AudioEngine {
       g.sfxBus.gain.setTargetAtTime(this.vol.sfx, now, 0.03);
       g.sfxSend.gain.setTargetAtTime(this.vol.sfx, now, 0.03);
       g.engineBus.gain.setTargetAtTime(this.vol.sfx, now, 0.03);
+    });
+  }
+
+  /** Kept until the audio graph exists, then handed on. */
+  private layerMix: Partial<LayerMix> = {};
+
+  setLayerMix(mix: Partial<LayerMix>): void {
+    this.guard(() => {
+      this.layerMix = { ...this.layerMix, ...mix };
+      this.g?.layers.setMix(this.layerMix);
     });
   }
 
@@ -360,6 +370,7 @@ export class SynthAudio implements AudioEngine {
     const musicWetIn = gain(1, musicSend);
 
     const layers = new EngineLayers(ctx, white, pink, engineBus);
+    layers.setMix(this.layerMix);
 
     this.g = { ctx, live, rng, white, pink, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
     this.applyMusic();

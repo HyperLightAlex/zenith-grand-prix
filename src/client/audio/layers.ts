@@ -16,12 +16,30 @@ const LEVEL = {
   wind: 0.27,
   road: 0.155,
   draft: 1,
-  boostNoise: 0.75,
-  boostTone: 0.11,
+  boostNoise: 0.8,
   strip: 0.12,
   scrape: 1.6,
-  alarm: 0.12,
+  alarm: 0.08,
 };
+
+/**
+ * The player's own mix of the continuous layers, 0..1 each (the tuning
+ * panel's Sound tab). Multiplies the levels above.
+ */
+export interface LayerMix {
+  engine: number;
+  wind: number;
+  afterburner: number;
+  strip: number;
+  slipstream: number;
+  scrape: number;
+  alarm: number;
+}
+
+export const DEFAULT_LAYER_MIX: Readonly<LayerMix> = Object.freeze({ engine: 1, wind: 1, afterburner: 1, strip: 1, slipstream: 1, scrape: 1, alarm: 1 });
+
+/** Beeps the low-armour alarm gives when armour first goes critical. It does not keep going. */
+const ALARM_BEEPS = 3;
 
 /**
  * Speed at the formation lap's limiter; the scene's speed is divided by this.
@@ -99,8 +117,6 @@ export class EngineLayers {
   private readonly draftPatch: Patch;
   private readonly boostCut: Glide;
   private readonly boostNoise: Glide;
-  private readonly boostFreq: Glide;
-  private readonly boostTone: Glide;
   private readonly boostPatch: Patch;
   private readonly stripFreq: Glide[];
   private readonly stripGain: Glide;
@@ -114,6 +130,8 @@ export class EngineLayers {
   private stripT = 0;
   private alarmOn = false;
   private alarmNext = 0;
+  private alarmLeft = 0;
+  private mix: LayerMix = { ...DEFAULT_LAYER_MIX };
 
   constructor(
     private readonly ctx: Ctx,
@@ -180,12 +198,14 @@ export class EngineLayers {
     air.connect(draftBp);
     draftBp.connect(draftG);
 
-    // --- afterburner: a fluttering band of white noise and a tone that climbs while it burns.
+    // --- afterburner: a low, fluttering band of white noise. (Version 0.2 had
+    // a sawtooth tone that climbed for as long as the boost burned; players
+    // found it shrill and it was taken out.)
     const hiss = this.loop(white);
     const boostOut = this.gain(1, null);
     this.boostPatch = new Patch(boostOut, out);
-    const boostBp = this.filter('bandpass', 500, 0.8);
-    this.boostCut = new Glide(boostBp.frequency, 0.1, 500);
+    const boostBp = this.filter('bandpass', 320, 0.9);
+    this.boostCut = new Glide(boostBp.frequency, 0.1, 320);
     const boostNG = this.gain(0, boostOut);
     this.boostNoise = new Glide(boostNG.gain, 0.04, 0);
     // A fast flutter on the noise sets it apart from plain wind.
@@ -193,13 +213,6 @@ export class EngineLayers {
     this.osc('triangle', 34).connect(this.gain(0.3, flutter.gain));
     hiss.connect(boostBp);
     boostBp.connect(flutter);
-    const boostOsc = this.osc('sawtooth', 130);
-    this.boostFreq = new Glide(boostOsc.frequency, 0.08, 130);
-    const boostLp = this.filter('lowpass', 1100, 0.7);
-    const boostTG = this.gain(0, boostOut);
-    this.boostTone = new Glide(boostTG.gain, 0.04, 0);
-    boostOsc.connect(boostLp);
-    boostLp.connect(boostTG);
 
     // --- charge strip: two partials with a fast tremolo, pitch rising while you ride it.
     const trem = this.gain(0.65, null);
@@ -234,7 +247,15 @@ export class EngineLayers {
     this.osc('sine', 659.3).connect(alarmG);
     this.osc('sine', 1318.5).connect(this.gain(0.25, alarmG));
 
-    this.taps = { engine: engG, whine: whineG, wind: windG, road: roadG, draft: draftG, boostNoise: boostNG, boostTone: boostTG, strip: stripG, scrape: scrapeG, alarm: alarmG };
+    this.taps = { engine: engG, whine: whineG, wind: windG, road: roadG, draft: draftG, boostNoise: boostNG, strip: stripG, scrape: scrapeG, alarm: alarmG };
+  }
+
+  /** The player's mix of the layers. Values are 0..1; anything else is ignored. */
+  setMix(mix: Partial<LayerMix>): void {
+    for (const k of Object.keys(DEFAULT_LAYER_MIX) as Array<keyof LayerMix>) {
+      const v = mix[k];
+      if (typeof v === 'number' && Number.isFinite(v)) this.mix[k] = clamp(v, 0, 1);
+    }
   }
 
   /** Pitches here only ever glide, so one value per render block is plenty. */
@@ -311,24 +332,25 @@ export class EngineLayers {
     for (let i = 0; i < this.f0.length; i++) this.f0[i].to(f0 * this.ratios[i], now);
     const over = Math.max(0, xs - 1);
     this.engCut.to((170 + 950 * xs ** 1.2 * (0.5 + 0.5 * thr)) * (s.battle ? 0.6 : 1), now);
-    this.engGain.to(on ? LEVEL.engine * (0.45 + 0.35 * thr + 0.2 * x1) * (1 + 0.5 * over) * (s.battle ? 0.68 : 1) : 0, now);
-    this.whineGain.to(on ? LEVEL.whine * x1 ** 1.5 * (1 + over) * (0.5 + 0.5 * thr) * (s.battle ? 0.5 : 1) : 0, now);
+    const mix = this.mix;
+    this.engGain.to(on ? LEVEL.engine * mix.engine * (0.45 + 0.35 * thr + 0.2 * x1) * (1 + 0.5 * over) * (s.battle ? 0.68 : 1) : 0, now);
+    // The whine only grows a little past the formation lap's limiter: at the
+    // speeds of laps 2 and 3 it was getting shrill.
+    this.whineGain.to(on ? LEVEL.whine * mix.engine * x1 ** 1.5 * (1 + 0.2 * over) * (0.5 + 0.5 * thr) * (s.battle ? 0.5 : 1) : 0, now);
 
     // Air and road. In a slipstream the broad rush drops and a hollow band takes over.
     const draft = on && s.drafting;
     this.windCut.to((300 + 1700 * xs) * (draft ? 0.7 : 1), now);
-    this.windGain.to(on ? LEVEL.wind * xs ** 1.8 * (draft ? 0.6 : 1) : 0, now);
-    this.roadGain.to(on ? LEVEL.road * xs : 0, now);
+    this.windGain.to(on ? LEVEL.wind * mix.wind * xs ** 1.8 * (draft ? 0.6 : 1) : 0, now);
+    this.roadGain.to(on ? LEVEL.road * mix.wind * xs : 0, now);
     this.draftPatch.set(draft, now, TAIL);
-    this.draftGain.to(draft ? LEVEL.draft * xs ** 1.2 : 0, now);
+    this.draftGain.to(draft ? LEVEL.draft * mix.slipstream * xs ** 1.2 : 0, now);
 
-    // Afterburner. An Overdrive burns louder and brighter than a boost, and
-    // its tone climbs a third further, to E above the boost's C.
+    // Afterburner: a low roar that opens a little as it burns. An Overdrive is
+    // a touch fuller than a boost, but no higher.
     this.boostPatch.set(burn, now, TAIL);
-    this.boostCut.to(500 + (surge ? 1300 : 900) * Math.min(1, this.boostT / 1.2), now);
-    this.boostFreq.to(130 * 2 ** ((surge ? 1.34 : 1) * Math.min(1, this.boostT / 2)), now);
-    this.boostNoise.to(burn ? LEVEL.boostNoise * (surge ? 1.3 : 1) : 0, now, burn ? 0.04 : 0.25);
-    this.boostTone.to(burn ? LEVEL.boostTone * (surge ? 1.3 : 1) : 0, now, burn ? 0.05 : 0.2);
+    this.boostCut.to(320 + (surge ? 480 : 360) * Math.min(1, this.boostT / 1.2), now);
+    this.boostNoise.to(burn ? LEVEL.boostNoise * mix.afterburner * (surge ? 1.15 : 1) : 0, now, burn ? 0.06 : 0.25);
 
     // Charge strip.
     const strip = on && s.onStrip;
@@ -336,23 +358,29 @@ export class EngineLayers {
     const sf = 587 * (1 + 0.7 * (1 - Math.exp(-this.stripT)));
     this.stripFreq[0].to(sf, now);
     this.stripFreq[1].to(sf * 2.007, now);
-    this.stripGain.to(strip ? LEVEL.strip : 0, now, strip ? 0.06 : 0.18);
+    this.stripGain.to(strip ? LEVEL.strip * mix.strip : 0, now, strip ? 0.06 : 0.18);
 
     // Scrape.
     const scrape = on && s.scraping;
     this.scrapePatch.set(scrape, now, TAIL);
-    this.scrapeGain.to(scrape ? LEVEL.scrape * (0.5 + 0.5 * x1) : 0, now, scrape ? 0.03 : 0.08);
+    this.scrapeGain.to(scrape ? LEVEL.scrape * mix.scrape * (0.5 + 0.5 * x1) : 0, now, scrape ? 0.03 : 0.08);
 
-    // Alarm: two soft beeps a second, queued ahead of the clock like the music.
+    // Alarm: a few soft beeps when armour first goes critical, queued ahead of
+    // the clock like the music, and then quiet. (It used to beep twice a
+    // second for the rest of the race.)
     const alarm = on && s.critical;
     this.alarmPatch.set(alarm, now, TAIL);
     if (alarm) {
-      if (!this.alarmOn || this.alarmNext < now - 0.05) this.alarmNext = now + 0.03;
-      while (this.alarmNext < now + ahead) {
-        const t = this.alarmNext;
-        this.alarmGain.setTargetAtTime(LEVEL.alarm, t, 0.008);
+      if (!this.alarmOn) {
+        this.alarmNext = now + 0.03;
+        this.alarmLeft = ALARM_BEEPS;
+      }
+      while (this.alarmLeft > 0 && this.alarmNext < now + ahead) {
+        const t = Math.max(this.alarmNext, now);
+        this.alarmGain.setTargetAtTime(LEVEL.alarm * mix.alarm, t, 0.008);
         this.alarmGain.setTargetAtTime(0, t + 0.1, 0.03);
-        this.alarmNext += 0.5;
+        this.alarmNext = t + 0.5;
+        this.alarmLeft--;
       }
     } else if (this.alarmOn) {
       this.alarmGain.cancelScheduledValues(now);

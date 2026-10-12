@@ -122,8 +122,10 @@ export class Game {
     this.tuning.onChange = (kind) => {
       if (kind !== 'feel' && this.session) Object.assign(this.session.race.rules, this.tuning.rules);
       this.input.rumbleScale = this.tuning.feel.rumble;
+      if (kind !== 'rule') this.applySound();
     };
     this.input.rumbleScale = this.tuning.feel.rumble;
+    this.applySound();
     this.input.onDeviceChange = (d) => {
       this.hud.setDevice(d);
       this.menus.setDevice(d);
@@ -171,7 +173,9 @@ export class Game {
     this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel);
     this.view.onImpact = (strength) => {
       this.input.rumble(strength, 90 + strength * 160);
-      if (strength >= 0.8) this.session.freeze(0.05);
+      // Hit-stop: a beat's pause on every blow you land or take, longer for the big ones.
+      if (strength >= 0.8) this.session.freeze(0.075);
+      else if (strength >= 0.35) this.session.freeze(0.035);
     };
     this.resultsAt = -1;
     this.slowmo = 0;
@@ -203,6 +207,21 @@ export class Game {
     this.setSession(choice, 1);
     this.view.cam.mode = 'orbit';
     this.view.cam.reset();
+  }
+
+  /** Volumes and the layer mix from the tuning panel's Sound tab. */
+  private applySound(): void {
+    const f = this.tuning.feel;
+    this.audio.setVolumes(f.volMaster, f.volMusic, f.volEffects);
+    this.audio.setLayerMix({
+      engine: f.mixEngine,
+      wind: f.mixWind,
+      afterburner: f.mixAfterburner,
+      strip: f.mixStrip,
+      slipstream: f.mixSlipstream,
+      scrape: f.mixScrape,
+      alarm: f.mixAlarm,
+    });
   }
 
   /** From the results (or a restart after the flag): the next round, or a fresh match if this one is decided. */

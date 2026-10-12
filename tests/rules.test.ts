@@ -59,7 +59,7 @@ describe('the default rules', () => {
       driveStripLap1: 6,
       driveDraft: 3,
       lap1Trickle: 0,
-      battleMove: 1.35,
+      battleMove: 1.6,
       cellMax: 3,
       cellStart: 0,
       gateValue: 0.5,

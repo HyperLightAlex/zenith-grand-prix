@@ -2,6 +2,7 @@
 // effect at once. It sits down the right-hand side and never pauses the game,
 // so a value can be changed with the mouse while the race carries on. Opened
 // from the pause menu it can also be driven from the pad or the keyboard.
+import type { SfxName } from '../audio/audio';
 import type { MenuInput } from '../input/input';
 import { TUNE_GROUPS, showValue, type TuneItem, type Tuning } from '../game/tuning';
 import { h, setClass, setText } from './dom';
@@ -15,8 +16,49 @@ interface Row {
 
 export interface TuningPanelCallbacks {
   onClose(): void;
-  onSound(name: 'ui_move' | 'ui_select' | 'ui_back'): void;
+  onSound(name: SfxName): void;
 }
+
+/** Every one-shot sound, by what it is for, so a sound can be found by ear and named. */
+const SOUND_TEST: Array<[SfxName, string]> = [
+  ['boost', 'Boost (lit)'],
+  ['dash', 'Dash'],
+  ['launch', 'Perfect launch'],
+  ['lock', 'Lock on'],
+  ['unlock', 'Let go'],
+  ['denied', 'Refused'],
+  ['swing_light', 'Light swing'],
+  ['swing_heavy', 'Heavy swing'],
+  ['hit_light', 'Light hit'],
+  ['hit_heavy', 'Heavy hit'],
+  ['block', 'Block'],
+  ['parry', 'Parry'],
+  ['guard_break', 'Guard break'],
+  ['shot_carbine', 'Carbine'],
+  ['shot_scatter', 'Scatter cannon'],
+  ['bullet_hit', 'Bullet hit'],
+  ['wall', 'Barrier hit'],
+  ['bump', 'Bump'],
+  ['ko', 'Knockout'],
+  ['critical', 'Armour critical'],
+  ['gate', 'Gate'],
+  ['cells_full', 'Cells full'],
+  ['overdrive', 'Overdrive'],
+  ['breakaway', 'Break Away'],
+  ['snare_shot', 'Snare shot'],
+  ['snared', 'Snared'],
+  ['pulse', 'Disruptor'],
+  ['ram', 'Ram'],
+  ['aegis', 'Aegis'],
+  ['count_beep', 'Countdown'],
+  ['count_go', 'Go'],
+  ['lap', 'Lap'],
+  ['lap_phase', 'Battle lap'],
+  ['final_lap', 'Speed lap'],
+  ['finish', 'Finish'],
+  ['command', 'Team play'],
+  ['comms', 'Radio'],
+];
 
 export class TuningPanel {
   readonly root = h('div.ui.tune');
@@ -128,6 +170,20 @@ export class TuningPanel {
       });
       this.rows.push(row);
       this.body.append(el);
+    }
+    if (TUNE_GROUPS[this.tab].title === 'Sound') {
+      // Play any effect on its own, to find the one that grates and name it.
+      const grid = h('div.sound-test');
+      for (const [name, label] of SOUND_TEST) {
+        const b = h('span.btn', label);
+        b.title = name;
+        b.addEventListener('click', () => {
+          this.cb.onSound(name);
+          this.say(`Played "${label}" (${name}).`);
+        });
+        grid.append(b);
+      }
+      this.body.append(h('div.tune-sub', 'Sound test: click to play'), grid);
     }
     this.sel = Math.min(this.sel, this.rows.length - 1);
     this.refresh();

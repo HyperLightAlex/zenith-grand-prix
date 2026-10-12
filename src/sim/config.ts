@@ -93,7 +93,10 @@ export const TOW_NEAR = 40;
 export const TOW_FAR = 0.15;
 export const COAST_DRAG = 14;
 export const OVERCAP_DRAG = 30;
-export const STAGGER_DRAG = 26;
+/** Extra slowing while staggered at racing speed. Kept small: a hit costs control, not the race. */
+export const STAGGER_DRAG = 6;
+/** The most of its throttle a staggered mech keeps at racing speed: it rides the hit out. */
+export const STAGGER_THROTTLE = 0.9;
 export const STEER_RATE = 7; // how fast steering input ramps, per second
 export const WALL_DRAG = 22;
 /**
@@ -113,9 +116,11 @@ export const LOCK_BREAK_TICKS = 40;
 export const AUTO_LOCK_RANGE = 45;
 export const BATTLE_CAP_MULT = 1.04; // of the limiter on laps 1-2, closing on a target ahead
 export const BATTLE_CAP_LAP3 = 0.93; // of the class top speed on lap 3
-export const BATTLE_MIN_FRAC = 0.7; // of the limiter: the slowest a fight is carried
+export const BATTLE_MIN_FRAC = 0.9; // of the limiter: the slowest a fight is carried
 /** A stagger bleeds less speed in a lock than at racing speed, so a fight keeps moving. */
-export const BATTLE_STAGGER_DRAG = 15;
+export const BATTLE_STAGGER_DRAG = 6;
+/** How far a lock's carry leans toward race pace rather than the target's own speed. */
+export const BATTLE_CARRY_PACE = 0.3;
 export const FACE_RATE = 12;
 export const ATTACK_MOVE_SCALE = 0.35;
 export const LINK_RANGE = 26; // escorting an ally inside this shares Drive
@@ -136,10 +141,10 @@ export const DASH_TICKS = 14;
  * cap, and what is left over is scrubbed off as soon as the dash ends. A dash
  * is for moving around a fight; it is not a second, cheaper boost.
  */
-export const DASH_OVER = 0.45;
-export const DASH_BLEED = 220;
-export const DASH_COOLDOWN = 36;
-export const COMBO_CANCEL_DELAY = 4;
+export const DASH_OVER = 0.3;
+export const DASH_BLEED = 300;
+export const DASH_COOLDOWN = 26;
+export const COMBO_CANCEL_DELAY = 3;
 export const CHAIN_LIMIT = 4; // hits in one stagger chain before a free escape
 export const CHAIN_TICKS = 75;
 export const ESCAPE_IFRAMES = 50;
@@ -149,8 +154,9 @@ export const SPLAT_CREDIT_TICKS = 150;
 export const COUNTER_HIT = 1.15; // damage bonus for hitting a wind-up
 export const WALL_SPLAT_MIN = 14;
 export const WALL_SPLAT_DAMAGE = 1.6; // per u/s of lateral speed
-export const HIT_SLOW_MAX = 0.35;
-export const HIT_SLOW_PER_DAMAGE = 1 / 400;
+/** A clean hit at racing speed costs a little pace: about 1% per 9 damage, never more than 12%. */
+export const HIT_SLOW_MAX = 0.12;
+export const HIT_SLOW_PER_DAMAGE = 1 / 900;
 export const CRITICAL_HP = 0.25;
 
 // ---- Abilities -----------------------------------------------------------
@@ -291,29 +297,29 @@ export const ATK = {
 
 export const ATTACKS: AttackDef[] = [
   // Forward: fast three-hit blade string, plus a gap-closing lance.
-  melee({ key: 'fw_slash1', name: 'Edge', windup: 5, active: 4, recovery: 14, damage: 20, stagger: 14, knockback: 8, advance: 22, next: ATK.FW_SLASH2 }),
-  melee({ key: 'fw_slash2', name: 'Edge', windup: 5, active: 4, recovery: 14, damage: 22, stagger: 14, knockback: 8, advance: 22, next: ATK.FW_SLASH3 }),
-  melee({ key: 'fw_slash3', name: 'Edge Finish', windup: 9, active: 5, recovery: 24, damage: 40, stagger: 24, knockback: 30, advance: 26, heavy: true }),
-  melee({ key: 'fw_lance', name: 'Lance Dash', windup: 12, active: 10, recovery: 26, damage: 56, stagger: 28, knockback: 34, reach: 6.5, advance: 75, armor: true, driveCost: 12, cooldown: 150, heavy: true }),
+  melee({ key: 'fw_slash1', name: 'Edge', windup: 5, active: 4, recovery: 11, damage: 20, stagger: 14, knockback: 8, advance: 24, next: ATK.FW_SLASH2 }),
+  melee({ key: 'fw_slash2', name: 'Edge', windup: 5, active: 4, recovery: 11, damage: 22, stagger: 14, knockback: 8, advance: 24, next: ATK.FW_SLASH3 }),
+  melee({ key: 'fw_slash3', name: 'Edge Finish', windup: 8, active: 5, recovery: 20, damage: 40, stagger: 24, knockback: 30, advance: 28, heavy: true }),
+  melee({ key: 'fw_lance', name: 'Lance Dash', windup: 12, active: 10, recovery: 22, damage: 56, stagger: 28, knockback: 34, reach: 6.5, advance: 75, armor: true, driveCost: 12, cooldown: 120, heavy: true }),
   // Midfielder: carbine bursts at range, and a kick to make space.
   {
     key: 'mf_burst', name: 'Carbine', kind: 'shot',
     windup: 7, active: 15, recovery: 12,
     reach: 0, arc: 0.4,
     damage: 6, guardDamage: 3, stagger: 4, knockback: 2,
-    guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 48, next: -1, heavy: false,
+    guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 40, next: -1, heavy: false,
     shot: { count: 3, interval: 5, pellets: 1, speed: 240, spread: 0.065, range: 62 },
   },
-  melee({ key: 'mf_kick', name: 'Stun Kick', windup: 9, active: 5, recovery: 22, damage: 34, stagger: 28, knockback: 38, reach: 6, cooldown: 70, heavy: true }),
+  melee({ key: 'mf_kick', name: 'Stun Kick', windup: 9, active: 5, recovery: 18, damage: 34, stagger: 28, knockback: 38, reach: 6, cooldown: 55, heavy: true }),
   // Defender: slow hammer blows that break guards, and a scatter cannon.
-  melee({ key: 'df_hammer1', name: 'Breaker', windup: 14, active: 5, recovery: 18, damage: 36, guardDamage: 30, stagger: 20, knockback: 14, reach: 6.5, arc: 1.15, advance: 14, armor: true, next: ATK.DF_HAMMER2 }),
-  melee({ key: 'df_hammer2', name: 'Breaker Slam', windup: 18, active: 6, recovery: 30, damage: 54, guardDamage: 60, stagger: 30, knockback: 44, reach: 6.5, arc: 1.15, advance: 16, armor: true, guardBreak: true, heavy: true }),
+  melee({ key: 'df_hammer1', name: 'Breaker', windup: 14, active: 5, recovery: 15, damage: 36, guardDamage: 30, stagger: 20, knockback: 14, reach: 6.5, arc: 1.15, advance: 14, armor: true, next: ATK.DF_HAMMER2 }),
+  melee({ key: 'df_hammer2', name: 'Breaker Slam', windup: 18, active: 6, recovery: 25, damage: 54, guardDamage: 60, stagger: 30, knockback: 44, reach: 6.5, arc: 1.15, advance: 16, armor: true, guardBreak: true, heavy: true }),
   {
     key: 'df_scatter', name: 'Scatter Cannon', kind: 'shot',
     windup: 13, active: 2, recovery: 26,
     reach: 0, arc: 0.5,
     damage: 6, guardDamage: 5, stagger: 7, knockback: 5,
-    guardBreak: false, armor: true, advance: 0, driveCost: 0, cooldown: 200, next: -1, heavy: true,
+    guardBreak: false, armor: true, advance: 0, driveCost: 0, cooldown: 160, next: -1, heavy: true,
     shot: { count: 1, interval: 1, pellets: 6, speed: 210, spread: 0.22, range: 30 },
   },
   // Midfielder abilities: the Snare bolt and the Disruptor pulse.
@@ -334,7 +340,7 @@ export const CLASSES: ClassDef[] = [
   {
     role: ROLE.FW, frame: 'Swift',
     blurb: 'Lightest and fastest. Wins the sprint if it survives the fight.',
-    maxHp: 1600, radius: 3.0, mass: 0.8,
+    maxHp: 1800, radius: 3.0, mass: 0.8,
     topSpeed: 160, accel: 45, brake: 90, grip: 100, turnMax: 2.2,
     battleAccel: 80, strafe: 30, approach: 34,
     guardMax: 80, guardRegen: 18, dash: 78, dashCost: 10, dashIframes: 13,

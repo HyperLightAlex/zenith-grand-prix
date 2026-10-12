@@ -35,8 +35,8 @@ Four decisions shape everything else:
 - Standing start after a four-second countdown. Squeeze the throttle in the
   last 22 ticks (about a third of a second) before GO for a launch bonus: a
   running start and 10 Drive. Holding it early, or blipping it, earns nothing.
-- Three laps of Meridian Skyway, 8,640 units round. Laps take about 79, 73
-  and 57 seconds; a race runs about 3:35.
+- Three laps of Meridian Skyway, 8,640 units round. Laps take about 83, 70
+  and 60 seconds; a race runs about 3:33.
 - The lap phase follows the race leader:
 
 | Lap | Name | Weapons and abilities | Speed |
@@ -143,17 +143,28 @@ if there is nobody they would reach.
 - LB locks the best enemy within 95 units. Clicking the left stick locks a
   teammate instead (escort). The lock breaks if the target gets more than 125
   units away for two-thirds of a second, retires or finishes.
+- **Switching target**: flick the right stick left or right while locked on
+  and the lock moves to the next enemy that way, as you see it (measured from
+  the way the mech faces, so "left" is left on screen), within 125 units.
+  Hold the stick over and it keeps stepping, once every third of a second.
+  Rivals you could switch to carry a small ◀ or ▶ beside their name tag; with
+  nobody there the HUD says so instead of doing nothing.
+- When a target is knocked out or finishes, a person locked on to it moves
+  straight on to the nearest rival within 60 units rather than being dropped
+  out of the fight mid-combo. Computer pilots choose for themselves.
 - Locked on, the mech is in **battle mode**. It faces the target. Stick up
   closes, stick down backs off, left and right circle. The track carries you
-  at the target's pace, eased toward the limiter.
-- Movement around the target is 35% quicker than in 0.1, and a fight is
-  never carried slower than 70% of the limiter, so the battle lap keeps
-  moving: about 345 mph on average against the 375 limiter.
+  at the target's pace, leaning 30% of the way toward race pace.
+- A fight is never carried slower than 90% of the limiter (70% before), and
+  movement around the target is 60% quicker than in 0.1, so the battle lap
+  runs at about 369 mph against the 375 limiter, locked on or not. In the
+  first build of 0.2 a long fight averaged 338 mph, and a stagger at racing
+  speed could bring a mech nearly to a stop.
 - You can close on a target ahead at up to 4% over the limiter, no more. To
   catch someone who is running, or to get away, you let go and spend Drive.
-- A dash down the road only carries 45% of its speed over that cap, and the
-  excess is gone the moment the dash ends. (In 0.1 dashes stacked: three in a
-  row inside a lock reached twice the limiter.)
+- A dash down the road only carries 30% of its speed over that cap, and the
+  excess is scrubbed off within a few ticks of the dash ending. (In 0.1
+  dashes stacked: three in a row inside a lock reached twice the limiter.)
 - Escorting a teammate within 26 units links you: both gain Drive.
 
 ### Fighting
@@ -176,6 +187,17 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
   attack near an enemy takes one for you.
 - Four hits in a chain and the victim bursts free.
 - Knocked into a barrier while staggered: extra damage.
+- **A hit costs control, not the race.** A clean hit takes about 1% of the
+  victim's pace per 9 damage, never more than 12% (it was 1% per 4, up to
+  35%). A mech staggered at racing speed keeps 90% of its throttle, and a
+  shove from behind adds only a tenth of its knockback down the road.
+- **Tempo.** Recovery frames are about 20% shorter than in the first build of
+  0.2, the dash is ready again in 26 ticks (36), the Lance in 2 s (2.5), and
+  the carbine, kick and scatter cannon all cycle faster. Computer pilots
+  attack about a third more often and fight longer before backing off.
+- **Feedback.** Blade strikes draw an arc in the attacker's colour (gold for
+  a finisher), heavy hits freeze the picture for a few hundredths of a
+  second, and damage you deal or take rises off the target as a number.
 - Armour at zero: retired. The pilot can still call team plays and ride a
   teammate's camera.
 
@@ -184,7 +206,7 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 | | Swift | Vector | Bulwark |
 |---|---|---|---|
 | Role | Forward | Midfielder | Defender |
-| Armour | 1600 | 1800 | 2200 |
+| Armour | 1800 | 1800 | 2200 |
 | Top speed (lap 3) | 160 u/s | 152.5 | 145 |
 | Grip | 100 | 90 | 80 |
 | Guard | 80 | 100 | 130 |
@@ -269,7 +291,9 @@ The teams swap sides of the grid from one round to the next.
   small kit, cel-shaded with an inverted-hull outline; legs are solved by
   two-bone IK; the upper body blends a pose library.
 - **Sound.** Synthesised at run time: engine, wind, 42 effects, and music
-  that follows the lap phase. No audio files.
+  that follows the lap phase. No audio files. Every continuous layer (engine,
+  wind, afterburner, strip hum, slipstream, scrape, alarm) has its own level
+  on the tuning panel, and the panel can play any one-shot by name.
 
 ## 4. Tuning
 
@@ -281,15 +305,16 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 
 | Measure | Value |
 |---|---|
-| Average race | 3:37 (laps of about 79, 73 and 57 s) |
-| Knockouts per race | 0.28 (54 forwards, 1 midfielder, 0 defenders) |
-| Winner's role | Forward 96%, midfielder 4% |
-| Armour left at the flag | Forward 45%, midfielder 65%, defender 64% |
+| Average race | 3:33 (laps of about 83, 70 and 60 s) |
+| Knockouts per race | 0.43 (77 forwards, 4 midfielders, 5 defenders) |
+| Winner's role | Forward 94%, midfielder 6%, defender under 1% |
+| Armour left at the flag | Forward 38%, midfielder 57%, defender 49% |
+| Damage dealt per race | About 5,100 on the battle lap, 1,000 on the speed lap |
 | Entering lap 2 | 1.5 Cells and 50 Drive per mech |
-| Abilities used per race | One to three of each (Overdrive and Ram most) |
-| Battle-lap pace | 347 mph against a 375 limiter |
-| Leader at the start of lap 3 goes on to win | 40% |
-| First finisher's team loses the round anyway | Under 1% |
+| Abilities used per race | One to three of each (Ram, Overdrive and Snare most) |
+| Battle-lap pace | 369 mph against a 375 limiter (366 while locked on) |
+| Leader at the start of lap 3 goes on to win | 43% |
+| First finisher's team loses the round anyway | About 1% |
 
 And the case that prompted the lap 3 changes, two forwards alone on the
 speed lap, the one behind on 50% armour and the leader on 90%:
@@ -329,10 +354,18 @@ person with a gamepad, and all of them are on the tuning panel:
 5. **Ability strength.** Durations and sizes were set by reasoning and by
    computer pilots using them, not by play.
 6. **Rival skill, the pack rule, how lethal lap 2 is against you**: as in 0.1.
-7. **Sound.** The nine new sounds and the engine at the new speeds were set
-   by measurement. Whether the gate chime stays pleasant six times a lap is a
-   listening call.
-8. **Real devices.** Rendering has only been checked in a software-rendered
+7. **Sound.** The afterburner's rising whistle (the loud, high sound from
+   lap 2 on, whenever a mech boosted or ran Overdrive) is gone; the
+   afterburner is now a lower roar of filtered noise. The low-armour alarm
+   beeps three times instead of sounding until the end of the race, the
+   turbine whine no longer climbs past its lap 1 level, and the brightest
+   hits are quieter. If another sound grates, the Sound tab plays each one by
+   name and turns each layer down.
+8. **Combat tempo.** Fights now stay at race pace and every move recovers
+   sooner. Knockouts went up from 0.28 to 0.43 a race even with the forward's
+   armour raised from 1600 to 1800; if lap 2 is now too lethal for a forward,
+   that armour figure (in `config.ts`) is the first thing to raise.
+9. **Real devices.** Rendering has only been checked in a software-rendered
    headless browser. Frame rate on a real GPU, the gamepad code path, Safari
    and Firefox are untested.
 
@@ -373,6 +406,8 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
   for the line.
 - Almost every knockout is a forward. Support mechs are rarely in danger, so
   the "lose the round despite winning the race" result is possible but rare.
+- Switching target is left and right only. There is no way to pick a target
+  behind you, or one further than 125 units, without letting go first.
 - The tuning panel's sliders cannot be worked from the pad while a race is
   running, only from the pause menu.
 - A team with a human seat never gets a computer captain, even if that

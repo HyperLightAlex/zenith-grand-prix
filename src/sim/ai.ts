@@ -112,13 +112,13 @@ function think(race: RaceState, track: Track, m: MechState): void {
   if (best >= 0) {
     if (ai.intent !== INTENT.ENGAGE || race.tick > ai.boutUntil + 120) {
       // A fresh bout: fight for a while, then break off and reset.
-      const len = lap3 ? 240 : 480 + Math.floor(rngNext(race) * 360);
+      const len = lap3 ? 300 : 600 + Math.floor(rngNext(race) * 420);
       ai.boutUntil = race.tick + len;
     }
     ai.intent = INTENT.ENGAGE;
     ai.intentTarget = best;
     if (!ordered && race.tick >= ai.boutUntil) {
-      ai.restUntil = race.tick + (lap3 ? 600 : 240 + Math.floor(rngNext(race) * 180));
+      ai.restUntil = race.tick + (lap3 ? 480 : 150 + Math.floor(rngNext(race) * 150));
       ai.intent = INTENT.RACE;
       ai.intentTarget = -1;
     }
@@ -165,7 +165,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     const ds = deltaS(track, chase.s, m.s);
     if (Math.abs(ds) < 160) dWant = lerp(dWant, chase.d, 0.6);
     if (ds > 20) wantBoost = wantBoost || m.drive > 30;
-    else if (ds < -12) throttle = 0.72; // let them come to us
+    else if (ds < -12) throttle = 0.92; // ease off a touch and let them come
   } else if (!m.finished) {
     const ws = wrapS(track, m.s);
     let found = false;
@@ -303,7 +303,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
         if (dist > a.shot.range - 4) continue;
         if (Math.abs(wrapAngle(Math.atan2(dd, ds) - m.facing)) > a.arc * 0.8) continue;
         press(out, m, slot === 0 ? BTN.X : BTN.Y);
-        ai.attackAt = tick + Math.round(lerp(150, 80, m.skill) + rngNext(race) * 60);
+        ai.attackAt = tick + Math.round(lerp(110, 55, m.skill) + rngNext(race) * 40);
         break;
       }
     }
@@ -490,7 +490,7 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
       }
     }
     // Attack in bursts with a breather between, so there is a rhythm to read.
-    if (used) ai.attackAt = tick + Math.round(lerp(150, 70, m.skill) + rngNext(race) * 60);
+    if (used) ai.attackAt = tick + Math.round(lerp(105, 45, m.skill) + rngNext(race) * 40);
   } else if (m.act === ACT.ATTACK && ai.comboLeft > 0) {
     const a = ATTACKS[m.attack];
     if (a.next >= 0 && m.actT >= a.windup && !m.comboQueued && (m.attackHit || m.actT >= a.windup + a.active)) {

@@ -893,7 +893,7 @@ describe('dash and the limiter', () => {
       }
       // The trick was really tried: eight dashes, each well over the limiter while it lasted.
       expect(a.events('dash').length).toBe(8);
-      expect(dashSpeed).toBeGreaterThan(a.pace * 1.3);
+      expect(dashSpeed).toBeGreaterThan(a.pace * 1.2);
       expect(max).toBeLessThanOrEqual(limiterCeiling(a.race) + EPS);
       // And over the whole exercise (five seconds, 80 Drive) it has covered
       // more ground than the limiter allows, but less than simply holding

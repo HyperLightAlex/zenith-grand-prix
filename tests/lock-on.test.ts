@@ -460,9 +460,12 @@ describe('battle mode movement', () => {
     // Chasing a target ahead tops out a little over the (live) limiter.
     expect(me.vs).toBeLessThanOrEqual(a.pace * BATTLE_CAP_MULT + 1e-9);
     expect(me.vs).toBeGreaterThan(a.pace);
+    // Backing off a target ahead is slow work: a fight is never carried below
+    // BATTLE_MIN_FRAC of the limiter, so it opens the gap but does not stop dead.
     a.inputs[FW0].my = -1;
     a.step(60);
-    expect(foe.s - me.s).toBeGreaterThan(gap1 + 15);
+    expect(foe.s - me.s).toBeGreaterThan(gap1 + 8);
+    expect(me.vs).toBeGreaterThanOrEqual(a.pace * BATTLE_MIN_FRAC - 1e-9);
   });
 
   it('closing on a target behind means slowing down to it', () => {
@@ -568,22 +571,20 @@ describe('battle mode movement', () => {
 
   it('closing speed scales with rules.battleMove too', () => {
     const closed = (battleMove: number, live = false) => {
-      // (No tow, and a gap inside PACK_SLACK, or the target behind would
-      // speed up as it came into the slipstream or fell off the pack.)
+      // Side by side, so closing in is all across the road: down the road a
+      // fight is carried at race pace (BATTLE_MIN_FRAC of the limiter at the
+      // least), which would cut short any test of how fast it closes.
       const a = new Arena(2, 1, live ? { tow: 0 } : { battleMove, tow: 0 });
       if (live) a.race.rules.battleMove = battleMove;
-      const me = a.put(FW0, 38, 0);
-      const foe = a.put(FW1, 0, 0); // behind: closing means dropping back to it, clear of the cap
+      const me = a.put(FW0, 0, -14);
+      const foe = a.put(FW1, 0, 14);
       a.tap(FW0, BTN.LOCK);
-      const gap0 = me.s - foe.s;
+      expect(me.target).toBe(FW1);
+      const gap0 = Math.hypot(foe.s - me.s, foe.d - me.d);
       a.inputs[FW0].my = 1;
       a.step(40);
-      return gap0 - (me.s - foe.s);
+      return gap0 - Math.hypot(foe.s - me.s, foe.d - me.d);
     };
-    // (Kept to settings where the closing speed stays clear of the slowest a
-    // fight is carried, BATTLE_MIN_FRAC of the limiter, which would cut it
-    // short. Dropping back to a target behind is all under the battle cap, so
-    // the scrub that takes off speed OVER the cap plays no part here.)
     const half = closed(0.5);
     const one = closed(1);
     expect(half).toBeGreaterThan(5);

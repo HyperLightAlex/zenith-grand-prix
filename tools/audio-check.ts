@@ -902,7 +902,8 @@ async function offlineLayers(): Promise<void> {
   }
   const rate = beeps / SLOT;
   table('alarm (offline)').push({ 'beeps in 3.2 s': beeps, 'per second': r3(rate), 'beep level': r3(top) });
-  if (rate < 1.5 || rate > 2.6) fail(`critical alarm beeps ${rate.toFixed(2)} times a second, expected about 2`);
+  // A short warning when armour goes critical, then quiet: three beeps, not a beep that runs all race.
+  if (beeps !== 3) fail(`critical alarm gave ${beeps} beeps in ${SLOT} s, expected 3 and then quiet`);
   await dump('layers', buf, 0, LAYER_CASES.length * SLOT);
 }
 

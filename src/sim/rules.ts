@@ -104,7 +104,7 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   driveDraft: 3,
   lap1Trickle: 0,
 
-  battleMove: 1.35,
+  battleMove: 1.6,
 
   cellMax: 3,
   cellStart: 0,

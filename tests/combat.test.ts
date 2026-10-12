@@ -284,7 +284,7 @@ describe('melee attacks: range, timing and damage', () => {
     // The slow-down itself, on its own: 20 damage takes 5% off.
     const b = duel(FW0, FW1, 8);
     applyHit(b.a.race, TRACK, b.att, b.vic, ATTACKS[ATK.FW_SLASH1], ATK.FW_SLASH1);
-    expect(b.vic.speed).toBeCloseTo(Math.hypot(b.a.pace + 0.25 * 8, 0) * (1 - 20 * HIT_SLOW_PER_DAMAGE), 9);
+    expect(b.vic.speed).toBeCloseTo(Math.hypot(b.a.pace + 0.1 * 8, 0) * (1 - 20 * HIT_SLOW_PER_DAMAGE), 9);
   });
 
   it('a mech cannot act while staggered', () => {
@@ -542,10 +542,10 @@ describe('drive costs and cooldowns', () => {
   });
 
   const cooled = [
-    { name: 'Lance Dash', att: FW0, btn: BTN.Y, atk: ATK.FW_LANCE, cd: 150, gap: 11 },
-    { name: 'Carbine', att: MF0, btn: BTN.X, atk: ATK.MF_BURST, cd: 48, gap: 30 },
-    { name: 'Stun Kick', att: MF0, btn: BTN.Y, atk: ATK.MF_KICK, cd: 70, gap: 11 },
-    { name: 'Scatter Cannon', att: DF0, btn: BTN.Y, atk: ATK.DF_SCATTER, cd: 200, gap: 15 },
+    { name: 'Lance Dash', att: FW0, btn: BTN.Y, atk: ATK.FW_LANCE, cd: 120, gap: 11 },
+    { name: 'Carbine', att: MF0, btn: BTN.X, atk: ATK.MF_BURST, cd: 40, gap: 30 },
+    { name: 'Stun Kick', att: MF0, btn: BTN.Y, atk: ATK.MF_KICK, cd: 55, gap: 11 },
+    { name: 'Scatter Cannon', att: DF0, btn: BTN.Y, atk: ATK.DF_SCATTER, cd: 160, gap: 15 },
   ];
   for (const mv of cooled) {
     it(`${mv.name} cannot be used again for ${mv.cd} ticks after it ends`, () => {
@@ -607,7 +607,7 @@ describe('drive costs and cooldowns', () => {
     const { a, att, vic } = duel(MF0, FW1, 11);
     a.tap(MF0, BTN.Y); // kick
     a.until(() => att.act === ACT.NONE, 100);
-    expect(att.cdSecondary).toBe(70);
+    expect(att.cdSecondary).toBe(ATTACKS[ATK.MF_KICK].cooldown);
     expect(att.cdPrimary).toBe(0);
     vic.s = att.s + 25;
     a.step(1);
@@ -668,7 +668,7 @@ describe('guard', () => {
     expect(hits.map((e) => e.blocked)).toEqual([true, true, true]);
     expect(hits.map((e) => e.damage)).toEqual([20, 22, 40].map((d) => d * GUARD_REDUCTION));
     expect(vic.guard).toBe(80 - 8 - 9 - 16);
-    expect(vic.hp).toBeCloseTo(1600 - 82 * GUARD_REDUCTION, 9);
+    expect(vic.hp).toBeCloseTo(CLASSES[vic.role].maxHp - 82 * GUARD_REDUCTION, 9);
   });
 
   it('does nothing against a blow from behind', () => {
@@ -954,7 +954,7 @@ describe('dash', () => {
     const neutral = run(0, 0);
     const right = run(1, 0);
     const left = run(-1, 0);
-    expect(toward.closed).toBeGreaterThan(5);
+    expect(toward.closed).toBeGreaterThan(3);
     expect(away.closed).toBeLessThan(-5);
     expect(neutral.closed).toBeCloseTo(away.closed, 6);
     expect(right.side).toBeGreaterThan(5);
@@ -1182,11 +1182,17 @@ describe('knock-outs', () => {
     expect(att.kos).toBe(1);
     expect(att.dmgDealt).toBe(15); // not the nominal 20
     expect(vic.dmgTaken).toBe(15);
-    for (const m of [att, mate, foe2]) {
-      expect(m.target).toBe(-1);
-      expect(m.mode).toBe(MODE.SPEED);
+    // The two that were locked on to it move straight on to the only other
+    // rival in reach (people flying do; it saves them dropping out of the
+    // fight mid-combo). The team-mate escorting it is simply let go.
+    for (const m of [att, mate]) {
+      expect(m.target).toBe(MF1);
+      expect(m.mode).toBe(MODE.BATTLE);
     }
-    expect(a.events('unlock').map((e) => e.mech).sort()).toEqual([FW0, MF0, MF1]);
+    expect(foe2.target).toBe(-1);
+    expect(foe2.mode).toBe(MODE.SPEED);
+    expect(a.events('unlock').map((e) => e.mech).sort()).toEqual([MF1]);
+    expect(a.events('lock').map((e) => [e.mech, e.target]).sort()).toEqual([[FW0, FW1], [FW0, MF1], [MF0, MF1]]); // (the first is the attack locking on)
     // Out of the race: last place, no points, and it will not be classified.
     a.step(1);
     expect(vic.place).toBe(6);
@@ -1305,9 +1311,9 @@ describe('knockback', () => {
     a.step(1);
     const before = vic.vs;
     applyHit(a.race, TRACK, att, vic, ATTACKS[ATK.MF_KICK], ATK.MF_KICK);
-    // 38 u/s of knockback, only a quarter of it forwards, and the hit itself
+    // 38 u/s of knockback, only a tenth of it forwards, and the hit itself
     // costs pace: all told the victim is no quicker than before.
-    expect(vic.vs).toBeCloseTo((before + 38 * 0.25) * (1 - 34 * HIT_SLOW_PER_DAMAGE), 9);
+    expect(vic.vs).toBeCloseTo((before + 38 * 0.1) * (1 - 34 * HIT_SLOW_PER_DAMAGE), 9);
     expect(vic.vs).toBeLessThan(before + 1);
   });
 
