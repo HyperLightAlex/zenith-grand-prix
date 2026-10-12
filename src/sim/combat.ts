@@ -38,10 +38,10 @@ import {
   type Ability,
   type AttackDef,
 } from './config';
-import { addVelocity, classOf, clearEffects, isActive, pickTarget, retarget, setTarget, speedCap, syncFromSpeed } from './core';
+import { addVelocity, classOf, clearEffects, inPlay, pickTarget, retarget, sameRoute, setTarget, speedCap, syncFromSpeed } from './core';
 import { ticks } from './rules';
 import { rngNext, wrapAngle } from './math';
-import { deltaS, type Track } from './track';
+import { deltaS, hwAt, medianAt, type Track } from './track';
 import type { MechInput, MechState, RaceState } from './types';
 
 function deny(race: RaceState, m: MechState, reason: 'weapons' | 'drive' | 'target' | 'cells'): void {
@@ -182,7 +182,7 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
     let any = false;
     for (const o of race.mechs) {
       // Somebody it would actually reach: a rival mid-dodge does not count.
-      if (o.team !== m.team && isActive(o) && o.iframes <= 0 && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) <= rules.pulseRange) any = true;
+      if (o.team !== m.team && inPlay(o) && sameRoute(track, m, o) && o.iframes <= 0 && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) <= rules.pulseRange) any = true;
     }
     if (!any) {
       deny(race, m, 'target');
@@ -228,7 +228,7 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
     case ABILITY.PULSE: {
       const a = ATTACKS[ATK.MF_PULSE];
       for (const o of race.mechs) {
-        if (o.team === m.team || !isActive(o)) continue;
+        if (o.team === m.team || !inPlay(o) || !sameRoute(track, m, o)) continue;
         if (Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) > rules.pulseRange) continue;
         if (applyHit(race, track, m, o, a, ATK.MF_PULSE)) o.drive = Math.max(0, o.drive - rules.pulseDrain);
       }
@@ -242,7 +242,7 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
     case ABILITY.AEGIS: {
       const dur = ticks(rules.aegisSecs);
       for (const o of race.mechs) {
-        if (o.team !== m.team || !isActive(o)) continue;
+        if (o.team !== m.team || !inPlay(o) || !sameRoute(track, m, o)) continue;
         if (o !== m && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) > rules.aegisRange) continue;
         o.shieldT = Math.max(o.shieldT, dur);
       }
@@ -270,6 +270,7 @@ export function retire(race: RaceState, m: MechState, by: MechState | null, trac
   m.retired = true;
   m.retireTick = race.tick;
   m.hp = 0;
+  m.fallT = 0;
   m.act = ACT.NONE;
   m.guarding = false;
   m.boosting = false;
@@ -417,10 +418,11 @@ function resolveMelee(race: RaceState, track: Track, m: MechState, a: AttackDef)
   let victim: MechState | null = null;
   let best = Infinity;
   for (const o of race.mechs) {
-    if (o.team === m.team || !isActive(o)) continue;
+    if (o.team === m.team || !inPlay(o) || !sameRoute(track, m, o)) continue;
     const ds = deltaS(track, o.s, m.s);
     const dd = o.d - m.d;
-    const dist = Math.hypot(ds, dd);
+    // Height counts: a mech in the air above you is out of reach of a blade.
+    const dist = Math.hypot(ds, dd, o.h - m.h);
     if (dist > a.reach + c.radius + classOf(o).radius) continue;
     if (Math.abs(wrapAngle(Math.atan2(dd, ds) - m.facing)) > a.arc) continue;
     const score = dist - (o.id === m.target ? 1000 : 0);
@@ -442,7 +444,7 @@ function shotTarget(race: RaceState, track: Track, m: MechState, a: AttackDef): 
   let t: MechState | null = null;
   let best = Infinity;
   for (const o of race.mechs) {
-    if (o.team === m.team || !isActive(o)) continue;
+    if (o.team === m.team || !inPlay(o) || !sameRoute(track, m, o)) continue;
     const ds = deltaS(track, o.s, m.s);
     const dd = o.d - m.d;
     const dist = Math.hypot(ds, dd);
@@ -482,6 +484,7 @@ function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef, idx
       charged,
       s: m.s + cs * (c.radius + 0.5),
       d: m.d + sn * (c.radius + 0.5),
+      h: m.h,
       vs: m.vs + cs * sh.speed,
       vd: m.vd + sn * sh.speed,
       life: Math.ceil((sh.range / sh.speed) * TICK_RATE),
@@ -584,15 +587,17 @@ export function stepProjectiles(race: RaceState, track: Track): void {
     p.s += p.vs * DT;
     p.d += p.vd * DT;
     p.life--;
-    let done = p.life <= 0 || Math.abs(p.d) > track.halfWidth;
+    // Off the road, or into the wall down the middle of a fork.
+    let done = p.life <= 0 || Math.abs(p.d) > hwAt(track, p.s) || Math.abs(p.d) < medianAt(track, p.s);
     let hit = false;
     if (!done) {
       for (const o of race.mechs) {
-        if (o.team === p.team || !isActive(o)) continue;
+        if (o.team === p.team || !inPlay(o)) continue;
         const ds = deltaS(track, o.s, p.s);
         const dd = o.d - p.d;
+        const dh = o.h - p.h;
         const r = classOf(o).radius + 0.9;
-        if (ds * ds + dd * dd <= r * r) {
+        if (ds * ds + dd * dd + dh * dh <= r * r) {
           applyHit(race, track, race.mechs[p.owner], o, ATTACKS[p.attack], p.attack, p.charged);
           done = true;
           hit = true;

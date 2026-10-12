@@ -2,7 +2,7 @@
 
 import { CLASSES, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, ROLE, type ClassDef } from './config';
 import { clamp, wrapAngle } from './math';
-import { deltaS, type Track } from './track';
+import { deltaS, splitApart, type Track } from './track';
 import type { MechState, RaceState } from './types';
 
 export function classOf(m: MechState): ClassDef {
@@ -12,6 +12,11 @@ export function classOf(m: MechState): ClassDef {
 /** Still racing: not knocked out and not across the line. */
 export function isActive(m: MechState): boolean {
   return !m.retired && !m.finished;
+}
+
+/** Racing and on the circuit: not out of it for a moment after a fall. */
+export function inPlay(m: MechState): boolean {
+  return !m.retired && !m.finished && m.fallT === 0;
 }
 
 /** Distance between two mechs on the track surface. */
@@ -64,7 +69,12 @@ export function towBonus(race: RaceState, m: MechState): number {
 
 /** Can `by` take a lock on `o`? A forward that has just broken away cannot be locked by enemies. */
 export function lockable(o: MechState, by: MechState): boolean {
-  return isActive(o) && (o.team === by.team || o.cloakT <= 0);
+  return inPlay(o) && (o.team === by.team || o.cloakT <= 0);
+}
+
+/** Can a and b reach each other at all? Not with the wall of a fork between them. */
+export function sameRoute(track: Track, a: MechState, b: MechState): boolean {
+  return !splitApart(track, a.s, a.d, b.s, b.d);
 }
 
 /** Ability effects end with the mech's race: called when it finishes or is knocked out. */
@@ -78,6 +88,7 @@ export function clearEffects(m: MechState): void {
   m.cdAbility = 0;
   m.tow = 0;
   m.momentum = 0;
+  m.padT = 0;
 }
 
 /** Keep speed/heading and vs/vd in agreement after the speed-mode values change. */
@@ -151,7 +162,7 @@ export function pickTarget(
   let best = -1;
   let bestScore = Infinity;
   for (const o of race.mechs) {
-    if (o.id === m.id || o.id === exclude || !lockable(o, m)) continue;
+    if (o.id === m.id || o.id === exclude || !lockable(o, m) || !sameRoute(track, m, o)) continue;
     if ((o.team === m.team) !== ally) continue;
     const ds = deltaS(track, o.s, m.s);
     const dd = o.d - m.d;
@@ -185,7 +196,7 @@ export function cycleTarget(race: RaceState, track: Track, m: MechState, dir: nu
   const ally = cur ? cur.team === m.team : false;
   const list: Array<{ id: number; ang: number }> = [];
   for (const o of race.mechs) {
-    if (o.id === m.id || !lockable(o, m)) continue;
+    if (o.id === m.id || !lockable(o, m) || !sameRoute(track, m, o)) continue;
     if ((o.team === m.team) !== ally) continue;
     const ds = deltaS(track, o.s, m.s);
     const dd = o.d - m.d;

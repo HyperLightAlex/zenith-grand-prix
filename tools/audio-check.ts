@@ -1207,6 +1207,69 @@ async function offlineMusic(): Promise<void> {
   await dump('music-race-3', buf, T_P3 + 2, T_END);
 }
 
+async function offlineStyles(): Promise<void> {
+  log('--- offline: each circuit\'s race music ---');
+  // Every circuit's race music through its three lap phases, then a change
+  // of circuit while the race music plays: it has to cross-fade to the new
+  // style, not carry on with the old one.
+  const PH = 24;
+  for (const style of ['meridian', 'canyon', 'helios']) {
+    const T2 = PH;
+    const T3 = PH * 2;
+    const T_SWAP = PH * 3;
+    const T_END = T_SWAP + 6;
+    const other = style === 'canyon' ? 'helios' : 'canyon';
+    const cues: Cue[] = [
+      { t: 0, run: (a) => a.setMusic('race', style) },
+      { t: T_SWAP, run: (a) => a.setMusic('race', other) },
+    ];
+    const sceneAt = (t: number): AudioScene => ({ ...OFF, lapPhase: t >= T3 ? 3 : t >= T2 ? 2 : 1 });
+    const seen = new Set<string>();
+    let reached = 0;
+    let swapped = '';
+    const { buf, warnings } = await render(T_END, cues, sceneAt, (t, a) => {
+      const m = a.debugInfo().music;
+      if (!m) return;
+      if (t < T_SWAP) {
+        seen.add(m.style);
+        reached = Math.max(reached, m.phase);
+      } else if (t > T_SWAP + 1) {
+        swapped = m.style;
+      }
+    });
+    if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) rendering the ${style} race music`);
+    const rows: Array<[string, number, number]> = [
+      ['phase 1', 2, T2],
+      ['phase 2', T2 + 3, T3],
+      ['phase 3', T3 + 3, T_SWAP],
+    ];
+    const rms: number[] = [];
+    for (const [name, t0, t1] of rows) {
+      const st = analyse(buf, t0, t1);
+      rms.push(st.rms);
+      table('race music by circuit (offline, default volumes)').push({
+        circuit: style,
+        state: name,
+        peak: r3(st.peak),
+        'rms dBFS': db(st.rms),
+        'centre (Hz)': Math.round(st.centroid),
+        'low/mid/high %': `${Math.round(st.low * 100)}/${Math.round(st.mid * 100)}/${Math.round(st.high * 100)}`,
+        'left-right dB': Math.round((db(st.rmsLeft) - db(st.rmsRight)) * 10) / 10,
+      });
+      if (st.rms < 0.004) fail(`${style} race music, ${name}, is inaudible`);
+      if (st.peak >= CLIP) fail(`${style} race music, ${name}, clips`);
+      if (Math.abs(db(st.rmsLeft) - db(st.rmsRight)) > 2) fail(`${style} race music, ${name}, leans to one side`);
+    }
+    if (seen.size !== 1 || !seen.has(style)) fail(`asked for the ${style} race music, got ${[...seen].join(', ')}`);
+    if (reached !== 3) fail(`${style} race music never reached the speed lap (phase ${reached})`);
+    if (!(rms[1] > rms[0] && rms[2] >= rms[1] * 0.9)) fail(`${style} race music does not build with the lap phase`);
+    if (swapped !== other) fail(`changing circuit from ${style} to ${other} left the ${swapped || 'no'} race music playing`);
+    const cross = analyse(buf, T_SWAP, T_SWAP + 1.5);
+    if (cross.rms < 0.002) fail(`silence when the race music changes from ${style} to ${other}`);
+    await dump(`music-${style}`, buf, 0, T_END);
+  }
+}
+
 async function offlineStack(): Promise<void> {
   log('--- offline: worst case ---');
   // The speed lap at the peak of an Overdrive with everything going wrong, and
@@ -1378,6 +1441,7 @@ async function main(): Promise<void> {
     ['layers', offlineLayers],
     ['speeds', offlineSpeeds],
     ['music', offlineMusic],
+    ['styles', offlineStyles],
     ['stack', offlineStack],
     ['race', offlineRace],
     ['realtime', realtime],

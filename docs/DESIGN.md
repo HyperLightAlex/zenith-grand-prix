@@ -1,6 +1,6 @@
 # Zenith GP: design document
 
-Version 0.2. This describes the game as built, why it is built that way, and
+Version 0.3. This describes the game as built, why it is built that way, and
 what comes next. Numbers quoted here come from `src/sim/rules.ts` and
 `src/sim/config.ts`; if the document and the code disagree, the code is right.
 
@@ -35,8 +35,10 @@ Four decisions shape everything else:
 - Standing start after a four-second countdown. Squeeze the throttle in the
   last 22 ticks (about a third of a second) before GO for a launch bonus: a
   running start and 10 Drive. Holding it early, or blipping it, earns nothing.
-- Three laps of Meridian Skyway, 8,640 units round. Laps take about 83, 70
-  and 61 seconds; a race runs about 3:33.
+- Three laps of one of three circuits, picked in the garage. On Meridian
+  Skyway (8,640 units round) laps take about 83, 70 and 61 seconds and a race
+  runs about 3:33; Corkscrew Canyon (8,167) runs about 3:19 and Helios Drop
+  (9,036) about 3:40. See "Circuits" below.
 - The lap phase follows the race leader:
 
 | Lap | Name | Weapons and abilities | Speed |
@@ -82,6 +84,66 @@ and three things make that possible:
 
 Two corners (the Harbour Hairpin and Drop Left) are now too tight to take
 flat at a forward's top speed, so braking and line are worth time as well.
+
+### Circuits
+
+Meridian Skyway is the flat test course: a plan of straights and arcs with
+barriers all the way round, and elevation and banking only for show. The two
+3D circuits are built from pieces (`src/sim/circuit.ts`): straights, turns,
+climbs, pitches (crests and dips), loops and rolls, each of which can set the
+road's width and banking, cut a gap, leave an edge open or split the road.
+The builder drives a frame (forward, right, up) through the pieces, lengthens
+two straights and sets one climb so the lap closes, then resamples every 4
+units. Every sample carries its own width, wall flags, a middle wall's half
+width, the curvature in the vertical plane, how far up the road faces, grip
+and whether it holds mechs on.
+
+- **Air.** A mech has a height above the road. On the ground the road holds
+  it while gravity's share plus the road's curve still push it down; over a
+  crest taken fast, off a ramp, or past the end of the road, it flies under
+  gravity (with under a third of its steering) and lands where the road is. A hard
+  landing costs up to 12% speed. Jumps are built for one speed: the arc is
+  the path a mech at exactly that speed would follow, with the middle of it
+  missing. Faster flies further; slower falls in.
+- **Falls.** Below the road with no road under it, a mech has fallen: 70
+  armour, out of play for 96 ticks (nobody can lock it, hit it or draft it),
+  then the drone sets it down on its own side 12 units past the next road, at
+  60% of the pace, with a second of invulnerability. A fall within 2.5 s of
+  being hit is credited like a ring-out, and can be a knockout.
+- **Open edges** have no barrier: nothing clamps the lane on that side.
+- **Forks** have a wall down the middle that grows in over 60 units at each
+  end. Two mechs on opposite sides cannot lock on, hit, shoot, tow or touch;
+  a lock breaks when the routes part. The routes are drawn apart (sideways
+  and up or down) by the renderer only; in the simulation they are the two
+  halves of one wide road.
+- **Loops and corkscrews** hold mechs to the road (a 220 u/s² pull replaces
+  gravity there).
+- **Banking** adds grip: a turn banked toward its inside grips up to about
+  twice as hard (the Bowl, at 58 degrees).
+- **Speed pads** raise the cap 18% for a second and count as a boost for
+  momentum strikes.
+
+Each route of a fork has something the other lacks (on Canyon, the lower
+route has a pad and a strip and the upper route a gate; on Helios, the jump
+route has a pad, the jump and a strip and the safe route a strip and a gate).
+Computer pilots pick by what they need (Drive, a Cell), how fast they are
+going (the jump only above 100 u/s), their role (forwards like the quick way)
+and the side of the road they favour; in 100 races about 63% of passes take
+the busier route.
+
+| Circuit | Lap 1 | Race | KOs a race | Falls a race | Take-offs a race |
+|---|---|---|---|---|---|
+| Meridian Skyway | 82.9 s | 3:33 | 0.50 | 0 | 0 |
+| Corkscrew Canyon | 77.5 s | 3:19 | 0.21 to 0.37 | 0.5 | 25 |
+| Helios Drop | 85.7 s | 3:40 | 0.49 to 0.60 | 0 | 40 |
+
+Each circuit has its own setting (Meridian: golden hour over the sea and a
+city; Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
+Sky Bridge; Helios: noon above a sea of cloud, floating islands, the Sun Gate
+over the Drop) and its own race music (Meridian: A minor, 138 BPM; Canyon:
+E Phrygian, 128 BPM, a broken beat; Helios: D major, 145 BPM, trance). Each
+follows the same arrangement over the three laps, and the lap and phase
+stingers are moved into the circuit's key.
 
 ### Free steering
 
@@ -318,11 +380,12 @@ The teams swap sides of the grid from one round to the next.
 ```
 
 - **Track coordinates.** Everything in the simulation is `(s, d)`: distance
-  along the centreline and lateral offset. The circuit is a list of straights
-  and arcs with exact radii; the builder closes the loop, rounds the joins,
-  and samples curvature. The renderer turns `(s, d)` into world space from
-  the same samples. Elevation and banking are purely visual (this is the
-  part the track system milestone replaces).
+  along the centreline and lateral offset, plus a height above the road for
+  mechs in the air. A circuit is either a flat plan of straights and arcs
+  (Meridian) or a list of 3D pieces; either way the builder closes the loop
+  and samples a full frame, width, walls and the rest every 4 units. The
+  renderer turns `(s, d, h)` into world space from the same samples, adding
+  the sideways and vertical offset of a fork's two routes.
 - **Rules are data.** Everything a player might want to dial in is one flat
   object of numbers, `race.rules`, that lives in the race state. A race can
   be created with overrides, the tuning panel writes to it live, and one day
@@ -346,8 +409,8 @@ The teams swap sides of the grid from one round to the next.
   radial blur, streaks, vignette, flash). Mechs are assembled in code from a
   small kit, cel-shaded with an inverted-hull outline; legs are solved by
   two-bone IK; the upper body blends a pose library.
-- **Sound.** Synthesised at run time: engine, wind, 42 effects, and music
-  that follows the lap phase. No audio files. Every continuous layer (engine,
+- **Sound.** Synthesised at run time: engine, wind, 52 effects, and music
+  that follows the lap phase, in a different style on each circuit. No audio files. Every continuous layer (engine,
   wind, afterburner, strip hum, slipstream, scrape, alarm) has its own level
   on the tuning panel, and the panel can play any one-shot by name.
 
@@ -434,23 +497,30 @@ person with a gamepad, and all of them are on the tuning panel:
 10. **Real devices.** Rendering has only been checked in a software-rendered
    headless browser. Frame rate on a real GPU, the gamepad code path, Safari
    and Firefox are untested.
+11. **The new circuits.** Whether the Narrows is too narrow, whether the
+   Bowl's banking reads, how the camera feels upside down in the loop and
+   the corkscrew (it turns over with the road, a little less than fully),
+   whether the jumps are generous enough (the Hop is built for 78 u/s, the
+   Drop for 86, both well under racing pace, so you only fall short when a
+   fight or a Snare has slowed you), and whether 70 armour and a couple of
+   seconds is the right price for a fall.
 
 ## 6. Roadmap
 
 **M1, done: solo race.** One circuit, three frames, computer pilots, team
 plays, gamepad and keyboard, HUD, sound.
 
-**M1.5, done (this version): rules pass.** Speed ramp, lap 1 economy, Cells
-and abilities, a lap 3 you can come back in, knockout points, match formats,
-feel pass, tuning panel, then combat at race pace, momentum strikes,
-ring-outs, wind-up tells and a lock that takes who you are looking at. 733
-simulation tests.
+**M1.5, done: rules pass.** Speed ramp, lap 1 economy, Cells and abilities,
+a lap 3 you can come back in, knockout points, match formats, feel pass,
+tuning panel, then combat at race pace, momentum strikes, ring-outs,
+wind-up tells and a lock that takes who you are looking at.
 
-**Next: the track system.** Loops, corkscrews, jumps, open edges, narrow
-sections and splits. This means giving the track a full 3D frame at every
-point (the road's "up" is currently assumed to be near the world's), air
-time in the simulation, and a second circuit that uses it. Meridian stays as
-the flat test course.
+**M1.6, done (this version): the track system.** A full 3D frame at every
+point, air time, falls and the recovery drone, open edges, forks with a
+middle wall, loops, corkscrews, banking grip and speed pads, and two
+circuits that use them (Corkscrew Canyon and Helios Drop), each with its own
+scenery and music. Meridian stays as the flat test course. 766 simulation
+tests.
 
 **M2: two browsers in one race.**
 - A Node server (Colyseus room) runs `stepRace` as the authority. Clients
@@ -485,3 +555,10 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
   person has dropped out.
 - No options screen yet (volume, quality, remapping).
 - Mech-to-mech contact is a simple circle push; only a Ram does damage.
+- Mechs in the air have no pose of their own yet: they keep running.
+- Computer pilots do not aim ring-outs at open edges, and never choose to
+  jump a gap when slow; they also do not know a fall is credited.
+- The minimap does not show gaps, open edges or a fork's two routes.
+- A fork's routes are drawn apart, but the simulation treats them as two
+  halves of one road; a projectile cannot fly from the upper route down to
+  the lower one, which is right, but the reason is the wall, not the height.

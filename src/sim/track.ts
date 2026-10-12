@@ -10,12 +10,21 @@
 // The simulation only needs curvature, width and the charge strips. The
 // renderer uses the same samples to turn (s, d, height) into world space, so
 // the two can never disagree about where the road is.
+//
+// Two kinds of definition build a Track. A TrackDef is a flat plan with
+// heights laid over it (Meridian). A CircuitDef (circuit.ts) is a run of
+// pieces in three dimensions: loops, corkscrews, jumps, forks, narrows and
+// open edges. Both produce the same Track, so nothing downstream needs to
+// know which it came from; on a plan track every 3D feature is simply absent.
 
 import { clamp } from './math';
+import type { CircuitDef } from './circuit';
 
 export interface StripDef {
-  /** Start of the strip as a fraction of the lap (0..1). */
+  /** Start of the strip as a fraction of the lap (0..1), or of `piece` when that is given. */
   at: number;
+  /** Circuits only: place it within this piece rather than by lap fraction. */
+  piece?: number;
   /** Length in units. */
   len: number;
   /** Lateral centre of the strip. */
@@ -25,8 +34,10 @@ export interface StripDef {
 }
 
 export interface GateDef {
-  /** Position as a fraction of the lap (0..1). */
+  /** Position as a fraction of the lap (0..1), or of `piece` when that is given. */
   at: number;
+  /** Circuits only: place it within this piece rather than by lap fraction. */
+  piece?: number;
   /** Lateral centre of the gate. */
   d: number;
   /** A mech scores the gate if its centre passes within this of the middle. */
@@ -39,6 +50,8 @@ export type Segment = { straight: number } | { arc: [radius: number, degrees: nu
 export interface TrackDef {
   id: string;
   name: string;
+  /** Scenery and music to use with it (client side). Meridian's own when absent. */
+  theme?: string;
   /** Lap length in units. The plan is scaled to hit it exactly. */
   length: number;
   halfWidth: number;
@@ -75,8 +88,34 @@ export interface Gate {
   halfW: number;
 }
 
+/** A speed pad: run over it and the next second is quicker. */
+export interface Pad {
+  s0: number;
+  s1: number;
+  d: number;
+  halfW: number;
+}
+
+/** What one side of a fork offers, for computer pilots choosing between them. */
+export interface Route {
+  strips: number;
+  gates: number;
+  pads: number;
+  /** It crosses a jump gap. */
+  jump: boolean;
+}
+
+/** A stretch where a wall down the middle splits the road into two routes. */
+export interface Fork {
+  s0: number;
+  s1: number;
+  median: number;
+  left: Route;
+  right: Route;
+}
+
 export interface Track {
-  def: TrackDef;
+  def: TrackDef | CircuitDef;
   length: number;
   halfWidth: number;
   /** Number of samples and the spacing between them. */
@@ -108,6 +147,39 @@ export interface Track {
   kappaAhead: Float32Array;
   strips: Strip[];
   gates: Gate[];
+
+  // ---- three-dimensional features. On a plan track (Meridian) every one of
+  // these is at its neutral value, so racing there is exactly as it was.
+  /** Half width of the road at each sample. */
+  hw: Float32Array;
+  /** 1 where there is road on that side of the centreline, 0 over a jump gap. */
+  roadL: Uint8Array;
+  roadR: Uint8Array;
+  /** 1 where a barrier stands on that side, 0 where the edge is open. */
+  wallL: Uint8Array;
+  wallR: Uint8Array;
+  /** Half width of the wall down the middle of a fork, or 0. */
+  median: Float32Array;
+  /** Drawing only: how far each route of a fork is moved across (shift) and up (rise). */
+  shiftL: Float32Array;
+  riseL: Float32Array;
+  shiftR: Float32Array;
+  riseR: Float32Array;
+  /** Curvature toward the road's own up: positive in a dip or a loop, negative over a crest. */
+  kv: Float32Array;
+  /** Vertical part of the (banked) road up: 1 flat, 0 on a wall, -1 upside down. */
+  upY: Float32Array;
+  /** 1 where the skates hold the road whatever the speed: loops, corkscrews, steep walls. */
+  mag: Uint8Array;
+  /** Cornering grip multiplier: a turn banked toward its inside can be taken faster. */
+  grip: Float32Array;
+  pads: Pad[];
+  forks: Fork[];
+  /** Mechs can leave the road here (jumps, crests, open edges). False on a plan track. */
+  air: boolean;
+  /** Narrowest and widest the road gets. */
+  minHw: number;
+  maxHw: number;
 }
 
 type V3 = [number, number, number];
@@ -237,7 +309,7 @@ function heightAt(keys: Array<[number, number]>, f: number): number {
   return keys[0][1];
 }
 
-function smoothRing(src: Float32Array, radius: number, passes = 1): Float32Array {
+export function smoothRing(src: Float32Array, radius: number, passes = 1): Float32Array {
   const n = src.length;
   let a = src;
   for (let p = 0; p < passes; p++) {
@@ -252,7 +324,46 @@ function smoothRing(src: Float32Array, radius: number, passes = 1): Float32Array
   return a;
 }
 
-export function buildTrack(def: TrackDef): Track {
+/** Build a track from either kind of definition. */
+export function buildTrack(def: TrackDef | CircuitDef): Track {
+  return 'pieces' in def ? buildCircuitTrack(def) : buildPlanTrack(def);
+}
+
+// Filled in by circuit.ts, which imports this module (kept as a hook so the
+// two files do not import each other at load time).
+let buildCircuitTrack: (def: CircuitDef) => Track = () => {
+  throw new Error('circuit builder not loaded');
+};
+export function registerCircuitBuilder(fn: (def: CircuitDef) => Track): void {
+  buildCircuitTrack = fn;
+}
+
+/** Neutral 3D feature arrays for a flat plan track of n samples. */
+export function flatFeatures(n: number, halfWidth: number): Pick<Track, 'hw' | 'roadL' | 'roadR' | 'wallL' | 'wallR' | 'median' | 'shiftL' | 'riseL' | 'shiftR' | 'riseR' | 'kv' | 'upY' | 'mag' | 'grip' | 'pads' | 'forks' | 'air' | 'minHw' | 'maxHw'> {
+  return {
+    hw: new Float32Array(n).fill(halfWidth),
+    roadL: new Uint8Array(n).fill(1),
+    roadR: new Uint8Array(n).fill(1),
+    wallL: new Uint8Array(n).fill(1),
+    wallR: new Uint8Array(n).fill(1),
+    median: new Float32Array(n),
+    shiftL: new Float32Array(n),
+    riseL: new Float32Array(n),
+    shiftR: new Float32Array(n),
+    riseR: new Float32Array(n),
+    kv: new Float32Array(n),
+    upY: new Float32Array(n).fill(1),
+    mag: new Uint8Array(n),
+    grip: new Float32Array(n).fill(1),
+    pads: [],
+    forks: [],
+    air: false,
+    minHw: halfWidth,
+    maxHw: halfWidth,
+  };
+}
+
+function buildPlanTrack(def: TrackDef): Track {
   // 1. Walk the plan, close the loop, round off the joins between straights
   //    and arcs, scale to the target lap length, then add height.
   const closed = closePlan(def);
@@ -421,6 +532,7 @@ export function buildTrack(def: TrackDef): Track {
     kappaAhead,
     strips,
     gates,
+    ...flatFeatures(n, def.halfWidth),
   };
 }
 
@@ -442,7 +554,8 @@ export function deltaS(track: Track, a: number, b: number): number {
   return d;
 }
 
-function sampleArray(track: Track, arr: Float32Array, s: number): number {
+/** Linear sample of any per-sample array at distance s. */
+export function sampleArray(track: Track, arr: Float32Array, s: number): number {
   const f = wrapS(track, s) / track.ds;
   const i = Math.floor(f) % track.n;
   const j = (i + 1) % track.n;
@@ -464,6 +577,87 @@ export function kappaAheadAt(track: Track, s: number): number {
 
 export function bankAt(track: Track, s: number): number {
   return sampleArray(track, track.bank, s);
+}
+
+function sampleIndex(track: Track, s: number): number {
+  return Math.floor(wrapS(track, s) / track.ds + 0.5) % track.n;
+}
+
+/** Half width of the road at s. */
+export function hwAt(track: Track, s: number): number {
+  return sampleArray(track, track.hw, s);
+}
+
+/** Half width of the wall down the middle of a fork at s, or 0. */
+export function medianAt(track: Track, s: number): number {
+  return sampleArray(track, track.median, s);
+}
+
+export function kvAt(track: Track, s: number): number {
+  return sampleArray(track, track.kv, s);
+}
+
+export function upYAt(track: Track, s: number): number {
+  return sampleArray(track, track.upY, s);
+}
+
+export function gripAt(track: Track, s: number): number {
+  return sampleArray(track, track.grip, s);
+}
+
+export function magAt(track: Track, s: number): boolean {
+  return track.mag[sampleIndex(track, s)] === 1;
+}
+
+/** Is there a barrier on that side (sign of `side`) at s? */
+export function wallAt(track: Track, s: number, side: number): boolean {
+  const i = sampleIndex(track, s);
+  return (side >= 0 ? track.wallR : track.wallL)[i] === 1;
+}
+
+/** Is there road under (s, d)? Not over a jump gap, nor beyond the edge. */
+export function roadAt(track: Track, s: number, d: number): boolean {
+  const i = sampleIndex(track, s);
+  return (d >= 0 ? track.roadR : track.roadL)[i] === 1 && Math.abs(d) <= track.hw[i] + 0.5;
+}
+
+/**
+ * The lateral range a body of radius r on side `side` (sign of its d) may
+ * use at s: the road, less any wall down the middle of a fork.
+ */
+export function laneAt(track: Track, s: number, side: number, r: number): [number, number] {
+  const w = hwAt(track, s) - r;
+  const m = medianAt(track, s);
+  if (m <= 0.01) return [-w, w];
+  return side >= 0 ? [Math.min(w, m + r), w] : [-w, -Math.min(w, m + r)];
+}
+
+/** Are a and b on different routes of a fork, with the wall between them? */
+export function splitApart(track: Track, s1: number, d1: number, s2: number, d2: number): boolean {
+  if (track.forks.length === 0) return false;
+  const m1 = medianAt(track, s1);
+  const m2 = medianAt(track, s2);
+  if (m1 <= 0.5 && m2 <= 0.5) return false;
+  return d1 * d2 < 0;
+}
+
+/** The fork whose wall is up at s, or null. */
+export function forkAt(track: Track, s: number): Fork | null {
+  const ws = wrapS(track, s);
+  for (const f of track.forks) {
+    if (f.s1 <= track.length ? ws >= f.s0 && ws <= f.s1 : ws >= f.s0 || ws <= f.s1 - track.length) return f;
+  }
+  return null;
+}
+
+/** Is the point (s, d) on a speed pad? */
+export function onPad(track: Track, s: number, d: number): boolean {
+  if (track.pads.length === 0) return false;
+  const ws = wrapS(track, s);
+  for (const p of track.pads) {
+    if (Math.abs(d - p.d) <= p.halfW && ws >= p.s0 && ws <= p.s1) return true;
+  }
+  return false;
 }
 
 /** Is the point (s, d) on a charge strip? */

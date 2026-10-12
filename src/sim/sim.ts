@@ -62,6 +62,17 @@ import {
   WALL_DRAG,
   WALL_SPLAT_DAMAGE,
   WALL_SPLAT_MIN,
+  AIR_CONTROL,
+  FALL_DAMAGE,
+  FALL_DEPTH,
+  FALL_TICKS,
+  GRAVITY,
+  HARD_LANDING,
+  MAG_PULL,
+  PAD_MULT,
+  PAD_TICKS,
+  RECOVER_IFRAMES,
+  RECOVER_SPEED,
   RINGOUT_BOUNCE,
   RINGOUT_DRIVE,
   RINGOUT_STAGGER,
@@ -75,6 +86,7 @@ import {
   clearEffects,
   cycleTarget,
   distance,
+  inPlay,
   isActive,
   limiterOf,
   ownTopSpeed,
@@ -88,7 +100,7 @@ import {
 } from './core';
 import { approach, approachAngle, clamp, lerp, rngNext, wrapAngle } from './math';
 import { makeRules } from './rules';
-import { deltaS, gateCrossed, kappaAt, onStrip, type Track } from './track';
+import { deltaS, gateCrossed, gripAt, hwAt, kappaAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
 import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceState } from './types';
 
 export { packBonus, speedCap } from './core';
@@ -140,6 +152,11 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       heading: 0,
       facing: 0,
       steer: 0,
+      h: 0,
+      vh: 0,
+      air: false,
+      fallT: 0,
+      padT: 0,
       mode: MODE.SPEED,
       target: -1,
       outOfRange: 0,
@@ -263,6 +280,9 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // The tow: full strength after a moment behind someone, and it lingers for
   // a moment after pulling out, which is what makes a slingshot pass.
   cap *= 1 + towBonus(race, m);
+  // A speed pad pushes harder still for a moment.
+  const padded = m.padT > 0;
+  if (padded) cap *= PAD_MULT;
 
   // A stagger takes the stick and the boost away, not the pace.
   const throttle = staggered ? Math.min(clamp(input.throttle, 0, 1), STAGGER_THROTTLE) : clamp(input.throttle, 0, 1);
@@ -271,7 +291,7 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   if (m.speed < want) {
     // Acceleration tails off toward the cap.
     const room = clamp(1.2 - m.speed / cap, 0.18, 1);
-    m.speed = Math.min(want, m.speed + c.accel * (overdrive ? OVERDRIVE_ACCEL : m.boosting ? BOOST_ACCEL : 1) * room * DT);
+    m.speed = Math.min(want, m.speed + c.accel * (overdrive ? OVERDRIVE_ACCEL : m.boosting || padded ? BOOST_ACCEL : 1) * room * DT);
   } else if (m.speed > want) {
     const drag = COAST_DRAG + (m.speed > cap ? OVERCAP_DRAG : 0);
     m.speed = Math.max(want, m.speed - drag * DT);
@@ -283,8 +303,10 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // free steering tops out a little above the cap.
   if (m.speed > cap * SPEED_CEILING) m.speed = cap * SPEED_CEILING;
 
-  // Steering fights the bend of the road: hold a line or run wide.
-  const omegaMax = Math.min(c.turnMax, c.grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12);
+  // Steering fights the bend of the road: hold a line or run wide. A turn
+  // banked toward its inside grips harder; in the air there is little grip at all.
+  const grip = c.grip * gripAt(track, m.s);
+  const omegaMax = Math.min(c.turnMax, grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
   const kappa = kappaAt(track, m.s);
   const sdot = (m.speed * Math.cos(m.heading)) / Math.max(0.35, 1 - kappa * m.d);
   const align = -m.heading * ALIGN_RATE * (1 - Math.abs(m.steer));
@@ -383,27 +405,154 @@ function stepRetired(track: Track, m: MechState): void {
   m.steer = 0;
   m.boosting = false;
   syncFromSpeed(m);
-  const edge = (m.d >= 0 ? 1 : -1) * (track.halfWidth - classOf(m).radius - 1);
+  const edge = (m.d >= 0 ? 1 : -1) * (hwAt(track, m.s) - classOf(m).radius - 1);
   m.vd = clamp((edge - m.d) * 1.2, -7, 7);
+  // ...or, with no road under it, drops out of sight.
+  if (track.air && (m.air || m.h < 0 || !roadAt(track, m.s, m.d))) {
+    m.air = true;
+    m.vh -= GRAVITY * DT;
+    m.h = Math.max(-400, m.h + m.vh * DT);
+  }
+}
+
+// --------------------------------------------------------------------------
+// Off the ground: jumps, crests, open edges, falls and the recovery drone
+// --------------------------------------------------------------------------
+
+/**
+ * Height above the road. On the ground the road holds a mech while its push
+ * against the surface (gravity's share plus the curve of the road) stays
+ * positive; over a crest taken fast enough, or past the end of the road, it
+ * leaves it and flies, and comes down where the road is. A mech that comes
+ * down with no road under it has fallen. Loops and corkscrews hold whatever
+ * the speed. Plan tracks never get here.
+ */
+function stepAir(race: RaceState, track: Track, m: MechState): void {
+  if (!track.air || m.retired || m.finished) return;
+  const on = roadAt(track, m.s, m.d);
+  if (!m.air) {
+    if (!on || (!magAt(track, m.s) && GRAVITY * upYAt(track, m.s) + kvAt(track, m.s) * m.vs * m.vs < 0)) {
+      m.air = true;
+      m.vh = 0;
+      race.events.push({ type: 'airborne', mech: m.id });
+    } else {
+      return;
+    }
+  }
+  // Over a loop or a corkscrew the skates' grip on the rail pulls a mech in
+  // whichever way up the road is; elsewhere it is gravity and the road's curve.
+  const pull = magAt(track, m.s) ? -MAG_PULL : -GRAVITY * upYAt(track, m.s) - kvAt(track, m.s) * m.vs * m.vs;
+  m.vh += pull * DT;
+  m.h += m.vh * DT;
+  if (m.h > 0) return;
+  if (on) {
+    const hit = -m.vh;
+    m.h = 0;
+    m.vh = 0;
+    m.air = false;
+    if (hit > HARD_LANDING && m.mode === MODE.SPEED) {
+      m.speed *= 1 - Math.min(0.12, (hit - HARD_LANDING) * 0.004);
+      syncFromSpeed(m);
+    }
+    race.events.push({ type: 'land', mech: m.id, intensity: hit });
+  } else if (m.h < -FALL_DEPTH) {
+    startFall(race, track, m);
+  }
+}
+
+/** Fallen: out of the race for a moment, armour lost, credited like a ring-out. */
+function startFall(race: RaceState, track: Track, m: MechState): void {
+  m.fallT = FALL_TICKS;
+  m.air = true;
+  if (m.vh > 0) m.vh = 0;
+  m.act = ACT.NONE;
+  m.guarding = false;
+  m.boosting = false;
+  m.comboQueued = false;
+  m.chain = 0;
+  m.padT = 0;
+  m.momentum = 0;
+  m.iframes = Math.max(m.iframes, FALL_TICKS + RECOVER_IFRAMES);
+  if (m.target >= 0) setTarget(race, m, -1);
+  for (const o of race.mechs) if (o.target === m.id) retarget(race, track, o, m.id);
+  const credit = m.lastHitBy >= 0 && race.tick - m.lastHitTick <= SPLAT_CREDIT_TICKS;
+  const by = credit ? race.mechs[m.lastHitBy] : null;
+  const dmg = Math.min(m.hp, FALL_DAMAGE);
+  m.hp -= dmg;
+  m.dmgTaken += dmg;
+  if (by) by.dmgDealt += dmg;
+  race.events.push({ type: 'fall', mech: m.id, by: by ? by.id : -1, damage: dmg });
+  if (m.hp <= 0.001) retire(race, m, by, track);
+}
+
+/** A fallen mech drifts on, dropping, until the drone has it. */
+function stepFalling(race: RaceState, track: Track, m: MechState, c: ClassDef): void {
+  m.vs *= 1 - 0.9 * DT;
+  m.vd *= 1 - 2 * DT;
+  m.speed = Math.hypot(m.vs, m.vd);
+  m.s += m.vs * DT;
+  m.d += m.vd * DT;
+  m.vh -= GRAVITY * DT;
+  m.h = Math.max(-400, m.h + m.vh * DT);
+  m.steer = 0;
+  if (--m.fallT > 0) return;
+  // Put back on the road, on its own side, where there is road to stand on.
+  const side = m.d >= 0 ? 1 : -1;
+  let s = m.s;
+  for (let k = 0; k < 250 && !roadAt(track, s, side); k++) s += 4;
+  s += 12;
+  const [lo, hi] = laneAt(track, s, side, c.radius);
+  m.s = s;
+  m.d = lo + 2 < hi - 2 ? clamp(m.d, lo + 2, hi - 2) : (lo + hi) / 2;
+  m.h = 0;
+  m.vh = 0;
+  m.air = false;
+  const pace = race.lapPhase < 3 ? limiterOf(race) : ownTopSpeed(race, m, c);
+  m.speed = pace * RECOVER_SPEED;
+  m.heading = 0;
+  m.facing = 0;
+  m.mode = MODE.SPEED;
+  syncFromSpeed(m);
+  m.iframes = RECOVER_IFRAMES;
+  race.events.push({ type: 'recover', mech: m.id });
 }
 
 function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): void {
   const kappa = kappaAt(track, m.s);
+  const home = m.d >= 0 ? 1 : -1;
   // The inside of a bend is the shorter way round.
   m.s += (m.vs / Math.max(0.35, 1 - kappa * m.d)) * DT;
   m.d += m.vd * DT;
 
-  const lim = track.halfWidth - c.radius;
-  if (Math.abs(m.d) > lim) {
-    const side = m.d > 0 ? 1 : -1;
-    m.d = side * lim;
+  // The lane this mech may use: the road, less the wall down the middle of a
+  // fork if it is in one. An edge with no barrier lets it go over.
+  const [lo, hi] = laneAt(track, m.s, home, c.radius);
+  let side = 0;
+  let limit = 0;
+  if (m.d > hi) {
+    const outer = home > 0;
+    if (!outer || wallAt(track, m.s, 1)) {
+      side = 1;
+      limit = hi;
+    }
+  } else if (m.d < lo) {
+    const outer = home < 0;
+    if (!outer || wallAt(track, m.s, -1)) {
+      side = -1;
+      limit = lo;
+    }
+  }
+  if (side !== 0) {
+    m.d = limit;
+    // Where the wall's face is: the road's edge, or the side of a fork's middle wall.
+    const face = limit + side * c.radius;
     const into = m.vd * side;
     if (into > 0) {
       let bounce = 0.25;
       if (!m.retired) {
         const ringOut = m.act === ACT.STAGGER && into > WALL_SPLAT_MIN && isActive(m);
         if (into > 7 && m.wall === 0 && !ringOut) {
-          race.events.push({ type: 'wall', mech: m.id, intensity: into, s: m.s, side });
+          race.events.push({ type: 'wall', mech: m.id, intensity: into, s: m.s, side, face });
         }
         if (ringOut) {
           // Knocked into the barrier while reeling: a ring-out. Heavy damage,
@@ -418,7 +567,7 @@ function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): vo
             by.dmgDealt += dmg;
             by.drive = Math.min(DRIVE_MAX, by.drive + RINGOUT_DRIVE);
           }
-          race.events.push({ type: 'splat', mech: m.id, by: by ? by.id : -1, damage: dmg, intensity: into, s: m.s, side });
+          race.events.push({ type: 'splat', mech: m.id, by: by ? by.id : -1, damage: dmg, intensity: into, s: m.s, side, face });
           if (m.hp <= 0.001) retire(race, m, by, track);
           else bounce = RINGOUT_BOUNCE;
         }
@@ -444,15 +593,24 @@ function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): vo
   }
 }
 
+/** Hold d inside [lo, hi], except past an edge with no barrier. */
+function clampLane(track: Track, s: number, d: number, lo: number, hi: number): number {
+  if (d > hi && (hi < 0 || wallAt(track, s, 1))) return hi;
+  if (d < lo && (lo > 0 || wallAt(track, s, -1))) return lo;
+  return d;
+}
+
 function collide(race: RaceState, track: Track): void {
   const ms = race.mechs;
   for (let i = 0; i < ms.length; i++) {
     const a = ms[i];
-    if (!isActive(a)) continue;
+    if (!inPlay(a)) continue;
     const ca = classOf(a);
     for (let j = i + 1; j < ms.length; j++) {
       const b = ms[j];
-      if (!isActive(b)) continue;
+      if (!inPlay(b)) continue;
+      // One flying over the other does not touch it.
+      if (Math.abs(a.h - b.h) > 6) continue;
       const cb = classOf(b);
       const ds = deltaS(track, a.s, b.s);
       const dd = a.d - b.d;
@@ -468,15 +626,18 @@ function collide(race: RaceState, track: Track): void {
       const mb = cb.mass * (b.ramT > 0 ? RAM_MASS : 1);
       const wa = mb / (ma + mb);
       const wb = 1 - wa;
+      const aHome = a.d >= 0 ? 1 : -1;
+      const bHome = b.d >= 0 ? 1 : -1;
       a.s += ns * overlap * wa;
       a.d += nd * overlap * wa;
       b.s -= ns * overlap * wb;
       b.d -= nd * overlap * wb;
-      // A shove must not leave either mech through the barrier.
-      const la = track.halfWidth - ca.radius;
-      const lb = track.halfWidth - cb.radius;
-      a.d = clamp(a.d, -la, la);
-      b.d = clamp(b.d, -lb, lb);
+      // A shove must not leave either mech through the barrier (an open edge
+      // is another matter: a mech can be shoved off it).
+      const [alo, ahi] = laneAt(track, a.s, aHome, ca.radius);
+      const [blo, bhi] = laneAt(track, b.s, bHome, cb.radius);
+      a.d = clampLane(track, a.s, a.d, alo, ahi);
+      b.d = clampLane(track, b.s, b.d, blo, bhi);
       const rv = (a.vs - b.vs) * ns + (a.vd - b.vd) * nd;
       if (rv < 0) {
         const j2 = -rv * 1.15;
@@ -626,6 +787,10 @@ function finalize(race: RaceState): void {
     if (isActive(m)) {
       // Still running when the flag fell: classified by distance covered.
       m.finished = true;
+      m.fallT = 0;
+      m.air = false;
+      m.h = 0;
+      m.vh = 0;
       m.finishTime = 1e9 - m.s;
       m.act = ACT.NONE;
       m.guarding = false;
@@ -737,7 +902,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     const ctl = controls[m.id];
     // A knocked-out pilot can still call plays from the pit wall.
     if (m.human && race.phase === PHASE.RACING && ctl.cmd !== m.prevCmd && ctl.cmd > 0) handleCommand(race, m, ctl.cmd);
-    if (isActive(m) && race.phase === PHASE.RACING) {
+    if (inPlay(m) && race.phase === PHASE.RACING) {
       const pressed = ctl.buttons & ~m.prevButtons;
       if (m.act !== ACT.STAGGER) handleLock(race, track, m, pressed);
       stepAction(race, track, m, ctl, pressed);
@@ -749,23 +914,31 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   // 3. Movement.
   for (const m of ms) {
     const c = classOf(m);
+    const sBefore = m.s;
+    startS[m.id] = sBefore;
+    if (m.fallT > 0 && !m.retired) {
+      // Fallen: out of it until the recovery drone puts it back.
+      stepFalling(race, track, m, c);
+      movedS[m.id] = m.s;
+      movedD[m.id] = m.d;
+      continue;
+    }
     if (m.retired) stepRetired(track, m);
     else if (m.mode === MODE.BATTLE && m.target >= 0) stepBattleMode(race, track, m, c, controls[m.id]);
     else stepSpeedMode(race, track, m, c, controls[m.id]);
-    // Momentum: racing hard (a boost, an Overdrive, a charged slipstream)
-    // primes the next attack for a moment. A fight only spends it.
-    if (isActive(m) && m.mode === MODE.SPEED && m.act !== ACT.STAGGER && (m.boosting || m.overdriveT > 0 || m.tow >= MOMENTUM_TOW)) {
+    // Momentum: racing hard (a boost, an Overdrive, a charged slipstream, a
+    // speed pad) primes the next attack for a moment. A fight only spends it.
+    if (isActive(m) && m.mode === MODE.SPEED && m.act !== ACT.STAGGER && (m.boosting || m.overdriveT > 0 || m.padT > 0 || m.tow >= MOMENTUM_TOW)) {
       m.momentum = Math.round(race.rules.momentumSecs * TICK_RATE);
     } else if (m.momentum > 0) {
       m.momentum--;
     }
-    const sBefore = m.s;
-    startS[m.id] = sBefore;
     integrate(race, track, m, c);
+    stepAir(race, track, m);
     movedS[m.id] = m.s;
     movedD[m.id] = m.d;
 
-    if (isActive(m) && race.phase === PHASE.RACING) {
+    if (inPlay(m) && race.phase === PHASE.RACING) {
       // Laps and the finish line.
       const lap = Math.floor(m.s / track.length);
       if (lap > m.lap) {
@@ -814,7 +987,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   // and a full mech takes nothing.
   if (race.phase === PHASE.RACING && track.gates.length > 0) {
     for (const m of ms) {
-      if (!isActive(m) || m.lap >= race.rules.gateLaps || m.cells >= race.rules.cellMax) continue;
+      if (!inPlay(m) || m.lap >= race.rules.gateLaps || m.cells >= race.rules.cellMax) continue;
       // The line has to be behind the mech when the tick ends. The opening is
       // judged on where it ended up, or on where it was when it crossed under
       // its own power, so contact cannot take a gate away.
@@ -837,22 +1010,31 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     m.linked = false;
   }
   for (const m of ms) {
-    if (!isActive(m)) {
+    if (!inPlay(m)) {
       m.onStrip = false;
       m.drafting = false;
       m.tow = 0;
+      m.padT = 0;
       continue;
     }
-    m.onStrip = m.speed > 30 && onStrip(track, m.s, m.d);
+    // Strips and pads work through the skates: not in the air.
+    m.onStrip = m.speed > 30 && !m.air && onStrip(track, m.s, m.d);
+    if (!m.air && track.pads.length > 0 && onPad(track, m.s, m.d)) {
+      if (m.padT === 0) race.events.push({ type: 'pad', mech: m.id });
+      m.padT = PAD_TICKS;
+    } else if (m.padT > 0) {
+      m.padT--;
+    }
     // Slipstream: how well tucked in behind somebody this mech is. Close up
     // the tow is at full strength; at the far end of its reach it is a third.
     m.drafting = false;
     let strength = 0;
     if (m.speed > 50) {
       for (const o of ms) {
-        if (o === m || !isActive(o) || o.speed < 50) continue;
+        if (o === m || !inPlay(o) || o.speed < 50) continue;
         const ahead = deltaS(track, o.s, m.s);
         if (ahead < DRAFT_MIN || ahead > towRange || Math.abs(o.d - m.d) >= DRAFT_WIDTH) continue;
+        if (splitApart(track, m.s, m.d, o.s, o.d)) continue;
         m.drafting = true;
         strength = Math.max(strength, ahead <= towNear ? 1 : lerp(1, TOW_FAR, (ahead - towNear) / (towRange - towNear)));
       }
@@ -862,7 +1044,8 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     if (m.target >= 0) {
       const t = race.mechs[m.target];
       const dist = distance(track, m, t);
-      if (!isActive(t)) {
+      if (!inPlay(t) || splitApart(track, m.s, m.d, t.s, t.d)) {
+        // Gone (or behind the wall of a fork): the lock cannot hold.
         setTarget(race, m, -1);
       } else if (dist > LOCK_BREAK) {
         if (++m.outOfRange >= LOCK_BREAK_TICKS) setTarget(race, m, -1);
@@ -881,7 +1064,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     const trickle = lap1 && rules.lap1Trickle < 0.5 ? 0 : 1;
     const strip = lap1 ? rules.driveStripLap1 : rules.driveStrip;
     for (const m of ms) {
-      if (!isActive(m)) continue;
+      if (!inPlay(m)) continue;
       const gain = (m.onStrip ? strip : 0) + trickle * (rules.drivePassive + (m.drafting ? rules.driveDraft : 0) + (m.linked ? DRIVE_LINK : 0));
       m.drive = Math.min(DRIVE_MAX, m.drive + gain * DT);
     }

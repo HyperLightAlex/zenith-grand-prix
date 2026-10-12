@@ -13,6 +13,7 @@ import { Game } from './game/game';
 //   &team=1         fly for Vanta                 &rivals=0..2
 //   &mute=1         no sound                      ?debug=mechs  model viewer
 //   &match=0..4     match format                  &tune=1   tuning panel open
+//   &track=canyon   circuit: meridian, canyon or helios
 const q = new URLSearchParams(location.search);
 
 async function boot(): Promise<void> {
@@ -53,6 +54,7 @@ async function boot(): Promise<void> {
     rivals: q.has('rivals') ? Number(q.get('rivals')) : undefined,
     match: q.has('match') ? Number(q.get('match')) : undefined,
     tune: q.has('tune'),
+    track: q.get('track') ?? undefined,
     audio,
   });
   (window as unknown as { game: Game }).game = game;

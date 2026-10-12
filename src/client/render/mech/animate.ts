@@ -20,6 +20,8 @@ export class MechAnimator {
   private boostW = 0;
   private koW = 0;
   private winW = 0;
+  private airW = 0;
+  private fallW = 0;
   private stride = 0;
   private lean = 0;
   private pitch = 0;
@@ -43,13 +45,16 @@ export class MechAnimator {
     this.boostW = toward(this.boostW, surging ? 1 : 0, 7, dt);
     this.koW = toward(this.koW, m.retired ? 1 : 0, 4, dt);
     this.winW = toward(this.winW, m.finished && !m.retired ? 1 : 0, 2.5, dt);
+    this.airW = toward(this.airW, m.air && !m.retired ? 1 : 0, 10, dt);
+    this.fallW = toward(this.fallW, m.fallT > 0 && !m.retired ? 1 : 0, 6, dt);
     const speedFrac = clamp01(m.speed / (PACE * 1.25));
     const P = this.pose;
 
     // ---- base: tuck, with a skating stride that settles into a glide
     copyPose(P, POSES.tuck);
     blendPose(P, POSES.boost, this.boostW);
-    const amp = (1 - ease(clamp01((speedFrac - 0.25) / 0.6)) * 0.8) * clamp01(m.speed / 8);
+    // No stride in the air: the skates have nothing to push on.
+    const amp = (1 - ease(clamp01((speedFrac - 0.25) / 0.6)) * 0.8) * clamp01(m.speed / 8) * (1 - this.airW);
     this.stride += dt * (2.4 + speedFrac * 3.2);
     const ph = this.stride;
     const sn = Math.sin(ph);
@@ -68,6 +73,29 @@ export class MechAnimator {
     // Standing on the grid: rise out of the tuck.
     const idle = 1 - clamp01(m.speed / 14);
     if (idle > 0) blendPose(P, POSES.battle, idle * 0.55 * (1 - this.battleW));
+
+    // ---- in the air: knees up, toes down, arms out for balance; falling,
+    // the legs drop and the arms go up
+    if (this.airW > 0.001) {
+      const k = this.airW * (1 - this.fallW);
+      P.footL[1] += 0.9 * k;
+      P.footR[1] += 0.6 * k;
+      P.footL[2] += 0.4 * k;
+      P.footR[2] -= 0.2 * k;
+      P.footL[3] += 0.35 * k;
+      P.footR[3] += 0.35 * k;
+      P.shL[2] += 0.45 * this.airW;
+      P.shR[2] -= 0.45 * this.airW;
+    }
+    if (this.fallW > 0.001) {
+      const f = this.fallW;
+      const kick = Math.sin(this.time * 9);
+      P.footL[2] += kick * 0.5 * f;
+      P.footR[2] -= kick * 0.5 * f;
+      P.shL[2] += 0.7 * f;
+      P.shR[2] -= 0.7 * f;
+      P.hips[2] += 0.25 * f;
+    }
 
     // ---- battle stance with a little life in it
     if (this.battleW > 0.001) {
@@ -149,6 +177,8 @@ export class MechAnimator {
       want = battle ? 0.28 : 0.22 + speedFrac * 0.45;
       if (surging) want = m.overdriveT > 0 ? 1.45 : 1.15;
       if (m.act === ACT.DASH) want = 1.0;
+      // Thrusters hold it level in the air, and fight the drop in a fall.
+      if (m.air) want = Math.max(want, m.fallT > 0 ? 1.3 : 0.75);
       if (m.finished) want = 0.25;
     }
     this.thrust = toward(this.thrust, want, 10, dt);

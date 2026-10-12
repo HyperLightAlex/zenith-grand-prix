@@ -456,7 +456,7 @@ describe('shots and projectiles', () => {
   it('rounds that leave the road are removed', () => {
     const a = arena(2);
     a.put(MF0, 300, 0);
-    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, charged: false, s: a.base + 300, d: 26, vs: a.pace, vd: 240, life: 30 });
+    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, charged: false, s: a.base + 300, d: 26, h: 0, vs: a.pace, vd: 240, life: 30 });
     a.step(1);
     expect(a.events('projEnd')).toMatchObject([{ proj: 900, hit: false }]);
     expect(a.race.projectiles.length).toBe(0);

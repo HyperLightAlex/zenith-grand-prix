@@ -10,8 +10,8 @@ is about getting your forward home first and stopping theirs.
 title lives in `index.html` and `src/client/ui/menus.ts` if you want to change
 it.
 
-This is version 0.2: one circuit, solo play with computer pilots in the other
-five seats, single races or a match of several rounds. The simulation is
+This is version 0.3: three circuits, solo play with computer pilots in the
+other five seats, single races or a match of several rounds. The simulation is
 already written to run on a server, which is a later milestone. See
 [docs/DESIGN.md](docs/DESIGN.md).
 
@@ -81,6 +81,41 @@ nearest rival by itself.
 
 Your two teammates follow the play you call with the D-pad. Call the same play
 again to cancel it.
+
+## Circuits
+
+Pick one in the garage (the first row). Each has its own scenery and its own
+race music.
+
+- **Meridian Skyway.** The original: an elevated loop over the sea at golden
+  hour. Sweepers, a hairpin and long straights, barriers all the way round.
+- **Corkscrew Canyon.** Built for fighting, at dusk in a red desert. The
+  Narrows (a cut through the rock too narrow to pass without a fight), a
+  corkscrew, the Bowl (banked so steeply you can take it flat out), the
+  Crossover (a fork whose two routes swap sides over and under each other),
+  the Sky Bridge (no barriers on either side) and the Hop, a short jump.
+- **Helios Drop.** Built for speed and air, above a sea of cloud. The Drop
+  (a jump off the top of a long climb, through the Sun Gate), a full loop,
+  the Carousel (a long banked right), the Skyline crest, and Split Decision:
+  a fork with a speed pad and a second jump on one side and the Drive strip
+  and a gate on the other.
+
+What the new circuits add:
+
+- **Jumps.** Fast enough and you fly the gap and land on the far side. Too
+  slow (you were fighting, or snared) and you fall short.
+- **Falls.** Off an open edge or into a gap, a recovery drone puts you back on
+  the road further on. It costs a couple of seconds and 70 armour, and if
+  somebody hit you just before, the fall is credited to them like a ring-out
+  (a fall can knock a damaged mech out).
+- **Forks.** A wall runs down the middle. Nobody can lock on, hit, shoot,
+  draft or bump across it, so picking the other route is a way out of a
+  fight, and each route has something the other does not.
+- **Loops and corkscrews.** The skates hold you to the road all the way round
+  at any speed.
+- **Banked turns** grip harder the steeper they are banked.
+- **Speed pads** (magenta chevrons) lift your top speed for a second.
+- **Crests** throw you into the air if you take them fast.
 
 ## Cells and abilities
 
@@ -160,10 +195,12 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then build to `dist/` |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Simulation test suite (733 tests) |
+| `npm test` | Simulation test suite (766 tests) |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |
+| `npm run sim -- 100 1 track=canyon` | The same on another circuit (`meridian`, `canyon`, `helios`) |
+| `npx tsx tools/circuit-plot.ts canyon` | Plan, height and features of a circuit, as numbers and an SVG |
 
 The browser-driving helpers in `tools/` (`shot.mjs`, `playtest.mjs`,
 `audio-check.mjs`) need Playwright, which is not a dependency of the project:
@@ -173,8 +210,9 @@ Dev shortcuts on the page URL: `?auto=FW` (or `MF`, `DF`) jumps straight into
 a race, `&demo=1` lets the computer fly your mech, `&skip=95` starts that many
 seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 `&rivals=0..2` sets rival skill, `&match=0..4` picks the match format,
-`&tune=1` opens the tuning panel, `&mute=1` turns sound off, and
-`?debug=mechs` opens a model viewer.
+`&track=canyon` (or `helios`, `meridian`) picks the circuit, `&tune=1` opens
+the tuning panel, `&mute=1` turns sound off, and `?debug=mechs` opens a model
+viewer.
 
 ## Layout
 
@@ -183,6 +221,9 @@ src/sim/        The race itself: track, physics, combat, AI, scoring. No DOM,
                 no rendering, deterministic. Runs in the browser and in Node.
   rules.ts      Every tunable rule, with its default and its allowed range
   config.ts     Frame data: classes, attacks, timings
+  track.ts      Built track: samples, frames and lookups (road, lanes, forks)
+  circuit.ts    Builder for 3D circuits from pieces (turns, climbs, loops...)
+  tracks/       The circuits: meridian.ts, canyon.ts, helios.ts
   match.ts      Series and points-race scoring across rounds
 src/client/     Everything you see and hear.
   game/         Game shell, the Session layer, the tuning store
@@ -197,6 +238,12 @@ play/           Prebuilt single-file game
 ```
 
 Rules live in `src/sim/rules.ts`, frame data in `src/sim/config.ts`, and the
-circuit (straights, arcs, strips and gates) in `src/sim/tracks/meridian.ts`.
-Change a number, run `npm run sim -- 100`, and read the summary. Camera and
-effect defaults are in `src/client/game/tuning.ts`.
+circuits in `src/sim/tracks/`. Meridian is a flat plan of straights and arcs;
+Canyon and Helios are lists of pieces (`straight`, `turn`, `climb`, `pitch`,
+`loop`, `roll`, plus `jump()`), each with optional width, banking, a gap, an
+open edge or a fork. The builder lengthens the two `closeWith` straights and
+sets the `settle` climb so the lap closes. Change a number, run
+`npm run sim -- 100 1 track=canyon`, and read the summary. Each circuit's
+scenery is in `src/client/render/world.ts` and `themes.ts`, its music in
+`src/client/audio/music.ts`. Camera and effect defaults are in
+`src/client/game/tuning.ts`.

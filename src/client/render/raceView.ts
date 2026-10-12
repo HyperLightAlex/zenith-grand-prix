@@ -11,6 +11,7 @@ import {
   DT,
   MODE,
   PHASE,
+  roadAt,
   weaponsFree,
   type MechState,
   type SimEvent,
@@ -47,6 +48,8 @@ interface MechVisual {
   prevSpeed: number;
   s: number;
   d: number;
+  /** Height above the road (in the air, or falling). */
+  h: number;
   facing: number;
   pos: THREE.Vector3;
   vel: THREE.Vector3;
@@ -92,6 +95,8 @@ function lerpAngle(a: number, b: number, t: number): number {
   return a + d * t;
 }
 
+const DUST: Record<string, number> = { meridian: 0x9aa2b0, canyon: 0xc98a5a, helios: 0xe8eef8 };
+
 export class RaceView {
   readonly group = new THREE.Group();
   readonly cam: CameraRig;
@@ -110,6 +115,9 @@ export class RaceView {
   private hurt = 0;
   private fxFov = 0;
 
+  /** Colour of the dust a landing kicks up: red sand in the canyon, cloud white up high. */
+  private readonly dust: number;
+
   constructor(
     private renderer: Renderer,
     private session: Session,
@@ -117,6 +125,7 @@ export class RaceView {
     private feel: Feel,
   ) {
     const race = session.race;
+    this.dust = DUST[session.track.def.theme ?? 'meridian'] ?? DUST.meridian;
     this.focusId = session.localId >= 0 ? session.localId : 0;
     this.cam = new CameraRig(renderer.camera, session.track, feel);
     for (const m of race.mechs) {
@@ -147,6 +156,7 @@ export class RaceView {
         prevSpeed: m.speed,
         s: m.s,
         d: m.d,
+        h: m.h,
         facing: m.facing,
         pos: new THREE.Vector3(),
         vel: new THREE.Vector3(),
@@ -208,19 +218,23 @@ export class RaceView {
       v.s = this.session.prevS[m.id] + (m.s - this.session.prevS[m.id]) * alpha;
       v.d = this.session.prevD[m.id] + (m.d - this.session.prevD[m.id]) * alpha;
       v.facing = lerpAngle(this.session.prevFacing[m.id], m.facing, alpha);
-      trackMatrix(track, v.s, v.d, 0, v.facing, m4);
+      v.h = this.session.prevH[m.id] + (m.h - this.session.prevH[m.id]) * alpha;
+      trackMatrix(track, v.s, v.d, v.h, v.facing, m4);
       v.rig.root.matrix.copy(m4);
       v.rig.root.matrixWorldNeedsUpdate = true;
       v.anim.update(dt, m, alpha);
       v.rig.root.updateMatrixWorld(true);
-      trackPoint(track, v.s, v.d, 4.2, v.pos);
+      trackPoint(track, v.s, v.d, 4.2 + v.h, v.pos);
       trackDir(track, v.s, m.vs, m.vd, v.vel).multiplyScalar(Math.hypot(m.vs, m.vd));
 
-      // Shadow: a soft blob stretched away from the low sun.
+      // Shadow: a soft blob stretched away from the low sun, shrinking as the
+      // mech climbs away from the road, and gone with no road under it.
       const sh = worldDirToTrackAngle(track, v.s, -SUN_DIR.x, -SUN_DIR.z);
       trackMatrix(track, v.s + Math.cos(sh) * 2.2, v.d + Math.sin(sh) * 2.2, 0.05, sh, m4);
       const r = CLASSES[m.role].radius;
-      shadowScale.makeScale(r * 2.6, 1, r * 4.4);
+      const lift = v.h > 0 ? Math.max(0.25, 1 - v.h / 40) : 1;
+      v.shadow.visible = v.h > -2 && roadAt(track, m.s, m.d);
+      shadowScale.makeScale(r * 2.6 * lift, 1, r * 4.4 * lift);
       v.shadow.matrix.multiplyMatrices(m4, shadowScale);
       v.shadow.matrixWorldNeedsUpdate = true;
 
@@ -398,7 +412,7 @@ export class RaceView {
     // ---- camera
     const fv = this.mechs[this.focusId];
     const tgt = focus.target >= 0 ? this.mechs[focus.target] : null;
-    this.cam.update(dt, { s: fv.s, d: fv.d, mech: focus, target: tgt ? { s: tgt.s, d: tgt.d } : null }, panX, panY, lookBack);
+    this.cam.update(dt, { s: fv.s, d: fv.d, h: fv.h, mech: focus, target: tgt ? { s: tgt.s, d: tgt.d } : null }, panX, panY, lookBack);
     // Sparks are sized in pixels from the field of view, which now swings with speed.
     if (Math.abs(this.renderer.camera.fov - this.fxFov) > 1.5) this.resize();
     this.fx.update(dt, this.renderer.camera);
@@ -523,8 +537,8 @@ export class RaceView {
         // runs away along it both ways.
         const v = this.mechs[e.mech];
         const hard = Math.min(1.5, 0.6 + e.intensity / 40);
-        this.trackVis.pulseWall(e.s, e.side, hard * this.feel.wallPulse, true);
-        trackPoint(track, v.s, e.side * (track.halfWidth - 0.3), 3.2, v1);
+        this.trackVis.pulseWall(e.s, e.face, hard * this.feel.wallPulse, true);
+        trackPoint(track, v.s, e.face - e.side * 0.3, 3.2 + v.h, v1);
         this.fx.flash(v1, 16, 0xff6ab0, 0.32);
         this.fx.flash(v1, 11, 0xffffff, 0.2, null, true);
         trackDir(track, v.s, 0.2, -e.side, v3);
@@ -556,7 +570,7 @@ export class RaceView {
       case 'wall': {
         const v = this.mechs[e.mech];
         const side = e.side;
-        this.trackVis.pulseWall(e.s, side, Math.min(0.9, Math.max(0.25, e.intensity / 30)) * this.feel.wallPulse, false);
+        this.trackVis.pulseWall(e.s, e.face, Math.min(0.9, Math.max(0.25, e.intensity / 30)) * this.feel.wallPulse, false);
         trackPoint(track, v.s, v.d + side * 3, 1.6, v1);
         trackDir(track, v.s, -1, -side * 0.5, v3);
         this.fx.spray(v1, v.vel, v3, Math.min(30, 6 + e.intensity), 30, 0xffc66e, 0.45, 0.45);
@@ -639,6 +653,70 @@ export class RaceView {
       case 'lapPhase':
         this.flash(0.4);
         break;
+      case 'airborne': {
+        // Off a ramp or a crest: the skates let go in a spit of sparks.
+        const v = this.mechs[e.mech];
+        trackPoint(track, v.s, v.d, 0.4, v1);
+        trackDir(track, v.s, -1, 0, v3);
+        this.fx.spray(v1, v.vel, v3, 14, 24, 0xffe2b0, 0.35, 0.35);
+        break;
+      }
+      case 'land': {
+        // Touchdown: dust and sparks thrown out sideways, harder for a longer drop.
+        const v = this.mechs[e.mech];
+        const k = Math.min(1, e.intensity / 40);
+        trackPoint(track, v.s, v.d, 0.3, v1);
+        for (const side of [-1, 1]) {
+          trackDir(track, v.s, 0.2, side, v3);
+          this.fx.spray(v1, v.vel, v3, Math.round(6 + k * 20), 18 + k * 20, 0xffd8a0, 0.4, 0.4);
+        }
+        this.fx.puff(v1, v.vel, Math.round(2 + k * 5), this.dust, 2.2 + k * 2, 0.9);
+        if (k > 0.3) this.fx.flash(v1, 6 + k * 6, 0xfff2d0, 0.12, null, true);
+        if (e.mech === local) {
+          this.cam.shake(0.1 + k * 0.5);
+          this.onImpact(Math.min(0.8, k * 0.9));
+        }
+        break;
+      }
+      case 'fall': {
+        // Over the edge: a flash where the mech left the road.
+        const v = this.mechs[e.mech];
+        trackPoint(track, v.s, v.d, 2 + v.h, v1);
+        this.fx.flash(v1, 12, 0xff6ab0, 0.3, null, true);
+        this.fx.burst(v1, v.vel, 24, 40, 0xffb0d8, 0.5, 0.5);
+        if (e.mech === local) {
+          this.cam.shake(0.5);
+          this.hurt = 1;
+        } else if (e.by === local) {
+          this.cam.shake(0.3);
+          this.flash(0.2);
+        }
+        break;
+      }
+      case 'recover': {
+        // Set back down by the recovery drone: a column of light where it lands.
+        const v = this.mechs[e.mech];
+        const pos = race.mechs[e.mech];
+        trackPoint(track, pos.s, pos.d, 6, v1);
+        this.fx.flash(v1, 16, v.livery.glow, 0.4, null, true);
+        trackPoint(track, pos.s, pos.d, 0.5, v1);
+        this.fx.spray(v1, v.vel, v3.set(0, 1, 0), 30, 30, v.livery.glow, 0.5, 0.6);
+        if (e.mech === local) this.flash(0.35);
+        break;
+      }
+      case 'pad': {
+        // A speed pad: a magenta kick of light under the skates.
+        const v = this.mechs[e.mech];
+        trackPoint(track, v.s, v.d, 0.6, v1);
+        this.fx.flash(v1, 9, 0xff3d9a, 0.22, null, true);
+        trackDir(track, v.s, -1, 0, v3);
+        this.fx.spray(v1, v.vel, v3, 22, 40, 0xff6ab8, 0.4, 0.35);
+        if (e.mech === local) {
+          this.cam.shake(0.15);
+          this.flash(0.12);
+        }
+        break;
+      }
       case 'gate': {
         const v = this.mechs[e.mech];
         if (e.mech === local) this.trackVis.gates.pulse(e.gate);

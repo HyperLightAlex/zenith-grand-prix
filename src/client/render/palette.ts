@@ -76,6 +76,8 @@ export function toonGradient(): THREE.DataTexture {
   gradient.magFilter = THREE.NearestFilter;
   gradient.generateMipmaps = false;
   gradient.needsUpdate = true;
+  // Shared by every toon material: never freed with a circuit's scenery.
+  gradient.userData.shared = true;
   return gradient;
 }
 

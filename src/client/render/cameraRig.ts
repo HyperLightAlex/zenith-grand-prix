@@ -2,7 +2,7 @@
 // stays behind the mech through bends, and swings to frame both fighters
 // when the pilot locks on.
 import * as THREE from 'three';
-import { MODE, deltaS, type MechState, type Track } from '../../sim/index';
+import { MODE, deltaS, hwAt, medianAt, upYAt, type MechState, type Track } from '../../sim/index';
 import type { Feel } from '../game/tuning';
 import { trackPoint, trackUp } from './trackSpace';
 
@@ -18,6 +18,8 @@ export interface CameraSubject {
   /** Interpolated track position of the mech being followed. */
   s: number;
   d: number;
+  /** Interpolated height above the road (in the air, or falling). */
+  h?: number;
   mech: MechState;
   /** Lock target position, when there is one. */
   target: { s: number; d: number } | null;
@@ -34,6 +36,7 @@ export class CameraRig {
   private battleYaw = 0;
   private battleW = 0;
   private dSmooth = 0;
+  private hSmooth = 0;
   private fov = 64;
   private dist = 14;
   private surgeW = 0;
@@ -66,7 +69,12 @@ export class CameraRig {
   update(dt: number, sub: CameraSubject, panX: number, panY: number, lookBack: boolean): void {
     const track = this.track;
     const m = sub.mech;
-    const hw = track.halfWidth;
+    const hw = hwAt(track, sub.s);
+    // In a fork the camera stays on the mech's own side of the middle wall.
+    const med = medianAt(track, sub.s);
+    const side = (d: number) => (med > 0.5 ? (sub.d >= 0 ? Math.max(d, med + 1) : Math.min(d, -med - 1)) : d);
+    // Follow a mech up into the air, and a little way down when it falls.
+    this.hSmooth = toward(this.hSmooth, Math.max(-25, sub.h ?? 0), 7, dt > 0 ? dt : 1);
     this.clock += dt;
     const F = this.feel;
     const speedFrac = Math.min(1.45, m.speed / FULL_SPEED);
@@ -95,13 +103,13 @@ export class CameraRig {
     const sdt = dt > 0 ? dt : 1 / 20;
     this.dist = toward(this.dist, F.camDist + speedFrac * F.camDistSpeed - (this.boostW + this.surgeW) * 1.5, 3, sdt);
     const dist = this.dist;
-    const height = F.camHeight + this.tilt * 6;
+    const height = F.camHeight + this.tilt * 6 + this.hSmooth;
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
-    const camD = THREE.MathUtils.clamp(this.dSmooth - sy * dist, -(hw + 4), hw + 4);
+    const camD = side(THREE.MathUtils.clamp(this.dSmooth - sy * dist, -(hw + 4), hw + 4));
     trackPoint(track, sub.s - cy * dist, camD, height, this.chasePos);
     const ahead = F.camLookAhead;
-    trackPoint(track, sub.s + cy * ahead, sub.d + sy * ahead, F.camLookHeight - this.tilt * 4, this.chaseLook);
+    trackPoint(track, sub.s + cy * ahead, side(sub.d + sy * ahead), F.camLookHeight - this.tilt * 4 + this.hSmooth * 0.9, this.chaseLook);
 
     // ---- battle view: over the shoulder, both fighters in frame
     if (sub.target && this.battleW > 0.001) {
@@ -117,11 +125,11 @@ export class CameraRig {
       const us = Math.cos(this.battleYaw);
       const ud = Math.sin(this.battleYaw);
       const back = F.camLockDist + Math.min(10, sep * 0.22);
-      const side = 3.6;
-      const bd = THREE.MathUtils.clamp(sub.d - ud * back + us * side, -(hw + 7), hw + 7);
-      trackPoint(track, sub.s - us * back - ud * side, bd, F.camLockHeight + Math.min(4, sep * 0.08), this.battlePos);
+      const shoulder = 3.6;
+      const bd = side(THREE.MathUtils.clamp(sub.d - ud * back + us * shoulder, -(hw + 7), hw + 7));
+      trackPoint(track, sub.s - us * back - ud * shoulder, bd, F.camLockHeight + Math.min(4, sep * 0.08) + this.hSmooth, this.battlePos);
       const f = Math.min(0.6, 8 / sep + 0.35);
-      trackPoint(track, sub.s + ds * f, sub.d + dd * f, 3.8, this.battleLook);
+      trackPoint(track, sub.s + ds * f, side(sub.d + dd * f), 3.8 + this.hSmooth, this.battleLook);
     } else if (!sub.target) {
       this.battleYaw = this.yaw;
     }
@@ -149,8 +157,10 @@ export class CameraRig {
       fov = 50;
     }
 
-    // ---- apply, with roll from the banking and any shake
-    trackUp(track, sub.s, this.up).lerp(WORLD_UP, 0.45).normalize();
+    // ---- apply, with roll from the banking and any shake. Upside down in a
+    // loop or a corkscrew, the camera turns over with the road.
+    const flat = THREE.MathUtils.clamp(upYAt(track, sub.s), 0, 1);
+    trackUp(track, sub.s, this.up).lerp(WORLD_UP, 0.45 * flat).normalize();
     const cam = this.camera;
     cam.position.copy(pos);
     cam.up.copy(this.up);

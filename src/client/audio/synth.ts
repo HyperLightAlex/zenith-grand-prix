@@ -17,7 +17,7 @@ import type { Ctx } from './dsp';
 import { clamp, compressorFullRangeGain, makeImpulse, makeNoise, Rng, softClipCurve } from './dsp';
 import { EngineLayers, type LayerMix } from './layers';
 import type { MusicTrack, TrackInfo, TrackName } from './music';
-import { createTrack } from './music';
+import { createTrack, RACE_STYLES } from './music';
 import type { Voice } from './sfx';
 import { buildSfx, SFX_META } from './sfx';
 
@@ -99,6 +99,8 @@ export class SynthAudio implements AudioEngine {
   private readonly lastPlay = new Map<SfxName, number>();
 
   private want: TrackName | null = null;
+  /** Which circuit's race music, when `want` is 'race'. */
+  private wantStyle = 'meridian';
   private track: MusicTrack | null = null;
   private dying: Array<{ track: MusicTrack; at: number }> = [];
   private lapPhase = 1;
@@ -234,9 +236,10 @@ export class SynthAudio implements AudioEngine {
     });
   }
 
-  setMusic(track: 'menu' | 'race' | null): void {
+  setMusic(track: 'menu' | 'race' | null, style = 'meridian'): void {
     this.guard(() => {
       this.want = track === 'menu' || track === 'race' ? track : null;
+      this.wantStyle = style;
       this.applyMusic();
     });
   }
@@ -452,7 +455,9 @@ export class SynthAudio implements AudioEngine {
   private applyMusic(): void {
     const g = this.g;
     if (!g) return;
-    if ((this.track ? this.track.name : null) === this.want) return;
+    // Racing on a different circuit is a change of music too.
+    const style = this.want === 'race' ? (RACE_STYLES.includes(this.wantStyle) ? this.wantStyle : 'meridian') : 'menu';
+    if ((this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style)) return;
     const now = g.ctx.currentTime;
     if (this.track) {
       // Fade the old track out over about a second, then tear it down.
@@ -461,7 +466,7 @@ export class SynthAudio implements AudioEngine {
       this.track = null;
     }
     if (this.want) {
-      const t = createTrack(this.want, g.ctx, g.white, now);
+      const t = createTrack(this.want, g.ctx, g.white, now, this.wantStyle);
       t.dry.connect(g.musicIn);
       t.wet.connect(g.musicWetIn);
       t.fade(MUSIC_TRIM, now, 0.2);

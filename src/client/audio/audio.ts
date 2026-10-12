@@ -14,6 +14,7 @@ export type SfxName =
   | 'tell' | 'tell_dodge' | 'momentum' | 'momentum_hit' | 'ringout'
   | 'shot_carbine' | 'shot_scatter' | 'bullet_hit'
   | 'wall' | 'bump' | 'ko' | 'critical'
+  | 'takeoff' | 'land' | 'fall' | 'recover' | 'pad'
   | 'lap' | 'lap_phase' | 'final_lap' | 'finish' | 'win' | 'lose'
   | 'command' | 'comms'
   | 'gate' | 'cells_full'
@@ -66,8 +67,11 @@ export interface AudioEngine {
   setLayerMix(mix: Partial<LayerMix>): void;
   update(dt: number, scene: AudioScene): void;
   play(name: SfxName, opts?: SfxOptions): void;
-  /** 'menu' is calm, 'race' builds with the lap phase, null fades out. */
-  setMusic(track: 'menu' | 'race' | null): void;
+  /**
+   * 'menu' is calm, 'race' builds with the lap phase, null fades out.
+   * `style` picks the race music: the circuit's theme ('meridian', 'canyon', 'helios').
+   */
+  setMusic(track: 'menu' | 'race' | null, style?: string): void;
 }
 
 /** Silent stand-in, used until the page has had a user gesture and in tests. */

@@ -1,15 +1,27 @@
 // Turns track coordinates (s, d, height, facing) into world-space transforms.
 import * as THREE from 'three';
-import { frameAt, makeFrame, type Track } from '../../sim/track';
+import { frameAt, makeFrame, sampleArray, type Track } from '../../sim/track';
 
 const f = makeFrame();
 const vx = new THREE.Vector3();
 const vy = new THREE.Vector3();
 const vz = new THREE.Vector3();
 
+/**
+ * Where a fork draws each route: how far across and up from the centreline
+ * frame a point on that side is moved. Zero everywhere but in a fork.
+ */
+export function forkOffset(track: Track, s: number, d: number): [shift: number, rise: number] {
+  if (track.forks.length === 0 || d === 0) return [0, 0];
+  return d < 0 ? [sampleArray(track, track.shiftL, s), sampleArray(track, track.riseL, s)] : [sampleArray(track, track.shiftR, s), sampleArray(track, track.riseR, s)];
+}
+
 /** World position of a point on (or above) the road. */
 export function trackPoint(track: Track, s: number, d: number, h: number, out: THREE.Vector3): THREE.Vector3 {
   frameAt(track, s, f);
+  const [sh, rh] = forkOffset(track, s, d);
+  d += sh;
+  h += rh;
   return out.set(f.px + f.rx * d + f.ux * h, f.py + f.ry * d + f.uy * h, f.pz + f.rz * d + f.uz * h);
 }
 
@@ -31,6 +43,9 @@ export function trackUp(track: Track, s: number, out: THREE.Vector3): THREE.Vect
  */
 export function trackMatrix(track: Track, s: number, d: number, h: number, facing: number, out: THREE.Matrix4): THREE.Matrix4 {
   frameAt(track, s, f);
+  const [sh, rh] = forkOffset(track, s, d);
+  d += sh;
+  h += rh;
   const c = Math.cos(facing);
   const sn = Math.sin(facing);
   vz.set(f.tx * c + f.rx * sn, f.ty * c + f.ry * sn, f.tz * c + f.rz * sn).normalize();

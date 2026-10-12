@@ -1,6 +1,6 @@
 // Menus: title, garage (pick your frame), controls, pause and results.
 // Driven by the same MenuInput from pad or keyboard; items also take clicks.
-import { ABILITIES, ATTACKS, CLASSES, ROLE_NAMES, roundsToWin, type MatchConfig, type MatchState, type RaceState, type Role } from '../../sim/index';
+import { ABILITIES, ATTACKS, CLASSES, ROLE_NAMES, TRACKS, roundsToWin, type MatchConfig, type MatchState, type RaceState, type Role } from '../../sim/index';
 import type { MenuInput } from '../input/input';
 import { LIVERIES } from '../render/palette';
 import { h, setClass, setText } from './dom';
@@ -15,7 +15,16 @@ export interface GarageChoice {
   rivals: number;
   /** Index into MATCH_OPTIONS. */
   match: number;
+  /** Circuit id. */
+  track: string;
 }
+
+/** What the garage says about each circuit. */
+export const TRACK_BLURBS: Record<string, string> = {
+  meridian: 'The original. An elevated loop over the sea at golden hour: sweepers, a hairpin and long straights.',
+  canyon: 'Built for fighting. The Narrows, a corkscrew, a bowl you can take flat out, a fork whose routes cross, and a sky bridge with no barriers.',
+  helios: 'Built for speed and air, above the clouds. The Drop, a full loop, the Carousel, and Split Decision: a jump or the safe way round.',
+};
 
 /** The match formats on offer. A single race is a series of one. */
 export const MATCH_OPTIONS: Array<{ label: string; blurb: string; cfg: MatchConfig }> = [
@@ -97,7 +106,7 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
 export class Menus {
   readonly root = h('div.ui.menu');
   screen: Screen = null;
-  choice: GarageChoice = { role: 0, team: 0, rivals: 1, match: 1 };
+  choice: GarageChoice = { role: 0, team: 0, rivals: 1, match: 1, track: 'meridian' };
   /** The match the results screen reports on. */
   match: MatchState | null = null;
   private items: Item[] = [];
@@ -206,6 +215,7 @@ export class Menus {
   private frameInfo = h('div.frame-info');
   private statEls: HTMLElement[] = [];
   private frameLabel = h('span.choice', '');
+  private trackLabel = h('span.choice', '');
   private teamLabel = h('span.choice', '');
   private rivalLabel = h('span.choice', '');
   private matchLabel = h('span.choice', '');
@@ -218,10 +228,16 @@ export class Menus {
     const col = h('div.col');
     const list = h('div.list');
     this.frameLabel = h('span.choice', '');
+    this.trackLabel = h('span.choice', '');
     this.teamLabel = h('span.choice', '');
     this.rivalLabel = h('span.choice', '');
     this.matchLabel = h('span.choice', '');
     this.matchBlurb = h('div.match-blurb', '');
+    this.addItem(list, h('div.item', h('span', 'Circuit'), this.trackLabel), undefined, (dir) => {
+      const i = Math.max(0, TRACKS.findIndex((t) => t.id === this.choice.track));
+      this.choice.track = TRACKS[(i + dir + TRACKS.length) % TRACKS.length].id;
+      this.refreshGarage(true);
+    });
     this.addItem(list, h('div.item', h('span', 'Frame'), this.frameLabel), undefined, (dir) => {
       this.choice.role = ((this.choice.role + dir + 3) % 3) as Role;
       this.refreshGarage(true);
@@ -263,7 +279,9 @@ export class Menus {
     setText(this.rivalLabel, RIVALS[this.choice.rivals]);
     const opt = MATCH_OPTIONS[this.choice.match] ?? MATCH_OPTIONS[0];
     setText(this.matchLabel, opt.label);
-    setText(this.matchBlurb, opt.blurb);
+    const circuit = TRACKS.find((t) => t.id === this.choice.track) ?? TRACKS[0];
+    setText(this.trackLabel, circuit.name);
+    setText(this.matchBlurb, `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`);
     setText(this.blurb, c.blurb);
     const power = [0.6, 0.55, 1][c.role];
     const stats = [(c.topSpeed - 130) / 30, c.maxHp / 2200, (c.grip - 60) / 40, power];

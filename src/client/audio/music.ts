@@ -11,6 +11,8 @@ export type TrackName = 'menu' | 'race';
 
 export interface TrackInfo {
   name: TrackName;
+  /** Which circuit's race music ('meridian', 'canyon', 'helios'); the menu's is 'menu'. */
+  style: string;
   /** Arrangement phase (the race track follows the lap phase; the menu is always 1). */
   phase: number;
   bar: number;
@@ -192,6 +194,7 @@ abstract class Track {
   constructor(
     ctx: Ctx,
     readonly name: TrackName,
+    readonly style: string,
     protected readonly stepDur: number,
     protected readonly stepsPerBar: number,
     now: number,
@@ -243,14 +246,62 @@ abstract class Track {
 
 // ---- race ---------------------------------------------------------------------
 
-const RACE_BPM = 138;
-
 interface Chord {
   /** Bass root, MIDI. */
   bass: number;
   /** Close-voiced triad around middle C. */
   pad: readonly [number, number, number];
 }
+
+type Wave = [OscillatorType, number, number, number];
+type Melody = ReadonlyArray<ReadonlyArray<readonly [number, number, number]>>;
+
+/**
+ * One circuit's race music. Every style follows the same arrangement (a
+ * sparse formation lap, drums and stabs for the battle lap, the lead and a
+ * key change for the speed lap) so the music still tells you where you are
+ * in the race; the key, tempo, groove and sounds are its own.
+ */
+interface RaceStyle {
+  bpm: number;
+  /** One chord per bar for each lap phase. */
+  prog: Record<number, readonly Chord[]>;
+  /** Semitones each phase is transposed by. */
+  shift: Record<number, number>;
+  /** Arpeggio shapes: indices into the chord's six-note ladder, one per eighth note. */
+  shapes: ReadonlyArray<readonly number[]>;
+  /** Lead arpeggio shapes, one index per sixteenth. */
+  leads: ReadonlyArray<readonly number[]>;
+  /** Bass lines in semitones above the root, per sixteenth; null rests (keep the kick's steps empty). */
+  bass2: ReadonlyArray<number | null>;
+  bass3: ReadonlyArray<number | null>;
+  /** Kick steps for the battle and speed laps. */
+  kicks2: readonly number[];
+  kicks3: readonly number[];
+  /** A soft extra kick on step 14 every fourth bar. */
+  pickup: boolean;
+  /** Steps the battle-lap chord stabs land on. */
+  stabs: ReadonlySet<number>;
+  hatVel: readonly number[];
+  /** Steps whose hat rings open. */
+  hatOpen: ReadonlySet<number>;
+  /** Speed-lap melody over prog[3], as [step, length in steps, MIDI note]. */
+  melody: Melody;
+  mix: { kick: number; snare: number; hat: number; crash: number; riser: number; bass: number; arp: number; lead: number; pad: number; echo: number };
+  bassWaves: Wave[];
+  bassQ: number;
+  arpWaves: Wave[];
+  arpQ: number;
+  leadWaves: Wave[];
+  leadQ: number;
+  padCut: number;
+  /** Multiplies every filter cutoff the patterns ask for: darker below 1, brighter above. */
+  bright: number;
+  /** Kick pitch sweep, start and end in Hz. */
+  kickHz: [number, number];
+}
+
+// ---- Meridian Skyway: A minor, 138 BPM, the original theme ------------------
 
 const Am: Chord = { bass: 45, pad: [57, 60, 64] };
 const F: Chord = { bass: 41, pad: [57, 60, 65] };
@@ -261,52 +312,191 @@ const Em: Chord = { bass: 40, pad: [55, 59, 64] };
 const E: Chord = { bass: 40, pad: [56, 59, 64] };
 const Bb: Chord = { bass: 46, pad: [58, 62, 65] };
 
-/** One chord per bar, written in A minor. */
-const PROG: Record<number, readonly Chord[]> = {
-  // Formation lap: slow changes, open and expectant.
-  1: [Am, Am, F, F, C, C, G, G, Am, Am, F, F, Dm, Dm, Em, Em],
-  // Battle lap: a change every bar, the major V and a flat II for bite.
-  2: [Am, F, Dm, E, Am, F, Bb, E],
-  // Speed lap: the formation chords at double speed, then IV-V-iii-vi.
-  3: [Am, F, C, G, F, G, Em, Am],
-};
-/** Semitones each phase is transposed by: the speed lap lifts a whole tone, to B minor. */
-const SHIFT: Record<number, number> = { 1: 0, 2: 0, 3: 2 };
-
-/** Arpeggio shapes: indices into the chord's six-note ladder, one per eighth note. */
-const SHAPES: ReadonlyArray<readonly number[]> = [
-  [0, 2, 4, 2, 1, 3, 5, 3],
-  [0, 1, 2, 3, 4, 3, 2, 1],
-  [2, 4, 5, 4, 2, 1, 0, 1],
-  [0, 2, 1, 3, 2, 4, 3, 5],
-];
-/** Lead arpeggio shapes, one index per sixteenth. */
-const LEADS: ReadonlyArray<readonly number[]> = [
-  [0, 2, 4, 5, 4, 2, 0, 2, 4, 5, 4, 2, 0, 2, 4, 5],
-  [5, 4, 2, 4, 5, 4, 2, 0, 2, 4, 5, 4, 2, 0, 2, 4],
-  [0, 3, 5, 3, 0, 3, 5, 3, 1, 4, 5, 4, 1, 4, 5, 4],
-];
-/** Bass lines in semitones above the root, per sixteenth. Both leave the kick's step empty. */
-const BASS2: ReadonlyArray<number | null> = [null, 0, 0, 0, null, 0, 0, 12, null, 0, 0, 0, null, 0, 12, 0];
-const BASS3: ReadonlyArray<number | null> = [null, 0, 12, 0, null, 0, 12, 0, null, 0, 12, 0, null, 0, 12, 12];
-/** Steps the battle-lap chord stabs land on (3+3+2). */
-const STABS = new Set([0, 3, 6, 8, 11, 14]);
-const HAT_VEL = [0.5, 0.22, 0.8, 0.27];
-
-/** Speed-lap lead melody over PROG[3], as [step, length in steps, MIDI note] in A minor. */
-const MELODY: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [
-  [[0, 3, 76], [3, 3, 81], [6, 2, 79], [8, 4, 76], [12, 2, 72], [14, 2, 74]],
-  [[0, 6, 76], [6, 2, 72], [8, 4, 69], [12, 4, 72]],
-  [[0, 3, 79], [3, 3, 76], [6, 2, 72], [8, 4, 79], [12, 2, 76], [14, 2, 79]],
-  [[0, 6, 74], [6, 2, 71], [8, 4, 74], [12, 2, 79], [14, 2, 81]],
-  [[0, 3, 81], [3, 3, 84], [6, 2, 81], [8, 4, 77], [12, 4, 81]],
-  [[0, 3, 83], [3, 3, 86], [6, 2, 83], [8, 4, 79], [12, 4, 83]],
-  [[0, 6, 83], [6, 2, 79], [8, 4, 76], [12, 2, 79], [14, 2, 83]],
-  [[0, 8, 81], [8, 4, 76], [12, 4, 81]],
-];
-
 /** Track mix. The audio check prints what each phase measures at the output. */
 const RACE_MIX = { kick: 0.55, snare: 1.35, hat: 0.5, crash: 0.5, riser: 0.6, bass: 0.45, arp: 0.4, lead: 0.45, pad: 0.4, echo: 0.4 };
+
+const MERIDIAN: RaceStyle = {
+  bpm: 138,
+  prog: {
+    // Formation lap: slow changes, open and expectant.
+    1: [Am, Am, F, F, C, C, G, G, Am, Am, F, F, Dm, Dm, Em, Em],
+    // Battle lap: a change every bar, the major V and a flat II for bite.
+    2: [Am, F, Dm, E, Am, F, Bb, E],
+    // Speed lap: the formation chords at double speed, then IV-V-iii-vi.
+    3: [Am, F, C, G, F, G, Em, Am],
+  },
+  // The speed lap lifts a whole tone, to B minor.
+  shift: { 1: 0, 2: 0, 3: 2 },
+  shapes: [
+    [0, 2, 4, 2, 1, 3, 5, 3],
+    [0, 1, 2, 3, 4, 3, 2, 1],
+    [2, 4, 5, 4, 2, 1, 0, 1],
+    [0, 2, 1, 3, 2, 4, 3, 5],
+  ],
+  leads: [
+    [0, 2, 4, 5, 4, 2, 0, 2, 4, 5, 4, 2, 0, 2, 4, 5],
+    [5, 4, 2, 4, 5, 4, 2, 0, 2, 4, 5, 4, 2, 0, 2, 4],
+    [0, 3, 5, 3, 0, 3, 5, 3, 1, 4, 5, 4, 1, 4, 5, 4],
+  ],
+  bass2: [null, 0, 0, 0, null, 0, 0, 12, null, 0, 0, 0, null, 0, 12, 0],
+  bass3: [null, 0, 12, 0, null, 0, 12, 0, null, 0, 12, 0, null, 0, 12, 12],
+  kicks2: [0, 4, 8, 12],
+  kicks3: [0, 4, 8, 12],
+  pickup: true,
+  // 3+3+2.
+  stabs: new Set([0, 3, 6, 8, 11, 14]),
+  hatVel: [0.5, 0.22, 0.8, 0.27],
+  hatOpen: new Set([2, 6, 10, 14]),
+  melody: [
+    [[0, 3, 76], [3, 3, 81], [6, 2, 79], [8, 4, 76], [12, 2, 72], [14, 2, 74]],
+    [[0, 6, 76], [6, 2, 72], [8, 4, 69], [12, 4, 72]],
+    [[0, 3, 79], [3, 3, 76], [6, 2, 72], [8, 4, 79], [12, 2, 76], [14, 2, 79]],
+    [[0, 6, 74], [6, 2, 71], [8, 4, 74], [12, 2, 79], [14, 2, 81]],
+    [[0, 3, 81], [3, 3, 84], [6, 2, 81], [8, 4, 77], [12, 4, 81]],
+    [[0, 3, 83], [3, 3, 86], [6, 2, 83], [8, 4, 79], [12, 4, 83]],
+    [[0, 6, 83], [6, 2, 79], [8, 4, 76], [12, 2, 79], [14, 2, 83]],
+    [[0, 8, 81], [8, 4, 76], [12, 4, 81]],
+  ],
+  mix: RACE_MIX,
+  bassWaves: [['sawtooth', 1, -6, 0.55], ['square', 1, 6, 0.28], ['sine', 1, 0, 0.4]],
+  bassQ: 3,
+  arpWaves: [['square', 1, 0, 0.5], ['sawtooth', 1, 9, 0.35]],
+  arpQ: 1.5,
+  leadWaves: [['sawtooth', 1, -7, 0.5], ['sawtooth', 1, 7, 0.5], ['square', 0.5, 0, 0.22]],
+  leadQ: 1.2,
+  padCut: 700,
+  bright: 1,
+  kickHz: [220, 47],
+};
+
+// ---- Corkscrew Canyon: E Phrygian, 128 BPM, a broken beat ---------------------
+
+const cEm: Chord = { bass: 40, pad: [55, 59, 64] };
+const cF: Chord = { bass: 41, pad: [57, 60, 65] };
+const cG: Chord = { bass: 43, pad: [55, 59, 62] };
+const cDm: Chord = { bass: 38, pad: [57, 62, 65] };
+const cC: Chord = { bass: 48, pad: [55, 60, 64] };
+
+const CANYON: RaceStyle = {
+  bpm: 128,
+  prog: {
+    // Formation lap: the tonic leaning on its flat second, low and wary.
+    1: [cEm, cEm, cF, cF, cEm, cEm, cDm, cDm, cEm, cEm, cF, cF, cC, cC, cDm, cDm],
+    2: [cEm, cF, cEm, cDm, cEm, cF, cG, cF],
+    3: [cEm, cF, cG, cF, cEm, cF, cDm, cEm],
+  },
+  // The speed lap climbs a semitone, to F Phrygian: tighter, not brighter.
+  shift: { 1: 0, 2: 0, 3: 1 },
+  shapes: [
+    [0, 1, 0, 2, 0, 1, 0, 3],
+    [0, 2, 1, 0, 3, 1, 2, 0],
+    [0, 3, 1, 4, 2, 5, 1, 3],
+    [5, 3, 4, 1, 2, 0, 1, 0],
+  ],
+  leads: [
+    [0, 1, 0, 3, 0, 1, 0, 4, 0, 1, 0, 3, 0, 1, 5, 4],
+    [0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 4, 0, 3, 0, 1, 0],
+    [3, 1, 0, 1, 3, 1, 0, 1, 4, 2, 0, 2, 4, 2, 0, 2],
+  ],
+  // A galloping line round the broken kick.
+  bass2: [null, 0, 0, 12, 0, 0, null, 0, 0, 0, null, 0, 7, 0, 12, 0],
+  bass3: [null, 0, 12, null, 0, 12, null, 0, 12, 0, null, 0, 12, 0, 7, 12],
+  kicks2: [0, 6, 10],
+  kicks3: [0, 3, 6, 10],
+  pickup: false,
+  stabs: new Set([0, 6, 10, 14]),
+  hatVel: [0.45, 0.18, 0.62, 0.3],
+  hatOpen: new Set([6, 14]),
+  melody: [
+    [[0, 3, 76], [3, 3, 77], [6, 2, 76], [8, 4, 74], [12, 4, 71]],
+    [[0, 6, 72], [6, 2, 74], [8, 4, 77], [12, 4, 76]],
+    [[0, 3, 79], [3, 3, 77], [6, 2, 76], [8, 4, 74], [12, 2, 71], [14, 2, 74]],
+    [[0, 8, 77], [8, 4, 76], [12, 4, 72]],
+    [[0, 3, 79], [3, 3, 81], [6, 2, 79], [8, 4, 77], [12, 4, 76]],
+    [[0, 3, 81], [3, 3, 84], [6, 2, 81], [8, 4, 77], [12, 4, 81]],
+    [[0, 6, 77], [6, 2, 74], [8, 4, 81], [12, 2, 77], [14, 2, 74]],
+    [[0, 8, 76], [8, 4, 71], [12, 4, 76]],
+  ],
+  mix: { kick: 0.62, snare: 1.25, hat: 0.45, crash: 0.45, riser: 0.55, bass: 0.5, arp: 0.42, lead: 0.42, pad: 0.42, echo: 0.45 },
+  // Growl: a square over a sub an octave down, through a resonant filter.
+  bassWaves: [['square', 1, -4, 0.5], ['sawtooth', 0.5, 0, 0.3], ['sine', 0.5, 0, 0.45]],
+  bassQ: 5,
+  // Plucked: a triangle with a thin square an octave up.
+  arpWaves: [['triangle', 1, 0, 0.7], ['square', 2, 4, 0.16]],
+  arpQ: 4,
+  leadWaves: [['square', 1, -10, 0.42], ['sawtooth', 1, 10, 0.4], ['triangle', 2, 0, 0.14]],
+  leadQ: 2,
+  padCut: 520,
+  bright: 0.8,
+  kickHz: [180, 42],
+};
+
+// ---- Helios Drop: D major, 145 BPM, uplifting trance --------------------------
+
+const hD: Chord = { bass: 38, pad: [57, 62, 66] };
+const hEm: Chord = { bass: 40, pad: [55, 59, 64] };
+const hG: Chord = { bass: 43, pad: [55, 59, 62] };
+const hA: Chord = { bass: 45, pad: [57, 61, 64] };
+const hBm: Chord = { bass: 47, pad: [54, 59, 62] };
+
+const HELIOS: RaceStyle = {
+  bpm: 145,
+  prog: {
+    1: [hD, hD, hA, hA, hBm, hBm, hG, hG, hD, hD, hA, hA, hG, hG, hA, hA],
+    // vi-IV-I-V, the anthem changes.
+    2: [hBm, hG, hD, hA, hBm, hG, hEm, hA],
+    3: [hG, hA, hBm, hBm, hG, hA, hD, hA],
+  },
+  // The speed lap lifts a whole tone, to E major.
+  shift: { 1: 0, 2: 0, 3: 2 },
+  shapes: [
+    [0, 2, 4, 5, 4, 2, 0, 2],
+    [0, 3, 5, 3, 1, 4, 5, 4],
+    [0, 2, 4, 2, 5, 4, 2, 0],
+    [1, 3, 5, 3, 0, 2, 4, 2],
+  ],
+  leads: [
+    [0, 2, 4, 5, 3, 5, 4, 2, 0, 2, 4, 5, 3, 5, 4, 2],
+    [5, 4, 3, 2, 5, 4, 3, 2, 4, 3, 2, 1, 4, 3, 2, 1],
+    [0, 3, 5, 3, 0, 3, 5, 3, 0, 2, 4, 2, 0, 2, 5, 4],
+  ],
+  // Off-beat bass for the battle lap, rolling sixteenths for the speed lap.
+  bass2: [null, null, 0, null, null, null, 0, null, null, null, 0, null, null, null, 0, 12],
+  bass3: [null, 0, 0, 12, null, 0, 0, 12, null, 0, 0, 12, null, 0, 12, 12],
+  kicks2: [0, 4, 8, 12],
+  kicks3: [0, 4, 8, 12],
+  pickup: false,
+  // Gated off-beat chords.
+  stabs: new Set([2, 6, 10, 14]),
+  hatVel: [0.32, 0.2, 0.95, 0.24],
+  hatOpen: new Set([2, 6, 10, 14]),
+  melody: [
+    [[0, 3, 83], [3, 3, 81], [6, 2, 79], [8, 4, 78], [12, 2, 79], [14, 2, 81]],
+    [[0, 6, 81], [6, 2, 76], [8, 4, 78], [12, 4, 81]],
+    [[0, 3, 83], [3, 3, 86], [6, 2, 85], [8, 4, 83], [12, 4, 78]],
+    [[0, 8, 78], [8, 4, 81], [12, 4, 83]],
+    [[0, 3, 86], [3, 3, 83], [6, 2, 79], [8, 4, 83], [12, 2, 86], [14, 2, 88]],
+    [[0, 3, 85], [3, 3, 81], [6, 2, 76], [8, 4, 81], [12, 4, 85]],
+    [[0, 6, 86], [6, 2, 85], [8, 4, 81], [12, 2, 78], [14, 2, 81]],
+    [[0, 8, 85], [8, 4, 81], [12, 4, 76]],
+  ],
+  mix: { kick: 0.58, snare: 1.15, hat: 0.5, crash: 0.55, riser: 0.65, bass: 0.42, arp: 0.36, lead: 0.4, pad: 0.42, echo: 0.42 },
+  bassWaves: [['sawtooth', 1, -5, 0.5], ['sawtooth', 1, 5, 0.35], ['sine', 0.5, 0, 0.45]],
+  bassQ: 2,
+  // Supersaw-ish: two saws a quarter-tone apart.
+  arpWaves: [['sawtooth', 1, -12, 0.42], ['sawtooth', 1, 12, 0.42]],
+  arpQ: 1.2,
+  leadWaves: [['sawtooth', 1, -14, 0.38], ['sawtooth', 1, 0, 0.32], ['sawtooth', 1, 14, 0.38], ['square', 2, 0, 0.1]],
+  leadQ: 1,
+  padCut: 1000,
+  bright: 1.25,
+  kickHz: [240, 50],
+};
+
+const STYLES: Record<string, RaceStyle> = { meridian: MERIDIAN, canyon: CANYON, helios: HELIOS };
+
+/** The circuits that have race music of their own. */
+export const RACE_STYLES = Object.keys(STYLES);
 
 const ladder = (ch: Chord, i: number): number => ch.pad[i % 3] + (i >= 3 ? 12 : 0);
 
@@ -334,9 +524,13 @@ class RaceTrack extends Track {
   private readonly kickPatch: Patch;
   private readonly snarePatch: Patch;
   private readonly leadPatch: Patch;
+  private readonly st: RaceStyle;
 
-  constructor(ctx: Ctx, white: AudioBuffer, now: number) {
-    super(ctx, 'race', 60 / RACE_BPM / 4, 16, now);
+  constructor(ctx: Ctx, white: AudioBuffer, now: number, style: string) {
+    const st = STYLES[style] ?? MERIDIAN;
+    super(ctx, 'race', STYLES[style] ? style : 'meridian', 60 / st.bpm / 4, 16, now);
+    this.st = st;
+    const RACE_MIX = st.mix;
     const k = this.kit;
     const dry = this.dry;
 
@@ -387,7 +581,7 @@ class RaceTrack extends Track {
 
     // Pitched parts.
     const bassOut = k.gain(RACE_MIX.bass, dry);
-    this.bass = new Mono(k, [['sawtooth', 1, -6, 0.55], ['square', 1, 6, 0.28], ['sine', 1, 0, 0.4]], 3, bassOut);
+    this.bass = new Mono(k, st.bassWaves, st.bassQ, bassOut);
 
     const echoOut = k.gain(RACE_MIX.echo, k.pan(0.35, dry));
     this.send(echoOut, 0.3);
@@ -396,7 +590,7 @@ class RaceTrack extends Track {
     const arpOut = k.gain(RACE_MIX.arp, k.pan(-0.3, dry));
     arpOut.connect(echo);
     this.send(arpOut, 0.2);
-    this.arp = new Mono(k, [['square', 1, 0, 0.5], ['sawtooth', 1, 9, 0.35]], 1.5, arpOut);
+    this.arp = new Mono(k, st.arpWaves, st.arpQ, arpOut);
 
     // The lead only plays on the speed lap, so it is unplugged until then.
     const leadBus = k.gain(1, k.pan(0.15, dry));
@@ -404,24 +598,25 @@ class RaceTrack extends Track {
     this.send(leadBus, 0.25);
     const leadOut = k.gain(RACE_MIX.lead);
     this.leadPatch = new Patch(leadOut, leadBus);
-    this.lead = new Mono(k, [['sawtooth', 1, -7, 0.5], ['sawtooth', 1, 7, 0.5], ['square', 0.5, 0, 0.22]], 1.2, leadOut);
+    this.lead = new Mono(k, st.leadWaves, st.leadQ, leadOut);
 
     const padOut = k.gain(RACE_MIX.pad, dry);
     this.send(padOut, 0.35);
-    this.pad = new Pad(k, 3, 700, padOut);
-    this.pad.chord(this.startTime, Am.pad, 0, 0.001);
+    this.pad = new Pad(k, 3, st.padCut, padOut);
+    this.pad.chord(this.startTime, st.prog[1][0].pad, 0, 0.001);
 
     Object.assign(this.taps, { kick: kickG, click: clickG, snare: snareG, snareTone: snareToneG, hat: hatG, crash: crashG, riser: riserG, bass: bassOut, arp: arpOut, lead: leadOut, echo: echoOut, pad: padOut });
   }
 
   info(): TrackInfo {
-    return { name: this.name, phase: this.phase, bar: this.bar, startTime: this.startTime, barDur: this.stepDur * 16, changeAt: this.changeAt };
+    return { name: this.name, style: this.style, phase: this.phase, bar: this.bar, startTime: this.startTime, barDur: this.stepDur * 16, changeAt: this.changeAt };
   }
 
   private kick(t: number, vel: number): void {
+    const RACE_MIX = this.st.mix;
     const f = this.kickOsc.frequency;
-    f.setValueAtTime(220, t - this.kit.lead);
-    f.exponentialRampToValueAtTime(47, t + 0.13);
+    f.setValueAtTime(this.st.kickHz[0], t - this.kit.lead);
+    f.exponentialRampToValueAtTime(this.st.kickHz[1], t + 0.13);
     this.kickG.setTargetAtTime(vel * RACE_MIX.kick, t, 0.0015);
     this.kickG.setTargetAtTime(0, t + 0.11, 0.06);
     this.clickG.setTargetAtTime(vel * RACE_MIX.kick * 1.3, t, 0.0005);
@@ -430,7 +625,7 @@ class RaceTrack extends Track {
 
   /** Noise snare with a clap's double strike and a short tuned thump underneath. */
   private snare(t: number, vel: number): void {
-    const v = vel * RACE_MIX.snare;
+    const v = vel * this.st.mix.snare;
     this.snareG.setTargetAtTime(v, t, 0.001);
     this.snareG.setTargetAtTime(v * 0.25, t + 0.006, 0.003);
     this.snareG.setTargetAtTime(v, t + 0.014, 0.001);
@@ -443,12 +638,12 @@ class RaceTrack extends Track {
   }
 
   private hat(t: number, vel: number, open: boolean): void {
-    this.hatG.setTargetAtTime(vel * RACE_MIX.hat, t, 0.0008);
+    this.hatG.setTargetAtTime(vel * this.st.mix.hat, t, 0.0008);
     this.hatG.setTargetAtTime(0, t + 0.004, open ? 0.06 : 0.013);
   }
 
   private crash(t: number, vel: number): void {
-    this.crashG.setTargetAtTime(vel * RACE_MIX.crash, t, 0.002);
+    this.crashG.setTargetAtTime(vel * this.st.mix.crash, t, 0.002);
     this.crashG.setTargetAtTime(0, t + 0.02, 0.4);
   }
 
@@ -462,7 +657,7 @@ class RaceTrack extends Track {
     f.setValueAtTime(500, t);
     f.exponentialRampToValueAtTime(6500, end);
     this.riserG.setValueAtTime(0.0001, t);
-    this.riserG.exponentialRampToValueAtTime(RACE_MIX.riser * amount, end);
+    this.riserG.exponentialRampToValueAtTime(this.st.mix.riser * amount, end);
     this.riserG.setTargetAtTime(0, end, 0.03);
   }
 
@@ -490,9 +685,11 @@ class RaceTrack extends Track {
     this.kickPatch.set(ph >= 2, t, 3);
     this.snarePatch.set(ph >= 2 || want >= 2 || this.building, t, 3);
     this.leadPatch.set(ph === 3, t, 3);
-    const prog = PROG[ph];
+    const st = this.st;
+    const B = st.bright;
+    const prog = st.prog[ph];
     const ch = prog[pb % prog.length];
-    const sh = SHIFT[ph];
+    const sh = st.shift[ph];
     const sd = this.stepDur;
     // Two slow, unrelated sweeps keep filters moving so no two passes sound the same.
     const breath = 0.5 - 0.5 * Math.cos((pb / 16) * Math.PI * 2);
@@ -503,7 +700,7 @@ class RaceTrack extends Track {
 
     if (step === 0) {
       this.pad.chord(t, ch.pad, sh, 0.012);
-      this.pad.lp.frequency.setTargetAtTime(ph === 1 ? 520 + 480 * breath : ph === 2 ? 800 + 400 * breath : 1300 + 500 * breath, t, 0.25);
+      this.pad.lp.frequency.setTargetAtTime((ph === 1 ? 520 + 480 * breath : ph === 2 ? 800 + 400 * breath : 1300 + 500 * breath) * B, t, 0.25);
       if (ph === 1) this.pad.vca.gain.setTargetAtTime(0.75 + 0.25 * breath, t, 0.5);
       else if (ph === 2 && pb < 4) this.pad.vca.gain.setTargetAtTime(0.6, t, 0.1);
       // Mark the eight-bar sections: a sweep into each one and a crash on its first beat.
@@ -514,9 +711,9 @@ class RaceTrack extends Track {
 
     // -- drums --
     if (ph >= 2) {
-      if (step % 4 === 0) {
+      if ((ph === 2 ? st.kicks2 : st.kicks3).includes(step)) {
         if (!roll) this.kick(t, 1);
-      } else if (step === 14 && cyc % 4 === 3 && !turn) {
+      } else if (st.pickup && step === 14 && cyc % 4 === 3 && !turn) {
         this.kick(t, 0.7);
       }
     }
@@ -530,23 +727,23 @@ class RaceTrack extends Track {
         else if (step === 15 && pb % 2 === 1) this.hat(t, 0.3, false);
       }
     } else {
-      this.hat(t, HAT_VEL[step % 4] * (ph === 3 ? 1.15 : 1), step % 4 === 2);
+      this.hat(t, st.hatVel[step % 4] * (ph === 3 ? 1.15 : 1), st.hatOpen.has(step));
     }
 
     // -- bass --
     if (ph === 1) {
       if (step % 2 === 0) {
         const up = step === 14 && pb % 2 === 1 ? 12 : 0;
-        this.bass.note(t, mtof(ch.bass + sh + up), sd * 1.2, step % 4 === 0 ? 0.95 : 0.65, 330 + 260 * breath, 2.4, 0.06);
+        this.bass.note(t, mtof(ch.bass + sh + up), sd * 1.2, step % 4 === 0 ? 0.95 : 0.65, (330 + 260 * breath) * B, 2.4, 0.06);
       }
     } else {
-      const n = (ph === 2 ? BASS2 : BASS3)[step];
-      if (n !== null) this.bass.note(t, mtof(ch.bass + sh + n), sd * 0.75, n ? 1 : 0.82, (ph === 2 ? 420 : 520) + 380 * breath, 3.2, 0.045);
+      const n = (ph === 2 ? st.bass2 : st.bass3)[step];
+      if (n !== null) this.bass.note(t, mtof(ch.bass + sh + n), sd * 0.75, n ? 1 : 0.82, ((ph === 2 ? 420 : 520) + 380 * breath) * B, 3.2, 0.045);
     }
 
     // -- chords --
     if (ph === 2 && pb >= 4) {
-      if (STABS.has(step)) {
+      if (st.stabs.has(step)) {
         this.pad.vca.gain.setTargetAtTime(1, t, 0.004);
         this.pad.vca.gain.setTargetAtTime(0.1, t + 0.09, 0.03);
       }
@@ -560,25 +757,25 @@ class RaceTrack extends Track {
     if (step % 2 === 0) {
       const i = step >> 1;
       if (ph === 1 && pb >= 4) {
-        const note = ladder(ch, SHAPES[(pb >> 1) % 4][i]) + 12 + sh;
-        this.arp.note(t, mtof(note), sd * 1.5, step % 4 === 0 ? 1 : 0.75, 1100 + 900 * breath2, 1.8, 0.07, 0.4);
+        const note = ladder(ch, st.shapes[(pb >> 1) % st.shapes.length][i]) + 12 + sh;
+        this.arp.note(t, mtof(note), sd * 1.5, step % 4 === 0 ? 1 : 0.75, (1100 + 900 * breath2) * B, 1.8, 0.07, 0.4);
       } else if (ph === 2 && pb >= 8) {
-        const note = ladder(ch, SHAPES[pb % 4][i]) + sh;
-        this.arp.note(t, mtof(note), sd * 1.5, step % 4 === 0 ? 0.8 : 0.6, 900 + 500 * breath2, 1.8, 0.07, 0.4);
+        const note = ladder(ch, st.shapes[pb % st.shapes.length][i]) + sh;
+        this.arp.note(t, mtof(note), sd * 1.5, step % 4 === 0 ? 0.8 : 0.6, (900 + 500 * breath2) * B, 1.8, 0.07, 0.4);
       } else if (ph === 3) {
-        const note = ladder(ch, SHAPES[pb % 4][i]) + sh;
-        this.arp.note(t, mtof(note), sd * 1.5, step % 4 === 0 ? 0.8 : 0.6, 1500 + 700 * breath2, 1.8, 0.07, 0.4);
+        const note = ladder(ch, st.shapes[pb % st.shapes.length][i]) + sh;
+        this.arp.note(t, mtof(note), sd * 1.5, step % 4 === 0 ? 0.8 : 0.6, (1500 + 700 * breath2) * B, 1.8, 0.07, 0.4);
       }
     }
 
     // -- lead: eight bars of sixteenth-note arpeggio, then eight of melody --
     if (ph === 3) {
       if (pb % 16 < 8) {
-        const note = ladder(ch, LEADS[pb % 3][step]) + 12 + sh;
-        this.lead.note(t, mtof(note), sd * 0.8, step % 4 === 0 ? 0.9 : 0.62, 2300 + 900 * breath, 1.6, 0.05, 0.5);
+        const note = ladder(ch, st.leads[pb % st.leads.length][step]) + 12 + sh;
+        this.lead.note(t, mtof(note), sd * 0.8, step % 4 === 0 ? 0.9 : 0.62, (2300 + 900 * breath) * B, 1.6, 0.05, 0.5);
       } else {
-        for (const [at, len, midi] of MELODY[pb % 8]) {
-          if (at === step) this.lead.note(t, mtof(midi + sh), len * sd * 0.92, 0.9, 2600, 1.5, 0.12, 0.75, 0.012);
+        for (const [at, len, midi] of st.melody[pb % st.melody.length]) {
+          if (at === step) this.lead.note(t, mtof(midi + sh), len * sd * 0.92, 0.9, 2600 * B, 1.5, 0.12, 0.75, 0.012);
         }
       }
     }
@@ -625,7 +822,7 @@ class MenuTrack extends Track {
   private readonly bassG: AudioParam;
 
   constructor(ctx: Ctx, now: number) {
-    super(ctx, 'menu', 60 / MENU_BPM / 2, 8, now);
+    super(ctx, 'menu', 'menu', 60 / MENU_BPM / 2, 8, now);
     const k = this.kit;
     const dry = this.dry;
 
@@ -661,7 +858,7 @@ class MenuTrack extends Track {
   }
 
   info(): TrackInfo {
-    return { name: this.name, phase: 1, bar: this.bar, startTime: this.startTime, barDur: this.stepDur * 8, changeAt: -1 };
+    return { name: this.name, style: this.style, phase: 1, bar: this.bar, startTime: this.startTime, barDur: this.stepDur * 8, changeAt: -1 };
   }
 
   private ring(t: number, midi: number, vel: number): void {
@@ -697,6 +894,7 @@ class MenuTrack extends Track {
 
 export type MusicTrack = Track;
 
-export function createTrack(name: TrackName, ctx: Ctx, white: AudioBuffer, now: number): MusicTrack {
-  return name === 'race' ? new RaceTrack(ctx, white, now) : new MenuTrack(ctx, now);
+/** `style` picks the race music: a circuit's theme id ('meridian', 'canyon', 'helios'). */
+export function createTrack(name: TrackName, ctx: Ctx, white: AudioBuffer, now: number, style = 'meridian'): MusicTrack {
+  return name === 'race' ? new RaceTrack(ctx, white, now, style) : new MenuTrack(ctx, now);
 }

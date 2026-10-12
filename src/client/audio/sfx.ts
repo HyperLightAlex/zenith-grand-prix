@@ -442,6 +442,44 @@ const RECIPES: Record<SfxName, Recipe> = {
     v.tone({ f: 120, f2: 40, t: 0.14, d: 0.6, g: 0.6 });
     v.noise({ t: 0.2, d: 2, g: 0.6, ft: 'bandpass', ff: 3200, ff2: 1200, fq: 3, am: 23 });
   },
+  // -- the circuit --
+  takeoff: (v) => {
+    // Off a ramp: the skates letting go with a clunk, and the air taking over.
+    v.tone({ f: 150, f2: 90, d: 0.12, g: 0.6, a: 0.002 });
+    v.noise({ d: 0.03, g: 0.4, ft: 'bandpass', ff: 1400, fq: 2 });
+    v.noise({ k: 'p', d: 0.55, g: 1.4, s: 'swell', a: 0.12, ft: 'bandpass', ff: 300, ff2: 1600, fq: 1.1, wide: true });
+    v.tone({ w: 'triangle', f: 196, f2: 294, d: 0.4, g: 0.1, s: 'swell', a: 0.2 });
+  },
+  land: (v) => {
+    // Coming down: a deep thump, the frame taking it with a dull clank, a skid of sparks.
+    v.tone({ f: 115, f2: 34, ft: 0.2, d: 0.4, g: 1, a: 0.002 });
+    v.noise({ k: 'p', d: 0.3, g: 2.2, a: 0.001, ft: 'lowpass', ff: 1600, ff2: 180, fq: 0.9 });
+    v.bell({ f: 196, ratio: 2.76, idx: 2.5, d: 0.28, g: 0.3 });
+    v.noise({ t: 0.03, d: 0.35, g: 0.6, a: 0.01, ft: 'bandpass', ff: 2600, ff2: 1100, fq: 1.4, am: 40 });
+  },
+  fall: (v) => {
+    // Over the edge: the wind falling away in pitch as the mech drops out of sight.
+    v.noise({ k: 'p', d: 1.3, g: 2, a: 0.05, h: 0.2, ft: 'bandpass', ff: 2200, ff2: 260, fs: 1.2, fq: 1.2, wide: true });
+    v.tone({ w: 'triangle', f: 520, f2: 130, ft: 1.1, d: 1.2, g: 0.22, a: 0.04, h: 0.3 });
+    v.tone({ w: 'triangle', f: 532, f2: 133, ft: 1.1, d: 1.2, g: 0.14, a: 0.04, h: 0.3 });
+    v.tone({ f: 90, f2: 40, d: 0.3, g: 0.5, a: 0.003 });
+  },
+  recover: (v) => {
+    // The recovery drone setting the mech back down: rotors, a clamp letting go, two soft chimes.
+    v.noise({ d: 0.7, g: 1, s: 'swell', a: 0.3, ft: 'bandpass', ff: 600, ff2: 900, fq: 1.8, am: 26 });
+    v.tone({ w: 'square', f: 110, d: 0.6, g: 0.12, s: 'swell', a: 0.3, lp: 500 });
+    v.tone({ f: 170, f2: 80, t: 0.55, d: 0.14, g: 0.6 });
+    v.noise({ t: 0.55, d: 0.03, g: 0.5, ft: 'bandpass', ff: 1800, fq: 2 });
+    v.tone({ w: 'triangle', f: 659.3, t: 0.6, d: 0.3, g: 0.35, a: 0.004 });
+    v.tone({ w: 'triangle', f: 987.8, t: 0.7, d: 0.45, g: 0.35, a: 0.004 });
+  },
+  pad: (v) => {
+    // A speed pad: a rising zap and a shove of air.
+    v.tone({ w: 'sawtooth', f: 160, f2: 640, d: 0.22, g: 0.3, a: 0.004, lp: 1600 });
+    v.tone({ w: 'sawtooth', f: 162, f2: 648, d: 0.22, g: 0.2, a: 0.004, lp: 1600, dt: 12 });
+    v.noise({ d: 0.35, g: 1.2, a: 0.01, ft: 'bandpass', ff: 700, ff2: 3600, fs: 0.2, fq: 1.4 });
+    v.tone({ f: 120, f2: 60, d: 0.12, g: 0.5 });
+  },
   critical: (v) => {
     // A tritone back and forth: reads as a warning without being shrill.
     [1318.5, 932.3, 1318.5, 932.3].forEach((f, i) => {
@@ -698,6 +736,11 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   bump: m(0.45, 0.03, 1, 0.08),
   ko: m(0.6, 0.3, 2, 0, 0.1, [0.3, 0.7]),
   critical: m(0.36, 0.05, 2, 0, 0.5),
+  takeoff: m(0.55, 0.08, 1, 0.06, 0.1),
+  land: m(0.4, 0.08, 1, 0.06, 0.08),
+  fall: m(0.6, 0.25, 2, 0.03, 0.2),
+  recover: m(0.5, 0.15, 2, 0, 0.2),
+  pad: m(0.4, 0.06, 1, 0.04, 0.12),
   lap: m(0.45, 0.3, 2),
   lap_phase: m(0.4, 0.25, 2, 0, 0.5, [0.4, 1.1]),
   final_lap: m(0.3, 0.3, 2, 0, 0.5, [0.5, 1.3]),

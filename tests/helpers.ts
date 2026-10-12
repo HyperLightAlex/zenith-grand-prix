@@ -135,7 +135,7 @@ function mechSum(m: MechState): number {
   const ai = m.ai;
   return (
     m.id + m.team + m.role + m.skill +
-    m.s + m.d + m.vs + m.vd + m.speed + m.heading + m.facing + m.steer +
+    m.s + m.d + m.vs + m.vd + m.speed + m.heading + m.facing + m.steer + m.h + m.vh + m.fallT + m.padT +
     m.mode + m.target + m.outOfRange +
     m.hp + m.guard + m.drive +
     m.act + m.actT + m.actDur + m.attack + m.attackStart + m.guardT + m.guardIdle + m.guardRest +
@@ -181,7 +181,7 @@ export function findNonFinite(race: RaceState): string | null {
     return `mech ${m.id} (tick ${race.tick})`;
   }
   for (const p of race.projectiles) {
-    if (!Number.isFinite(p.id + p.owner + p.team + p.attack + p.s + p.d + p.vs + p.vd + p.life)) return `projectile ${p.id} (tick ${race.tick})`;
+    if (!Number.isFinite(p.id + p.owner + p.team + p.attack + p.s + p.d + p.h + p.vs + p.vd + p.life)) return `projectile ${p.id} (tick ${race.tick})`;
   }
   for (const t of race.teams) {
     if (!Number.isFinite(t.tactic + t.mark + t.captainAt + t.captainPhase)) return `team state (tick ${race.tick})`;

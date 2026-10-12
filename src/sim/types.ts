@@ -70,6 +70,15 @@ export interface MechState {
   /** Which way the body faces, relative to the track. */
   facing: number;
   steer: number;
+  /** Height above the road surface and its rate of change (only ever non-zero off the ground). */
+  h: number;
+  vh: number;
+  /** Off the ground: over a jump, off a crest, over an open edge. */
+  air: boolean;
+  /** Ticks left out of the race after falling (into a jump gap, off an open edge); 0 in play. */
+  fallT: number;
+  /** Ticks left of a speed pad's push. */
+  padT: number;
 
   // --- lock-on
   mode: Mode;
@@ -167,6 +176,8 @@ export interface Projectile {
   charged: boolean;
   s: number;
   d: number;
+  /** Height above the road it was fired at. */
+  h: number;
   vs: number;
   vd: number;
   life: number;
@@ -196,10 +207,25 @@ export type SimEvent =
   | { type: 'guardBreak'; mech: number; by: number }
   | { type: 'evade'; mech: number }
   | { type: 'escape'; mech: number }
-  /** A ring-out: knocked into the barrier while reeling. `by` is the pilot credited, or -1. */
-  | { type: 'splat'; mech: number; by: number; damage: number; intensity: number; s: number; side: number }
+  /**
+   * A ring-out: knocked into the barrier while reeling. `by` is the pilot
+   * credited, or -1. `side` is the way the mech was travelling into the
+   * wall; `face` is where the wall's face is (d), which is not the edge of
+   * the road when it is the wall down the middle of a fork.
+   */
+  | { type: 'splat'; mech: number; by: number; damage: number; intensity: number; s: number; side: number; face: number }
   | { type: 'ko'; mech: number; by: number }
-  | { type: 'wall'; mech: number; intensity: number; s: number; side: number }
+  | { type: 'wall'; mech: number; intensity: number; s: number; side: number; face: number }
+  /** Left the ground (a jump, a crest, an open edge). */
+  | { type: 'airborne'; mech: number }
+  /** Back on the road. `intensity` is how fast it was coming down. */
+  | { type: 'land'; mech: number; intensity: number }
+  /** Fell (short of a landing, off an open edge). `by` is the pilot credited, or -1. */
+  | { type: 'fall'; mech: number; by: number; damage: number }
+  /** Put back on the road by the recovery drone. */
+  | { type: 'recover'; mech: number }
+  /** Ran over a speed pad. */
+  | { type: 'pad'; mech: number }
   | { type: 'bump'; a: number; b: number; intensity: number }
   | { type: 'lock'; mech: number; target: number }
   | { type: 'unlock'; mech: number }

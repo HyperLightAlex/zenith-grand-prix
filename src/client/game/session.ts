@@ -12,7 +12,7 @@ import {
   type RaceState,
   type SimEvent,
   type Track,
-  type TrackDef,
+  type AnyTrackDef,
 } from '../../sim/index';
 
 export interface Session {
@@ -24,6 +24,8 @@ export interface Session {
   readonly prevS: Float64Array;
   readonly prevD: Float32Array;
   readonly prevFacing: Float32Array;
+  /** Height above the road one tick ago. */
+  readonly prevH: Float32Array;
   /** 0..1: how far the picture is between the previous tick and the current one. */
   alpha: number;
   /** Everything that happened during the last update call. */
@@ -39,6 +41,7 @@ export class LocalSession implements Session {
   readonly prevS: Float64Array;
   readonly prevD: Float32Array;
   readonly prevFacing: Float32Array;
+  readonly prevH: Float32Array;
   readonly events: SimEvent[] = [];
   alpha = 1;
   /** Slow motion factor, eased back to 1 by the game. */
@@ -55,13 +58,14 @@ export class LocalSession implements Session {
   private latchedCmd = 0;
   private first = emptyInput();
 
-  constructor(trackDef: TrackDef, cfg: RaceConfig, readonly localId: number) {
+  constructor(trackDef: AnyTrackDef, cfg: RaceConfig, readonly localId: number) {
     this.track = buildTrack(trackDef);
     this.race = createRace(this.track, cfg);
     const n = this.race.mechs.length;
     this.prevS = new Float64Array(n);
     this.prevD = new Float32Array(n);
     this.prevFacing = new Float32Array(n);
+    this.prevH = new Float32Array(n);
     this.inputs = new Array(n).fill(null);
     this.snapshot();
   }
@@ -71,6 +75,7 @@ export class LocalSession implements Session {
       this.prevS[m.id] = m.s;
       this.prevD[m.id] = m.d;
       this.prevFacing[m.id] = m.facing;
+      this.prevH[m.id] = m.h;
     }
   }
 

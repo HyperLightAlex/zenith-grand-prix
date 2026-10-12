@@ -2,13 +2,15 @@
 // shader), barriers, gantries, support pylons and trackside boards.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { frameAt, makeFrame, wrapS, type Track } from '../../sim/track';
+import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
 
 const MAX_STRIPS = 12;
 const MAX_GATES = 8;
+const MAX_PADS = 8;
+const MAX_GAPS = 8;
 const MAX_WALL_PULSES = 8;
 
 // The barrier's energy field: invisible until something hits the wall, then
@@ -44,9 +46,10 @@ void main() {
   float grid = 0.3 + 0.7 * smoothstep(0.36, 0.5, max(gs, gh));
   for (int i = 0; i < ${MAX_WALL_PULSES}; i++) {
     vec4 p = uPulse[i];
-    float side = p.y > 0.0 ? 1.0 : -1.0;
-    if (p.w <= 0.0 || abs(side - vSide) > 0.5) continue;
-    float hot = step(1.5, abs(p.y));
+    // y: which face (-2, -1, 1, 2), plus ten (away from zero) for a ring-out.
+    float hot = step(5.0, abs(p.y));
+    float face = p.y - sign(p.y) * 10.0 * hot;
+    if (p.w <= 0.0 || abs(face - vSide) > 0.5) continue;
     float age = p.z;
     float life = mix(0.7, 1.2, hot) + 0.15 * p.w;
     if (age > life) continue;
@@ -71,8 +74,10 @@ void main() {
 
 const roadVertex = /* glsl */ `
 attribute float aKappa;
+attribute vec3 aEdge;
 varying vec2 vTc;
 varying float vKappa;
+varying vec3 vEdge;
 varying vec3 vWorld;
 varying vec3 vNormalW;
 #include <common>
@@ -80,6 +85,7 @@ varying vec3 vNormalW;
 void main() {
   vTc = uv;
   vKappa = aKappa;
+  vEdge = aEdge;
   vec4 world = modelMatrix * vec4(position, 1.0);
   vWorld = world.xyz;
   vNormalW = normalize(mat3(modelMatrix) * normal);
@@ -91,7 +97,9 @@ void main() {
 const roadFragment = /* glsl */ `
 uniform float uTime;
 uniform float uLength;
-uniform float uHalfW;
+uniform vec4 uPads[${MAX_PADS}];
+uniform vec4 uGaps[${MAX_GAPS}];
+uniform vec3 uPadColor;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform vec3 uSkyColor;
@@ -102,6 +110,8 @@ uniform vec3 uCellColor;
 uniform float uWeapons;
 varying vec2 vTc;
 varying float vKappa;
+/** Half width, the half width of a fork's middle wall, and 1 where this side's edge has no barrier. */
+varying vec3 vEdge;
 varying vec3 vWorld;
 varying vec3 vNormalW;
 #include <common>
@@ -126,6 +136,9 @@ void main() {
   float d = vTc.x;
   float s = vTc.y;
   float ad = abs(d);
+  float uHalfW = vEdge.x;
+  float med = vEdge.y;
+  float open = vEdge.z;
   float dist = length(cameraPosition - vWorld);
   float detail = 1.0 - smoothstep(260.0, 900.0, dist);
 
@@ -155,6 +168,15 @@ void main() {
   col = mix(col, vec3(0.96, 0.97, 1.0), edge);
   float shoulder = smoothstep(uHalfW - 2.5, uHalfW - 2.3, ad);
   col = mix(col, vec3(0.17, 0.19, 0.24), shoulder);
+  // An edge with no barrier: red and white blocks and a lit lip, so the drop reads.
+  float lip = open * smoothstep(uHalfW - 2.3, uHalfW - 0.4, ad);
+  col = mix(col, mix(vec3(0.95, 0.12, 0.18), vec3(0.97), step(0.5, fract(s / 6.0))), open * shoulder);
+  // A fork's middle wall gets an edge line and shoulder of its own.
+  if (med > 0.3) {
+    float inner = ad - med;
+    col = mix(col, vec3(0.96, 0.97, 1.0), box(inner, 2.5, 3.1));
+    col = mix(col, vec3(0.17, 0.19, 0.24), 1.0 - smoothstep(2.3, 2.5, inner));
+  }
   // Kerbs on the inside of corners: red and white blocks.
   float inside = step(0.0, vKappa * d);
   float kerbOn = smoothstep(0.0012, 0.0022, abs(vKappa)) * inside * shoulder;
@@ -223,6 +245,35 @@ void main() {
     lit = mix(lit, lit * 0.45, m * 0.6 * gt.w);
     glow += uCellColor * m * (0.08 + arrows * 0.7 + rim * 1.2) * mix(0.12, 1.0, gt.w);
   }
+  // Speed pads: fast chevrons, hot pink.
+  for (int i = 0; i < ${MAX_PADS}; i++) {
+    vec4 pd = uPads[i];
+    if (pd.w <= 0.0) continue;
+    float along = box(s, pd.x, pd.y);
+    if (along <= 0.001) continue;
+    float ld = (d - pd.z) / pd.w;
+    float across = 1.0 - smoothstep(0.9, 1.0, abs(ld));
+    float chev = fract((s - abs(ld) * 7.0 - uTime * 70.0) / 8.0);
+    float arrows = smoothstep(0.0, 0.1, chev) * (1.0 - smoothstep(0.45, 0.55, chev));
+    float m = along * across;
+    lit = mix(lit, lit * 0.3, m * 0.8);
+    glow += uPadColor * m * (0.3 + arrows * 1.4);
+  }
+  // A jump: hazard stripes running up to the lip, and again on the landing.
+  for (int i = 0; i < ${MAX_GAPS}; i++) {
+    vec4 gp = uGaps[i];
+    if (gp.y <= gp.x) continue;
+    if (gp.z * d < 0.0) continue;
+    float before = gp.x - s;
+    float after = s - gp.y;
+    float near = max(box(before, 0.0, 16.0), box(after, 0.0, 10.0));
+    if (near <= 0.001) continue;
+    float stripe = step(0.5, fract((s + d * 0.8) / 4.0));
+    col = mix(vec3(0.08), vec3(1.0, 0.78, 0.1), stripe);
+    lit = mix(lit, col * (uSkyColor * 0.55 + uSunColor * 0.9), near * 0.9);
+    glow += vec3(1.0, 0.6, 0.1) * near * box(before, 0.0, 1.2) * 2.0;
+  }
+  glow += vec3(1.0, 0.15, 0.25) * lip * 1.1;
   lit += glow;
 
   gl_FragColor = vec4(lit, 1.0);
@@ -238,59 +289,36 @@ export interface TrackVisual {
   /** The five start lights, left to right. */
   lights: THREE.Mesh[];
   /**
-   * Light the barrier where something hit it: `side` is -1 (left) or 1
-   * (right), `strength` about 0.3 for a glancing touch to 1 for a hard hit,
-   * `ringOut` for a mech thrown into it.
+   * Light the barrier where something hit it: `face` is where the wall's
+   * face is across the road (d: an edge, or a side of a fork's middle wall),
+   * `strength` about 0.3 for a glancing touch to 1 for a hard hit, `ringOut`
+   * for a mech thrown into it.
    */
-  pulseWall(s: number, side: number, strength: number, ringOut: boolean): void;
+  pulseWall(s: number, face: number, strength: number, ringOut: boolean): void;
   update(time: number): void;
 }
 
-/** Sweep a 2D profile (d, h) along the whole lap. */
-function extrude(
-  track: Track,
-  profile: Array<[number, number]>,
-  colors: THREE.Color[],
-  step: number,
-  colorAt?: (ring: number, seg: number, base: THREE.Color, out: THREE.Color) => THREE.Color,
-): THREE.BufferGeometry {
-  const rings = Math.floor(track.n / step);
-  const segs = profile.length - 1;
-  const pos = new Float32Array(rings * segs * 18);
-  const col = new Float32Array(rings * segs * 18);
-  const f0 = makeFrame();
-  const f1 = makeFrame();
-  const tmp = new THREE.Color();
-  let o = 0;
-  const put = (f: ReturnType<typeof makeFrame>, p: [number, number], c: THREE.Color) => {
-    pos[o] = f.px + f.rx * p[0] + f.ux * p[1];
-    pos[o + 1] = f.py + f.ry * p[0] + f.uy * p[1];
-    pos[o + 2] = f.pz + f.rz * p[0] + f.uz * p[1];
-    col[o] = c.r;
-    col[o + 1] = c.g;
-    col[o + 2] = c.b;
-    o += 3;
-  };
-  for (let r = 0; r < rings; r++) {
-    frameAt(track, r * step * track.ds, f0);
-    frameAt(track, ((r + 1) % rings) * step * track.ds, f1);
-    for (let k = 0; k < segs; k++) {
-      const a = profile[k];
-      const b = profile[k + 1];
-      const c = colorAt ? colorAt(r, k, colors[k], tmp) : colors[k];
-      put(f0, a, c);
-      put(f0, b, c);
-      put(f1, b, c);
-      put(f0, a, c);
-      put(f1, b, c);
-      put(f1, a, c);
+/** Each jump gap as a run of samples: start, end and side (0 both, -1 left, 1 right). */
+function gapRuns(track: Track): Array<{ s0: number; s1: number; side: number }> {
+  const out: Array<{ s0: number; s1: number; side: number }> = [];
+  const n = track.n;
+  for (const [arr, side] of [[track.roadL, -1], [track.roadR, 1]] as const) {
+    for (let i = 0; i < n; i++) {
+      if (arr[i] === 0 && arr[(i - 1 + n) % n] === 1) {
+        let j = i;
+        while (arr[j % n] === 0 && j < i + n) j++;
+        out.push({ s0: i * track.ds, s1: j * track.ds, side });
+      }
     }
   }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  g.computeVertexNormals();
-  return g;
+  // A gap across the whole road shows once, for both sides.
+  const merged: Array<{ s0: number; s1: number; side: number }> = [];
+  for (const g of out) {
+    const twin = merged.find((o) => Math.abs(o.s0 - g.s0) < 1 && Math.abs(o.s1 - g.s1) < 1);
+    if (twin) twin.side = 0;
+    else merged.push({ ...g });
+  }
+  return merged;
 }
 
 function boardTexture(lines: string[], bg: string, fg: string, accent: string): THREE.CanvasTexture {
@@ -319,44 +347,116 @@ function boardTexture(lines: string[], bg: string, fg: string, accent: string): 
   return t;
 }
 
-export function buildTrackVisual(track: Track): TrackVisual {
+export function buildTrackVisual(
+  track: Track,
+  theme: { sunLight: number; skyLight: number; groundY: number } = { sunLight: COLORS.sunLight, skyLight: COLORS.skyLight, groundY: -6 },
+): TrackVisual {
   const group = new THREE.Group();
   const hw = track.halfWidth;
   const f = makeFrame();
 
+  // Every surface below is swept along the samples. Each side of the road
+  // is drawn with that side's fork offset (zero outside a fork), only where
+  // it exists (no road over a jump gap, no barrier along an open edge).
+  const n = track.n;
+  const tmp = new THREE.Color();
+  const put = (i: number, d: number, h: number, side: number, out: Float32Array | number[], o: number) => {
+    const j = ((i % n) + n) % n;
+    const sh = side < 0 ? track.shiftL[j] : side > 0 ? track.shiftR[j] : 0;
+    const rh = side < 0 ? track.riseL[j] : side > 0 ? track.riseR[j] : 0;
+    const dd = d + sh;
+    const hh = h + rh;
+    out[o] = track.px[j] + track.rx[j] * dd + track.ux[j] * hh;
+    out[o + 1] = track.py[j] + track.ry[j] * dd + track.uy[j] * hh;
+    out[o + 2] = track.pz[j] + track.rz[j] * dd + track.uz[j] * hh;
+  };
+  /** Sweep a profile (a list of (d, h) per sample) along every stretch where `mask` holds. */
+  const sweep = (
+    side: number,
+    prof: (i: number) => Array<[number, number]>,
+    colors: THREE.Color[],
+    mask: (i: number) => boolean,
+    colorAt?: (i: number, seg: number, base: THREE.Color, out: THREE.Color) => THREE.Color,
+  ): THREE.BufferGeometry => {
+    const pos: number[] = [];
+    const col: number[] = [];
+    const v = [0, 0, 0];
+    const vert = (i: number, p: [number, number], c: THREE.Color) => {
+      put(i, p[0], p[1], side, v, 0);
+      pos.push(v[0], v[1], v[2]);
+      col.push(c.r, c.g, c.b);
+    };
+    for (let i = 0; i < n; i++) {
+      if (!mask(i) || !mask((i + 1) % n)) continue;
+      const pa = prof(i);
+      const pb = prof(i + 1);
+      for (let k = 0; k < pa.length - 1; k++) {
+        const c = colorAt ? colorAt(i, k, colors[k], tmp) : colors[k];
+        vert(i, pa[k], c);
+        vert(i, pa[k + 1], c);
+        vert(i + 1, pb[k + 1], c);
+        vert(i, pa[k], c);
+        vert(i + 1, pb[k + 1], c);
+        vert(i + 1, pb[k], c);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.computeVertexNormals();
+    return g;
+  };
+  const hwOf = (i: number) => track.hw[((i % n) + n) % n];
+  const medOf = (i: number) => track.median[((i % n) + n) % n];
+  const roadL = (i: number) => track.roadL[i % n] === 1;
+  const roadR = (i: number) => track.roadR[i % n] === 1;
+  const wallL = (i: number) => track.wallL[i % n] === 1;
+  const wallR = (i: number) => track.wallR[i % n] === 1;
+  const medWallL = (i: number) => medOf(i) > 0.6 && roadL(i);
+  const medWallR = (i: number) => medOf(i) > 0.6 && roadR(i);
+
   // ---- road surface -------------------------------------------------------
   {
-    const n = track.n;
-    const pos = new Float32Array((n + 1) * 2 * 3);
-    const nor = new Float32Array((n + 1) * 2 * 3);
-    const uv = new Float32Array((n + 1) * 2 * 2);
-    const kap = new Float32Array((n + 1) * 2);
+    // Four vertices a ring: left edge, left of the middle, right of the
+    // middle, right edge. Outside a fork the two middle ones meet at d = 0.
+    const pos = new Float32Array((n + 1) * 4 * 3);
+    const nor = new Float32Array((n + 1) * 4 * 3);
+    const uv = new Float32Array((n + 1) * 4 * 2);
+    const kap = new Float32Array((n + 1) * 4);
+    const edge = new Float32Array((n + 1) * 4 * 3);
     for (let i = 0; i <= n; i++) {
       const j = i % n;
-      for (let side = 0; side < 2; side++) {
-        const d = side === 0 ? -hw : hw;
-        const o = (i * 2 + side) * 3;
-        pos[o] = track.px[j] + track.rx[j] * d;
-        pos[o + 1] = track.py[j] + track.ry[j] * d;
-        pos[o + 2] = track.pz[j] + track.rz[j] * d;
-        nor[o] = track.ux[j];
-        nor[o + 1] = track.uy[j];
-        nor[o + 2] = track.uz[j];
-        uv[(i * 2 + side) * 2] = d;
-        uv[(i * 2 + side) * 2 + 1] = i * track.ds;
-        kap[i * 2 + side] = track.kappa[j];
+      const hwi = track.hw[j];
+      const m = track.median[j];
+      const ds = [-hwi, -m, m, hwi];
+      for (let k = 0; k < 4; k++) {
+        const side = k < 2 ? -1 : 1;
+        const v = i * 4 + k;
+        put(i, ds[k], 0, side, pos, v * 3);
+        nor[v * 3] = track.ux[j];
+        nor[v * 3 + 1] = track.uy[j];
+        nor[v * 3 + 2] = track.uz[j];
+        uv[v * 2] = ds[k];
+        uv[v * 2 + 1] = i * track.ds;
+        kap[v] = track.kappa[j];
+        edge[v * 3] = hwi;
+        edge[v * 3 + 1] = m;
+        edge[v * 3 + 2] = (side < 0 ? track.wallL[j] : track.wallR[j]) ? 0 : 1;
       }
     }
     const idx: number[] = [];
     for (let i = 0; i < n; i++) {
-      const a = i * 2;
-      idx.push(a, a + 1, a + 3, a, a + 3, a + 2);
+      const a = i * 4;
+      const b = (i + 1) * 4;
+      if (roadL(i) && roadL(i + 1)) idx.push(a, a + 1, b + 1, a, b + 1, b);
+      if (roadR(i) && roadR(i + 1)) idx.push(a + 2, a + 3, b + 3, a + 2, b + 3, b + 2);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     g.setAttribute('aKappa', new THREE.BufferAttribute(kap, 1));
+    g.setAttribute('aEdge', new THREE.BufferAttribute(edge, 3));
     g.setIndex(idx);
     const strips: THREE.Vector4[] = [];
     for (let i = 0; i < MAX_STRIPS; i++) {
@@ -368,6 +468,13 @@ export function buildTrackVisual(track: Track): TrackVisual {
       const gt = track.gates[i];
       gates.push(gt ? new THREE.Vector4(gt.s, gt.d, gt.halfW, 1) : new THREE.Vector4(0, 0, 0, 0));
     }
+    const pads: THREE.Vector4[] = [];
+    for (let i = 0; i < MAX_PADS; i++) {
+      const pd = track.pads[i];
+      pads.push(pd ? new THREE.Vector4(pd.s0, pd.s1, pd.d, pd.halfW) : new THREE.Vector4(0, 0, 0, 0));
+    }
+    const gaps: THREE.Vector4[] = gapRuns(track).slice(0, MAX_GAPS).map((gp) => new THREE.Vector4(gp.s0, gp.s1, gp.side, 0));
+    while (gaps.length < MAX_GAPS) gaps.push(new THREE.Vector4(0, 0, 0, 0));
     const road = new THREE.ShaderMaterial({
       vertexShader: roadVertex,
       fragmentShader: roadFragment,
@@ -376,13 +483,15 @@ export function buildTrackVisual(track: Track): TrackVisual {
         {
           uTime: { value: 0 },
           uLength: { value: track.length },
-          uHalfW: { value: hw },
           uSunDir: { value: SUN_DIR.clone() },
-          uSunColor: { value: new THREE.Color(COLORS.sunLight) },
-          uSkyColor: { value: new THREE.Color(COLORS.skyLight) },
+          uSunColor: { value: new THREE.Color(theme.sunLight) },
+          uSkyColor: { value: new THREE.Color(theme.skyLight) },
           uChargeColor: { value: new THREE.Color(COLORS.charge) },
           uStrips: { value: strips },
           uGates: { value: gates },
+          uPads: { value: pads },
+          uGaps: { value: gaps },
+          uPadColor: { value: new THREE.Color(0xff3d9a) },
           uCellColor: { value: new THREE.Color(COLORS.cell) },
           uWeapons: { value: 0 },
         },
@@ -396,103 +505,127 @@ export function buildTrackVisual(track: Track): TrackVisual {
   }
   const road = (group.userData as { road: THREE.ShaderMaterial }).road;
 
-  // ---- barriers and the slab under the road -------------------------------
+  // ---- barriers, the slab under the road, a fork's middle wall ------------
   {
     const W = new THREE.Color(COLORS.wall);
     const D = new THREE.Color(COLORS.wallDark);
     const A = new THREE.Color(COLORS.accent);
     const U = new THREE.Color(0x4a5568);
     const K = new THREE.Color(0x2c3442);
-    const profile: Array<[number, number]> = [
-      [hw, -0.05],
-      [hw, 2.3],
-      [hw + 0.45, 3.0],
-      [hw + 1.7, 3.0],
-      [hw + 2.3, 2.3],
-      [hw + 2.3, -1.6],
-      [hw - 5, -4.4],
-      [7, -6.2],
-      [-7, -6.2],
-      [-(hw - 5), -4.4],
-      [-(hw + 2.3), -1.6],
-      [-(hw + 2.3), 2.3],
-      [-(hw + 1.7), 3.0],
-      [-(hw + 0.45), 3.0],
-      [-hw, 2.3],
-      [-hw, -0.05],
-    ];
-    const colors = [W, A, D, D, W, U, K, K, K, U, W, D, D, A, W];
     // Alternate the inner wall panels so speed reads against them.
-    const g = extrude(track, profile, colors, 2, (ring, seg, base, out) => {
-      if (seg === 0 || seg === 14) return out.copy(base).multiplyScalar(ring % 4 < 2 ? 1 : 0.76);
-      return out.copy(base);
-    });
-    const mesh = new THREE.Mesh(g, toonMaterial({ side: THREE.DoubleSide }));
+    const panels = (face: number) => (i: number, seg: number, base: THREE.Color, out: THREE.Color) =>
+      seg === face ? out.copy(base).multiplyScalar(i % 8 < 4 ? 1 : 0.76) : out.copy(base);
+    const parts: THREE.BufferGeometry[] = [];
+    // Outer barriers: inner face, lip, top, outer face.
+    parts.push(
+      sweep(-1, (i) => { const w = hwOf(i); return [[-(w + 2.3), -1.6], [-(w + 2.3), 2.3], [-(w + 1.7), 3.0], [-(w + 0.45), 3.0], [-w, 2.3], [-w, -0.05]]; }, [W, D, D, A, W], wallL, panels(4)),
+      sweep(1, (i) => { const w = hwOf(i); return [[w, -0.05], [w, 2.3], [w + 0.45, 3.0], [w + 1.7, 3.0], [w + 2.3, 2.3], [w + 2.3, -1.6]]; }, [W, A, D, D, W], wallR, panels(0)),
+    );
+    // The slab under each half of the road, with a chamfer where an edge is open.
+    parts.push(
+      sweep(-1, (i) => { const w = hwOf(i); const m = medOf(i); return [[-m, -0.05], [-m, -6.2], [-7, -6.2], [-(w - 5), -4.4], [-(w + 2.3), -1.6], [-w, -0.05]]; }, [K, K, K, U, U], roadL),
+      sweep(1, (i) => { const w = hwOf(i); const m = medOf(i); return [[w, -0.05], [w + 2.3, -1.6], [w - 5, -4.4], [7, -6.2], [m, -6.2], [m, -0.05]]; }, [U, U, K, K, K], roadR),
+    );
+    // A fork's middle wall, one face to each route.
+    if (track.forks.length > 0) {
+      parts.push(
+        sweep(-1, (i) => { const m = medOf(i); return [[-m, -0.05], [-m, 2.3], [-m + 0.45, 3.0], [-m + 1.7, 3.0], [-m + 2.3, 2.3], [-m + 2.3, -1.6]]; }, [W, A, D, D, W], medWallL, panels(0)),
+        sweep(1, (i) => { const m = medOf(i); return [[m - 2.3, -1.6], [m - 2.3, 2.3], [m - 1.7, 3.0], [m - 0.45, 3.0], [m, 2.3], [m, -0.05]]; }, [W, D, D, A, W], medWallR, panels(4)),
+      );
+    }
+    // Close the ends of the slab at a jump's lip and landing.
+    const caps: number[] = [];
+    const ccol: number[] = [];
+    const v = [0, 0, 0];
+    const cap = (i: number, side: number) => {
+      const w = hwOf(i);
+      const m = medOf(i);
+      const quad: Array<[number, number]> = [[side * m, -0.05], [side * w, -0.05], [side * (w + 2.3), -1.6], [side * m, -6.2]];
+      for (const k of [0, 1, 2, 0, 2, 3]) {
+        put(i, quad[k][0], quad[k][1], side, v, 0);
+        caps.push(v[0], v[1], v[2]);
+        ccol.push(K.r, K.g, K.b);
+      }
+    };
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      if (roadL(i) !== roadL(j)) cap(roadL(i) ? i : j, -1);
+      if (roadR(i) !== roadR(j)) cap(roadR(i) ? i : j, 1);
+    }
+    if (caps.length) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(caps, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(ccol, 3));
+      g.computeVertexNormals();
+      parts.push(g);
+    }
+    const mesh = new THREE.Mesh(mergeGeometries(parts.filter((g) => g.attributes.position.count > 0))!, toonMaterial({ side: THREE.DoubleSide }));
     mesh.frustumCulled = false;
     group.add(mesh);
 
     // Light strip along each wall: cyan on the straights, amber into corners.
     const cool = new THREE.Color(0x4fe6ff).multiplyScalar(1.5);
     const warm = new THREE.Color(0xff8a1f).multiplyScalar(1.7);
-    const stripProfile = (side: number): Array<[number, number]> => [
-      [side * (hw - 0.04), 1.55],
-      [side * (hw - 0.04), 1.95],
+    const tint = (i: number, _seg: number, _base: THREE.Color, out: THREE.Color) =>
+      out.copy(cool).lerp(warm, THREE.MathUtils.smoothstep(track.kappaAhead[i % n], 0.0016, 0.003));
+    const strips = [
+      sweep(-1, (i) => [[-(hwOf(i) - 0.04), 1.55], [-(hwOf(i) - 0.04), 1.95]], [cool], wallL, tint),
+      sweep(1, (i) => [[hwOf(i) - 0.04, 1.55], [hwOf(i) - 0.04, 1.95]], [cool], wallR, tint),
     ];
-    const tint = (ring: number, _seg: number, _base: THREE.Color, out: THREE.Color) => {
-      const i = (ring * 2) % track.n;
-      const k = track.kappaAhead[i];
-      return out.copy(cool).lerp(warm, THREE.MathUtils.smoothstep(k, 0.0016, 0.003));
-    };
-    for (const side of [-1, 1]) {
-      const sg = extrude(track, stripProfile(side), [cool], 2, tint);
-      const sm = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }));
-      sm.frustumCulled = false;
-      group.add(sm);
+    if (track.forks.length > 0) {
+      strips.push(
+        sweep(-1, (i) => [[-(medOf(i) + 0.04), 1.55], [-(medOf(i) + 0.04), 1.95]], [cool], medWallL, tint),
+        sweep(1, (i) => [[medOf(i) + 0.04, 1.55], [medOf(i) + 0.04, 1.95]], [cool], medWallR, tint),
+      );
     }
+    const sm = new THREE.Mesh(mergeGeometries(strips.filter((g) => g.attributes.position.count > 0))!, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }));
+    sm.frustumCulled = false;
+    group.add(sm);
   }
 
   // ---- the barrier's energy field (see wallFragment) ------------------------
+  // One sheet on each barrier face: the outer walls (side -1, 1) and both
+  // faces of a fork's middle wall (-2 for the left route's, 2 for the right's).
   const wallPulses: THREE.Vector4[] = [];
   const pulseStart: number[] = [];
   let wallMat: THREE.ShaderMaterial;
   {
-    const n = track.n;
     const H = 7.5;
-    const verts = (n + 1) * 2 * 2;
-    const pos = new Float32Array(verts * 3);
-    const aS = new Float32Array(verts);
-    const aH = new Float32Array(verts);
-    const aSide = new Float32Array(verts);
-    let v = 0;
-    for (let i = 0; i <= n; i++) {
-      const j = i % n;
-      for (const side of [-1, 1]) {
-        const d = side * (hw - 0.06);
-        for (const ht of [0, H]) {
-          pos[v * 3] = track.px[j] + track.rx[j] * d + track.ux[j] * ht;
-          pos[v * 3 + 1] = track.py[j] + track.ry[j] * d + track.uy[j] * ht;
-          pos[v * 3 + 2] = track.pz[j] + track.rz[j] * d + track.uz[j] * ht;
-          aS[v] = i * track.ds;
-          aH[v] = ht;
-          aSide[v] = side;
-          v++;
-        }
+    const pos: number[] = [];
+    const aS: number[] = [];
+    const aH: number[] = [];
+    const aSide: number[] = [];
+    const v = [0, 0, 0];
+    const sheet = (code: number, dAt: (i: number) => number, mask: (i: number) => boolean) => {
+      const side = Math.sign(code);
+      for (let i = 0; i < n; i++) {
+        if (!mask(i) || !mask((i + 1) % n)) continue;
+        const corner = (ii: number, ht: number) => {
+          put(ii, dAt(ii), ht, side, v, 0);
+          pos.push(v[0], v[1], v[2]);
+          aS.push(ii * track.ds);
+          aH.push(ht);
+          aSide.push(code);
+        };
+        corner(i, 0);
+        corner(i, H);
+        corner(i + 1, H);
+        corner(i, 0);
+        corner(i + 1, H);
+        corner(i + 1, 0);
       }
-    }
-    const idx: number[] = [];
-    for (let i = 0; i < n; i++) {
-      for (let k = 0; k < 2; k++) {
-        const a = i * 4 + k * 2;
-        const b = a + 4;
-        idx.push(a, a + 1, b + 1, a, b + 1, b);
-      }
+    };
+    sheet(-1, (i) => -(hwOf(i) - 0.06), wallL);
+    sheet(1, (i) => hwOf(i) - 0.06, wallR);
+    if (track.forks.length > 0) {
+      sheet(-2, (i) => -(medOf(i) + 0.06), medWallL);
+      sheet(2, (i) => medOf(i) + 0.06, medWallR);
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('aS', new THREE.BufferAttribute(aS, 1));
-    g.setAttribute('aH', new THREE.BufferAttribute(aH, 1));
-    g.setAttribute('aSide', new THREE.BufferAttribute(aSide, 1));
-    g.setIndex(idx);
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('aS', new THREE.Float32BufferAttribute(aS, 1));
+    g.setAttribute('aH', new THREE.Float32BufferAttribute(aH, 1));
+    g.setAttribute('aSide', new THREE.Float32BufferAttribute(aSide, 1));
     for (let i = 0; i < MAX_WALL_PULSES; i++) {
       wallPulses.push(new THREE.Vector4(0, 1, 99, 0));
       pulseStart.push(-99);
@@ -526,29 +659,30 @@ export function buildTrackVisual(track: Track): TrackVisual {
   // at eye level and close, so they strobe past and sell the speed.
   {
     const every = 5; // samples
-    const count = Math.floor(track.n / every);
+    const spots: Array<[number, number]> = [];
+    for (let i = 0; i < n; i += every) {
+      if (wallL(i)) spots.push([i, -1]);
+      if (wallR(i)) spots.push([i, 1]);
+    }
     const postGeo = new THREE.BoxGeometry(0.32, 3.4, 0.32);
     postGeo.translate(0, 1.7, 0);
     const capGeo = new THREE.BoxGeometry(0.5, 0.34, 1.5);
     capGeo.translate(0, 3.55, 0);
-    const posts = new THREE.InstancedMesh(postGeo, new THREE.MeshLambertMaterial({ color: 0x39414f }), count * 2);
-    const caps = new THREE.InstancedMesh(capGeo, new THREE.MeshBasicMaterial({ toneMapped: false }), count * 2);
+    const posts = new THREE.InstancedMesh(postGeo, new THREE.MeshLambertMaterial({ color: 0x39414f }), Math.max(1, spots.length));
+    const caps = new THREE.InstancedMesh(capGeo, new THREE.MeshBasicMaterial({ toneMapped: false }), Math.max(1, spots.length));
     const m = new THREE.Matrix4();
     const cool = new THREE.Color(0x4fe6ff).multiplyScalar(1.3);
     const warm = new THREE.Color(0xff8a1f).multiplyScalar(1.5);
     const c = new THREE.Color();
-    let k = 0;
-    for (let i = 0; i < count; i++) {
-      const idx = i * every;
+    spots.forEach(([idx, side], k) => {
       const turn = THREE.MathUtils.smoothstep(track.kappaAhead[idx], 0.0016, 0.003);
-      for (const side of [-1, 1]) {
-        trackMatrix(track, idx * track.ds, side * (hw + 1.1), 3.0, 0, m);
-        posts.setMatrixAt(k, m);
-        caps.setMatrixAt(k, m);
-        caps.setColorAt(k, c.copy(cool).lerp(warm, turn).multiplyScalar(i % 2 === 0 ? 1 : 0.55));
-        k++;
-      }
-    }
+      trackMatrix(track, idx * track.ds, side * (hwOf(idx) + 1.1), 3.0, 0, m);
+      posts.setMatrixAt(k, m);
+      caps.setMatrixAt(k, m);
+      caps.setColorAt(k, c.copy(cool).lerp(warm, turn).multiplyScalar((idx / every) % 2 === 0 ? 1 : 0.55));
+    });
+    posts.count = spots.length;
+    caps.count = spots.length;
     posts.instanceMatrix.needsUpdate = true;
     caps.instanceMatrix.needsUpdate = true;
     if (caps.instanceColor) caps.instanceColor.needsUpdate = true;
@@ -558,24 +692,32 @@ export function buildTrackVisual(track: Track): TrackVisual {
   }
 
   // ---- support pylons ------------------------------------------------------
+  // Down to the ground under level road. (Loops, corkscrews and forks stand
+  // on their own.)
+  const plain = (i: number) => {
+    const j = ((i % n) + n) % n;
+    return track.roadL[j] === 1 && track.roadR[j] === 1 && track.mag[j] === 0 && track.median[j] < 0.1 && track.upY[j] > 0.85 && Math.abs(track.ty[j]) < 0.35;
+  };
   {
     const spacing = 30; // samples
-    const count = Math.floor(track.n / spacing);
+    const spots: number[] = [];
+    for (let i = 0; i < n; i += spacing) if (plain(i)) spots.push(i);
     const geo = new THREE.CylinderGeometry(3.2, 4.6, 1, 6, 1, false);
     geo.translate(0, -0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0x6f7b8f });
-    const inst = new THREE.InstancedMesh(geo, mat, count);
+    const inst = new THREE.InstancedMesh(geo, mat, Math.max(1, spots.length));
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const p = new THREE.Vector3();
     const sc = new THREE.Vector3();
-    for (let i = 0; i < count; i++) {
-      frameAt(track, i * spacing * track.ds, f);
+    spots.forEach((i, k) => {
+      frameAt(track, i * track.ds, f);
       p.set(f.px - f.ux * 5.5, f.py - f.uy * 5.5, f.pz - f.uz * 5.5);
-      sc.set(1, p.y + 6, 1);
+      sc.set(1, Math.max(1, p.y - theme.groundY), 1);
       m.compose(p, q, sc);
-      inst.setMatrixAt(i, m);
-    }
+      inst.setMatrixAt(k, m);
+    });
+    inst.count = spots.length;
     inst.instanceMatrix.needsUpdate = true;
     inst.frustumCulled = false;
     group.add(inst);
@@ -607,12 +749,25 @@ export function buildTrackVisual(track: Track): TrackVisual {
       list.push(g);
     };
     const gateEvery = track.length / 18;
+    // Only over plain road: level, barriers both sides, no fork, nowhere near a jump.
+    const clear = (s: number) => {
+      for (let q = -6; q <= 6; q++) {
+        const j = Math.floor(wrapS(track, s + q * 4) / track.ds) % n;
+        if (!plain(j) || !track.wallL[j] || !track.wallR[j] || Math.abs(track.ty[j]) > 0.08) return false;
+      }
+      return true;
+    };
     for (let k = 0; k < 18; k++) {
-      const s = k * gateEvery + (k === 0 ? 0 : 60);
+      let s = k * gateEvery + (k === 0 ? 0 : 60);
+      if (k > 0) {
+        let tries = 0;
+        while (!clear(s) && tries++ < 40) s += 10;
+        if (!clear(s)) continue;
+      }
       const start = k === 0;
       const top = start ? 17 : 14;
       const leg = start ? 2.6 : 1.8;
-      const x = hw + 3.4;
+      const x = hwAt(track, s) + 3.4;
       addBox(parts, s, x, top / 2 - 2, 0, leg, top + 4, leg, 0x424b5c);
       addBox(parts, s, -x, top / 2 - 2, 0, leg, top + 4, leg, 0x424b5c);
       addBox(parts, s, 0, top, 0, x * 2 + leg, start ? 4.2 : 2.2, leg * 1.2, start ? 0x1c2230 : 0x2c3442);
@@ -659,7 +814,8 @@ export function buildTrackVisual(track: Track): TrackVisual {
       [['NOVA TIRE'], '#f4f6fb', '#10141f', '#ff3d5a'],
       [['AOKI HEAVY', 'INDUSTRIES'], '#1b1b22', '#ffb21a', '#ffb21a'],
       [['HALCYON AIR'], '#ff7a1a', '#10141f', '#10141f'],
-      [['MERIDIAN', 'SKYWAY'], '#103b3f', '#e9fbff', '#35f0ff'],
+      // The circuit's own name.
+      [track.def.name.toUpperCase().split(' ').slice(0, 2), '#103b3f', '#e9fbff', '#35f0ff'],
       [['ZGP LIVE'], '#e0263c', '#ffffff', '#10141f'],
     ];
     const mats = ads.map((a) => new THREE.MeshBasicMaterial({ map: boardTexture(...a), toneMapped: true }));
@@ -675,8 +831,9 @@ export function buildTrackVisual(track: Track): TrackVisual {
       }
       // Stand the board on the outside of any bend, facing the road.
       const side = track.kappa[i] > 0.0004 ? -1 : track.kappa[i] < -0.0004 ? 1 : k % 2 === 0 ? 1 : -1;
+      if (!plain(i) || !(side < 0 ? track.wallL[i] : track.wallR[i])) continue;
       const board = new THREE.Mesh(plane, mats[k % mats.length]);
-      trackMatrix(track, s, side * (hw + 5.5), 9.5, side > 0 ? -Math.PI / 2 - 0.25 : Math.PI / 2 + 0.25, m);
+      trackMatrix(track, s, side * (track.hw[i] + 5.5), 9.5, side > 0 ? -Math.PI / 2 - 0.25 : Math.PI / 2 + 0.25, m);
       board.applyMatrix4(m);
       group.add(board);
       const back = new THREE.Mesh(new THREE.BoxGeometry(31, 10.4, 0.8), backMat);
@@ -750,12 +907,14 @@ export function buildTrackVisual(track: Track): TrackVisual {
     road,
     gates: gateVis,
     lights,
-    pulseWall(s: number, side: number, strength: number, ringOut: boolean) {
+    pulseWall(s: number, face: number, strength: number, ringOut: boolean) {
       // Reuse the oldest slot.
       let k = 0;
       for (let i = 1; i < MAX_WALL_PULSES; i++) if (pulseStart[i] < pulseStart[k]) k = i;
       pulseStart[k] = clock;
-      wallPulses[k].set(wrapS(track, s), (side >= 0 ? 1 : -1) * (ringOut ? 2 : 1), 0, Math.max(0.05, strength));
+      const sign = face >= 0 ? 1 : -1;
+      const code = (Math.abs(face) >= hwAt(track, s) - 1.5 ? 1 : 2) * sign;
+      wallPulses[k].set(wrapS(track, s), code + (ringOut ? sign * 10 : 0), 0, Math.max(0.05, strength));
       wallMat.visible = true;
     },
     update(time: number) {

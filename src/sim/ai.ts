@@ -17,10 +17,10 @@ import {
   TACTIC,
   type Tactic,
 } from './config';
-import { classOf, distance, hpFraction, isActive, lockable, setTarget, speedCap } from './core';
+import { classOf, distance, hpFraction, inPlay, lockable, sameRoute, setTarget, speedCap } from './core';
 import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
-import { deltaS, kappaAheadAt, kappaAt, lineAt, wrapS, type Track } from './track';
+import { deltaS, forkAt, gripAt, hwAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
 import type { MechInput, MechState, RaceState } from './types';
 
 const INTENT = { RACE: 0, ENGAGE: 1, ESCORT: 2 } as const;
@@ -32,7 +32,7 @@ function press(out: MechInput, m: MechState, bit: number): void {
 
 function ownForward(race: RaceState, m: MechState): MechState | null {
   for (const o of race.mechs) {
-    if (o.team === m.team && o.role === ROLE.FW && isActive(o)) return o;
+    if (o.team === m.team && o.role === ROLE.FW && inPlay(o)) return o;
   }
   return null;
 }
@@ -58,7 +58,7 @@ function think(race: RaceState, track: Track, m: MechState): void {
   let best = -1;
   let bestScore = 28;
   for (const e of race.mechs) {
-    if (e.team === m.team || !isActive(e)) continue;
+    if (e.team === m.team || !inPlay(e)) continue;
     const ds = deltaS(track, e.s, m.s);
     const dist = Math.hypot(ds, e.d - m.d);
     if (dist > maxRange) continue;
@@ -141,6 +141,38 @@ function think(race: RaceState, track: Track, m: MechState): void {
   }
 }
 
+/**
+ * Which route to take at a fork coming up (or under way): -1 left, 1 right,
+ * 0 when there is no fork near. Drive-hungry pilots go for strips, pilots
+ * short of a Cell for the gate, the rest for speed (pads, the jump) unless
+ * they are too slow to clear it; ties split the field by pilot.
+ */
+function routeSide(race: RaceState, track: Track, m: MechState, look: number): number {
+  const here = forkAt(track, m.s);
+  if (here) return m.d >= 0 ? 1 : -1; // already in: stay on this side of the wall
+  let fork: Fork | null = null;
+  for (const ahead of [look, look + 80, look + 160]) {
+    fork = forkAt(track, m.s + ahead);
+    if (fork) break;
+  }
+  if (!fork) return 0;
+  const lap3 = race.lapPhase >= 3;
+  const wantDrive = m.drive < 55 ? 2 : m.drive < 85 ? 0.5 : 0;
+  const wantCell = m.cells < Math.min(1, race.rules.cellMax) && m.lap < race.rules.gateLaps ? 2.5 : m.cells < race.rules.cellMax ? 0.6 : 0;
+  // Forwards are racers first: they like the quick way (the pad, the jump)
+  // better than the others do, so the field splits instead of queueing.
+  const racer = m.role === ROLE.FW;
+  const score = (r: Fork['left']) =>
+    r.strips * wantDrive + r.gates * wantCell + r.pads * (lap3 ? 2 : 1) * (racer ? 2.2 : 1) + (r.jump ? (m.speed > 100 ? (racer ? 1.2 : 0.5) : -3) : 0);
+  // Each pilot has a side it favours (the lane it likes to run in), worth
+  // about as much as a speed pad: close calls go its way, clear ones do not.
+  const lean = clamp(m.ai.lane / 5, -1, 1) * 1.4;
+  const l = score(fork.left) - lean;
+  const r = score(fork.right) + lean;
+  if (Math.abs(l - r) < 0.25) return m.ai.lane >= 0 ? 1 : -1;
+  return l > r ? -1 : 1;
+}
+
 function race_(race: RaceState, track: Track, m: MechState, out: MechInput): void {
   const ai = m.ai;
   const c = classOf(m);
@@ -160,9 +192,11 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // A ramming defender steers at this mech instead of around it.
   let ramAt: MechState | null = null;
 
-  const chase = ai.intentTarget >= 0 ? race.mechs[ai.intentTarget] : null;
+  const chase0 = ai.intentTarget >= 0 ? race.mechs[ai.intentTarget] : null;
+  // Someone on the other route of a fork cannot be chased down.
+  const chase = chase0 && !splitApart(track, m.s, m.d, chase0.s, chase0.d) ? chase0 : null;
   const hot = tick < ai.hotUntil;
-  if (chase && isActive(chase)) {
+  if (chase && inPlay(chase)) {
     const ds = deltaS(track, chase.s, m.s);
     if (hot) {
       // Run up on the infield side, so the blow throws them at their barrier.
@@ -211,7 +245,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     if (!found && lap3) {
       let nearest = rules.towRange3 + 40;
       for (const o of race.mechs) {
-        if (o === m || !isActive(o)) continue;
+        if (o === m || !inPlay(o)) continue;
         const ahead = deltaS(track, o.s, m.s);
         if (ahead < 30 || ahead > nearest || Math.abs(o.d - m.d) > 26) continue;
         nearest = ahead;
@@ -223,7 +257,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     // Mid-ram: aim the charge at the nearest rival it has not hit yet.
     let nearest = 70;
     for (const e of race.mechs) {
-      if (e.team === m.team || !isActive(e) || (m.ramHits & (1 << e.id)) !== 0) continue;
+      if (e.team === m.team || !inPlay(e) || (m.ramHits & (1 << e.id)) !== 0) continue;
       const ahead = deltaS(track, e.s, m.s);
       if (ahead < -8 || ahead > nearest) continue;
       nearest = ahead;
@@ -260,8 +294,19 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     const room = c.radius + classOf(o).radius + 2.5;
     if (Math.abs(dd) < room) dWant += (dd > 0 ? -1 : 1) * (room - Math.abs(dd)) * 1.5;
   }
-  const lim = track.halfWidth - c.radius - 2.5;
-  dWant = clamp(dWant, -lim, lim);
+  // Pick a route at a fork, and keep inside the road: the narrowest of it
+  // between here and the look-ahead point, wider of an edge with no barrier.
+  const route = routeSide(race, track, m, look);
+  if (route !== 0 && Math.sign(dWant) !== route) dWant = route * 14;
+  const side = route !== 0 ? route : m.d >= 0 ? 1 : -1;
+  let lo = -Infinity;
+  let hi = Infinity;
+  for (const ahead of [0, look * 0.5, look]) {
+    const [l, h] = laneAt(track, m.s + ahead, side, c.radius + 2.5);
+    lo = Math.max(lo, l + (wallAt(track, m.s + ahead, -1) || l > 0 ? 0 : 5));
+    hi = Math.min(hi, h - (wallAt(track, m.s + ahead, 1) || h < 0 ? 0 : 5));
+  }
+  dWant = lo <= hi ? clamp(dWant, lo, hi) : (lo + hi) / 2;
 
   // --- steer: feed forward the bend, correct toward the line
   const kappa = kappaAt(track, m.s + m.speed * 0.12);
@@ -274,7 +319,8 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // --- slow for corners that are too tight for this speed
   let kMax = 0;
   const reach = 24 + m.speed * 0.75;
-  for (let a = 0; a <= reach; a += 12) kMax = Math.max(kMax, Math.abs(kappaAt(track, m.s + a)));
+  // A turn banked toward its inside can be taken faster: its grip goes into the sum.
+  for (let a = 0; a <= reach; a += 12) kMax = Math.max(kMax, Math.abs(kappaAt(track, m.s + a)) / gripAt(track, m.s + a));
   const vCorner = kMax > 1e-5 ? Math.sqrt((c.grip * 0.95) / kMax) * 1.04 : 999;
   if (m.speed > vCorner + 3) {
     out.brake = clamp((m.speed - vCorner) / 14, 0.2, 1);
@@ -304,7 +350,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     const a = ATTACKS[idx];
     if ((slot === 0 ? m.cdPrimary : m.cdSecondary) === 0 && a.shot) {
       for (const e of race.mechs) {
-        if (e.team === m.team || !isActive(e)) continue;
+        if (e.team === m.team || !inPlay(e)) continue;
         const ds = deltaS(track, e.s, m.s);
         const dd = e.d - m.d;
         const dist = Math.hypot(ds, dd);
@@ -333,7 +379,7 @@ function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: b
       let chasing = false;
       let hunted = false;
       for (const e of race.mechs) {
-        if (e.team === m.team || !isActive(e)) continue;
+        if (e.team === m.team || !inPlay(e)) continue;
         const ahead = deltaS(track, e.s, m.s);
         if (ahead > 10 && ahead < 380) chasing = true;
         if (ahead < 0 && ahead > -70) hunted = true;
@@ -345,7 +391,7 @@ function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: b
       const a = ATTACKS[ATK.MF_SNARE];
       const ts = race.teams[m.team];
       for (const e of race.mechs) {
-        if (e.team === m.team || !isActive(e) || e.snareT > 0 || e.shieldT > 0 || e.iframes > 0) continue;
+        if (e.team === m.team || !inPlay(e) || e.snareT > 0 || e.shieldT > 0 || e.iframes > 0) continue;
         const ds = deltaS(track, e.s, m.s);
         const dd = e.d - m.d;
         const dist = Math.hypot(ds, dd);
@@ -358,7 +404,7 @@ function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: b
     case ABILITY.RAM: {
       if (m.ramT > 0) return false;
       for (const e of race.mechs) {
-        if (e.team === m.team || !isActive(e) || e.shieldT > 0) continue;
+        if (e.team === m.team || !inPlay(e) || e.shieldT > 0) continue;
         const ds = deltaS(track, e.s, m.s);
         if (ds < -6 || ds > 42 || Math.abs(e.d - m.d) > 18) continue;
         // The rival forward is always worth it; on the speed lap so is anyone near the front.
@@ -383,7 +429,7 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
       const staggered = m.act === ACT.STAGGER;
       let hunters = 0;
       for (const e of race.mechs) {
-        if (e.team !== m.team && isActive(e) && e.target === m.id && distance(track, e, m) < 34) hunters++;
+        if (e.team !== m.team && inPlay(e) && e.target === m.id && distance(track, e, m) < 34) hunters++;
       }
       // On the speed lap any hit is the race. Before that a Cell is worth
       // more as an Overdrive later, so only a spare one, or real danger, goes.
@@ -396,7 +442,7 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
       let swinging = false;
       let pressing = false;
       for (const e of race.mechs) {
-        if (e.team === m.team || !isActive(e)) continue;
+        if (e.team === m.team || !inPlay(e)) continue;
         const dist = distance(track, e, m);
         if (dist > rules.pulseRange * 0.9) continue;
         near++;
@@ -414,7 +460,7 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
       const hot = (o: MechState) => race.tick - o.lastHitTick < 50;
       if (hp < (lap3 ? 0.4 : 0.3) && hot(m)) return true;
       for (const f of race.mechs) {
-        if (f.team !== m.team || f === m || !isActive(f) || f.shieldT > 0 || f.role !== ROLE.FW) continue;
+        if (f.team !== m.team || f === m || !inPlay(f) || f.shieldT > 0 || f.role !== ROLE.FW) continue;
         if (distance(track, f, m) > rules.aegisRange * 0.9 || !hot(f)) continue;
         const fhp = hpFraction(f);
         if (lap3 || fhp < 0.35 || (fhp < 0.55 && m.cells >= 2)) return true;
@@ -458,7 +504,9 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   }
   // Do not circle into the barrier.
   const lateral = us * ai.orbit;
-  if (Math.abs(m.d) > track.halfWidth - 9 && lateral * m.d > 0) {
+  // ...and keep well clear of an edge with no barrier: a blow there is a fall.
+  const edge = hwAt(track, m.s) - (wallAt(track, m.s, m.d) ? 9 : 16);
+  if (Math.abs(m.d) > edge && lateral * m.d > 0) {
     ai.orbit = -ai.orbit;
     ai.orbitUntil = tick + 50;
   }
@@ -513,7 +561,7 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
 
   // --- defend against a blow that is winding up
   for (const e of race.mechs) {
-    if (e.team === m.team || !isActive(e) || e.act !== ACT.ATTACK) continue;
+    if (e.team === m.team || !inPlay(e) || e.act !== ACT.ATTACK) continue;
     const a = ATTACKS[e.attack];
     if (a.kind !== 'melee' || e.actT >= a.windup) continue;
     const ed = distance(track, e, m);
@@ -610,17 +658,17 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
   out.brake = 0;
   out.buttons = 0;
   out.cmd = 0;
-  if (m.retired || race.phase === PHASE.COUNTDOWN) return out;
+  if (m.retired || m.fallT > 0 || race.phase === PHASE.COUNTDOWN) return out;
   const ai = m.ai;
   if (race.tick >= ai.nextThink) think(race, track, m);
 
-  if (isActive(m) && m.act !== ACT.STAGGER) {
+  if (inPlay(m) && m.act !== ACT.STAGGER) {
     // Turn the intent into a lock (or let go of one).
     let want = -1;
     if (ai.intent !== INTENT.RACE && ai.intentTarget >= 0) {
       const t = race.mechs[ai.intentTarget];
       // Having just broken away, stay away: no enemy lock until the cloak has run out.
-      if (lockable(t, m) && !(m.cloakT > 0 && t.team !== m.team)) {
+      if (lockable(t, m) && sameRoute(track, m, t) && !(m.cloakT > 0 && t.team !== m.team)) {
         const dist = distance(track, m, t);
         if (dist < LOCK_RANGE - 6 || (m.target === t.id && dist < LOCK_RANGE + 20)) want = t.id;
       }
@@ -636,7 +684,7 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
   const breaker = classOf(m).abilityLocked === ABILITY.BREAKAWAY;
   const inFight = m.mode === MODE.BATTLE && m.target >= 0;
   if (
-    isActive(m) && weaponsFree(race) && m.cells >= 1 && m.cdAbility === 0 && race.tick >= ai.abilityAt &&
+    inPlay(m) && weaponsFree(race) && m.cells >= 1 && m.cdAbility === 0 && race.tick >= ai.abilityAt &&
     (m.act === ACT.STAGGER ? breaker : inFight)
   ) {
     ai.abilityAt = race.tick + 10;
@@ -665,9 +713,9 @@ export function aiCaptain(race: RaceState, track: Track, team: number): void {
   if (race.lapPhase === 2 && ts.tactic !== TACTIC.SHIELD && race.tick >= ts.captainAt - 1200 && race.tick % 90 === team * 45) {
     // Forward in trouble? Call the shield without waiting for the next review.
     for (const f of race.mechs) {
-      if (f.team !== team || f.role !== ROLE.FW || !isActive(f)) continue;
+      if (f.team !== team || f.role !== ROLE.FW || !inPlay(f)) continue;
       let hunters = 0;
-      for (const e of race.mechs) if (e.team !== team && isActive(e) && e.target === f.id) hunters++;
+      for (const e of race.mechs) if (e.team !== team && inPlay(e) && e.target === f.id) hunters++;
       if (hunters >= 2 || (hunters >= 1 && hpFraction(f) < 0.45)) {
         setTactic(race, team, TACTIC.SHIELD, -1, -1);
         ts.captainAt = race.tick + 1500;
@@ -684,7 +732,7 @@ export function aiCaptain(race: RaceState, track: Track, team: number): void {
     let ownFw: MechState | null = null;
     let enemyFw: MechState | null = null;
     for (const m of race.mechs) {
-      if (m.role !== ROLE.FW || !isActive(m)) continue;
+      if (m.role !== ROLE.FW || !inPlay(m)) continue;
       if (m.team === team) ownFw = m;
       else enemyFw = m;
     }

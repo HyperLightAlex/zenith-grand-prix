@@ -109,6 +109,32 @@ export const ALIGN_RATE = 1.6;
 export const BUMP_TURN = 0.4;
 export const MAX_HEADING = 1.2;
 
+// ---- Leaving the road (circuits with jumps, crests and open edges) ---------
+/**
+ * Gravity, u/s^2. Game gravity: about seven times the real thing at this
+ * scale, so a jump is a leap and not a float.
+ */
+export const GRAVITY = 45;
+/** Steering left in the air, as a share of the grip on the road. */
+export const AIR_CONTROL = 0.3;
+/** Below the road surface by this much, with no road under it: the mech has fallen. */
+export const FALL_DEPTH = 3;
+/** Ticks a fallen mech is out of the race before the recovery drone puts it back. */
+export const FALL_TICKS = 96;
+/** Armour a fall costs. Credited like a ring-out to whoever knocked it there. */
+export const FALL_DAMAGE = 70;
+/** Speed a recovered mech is put back at, as a share of the limiter (lap 3: of its top speed). */
+export const RECOVER_SPEED = 0.6;
+/** Invulnerable ticks after a recovery. */
+export const RECOVER_IFRAMES = 60;
+/** On a loop or corkscrew a mech in the air is pulled back to the road this hard, u/s^2. */
+export const MAG_PULL = 220;
+/** A landing harder than this (u/s straight down) costs a little speed. */
+export const HARD_LANDING = 22;
+/** Speed pads: ticks of extra top speed, and how much. */
+export const PAD_TICKS = 60;
+export const PAD_MULT = 1.18;
+
 // ---- Battle mode ---------------------------------------------------------
 export const LOCK_RANGE = 95;
 export const LOCK_BREAK = 125;

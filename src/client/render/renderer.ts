@@ -108,6 +108,13 @@ export class Renderer {
     window.addEventListener('resize', () => this.resize());
   }
 
+  /** Fog colour and thickness for a circuit's setting. */
+  setTheme(theme: { fog: number; fogDensity: number }): void {
+    const fog = this.scene.fog as THREE.FogExp2;
+    fog.color.setHex(theme.fog);
+    fog.density = theme.fogDensity;
+  }
+
   /** Bloom strength, from the tuning panel. */
   setBloom(strength: number): void {
     this.bloom.strength = strength;

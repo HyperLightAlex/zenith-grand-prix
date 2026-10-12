@@ -7,7 +7,6 @@ import {
   ATTACKS,
   BTN,
   CLASSES,
-  MERIDIAN,
   MODE,
   PHASE,
   ROLE,
@@ -15,6 +14,8 @@ import {
   createMatch,
   deltaS,
   recordRound,
+  trackById,
+  TRACKS,
   type MatchState,
   type Role,
   type SeatConfig,
@@ -26,6 +27,7 @@ import { RaceView } from '../render/raceView';
 import { Renderer } from '../render/renderer';
 import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
 import { buildWorld, type World } from '../render/world';
+import { disposeTree, themeFor } from '../render/themes';
 import { LIVERIES } from '../render/palette';
 import { Hud } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice } from '../ui/menus';
@@ -55,10 +57,22 @@ export interface GameOptions {
   match?: number;
   /** Open the tuning panel at once. */
   tune?: boolean;
+  /** Circuit id to race on (see TRACKS). */
+  track?: string;
   audio?: AudioEngine;
 }
 
 const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
+/**
+ * Semitones to move the race stingers by on each circuit so they land in the
+ * key its music is in (they are written for Meridian's A minor, B minor and
+ * D major): the lap chime, the battle-lap stab, the speed-lap fanfare and the flag.
+ */
+const STINGER_KEY: Record<string, Partial<Record<SfxName, number>>> = {
+  meridian: {},
+  canyon: { lap: 1, lap_phase: -5, final_lap: -6, finish: -1 },
+  helios: { lap_phase: 2, final_lap: 5, finish: 2 },
+};
 /** Semitones above the gate chime's home note for each gate banked: steps of A minor. */
 const GATE_STEPS = [0, 2, 3, 5, 7];
 
@@ -70,12 +84,14 @@ export class Game {
   readonly tuning = new Tuning();
   readonly panel: TuningPanel;
   audio: AudioEngine;
-  private trackVis: TrackVisual;
-  private world: World;
+  private trackVis!: TrackVisual;
+  private world!: World;
+  /** Id of the circuit whose scenery is built. */
+  private trackId = '';
   private session!: LocalSession;
   private view!: RaceView;
   private state: State = 'title';
-  private choice: GarageChoice = { role: ROLE.FW, team: 0, rivals: 1, match: 1 };
+  private choice: GarageChoice = { role: ROLE.FW, team: 0, rivals: 1, match: 1, track: 'meridian' };
   /** The match being played: one or more rounds between the same two teams. */
   private match: MatchState | null = null;
   private roundScored = false;
@@ -92,11 +108,10 @@ export class Game {
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement, private opts: GameOptions = {}) {
     this.audio = opts.audio ?? new NullAudio();
     this.renderer = new Renderer(canvas);
-    // The circuit and its surroundings are built once and shared by every race.
-    const track = buildTrack(MERIDIAN);
-    this.trackVis = buildTrackVisual(track);
-    this.world = buildWorld(track);
-    this.renderer.scene.add(this.trackVis.group, this.world.group);
+    if (opts.track && trackById(opts.track)) this.choice.track = opts.track;
+    // The circuit and its surroundings are built when it is chosen and
+    // shared by every race on it.
+    this.useTrack(this.choice.track);
     this.hud = new Hud(uiRoot);
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
     this.hud.onCritical = () => this.audio.play('critical');
@@ -169,7 +184,8 @@ export class Game {
   private setSession(choice: GarageChoice | null, seed: number, gridFlip = false): void {
     this.view?.dispose();
     const { seats, localId } = this.seats(choice);
-    this.session = new LocalSession(MERIDIAN, { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
+    this.useTrack(choice?.track ?? this.trackId);
+    this.session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
     this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel);
     this.view.onImpact = (strength) => {
       this.input.rumble(strength, 90 + strength * 160);
@@ -186,6 +202,25 @@ export class Game {
     this.resultsAt = -1;
     this.slowmo = 0;
     this.session.timeScale = 1;
+  }
+
+  /** Build the circuit and its scenery, replacing the last one's. */
+  private useTrack(id: string): void {
+    const def = trackById(id) ?? TRACKS[0];
+    if (def.id === this.trackId) return;
+    this.trackId = def.id;
+    const scene = this.renderer.scene;
+    if (this.trackVis) {
+      scene.remove(this.trackVis.group, this.world.group);
+      disposeTree(this.trackVis.group);
+      disposeTree(this.world.group);
+    }
+    const track = buildTrack(def);
+    const theme = themeFor(def.theme);
+    this.trackVis = buildTrackVisual(track, theme);
+    this.world = buildWorld(track, theme);
+    this.renderer.setTheme(theme);
+    scene.add(this.trackVis.group, this.world.group);
   }
 
   private showTitle(): void {
@@ -272,7 +307,7 @@ export class Game {
     this.hud.setDevice(this.input.device);
     this.view.cam.reset();
     this.view.cam.mode = this.session.race.phase === PHASE.COUNTDOWN ? 'intro' : 'play';
-    this.audio.setMusic('race');
+    this.audio.setMusic('race', this.session.track.def.theme ?? 'meridian');
   }
 
   private pause(): void {
@@ -319,14 +354,44 @@ export class Game {
         if (e.mech === local && inRace) A.play('launch');
         break;
       case 'lapPhase':
-        if (inRace) A.play(e.lap >= 3 ? 'final_lap' : 'lap_phase');
+        if (inRace) this.sting(e.lap >= 3 ? 'final_lap' : 'lap_phase');
         break;
       case 'lap':
-        if (e.mech === local && inRace) A.play('lap');
+        if (e.mech === local && inRace) this.sting('lap');
         break;
       case 'finish':
-        if (e.mech === local && inRace) A.play('finish');
+        if (e.mech === local && inRace) this.sting('finish');
         break;
+      case 'airborne': {
+        const h = this.heard(e.mech);
+        if (h.volume > 0.05) A.play('takeoff', { volume: h.volume * 0.8 * quiet, pan: h.pan });
+        break;
+      }
+      case 'land': {
+        const h = this.heard(e.mech);
+        const v = h.volume * Math.min(1, 0.35 + e.intensity * 0.02) * quiet;
+        if (v > 0.03) A.play('land', { volume: v, pan: h.pan });
+        if (e.mech === this.view.focusId && e.intensity > 12) this.input.rumble(Math.min(1, e.intensity * 0.02), 140);
+        break;
+      }
+      case 'fall': {
+        const h = this.heard(e.mech);
+        const v = Math.max(e.mech === local || e.by === local ? 0.7 : 0, h.volume) * quiet;
+        if (v > 0.03) A.play('fall', { volume: v, pan: h.pan });
+        if (inRace && e.by === local) this.slowmo = 0.6;
+        break;
+      }
+      case 'recover': {
+        const h = this.heard(e.mech);
+        const v = Math.max(e.mech === local ? 0.8 : 0, h.volume) * quiet;
+        if (v > 0.05) A.play('recover', { volume: v, pan: h.pan });
+        break;
+      }
+      case 'pad': {
+        const h = this.heard(e.mech);
+        if (h.volume > 0.05) A.play('pad', { volume: h.volume * (e.mech === local ? 1 : 0.5) * quiet, pan: h.pan });
+        break;
+      }
       case 'swing': {
         const h = this.heard(e.mech);
         if (h.volume > 0.02) A.play(ATTACKS[e.attack].heavy ? 'swing_heavy' : 'swing_light', { volume: h.volume * 0.8 * quiet, pan: h.pan });
@@ -440,6 +505,12 @@ export class Game {
       default:
         break;
     }
+  }
+
+  /** A race stinger, moved into the key of this circuit's music. */
+  private sting(name: SfxName): void {
+    const semis = STINGER_KEY[this.session.track.def.theme ?? 'meridian']?.[name] ?? 0;
+    this.audio.play(name, semis ? { pitch: 2 ** (semis / 12) } : undefined);
   }
 
   /** The flag has fallen: bank the round and bring the results up in a moment. */

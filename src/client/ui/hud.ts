@@ -69,6 +69,8 @@ const LINES = {
   pulse: ['Disruptor! Back off, all of you!', 'Pulse out!'],
   ram: ['Ramming speed!', 'Coming through!'],
   aegis: ['Aegis up! Stay close!', 'Shield is on you!'],
+  fell: ['I am over the edge! Drone, where are you?', 'Lost the road. Back in a moment.'],
+  sentOver: ['{t} went over the side!', 'And {t} is off the circuit.'],
 };
 
 function me0(race: RaceState, id: number): number {
@@ -861,6 +863,26 @@ export class Hud {
           this.pop(h('div.pop.ring' + (mine ? '' : '.taken'), h('small', 'Ring-out'), String(Math.round(e.damage))), e.mech);
           if (mine) this.showNotice('Ring-out', false, 1.2);
         }
+        break;
+      case 'fall': {
+        // Off an open edge or short of a jump: a drone fetches the mech back, at a price.
+        const victim = race.mechs[e.mech];
+        const by = e.by >= 0 ? race.mechs[e.by] : null;
+        if (e.mech === this.localId) {
+          this.showNotice(by ? `Knocked off by ${by.name}` : 'Off the edge', true, 2);
+          this.pop(h('div.pop.ring.taken', h('small', 'Fall'), String(Math.round(e.damage))), e.mech);
+        } else if (by && by.id === this.localId) {
+          this.pop(h('div.pop.ring', h('small', 'Over the edge'), String(Math.round(e.damage))), e.mech);
+          this.showNotice(`${victim.name} is over the edge`, false, 1.4);
+        } else if (victim.team === me.team) {
+          this.say(victim, pick(LINES.fell, this.seq++));
+        } else if (by && by.team === me.team) {
+          this.say(by, pick(LINES.sentOver, this.seq++).replace('{t}', victim.name));
+        }
+        break;
+      }
+      case 'recover':
+        if (e.mech === this.localId) this.showNotice('Back on the road', false, 1.2);
         break;
       case 'parry':
         if (e.mech === this.localId) this.showNotice('Parry');

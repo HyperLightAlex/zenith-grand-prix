@@ -6,12 +6,12 @@
 //   npm run sim -- 40           40 races, summary only
 //   npm run sim -- 1 7          one race with seed 7
 //   npm run sim -- 100 1 tow3=0.12 koPoints=4     override any rule
+//   npm run sim -- 100 1 track=helios              on another circuit
 import {
   ABILITIES,
   ATTACKS,
   CLASSES,
   DT,
-  MERIDIAN,
   MPH_PER_UNIT,
   PHASE,
   ROLE,
@@ -22,6 +22,7 @@ import {
   hpFraction,
   scoreRound,
   stepRace,
+  trackById,
   type RaceConfig,
   type Rules,
   type SeatConfig,
@@ -31,13 +32,15 @@ const count = Number(process.argv[2] ?? 1);
 const seed0 = Number(process.argv[3] ?? 1);
 const rules: Partial<Rules> = {};
 let skills = [0.6, 0.6];
+let trackId = 'meridian';
 for (const arg of process.argv.slice(4)) {
   const [k, v] = arg.split('=');
   if (k === 'skill') skills = v.split(',').map(Number);
+  else if (k === 'track') trackId = v;
   else (rules as Record<string, number>)[k] = Number(v);
 }
 const verbose = count === 1;
-const track = buildTrack(MERIDIAN);
+const track = buildTrack(trackById(trackId));
 
 function seats(skillA: number, skillB: number): SeatConfig[] {
   const names = [['Kite', 'Lark', 'Atlas'], ['Shrike', 'Moth', 'Golem']];
@@ -71,6 +74,8 @@ let firstTeamLost = 0, tiedRounds = 0, passes3 = 0;
 const duel = { n: 0, held: 0, bins: [[0, 0], [0, 0], [0, 0]], hurtBehind: 0, hurtBehindWon: 0 };
 let lap2Speed = 0, lap2Ticks = 0, lockSpeed = 0, lockTicks = 0, gatesTaken = 0;
 let chargedHits = 0, chargedDamage = 0, ringOuts = 0, ringOutsCredited = 0, parries = 0;
+let falls = 0, fallsCredited = 0, takeoffs = 0, landings = 0, pads = 0, maxAir = 0;
+const forkSides = [0, 0];
 const t0 = Date.now();
 let ticksRun = 0;
 
@@ -88,7 +93,14 @@ for (let r = 0; r < count; r++) {
   while (race.phase !== PHASE.FINISHED && race.tick < 60 * 60 * 10) {
     stepRace(race, track, []);
     ticksRun++;
+    for (const f of track.forks) {
+      for (const m of race.mechs) {
+        const ws = ((m.s % track.length) + track.length) % track.length;
+        if (!m.retired && m.fallT === 0 && Math.abs(ws - (f.s0 + f.s1) / 2) < 2) forkSides[m.d < 0 ? 0 : 1]++;
+      }
+    }
     for (const m of race.mechs) {
+      maxAir = Math.max(maxAir, m.h);
       totals.maxSpeed = Math.max(totals.maxSpeed, m.speed);
       if (!m.retired && !m.finished && race.lapPhase === 2) {
         activeTicks++;
@@ -100,6 +112,10 @@ for (let r = 0; r < count; r++) {
       if (e.type === 'hit') { const k = ATTACKS[e.attack].key; dmgByAttack[k] = (dmgByAttack[k] ?? 0) + e.damage; dmgByPhase[race.lapPhase] += e.damage; if (e.blocked) blockedHits++; else cleanHits++; if (e.charged) { chargedHits++; chargedDamage += e.damage; } }
       if (e.type === 'splat') { dmgByAttack.splat = (dmgByAttack.splat ?? 0) + e.damage; dmgByPhase[race.lapPhase] += e.damage; ringOuts++; if (e.by >= 0) ringOutsCredited++; }
       if (e.type === 'parry') parries++;
+      if (e.type === 'fall') { falls++; if (e.by >= 0) fallsCredited++; if (verbose) console.log(`${fmt(race.tick * DT)}  FALL ${race.mechs[e.mech].name} by ${e.by >= 0 ? race.mechs[e.by].name : '-'} at s=${(race.mechs[e.mech].s % track.length).toFixed(0)} d=${race.mechs[e.mech].d.toFixed(1)} speed ${race.mechs[e.mech].speed.toFixed(0)}`); }
+      if (e.type === 'airborne') takeoffs++;
+      if (e.type === 'land') landings++;
+      if (e.type === 'pad') pads++;
       if (e.type === 'ko') koTimes.push(race.tick * DT);
       if (e.type === 'ability') abilityUses[e.ability]++;
       if (e.type === 'gate') gatesTaken++;
@@ -219,6 +235,7 @@ console.log(`lap-2 time spent locked on an enemy: ${pct(engagedTicks, activeTick
 console.log(`entering lap 2: cells FW ${avg(cellsAtLap2[0]).toFixed(2)} MF ${avg(cellsAtLap2[1]).toFixed(2)} DF ${avg(cellsAtLap2[2]).toFixed(2)}; Drive FW ${avg(driveAtLap2[0]).toFixed(0)} MF ${avg(driveAtLap2[1]).toFixed(0)} DF ${avg(driveAtLap2[2]).toFixed(0)}`);
 console.log(`battle lap pace: all ${(lap2Speed / Math.max(1, lap2Ticks) * MPH_PER_UNIT).toFixed(0)} mph, while locked on ${(lockSpeed / Math.max(1, lockTicks) * MPH_PER_UNIT).toFixed(0)} mph; gates threaded per mech ${(gatesTaken / N / 6).toFixed(2)}`);
 console.log(`momentum strikes per race ${(chargedHits / N).toFixed(2)} (${(chargedDamage / Math.max(1, chargedHits)).toFixed(0)} damage each); ring-outs per race ${(ringOuts / N).toFixed(2)} (credited ${pct(ringOutsCredited, ringOuts)}); parries per race ${(parries / N).toFixed(2)}`);
+if (track.air) console.log(`air: take-offs per race ${(takeoffs / N).toFixed(1)}, landings ${(landings / N).toFixed(1)}, highest ${maxAir.toFixed(0)}u; falls per race ${(falls / N).toFixed(2)} (credited ${pct(fallsCredited, falls)}); speed pads per race ${(pads / N).toFixed(1)}; fork routes taken left ${forkSides[0]} right ${forkSides[1]}`);
 console.log(`abilities per race: ${ABILITIES.map((a, i) => `${a.name} ${(abilityUses[i] / N).toFixed(2)}`).join(', ')}`);
 console.log(`speed lap: leader at its start won ${pct(lap3LeaderWon, lap3Races)}; lead changes per race ${(leadChanges3 / Math.max(1, lap3Races)).toFixed(2)}; places gained per race ${(passes3 / Math.max(1, lap3Races)).toFixed(1)}`);
 console.log(`forwards starting the speed lap behind someone: ${chasers}, gained a place ${pct(chasersGained, chasers)}; of those under 75% armour: ${hurtChasers}, gained ${pct(hurtChasersGained, hurtChasers)}, won ${pct(hurtChasersWon, hurtChasers)}`);
