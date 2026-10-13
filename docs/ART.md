@@ -78,12 +78,17 @@ knockout keeps its own colours. They play on the drawing clock.
 | Energy crackle | 10 | Bolts round a snared mech (orange) or one breaking away (its team colour); a ring on the road round a mech in Overdrive (gold) |
 | Pickup sparkle | 11 | Cell gates (gold), speed pads (magenta), recovery (team colour) |
 | Knockout explosion | 12 | Knockouts: flash, fireball, smoke closing over it, smoke breaking up; the painted still holds the fireball |
+| Kick | 13 | The stun kick: a rising smear, the contact star at its tip |
+| Stun | 13B | A staggered mech shorting out round its head and shoulders, for as long as the stagger lasts |
+| Hammer | 14B | The Breaker and the Breaker Slam coming down; a slam also cracks the road round the mech it hits |
+| Muzzle blasts | 15 | Every shot, along its line: a spike from a rifle, a cone from the scatter cannon (once a volley) |
+| Ram | 16 | The Ram: the charge starting, then the prow's bow shock ahead of the mech while it lasts (seen from behind, smaller and behind the mech) |
 
 `tools/fx/ingest.py` keys out a sheet's magenta and cuts its panels (and
 can take out smoke an image model painted into a glow);
 `tools/fx/build_sprites.py` makes the game's atlases from them, lining up
-what needs lining up (the barrier strike's flat side, a row painted off its
-panel). `src/client/render/sprites.ts` plays them: one-off effects run
+what needs lining up (the barrier strike's flat side, a muzzle, a prow's
+tip, a row painted off its panel). `src/client/render/sprites.ts` plays them: one-off effects run
 through their drawings once, some held for two; loops (the crackle) are
 asked for every frame they should show, and play their drawings in a
 random order, flipped and turned, so three drawings never visibly repeat.
@@ -165,9 +170,6 @@ style, roughly in order of payoff.
   to every colour. A cel painter mixed a shadow for each paint (the white
   armour's lavender, the red's maroon). A small table per livery would do
   it.
-- **The last effect sheets.** Sheets 13 to 16 (the stun kick, the breaker
-  hammer, muzzle blasts, the ram's charge) are written into the same brief
-  but not painted yet; until then those use the hit sparks and impacts.
 - **Coloured lines.** Lines are ink everywhere. Productions used coloured
   lines inside light areas (on a glow, on the sky side of a cloud).
 - **Lines between two overlapping mechs** fall back to the depth test, so

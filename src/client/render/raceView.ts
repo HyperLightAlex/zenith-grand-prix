@@ -23,7 +23,7 @@ import { TELL_COLOR, tellOf, type TellKind } from '../game/tells';
 import type { Feel } from '../game/tuning';
 import { CameraRig } from './cameraRig';
 import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
-import { WALL_EDGE } from './sprites';
+import { MUZZLE_EDGE, RAM_TIP, WALL_EDGE } from './sprites';
 import { MechAnimator } from './mech/animate';
 import { buildFrame } from './mech/frames';
 import { drawClock, drawingStep, look, markCharacter } from './look';
@@ -61,6 +61,10 @@ interface MechVisual {
   sparkT: number;
   /** A Breakaway's drawn crackle, seconds left. */
   crackleT: number;
+  /** How long the current ram has been going, seconds. */
+  ramAge: number;
+  /** The tick of the last drawn muzzle blast (a scatter cannon reports every pellet). */
+  shotTick: number;
   /** The tier of the carve burst running now, for its colour. */
   burstTier: number;
   /** Which cut of a combo is next, for the blade arcs. */
@@ -94,6 +98,7 @@ const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
 const v4 = new THREE.Vector3();
+const camFwd = new THREE.Vector3();
 const ndc = new THREE.Vector3();
 const shadowScale = new THREE.Matrix4();
 /** A drawn ring lying on the road: the road's orientation, turned so the sprite's face is the road's. */
@@ -209,6 +214,8 @@ export class RaceView {
         smokeT: 0,
         sparkT: 0,
         crackleT: 0,
+        ramAge: 0,
+        shotTick: -1,
         burstTier: 0,
         cut: 0,
         poseAcc: 0,
@@ -371,6 +378,18 @@ export class RaceView {
         m4.decompose(v1, flatQ, v2);
         flatQ.multiply(layFlat);
         this.fx.drawnKeep(`surge${m.id}`, 'crackle', v1, 15, { row: 1, tint: COLORS.cell, flat: flatQ, turn: true, depth: true, gain: 1.25 });
+      }
+      // A staggered mech shorting out round its head and shoulders.
+      if (!m.retired && m.act === ACT.STAGGER) {
+        this.fx.drawnKeep(`stun${m.id}`, 'stun', v.pos, CLASSES[m.role].radius * 3.4, { tint: 0xfff0a0, gain: 1.3 });
+      }
+      // The ram's prow: its bow shock ahead of the mech, once the charge's
+      // own first drawings have played.
+      if (ramming) {
+        v.ramAge += dt;
+        if (v.ramAge > 0.25) this.ramProw(v, m, `ram${m.id}`);
+      } else {
+        v.ramAge = 0;
       }
 
       // Ambient sparks and smoke.
@@ -601,8 +620,9 @@ export class RaceView {
   /**
    * The anime look's drawn swing: a painted smear round the mech, facing the
    * camera as a cel would. Light cuts alternate their direction through a
-   * combo; a heavy blow, a kick and a hammer use the heavy smear; the lance
-   * is a thrust pointing along the dash. Returns false in the plain look.
+   * combo; a heavy blow uses the heavy smear, a kick its own rising one, a
+   * hammer its own coming down; the lance is a thrust pointing along the
+   * dash. Returns false in the plain look.
    */
   private drawnSwing(v: MechVisual, attack: number, color: number, tilt: number): boolean {
     const { track } = this.session;
@@ -612,9 +632,18 @@ export class RaceView {
       trackDir(track, v.s, Math.cos(v.facing), Math.sin(v.facing), v3);
       return this.fx.drawnSprite('lance', v1, 18, { tint: color, follow: v.rig.root, dir: v3, gain: 1.3 });
     }
+    if (attack === ATK.MF_KICK) {
+      trackPoint(track, v.s, v.d, 4.8, v1);
+      return this.fx.drawnSprite('kick', v1, 11, { tint: color, follow: v.rig.root, roll: tilt, flip: v.cut % 2 === 1, gain: 1.25 });
+    }
+    if (attack === ATK.DF_HAMMER1 || attack === ATK.DF_HAMMER2) {
+      // Brought down in front of the mech.
+      trackPoint(track, v.s + Math.cos(v.facing) * 2, v.d + Math.sin(v.facing) * 2, 6, v1);
+      return this.fx.drawnSprite('hammer', v1, attack === ATK.DF_HAMMER2 ? 17 : 15, { tint: color, follow: v.rig.root, flip: v.cut % 2 === 1, gain: 1.25 });
+    }
     trackPoint(track, v.s, v.d, 4.8, v1);
-    const size = attack === ATK.DF_HAMMER1 || attack === ATK.DF_HAMMER2 ? 15 : attack === ATK.MF_KICK ? 9 : atk.heavy ? 13 : 10;
-    if (atk.heavy || attack === ATK.MF_KICK || attack === ATK.DF_HAMMER1) {
+    const size = atk.heavy ? 13 : 10;
+    if (atk.heavy) {
       return this.fx.drawnSprite('cutHeavy', v1, size, { tint: color, follow: v.rig.root, roll: tilt, flip: v.cut % 2 === 1, gain: 1.2 });
     }
     return this.fx.drawnSprite('cutLight', v1, size, { tint: color, follow: v.rig.root, roll: tilt, row: v.cut % 2, gain: 1.2 });
@@ -646,6 +675,70 @@ export class RaceView {
     trackPoint(track, v.s, face - side * size * 0.15, h, v1);
     this.fx.drawnSprite('smoke', v1, size * 0.5, { row: 0, tint: this.dust, vel: v2, delay: 2, flip: side > 0, depth: true });
     return true;
+  }
+
+  /**
+   * The cracks a hammer slam leaves on the road round the mech it hit (the
+   * anime look): a couple of drawings after the blow, once the impact's
+   * flash, which covers the feet, has shrunk.
+   */
+  private groundCracks(v: MechVisual, color: number): boolean {
+    if (v.h > 1) return false;
+    trackMatrix(this.session.track, v.s, v.d, 0.12, 0, m4);
+    m4.decompose(v1, flatQ, v2);
+    flatQ.multiply(layFlat);
+    // Carried along under the mech: at racing speed, cracks left where the
+    // blow landed would be behind the camera before they had drawn.
+    return this.fx.drawnSprite('cracks', v1, 20, { tint: color, flat: flatQ, follow: v.rig.root, roll: Math.random() * Math.PI * 2, delay: 2, depth: true, gain: 1.3 });
+  }
+
+  /**
+   * The ram's prow, its tip just ahead of the mech, pointing the way it
+   * faces: the charge starting (`key` null, riding on the mech) or the loop
+   * while it lasts (kept under `key`). Seen from behind (a ram charging away
+   * up the track, as the player's own does) it is drawn smaller and pushed
+   * back along the line of sight, behind the mech, so the mech stands in
+   * front of it with the prow flaring round it. Returns false in the plain
+   * look.
+   */
+  private ramProw(v: MechVisual, m: MechState, key: string | null): boolean {
+    const r = CLASSES[m.role].radius;
+    trackDir(this.session.track, v.s, Math.cos(v.facing), Math.sin(v.facing), v3);
+    const cam = this.renderer.camera;
+    cam.getWorldDirection(camFwd);
+    const away = v3.dot(camFwd) > 0.3;
+    let size = (6 + r * 2.4) * (away ? 0.65 : 1);
+    v4.copy(v.pos).addScaledVector(v3, r + 1.5 - (RAM_TIP - 0.5) * size);
+    if (away) {
+      // Further along the same line of sight, and bigger by as much: the same
+      // place on screen, but behind the mech.
+      v2.copy(v4).sub(cam.position);
+      const d = v2.length() || 1;
+      const k = (d + r * 2.5) / d;
+      v4.copy(cam.position).addScaledVector(v2, k);
+      size *= k;
+    }
+    const o = { row: key ? 1 : 0, tint: 0xffa030, dir: v3, gain: 1.3, depth: away, follow: key ? null : v.rig.root };
+    return key ? this.fx.drawnKeep(key, 'ram', v4, size, o) : this.fx.drawnSprite('ram', v4, size, o);
+  }
+
+  /**
+   * The muzzle blast along a shot (the anime look): the rifle's or, for a
+   * gun throwing pellets, the scatter cannon's. Once a volley: a scatter
+   * cannon reports each pellet. Returns false in the plain look.
+   */
+  private drawnMuzzle(v: MechVisual, mech: number, proj: number, scatter: boolean): boolean {
+    if (!look.on) return false;
+    const { race, track } = this.session;
+    if (v.shotTick === race.tick) return true;
+    v.shotTick = race.tick;
+    const m = race.mechs[mech];
+    const p = race.projectiles.find((q) => q.id === proj);
+    const aim = p ? Math.atan2(p.vd - m.vd, p.vs - m.vs) : m.facing;
+    trackDir(track, v.s, Math.cos(aim), Math.sin(aim), v3);
+    const size = scatter ? 7 : 6;
+    v.rig.muzzle.getWorldPosition(v1).addScaledVector(v3, (0.5 - MUZZLE_EDGE) * size);
+    return this.fx.drawnSprite('muzzle', v1, size, { row: scatter ? 1 : 0, tint: v.livery.glow, follow: v.rig.root, dir: v3, gain: 1.3 });
   }
 
   /** React to something the simulation reported. */
@@ -693,6 +786,8 @@ export class RaceView {
           }
           this.fx.burst(v1, v.vel, 40, 70, HOT_HEX, 0.6, 0.5);
         }
+        // Drawn: a hammer slam cracks the road round the mech it hit.
+        if (e.attack === ATK.DF_HAMMER2) this.groundCracks(v, weaponColor(e.attack));
         if ((e.victim === local || e.attacker === local) && (big || surge)) {
           this.cam.punch(surge ? 0.9 : 0.6);
           this.renderer.impactFrame(surge ? 0.12 : 0.09);
@@ -815,9 +910,12 @@ export class RaceView {
       }
       case 'shot': {
         const v = this.mechs[e.mech];
-        v.rig.muzzle.getWorldPosition(v1);
-        this.fx.flash(v1, ATTACKS[e.attack].shot!.pellets > 1 ? 2.6 : 3.4, v.livery.glow, 0.07, v.rig.root);
-        if (e.mech === local) this.cam.shake(ATTACKS[e.attack].shot!.pellets > 1 ? 0.07 : 0.1);
+        const scatter = ATTACKS[e.attack].shot!.pellets > 1;
+        if (!this.drawnMuzzle(v, e.mech, e.proj, scatter)) {
+          v.rig.muzzle.getWorldPosition(v1);
+          this.fx.flash(v1, scatter ? 2.6 : 3.4, v.livery.glow, 0.07, v.rig.root);
+        }
+        if (e.mech === local) this.cam.shake(scatter ? 0.07 : 0.1);
         break;
       }
       case 'windup': {
@@ -1031,6 +1129,8 @@ export class RaceView {
             if (mine || this.mechs[local].pos.distanceTo(v.pos) < race.rules.pulseRange * 1.4) this.cam.shake(0.45);
             break;
           case ABILITY.RAM:
+            v.ramAge = 0;
+            this.ramProw(v, race.mechs[e.mech], null);
             this.fx.flash(v1, 12, 0xffa030, 0.3, v.rig.root, true);
             this.fx.burst(v1, v.vel, 30, 40, 0xffa030, 0.5, 0.45);
             if (mine) {

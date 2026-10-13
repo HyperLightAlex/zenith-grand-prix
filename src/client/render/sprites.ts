@@ -14,14 +14,20 @@ import crackleUrl from './sprites/fx-crackle.png';
 import cutHeavyUrl from './sprites/fx-cut-heavy.png';
 import cutLightUrl from './sprites/fx-cut-light.png';
 import explosionUrl from './sprites/fx-explosion.png';
+import cracksUrl from './sprites/fx-cracks.png';
 import groundRingUrl from './sprites/fx-ground-ring.png';
+import hammerUrl from './sprites/fx-hammer.png';
 import impactUrl from './sprites/fx-impact.png';
+import kickUrl from './sprites/fx-kick.png';
 import lanceUrl from './sprites/fx-lance.png';
+import muzzleUrl from './sprites/fx-muzzle.png';
 import parryUrl from './sprites/fx-parry.png';
+import ramUrl from './sprites/fx-ram.png';
 import ringUrl from './sprites/fx-ring.png';
 import smokeUrl from './sprites/fx-smoke.png';
 import sparkUrl from './sprites/fx-spark.png';
 import sparkleUrl from './sprites/fx-sparkle.png';
+import stunUrl from './sprites/fx-stun.png';
 import wallUrl from './sprites/fx-wall.png';
 
 export type SpriteKind =
@@ -37,7 +43,13 @@ export type SpriteKind =
   | 'smoke'
   | 'wall'
   | 'crackle'
-  | 'sparkle';
+  | 'sparkle'
+  | 'kick'
+  | 'stun'
+  | 'hammer'
+  | 'cracks'
+  | 'muzzle'
+  | 'ram';
 
 /**
  * How a sheet is coloured: `glow` swaps its cyan for the tint, `smoke` shades
@@ -59,6 +71,10 @@ interface Atlas {
 
 /** Where the barrier sits in a `wall` drawing: tools/fx/build_sprites.py lines it up 32 px into a 256 px cell. */
 export const WALL_EDGE = 32 / 256;
+/** Where the muzzle sits in a `muzzle` drawing, from its left edge (the blast goes right). */
+export const MUZZLE_EDGE = 8 / 256;
+/** Where the prow's tip sits in a `ram` drawing, from its left edge. */
+export const RAM_TIP = 232 / 256;
 
 const ATLASES: Record<SpriteKind, Atlas> = {
   spark: { url: sparkUrl, cols: 3, rows: 2, paint: 'glow' },
@@ -80,6 +96,17 @@ const ATLASES: Record<SpriteKind, Atlas> = {
   // Loops: four bolts bracketing a mech, and a ring.
   crackle: { url: crackleUrl, cols: 3, rows: 2, paint: 'glow' },
   sparkle: { url: sparkleUrl, cols: 6, rows: 1, paint: 'glow' },
+  // The kick's smear, rising to the contact.
+  kick: { url: kickUrl, cols: 3, rows: 1, paint: 'glow' },
+  // Loops over a staggered mech: sparks shorting out, a broken halo. Top half of the cell.
+  stun: { url: stunUrl, cols: 3, rows: 2, paint: 'glow' },
+  // The hammer coming down, and the cracks a slam leaves on the road.
+  hammer: { url: hammerUrl, cols: 3, rows: 1, paint: 'glow' },
+  cracks: { url: cracksUrl, cols: 3, rows: 1, paint: 'glow', holds: [1, 2, 2] },
+  // Row 0 the rifle, row 1 the scatter cannon.
+  muzzle: { url: muzzleUrl, cols: 3, rows: 2, paint: 'glow' },
+  // Row 0 the charge starting, row 1 the loop while it lasts.
+  ram: { url: ramUrl, cols: 3, rows: 2, paint: 'glow' },
 };
 
 const VERT = /* glsl */ `
@@ -270,6 +297,11 @@ export class SpriteFx {
         s.offset.copy(at).sub(_v);
       }
       if (o.flat && s.flat) s.flat.copy(o.flat);
+      if (o.dir && s.dir) s.dir.copy(o.dir);
+      if (o.depth !== undefined) {
+        s.mat.depthTest = o.depth;
+        s.mesh.renderOrder = o.depth ? 7 : 8;
+      }
       if (o.tint !== undefined) (s.mat.uniforms.uTint.value as THREE.Color).set(o.tint);
       if (o.gain !== undefined) s.mat.uniforms.uGain.value = o.gain;
       s.mesh.scale.setScalar(size);
