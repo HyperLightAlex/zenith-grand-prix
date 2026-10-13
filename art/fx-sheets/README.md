@@ -12,5 +12,6 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 3 Parry glint | fx-03-parry-glint.png | two variations | `rows centre` |
 | 4 Blade arcs | fx-04-blade-arcs.png | bottom row (heavy cut) only | `rows` |
 | 4B Light cut | fx-04b-light-cut.png | two variations | `rows` |
+| 5 Lance thrust | fx-05-lance-thrust.png | two variations | `rows` |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
