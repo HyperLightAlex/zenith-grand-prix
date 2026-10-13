@@ -97,33 +97,78 @@ The procedural explosion the painted one replaced is still in
 
 ## Painted backgrounds
 
-In the anime look a circuit with a painted background (so far Meridian
-Skyway) has its scenery painted, the way a background department painted
-behind the cels. The sheets are in `art/bg-sheets`, painted by an image model
+In the anime look every circuit has its scenery painted, the way a
+background department painted behind the cels. The sheets are in `art/bg-sheets`, painted by an image model
 to one brief per circuit and checked one at a time.
 
 - **The sky** all the way round, horizon to zenith, in two halves: the half
-  facing the sun, with its glow, and the half facing away. Turned so the glow
-  is round the sun, which is still drawn as a hard disc on top.
+  facing the sun, with its glow, and the half facing away (Helios, lit from
+  overhead, uses one half twice). Turned so the glow is round the sun, which
+  is still drawn as a hard disc on top: where the light comes from at
+  Meridian, on the horizon at Canyon (its sky is painted with the sun
+  setting; the disc sinks behind the far mesas), high overhead at Helios.
 - **The horizon**: three painted strips, each on a ring round the circuit at
-  its own distance (far mountains, the coast, a city across the water),
-  standing on the sea and repeating round the circle. They move against each
-  other a little as the circuit turns, as layered paintings would.
+  its own distance (Meridian: far mountains, the coast, a city across the
+  water; Canyon: mesas, buttes and spires, hoodoos; Helios: far snowy peaks,
+  nearer peaks, a wall of cumulus), standing on the ground and repeating
+  round the circle. They move against each other a little as the circuit
+  turns, as layered paintings would.
 - **Clouds**: painted cumulus cards in place of the modelled ones, turning to
   face the camera but staying upright.
-- **Surfaces**: the sea, three kinds of tower facade (glass offices, hotels,
-  dark glass), the platforms the towers stand on, and white panels on the
-  landmarks, as repeating painted textures under the cel shading.
+- **Surfaces**, as repeating painted textures:
+  - Meridian: the sea, three kinds of tower facade (glass offices, hotels,
+    dark glass), the platforms the towers stand on, and white panels on the
+    landmarks.
+  - Canyon: the desert floor (the sand at two sizes and angles blended by a
+    slow noise, so its scrub never lines up into a grid, with pans of cracked
+    clay and broad light and shade), the gorges' rock, strata cliffs and
+    caprock on the cut, the mesas and the arch, the hoodoos' softer stone.
+  - Helios: the cloud sea (drifting, at two sizes), layered rock under the
+    islands and meadow on top, whitewashed buildings, and engraved gold on
+    the Sun Gate and the spire's collar.
+  The rock's texture coordinates come from the world position and each
+  face's facing (`paintedRock` in `world.ts`): the strata stay level all the
+  way round a mesa and dip gently across the desert, so no two mesas band
+  alike, and whatever faces up gets the top texture.
 
 `tools/bg/build_backgrounds.py` turns the sheets into the game's textures:
 it matches the two sky halves' colours across their joins, cuts the strips
 and clouds out of the green with a colour-difference key, and cuts each
-surface square to the length that repeats best, blending its seams. It
+surface square to the length that repeats best, blending its seams. The key
+alone misjudges an edge whose colour has some green in it (a blue-white
+cloud's rim reads as solid and comes out teal, an orange one too solid and
+olive), so each edge pixel is then taken as a mix of the green and the colour
+a few pixels further in, and its alpha read from where it lies between them. It
 writes `src/client/render/backgrounds/<circuit>.ts`, which `painted.ts`
 collects; `world.ts` swaps between the plain scenery and the painted one
 with the look. The frame's ACES tone mapping would change a painting's
 colours (lifted mids, grey whites), so the sky, horizon, clouds and sea undo
 it first (`unTone` in `painted.ts`) and come out as painted.
+
+## The painted track kit
+
+Everything bolted to the circuit is painted too, from one kit shared by all
+three circuits (`art/track-sheets`; `tools/bg/build_track.py` builds it into
+`src/client/render/backgrounds/track.ts`, and `trackMesh.ts` switches it with
+the look):
+
+- **The road deck**, under all the markings. Each 24-unit run of road takes
+  the texture from its own place in it, so its scuffs never line up panel
+  after panel; the panel seams cover the joins.
+- **Barriers**: armour on the faces toward the road (one repeat the face's
+  whole height), dark ribbed steel over the top and down the back; the slab
+  under the road and the pylons in concrete; the gantries in riveted navy
+  steel; the grandstands' crowd, cut on whole rows of seats, and their bases
+  in concrete.
+- **Boards**: the sponsors' boards, the circuit's own and the race's, and the
+  banner over the line, each in a frame of its own shape (the paintings came
+  out a little deeper than the plain boards), drawn as painted.
+
+What stays as the game draws it in both looks: the lane and edge lines,
+kerbs, chevrons, the start line and grid, charge strips, speed pads, cell
+gates, jump stripes, the barriers' light strips and energy field and the
+start lights. They are signals, so they stay crisp and bright, over the
+paintings.
 
 ## Settings (tuning panel, Look tab)
 
@@ -192,10 +237,6 @@ works as before, and on the low quality setting the ink pass is skipped.
 These are the parts that would take it from a convincing pass to a finished
 style, roughly in order of payoff.
 
-- **Painted backgrounds for Corkscrew Canyon and Helios Drop.** Meridian
-  Skyway has its painted background (below); the other two circuits still
-  have their flat-coloured scenery in the anime look, until their sheets are
-  painted (the prompts are in `art/bg-sheets/README.md`).
 - **A shadow colour per paint.** Shadows are one tint per circuit applied
   to every colour. A cel painter mixed a shadow for each paint (the white
   armour's lavender, the red's maroon). A small table per livery would do

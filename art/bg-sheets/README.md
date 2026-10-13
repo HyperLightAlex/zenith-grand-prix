@@ -23,7 +23,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-Meridian Skyway's sheets are in the game (`tools/bg/build_backgrounds.py meridian`).
+All three circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
 
 | Sheet | File | Notes |
 |---|---|---|

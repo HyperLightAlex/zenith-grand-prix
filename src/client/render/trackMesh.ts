@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
+import { look } from './look';
+import { paintedSignMaterial, paintedSurfaceMaterial, paintedTexture, paintedTrack, type PaintedSign } from './painted';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
@@ -108,6 +110,8 @@ uniform vec4 uStrips[${MAX_STRIPS}];
 uniform vec4 uGates[${MAX_GATES}];
 uniform vec3 uCellColor;
 uniform float uWeapons;
+uniform float uPainted;
+uniform sampler2D uRoadMap;
 varying vec2 vTc;
 varying float vKappa;
 /** Half width, the half width of a fork's middle wall, and 1 where this side's edge has no barrier. */
@@ -146,6 +150,14 @@ void main() {
   vec2 cell = vec2(floor(s / 24.0), floor((d + uHalfW) / (uHalfW * 0.5)));
   float n = hash21(cell);
   vec3 col = mix(vec3(0.29, 0.31, 0.36), vec3(0.34, 0.36, 0.42), n);
+  if (uPainted > 0.5) {
+    // The painted deck, each 24-unit run of it taken from its own place in
+    // the texture, so its scuffs never repeat in step; the seams cover the joins.
+    float run = floor(s / 24.0);
+    vec2 tc = vec2(d, s) / 24.0;
+    vec2 off = vec2(hash21(vec2(run, 3.7)), hash21(vec2(run, 9.1)));
+    col = textureGrad(uRoadMap, tc + off, dFdx(tc), dFdy(tc)).rgb * 1.35;
+  }
   // Darker racing groove down the middle third.
   col *= 1.0 - 0.10 * (1.0 - smoothstep(4.0, 15.0, ad));
   // Panel seams.
@@ -282,6 +294,46 @@ void main() {
   #include <fog_fragment>
 }`;
 
+// The painted track kit on the swept barriers and slab: which texture each
+// face takes, and how many units of track one repeat of it covers.
+const KIT_NONE = 0;
+const KIT_ARMOUR = 1;
+const KIT_STEEL = 2;
+const KIT_CONCRETE = 3;
+const KIT_SIZE = [1, 3, 3, 8];
+
+/**
+ * The barriers' and slab's material with the painted kit: each face its
+ * texture by kind (armour, dark steel, concrete), the rest (the orange lip)
+ * its plain colour; cel-shaded like the plain one.
+ */
+function kitMaterial(armour: THREE.Texture, steel: THREE.Texture, concrete: THREE.Texture): THREE.MeshToonMaterial {
+  const mat = toonMaterial({ side: THREE.DoubleSide });
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uArmour = { value: armour };
+    sh.uniforms.uSteel = { value: steel };
+    sh.uniforms.uConcrete = { value: concrete };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aKind;\nattribute vec2 aPaintUv;\nvarying float vKind;\nvarying vec2 vPaintUv;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvKind = aKind;\nvPaintUv = aPaintUv;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uArmour;\nuniform sampler2D uSteel;\nuniform sampler2D uConcrete;\nvarying float vKind;\nvarying vec2 vPaintUv;')
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+{
+  vec3 ta = texture2D(uArmour, vPaintUv).rgb;
+  vec3 ts = texture2D(uSteel, vPaintUv).rgb;
+  vec3 tc = texture2D(uConcrete, vPaintUv).rgb;
+  vec3 t = vKind < 1.5 ? ta : vKind < 2.5 ? ts : tc;
+  diffuseColor.rgb = mix(diffuseColor.rgb, t, step(0.5, vKind));
+}`,
+      );
+  };
+  mat.customProgramCacheKey = () => 'trackKit';
+  return mat;
+}
+
 export interface TrackVisual {
   group: THREE.Group;
   road: THREE.ShaderMaterial;
@@ -349,9 +401,21 @@ function boardTexture(lines: string[], bg: string, fg: string, accent: string): 
 
 export function buildTrackVisual(
   track: Track,
-  theme: { sunLight: number; skyLight: number; groundY: number } = { sunLight: COLORS.sunLight, skyLight: COLORS.skyLight, groundY: -6 },
+  theme: { id?: string; sunLight: number; skyLight: number; groundY: number } = { sunLight: COLORS.sunLight, skyLight: COLORS.skyLight, groundY: -6 },
 ): TrackVisual {
   const group = new THREE.Group();
+  // The painted track kit (the anime look): what is drawn only in one look
+  // or the other, and the material changes between them (true: painted).
+  const kit = paintedTrack;
+  const plainOnly: THREE.Object3D[] = [];
+  const paintedOnly: THREE.Object3D[] = [];
+  const swaps: Array<(painted: boolean) => void> = [];
+  const kitTex: Partial<Record<keyof typeof kit.surfaces, THREE.Texture>> = {};
+  const tex = (name: keyof typeof kit.surfaces) => (kitTex[name] ??= paintedTexture(kit.surfaces[name], { repeat: true }));
+  const swapMaterial = (mesh: THREE.Mesh, painted: THREE.Material) => {
+    const plain = mesh.material as THREE.Material;
+    swaps.push((on) => (mesh.material = on ? painted : plain));
+  };
   const hw = track.halfWidth;
   const f = makeFrame();
 
@@ -377,14 +441,19 @@ export function buildTrackVisual(
     colors: THREE.Color[],
     mask: (i: number) => boolean,
     colorAt?: (i: number, seg: number, base: THREE.Color, out: THREE.Color) => THREE.Color,
+    kinds?: number[],
   ): THREE.BufferGeometry => {
     const pos: number[] = [];
     const col: number[] = [];
+    const kind: number[] = [];
+    const puv: number[] = [];
     const v = [0, 0, 0];
-    const vert = (i: number, p: [number, number], c: THREE.Color) => {
+    const vert = (i: number, p: [number, number], c: THREE.Color, kd: number, u: number, w: number) => {
       put(i, p[0], p[1], side, v, 0);
       pos.push(v[0], v[1], v[2]);
       col.push(c.r, c.g, c.b);
+      kind.push(kd);
+      puv.push(u, w);
     };
     for (let i = 0; i < n; i++) {
       if (!mask(i) || !mask((i + 1) % n)) continue;
@@ -392,17 +461,33 @@ export function buildTrackVisual(
       const pb = prof(i + 1);
       for (let k = 0; k < pa.length - 1; k++) {
         const c = colorAt ? colorAt(i, k, colors[k], tmp) : colors[k];
-        vert(i, pa[k], c);
-        vert(i, pa[k + 1], c);
-        vert(i + 1, pb[k + 1], c);
-        vert(i, pa[k], c);
-        vert(i + 1, pb[k + 1], c);
-        vert(i + 1, pb[k], c);
+        // The painted kit: which texture (KIT_*), along the track and across the face.
+        const kd = kinds?.[k] ?? KIT_NONE;
+        const size = KIT_SIZE[kd];
+        const ua = (i * track.ds) / size;
+        const ub = ((i + 1) * track.ds) / size;
+        // The armour takes the face's whole height; the rest repeat across it.
+        const across = (p: [number, number], q: [number, number], end: number) => {
+          if (kd !== KIT_ARMOUR) return end === 0 ? 0 : Math.hypot(q[0] - p[0], q[1] - p[1]) / size;
+          const lo = Math.min(p[1], q[1]);
+          const hi = Math.max(p[1], q[1]);
+          return ((end === 0 ? p[1] : q[1]) - lo) / Math.max(hi - lo, 1e-3);
+        };
+        const a0 = across(pa[k], pa[k + 1], 0);
+        const a1 = across(pa[k], pa[k + 1], 1);
+        vert(i, pa[k], c, kd, ua, a0);
+        vert(i, pa[k + 1], c, kd, ua, a1);
+        vert(i + 1, pb[k + 1], c, kd, ub, a1);
+        vert(i, pa[k], c, kd, ua, a0);
+        vert(i + 1, pb[k + 1], c, kd, ub, a1);
+        vert(i + 1, pb[k], c, kd, ub, a0);
       }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setAttribute('aKind', new THREE.Float32BufferAttribute(kind, 1));
+    g.setAttribute('aPaintUv', new THREE.Float32BufferAttribute(puv, 2));
     g.computeVertexNormals();
     return g;
   };
@@ -494,6 +579,8 @@ export function buildTrackVisual(
           uPadColor: { value: new THREE.Color(0xff3d9a) },
           uCellColor: { value: new THREE.Color(COLORS.cell) },
           uWeapons: { value: 0 },
+          uPainted: { value: 0 },
+          uRoadMap: { value: null },
         },
       ]),
       fog: true,
@@ -517,20 +604,23 @@ export function buildTrackVisual(
       seg === face ? out.copy(base).multiplyScalar(i % 8 < 4 ? 1 : 0.76) : out.copy(base);
     const parts: THREE.BufferGeometry[] = [];
     // Outer barriers: inner face, lip, top, outer face.
+    // Painted: armour on the faces toward the road, dark steel over the top and down the back.
+    const S = KIT_STEEL;
+    const C = KIT_CONCRETE;
     parts.push(
-      sweep(-1, (i) => { const w = hwOf(i); return [[-(w + 2.3), -1.6], [-(w + 2.3), 2.3], [-(w + 1.7), 3.0], [-(w + 0.45), 3.0], [-w, 2.3], [-w, -0.05]]; }, [W, D, D, A, W], wallL, panels(4)),
-      sweep(1, (i) => { const w = hwOf(i); return [[w, -0.05], [w, 2.3], [w + 0.45, 3.0], [w + 1.7, 3.0], [w + 2.3, 2.3], [w + 2.3, -1.6]]; }, [W, A, D, D, W], wallR, panels(0)),
+      sweep(-1, (i) => { const w = hwOf(i); return [[-(w + 2.3), -1.6], [-(w + 2.3), 2.3], [-(w + 1.7), 3.0], [-(w + 0.45), 3.0], [-w, 2.3], [-w, -0.05]]; }, [W, D, D, A, W], wallL, panels(4), [S, S, S, KIT_NONE, KIT_ARMOUR]),
+      sweep(1, (i) => { const w = hwOf(i); return [[w, -0.05], [w, 2.3], [w + 0.45, 3.0], [w + 1.7, 3.0], [w + 2.3, 2.3], [w + 2.3, -1.6]]; }, [W, A, D, D, W], wallR, panels(0), [KIT_ARMOUR, KIT_NONE, S, S, S]),
     );
     // The slab under each half of the road, with a chamfer where an edge is open.
     parts.push(
-      sweep(-1, (i) => { const w = hwOf(i); const m = medOf(i); return [[-m, -0.05], [-m, -6.2], [-7, -6.2], [-(w - 5), -4.4], [-(w + 2.3), -1.6], [-w, -0.05]]; }, [K, K, K, U, U], roadL),
-      sweep(1, (i) => { const w = hwOf(i); const m = medOf(i); return [[w, -0.05], [w + 2.3, -1.6], [w - 5, -4.4], [7, -6.2], [m, -6.2], [m, -0.05]]; }, [U, U, K, K, K], roadR),
+      sweep(-1, (i) => { const w = hwOf(i); const m = medOf(i); return [[-m, -0.05], [-m, -6.2], [-7, -6.2], [-(w - 5), -4.4], [-(w + 2.3), -1.6], [-w, -0.05]]; }, [K, K, K, U, U], roadL, undefined, [C, C, C, C, C]),
+      sweep(1, (i) => { const w = hwOf(i); const m = medOf(i); return [[w, -0.05], [w + 2.3, -1.6], [w - 5, -4.4], [7, -6.2], [m, -6.2], [m, -0.05]]; }, [U, U, K, K, K], roadR, undefined, [C, C, C, C, C]),
     );
     // A fork's middle wall, one face to each route.
     if (track.forks.length > 0) {
       parts.push(
-        sweep(-1, (i) => { const m = medOf(i); return [[-m, -0.05], [-m, 2.3], [-m + 0.45, 3.0], [-m + 1.7, 3.0], [-m + 2.3, 2.3], [-m + 2.3, -1.6]]; }, [W, A, D, D, W], medWallL, panels(0)),
-        sweep(1, (i) => { const m = medOf(i); return [[m - 2.3, -1.6], [m - 2.3, 2.3], [m - 1.7, 3.0], [m - 0.45, 3.0], [m, 2.3], [m, -0.05]]; }, [W, D, D, A, W], medWallR, panels(4)),
+        sweep(-1, (i) => { const m = medOf(i); return [[-m, -0.05], [-m, 2.3], [-m + 0.45, 3.0], [-m + 1.7, 3.0], [-m + 2.3, 2.3], [-m + 2.3, -1.6]]; }, [W, A, D, D, W], medWallL, panels(0), [KIT_ARMOUR, KIT_NONE, S, S, KIT_ARMOUR]),
+        sweep(1, (i) => { const m = medOf(i); return [[m - 2.3, -1.6], [m - 2.3, 2.3], [m - 1.7, 3.0], [m - 0.45, 3.0], [m, 2.3], [m, -0.05]]; }, [W, D, D, A, W], medWallR, panels(4), [KIT_ARMOUR, S, S, KIT_NONE, KIT_ARMOUR]),
       );
     }
     // Close the ends of the slab at a jump's lip and landing.
@@ -556,12 +646,15 @@ export function buildTrackVisual(
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(caps, 3));
       g.setAttribute('color', new THREE.Float32BufferAttribute(ccol, 3));
+      g.setAttribute('aKind', new THREE.Float32BufferAttribute(new Float32Array(caps.length / 3).fill(KIT_NONE), 1));
+      g.setAttribute('aPaintUv', new THREE.Float32BufferAttribute(new Float32Array((caps.length / 3) * 2), 2));
       g.computeVertexNormals();
       parts.push(g);
     }
     const mesh = new THREE.Mesh(mergeGeometries(parts.filter((g) => g.attributes.position.count > 0))!, toonMaterial({ side: THREE.DoubleSide }));
     mesh.frustumCulled = false;
     group.add(mesh);
+    swapMaterial(mesh, kitMaterial(tex('armour'), tex('steel'), tex('concrete')));
 
     // Light strip along each wall: cyan on the straights, amber into corners.
     const cool = new THREE.Color(0x4fe6ff).multiplyScalar(1.5);
@@ -721,6 +814,7 @@ export function buildTrackVisual(
     inst.instanceMatrix.needsUpdate = true;
     inst.frustumCulled = false;
     group.add(inst);
+    swapMaterial(inst, paintedSurfaceMaterial(tex('concrete'), tex('concrete'), 8, 8, THREE.FrontSide, { dip: 0 }));
   }
 
   // ---- gantries -----------------------------------------------------------
@@ -782,6 +876,7 @@ export function buildTrackVisual(
     const gate = new THREE.Mesh(mergeGeometries(parts)!, toonMaterial());
     gate.frustumCulled = false;
     group.add(gate);
+    swapMaterial(gate, paintedSurfaceMaterial(tex('gantry'), tex('gantry'), 3, 3, THREE.FrontSide, { toon: true, dip: 0 }));
     const glowGeo = mergeGeometries(glowParts)!;
     const gc = glowGeo.attributes.color as THREE.BufferAttribute;
     for (let i = 0; i < gc.count * 3; i++) (gc.array as Float32Array)[i] *= 1.6;
@@ -805,6 +900,14 @@ export function buildTrackVisual(
     trackMatrix(track, -1.75, 0, 17.6, Math.PI, m);
     banner.applyMatrix4(m);
     group.add(banner);
+    // The painted banner, as wide, deeper to its own shape, its foot where the plain one's is.
+    const bh = 44 / kit.banner.aspect;
+    const painted = new THREE.Mesh(new THREE.PlaneGeometry(44, bh), paintedSignMaterial(paintedTexture(kit.banner.url)));
+    trackMatrix(track, -1.75, 0, 17.6 - 1.5 + bh / 2, Math.PI, m);
+    painted.applyMatrix4(m);
+    group.add(painted);
+    plainOnly.push(banner);
+    paintedOnly.push(painted);
   }
 
   // ---- trackside boards and grandstands -----------------------------------
@@ -821,6 +924,10 @@ export function buildTrackVisual(
     const mats = ads.map((a) => new THREE.MeshBasicMaterial({ map: boardTexture(...a), toneMapped: true }));
     const plane = new THREE.PlaneGeometry(30, 9.4);
     const backMat = new THREE.MeshLambertMaterial({ color: 0x2c3442 });
+    // The painted boards, in the same order (the circuit's own fifth), and the race's own board as well.
+    const own = kit.circuits[theme.id ?? ''] ?? kit.circuits.meridian;
+    const signs: PaintedSign[] = [kit.boards[0], kit.boards[1], kit.boards[2], kit.boards[3], own, kit.boards[4], kit.boards[5]];
+    const signMats = signs.map((sg) => paintedSignMaterial(paintedTexture(sg.url)));
     const m = new THREE.Matrix4();
     let k = 0;
     for (let s = 150; s < track.length - 100; s += 170) {
@@ -832,20 +939,29 @@ export function buildTrackVisual(
       // Stand the board on the outside of any bend, facing the road.
       const side = track.kappa[i] > 0.0004 ? -1 : track.kappa[i] < -0.0004 ? 1 : k % 2 === 0 ? 1 : -1;
       if (!plain(i) || !(side < 0 ? track.wallL[i] : track.wallR[i])) continue;
-      const board = new THREE.Mesh(plane, mats[k % mats.length]);
       trackMatrix(track, s, side * (track.hw[i] + 5.5), 9.5, side > 0 ? -Math.PI / 2 - 0.25 : Math.PI / 2 + 0.25, m);
-      board.applyMatrix4(m);
-      group.add(board);
-      const back = new THREE.Mesh(new THREE.BoxGeometry(31, 10.4, 0.8), backMat);
-      back.applyMatrix4(new THREE.Matrix4().makeTranslation(0, 0, -0.5));
-      back.applyMatrix4(m);
-      group.add(back);
-      for (const off of [-11, 11]) {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(1, 9, 1), backMat);
-        post.applyMatrix4(new THREE.Matrix4().makeTranslation(off, -9, -0.6));
-        post.applyMatrix4(m);
-        group.add(post);
-      }
+      // A board on its back and two posts: plain, and painted (its frame to the painting's shape, as tall).
+      const stand = (w: number, mat: THREE.Material) => {
+        const g = new THREE.Group();
+        const board = new THREE.Mesh(w === 30 ? plane : new THREE.PlaneGeometry(w, 9.4), mat);
+        board.applyMatrix4(m);
+        g.add(board);
+        const back = new THREE.Mesh(new THREE.BoxGeometry(w + 1, 10.4, 0.8), backMat);
+        back.applyMatrix4(new THREE.Matrix4().makeTranslation(0, 0, -0.5));
+        back.applyMatrix4(m);
+        g.add(back);
+        for (const off of [-(w / 2 - 4), w / 2 - 4]) {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(1, 9, 1), backMat);
+          post.applyMatrix4(new THREE.Matrix4().makeTranslation(off, -9, -0.6));
+          post.applyMatrix4(m);
+          g.add(post);
+        }
+        group.add(g);
+        return g;
+      };
+      plainOnly.push(stand(30, mats[k % mats.length]));
+      const sg = signs[k % signs.length];
+      paintedOnly.push(stand(9.4 * sg.aspect, signMats[k % signs.length]));
       k++;
     }
 
@@ -875,6 +991,11 @@ export function buildTrackVisual(
     crowdTex.repeat.set(3, 1);
     const standMat = new THREE.MeshLambertMaterial({ map: crowdTex });
     const roofMat = new THREE.MeshLambertMaterial({ color: 0xe9edf2 });
+    // Painted: the crowd, rows of it about 13 units deep to a repeat, and concrete stands.
+    const crowdPainted = paintedTexture(kit.surfaces.crowd, { repeat: true });
+    crowdPainted.repeat.set(120 / (13 * kit.crowdAspect), 2);
+    swaps.push((on) => (standMat.map = on ? crowdPainted : crowdTex));
+    const baseMat = paintedSurfaceMaterial(tex('concrete'), tex('concrete'), 8, 8, THREE.FrontSide, { dip: 0 });
     for (const side of [-1, 1]) {
       for (let seg = 0; seg < 4; seg++) {
         const s = -260 + seg * 130;
@@ -889,6 +1010,7 @@ export function buildTrackVisual(
         base.applyMatrix4(new THREE.Matrix4().makeTranslation(0, -10, -12));
         base.applyMatrix4(m);
         group.add(base);
+        swapMaterial(base, baseMat);
         const roof = new THREE.Mesh(new THREE.BoxGeometry(124, 1.2, 26), roofMat);
         roof.applyMatrix4(new THREE.Matrix4().makeRotationX(0.12));
         roof.applyMatrix4(new THREE.Matrix4().makeTranslation(0, 17, -8));
@@ -901,6 +1023,18 @@ export function buildTrackVisual(
   const gateVis = buildGates(track);
   group.add(gateVis.group);
   const gateUniforms = road.uniforms.uGates.value as THREE.Vector4[];
+
+  // The painted road deck, and switching the kit with the look.
+  road.uniforms.uRoadMap.value = tex('road');
+  swaps.push((on) => (road.uniforms.uPainted.value = on ? 1 : 0));
+  let painted: boolean | null = null;
+  const show = (on: boolean) => {
+    painted = on;
+    for (const o of plainOnly) o.visible = !on;
+    for (const o of paintedOnly) o.visible = on;
+    for (const f of swaps) f(on);
+  };
+  show(false);
 
   return {
     group,
@@ -918,6 +1052,7 @@ export function buildTrackVisual(
       wallMat.visible = true;
     },
     update(time: number) {
+      if (look.on !== painted) show(look.on);
       clock = time;
       let live = false;
       for (let i = 0; i < MAX_WALL_PULSES; i++) {

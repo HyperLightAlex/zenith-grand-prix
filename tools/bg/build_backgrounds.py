@@ -42,6 +42,29 @@ CIRCUITS = {
         surfaces='bg-m4-surfaces.png',
         tiles=['sea', 'office', 'hotel', 'dark', 'concrete', 'panels'],
     ),
+    'canyon': dict(
+        sky=['bg-c1-sky.png', 'bg-c1b-sky.png'],
+        # C1's left edge carries more of the sunset than C1B's right edge.
+        join_band=640,
+        horizon='bg-c2-horizon.png',
+        clouds='bg-c3-clouds.png',
+        # A sliver of grey-blue painted sky between two of the cloudlets:
+        # everything in these clouds is clearly redder than it is green.
+        drop_cool=True,
+        surfaces='bg-c4-surfaces.png',
+        tiles=['strata', 'caprock', 'sand', 'gorge', 'hoodoo', 'lakebed'],
+    ),
+    'helios': dict(
+        # The sun is overhead and the light even all round: one half, used twice.
+        sky=['bg-h1-sky.png'],
+        horizon='bg-h2-horizon.png',
+        clouds='bg-h3-clouds.png',
+        # Bits of the green left in the ragged cloud's gaps come out teal: no
+        # noon cloud's colour is much greener than the mean of its red and blue.
+        clamp_teal=True,
+        surfaces='bg-h4-surfaces.png',
+        tiles=['cloudsea', 'islandrock', 'meadow', 'whitewall', 'snow', 'gold'],
+    ),
 }
 
 
@@ -81,13 +104,16 @@ def sky_half(sky, width):
     return out, hz
 
 
-def edge_colour(img, side, n=200):
+def edge_colour(img, side, n=40):
     """The sky's own colour along one edge, row by row: the median across a
-    wide band (so the clouds in it do not count), smoothed down the rows."""
+    band by the edge, then down the rows (so the clouds in it do not count),
+    smoothed; the sky and the haze below the horizon each on their own."""
     cols = img[:, :n] if side == 'left' else img[:, -n:]
     c = np.median(cols, 1)
-    c = ndimage.median_filter(c, size=(61, 1), mode='nearest')
-    return ndimage.gaussian_filter1d(c, 12, axis=0, mode='nearest')
+    h = SKY_H - HAZE
+    sky = ndimage.gaussian_filter1d(ndimage.median_filter(c[:h], size=(61, 1), mode='nearest'), 12, axis=0, mode='nearest')
+    haze = ndimage.gaussian_filter1d(ndimage.median_filter(c[h:], size=(9, 1), mode='nearest'), 2, axis=0, mode='nearest')
+    return np.concatenate([sky, haze], 0)
 
 
 def match_joins(a, b, band=320):
@@ -121,7 +147,7 @@ def build_sky(spec):
     sun = sun_column(halves[0], hz) / halves[0].shape[1] * 0.5
     if len(halves) > 1:
         b, _ = sky_half(halves[1], SKY_W // 2)
-        b = match_joins(a, b)
+        b = match_joins(a, b, spec.get('join_band', 320))
     else:
         b = a.copy()
     pano = np.concatenate([a, b], 1)
@@ -131,7 +157,7 @@ def build_sky(spec):
 
 # ---- keyed sheets ------------------------------------------------------------
 
-def keyed(rgb):
+def keyed(rgb, refine=True):
     """Cut a sheet out of its flat key colour. Alpha is how little the key's
     channel stands above the other two; edge pixels have the key taken back
     out; any of the key's hue left over is clamped away (nothing painted on
@@ -149,8 +175,36 @@ def keyed(rgb):
     col[..., k] = np.minimum(col[..., k], np.maximum(col[..., o[0]], col[..., o[1]]))
     _, (iy, ix) = ndimage.distance_transform_edt(a < 0.98, return_indices=True)
     solid = a >= 0.98
-    col = np.where(solid[..., None], col, col[iy, ix] * (a[..., None] > 0.02) + col[iy, ix] * (a[..., None] <= 0.02))
+    col = np.where(solid[..., None], col, col[iy, ix])
+    if refine:
+        a, col = refine_edges(rgb, bg, a, col)
     return np.concatenate([col, a[..., None]], -1)
+
+
+def refine_edges(rgb, bg, a, col, inset=3, reach=40):
+    """A second, closer look at the edges. The key alone misjudges an edge
+    whose colour has some of the key's channel in it: a blue-white cloud's
+    rim against green reads as solid (its blue hides the green; it comes out
+    teal), an orange one as more solid than it is (it comes out olive).
+    Instead each edge pixel is taken as a mix of the key and the colour a few
+    pixels further in, and its alpha is how far along that line it lies."""
+    core = ndimage.binary_erosion(a >= 0.98, iterations=inset)
+    dist, (iy, ix) = ndimage.distance_transform_edt(~core, return_indices=True)
+    F = rgb[iy, ix]
+    d = F - bg
+    al = np.clip(((rgb - bg) * d).sum(-1) / np.maximum((d * d).sum(-1), 1e-4), 0, 1)
+    edge = ~core & (dist <= reach)
+    a2 = np.where(edge, np.minimum(a, al), a)
+    un = np.clip((rgb - (1 - a2[..., None]) * bg) / np.maximum(a2[..., None], 0.02), 0, 1)
+    k = int(np.argmax(bg))
+    o = [c for c in range(3) if c != k]
+    # Nothing on the sheets leans further toward the key than the colour inside it.
+    lim = np.maximum(np.maximum(un[..., o[0]], un[..., o[1]]), F[..., k] - np.maximum(F[..., o[0]], F[..., o[1]]) + np.maximum(un[..., o[0]], un[..., o[1]]))
+    un[..., k] = np.minimum(un[..., k], lim)
+    w = np.clip((a2 - 0.2) / 0.5, 0, 1)[..., None]
+    c2 = un * w + F * (1 - w)
+    col = np.where(edge[..., None], c2, col)
+    return a2, col
 
 
 def wrap_ends(img, ov=32):
@@ -186,6 +240,10 @@ def build_horizon(spec):
 
 def build_clouds(spec):
     rgba = keyed(load(spec['clouds']))
+    if spec.get('drop_cool'):
+        rgba[..., 3] *= np.clip((rgba[..., 0] - rgba[..., 1] - 0.02) / 0.05, 0, 1)
+    if spec.get('clamp_teal'):
+        rgba[..., 1] = np.minimum(rgba[..., 1], (rgba[..., 0] + rgba[..., 2]) / 2 + 0.03)
     lab, n = ndimage.label(rgba[..., 3] > 0.5)
     sizes = ndimage.sum(np.ones(lab.shape), lab, range(1, n + 1))
     cents = ndimage.center_of_mass(np.ones(lab.shape), lab, range(1, n + 1))

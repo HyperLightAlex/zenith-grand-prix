@@ -11,7 +11,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
 import { look } from './look';
-import { HORIZON_RINGS, UNTONE, paintedCardMaterial, paintedSet, paintedTexture, whiteTexture, type PaintedSet } from './painted';
+import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paintedSurfaceMaterial as paintedRock, paintedTexture, whiteTexture, type PaintedSet } from './painted';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
 import { trackMatrix } from './trackSpace';
@@ -52,6 +52,8 @@ uniform sampler2D uPano;
 uniform float uPanoSunU;
 uniform float uPanoHorizon;
 uniform float uSunAz;
+uniform vec3 uDiscDir;
+uniform vec3 uDiscColor;
 varying vec3 vDir;
 ${NOISE}
 ${UNTONE}
@@ -60,7 +62,8 @@ void main() {
   float h = dir.y;
   if (uPainted > 0.5) {
     // The painted sky, round the horizon and up to the zenith, the middle of
-    // its sun-side half turned to the sun; the disc drawn over it.
+    // its sun-side half turned to the sun; the disc drawn over it, where the
+    // painting has it, and only above the horizon.
     float elev = asin(clamp(h, -1.0, 1.0));
     float az = atan(dir.z, dir.x);
     vec2 uv = vec2(uPanoSunU + (az - uSunAz) / 6.2831853, uPanoHorizon + (1.0 - uPanoHorizon) * clamp(elev / 1.5707963, 0.0, 1.0));
@@ -71,8 +74,8 @@ void main() {
     dx.x -= floor(dx.x + 0.5);
     dy.x -= floor(dy.x + 0.5);
     vec3 painted = unTone(textureGrad(uPano, vec2(fract(uv.x), uv.y), dx, dy).rgb);
-    float sdp = max(dot(dir, uSunDir), 0.0);
-    painted = mix(painted, vec3(1.9, 1.75, 1.45), smoothstep(0.9990, 0.9993, sdp));
+    float sdp = max(dot(dir, uDiscDir), 0.0);
+    painted = mix(painted, uDiscColor, smoothstep(0.9990, 0.9993, sdp) * smoothstep(-0.0005, 0.0005, h));
     gl_FragColor = vec4(painted, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -179,20 +182,39 @@ uniform vec3 uSand;
 uniform vec3 uRock;
 uniform vec4 uGorgeA[${MAX_GORGES}];
 uniform vec4 uGorgeB[${MAX_GORGES}];
+uniform float uPainted;
+uniform sampler2D uSandMap;
+uniform sampler2D uClayMap;
+uniform sampler2D uGorgeMap;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE}
+${UNTONE}
 void main() {
   vec2 p = vWorld.xz;
   float big = fbm(p * 0.0009);
   float mid = noise(p * 0.006);
-  vec3 col = mix(uRock, uSand, smoothstep(0.38, 0.62, big));
-  // Wind ripples in two flat tones, and scattered dark scrub.
-  float rip = sin(dot(p, vec2(0.045, 0.018)) + mid * 5.0);
-  col *= 0.95 + 0.05 * step(0.0, rip);
-  float fl = noise(p * 0.035);
-  col = mix(col, uRock * 0.7, smoothstep(0.8, 0.83, fl) * 0.45);
+  vec3 col;
+  if (uPainted > 0.5) {
+    // The painted sand twice, at two sizes and turned, blended by a slow
+    // noise so its scrub never lines up into a grid; pans of cracked clay
+    // where the plain look has its darker ground; broad light and shade
+    // across it all.
+    vec3 s1 = texture2D(uSandMap, p / 52.0).rgb;
+    vec3 s2 = texture2D(uSandMap, mat2(0.8, -0.6, 0.6, 0.8) * p / 67.0 + 0.37).rgb;
+    col = mix(s1, s2, smoothstep(0.3, 0.7, mid));
+    vec3 clay = texture2D(uClayMap, p / 96.0).rgb;
+    col = mix(clay, col, smoothstep(0.37, 0.41, big + (noise(p * 0.02) - 0.5) * 0.03));
+    col *= 0.86 + 0.24 * fbm(p * 0.0023 + 5.3);
+  } else {
+    col = mix(uRock, uSand, smoothstep(0.38, 0.62, big));
+    // Wind ripples in two flat tones, and scattered dark scrub.
+    float rip = sin(dot(p, vec2(0.045, 0.018)) + mid * 5.0);
+    col *= 0.95 + 0.05 * step(0.0, rip);
+    float fl = noise(p * 0.035);
+    col = mix(col, uRock * 0.7, smoothstep(0.8, 0.83, fl) * 0.45);
+  }
   // Gorges: a lit rim, then shadow falling away into the depths.
   for (int i = 0; i < ${MAX_GORGES}; i++) {
     vec4 a = uGorgeA[i];
@@ -205,10 +227,19 @@ void main() {
     w *= smoothstep(b.y, b.y * 0.6, abs(along));
     float inside = 1.0 - smoothstep(w - 2.0, w, across);
     float depth = clamp(1.0 - across / max(w, 1.0), 0.0, 1.0);
-    vec3 g = mix(uRock * 0.5, uRock * 0.08, smoothstep(0.05, 0.6, depth));
-    g = mix(g, uSand * 1.1, smoothstep(w - 12.0, w - 5.0, across) * 0.7);
+    vec3 g;
+    if (uPainted > 0.5) {
+      // The painted gorge rock, its cracks running down from the rims.
+      g = texture2D(uGorgeMap, vec2(along, across) / 46.0).rgb;
+      g *= mix(1.0, 0.16, smoothstep(0.05, 0.7, depth));
+      g = mix(g, col * 1.12, smoothstep(w - 10.0, w - 4.0, across) * 0.7);
+    } else {
+      g = mix(uRock * 0.5, uRock * 0.08, smoothstep(0.05, 0.6, depth));
+      g = mix(g, uSand * 1.1, smoothstep(w - 12.0, w - 5.0, across) * 0.7);
+    }
     col = mix(col, g, inside);
   }
+  if (uPainted > 0.5) col = unTone(col);
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -221,20 +252,36 @@ uniform vec3 uShade;
 uniform vec3 uDeep;
 uniform vec3 uSunDir;
 uniform float uTime;
+uniform float uPainted;
+uniform sampler2D uSeaMap;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE}
+${UNTONE}
 void main() {
   vec2 p = vWorld.xz * 0.0011 + vec2(uTime * 0.004, uTime * 0.0016);
   float c = fbm(p) * 0.8 + noise(p * 6.0) * 0.2;
-  // Lit where the billows rise toward the sun, shaded where they fall away.
-  float c2 = fbm(p + normalize(uSunDir.xz) * 0.025) * 0.8 + noise((p + normalize(uSunDir.xz) * 0.025) * 6.0) * 0.2;
-  float lit = step(0.0, c - c2 + 0.004);
-  vec3 col = mix(uShade, uLit, smoothstep(0.4, 0.62, c));
-  col *= mix(0.78, 1.04, lit);
-  // Thin places: the blue far below shows through.
-  col = mix(uDeep, col, smoothstep(0.28, 0.36, c));
+  vec3 col;
+  if (uPainted > 0.5) {
+    // The painted cloud sea, drifting, at two sizes blended by a slow noise
+    // so its billows never line up into a grid, with broad light and shade.
+    vec2 q = vWorld.xz + vec2(uTime * 3.6, uTime * 1.5);
+    vec3 a = texture2D(uSeaMap, q / 260.0).rgb;
+    vec3 b = texture2D(uSeaMap, mat2(0.8, -0.6, 0.6, 0.8) * q / 340.0 + 0.41).rgb;
+    col = mix(a, b, smoothstep(0.3, 0.7, noise(vWorld.xz * 0.0016)));
+    col *= 0.9 + 0.16 * smoothstep(0.35, 0.65, c);
+    // Thin places: the blue far below shows through.
+    col = unTone(mix(uDeep, col, smoothstep(0.27, 0.33, c)));
+  } else {
+    // Lit where the billows rise toward the sun, shaded where they fall away.
+    float c2 = fbm(p + normalize(uSunDir.xz) * 0.025) * 0.8 + noise((p + normalize(uSunDir.xz) * 0.025) * 6.0) * 0.2;
+    float lit = step(0.0, c - c2 + 0.004);
+    col = mix(uShade, uLit, smoothstep(0.4, 0.62, c));
+    col *= mix(0.78, 1.04, lit);
+    // Thin places: the blue far below shows through.
+    col = mix(uDeep, col, smoothstep(0.28, 0.36, c));
+  }
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -363,6 +410,12 @@ function strata(base: THREE.Color, seed: number): (x: number, y: number, z: numb
   };
 }
 
+/** Use `painted` on `mesh` with the painted background, its own material otherwise. */
+function swapMaterial(ctx: Ctx, mesh: THREE.Mesh, painted: THREE.Material): void {
+  const plain = mesh.material as THREE.Material;
+  ctx.swaps.push((on) => (mesh.material = on ? painted : plain));
+}
+
 interface Ctx {
   track: Track;
   theme: Theme;
@@ -450,6 +503,8 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uPanoSunU: { value: painted?.sunU ?? 0.25 },
       uPanoHorizon: { value: painted?.horizonV ?? 0 },
       uSunAz: { value: Math.atan2(SUN_DIR.z, SUN_DIR.x) },
+      uDiscDir: { value: discDir(theme.id) },
+      uDiscColor: { value: new THREE.Vector3(...(SUN_DISC[theme.id]?.color ?? [1.9, 1.75, 1.45])) },
     },
     side: THREE.BackSide,
     depthWrite: false,
@@ -496,6 +551,15 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       for (const u of ctx.updates) u(time, camera);
     },
   };
+}
+
+/** Where the painted sky's sun disc goes: toward the light, at the height its painting has it. */
+function discDir(themeId: string): THREE.Vector3 {
+  const disc = SUN_DISC[themeId];
+  if (!disc) return SUN_DIR.clone();
+  const e = (disc.elevation * Math.PI) / 180;
+  const flat = new THREE.Vector3(SUN_DIR.x, 0, SUN_DIR.z).normalize();
+  return flat.multiplyScalar(Math.cos(e)).setY(Math.sin(e));
 }
 
 /**
@@ -841,6 +905,13 @@ function buildCanyon(ctx: Ctx): void {
   const rockDark = new THREE.Color(0x8a3d2c);
   const cap = new THREE.Color(0xd99a62);
   const rockMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  // The painted background's rock: strata cliffs and caprock, the hoodoos' softer stone.
+  const surf = ctx.painted?.surfaces;
+  const tex = (name: string) => (surf?.[name] ? paintedTexture(surf[name], { repeat: true }) : null);
+  const strataTex = tex('strata');
+  const capTex = tex('caprock');
+  const hoodooTex = tex('hoodoo');
+  const cliffMat = strataTex && capTex ? paintedRock(strataTex, capTex, 70, 90) : null;
 
   // ---- the desert floor, with a gorge under the Sky Bridge and a ravine under the Hop
   const gorgeA: THREE.Vector4[] = [];
@@ -860,7 +931,7 @@ function buildCanyon(ctx: Ctx): void {
     gorgeA.push(new THREE.Vector4(0, 0, 1, 0));
     gorgeB.push(new THREE.Vector4(0, 0, 0, 0));
   }
-  groundPlane(
+  const desertMat = groundPlane(
     ctx,
     desertFragment,
     {
@@ -868,9 +939,19 @@ function buildCanyon(ctx: Ctx): void {
       uRock: { value: new THREE.Color(theme.groundDeep) },
       uGorgeA: { value: gorgeA.slice(0, MAX_GORGES) },
       uGorgeB: { value: gorgeB.slice(0, MAX_GORGES) },
+      uPainted: { value: 0 },
+      uSandMap: { value: null },
+      uClayMap: { value: null },
+      uGorgeMap: { value: null },
     },
     theme.groundY,
   );
+  if (surf?.sand && surf.lakebed && surf.gorge) {
+    desertMat.uniforms.uSandMap.value = paintedTexture(surf.sand, { repeat: true });
+    desertMat.uniforms.uClayMap.value = paintedTexture(surf.lakebed, { repeat: true });
+    desertMat.uniforms.uGorgeMap.value = paintedTexture(surf.gorge, { repeat: true });
+    ctx.swaps.push((on) => (desertMat.uniforms.uPainted.value = on ? 1 : 0));
+  }
   /** Is (x, z) over one of the gorges? Nothing stands there. */
   const inGorge = (x: number, z: number) =>
     gorgeA.some((a, i) => {
@@ -941,6 +1022,7 @@ function buildCanyon(ctx: Ctx): void {
       const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }));
       mesh.frustumCulled = false;
       group.add(mesh);
+      if (strataTex && capTex) swapMaterial(ctx, mesh, paintedRock(strataTex, capTex, 70, 90, THREE.DoubleSide));
     }
   }
 
@@ -948,6 +1030,7 @@ function buildCanyon(ctx: Ctx): void {
   {
     const rnd = mulberry(1231);
     const parts: THREE.BufferGeometry[] = [];
+    const spires: THREE.BufferGeometry[] = [];
     const R = 5200;
     let placed = 0;
     for (let tries = 0; tries < 400 && placed < 46; tries++) {
@@ -983,12 +1066,19 @@ function buildCanyon(ctx: Ctx): void {
       const both = mergeGeometries([g, capStone])!;
       both.translate(x, -1, z);
       paint(both, strata(rnd() < 0.5 ? rock : rockDark, rnd() * 9));
-      parts.push(both);
+      spires.push(both);
       placed++;
     }
     const mesh = new THREE.Mesh(mergeGeometries(parts)!, rockMat);
     mesh.frustumCulled = false;
     group.add(mesh);
+    if (cliffMat) swapMaterial(ctx, mesh, cliffMat);
+    if (spires.length > 0) {
+      const hoodoos = new THREE.Mesh(mergeGeometries(spires)!, rockMat);
+      hoodoos.frustumCulled = false;
+      group.add(hoodoos);
+      if (hoodooTex && capTex) swapMaterial(ctx, hoodoos, paintedRock(hoodooTex, capTex, 34, 40));
+    }
   }
 
   // ---- a great natural arch, where the desert inside the circuit is widest
@@ -1004,6 +1094,7 @@ function buildCanyon(ctx: Ctx): void {
     const arch = new THREE.Mesh(g, rockMat);
     arch.frustumCulled = false;
     group.add(arch);
+    if (cliffMat) swapMaterial(ctx, arch, cliffMat);
   }
 
   // ---- far buttes on the horizon --------------------------------------------
@@ -1023,6 +1114,8 @@ function buildCanyon(ctx: Ctx): void {
     const ridge = new THREE.Mesh(mergeGeometries(parts)!, new THREE.MeshLambertMaterial({ color: theme.ridge, flatShading: true }));
     ridge.frustumCulled = false;
     group.add(ridge);
+    // The painted horizon replaces them.
+    if (ctx.painted) ctx.plainOnly.push(ridge);
   }
 
   // ---- a few high clouds lit from below by the setting sun ------------------
@@ -1038,17 +1131,27 @@ function buildCanyon(ctx: Ctx): void {
 function buildHelios(ctx: Ctx): void {
   const { track, group, cx, cz, theme } = ctx;
 
+  const surf = ctx.painted?.surfaces;
+  const tex = (name: string, repeat = true) => (surf?.[name] ? paintedTexture(surf[name], { repeat }) : null);
+
   // ---- the sea of cloud ----------------------------------------------------
-  groundPlane(
+  const seaMat = groundPlane(
     ctx,
     cloudFragment,
     {
       uLit: { value: new THREE.Color(theme.groundLight2) },
       uShade: { value: new THREE.Color(theme.groundDeep) },
       uDeep: { value: new THREE.Color(0x2a58a8) },
+      uPainted: { value: 0 },
+      uSeaMap: { value: null },
     },
     theme.groundY,
   );
+  const seaTex = tex('cloudsea');
+  if (seaTex) {
+    seaMat.uniforms.uSeaMap.value = seaTex;
+    ctx.swaps.push((on) => (seaMat.uniforms.uPainted.value = on ? 1 : 0));
+  }
 
   // ---- cloud towers rising out of it, kept clear of the road ---------------
   cumulus(
@@ -1107,15 +1210,20 @@ function buildHelios(ctx: Ctx): void {
       }
       placed++;
     }
-    const add = (parts: THREE.BufferGeometry[], mat: THREE.Material) => {
+    const add = (parts: THREE.BufferGeometry[], mat: THREE.Material, painted: THREE.Material | null) => {
       if (parts.length === 0) return;
       const mesh = new THREE.Mesh(mergeGeometries(parts)!, mat);
       mesh.frustumCulled = false;
       group.add(mesh);
+      if (painted) swapMaterial(ctx, mesh, painted);
     };
-    add(rockParts, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
-    add(grass, new THREE.MeshLambertMaterial({ color: 0x8cc46a, flatShading: true }));
-    add(white, new THREE.MeshLambertMaterial({ color: 0xf4f6fb, flatShading: true }));
+    // Painted: layered rock under each island, a meadow on top, whitewashed walls.
+    const rockTex = tex('islandrock');
+    const meadowTex = tex('meadow');
+    const wallTex = tex('whitewall');
+    add(rockParts, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), rockTex ? paintedRock(rockTex, rockTex, 46, 46) : null);
+    add(grass, new THREE.MeshLambertMaterial({ color: 0x8cc46a, flatShading: true }), rockTex && meadowTex ? paintedRock(rockTex, meadowTex, 46, 34) : null);
+    add(white, new THREE.MeshLambertMaterial({ color: 0xf4f6fb, flatShading: true }), wallTex ? paintedRock(wallTex, wallTex, 30, 30) : null);
   }
 
   // ---- far peaks above the cloud, capped with snow ---------------------------
@@ -1146,10 +1254,23 @@ function buildHelios(ctx: Ctx): void {
     peaks.frustumCulled = false;
     caps.frustumCulled = false;
     group.add(peaks, caps);
+    // The painted horizon replaces them.
+    if (ctx.painted) ctx.plainOnly.push(peaks, caps);
   }
 
   // ---- the Sun Gate: a golden ring over the Drop's gap -----------------------
-  const gold = toonMaterial({ color: 0xffcf6a, emissive: 0x6a3a00, emissiveIntensity: 0.35, vertexColors: false });
+  const gold = toonMaterial({ color: 0xffcf6a, emissive: 0x6a3a00, emissiveIntensity: 0.35, vertexColors: false, map: whiteTexture() });
+  // Painted: engraved gold panels round the ring and the spire's collar.
+  const goldTex = tex('gold');
+  if (goldTex) {
+    goldTex.repeat.set(28, 1);
+    const blank = gold.map;
+    ctx.swaps.push((on) => {
+      gold.map = on ? goldTex : blank;
+      gold.color.set(on ? 0xffffff : 0xffcf6a);
+      gold.emissiveIntensity = on ? 0.15 : 0.35;
+    });
+  }
   const glow = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd27a).multiplyScalar(1.8), toneMapped: false });
   {
     const gaps = spans(track, 'gap').sort((a, b) => b[1] - b[0] - (a[1] - a[0]));

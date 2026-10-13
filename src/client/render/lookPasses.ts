@@ -103,8 +103,8 @@ const InkShader = {
         vec3 cb = texture2D(tDiffuse, uv - iy).rgb, ct = texture2D(tDiffuse, uv + iy).rgb;
         float hot = max(max(max(luma(cl), luma(cr)), max(luma(cb), luma(ct))), luma(src));
         // Paint boundaries change brightness by a wide ratio; a shadow by much less.
-        float rx = abs(log((luma(cr) + 0.015) / (luma(cl) + 0.015)));
-        float ry = abs(log((luma(ct) + 0.015) / (luma(cb) + 0.015)));
+        float rx = abs(log((max(luma(cr), 0.0) + 0.015) / (max(luma(cl), 0.0) + 0.015)));
+        float ry = abs(log((max(luma(ct), 0.0) + 0.015) / (max(luma(cb), 0.0) + 0.015)));
         float colour = smoothstep(0.85, 1.25, max(rx, ry)) * (1.0 - smoothstep(0.9, 1.3, hot)) * 0.8;
         inner = max(max(over, fold), colour) * 0.72;
       }
@@ -189,10 +189,13 @@ const FilmShader = {
       vec3 soft = (tex(uv + vec2(px.x, 0.0)) + tex(uv - vec2(px.x, 0.0)) + tex(uv + vec2(0.0, px.y)) + tex(uv - vec2(0.0, px.y))) * 0.25;
       c = mix(c, soft, 0.2 * min(uFilm, 1.5));
       // Halation: bright light bleeds red-orange into the emulsion round it.
-      vec3 hal = vec3(0.0);
+      // (From how bright the light is, not from any one channel: a painted
+      // ultramarine sky carries a very high blue under the tone mapping, and
+      // must not glow.)
+      float hal = 0.0;
       for (int i = 0; i < 8; i++) {
         float a = float(i) * 0.785398 + 0.39;
-        hal += max(tex(uv + vec2(cos(a), sin(a)) * px * 6.5 * max(1.0, uRes.y / 1080.0)) - 0.9, 0.0);
+        hal += max(luma(tex(uv + vec2(cos(a), sin(a)) * px * 6.5 * max(1.0, uRes.y / 1080.0))) - 0.9, 0.0);
       }
       c += hal * (0.1 * uFilm) * vec3(1.0, 0.42, 0.22);
       // Grade toward the painted palette: cooler, more violet shadows, warmer
@@ -200,7 +203,11 @@ const FilmShader = {
       float k = min(uFilm, 1.0);
       float y = luma(c);
       float ty = y / (y + 0.35);
-      c = max(mix(vec3(y), c, 1.0 + 0.16 * k), 0.0);
+      // (A painting's saturated colour may carry a channel a little below
+      // zero, which the tone mapping needs; it is kept, but the boost never
+      // pushes a channel further below zero than it was.)
+      vec3 c0 = c;
+      c = max(mix(vec3(y), c, 1.0 + 0.16 * k), min(c0, 0.0));
       vec3 grade = mix(uShadowGrade, uLightGrade, smoothstep(0.15, 0.6, ty));
       c *= mix(vec3(1.0), grade, k);
       // Blacks are paint, not black.
