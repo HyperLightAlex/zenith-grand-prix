@@ -655,6 +655,7 @@ export class Game {
     setHullOutlines(!this.renderer.inking);
     this.world.sky.uniforms.uBands.value = look.on ? 9 : 0;
     this.hud.anime = look.on;
+    this.renderer.moments = this.state === 'race';
     const mine = this.session.race.mechs[this.session.localId];
     this.input.battle = this.state === 'race' && !!mine && mine.mode === MODE.BATTLE && !mine.retired;
     this.input.poll();

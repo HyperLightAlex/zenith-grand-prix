@@ -577,7 +577,11 @@ The teams swap sides of the grid from one round to the next.
 - **Rendering.** Three.js with a short post chain (bloom, then a speed pass:
   radial blur, streaks, vignette, flash). Mechs are assembled in code from a
   small kit, cel-shaded with an inverted-hull outline; legs are solved by
-  two-bone IK; the upper body blends a pose library.
+  two-bone IK; the upper body blends a pose library. On the `art-80s`
+  branch an 80s anime look sits on top behind one switch: cel tones on
+  every material, an ink pass and a film pass, banded bloom, drawn speed
+  lines and effects, poses on twos, and cuts of its own for big moments.
+  See [ART.md](ART.md).
 - **Sound.** Synthesised at run time: engine, wind, 55 effects, and music
   that follows the lap phase, in a different style on each circuit. No audio
   files. Every continuous layer (engine, wind, afterburner, strip hum,
@@ -716,6 +720,11 @@ and Drive, contested gates, support points for the midfielder and defender,
 guard on the left trigger and the guard swing, fights that are easier to
 read, armour down, and the three circuits rebuilt round carving. 822
 simulation tests.
+
+**Art experiment (branch `art-80s`): the 80s anime look.** Cel and ink,
+film, animation on twos, drawn effects, impact frames, painted stills, title
+cards and an eyecatch, all behind one switch (G). What it would take to
+finish it is in [ART.md](ART.md).
 
 **M2: two browsers in one race.**
 - A Node server (Colyseus room) runs `stepRace` as the authority. Clients

@@ -69,7 +69,7 @@ const InkShader = {
 
       // ---- the outer line: the near edge of a shape against what is behind it.
       // A character's contour is heavy close up and thins with distance; a background's is light.
-      float wo = scale * mix(mix(2.1, 1.2, smoothstep(10.0, 80.0, zc)), 1.0, 1.0 - me);
+      float wo = scale * mix(mix(3.4, 1.3, smoothstep(8.0, 70.0, zc)), 1.0, 1.0 - me);
       vec2 ox = vec2(px.x * wo, 0.0);
       vec2 oy = vec2(0.0, px.y * wo);
       float zl = dist(uv - ox), zr = dist(uv + ox), zb = dist(uv - oy), zt = dist(uv + oy);
@@ -87,8 +87,9 @@ const InkShader = {
       // shadow: cels never inked those.
       float inner = 0.0;
       if (me > 0.5) {
-        vec2 ix = vec2(px.x * scale, 0.0);
-        vec2 iy = vec2(0.0, px.y * scale);
+        float wi = scale * mix(1.6, 1.0, smoothstep(8.0, 40.0, zc));
+        vec2 ix = vec2(px.x * wi, 0.0);
+        vec2 iy = vec2(0.0, px.y * wi);
         float il = dist(uv - ix), ir = dist(uv + ix), ib = dist(uv - iy), it = dist(uv + iy);
         float over = smoothstep(0.03, 0.08, max(il + ir - 2.0 * zc, ib + it - 2.0 * zc) / zc);
         float lap = abs(il + ir - 2.0 * zc) + abs(ib + it - 2.0 * zc);

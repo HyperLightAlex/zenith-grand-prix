@@ -102,7 +102,7 @@ export function setCelTheme(theme: Theme): void {
   sky.multiplyScalar(1 / sp);
   const violet = new THREE.Color(0.66, 0.56, 1.0);
   const tint = sky.clone().lerp(violet, 0.35);
-  CEL.uShadeTint.value.copy(tint).multiplyScalar(0.72);
+  CEL.uShadeTint.value.copy(tint).multiplyScalar(0.64);
   CEL.uBgShadeTint.value.copy(tint).lerp(new THREE.Color(1, 1, 1), 0.3).multiplyScalar(0.78);
 }
 

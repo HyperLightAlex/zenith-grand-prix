@@ -18,6 +18,12 @@ easier to read. The simulation is
 already written to run on a server, which is a later milestone. See
 [docs/DESIGN.md](docs/DESIGN.md).
 
+**On the `art-80s` branch** the game is drawn as an 80s mecha anime: cel
+shading and ink, film grain and halation, poses and effects on twos, drawn
+speed lines and sparks, impact frames, a painted still on a knockout, title
+cards and an eyecatch. Press **G** to switch between that and the plain look.
+See [docs/ART.md](docs/ART.md).
+
 ## Play
 
 **No install:** open `play/index.html` in a browser. It is the whole game in
@@ -54,6 +60,7 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 | Pause | Start | Esc |
 | Tuning panel | Back | T |
 | Full screen | | F |
+| Switch the look (80s anime / plain) | Pause → Look | G |
 
 While you are free you steer like any racer. Lock on and the track carries
 you: the stick now moves you around your target (toward it, away from it,
@@ -232,7 +239,9 @@ The teams swap sides of the grid each round.
 
 ## Tuning panel
 
-Press T (or Back on a pad) at any time. It has sliders for the limiters, top
+Press T (or Back on a pad) at any time. The first tab, Look, switches the
+80s anime look and sets its film, ink, line boil, drawings a second, impact
+frames and knockout still. The others have sliders for the limiters, top
 speed, boost, carving, the slipstream, Drive and Cells, every ability,
 knockout and support points, combat (lock-on movement, momentum, ring-outs,
 the guard swing, armour), the camera (including the punch-in), the
@@ -272,9 +281,9 @@ Dev shortcuts on the page URL: `?auto=FW` (or `MF`, `DF`) jumps straight into
 a race, `&demo=1` lets the computer fly your mech, `&skip=95` starts that many
 seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 `&rivals=0..2` sets rival skill, `&match=0..4` picks the match format,
-`&track=canyon` (or `helios`, `meridian`) picks the circuit, `&tune=1` opens
-the tuning panel, `&mute=1` turns sound off, and `?debug=mechs` opens a model
-viewer.
+`&track=canyon` (or `helios`, `meridian`) picks the circuit, `&look=plain`
+(or `anime`) picks the look for that visit, `&tune=1` opens the tuning panel,
+`&mute=1` turns sound off, and `?debug=mechs` opens a model viewer.
 
 ## Layout
 
@@ -295,7 +304,7 @@ src/client/     Everything you see and hear.
   audio/        Synthesised sound and music (Web Audio, no files)
 tests/          Simulation tests (vitest)
 tools/          Headless race runner, track plotter, screenshot and audio checks
-docs/           Design document
+docs/           Design document, and ART.md for the anime look
 play/           Prebuilt single-file game
 ```
 

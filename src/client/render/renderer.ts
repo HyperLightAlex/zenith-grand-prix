@@ -114,6 +114,8 @@ export class Renderer {
   private stillWait = 0;
   /** Real seconds since the renderer started. */
   private clock = 0;
+  /** Whether the look may cut in its moments: only while the player is racing, not behind the menus. */
+  moments = false;
   private quality: Quality = 'high';
   private frameTimes: number[] = [];
   private lastScaleChange = 0;
@@ -149,7 +151,7 @@ export class Renderer {
       'float bloomAlpha =',
       `if (uBands > 0.5) {
         float bl = max(bloom.r, max(bloom.g, bloom.b));
-        float q = bl < 0.85 ? step(0.04, bl) * 0.1 + step(0.14, bl) * 0.14 + step(0.32, bl) * 0.22 + step(0.58, bl) * 0.26 : bl;
+        float q = bl < 0.85 ? step(0.09, bl) * 0.16 + step(0.26, bl) * 0.24 + step(0.55, bl) * 0.32 : bl;
         bloom *= q / max(bl, 1e-4);
       }
       float bloomAlpha =`,
@@ -184,7 +186,7 @@ export class Renderer {
    * eyes, and would stop meaning anything).
    */
   impactFrame(seconds = 0.11, force = false): void {
-    if (!look.on || !look.impact) return;
+    if (!look.on || !look.impact || !this.moments) return;
     if (!force && this.clock - this.lastImpact < 1.2) return;
     this.lastImpact = this.clock;
     this.impactT = this.impactDur = seconds;
@@ -195,7 +197,7 @@ export class Renderer {
    * starts once any impact frame has played out.
    */
   paintedStill(seconds: number): void {
-    if (!look.on || !look.still) return;
+    if (!look.on || !look.still || !this.moments) return;
     this.stillT = this.stillDur = seconds;
     this.stillWait = this.impactT;
     this.filmPass.uniforms.uPaperSeed.value = Math.random() * 100;
@@ -216,6 +218,8 @@ export class Renderer {
     const on = look.on;
     const ink = this.inkPass.uniforms;
     const film = this.filmPass.uniforms;
+    // The plain look has no moments of its own: switching mid-cut ends the cut.
+    if (!on) this.impactT = this.stillT = this.stillWait = 0;
     this.inkPass.enabled = this.inking;
     this.filmPass.enabled = on || this.impactT > 0 || this.stillT > 0;
     if (this.inkPass.enabled) {
