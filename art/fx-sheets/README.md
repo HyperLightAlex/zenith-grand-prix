@@ -24,6 +24,7 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 12 Knockout explosion | fx-12-knockout-explosion.png | one animation of six in its own colours (not recoloured): flash, fireball, smoke closing over it, smoke breaking up; the painted alternative to the procedural explosion | `all 384` |
 | 13 Stun kick | fx-13-stun-kick.png | top row only (the kick's smear: the swing, the contact, breaking up); the stun row's dizzy spirals are redone as 13B | `rows` |
 | 13B Stun | fx-13b-stun.png | two loops over a staggered mech's head and shoulders: sparks shorting out, and a broken halo of discharges; both sit in the top half of the cell | `rows` (not centred, so the empty lower half stays over the body) |
+| 14 Breaker hammer | fx-14-breaker-hammer.png | top row: the hammer's smear coming down; bottom row: the contact flash (a glow), then a ring of dust and rocks blown out along the ground (drawings 5 and 6, painted grey, so the game shades them to the circuit's dust and lays them flat on the road) | build_sprites.py |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
 
