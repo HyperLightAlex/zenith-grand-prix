@@ -2,6 +2,7 @@
 // shadows, lock rings and guard shields. Everything is pooled; nothing here
 // allocates during a race.
 import * as THREE from 'three';
+import { drawClock, look } from './look';
 import { COLORS } from './palette';
 
 const _v = new THREE.Vector3();
@@ -41,35 +42,73 @@ class Particles {
     g.setAttribute('color', new THREE.BufferAttribute(this.col, 3).setUsage(THREE.DynamicDrawUsage));
     g.setAttribute('aux', new THREE.BufferAttribute(this.aux, 2).setUsage(THREE.DynamicDrawUsage));
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uScale: { value: 600 } },
+      uniforms: { uScale: { value: 600 }, uDrawn: { value: 0 }, uSeed: { value: 0 } },
       vertexShader: /* glsl */ `
         attribute vec2 aux;
         uniform float uScale;
+        uniform float uSeed;
         varying vec3 vColor;
         varying float vAlpha;
+        varying float vSeed;
         void main() {
           vColor = color;
           vAlpha = aux.y;
+          // A different turn for each particle on each drawing.
+          vSeed = fract(sin(float(gl_VertexID) * 12.9898 + uSeed * 78.233) * 43758.5453);
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           gl_PointSize = aux.x * uScale / max(1.0, -mv.z);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: additive
         ? /* glsl */ `
+        uniform float uDrawn;
         varying vec3 vColor;
         varying float vAlpha;
+        varying float vSeed;
         void main() {
           vec2 p = gl_PointCoord * 2.0 - 1.0;
+          if (uDrawn > 0.5) {
+            // A drawn spark: a four-pointed star, a white core in a coloured
+            // body, hard-edged, turned a new way on every drawing.
+            float a = vSeed * 6.28318;
+            p = mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
+            vec2 q = abs(p) * 1.05;
+            float star = pow(q.x, 0.55) + pow(q.y, 0.55);
+            float aa = fwidth(star) * 0.8 + 0.02;
+            float body = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, star);
+            if (body <= 0.0 || vAlpha <= 0.0) discard;
+            float core = 1.0 - smoothstep(0.58 - aa, 0.58 + aa, star);
+            vec3 col = mix(vColor * 1.7, vec3(2.4), core);
+            gl_FragColor = vec4(col * body, body);
+            return;
+          }
           float d = dot(p, p);
           if (d > 1.0) discard;
           float a = (1.0 - d) * vAlpha;
           gl_FragColor = vec4(vColor * a * 1.8, a);
         }`
         : /* glsl */ `
+        uniform float uDrawn;
         varying vec3 vColor;
         varying float vAlpha;
+        varying float vSeed;
         void main() {
           vec2 p = gl_PointCoord * 2.0 - 1.0;
+          if (uDrawn > 0.5) {
+            // Drawn smoke: a lumpy puff in two flat tones that breaks up into
+            // holes as it goes, redrawn on every drawing.
+            float d = length(p);
+            float ang = atan(p.y, p.x);
+            float r = 0.8 + 0.1 * sin(ang * 5.0 + vSeed * 6.28) + 0.06 * sin(ang * 9.0 - vSeed * 12.0);
+            float aa = fwidth(d) + 0.01;
+            float inside = 1.0 - smoothstep(r - aa, r + aa, d);
+            float n = 0.5 + 0.25 * sin(p.x * 7.0 + vSeed * 5.0) * sin(p.y * 6.0 - vSeed * 3.0) + 0.25 * sin((p.x + p.y) * 4.0 + vSeed * 9.0);
+            inside *= step(1.0 - vAlpha * 1.2, n);
+            if (inside < 0.01) discard;
+            float shade = smoothstep(0.1 - aa, 0.1 + aa, dot(p, vec2(0.55, 0.62)));
+            gl_FragColor = vec4(vColor * mix(1.3, 0.72, shade), inside * 0.95);
+            return;
+          }
           float d = dot(p, p);
           if (d > 1.0) discard;
           gl_FragColor = vec4(vColor, (1.0 - d) * vAlpha);
@@ -105,10 +144,28 @@ class Particles {
     this.baseSize[i] = size;
     this.drag[i] = drag;
     this.grav[i] = gravity;
+    // Shown at once, not on the next drawing.
+    this.aux[i * 2] = size;
+    this.aux[i * 2 + 1] = 1;
+    this.col[i * 3] = color.r;
+    this.col[i * 3 + 1] = color.g;
+    this.col[i * 3 + 2] = color.b;
     this.live = Math.max(this.live, 1);
   }
 
-  update(dt: number, growth: number): void {
+  /** Drawn (the anime look) or soft, and the seed for this drawing. */
+  setDrawn(on: boolean, seed: number): void {
+    const u = (this.points.material as THREE.ShaderMaterial).uniforms;
+    u.uDrawn.value = on ? 1 : 0;
+    u.uSeed.value = seed;
+  }
+
+  /**
+   * Move every particle on (always, so they travel smoothly with the camera)
+   * and, when `fresh`, draw them again: their size, colour and fade change
+   * only then. Drawn particles shrink away rather than fading.
+   */
+  update(dt: number, growth: number, fresh = true, drawn = false): void {
     let any = false;
     for (let i = 0; i < this.cap; i++) {
       if (this.life[i] <= 0) {
@@ -125,10 +182,16 @@ class Particles {
       this.pos[i * 3] += this.vel[i * 3] * dt;
       this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
       this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
+      if (this.life[i] <= 0) {
+        this.aux[i * 2 + 1] = 0;
+        continue;
+      }
+      if (!fresh) continue;
       this.col[i * 3] = this.rgb[i * 3];
       this.col[i * 3 + 1] = this.rgb[i * 3 + 1];
       this.col[i * 3 + 2] = this.rgb[i * 3 + 2];
-      this.aux[i * 2] = this.baseSize[i] * (1 + (1 - k) * growth);
+      const size = this.baseSize[i] * (1 + (1 - k) * growth);
+      this.aux[i * 2] = drawn && growth === 0 ? size * (0.35 + 0.65 * k) * 1.25 : size;
       this.aux[i * 2 + 1] = k;
     }
     const g = this.points.geometry;
@@ -167,6 +230,60 @@ function starTexture(): THREE.CanvasTexture {
     g.lineTo(3.2, 0);
     g.fill();
   }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** The anime look's impact star: a hard, ragged burst of spikes in two values, no glow. */
+function drawnStarTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+  const g = c.getContext('2d')!;
+  const burst = (spikes: number, outer: number, inner: number, jitter: number, seed: number, fill: string) => {
+    let r = seed;
+    const rnd = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+    g.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+      const a = (i / (spikes * 2)) * Math.PI * 2;
+      const len = i % 2 === 0 ? outer * (1 - jitter + rnd() * jitter) : inner * (0.85 + rnd() * 0.3);
+      const x = 64 + Math.cos(a) * len;
+      const y = 64 + Math.sin(a) * len;
+      if (i === 0) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.closePath();
+    g.fillStyle = fill;
+    g.fill();
+  };
+  burst(13, 62, 26, 0.45, 7, 'rgba(105,105,105,1)');
+  burst(9, 40, 17, 0.35, 19, 'rgba(255,255,255,1)');
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** The anime look's blade arc: a hard crescent, white at its edge, tapering to points. */
+function drawnSlashTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 32;
+  const g = c.getContext('2d')!;
+  const crescent = (depth: number, fill: string) => {
+    g.beginPath();
+    g.moveTo(0, 32);
+    for (let i = 0; i <= 32; i++) {
+      const u = i / 32;
+      g.lineTo(u * 256, 32 - depth * Math.sin(Math.PI * Math.pow(u, 0.8)));
+    }
+    g.lineTo(256, 32);
+    g.closePath();
+    g.fillStyle = fill;
+    g.fill();
+  };
+  crescent(30, 'rgba(160,160,160,1)');
+  crescent(12, 'rgba(255,255,255,1)');
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -356,7 +473,8 @@ export class Trail {
       this.pos[v + 3] = p[o] + p[o + 3] * w;
       this.pos[v + 4] = p[o + 1] + p[o + 4] * w;
       this.pos[v + 5] = p[o + 2] + p[o + 5] * w;
-      const a = k * k * intensity;
+      // Drawn (the anime look), the trail is laid in flat bands of light.
+      const a = (look.on ? (k > 0.62 ? 1 : k > 0.3 ? 0.5 : k > 0.08 ? 0.2 : 0) : k * k) * intensity;
       for (let j = 0; j < 2; j++) {
         this.col[v + j * 3] = this.color.r * a;
         this.col[v + j * 3 + 1] = this.color.g * a;
@@ -387,6 +505,10 @@ export class Fx {
   private star = starTexture();
   private ring = ringTexture();
   private slashTex = slashTexture();
+  private drawnStar = drawnStarTexture();
+  private drawnSlash = drawnSlashTexture();
+  /** The anime look: effects drawn rather than glowing, and changed only on each new drawing. */
+  private drawn = false;
   private tracers: THREE.InstancedMesh;
   private tracerCount = 0;
   private tmpColor = new THREE.Color();
@@ -464,6 +586,8 @@ export class Fx {
       s.mat.dispose();
     }
     this.slashTex.dispose();
+    this.drawnSlash.dispose();
+    this.drawnStar.dispose();
     this.star.dispose();
     this.ring.dispose();
     (this.tracers.material as THREE.Material).dispose();
@@ -556,9 +680,11 @@ export class Fx {
     }
     f.life = life;
     f.maxLife = life;
-    f.from = ring ? size * 0.3 : size * 0.55;
-    f.to = ring ? size * 1.6 : size * 1.25;
-    f.mat.map = ring ? this.ring : this.star;
+    // A drawn burst is solid all the way out, so it is drawn smaller than a glow.
+    const k = this.drawn && !ring ? 0.55 : 1;
+    f.from = (ring ? size * 0.3 : size * 0.55) * k;
+    f.to = (ring ? size * 1.6 : size * 1.25) * k;
+    f.mat.map = ring ? this.ring : this.drawn ? this.drawnStar : this.star;
     f.mat.color.set(color);
     f.follow = follow;
     if (follow) {
@@ -627,6 +753,18 @@ export class Fx {
   }
 
   update(dt: number, camera: THREE.Camera): void {
+    // In the anime look the effects are drawn on twos: they move every frame,
+    // but their shapes change only when a new drawing comes round. The tells
+    // stay smooth: they are for timing a parry.
+    const drawn = look.on;
+    if (drawn !== this.drawn) {
+      this.drawn = drawn;
+      for (const s of this.slashes) s.mat.map = drawn ? this.drawnSlash : this.slashTex;
+      for (const f of this.flashes) if (f.mat.map !== this.ring) f.mat.map = drawn ? this.drawnStar : this.star;
+    }
+    const fresh = !drawn || drawClock.fresh;
+    this.sparks.setDrawn(drawn, drawClock.drawing % 113);
+    this.smoke.setDrawn(drawn, drawClock.drawing % 113);
     for (const t of this.tells) {
       if (t.seen !== this.tellFrame) {
         t.mesh.visible = false;
@@ -642,24 +780,30 @@ export class Fx {
         continue;
       }
       s.life -= dt;
+      if (!fresh) continue;
       const k = 1 - Math.max(0, s.life / s.maxLife);
-      s.mat.opacity = 1 - k * k;
+      // Drawn, it holds full strength and is gone; otherwise it fades.
+      s.mat.opacity = drawn ? (k < 0.75 ? 1 : 0.5) : 1 - k * k;
       // A quick sweep outwards as it fades.
       const grow = (0.9 + 0.2 * k) * s.size;
       s.mesh.scale.set(s.flip * grow, 1, grow);
     }
-    this.sparks.update(dt, 0);
-    this.smoke.update(dt, 2.2);
+    this.sparks.update(dt, 0, fresh, drawn);
+    this.smoke.update(dt, 2.2, fresh, drawn);
     for (const f of this.flashes) {
       if (f.life <= 0) {
         f.mesh.visible = false;
         continue;
       }
       f.life -= dt;
-      const k = 1 - Math.max(0, f.life / f.maxLife);
-      const s = f.from + (f.to - f.from) * (1 - (1 - k) * (1 - k));
-      f.mesh.scale.setScalar(s);
-      f.mat.opacity = (1 - k * k) * 0.8;
+      if (fresh) {
+        const k = 1 - Math.max(0, f.life / f.maxLife);
+        const s = f.from + (f.to - f.from) * (1 - (1 - k) * (1 - k));
+        f.mesh.scale.setScalar(s);
+        f.mat.opacity = drawn ? (k < 0.6 ? 0.8 : 0.35) : (1 - k * k) * 0.8;
+        // Drawn, each new drawing of the burst is turned a new way.
+        if (drawn) f.spin = Math.random() * Math.PI * 2;
+      }
       if (f.follow) {
         f.follow.getWorldPosition(_v);
         f.mesh.position.copy(_v).add(f.offset);
@@ -680,8 +824,28 @@ const _s = new THREE.Vector3();
 // ---------------------------------------------------------------------------
 
 let shadowTex: THREE.CanvasTexture | null = null;
+let drawnShadowTex: THREE.CanvasTexture | null = null;
 
-export function makeShadow(): THREE.Mesh {
+/** The blob shadow under a mech: soft, or (the anime look) a flat painted shape with a hard edge. */
+export function shadowTexture(drawn: boolean): THREE.CanvasTexture {
+  if (drawn) {
+    if (!drawnShadowTex) {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      const g = c.getContext('2d')!;
+      g.fillStyle = 'rgba(14,10,34,0.5)';
+      g.beginPath();
+      g.ellipse(32, 32, 28, 28, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = 'rgba(14,10,34,0.62)';
+      g.beginPath();
+      g.ellipse(30, 30, 17, 19, 0, 0, Math.PI * 2);
+      g.fill();
+      drawnShadowTex = new THREE.CanvasTexture(c);
+    }
+    return drawnShadowTex;
+  }
   if (!shadowTex) {
     const c = document.createElement('canvas');
     c.width = 64;
@@ -695,9 +859,13 @@ export function makeShadow(): THREE.Mesh {
     g.fillRect(0, 0, 64, 64);
     shadowTex = new THREE.CanvasTexture(c);
   }
+  return shadowTex;
+}
+
+export function makeShadow(): THREE.Mesh {
   const geo = new THREE.PlaneGeometry(1, 1);
   geo.rotateX(-Math.PI / 2);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: shadowTexture(false), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
   mesh.renderOrder = 1;
   mesh.matrixAutoUpdate = false;
   return mesh;

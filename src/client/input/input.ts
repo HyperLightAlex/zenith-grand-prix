@@ -3,7 +3,7 @@
 import { BTN, emptyInput, type MechInput } from '../../sim/index';
 
 /** One menu press. Presses are queued, so none are lost on a slow frame. */
-export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune';
+export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune' | 'look';
 
 const KEY_BUTTONS: Record<string, number> = {
   Space: BTN.A,
@@ -74,6 +74,7 @@ export class Input {
       if (e.code === 'Escape' || e.code === 'Backspace') m.push('back');
       if (e.code === 'Escape' || e.code === 'KeyP') m.push('pause');
       if (e.code === 'KeyT' || e.code === 'Backquote') m.push('tune');
+      if (e.code === 'KeyG') m.push('look');
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());

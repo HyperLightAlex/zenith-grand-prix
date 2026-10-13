@@ -186,9 +186,12 @@ export class Hud {
   private lastTarget = -1;
   // banners
   private banner = h('div.banner');
+  private bannerKick = h('div.kick', '');
   private bannerBig = h('div.big', '');
   private bannerSmall = h('div.small', '');
   private bannerTimer = 0;
+  /** The 80s anime look is on: banners come up as title cards. */
+  anime = false;
   private count = h('div.count');
   private notice = h('div.notice');
   private noticeText = h('span', '');
@@ -243,7 +246,7 @@ export class Hud {
     R.append(tact, this.comms);
     this.target.append(this.targetName, h('div.sub', this.targetRole, this.targetDist), h('div.bar.hp', this.targetHp), h('div.bar.gd', this.targetGd));
     R.append(this.target, this.reticle, this.preview);
-    this.banner.append(h('div.strip', this.bannerBig, this.bannerSmall));
+    this.banner.append(h('div.strip', this.bannerKick, this.bannerBig, this.bannerSmall));
     this.notice.append(this.noticeText);
     this.retired.append(h('div.big', 'Retired'), this.retiredSmall);
     R.append(this.banner, this.count, this.notice, this.retired);
@@ -814,8 +817,15 @@ export class Hud {
 
   // ---- messages -----------------------------------------------------------
 
-  showBanner(big: string, small: string, cls = '', seconds = 2.6): void {
-    this.banner.className = 'banner ' + cls;
+  /**
+   * A banner across the screen. With the anime look on it is a title card
+   * instead: a hard cut to a black band, heavy serif type and a red rule, with
+   * `kick` (an episode-style line, "Lap two") over the title.
+   */
+  showBanner(big: string, small: string, cls = '', seconds = 2.6, kick = ''): void {
+    this.banner.className = 'banner ' + cls + (this.anime ? ' anime' : '');
+    setText(this.bannerKick, this.anime ? kick : '');
+    this.bannerKick.hidden = !this.anime || !kick;
     setText(this.bannerBig, big);
     setText(this.bannerSmall, small);
     this.banner.hidden = false;
@@ -949,10 +959,10 @@ export class Hud {
       }
       case 'lapPhase':
         if (e.lap === 2) {
-          this.showBanner('Battle lap', 'Weapons free', 'p2', 3);
+          this.showBanner('Battle lap', 'Weapons free', 'p2', 3, 'Lap two');
           if (mates[0]) this.say(mates[0], pick(LINES.battle, this.seq++));
         } else if (e.lap === 3) {
-          this.showBanner('Speed lap', 'Limiters off', 'p3', 3);
+          this.showBanner('Speed lap', 'Limiters off', 'p3', 3, 'Final lap');
           if (mates[0]) this.say(mates[mates.length - 1], pick(LINES.speed, this.seq++));
         }
         break;
@@ -983,7 +993,7 @@ export class Hud {
         const victim = race.mechs[e.mech];
         const by = e.by >= 0 ? race.mechs[e.by] : null;
         if (victim.id === this.localId) {
-          this.showBanner('Knocked out', by ? `by ${by.name}` : '', 'p2', 3);
+          this.showBanner('Knocked out', by ? `by ${by.name}` : '', 'p2', 3, 'Retired');
         } else if (victim.team === me.team) {
           this.say(victim, pick(LINES.out, this.seq++));
         } else if (by && by.id === this.localId) {
@@ -1049,7 +1059,7 @@ export class Hud {
         break;
       case 'finish': {
         const m = race.mechs[e.mech];
-        if (e.mech === this.localId) this.showBanner(`Finished ${e.place}${ORD[e.place - 1]}`, '', 'p3', 3);
+        if (e.mech === this.localId) this.showBanner(`Finished ${e.place}${ORD[e.place - 1]}`, '', 'p3', 3, 'The flag');
         else if (m.team === me.team) this.say(m, pick(LINES.finish, this.seq++));
         else if (e.place === 1) this.say(null, `${m.name} takes the flag.`);
         break;

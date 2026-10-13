@@ -8,6 +8,20 @@
 import { DEFAULT_RULES, MPH_PER_UNIT, RULE_KEYS, makeRules, type RuleKey, type Rules } from '../../sim/index';
 
 export interface Feel {
+  /** The 80s anime look (1) or the plain one (0). */
+  look: number;
+  /** Its film layer: grain, halation, softness, aberration. */
+  lookFilm: number;
+  /** Its ink lines. */
+  lookInk: number;
+  /** How much the lines and grain boil from one drawing to the next. */
+  lookBoil: number;
+  /** Drawings a second for mech poses and effects; 0 animates smoothly. */
+  lookSteps: number;
+  /** A frame or two of flat ink on a big hit. */
+  lookImpact: number;
+  /** A painted still when you take part in a knockout. */
+  lookStill: number;
   camHeight: number;
   camDist: number;
   camDistSpeed: number;
@@ -46,6 +60,13 @@ export interface Feel {
 }
 
 export const DEFAULT_FEEL: Readonly<Feel> = Object.freeze({
+  look: 1,
+  lookFilm: 1,
+  lookInk: 1,
+  lookBoil: 1,
+  lookSteps: 12,
+  lookImpact: 1,
+  lookStill: 1,
   camHeight: 8.4,
   camDist: 13,
   camDistSpeed: 2.4,
@@ -104,6 +125,18 @@ const rule = (key: RuleKey, label: string, min: number, max: number, step: numbe
 const feel = (key: FeelKey, label: string, min: number, max: number, step: number, show?: TuneItem['show'], hint?: string): TuneItem => ({ kind: 'feel', key, label, min, max, step, show, hint });
 
 export const TUNE_GROUPS: TuneGroup[] = [
+  {
+    title: 'Look',
+    items: [
+      feel('look', '80s anime look', 0, 1, 1, 'onoff', 'Cel shading, ink lines, film and animation drawn on twos. Off: the plain look. G on the keyboard switches it too.'),
+      feel('lookFilm', 'Film', 0, 2, 0.05, 'x', 'Grain, halation, softness and colour fringe.'),
+      feel('lookInk', 'Ink lines', 0, 2, 0.05, 'x'),
+      feel('lookBoil', 'Line boil', 0, 2, 0.05, 'x', 'How much the lines and the grain shift from one drawing to the next.'),
+      feel('lookSteps', 'Drawings a second', 0, 24, 1, 'int', 'Mech poses and effects. 12 is animation on twos; 8 on threes; 0 animates smoothly. The race and the camera always run at full speed.'),
+      feel('lookImpact', 'Impact frames', 0, 1, 1, 'onoff', 'A flash of flat ink on a big hit you are part of. At most one every second and a half.'),
+      feel('lookStill', 'Knockout still', 0, 1, 1, 'onoff', 'A painted freeze-frame when you take part in a knockout.'),
+    ],
+  },
   {
     title: 'Pace',
     items: [

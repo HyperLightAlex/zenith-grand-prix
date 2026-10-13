@@ -85,6 +85,15 @@ function chamferBox(w: number, h: number, d: number, c: number): THREE.BufferGeo
 
 let outlineMaterial: THREE.ShaderMaterial | null = null;
 
+/**
+ * Show or hide the mechs' hull outlines. The anime look's ink pass draws
+ * its own contour (with weight and breaks), so it turns these off while it
+ * is inking.
+ */
+export function setHullOutlines(on: boolean): void {
+  outlineMat().visible = on;
+}
+
 /** Inverted-hull ink line: back faces pushed out along smoothed normals. */
 function outlineMat(): THREE.ShaderMaterial {
   if (outlineMaterial) return outlineMaterial;
@@ -223,6 +232,8 @@ export function armorMat(): THREE.MeshToonMaterial {
       );
   };
   mat.customProgramCacheKey = () => 'zgp-armor-v1';
+  // The anime look paints the armour's metal and glass (see look.ts).
+  mat.userData.celArmor = true;
   armorMaterial = mat;
   return mat;
 }

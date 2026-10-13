@@ -18,6 +18,7 @@ import {
   trackById,
   TRACKS,
   type MatchState,
+  type RaceState,
   type Role,
   type SeatConfig,
   type SimEvent,
@@ -29,13 +30,16 @@ import { Renderer } from '../render/renderer';
 import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
 import { buildWorld, type World } from '../render/world';
 import { disposeTree, themeFor } from '../render/themes';
+import { CEL, celify, look, readLook, setCelTheme, tickDrawings } from '../render/look';
+import { setHullOutlines } from '../render/mech/kit';
 import { LIVERIES } from '../render/palette';
+import { Eyecatch } from '../ui/eyecatch';
 import { Hud } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice } from '../ui/menus';
 import { TuningPanel } from '../ui/tuningPanel';
 import { inKnockout } from './moments';
 import { LocalSession } from './session';
-import { Tuning } from './tuning';
+import { TUNE_GROUPS, Tuning } from './tuning';
 
 type State = 'title' | 'garage' | 'race' | 'paused' | 'results';
 
@@ -107,6 +111,9 @@ export class Game {
   private prevButtons = 0;
   private lastShotKey = '';
   private slowmo = 0;
+  /** The eyecatch before the results: on screen in the anime look, once a round. */
+  private eyecatch: Eyecatch;
+  private eyecaught = false;
   private ownLock = -1;
   private ownLockAt = 0;
   private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
@@ -119,6 +126,7 @@ export class Game {
     // shared by every race on it.
     this.useTrack(this.choice.track);
     this.hud = new Hud(uiRoot);
+    this.eyecatch = new Eyecatch(uiRoot);
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
     this.hud.onCritical = () => this.audio.play('critical');
     this.menus = new Menus(uiRoot, {
@@ -129,6 +137,8 @@ export class Game {
       onRestart: () => (this.roundScored ? this.next() : this.startRound()),
       onNext: () => this.next(),
       onTuning: () => this.panel.show(),
+      onToggleLook: () => this.toggleLook(),
+      lookOn: () => this.tuning.feel.look >= 0.5,
       onQuit: () => this.showTitle(),
       onGarage: () => {
         this.menus.show('garage');
@@ -168,6 +178,9 @@ export class Game {
       this.showTitle();
     }
     if (opts.tune) this.panel.show();
+    // ?look=plain or ?look=anime picks the look for this visit without remembering it.
+    const lk = new URLSearchParams(location.search).get('look');
+    if (lk === 'plain' || lk === 'anime') this.tuning.feel.look = lk === 'anime' ? 1 : 0;
     requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -193,6 +206,8 @@ export class Game {
     this.useTrack(choice?.track ?? this.trackId);
     this.session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
     this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel);
+    // The mechs (and anything else the view made) take the cel shading too.
+    celify(this.renderer.scene);
     this.view.onImpact = (strength) => {
       this.input.rumble(strength, 90 + strength * 160);
       // Hit-stop: a beat's pause on every blow you land or take, longer for the big ones.
@@ -207,6 +222,8 @@ export class Game {
     };
     this.resultsAt = -1;
     this.slowmo = 0;
+    this.eyecaught = false;
+    this.eyecatch?.hide();
     this.ownLock = -1;
     this.ownLockAt = 0;
     this.session.timeScale = 1;
@@ -228,6 +245,9 @@ export class Game {
     this.trackVis = buildTrackVisual(track, theme);
     this.world = buildWorld(track, theme);
     this.renderer.setTheme(theme);
+    setCelTheme(theme);
+    celify(this.trackVis.group);
+    celify(this.world.group);
     scene.add(this.trackVis.group, this.world.group);
   }
 
@@ -256,6 +276,14 @@ export class Game {
     this.setSession(choice, 1);
     this.view.cam.mode = 'orbit';
     this.view.cam.reset();
+  }
+
+  /** Switch the 80s anime look on or off (remembered like any tuning value). Returns whether it is now on. */
+  private toggleLook(): boolean {
+    const item = TUNE_GROUPS.flatMap((g) => g.items).find((i) => i.key === 'look');
+    if (item) this.tuning.set(item, this.tuning.feel.look >= 0.5 ? 0 : 1);
+    this.hud.showNotice(this.tuning.feel.look >= 0.5 ? 'Look: 80s anime' : 'Look: plain', false, 1.2);
+    return this.tuning.feel.look >= 0.5;
   }
 
   /** Volumes and the layer mix from the tuning panel's Sound tab. */
@@ -444,8 +472,19 @@ export class Game {
       case 'ko': {
         const h = this.heard(e.mech);
         A.play('ko', { volume: Math.max(0.35, h.volume) * quiet, pan: h.pan });
-        // Slow motion for any knockout the player had a hand in.
-        if (inRace && inKnockout(race, e.mech, e.by, local, this.ownLock)) this.slowmo = 0.9;
+        // Slow motion for any knockout the player had a hand in. In the anime
+        // look the moment is cut first: an impact frame, then the frame held
+        // as a painted still while the clock stops, then the slow motion.
+        if (inRace && inKnockout(race, e.mech, e.by, local, this.ownLock)) {
+          this.slowmo = 0.9;
+          if (look.on && look.still) {
+            const hold = 0.7;
+            this.renderer.impactFrame(0.11, true);
+            this.renderer.paintedStill(hold);
+            this.session.freeze(hold + 0.11);
+            this.slowmo += hold + 0.11;
+          }
+        }
         // Lost the mech we were riding with: move the camera to a teammate.
         if (e.mech === this.view.focusId) {
           const session = this.session;
@@ -547,6 +586,27 @@ export class Game {
     this.audio.play(name, semis ? { pitch: 2 ** (semis / 12) } : undefined);
   }
 
+  /**
+   * In the anime look, put up the eyecatch over a painted still the first
+   * time the results are due, and push the results back until it has run.
+   * Returns whether it did.
+   */
+  private eyecatchFor(race: RaceState): boolean {
+    if (!look.on || this.eyecaught) return false;
+    this.eyecaught = true;
+    const hold = 2.1;
+    const me = race.mechs[this.session.localId];
+    const m = this.match;
+    const round = m?.rounds[m.rounds.length - 1];
+    const winner = m && m.winner >= 0 ? m.winner : round ? round.winner : me ? me.team : 0;
+    const what = m && m.winner >= 0 && m.rounds.length > 1 ? 'the match' : 'the round';
+    this.eyecatch.show(m ? `Round ${m.rounds.length}` : 'The flag', `${LIVERIES[winner].name} take ${what}`, hold);
+    this.renderer.paintedStill(hold);
+    this.hud.hide();
+    this.resultsAt = this.time + hold;
+    return true;
+  }
+
   /** The flag has fallen: bank the round and bring the results up in a moment. */
   private finishRound(): void {
     if (this.resultsAt > 0) return;
@@ -585,10 +645,25 @@ export class Game {
     const dt = Math.min(0.1, Math.max(0.0005, (now - this.last) / 1000));
     this.last = now;
     this.time += dt;
+    // The look: its settings for this frame, and the drawing clock.
+    readLook(this.tuning.feel);
+    // (A held frame is a held cel: the drawings stop with it.)
+    tickDrawings(this.renderer.stillShowing ? 0 : dt * (this.state === 'race' ? this.session.timeScale : 1));
+    this.eyecatch.update(dt);
+    CEL.uCel.value = look.on ? 1 : 0;
+    // The ink pass draws the mechs' contours itself; the hull outlines are for the plain look.
+    setHullOutlines(!this.renderer.inking);
+    this.world.sky.uniforms.uBands.value = look.on ? 9 : 0;
+    this.hud.anime = look.on;
     const mine = this.session.race.mechs[this.session.localId];
     this.input.battle = this.state === 'race' && !!mine && mine.mode === MODE.BATTLE && !mine.retired;
     this.input.poll();
     let menu = this.input.consumeMenu();
+    // G switches the look, anywhere.
+    if (menu.includes('look')) {
+      this.toggleLook();
+      menu = menu.filter((m) => m !== 'look');
+    }
     // The tuning panel opens over anything. While a race is running it is
     // worked with the mouse only, so the pad and keys keep flying the mech.
     if (menu.includes('tune')) {
@@ -648,8 +723,11 @@ export class Game {
         if (flying) this.roadRumble(dt);
         // The race can also end while nobody is watching (a dev skip past the flag).
         if (race.phase === PHASE.FINISHED && this.resultsAt < 0) this.finishRound();
-        if (this.resultsAt > 0 && this.time >= this.resultsAt) {
+        if (this.resultsAt > 0 && this.time >= this.resultsAt && this.eyecatchFor(race)) {
+          // The anime look cuts to an eyecatch first; the results come up after it.
+        } else if (this.resultsAt > 0 && this.time >= this.resultsAt) {
           this.resultsAt = -1;
+          this.eyecatch.hide();
           this.state = 'results';
           this.hud.hide();
           this.menus.match = this.match;
@@ -671,7 +749,9 @@ export class Game {
 
     const cur = this.session.race;
     const flyingNow = this.state === 'race' && this.view.focusId === local;
-    this.view.update(simDt * (this.state === 'race' ? this.session.timeScale : 1), flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
+    // A painted still holds everything, the camera and the sparks included.
+    const viewDt = this.renderer.stillShowing ? 0 : simDt * (this.state === 'race' ? this.session.timeScale : 1);
+    this.view.update(viewDt, flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
     if (this.state === 'race') this.hud.update(dt, cur, this.view.plates, this.view.focusId);
     this.trackVis.update(this.time);
     this.world.update(this.time, this.renderer.camera);

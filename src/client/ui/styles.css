@@ -383,6 +383,51 @@ html, body {
 .banner[hidden] { display: none; }
 @keyframes banner-in { from { transform: translateX(-60vw) skewX(-20deg); opacity: 0; } }
 @keyframes banner-out { to { transform: translateX(60vw) skewX(-20deg); opacity: 0; } }
+.banner .kick[hidden] { display: none; }
+
+/* The anime look: banners are title cards. A hard cut to a black band across
+   the frame, heavy Mincho-style serif set tall and tight, a red rule, the
+   type hung off-centre the way an episode card is laid out. In and out on a
+   cut, with one inverted drawing as it lands. */
+.banner.anime { top: 20%; text-align: left; --card-font: 'Hiragino Mincho ProN', 'Hiragino Mincho Pro', 'Yu Mincho', YuMincho, 'Noto Serif JP', 'Noto Serif CJK JP', 'Times New Roman', Times, serif; }
+.banner.anime .strip {
+  display: block;
+  padding: 0.9em 8% 1.1em 17%;
+  clip-path: none;
+  background: #07050a;
+  box-shadow: 0 -0.18em 0 #07050a, 0 0.18em 0 #07050a;
+  font-family: var(--card-font);
+  animation: card-in 0.17s steps(1, end) both;
+}
+.banner.anime .strip::before, .banner.anime .strip::after { display: none; }
+.banner.anime .kick { font-size: 1.25em; font-weight: 600; letter-spacing: 0.32em; text-transform: uppercase; color: #f4efe6; opacity: 0.92; margin-bottom: 0.25em; }
+.banner.anime .big {
+  font-size: 5.6em;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 0.95;
+  text-transform: uppercase;
+  color: #fbf8f2;
+  transform: scaleY(1.22);
+  transform-origin: 0 70%;
+  margin: 0.08em 0 0.12em;
+}
+.banner.anime .small {
+  display: inline-block;
+  font-size: 1.55em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f4efe6;
+  margin: 0.35em 0 0 18%;
+  padding-top: 0.3em;
+  border-top: 0.14em solid #d8232c;
+}
+.banner.anime .small:empty { display: none; }
+.banner.anime.p2 .kick, .banner.anime.p3 .kick { color: #e8323a; }
+.banner.anime.out .strip { animation: card-out 0.3s steps(1, end) both; }
+@keyframes card-in { 0% { filter: invert(1); } 100% { filter: none; } }
+@keyframes card-out { to { visibility: hidden; } }
 
 .count { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-size: 16em; font-weight: 800; text-shadow: 0 0.04em 0 var(--ink), 0 0 0.3em rgba(15, 21, 36, 0.5); }
 .count.go { color: var(--charge); }
@@ -568,3 +613,25 @@ html, body {
 .sound-test { display: flex; flex-wrap: wrap; gap: 0.3em; }
 .sound-test .btn { font-size: 0.95em; }
 .tune-foot { font-size: 0.88em; opacity: 0.6; line-height: 1.25; }
+
+/* ---- the anime look: eyecatch ---------------------------------------------
+   Between the race and the results: the last frame held as a painted still,
+   the title over it on a slanted black card, a red rule. In on a cut. */
+.eyecatch { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: flex-start; z-index: 30; }
+.eyecatch[hidden] { display: none; }
+.eyecatch .ec-card {
+  margin-left: 9%;
+  padding: 1.6em 3.4em 1.7em 2.6em;
+  background: #07050a;
+  color: #fbf8f2;
+  font-family: 'Hiragino Mincho ProN', 'Hiragino Mincho Pro', 'Yu Mincho', YuMincho, 'Noto Serif JP', 'Noto Serif CJK JP', 'Times New Roman', Times, serif;
+  transform: rotate(-4deg) skewX(-4deg);
+  box-shadow: 0.7em 0.7em 0 #d8232c;
+}
+.eyecatch.in .ec-card { animation: card-in 0.17s steps(1, end) both; }
+.eyecatch .ec-kick { font-size: 1.3em; font-weight: 600; letter-spacing: 0.4em; text-transform: uppercase; color: #e8323a; }
+.eyecatch .ec-title, .eyecatch .ec-title2 { font-weight: 800; text-transform: uppercase; line-height: 0.92; transform: scaleY(1.25); transform-origin: 0 80%; }
+.eyecatch .ec-title { font-size: 7.4em; letter-spacing: -0.01em; margin-top: 0.12em; }
+.eyecatch .ec-title2 { font-size: 3.6em; letter-spacing: 0.18em; margin: 0.2em 0 0 0.1em; }
+.eyecatch .ec-rule { height: 0.18em; width: 62%; background: #d8232c; margin: 0.9em 0 0.5em; }
+.eyecatch .ec-sub { font-size: 1.45em; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }

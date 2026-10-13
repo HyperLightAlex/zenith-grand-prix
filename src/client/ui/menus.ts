@@ -44,6 +44,10 @@ export interface MenuCallbacks {
   /** From the results: the next round, or a fresh match if this one is over. */
   onNext(): void;
   onTuning(): void;
+  /** Switch the 80s anime look on or off; returns whether it is now on. */
+  onToggleLook(): boolean;
+  /** Whether the 80s anime look is on. */
+  lookOn(): boolean;
   onQuit(): void;
   onGarage(): void;
   onSound(name: 'ui_move' | 'ui_select' | 'ui_back'): void;
@@ -330,6 +334,10 @@ export class Menus {
     this.addItem(list, h('div.item', h('span', 'Resume')), () => this.cb.onResume());
     this.addItem(list, h('div.item', h('span', 'Restart this race')), () => this.cb.onRestart());
     this.addItem(list, h('div.item', h('span', 'Tuning')), () => this.cb.onTuning());
+    const lookLabel = h('span', `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`);
+    this.addItem(list, h('div.item', lookLabel), () => {
+      lookLabel.textContent = `Look: ${this.cb.onToggleLook() ? '80s anime' : 'plain'}`;
+    });
     this.addItem(list, h('div.item', h('span', 'Controls')), () => this.show('controls'));
     this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
     this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());

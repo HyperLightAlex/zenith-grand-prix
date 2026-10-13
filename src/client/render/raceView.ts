@@ -22,9 +22,10 @@ import { inKnockout } from '../game/moments';
 import { TELL_COLOR, tellOf, type TellKind } from '../game/tells';
 import type { Feel } from '../game/tuning';
 import { CameraRig } from './cameraRig';
-import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareRing } from './fx';
+import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
 import { MechAnimator } from './mech/animate';
 import { buildFrame } from './mech/frames';
+import { drawClock, drawingStep, look, markCharacter } from './look';
 import type { MechRig } from './mech/rig';
 import { CARVE_COLORS, COLORS, LIVERIES, SUN_DIR, type Livery } from './palette';
 import type { Renderer } from './renderer';
@@ -61,6 +62,9 @@ interface MechVisual {
   burstTier: number;
   /** Which cut of a combo is next, for the blade arcs. */
   cut: number;
+  /** Time gathered since the pose was last drawn, and which drawing that was (the anime look poses on twos). */
+  poseAcc: number;
+  poseIdx: number;
 }
 
 /** Where a mech sits on screen, for name plates and the lock reticle. */
@@ -165,6 +169,8 @@ export class RaceView {
       const livery = LIVERIES[m.team];
       const rig = buildFrame(m.role, livery, String(m.role + 1));
       rig.root.matrixAutoUpdate = false;
+      // Inked and shaded as a cel character in the anime look.
+      markCharacter(rig.root);
       const shield = makeShield(livery.glow);
       const bubble = makeBubble(COLORS.cell, CLASSES[m.role].radius * 1.5 + 2.4);
       rig.root.add(shield, bubble);
@@ -197,6 +203,8 @@ export class RaceView {
         sparkT: 0,
         burstTier: 0,
         cut: 0,
+        poseAcc: 0,
+        poseIdx: -1,
       });
       this.plates.push({ id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false, ex: 0, ey: 0 });
     }
@@ -263,7 +271,18 @@ export class RaceView {
       trackMatrix(track, v.s, v.d, v.h, v.facing, m4);
       v.rig.root.matrix.copy(m4);
       v.rig.root.matrixWorldNeedsUpdate = true;
-      v.anim.update(dt, m, alpha);
+      // The pose: every frame, or in the anime look only on each new drawing
+      // (twelve a second, eight for a held pose: a boost, a carve, a burst),
+      // while the mech itself moves smoothly.
+      v.poseAcc += dt;
+      const held = !m.retired && (m.boosting || m.carving || m.overdriveT > 0 || (m.carveT > 0 && m.mode === MODE.SPEED));
+      const step = drawingStep(held ? 8 : 0);
+      const idx = step > 0 ? Math.floor(drawClock.time / step) : -2;
+      if (step <= 0 || idx !== v.poseIdx) {
+        v.anim.update(v.poseAcc, m, alpha);
+        v.poseAcc = 0;
+        v.poseIdx = idx;
+      }
       v.rig.root.updateMatrixWorld(true);
       trackPoint(track, v.s, v.d, 4.2 + v.h, v.pos);
       trackDir(track, v.s, m.vs, m.vd, v.vel).multiplyScalar(Math.hypot(m.vs, m.vd));
@@ -275,6 +294,7 @@ export class RaceView {
       const r = CLASSES[m.role].radius;
       const lift = v.h > 0 ? Math.max(0.25, 1 - v.h / 40) : 1;
       v.shadow.visible = v.h > -2 && roadAt(track, m.s, m.d);
+      (v.shadow.material as THREE.MeshBasicMaterial).map = shadowTexture(look.on);
       shadowScale.makeScale(r * 2.6 * lift, 1, r * 4.4 * lift);
       v.shadow.matrix.multiplyMatrices(m4, shadowScale);
       v.shadow.matrixWorldNeedsUpdate = true;
@@ -582,7 +602,10 @@ export class RaceView {
           this.fx.flash(v1, 10, 0xffe6c0, 0.18, v.rig.root);
           this.fx.burst(v1, v.vel, 40, 70, HOT_HEX, 0.6, 0.5);
         }
-        if ((e.victim === local || e.attacker === local) && (big || surge)) this.cam.punch(surge ? 0.9 : 0.6);
+        if ((e.victim === local || e.attacker === local) && (big || surge)) {
+          this.cam.punch(surge ? 0.9 : 0.6);
+          this.renderer.impactFrame(surge ? 0.12 : 0.09);
+        }
         if (e.victim === local) {
           this.cam.shake(e.blocked ? 0.18 : surge ? 0.8 : big ? 0.62 : atk.kind === 'melee' ? 0.38 : 0.16);
           if (!e.blocked) this.hurt = Math.min(1, this.hurt + (big || surge ? 0.7 : 0.35));
@@ -607,6 +630,7 @@ export class RaceView {
           this.cam.punch(0.75);
           this.flash(0.35);
           this.onImpact(0.9);
+          this.renderer.impactFrame(0.09);
         }
         break;
       }
@@ -619,6 +643,7 @@ export class RaceView {
           this.cam.shake(0.7);
           this.cam.punch(0.85);
           this.onImpact(1);
+          this.renderer.impactFrame(0.11);
         }
         break;
       }
@@ -639,6 +664,7 @@ export class RaceView {
           if (e.mech === local) this.hurt = 1;
           this.flash(0.3);
           this.onImpact(1);
+          this.renderer.impactFrame(0.11);
         }
         break;
       }

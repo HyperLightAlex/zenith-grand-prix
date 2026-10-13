@@ -42,13 +42,23 @@ uniform vec3 uHalo;
 uniform vec3 uCirrus;
 uniform float uCirrusAmt;
 uniform float uTime;
+uniform float uBands;
 varying vec3 vDir;
 ${NOISE}
 void main() {
   vec3 dir = normalize(vDir);
   float h = dir.y;
-  vec3 col = mix(uHorizon, uMid, smoothstep(-0.02, 0.22, h));
-  col = mix(col, uZenith, smoothstep(0.18, 0.85, h));
+  float t1 = smoothstep(-0.02, 0.22, h);
+  float t2 = smoothstep(0.18, 0.85, h);
+  if (uBands > 0.5) {
+    // Painted: the gradient laid down in bands of flat colour, their edges
+    // a little uneven, as a background painter's brush would leave them.
+    float wob = (noise(dir.xz * 7.0 + dir.y * 3.0) - 0.5) * 0.06;
+    t1 = floor((t1 + wob) * uBands + 0.5) / uBands;
+    t2 = floor((t2 + wob) * uBands + 0.5) / uBands;
+  }
+  vec3 col = mix(uHorizon, uMid, t1);
+  col = mix(col, uZenith, t2);
   // Sun: hard anime disc, soft halo, wide warm wash.
   float sd = max(dot(dir, uSunDir), 0.0);
   col += uHalo * pow(sd, 9.0) * 0.22;
@@ -186,6 +196,8 @@ void main() {
 export interface World {
   group: THREE.Group;
   sun: THREE.DirectionalLight;
+  /** The sky's material: its `uBands` paints the gradient in flat bands (0 = smooth). */
+  sky: THREE.ShaderMaterial;
   update(time: number, camera: THREE.Camera): void;
 }
 
@@ -355,6 +367,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uCirrus: { value: new THREE.Color().setRGB(...theme.cirrus) },
       uCirrusAmt: { value: theme.cirrusAmount },
       uTime: { value: 0 },
+      uBands: { value: 0 },
     },
     side: THREE.BackSide,
     depthWrite: false,
@@ -376,6 +389,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   return {
     group,
     sun,
+    sky: skyMat,
     update(time: number, camera: THREE.Camera) {
       for (const u of ctx.updates) u(time, camera);
     },

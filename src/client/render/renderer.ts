@@ -6,6 +6,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { drawClock, look } from './look';
+import { FilmPass, InkPass, LOOK_PALETTES } from './lookPasses';
 import { COLORS } from './palette';
 
 const SpeedShader = {
@@ -22,13 +24,18 @@ const SpeedShader = {
     uTime: { value: 0 },
     uAspect: { value: 1 },
     uFocus: { value: new THREE.Vector2(0.5, 0.5) },
+    // The anime look: speed drawn as lines rather than blurred, redrawn on each drawing.
+    uDrawn: { value: 0 },
+    uLineSeed: { value: 0 },
+    // A held frame: no blur and no speed lines over it.
+    uHold: { value: 0 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
-    uniform float uSpeed, uBoost, uFlash, uHurt, uTime, uAspect, uBlurK, uLineK;
+    uniform float uSpeed, uBoost, uFlash, uHurt, uTime, uAspect, uBlurK, uLineK, uDrawn, uLineSeed, uHold;
     uniform vec2 uFocus;
     uniform vec3 uTint;
     varying vec2 vUv;
@@ -38,7 +45,7 @@ const SpeedShader = {
       vec2 asp = vec2(to.x * uAspect, to.y);
       float r = length(asp);
       // Radial blur that grows toward the edges of the frame.
-      float amt = (uSpeed * 0.04 + uBoost * 0.05) * uBlurK * smoothstep(0.12, 0.85, r);
+      float amt = (uSpeed * 0.04 + uBoost * 0.05) * uBlurK * smoothstep(0.12, 0.85, r) * mix(1.0, 0.3, uDrawn) * (1.0 - uHold);
       vec3 col = vec3(0.0);
       float tw = 0.0;
       for (int i = 0; i < 8; i++) {
@@ -59,7 +66,23 @@ const SpeedShader = {
       float line = smoothstep(0.82, 1.0, rnd) * smoothstep(0.30 + hash(seg) * 0.25, 0.95, r);
       float fa = fract(ang * 34.0);
       line *= smoothstep(0.0, 0.25, fa) * smoothstep(1.0, 0.75, fa);
-      col += uTint * line * (uSpeed * 0.12 + uBoost * 0.35) * uLineK;
+      col += uTint * line * (uSpeed * 0.12 + uBoost * 0.35) * uLineK * (1.0 - uDrawn);
+      if (uDrawn > 0.5) {
+        // Drawn speed lines: hard-edged wedges from the edge of the frame,
+        // thicker toward the edge, mostly white with a few in ink, a new set
+        // on every drawing.
+        float n = 56.0;
+        float sd = floor(ang * n / 6.28318);
+        float on = step(0.8, hash(sd * 1.71 + uLineSeed * 31.7));
+        float start = 0.36 + hash(sd + 3.1) * 0.3;
+        float fd = fract(ang * n / 6.28318);
+        float hw = 0.07 + 0.3 * smoothstep(start, 1.25, r);
+        float edge = fwidth(fd) * 1.2;
+        float wedge = 1.0 - smoothstep(hw - edge, hw + edge, abs(fd - 0.5));
+        float drawn = on * wedge * smoothstep(start, start + 0.04, r);
+        vec3 lc = hash(sd + 7.7) < 0.25 ? vec3(0.02, 0.016, 0.04) : uTint * 1.5;
+        col = mix(col, lc, drawn * clamp(uSpeed * 0.5 + uBoost * 0.9, 0.0, 0.9) * uLineK * (1.0 - uHold));
+      }
       // Vignette, hurt tint, flash.
       float vig = smoothstep(0.55, 1.15, r);
       col *= 1.0 - vig * (0.22 + uSpeed * 0.12);
@@ -78,6 +101,19 @@ export class Renderer {
   readonly speedPass: ShaderPass;
   private composer: EffectComposer;
   private bloom: UnrealBloomPass;
+  private bloomThreshold = 1;
+  private bloomBands = { value: 0 };
+  private inkPass: InkPass;
+  private filmPass: FilmPass;
+  /** Moments the film cuts in: time left on an impact frame, and on a painted still (and how long that still runs). */
+  private impactT = 0;
+  private impactDur = 0.1;
+  private lastImpact = -10;
+  private stillT = 0;
+  private stillDur = 1;
+  private stillWait = 0;
+  /** Real seconds since the renderer started. */
+  private clock = 0;
   private quality: Quality = 'high';
   private frameTimes: number[] = [];
   private lastScaleChange = 0;
@@ -97,22 +133,122 @@ export class Renderer {
     const ext = this.renderer.extensions;
     const hdr = this.renderer.capabilities.isWebGL2 && (ext.has('EXT_color_buffer_float') || ext.has('EXT_color_buffer_half_float'));
     const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4 });
+    // The ink pass traces lines from the depth of the frame.
+    target.depthTexture = new THREE.DepthTexture(size.x, size.y);
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.42, 0.55, hdr ? 1.0 : 0.9);
+    this.inkPass = new InkPass();
+    this.composer.addPass(this.inkPass);
+    this.bloomThreshold = hdr ? 1.0 : 0.9;
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.42, 0.55, this.bloomThreshold);
     this.composer.addPass(this.bloom);
+    // The anime look cuts the glow into flat rings, the way it was painted on the cel.
+    const comp = this.bloom.compositeMaterial;
+    comp.uniforms.uBands = this.bloomBands;
+    comp.fragmentShader = comp.fragmentShader.replace('uniform float bloomRadius;', 'uniform float bloomRadius;\nuniform float uBands;').replace(
+      'float bloomAlpha =',
+      `if (uBands > 0.5) {
+        float bl = max(bloom.r, max(bloom.g, bloom.b));
+        float q = bl < 0.85 ? step(0.04, bl) * 0.1 + step(0.14, bl) * 0.14 + step(0.32, bl) * 0.22 + step(0.58, bl) * 0.26 : bl;
+        bloom *= q / max(bl, 1e-4);
+      }
+      float bloomAlpha =`,
+    );
+    comp.needsUpdate = true;
     this.speedPass = new ShaderPass(SpeedShader);
     this.composer.addPass(this.speedPass);
+    this.filmPass = new FilmPass();
+    this.composer.addPass(this.filmPass);
     this.composer.addPass(new OutputPass());
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
 
-  /** Fog colour and thickness for a circuit's setting. */
-  setTheme(theme: { fog: number; fogDensity: number }): void {
+  /** Fog colour and thickness for a circuit's setting, and the look's ink and grade for it. */
+  setTheme(theme: { id: string; fog: number; fogDensity: number }): void {
     const fog = this.scene.fog as THREE.FogExp2;
     fog.color.setHex(theme.fog);
     fog.density = theme.fogDensity;
+    const pal = LOOK_PALETTES[theme.id] ?? LOOK_PALETTES.meridian;
+    (this.inkPass.uniforms.uInkColor.value as THREE.Color).setHex(pal.ink);
+    (this.filmPass.uniforms.uInkColor.value as THREE.Color).setHex(pal.ink);
+    (this.filmPass.uniforms.uShadowGrade.value as THREE.Color).setRGB(...pal.shadowGrade);
+    (this.filmPass.uniforms.uLightGrade.value as THREE.Color).setRGB(...pal.lightGrade);
+    (this.filmPass.uniforms.uLift.value as THREE.Color).setRGB(...pal.lift);
+  }
+
+  /**
+   * Cut to an impact frame for `seconds`, if the look allows: a drawing in
+   * negative, then one in two flat tones with the lines in red. No more than
+   * one every 1.2 s unless `force`d (a strobe of them would be hard on the
+   * eyes, and would stop meaning anything).
+   */
+  impactFrame(seconds = 0.11, force = false): void {
+    if (!look.on || !look.impact) return;
+    if (!force && this.clock - this.lastImpact < 1.2) return;
+    this.lastImpact = this.clock;
+    this.impactT = this.impactDur = seconds;
+  }
+
+  /**
+   * Lay the frame down as a painted still, pushing in, for `seconds`. It
+   * starts once any impact frame has played out.
+   */
+  paintedStill(seconds: number): void {
+    if (!look.on || !look.still) return;
+    this.stillT = this.stillDur = seconds;
+    this.stillWait = this.impactT;
+    this.filmPass.uniforms.uPaperSeed.value = Math.random() * 100;
+  }
+
+  /** Whether a painted still (or the impact frame before it) is on screen: the world should hold still. */
+  get stillShowing(): boolean {
+    return this.stillT > 0;
+  }
+
+  /** Whether the ink pass is drawing lines this frame (it needs a depth texture, so not on low quality). */
+  get inking(): boolean {
+    return look.on && look.ink > 0 && this.quality !== 'low';
+  }
+
+  /** The look's passes and settings for this frame. `dt` is real time. */
+  private applyLook(dt: number): void {
+    const on = look.on;
+    const ink = this.inkPass.uniforms;
+    const film = this.filmPass.uniforms;
+    this.inkPass.enabled = this.inking;
+    this.filmPass.enabled = on || this.impactT > 0 || this.stillT > 0;
+    if (this.inkPass.enabled) {
+      ink.uInk.value = look.ink;
+      ink.uBoil.value = look.boil;
+      if (drawClock.fresh) ink.uSeed.value = (drawClock.drawing % 97) * 1.37 * Math.min(1, look.boil);
+      ink.uNear.value = this.camera.near;
+      ink.uFar.value = this.camera.far;
+    }
+    film.uFilm.value = on ? look.film : 0;
+    if (drawClock.filmFresh) {
+      film.uGrainSeed.value = (drawClock.film % 61) * 7.13;
+      const w = 0.00035 * look.film * Math.min(1, look.boil);
+      (film.uWeave.value as THREE.Vector2).set((Math.random() - 0.5) * w, (Math.random() - 0.5) * w);
+    }
+    // Moments: the impact frame cuts in hard and out hard, negative first;
+    // the still follows it and eases out at the end.
+    this.clock += dt;
+    film.uImpact.value = this.impactT > 0 ? (this.impactT > this.impactDur * 0.5 ? 2 : 1) : 0;
+    this.impactT = Math.max(0, this.impactT - dt);
+    const left = this.stillT;
+    const showing = left > 0 && this.stillWait <= 0;
+    film.uStill.value = showing ? Math.min(1, left / 0.12) : 0;
+    film.uStillZoom.value = showing ? 0.07 * (1 - left / this.stillDur) : 0;
+    this.speedPass.uniforms.uHold.value = showing ? 1 : 0;
+    if (this.stillWait > 0) this.stillWait -= dt;
+    else this.stillT = Math.max(0, this.stillT - dt);
+    // Only what is meant to glow blooms: a lit surface keeps its flat colour.
+    this.bloom.threshold = on ? this.bloomThreshold + 0.3 : this.bloomThreshold;
+    this.bloomBands.value = on ? 1 : 0;
+    // Speed is drawn, not blurred.
+    this.speedPass.uniforms.uDrawn.value = on ? 1 : 0;
+    if (drawClock.fresh) this.speedPass.uniforms.uLineSeed.value = drawClock.drawing % 89;
   }
 
   /** Bloom strength, from the tuning panel. */
@@ -138,6 +274,10 @@ export class Renderer {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.speedPass.uniforms.uAspect.value = w / h;
+    const pw = Math.round(w * ratio);
+    const ph = Math.round(h * ratio);
+    (this.inkPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
+    (this.filmPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
   }
 
   /** Drop resolution a notch if frames run long, raise it again when there is headroom. */
@@ -160,6 +300,7 @@ export class Renderer {
 
   render(dt: number, now: number): void {
     this.adapt(dt, now);
+    this.applyLook(dt);
     this.speedPass.uniforms.uTime.value = now;
     this.composer.render(dt);
   }
