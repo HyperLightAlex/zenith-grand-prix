@@ -355,6 +355,14 @@ export class RaceView {
             this.fx.spray(v1, v3, v2, n, 16, surge ? COLORS.cell : hard ? 0xffb060 : 0xffe2b0, 0.26, 0.28);
           }
         }
+        if (m.act === ACT.DASH && m.arcDir !== 0 && !m.retired && this.feel.sparks > 0) {
+          // A guard swing throws a spray off both skates, out from the circle.
+          for (const heel of [0, 1]) {
+            v.rig.heels[heel].getWorldPosition(v1);
+            trackDir(track, v.s, -0.4, heel === 0 ? -0.8 : 0.8, v2);
+            this.fx.spray(v1, v.vel, v2, Math.ceil(2.5 * this.feel.sparks), 22, CARVE_COLORS[1], 0.32, 0.3);
+          }
+        }
         if (m.carving && !m.air && !m.retired && this.feel.sparks > 0) {
           // Carve sparks off the outside skate, thicker and brighter with
           // each tier, and from the inside one as well once it is charged.
@@ -718,6 +726,15 @@ export class RaceView {
         this.fx.flash(v1, 9, v.livery.glow, 0.25, v.rig.root, true);
         this.fx.burst(v1, v.vel, 18, 36, v.livery.glow, 0.45, 0.35);
         if (e.mech === local) this.cam.shake(0.2);
+        break;
+      }
+      case 'arc': {
+        // Off on a guard swing: a kick of sparks and a flash in the pilot's colour.
+        const v = this.mechs[e.mech];
+        trackPoint(track, v.s, v.d, 1.2, v1);
+        this.fx.flash(v1, 6, v.livery.glow, 0.18, v.rig.root, true);
+        this.fx.burst(v1, v.vel, 18, 32, CARVE_COLORS[1], 0.4, 0.3);
+        if (e.mech === local) this.cam.shake(0.12);
         break;
       }
       case 'carve': {

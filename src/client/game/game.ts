@@ -475,6 +475,14 @@ export class Game {
         // Your own support points chime, a step higher for a 2.
         if (e.mech === local && inRace) A.play('award', { pitch: e.points >= 2 ? 2 ** (4 / 12) : 1 });
         break;
+      case 'arc': {
+        // A guard swing: the dash's whoosh and the skates' edges biting.
+        const h = this.heard(e.mech);
+        A.play('dash', { volume: h.volume * 0.8 * quiet, pitch: 0.85 });
+        A.play('carve_burst', { volume: h.volume * 0.45 * quiet, pan: h.pan, pitch: 1.15 });
+        if (e.mech === local && inRace) this.input.rumble(0.3, 110);
+        break;
+      }
       case 'carve':
         // Only your own carve chimes: a field of them would be a wind chime.
         if (e.mech === this.view.focusId && inRace) {
@@ -577,6 +585,8 @@ export class Game {
     const dt = Math.min(0.1, Math.max(0.0005, (now - this.last) / 1000));
     this.last = now;
     this.time += dt;
+    const mine = this.session.race.mechs[this.session.localId];
+    this.input.battle = this.state === 'race' && !!mine && mine.mode === MODE.BATTLE && !mine.retired;
     this.input.poll();
     let menu = this.input.consumeMenu();
     // The tuning panel opens over anything. While a race is running it is

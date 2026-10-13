@@ -31,6 +31,8 @@ export interface AiState {
   guardFrom: number;
   guardUntil: number;
   dodgeAt: number;
+  /** ...and whether that dodge is a guard swing round the attacker rather than a dash. */
+  dodgeArc: boolean;
   /** Attack instance (attacker id * 100000 + start tick) already reacted to. */
   reactedTo: number;
   comboLeft: number;
@@ -148,6 +150,15 @@ export interface MechState {
   /** Ticks left of a carve's burst, and the extra top speed it gives. */
   carveT: number;
   carveBoost: number;
+  /**
+   * A guard swing under way: which way (1 right, -1 left, 0 none), where it
+   * started (the angle of the mech seen from its target, in (s, d)), how far
+   * round it goes (signed, radians) and at what radius.
+   */
+  arcDir: number;
+  arcFrom: number;
+  arcSweep: number;
+  arcR: number;
   /** Ticks off the ground in the current flight (for a clean landing). */
   airT: number;
 
@@ -280,6 +291,7 @@ export type SimEvent =
   | { type: 'lock'; mech: number; target: number }
   | { type: 'unlock'; mech: number }
   | { type: 'dash'; mech: number }
+  | { type: 'arc'; mech: number; dir: number }
   | { type: 'boost'; mech: number }
   | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' }
   | { type: 'gate'; mech: number; gate: number; cells: number }

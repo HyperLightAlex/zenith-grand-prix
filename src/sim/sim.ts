@@ -219,6 +219,10 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       carveTier: 0,
       carveT: 0,
       carveBoost: 0,
+      arcDir: 0,
+      arcFrom: 0,
+      arcSweep: 0,
+      arcR: 0,
       airT: 0,
       boosting: false,
       onStrip: false,
@@ -268,6 +272,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
         guardFrom: 0,
         guardUntil: 0,
         dodgeAt: -1,
+        dodgeArc: false,
         reactedTo: -1,
         comboLeft: 0,
         boostUntil: 0,
@@ -449,6 +454,26 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     // Tumbling: no control, bleed speed.
     m.vs = approach(m.vs, floor, BATTLE_STAGGER_DRAG * DT);
     m.vd *= 0.955;
+  } else if (m.act === ACT.DASH && m.arcDir !== 0) {
+    // A guard swing: carried round the target on a circle, quick off the
+    // mark and easing in at the end, facing it all the way. Where the target
+    // will be after this tick is where the circle is centred.
+    const k = Math.min(1, (m.actT + 1) / Math.max(1, m.actDur));
+    const e = Math.sin((k * Math.PI) / 2);
+    const th = m.arcFrom + m.arcSweep * e;
+    const ts = t.s + t.vs * DT;
+    const td = t.d + t.vd * DT;
+    const edge = Math.max(0, hwAt(track, ts) - c.radius - 0.5);
+    const wantD = clamp(td + Math.sin(th) * m.arcR, -edge, edge);
+    const wantS = ts + Math.cos(th) * m.arcR;
+    // Moved round the circle directly, carried down the road at the
+    // target's pace like the rest of the fight: its velocity stays the
+    // fight's, so nothing is flung on when the swing ends or is cut short.
+    m.vs = t.vs;
+    m.vd = t.vd;
+    m.s = wantS - (m.vs / Math.max(0.35, 1 - kappaAt(track, wantS) * wantD)) * DT;
+    m.d = wantD - m.vd * DT;
+    m.facing = Math.atan2(td - wantD, ts - wantS);
   } else if (m.act === ACT.DASH) {
     // The dash impulse was applied when it started; just let it run out.
     // Down the road it only counts for part of its speed over the cap, or

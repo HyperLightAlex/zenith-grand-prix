@@ -123,6 +123,8 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('momentumKnock', 'Momentum strike knockback', 1, 2.5, 0.05, 'x'),
       rule('ringoutThrow', 'Heavy blows: throw across the road', 0.8, 2, 0.05, 'x', 'How hard heavy blows throw a mech toward the barrier.'),
       rule('ringoutDamage', 'Ring-out damage', 0, 60, 1, 'int', 'Damage for being thrown into the barrier, before the part that grows with the impact.'),
+      rule('arcAngle', 'Guard swing: how far round', 0, 270, 5, 'int', 'Degrees round the target. Less from further out, so it never goes round faster than 150 u/s. 0 turns the swing off.'),
+      rule('arcSecs', 'Guard swing: time', 0.2, 0.8, 0.01, 'sec'),
       rule('armourScale', 'Armour', 0.5, 1.5, 0.05, 'x', 'Scales every frame. 1.00 is 1600 for the Swift and Vector, 2000 for the Bulwark.'),
     ],
   },

@@ -75,6 +75,8 @@ describe('the default rules', () => {
       momentumKnock: 1.5,
       ringoutThrow: 1.3,
       ringoutDamage: 14,
+      arcAngle: 180,
+      arcSecs: 0.45,
       cellMax: 3,
       cellStart: 0,
       gateValue: 1,

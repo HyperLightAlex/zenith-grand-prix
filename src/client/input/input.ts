@@ -152,8 +152,11 @@ export class Input {
       const rx = dead(p.axes[2] ?? 0, 0.2);
       const ry = dead(p.axes[3] ?? 0, 0.2);
       const rt = v(PAD.RT);
-      const lt = v(PAD.LT);
+      let lt = v(PAD.LT);
       let pb = 0;
+      // Locked on there is nothing to brake or carve: the left trigger is the guard.
+      if (this.battle && lt > 0.35) pb |= BTN.GUARD;
+      if (this.battle) lt = 0;
       if (b(PAD.A)) pb |= BTN.A;
       if (b(PAD.X)) pb |= BTN.X;
       if (b(PAD.Y)) pb |= BTN.Y;
@@ -251,6 +254,11 @@ export class Input {
 
   /** Scales every rumble. Set from the tuning panel. */
   rumbleScale = 1;
+  /**
+   * The player's mech is locked on and fighting: the pad's left trigger then
+   * raises the guard (as RB does) instead of braking. Set by the game each frame.
+   */
+  battle = false;
   /** Until when (performance.now) a hit's rumble should not be overwritten by the road's. */
   private rumbleBusyUntil = 0;
 

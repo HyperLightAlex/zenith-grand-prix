@@ -229,6 +229,19 @@ export const PARRY_REARM = 30;
 export const PARRY_STAGGER = 36;
 export const DASH_TICKS = 14;
 /**
+ * Guard swing: with the guard up, A and the stick to one side carve a fast
+ * arc round the target instead of a dash. The stick has to be at least this
+ * far over, and further to the side than up or down.
+ */
+export const ARC_MIN_STEER = 0.35;
+/**
+ * Fastest a swing carries a mech round its target (u/s, at the start of the
+ * swing, where it is quickest): from further out it goes less far round.
+ */
+export const ARC_MAX_SPEED = 150;
+/** Share of the swing (from the start) that is invulnerable. */
+export const ARC_IFRAME_SHARE = 0.6;
+/**
  * A dash down the road only carries this share of its speed over the battle
  * cap, and what is left over is scrubbed off as soon as the dash ends. A dash
  * is for moving around a fight; it is not a second, cheaper boost.

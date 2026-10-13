@@ -21,6 +21,8 @@ export class MechAnimator {
   private boostW = 0;
   /** Carving, signed: positive to the right. */
   private carveW = 0;
+  /** A guard swing round the target, signed the same way. */
+  private arcW = 0;
   private koW = 0;
   private winW = 0;
   private airW = 0;
@@ -51,6 +53,7 @@ export class MechAnimator {
     this.airW = toward(this.airW, m.air && !m.retired ? 1 : 0, 10, dt);
     this.fallW = toward(this.fallW, m.fallT > 0 && !m.retired ? 1 : 0, 6, dt);
     this.carveW = toward(this.carveW, m.carving && !m.air && !m.retired ? m.carveDir : 0, 12, dt);
+    this.arcW = toward(this.arcW, m.act === ACT.DASH && m.arcDir !== 0 && !m.retired ? m.arcDir : 0, 22, dt);
     const speedFrac = clamp01(m.speed / (PACE * 1.25));
     const P = this.pose;
 
@@ -116,6 +119,9 @@ export class MechAnimator {
       blendPose(P, this.tmp, ease(this.battleW));
     }
     if (this.guardW > 0.001) blendPose(P, POSES.guard, this.guardW);
+    // A guard swing: down on the edges like a carve, out of the fighting stance.
+    const arcing = Math.abs(this.arcW);
+    if (arcing > 0.001) blendPose(P, this.arcW > 0 ? POSES.carveRight : carveLeft, ease(arcing) * 0.8);
 
     // ---- actions
     if (m.act !== this.lastAct) {
@@ -174,7 +180,7 @@ export class MechAnimator {
     const accel = dt > 0 ? (m.speed - this.prevSpeed) / dt : 0;
     this.prevSpeed = m.speed;
     // A carve leans in further than a turn.
-    const wantLean = battle ? 0 : m.steer * (0.42 + 0.26 * carving) * clamp01(m.speed / 40);
+    const wantLean = battle ? this.arcW * 0.45 : m.steer * (0.42 + 0.26 * carving) * clamp01(m.speed / 40);
     this.lean = toward(this.lean, wantLean * (1 - this.koW), 8, dt);
     this.pitch = toward(this.pitch, Math.max(-0.12, Math.min(0.1, accel * 0.0022)) * (1 - this.battleW), 5, dt);
     this.rig.body.rotation.set(-this.pitch, 0, this.lean);

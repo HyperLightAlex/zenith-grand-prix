@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   ABILITIES,
   ABILITY,
+  ACT,
   CLASSES,
   COUNTDOWN_TICKS,
   DEFAULT_RULES,
@@ -52,6 +53,8 @@ interface Summary {
   lockBreak: string | null;
   placeBreak: string | null;
   maxSpeed: number;
+  /** Ticks spent in guard swings. */
+  swings: number;
   lap1Combat: string[];
   lap1HpLost: number;
   phaseEvents: Array<[number, number]>;
@@ -120,6 +123,7 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
     lockBreak: null,
     placeBreak: null,
     maxSpeed: 0,
+    swings: 0,
     lap1Combat: [],
     lap1HpLost: 0,
     phaseEvents: [],
@@ -237,8 +241,9 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
       const c = CLASSES[m.role];
       placeMask |= 1 << m.place;
       if (m.speed > sum.maxSpeed) sum.maxSpeed = m.speed;
+      if (m.act === ACT.DASH && m.arcDir !== 0) sum.swings++;
       if (!sum.wallBreak && wallOvershoot(m) > 1e-9) sum.wallBreak = `tick ${tick}: mech ${m.id} d=${m.d}`;
-      if (!sum.gaugeBreak && (m.hp < 0 || m.hp > c.maxHp || m.drive < 0 || m.drive > DRIVE_MAX || m.guard < 0 || m.guard > c.guardMax || m.speed < 0)) {
+      if (!sum.gaugeBreak && (m.hp < 0 || m.hp > m.maxHp || m.drive < 0 || m.drive > DRIVE_MAX || m.guard < 0 || m.guard > c.guardMax || m.speed < 0)) {
         sum.gaugeBreak = `tick ${tick}: mech ${m.id} hp=${m.hp} drive=${m.drive} guard=${m.guard} speed=${m.speed}`;
       }
       if (!sum.lockBreak) {
@@ -370,7 +375,9 @@ describe(`${RACES} all-AI races`, () => {
     each((s) => expect(s.placeBreak).toBe(null));
   });
 
-  it(`no mech exceeds ${SPEED_BOUND.toFixed(0)} u/s`, () => {
+  it(`no mech exceeds ${SPEED_BOUND.toFixed(0)} u/s, guard swings included`, () => {
+    // (Somebody swings round a rival somewhere in the batch.)
+    expect(results.reduce((n, s) => n + s.swings, 0)).toBeGreaterThan(0);
     each((s) => {
       expect(s.maxSpeed).toBeLessThan(SPEED_BOUND);
       // ...and the speed lap does get properly quick: somebody in every race

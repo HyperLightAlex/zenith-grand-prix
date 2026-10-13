@@ -45,8 +45,8 @@ const TACTIC_LABEL = ['Free', 'Blitz', 'Run', 'Shield', 'Mark'];
 type Device = 'pad' | 'keys';
 
 const KEYS: Record<Device, Record<string, string>> = {
-  pad: { accel: 'RT', brake: 'LT', carve: 'LT + stick', boost: 'A', dash: 'A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'RB', swap: 'R stick ◀ ▶', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
-  keys: { accel: 'W', brake: 'S', carve: 'S + A/D', boost: 'Space', dash: 'Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
+  pad: { accel: 'RT', brake: 'LT', carve: 'LT + stick', boost: 'A', dash: 'A', swing: 'LT + ◀▶ + A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'LT', swap: 'R stick ◀ ▶', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
+  keys: { accel: 'W', brake: 'S', carve: 'S + A/D', boost: 'Space', dash: 'Space', swing: 'L + A/D + Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
 };
 
 /** Radio lines. {t} is replaced by a target's callsign. */
@@ -608,7 +608,7 @@ export class Hud {
       if (me.retired || me.finished) {
         items.push([k.lock, 'Next camera'], [k.pause, 'Pause']);
       } else if (battle) {
-        items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], [k.lock, 'Let go']);
+        items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash'], [k.swing, 'Swing'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], [k.lock, 'Let go']);
       } else {
         items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.carve, 'Carve'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);
         if (race.lapPhase >= 2) items.push([k.x, 'Attack'], [k.ability, ABILITIES[shown].name]);

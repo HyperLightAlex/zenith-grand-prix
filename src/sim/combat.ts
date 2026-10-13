@@ -4,6 +4,9 @@ import {
   ABILITY,
   ABILITY_COOLDOWN,
   ACT,
+  ARC_IFRAME_SHARE,
+  ARC_MAX_SPEED,
+  ARC_MIN_STEER,
   ATK,
   ATTACKS,
   AUTO_LOCK_RANGE,
@@ -123,6 +126,12 @@ export function tryDash(race: RaceState, track: Track, m: MechState, input: Mech
   const ds = deltaS(track, t.s, m.s);
   const dd = t.d - m.d;
   const dist = Math.hypot(ds, dd) || 1e-3;
+  // Guard up and the stick to one side: a guard swing instead.
+  const side = Math.abs(input.mx);
+  if (m.guarding && side >= ARC_MIN_STEER && side >= Math.abs(input.my) && race.rules.arcAngle > 0) {
+    startArc(race, m, t, -ds, -dd, dist, input.mx > 0 ? 1 : -1);
+    return true;
+  }
   const us = ds / dist;
   const ud = dd / dist;
   let mx = input.mx;
@@ -140,6 +149,7 @@ export function tryDash(race: RaceState, track: Track, m: MechState, input: Mech
   m.act = ACT.DASH;
   m.actT = 0;
   m.actDur = DASH_TICKS;
+  m.arcDir = 0;
   m.iframes = Math.max(m.iframes, c.dashIframes);
   m.cdDash = DASH_COOLDOWN;
   m.guarding = false;
@@ -147,6 +157,42 @@ export function tryDash(race: RaceState, track: Track, m: MechState, input: Mech
   m.vd += (ud * my + us * mx) * c.dash;
   race.events.push({ type: 'dash', mech: m.id });
   return true;
+}
+
+/**
+ * A guard swing: a fast arc round the target to the side the stick is
+ * pushed (`dir` 1 right, -1 left, as the pilot sees it facing the target),
+ * as far round as rules.arcAngle, or less from further out, so it never goes
+ * round faster than ARC_MAX_SPEED. Invulnerable for the first part. Paid for
+ * like a dash; the guard comes down while it runs. (ps, pd) is where the mech
+ * is seen from the target.
+ */
+function startArc(race: RaceState, m: MechState, t: MechState, ps: number, pd: number, dist: number, dir: 1 | -1): void {
+  const c = classOf(m);
+  const r = Math.max(dist, c.radius + classOf(t).radius + 1.5);
+  const dur = Math.max(2, ticks(race.rules.arcSecs));
+  // The swing eases out along a quarter sine, quickest at the start: pi/2
+  // times its average speed round the circle.
+  const sweep = Math.min((race.rules.arcAngle * Math.PI) / 180, (ARC_MAX_SPEED * dur * DT) / ((Math.PI / 2) * r));
+  m.drive -= c.dashCost;
+  m.act = ACT.DASH;
+  m.actT = 0;
+  m.actDur = dur;
+  m.arcDir = dir;
+  m.arcFrom = Math.atan2(pd, ps);
+  // Pushed right, the mech goes round the target clockwise as seen from
+  // above in (s, d): its angle from the target falls.
+  m.arcSweep = -dir * sweep;
+  m.arcR = r;
+  m.iframes = Math.max(m.iframes, Math.round(dur * ARC_IFRAME_SHARE));
+  m.cdDash = dur + DASH_COOLDOWN - DASH_TICKS;
+  m.guarding = false;
+  race.events.push({ type: 'arc', mech: m.id, dir });
+}
+
+/** A guard swing over, or cut short. (It moved the mech, not its velocity: nothing to undo.) */
+export function endArc(m: MechState): void {
+  m.arcDir = 0;
 }
 
 /** Which ability the button would fire right now, or -1 if the mech is in no state to use one. */
@@ -266,6 +312,7 @@ export function setStagger(m: MechState, dur: number): void {
     m.actT = 0;
     m.actDur = dur;
   }
+  if (m.arcDir !== 0) endArc(m);
   m.guarding = false;
   m.comboQueued = false;
 }
@@ -596,7 +643,10 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
     case ACT.STAGGER:
     case ACT.DASH: {
       m.actT++;
-      if (m.actT >= m.actDur) m.act = ACT.NONE;
+      if (m.actT >= m.actDur) {
+        m.act = ACT.NONE;
+        if (m.arcDir !== 0) endArc(m);
+      }
       break;
     }
   }

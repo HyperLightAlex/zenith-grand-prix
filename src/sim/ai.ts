@@ -625,14 +625,20 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     const pGuard = 0.3 + 0.5 * m.skill + (hpFraction(m) < 0.4 ? 0.2 : 0);
     const reaction = Math.round(lerp(13, 5, m.skill) + rngNext(race) * 4);
     const toHit = a.windup - e.actT;
+    // Swinging round the attacker, rather than hopping away, puts the dodger
+    // at its side: the better pilots do it more, against the blow they are
+    // locked on to.
+    const arc = race.rules.arcAngle > 0 && m.target === e.id && rngNext(race) < 0.15 + 0.45 * m.skill;
     if (r < pDodge && m.drive >= c.dashCost) {
       ai.dodgeAt = tick + Math.max(0, Math.min(reaction, toHit - 3));
+      ai.dodgeArc = arc;
     } else if (r < pDodge + pGuard && !a.guardBreak) {
       ai.guardFrom = tick + reaction;
       ai.guardUntil = tick + toHit + a.active + 6;
     } else if (r < pDodge + pGuard && m.drive >= c.dashCost) {
       // Cannot block a guard breaker: get out of the way instead.
       ai.dodgeAt = tick + Math.max(0, Math.min(reaction, toHit - 3));
+      ai.dodgeArc = arc;
     }
   }
   // Under fire from the front with nothing better to do: raise the guard.
@@ -658,6 +664,11 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   if (tick === ai.dodgeAt && m.act === ACT.NONE) {
     out.mx = ai.orbit;
     out.my = -0.4;
+    // A guard swing needs the guard up as A goes in, and the stick square to the side.
+    if (ai.dodgeArc && m.guard > 0) {
+      out.buttons |= BTN.GUARD;
+      out.my = 0;
+    }
     press(out, m, BTN.A);
   }
 }

@@ -76,6 +76,9 @@ export interface Rules {
   ringoutThrow: number;
   /** Damage for being knocked into the barrier, before the part that grows with the impact. */
   ringoutDamage: number;
+  /** Guard swing: how far round the target it carries a mech, in degrees (0 turns it off), and how long it takes. */
+  arcAngle: number;
+  arcSecs: number;
 
   // --- Cells and gates
   cellMax: number;
@@ -156,6 +159,8 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   momentumKnock: 1.5,
   ringoutThrow: 1.3,
   ringoutDamage: 14,
+  arcAngle: 180,
+  arcSecs: 0.45,
 
   cellMax: 3,
   cellStart: 0,
@@ -229,6 +234,8 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   momentumKnock: [1, 5],
   ringoutThrow: [0.5, 4],
   ringoutDamage: [0, 1000],
+  arcAngle: [0, 360],
+  arcSecs: [0.1, 2],
 
   cellMax: [0, 6],
   cellStart: [0, 6],
