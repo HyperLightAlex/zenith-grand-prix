@@ -19,6 +19,7 @@ export interface Feel {
   camLockDist: number;
   camLockHeight: number;
   camShake: number;
+  camPunch: number;
   camRumble: number;
   speedBlur: number;
   speedLines: number;
@@ -56,6 +57,7 @@ export const DEFAULT_FEEL: Readonly<Feel> = Object.freeze({
   camLockDist: 12.5,
   camLockHeight: 8.2,
   camShake: 1,
+  camPunch: 1,
   camRumble: 1,
   speedBlur: 1,
   speedLines: 1,
@@ -201,6 +203,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
       feel('camLockDist', 'Locked on: distance', 6, 24, 0.5),
       feel('camLockHeight', 'Locked on: height', 3, 14, 0.1),
       feel('camShake', 'Shake on hits', 0, 2, 0.05, 'x'),
+      feel('camPunch', 'Punch-in on big hits', 0, 2, 0.05, 'x', 'A short dart in on heavy blows, parries, guard breaks and knockouts. 0 turns it off.'),
       feel('camRumble', 'Road rumble', 0, 3, 0.1, 'x'),
     ],
   },

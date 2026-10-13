@@ -32,6 +32,7 @@ import { LIVERIES } from '../render/palette';
 import { Hud } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice } from '../ui/menus';
 import { TuningPanel } from '../ui/tuningPanel';
+import { inKnockout } from './moments';
 import { LocalSession } from './session';
 import { Tuning } from './tuning';
 
@@ -438,7 +439,8 @@ export class Game {
       case 'ko': {
         const h = this.heard(e.mech);
         A.play('ko', { volume: Math.max(0.35, h.volume) * quiet, pan: h.pan });
-        if (inRace && (e.mech === local || e.by === local)) this.slowmo = 0.9;
+        // Slow motion for any knockout the player had a hand in.
+        if (inRace && inKnockout(race, e.mech, e.by, local, this.view.recentTarget)) this.slowmo = 0.9;
         // Lost the mech we were riding with: move the camera to a teammate.
         if (e.mech === this.view.focusId) {
           const session = this.session;

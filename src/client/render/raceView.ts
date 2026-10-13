@@ -11,12 +11,14 @@ import {
   DT,
   MODE,
   PHASE,
+  TICK_RATE,
   roadAt,
   weaponsFree,
   type MechState,
   type SimEvent,
 } from '../../sim/index';
 import type { Session } from '../game/session';
+import { inKnockout } from '../game/moments';
 import { TELL_COLOR, tellOf, type TellKind } from '../game/tells';
 import type { Feel } from '../game/tuning';
 import { CameraRig } from './cameraRig';
@@ -72,6 +74,12 @@ export interface Plate {
   cy: number;
   dist: number;
   visible: boolean;
+  /**
+   * Which way the mech lies from the middle of the screen, in screen pixels
+   * (y down), right even when it is behind the camera: for edge arrows.
+   */
+  ex: number;
+  ey: number;
 }
 
 const m4 = new THREE.Matrix4();
@@ -86,6 +94,23 @@ const AMBER = new THREE.Color(0xffa030);
 const HOT = new THREE.Color(0xff7a2a);
 const HOT_HEX = 0xff8a3a;
 const CARVE = CARVE_COLORS.map((c) => new THREE.Color(c));
+
+/** A colour for each weapon: its swing, and the sparks it throws off what it hits. */
+const WEAPON_COLOR: Record<string, number> = {
+  fw_slash1: 0x8ff0ff,
+  fw_slash2: 0x8ff0ff,
+  fw_slash3: 0xd8fbff,
+  fw_lance: 0x5f9dff,
+  mf_burst: 0xffe27a,
+  mf_kick: 0xb8ff5a,
+  mf_snare: COLORS.snare,
+  mf_pulse: 0xb28cff,
+  df_hammer1: 0xff9a3a,
+  df_hammer2: 0xffb24a,
+  df_scatter: 0xff6a3a,
+  df_ram: 0xffa030,
+};
+const weaponColor = (attack: number): number => WEAPON_COLOR[ATTACKS[attack]?.key ?? ''] ?? 0xffb040;
 const WHITE = new THREE.Color(0xffffff);
 const tint = new THREE.Color();
 /** Speed the effects treat as "flat out": a forward's top speed on the speed lap. */
@@ -101,6 +126,11 @@ function lerpAngle(a: number, b: number, t: number): number {
 const DUST: Record<string, number> = { meridian: 0x9aa2b0, canyon: 0xc98a5a, helios: 0xe8eef8 };
 
 export class RaceView {
+  /** Which gates were dark last frame, to flash them as they relight. */
+  private gateDark: boolean[] = [];
+  /** Who the mech being followed was last locked on to (a knockout clears the lock). */
+  private lastTarget = -1;
+  private lastTargetAt = 0;
   readonly group = new THREE.Group();
   readonly cam: CameraRig;
   readonly fx = new Fx();
@@ -168,7 +198,7 @@ export class RaceView {
         burstTier: 0,
         cut: 0,
       });
-      this.plates.push({ id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false });
+      this.plates.push({ id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false, ex: 0, ey: 0 });
     }
     this.group.add(this.ring, this.fx.group);
     renderer.scene.add(this.group);
@@ -214,6 +244,13 @@ export class RaceView {
     const alpha = this.session.alpha;
     this.time += dt;
     const focus = race.mechs[this.focusId];
+    // Remember the lock for a few seconds after it goes.
+    if (focus.target >= 0) {
+      this.lastTarget = focus.target;
+      this.lastTargetAt = race.tick;
+    } else if (race.tick - this.lastTargetAt > 5 * TICK_RATE) {
+      this.lastTarget = -1;
+    }
 
     // ---- place and animate every mech
     const armed = weaponsFree(race);
@@ -423,13 +460,22 @@ export class RaceView {
       lights.forEach((b) => (b.material as THREE.MeshBasicMaterial).color.setHex(on ? 0x30ff60 : 0x081a0c).multiplyScalar(on ? 2.2 : 1));
     }
 
-    // ---- Cell gates: lit while the mech being followed can still score them
+    // ---- Cell gates: lit while the mech being followed can still score them.
+    // A gate someone has just taken is dark for everyone, glowing back up as
+    // it comes round to relighting; it flashes when it is live again.
     const gates = this.trackVis.gates;
     const gateWorth = focus.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
     const open = race.phase !== PHASE.FINISHED && focus.lap < race.rules.gateLaps && gateWorth > 0 && !focus.retired && !focus.finished;
+    const relight = Math.max(1, race.rules.gateRelight * TICK_RATE);
     for (let i = 0; i < track.gates.length; i++) {
       const taken = (focus.gateMask & (1 << i)) !== 0;
-      gates.setLit(i, open && !taken ? (focus.cells < race.rules.cellMax ? 1 : 0.35) : 0);
+      const darkFor = race.gateDark[i] - race.tick;
+      const dark = darkFor > 0;
+      if (this.gateDark[i] && !dark && open && !taken) gates.pulse(i);
+      this.gateDark[i] = dark;
+      let lit = open && !taken ? (focus.cells < race.rules.cellMax ? 1 : 0.35) : 0;
+      if (dark && lit > 0) lit = 0.06 + 0.22 * (1 - darkFor / relight);
+      gates.setLit(i, lit);
     }
 
     // ---- camera
@@ -483,7 +529,16 @@ export class RaceView {
       ndc.copy(v.pos).project(cam);
       plate.cx = (ndc.x * 0.5 + 0.5) * w;
       plate.cy = (-ndc.y * 0.5 + 0.5) * h;
+      // Behind the camera the projection comes out mirrored through the middle.
+      const flip = ndc.z > 1 ? -1 : 1;
+      plate.ex = ndc.x * flip * w * 0.5;
+      plate.ey = -ndc.y * flip * h * 0.5;
     }
+  }
+
+  /** Who the mech being followed has been locked on to in the last few seconds, or -1. */
+  get recentTarget(): number {
+    return this.lastTarget;
   }
 
   /** React to something the simulation reported. */
@@ -507,8 +562,9 @@ export class RaceView {
           this.fx.flash(v1, 4.5, v.livery.glow, 0.14, v.rig.root, true);
         } else {
           const melee = atk.kind === 'melee';
-          this.fx.burst(v1, v.vel, melee ? (big ? 34 : 16) : 6, big ? 52 : 34, melee ? 0xffb040 : a.livery.glow, melee ? 0.55 : 0.4, 0.45);
-          this.fx.flash(v1, big ? 8.5 : melee ? 5.5 : 3.2, melee ? 0xfff2c8 : a.livery.glow, big ? 0.2 : 0.12, v.rig.root);
+          const wc = weaponColor(e.attack);
+          this.fx.burst(v1, v.vel, melee ? (big ? 34 : 16) : 6, big ? 52 : 34, wc, melee ? 0.55 : 0.4, 0.45);
+          this.fx.flash(v1, big ? 8.5 : melee ? 5.5 : 3.2, melee ? 0xfff2c8 : wc, big ? 0.2 : 0.12, v.rig.root);
           if (big) this.fx.flash(v1, 7, 0xffffff, 0.28, v.rig.root, true);
         }
         // A momentum strike lands with a shockwave in the colour of the heat it carried.
@@ -518,6 +574,7 @@ export class RaceView {
           this.fx.flash(v1, 10, 0xffe6c0, 0.18, v.rig.root);
           this.fx.burst(v1, v.vel, 40, 70, HOT_HEX, 0.6, 0.5);
         }
+        if ((e.victim === local || e.attacker === local) && (big || surge)) this.cam.punch(surge ? 0.9 : 0.6);
         if (e.victim === local) {
           this.cam.shake(e.blocked ? 0.18 : surge ? 0.8 : big ? 0.62 : atk.kind === 'melee' ? 0.38 : 0.16);
           if (!e.blocked) this.hurt = Math.min(1, this.hurt + (big || surge ? 0.7 : 0.35));
@@ -539,6 +596,7 @@ export class RaceView {
         this.fx.burst(v1, v.vel, 30, 60, 0xffffff, 0.5, 0.4);
         if (e.mech === local || e.attacker === local) {
           this.cam.shake(0.45);
+          this.cam.punch(0.75);
           this.flash(0.35);
           this.onImpact(0.9);
         }
@@ -551,6 +609,7 @@ export class RaceView {
         this.fx.burst(v1, v.vel, 40, 55, v.livery.glow, 0.6, 0.55);
         if (e.mech === local || e.by === local) {
           this.cam.shake(0.7);
+          this.cam.punch(0.85);
           this.onImpact(1);
         }
         break;
@@ -583,6 +642,7 @@ export class RaceView {
         this.fx.burst(v1, v.vel, 90, 80, 0xffa040, 0.8, 0.9);
         this.fx.puff(v1, v.vel, 12, 0x2b2b33, 3.5, 1.8);
         const near = this.mechs[local].pos.distanceTo(v.pos) < 140;
+        if (inKnockout(race, e.mech, e.by, local, this.lastTarget)) this.cam.punch(1);
         if (near) {
           this.cam.shake(e.mech === local ? 1 : 0.6);
           this.flash(e.mech === local ? 1 : 0.5);
@@ -638,9 +698,10 @@ export class RaceView {
           // combo, and a streak of sparks along the strike.
           v.cut = (v.cut + 1) % 4;
           const tilt = atk.heavy ? 0 : [0.35, -0.3, 0.15, -0.4][v.cut];
-          this.fx.slash(v.rig.root, atk.heavy ? 0xffd27a : v.livery.glow, atk.heavy, tilt, v.cut % 2 === 1);
+          const wc = weaponColor(e.attack);
+          this.fx.slash(v.rig.root, wc, atk.heavy, tilt, v.cut % 2 === 1);
           trackPoint(track, v.s + Math.cos(v.facing) * 3.5, v.d + Math.sin(v.facing) * 3.5, 4.6, v1);
-          this.fx.burst(v1, v.vel, atk.heavy ? 10 : 5, 20, v.livery.glow, 0.35, 0.22);
+          this.fx.burst(v1, v.vel, atk.heavy ? 10 : 5, 20, wc, 0.35, 0.22);
         }
         break;
       }

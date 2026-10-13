@@ -173,7 +173,7 @@ export class Hud {
   private reticle = h('div.reticle', h('i'), h('i'), h('i'), h('i'));
   /** Free steering: who the lock button would take, before you press it. */
   private preview = h('div.reticle.preview', h('i'), h('i'), h('i'), h('i'));
-  private plates: Array<{ el: HTMLElement; hp: HTMLElement; cue: HTMLElement; cueText: string; warn: HTMLElement; warnKey: string }> = [];
+  private plates: Array<{ el: HTMLElement; hp: HTMLElement; cue: HTMLElement; cueText: string; warn: HTMLElement; warnKey: string; edge: HTMLElement; edgeArrow: HTMLElement; edgeLabel: HTMLElement; edgeKey: string }> = [];
   private lastTarget = -1;
   // banners
   private banner = h('div.banner');
@@ -278,7 +278,10 @@ export class Hud {
 
     this.tower.replaceChildren();
     this.rows = [];
-    this.plates.forEach((p) => p.el.remove());
+    this.plates.forEach((p) => {
+      p.el.remove();
+      p.edge.remove();
+    });
     this.plates = [];
     for (const m of race.mechs) {
       const pos = h('span.pos', '');
@@ -295,7 +298,14 @@ export class Hud {
       plate.hidden = true;
       // Under the panels, so a name never covers the running order.
       this.root.prepend(plate);
-      this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnKey: '' });
+      // An arrow at the edge of the screen for a blow winding up at you from
+      // someone you cannot see.
+      const edgeArrow = h('i.arrow');
+      const edgeLabel = h('span', '');
+      const edge = h('div.edgewarn', edgeArrow, edgeLabel);
+      edge.hidden = true;
+      this.root.append(edge);
+      this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnKey: '', edge, edgeArrow, edgeLabel, edgeKey: '' });
     }
     this.buildPips(race.rules.cellMax);
     this.lastCells = me0(race, localId);
@@ -425,7 +435,14 @@ export class Hud {
         g.lineTo(x * size, y * size + r);
         g.lineTo(x * size - r, y * size);
         g.closePath();
-        g.fill();
+        // Dark (someone has just taken it): an outline until it relights.
+        if (race.gateDark[i] > race.tick) {
+          g.strokeStyle = '#ffc93a';
+          g.lineWidth = Math.max(1, size * 0.008);
+          g.stroke();
+        } else {
+          g.fill();
+        }
       });
     }
     // Start line.
@@ -662,6 +679,27 @@ export class Hud {
           setText(pl.warn, TELL_LABEL[tell.kind]);
           pl.warn.className = `warn ${tell.kind}${tell.now ? ' now' : ''}`;
         }
+      }
+      // Off screen, the warning moves to an arrow on the edge pointing at them.
+      const offscreen = tell !== null && !p.visible;
+      const edgeKey = offscreen && tell ? `${tell.kind}${tell.now ? '!' : ''}` : '';
+      if (edgeKey !== pl.edgeKey) {
+        pl.edgeKey = edgeKey;
+        pl.edge.hidden = !offscreen;
+        if (offscreen && tell) {
+          pl.edge.className = `edgewarn ${tell.kind}${tell.now ? ' now' : ''}`;
+          setText(pl.edgeLabel, TELL_LABEL[tell.kind]);
+        }
+      }
+      if (offscreen) {
+        const W = this.root.clientWidth || window.innerWidth;
+        const H = this.root.clientHeight || window.innerHeight;
+        const len = Math.hypot(p.ex, p.ey) || 1;
+        const ux = p.ex / len;
+        const uy = p.ey / len;
+        const reach = Math.min((W * 0.5 - 64) / Math.max(1e-6, Math.abs(ux)), (H * 0.5 - 64) / Math.max(1e-6, Math.abs(uy)));
+        pl.edge.style.transform = `translate(${(W * 0.5 + ux * reach).toFixed(1)}px, ${(H * 0.5 + uy * reach).toFixed(1)}px) translate(-50%, -50%)`;
+        pl.edgeArrow.style.transform = `rotate(${Math.atan2(uy, ux).toFixed(3)}rad)`;
       }
       if (show) {
         const sc = Math.max(0.62, Math.min(1.05, 60 / p.dist + 0.5));

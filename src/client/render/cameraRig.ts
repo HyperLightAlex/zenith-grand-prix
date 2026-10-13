@@ -25,6 +25,11 @@ export interface CameraSubject {
   target: { s: number; d: number } | null;
 }
 
+/** Punch-in timing, seconds: in, held, and back out. */
+const PUNCH_IN = 0.05;
+const PUNCH_HOLD = 0.07;
+const PUNCH_OUT = 0.3;
+
 export class CameraRig {
   mode: CameraMode = 'play';
   /** 0..1, set by hits; decays on its own. */
@@ -45,6 +50,8 @@ export class CameraRig {
   private pan = 0;
   private tilt = 0;
   private boostW = 0;
+  private punchT = 1;
+  private punchAmt = 0;
   private first = true;
   private chasePos = new THREE.Vector3();
   private chaseLook = new THREE.Vector3();
@@ -58,6 +65,22 @@ export class CameraRig {
 
   shake(amount: number): void {
     this.trauma = Math.min(1, this.trauma + amount * this.feel.camShake);
+  }
+
+  /**
+   * A short punch-in on a big moment (a heavy blow, a parry, a guard break, a
+   * knockout): the camera darts in and the view narrows for a third of a
+   * second, then it is all back as it was. Never a held zoom: the rest of the
+   * field has to stay in view. `amount` is 0..1.
+   */
+  punch(amount: number): void {
+    const a = Math.min(1, amount) * this.feel.camPunch;
+    if (a <= 0) return;
+    // A bigger one takes over; a smaller one during a bigger one is lost in it.
+    if (this.punchT >= PUNCH_IN + PUNCH_HOLD || a > this.punchAmt) {
+      this.punchAmt = a;
+      this.punchT = 0;
+    }
   }
 
   reset(): void {
@@ -158,6 +181,17 @@ export class CameraRig {
       fov = 50;
     }
 
+    // ---- punch-in: dart toward what the camera is looking at
+    let punch = 0;
+    if (this.punchAmt > 0 && this.mode === 'play') {
+      this.punchT += dt;
+      const t = this.punchT;
+      const env = t < PUNCH_IN ? t / PUNCH_IN : t < PUNCH_IN + PUNCH_HOLD ? 1 : Math.max(0, 1 - (t - PUNCH_IN - PUNCH_HOLD) / PUNCH_OUT);
+      punch = env * env * (3 - 2 * env) * this.punchAmt;
+      if (env <= 0) this.punchAmt = 0;
+      pos.lerp(look, punch * 0.22);
+    }
+
     // ---- apply, with roll from the banking and any shake. Upside down in a
     // loop or a corkscrew, the camera turns over with the road.
     const flat = THREE.MathUtils.clamp(upYAt(track, sub.s), 0, 1);
@@ -182,8 +216,9 @@ export class CameraRig {
       cam.rotateZ(Math.sin(this.rumbleT * 0.63) * amp * 0.012);
     }
     this.fov = toward(this.fov, fov, 6, sdt);
-    if (Math.abs(cam.fov - this.fov) > 0.01) {
-      cam.fov = this.fov;
+    const shown = this.fov - punch * 8;
+    if (Math.abs(cam.fov - shown) > 0.01) {
+      cam.fov = shown;
       cam.updateProjectionMatrix();
     }
   }
