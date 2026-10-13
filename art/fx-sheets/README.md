@@ -23,6 +23,7 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 11 Pickup sparkle | fx-11-pickup-sparkle.png | one animation of six: pop, star, scatter, rising glints, fade; the bottom row sits 12 px high, so its window moves up to match | build_sprites.py |
 | 12 Knockout explosion | fx-12-knockout-explosion.png | one animation of six in its own colours (not recoloured): flash, fireball, smoke closing over it, smoke breaking up; the painted alternative to the procedural explosion | `all 384` |
 | 13 Stun kick | fx-13-stun-kick.png | top row only (the kick's smear: the swing, the contact, breaking up); the stun row's dizzy spirals are redone as 13B | `rows` |
+| 13B Stun | fx-13b-stun.png | two loops over a staggered mech's head and shoulders: sparks shorting out, and a broken halo of discharges; both sit in the top half of the cell | `rows` (not centred, so the empty lower half stays over the body) |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
 
