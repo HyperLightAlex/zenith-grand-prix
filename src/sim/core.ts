@@ -25,7 +25,7 @@ export function distance(track: Track, a: MechState, b: MechState): number {
 }
 
 export function hpFraction(m: MechState): number {
-  return m.hp / classOf(m).maxHp;
+  return m.hp / m.maxHp;
 }
 
 /** The limiter in force: one figure for the formation lap, another for the battle laps. */
@@ -89,6 +89,16 @@ export function clearEffects(m: MechState): void {
   m.tow = 0;
   m.momentum = 0;
   m.padT = 0;
+  dropCarve(m);
+  m.carveT = 0;
+  m.carveBoost = 0;
+}
+
+/** A carve ends with nothing to show for it: knocked about, locked on, or out of the race. */
+export function dropCarve(m: MechState): void {
+  m.carving = false;
+  m.carveCharge = 0;
+  m.carveTier = 0;
 }
 
 /** Keep speed/heading and vs/vd in agreement after the speed-mode values change. */

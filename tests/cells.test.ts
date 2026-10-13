@@ -1,6 +1,8 @@
 // Cell gates. Threading a gate (crossing its line with the mech's centre
-// inside its opening) on the formation lap earns a share of a Cell; a whole
-// Cell pays for one ability (abilities.test.ts).
+// inside its opening) earns a Cell, which pays for one ability
+// (abilities.test.ts). Gates are contested: the first mech through takes it
+// and it goes dark for rules.gateRelight seconds, but a mech that is already
+// full passes through without using it up.
 import { describe, expect, it } from 'vitest';
 import { BTN, CLASSES, DEFAULT_RULES, MERIDIAN, MODE, PHASE, buildTrack, gateCrossed, stepRace } from '../src/sim/index';
 import type { MechInput, Rules, TrackDef } from '../src/sim/index';
@@ -176,16 +178,16 @@ describe('threading a gate', () => {
       expect(n).toBeGreaterThan(0);
       expect(n).toBeLessThanOrEqual(3);
       expect(m.cells).toBe(a.race.rules.gateValue);
-      expect(m.cells).toBe(0.5);
+      expect(m.cells).toBe(1);
       expect(m.gateMask).toBe(1 << g);
-      expect(a.events('gate')).toEqual([{ type: 'gate', mech: MF0, gate: g, cells: 0.5, tick: a.race.tick }]);
+      expect(a.events('gate')).toEqual([{ type: 'gate', mech: MF0, gate: g, cells: 1, tick: a.race.tick }]);
       // The event comes on the tick the mech's s passes the gate's.
       expect(m.s - a.base).toBeGreaterThanOrEqual(GATES[g].s);
       expect(m.s - a.base - m.vs / 60).toBeLessThan(GATES[g].s + 0.5);
       // Nothing more on the way out.
       a.step(30);
       expect(a.events('gate').length).toBe(1);
-      expect(m.cells).toBe(0.5);
+      expect(m.cells).toBe(1);
     }
   });
 
@@ -194,7 +196,7 @@ describe('threading a gate', () => {
       const a = new Arena(1);
       const m = approach(a, id, 0);
       a.step(5);
-      expect(m.cells).toBe(0.5);
+      expect(m.cells).toBe(1);
     }
   });
 
@@ -203,7 +205,7 @@ describe('threading a gate', () => {
       const inside = new Arena(1);
       const mi = approach(inside, FW0, 0, side * (G0.halfW - 0.2));
       inside.step(5);
-      expect(mi.cells).toBe(0.5);
+      expect(mi.cells).toBe(1);
 
       const outside = new Arena(1);
       const mo = approach(outside, FW0, 0, side * (G0.halfW + 0.2));
@@ -231,20 +233,20 @@ describe('threading a gate', () => {
     m.s = a.base + G0.s - 3;
     m.d = G0.d;
     a.step(5);
-    expect(m.cells).toBe(0.5);
+    expect(m.cells).toBe(1);
   });
 
   it('once per lap per gate, even if the mech is shoved back across the line', () => {
     const a = new Arena(1);
     const m = approach(a, FW0, 0);
     a.step(5);
-    expect(m.cells).toBe(0.5);
+    expect(m.cells).toBe(1);
     for (let rep = 0; rep < 5; rep++) {
       m.s = a.base + G0.s - 3; // thrown back behind the gate
       a.step(5);
       expect(m.s - a.base).toBeGreaterThan(G0.s);
     }
-    expect(m.cells).toBe(0.5);
+    expect(m.cells).toBe(1);
     expect(m.gateMask).toBe(1);
     expect(a.events('gate').length).toBe(1);
   });
@@ -268,11 +270,11 @@ describe('threading a gate', () => {
     // ...and it scores when it shoulders the obstacle along and ends a tick past the line.
     const n = a.until(() => m.s - a.base > G0.s, 60);
     expect(n).toBeGreaterThan(0);
-    expect(a.events('gate')).toEqual([{ type: 'gate', mech: FW0, gate: 0, cells: 0.5, tick: a.race.tick }]);
+    expect(a.events('gate')).toEqual([{ type: 'gate', mech: FW0, gate: 0, cells: 1, tick: a.race.tick }]);
     // Once, however much more to-ing and fro-ing there is.
     a.step(120);
     expect(m.s - a.base).toBeGreaterThan(G0.s + 2);
-    expect(m.cells).toBe(0.5);
+    expect(m.cells).toBe(1);
     expect(m.gateMask).toBe(1);
     expect(a.events('gate').length).toBe(1);
     // (The defender, pushed along from well past the line, never crossed it.)
@@ -297,42 +299,30 @@ describe('threading a gate', () => {
     });
     expect(crossings).toBeGreaterThan(5);
     expect(a.events('gate').length).toBe(1);
-    expect(m.cells).toBe(0.5);
+    expect(m.cells).toBe(1);
   });
 
-  it('each gate of the lap pays separately; six gates fill three Cells exactly', () => {
+  it('each gate of the lap pays separately; three fill the Cells, and a full mech takes no more', () => {
     const a = new Arena(1);
     const m = a.put(FW0, 0, 0);
-    let expected = 0;
     for (let g = 0; g < GATES.length; g++) {
       m.s = a.base + GATES[g].s - 3;
       m.d = GATES[g].d;
       m.heading = 0;
       a.step(4);
-      expected += a.race.rules.gateValue;
-      expect(m.cells).toBe(expected);
-      expect(m.gateMask).toBe((1 << (g + 1)) - 1);
+      expect(m.cells).toBe(Math.min(a.race.rules.cellMax, (g + 1) * a.race.rules.gateValue));
     }
     expect(m.cells).toBe(a.race.rules.cellMax);
+    expect(m.gateMask).toBe(0b000111);
     expect(a.events('gate').map((e) => [e.gate, e.cells])).toEqual([
-      [0, 0.5],
-      [1, 1],
-      [2, 1.5],
-      [3, 2],
-      [4, 2.5],
-      [5, 3],
+      [0, 1],
+      [1, 2],
+      [2, 3],
     ]);
+    // The three it passed full are still lit for whoever comes next.
+    expect([3, 4, 5].map((g) => a.race.gateDark[g])).toEqual([0, 0, 0]);
   });
 
-  it('gates are not used up: every mech that threads one scores it', () => {
-    const a = new Arena(1);
-    const first = a.put(FW0, G0.s - 3, G0.d - 3);
-    const second = a.put(FW1, G0.s - 3, G0.d + 3.5);
-    const third = a.put(MF1, G0.s - 30, G0.d);
-    a.step(30);
-    expect([first.cells, second.cells, third.cells]).toEqual([0.5, 0.5, 0.5]);
-    expect(a.events('gate').map((e) => e.mech).sort()).toEqual([FW0, FW1, MF1]);
-  });
 
   it('counts in battle mode too: it is about where the mech goes, not how it is flown', () => {
     const a = new Arena(1);
@@ -343,7 +333,7 @@ describe('threading a gate', () => {
     a.step(30);
     expect(m.mode).toBe(MODE.BATTLE);
     expect(m.s - a.base).toBeGreaterThan(G0.s);
-    expect(m.cells).toBe(0.5);
+    expect(m.cells).toBe(1);
   });
 
   it('a gate straddled by a tick is scored on the tick that takes the mech past it, whatever the speed', () => {
@@ -358,7 +348,7 @@ describe('threading a gate', () => {
         a.step(1);
         // One tick moves it further than `before`, so that tick crossed the line.
         expect(m.s - s0).toBeGreaterThan(before);
-        expect(m.cells).toBe(0.5);
+        expect(m.cells).toBe(1);
         expect(a.events('gate').length).toBe(1);
         a.step(3);
         expect(a.events('gate').length).toBe(1);
@@ -377,8 +367,86 @@ describe('threading a gate', () => {
     m.cells = 1.25;
     a.step(4);
     const [e] = a.events('gate');
-    expect(e).toEqual({ type: 'gate', mech: FW0, gate: 2, cells: 1.75, tick: e.tick });
-    expect(m.cells).toBe(1.75);
+    expect(e).toEqual({ type: 'gate', mech: FW0, gate: 2, cells: 2.25, tick: e.tick });
+    expect(m.cells).toBe(2.25);
+  });
+});
+
+describe('contested gates', () => {
+  const dark = () => Math.round(DEFAULT_RULES.gateRelight * 60);
+
+  it('the first mech through takes it, and it goes dark for rules.gateRelight seconds', () => {
+    const a = new Arena(1);
+    const first = approach(a, FW0, 0);
+    const next = a.put(FW1, G0.s - 30, G0.d); // half a second behind
+    a.step(30);
+    expect(first.cells).toBe(1);
+    expect(next.s - a.base).toBeGreaterThan(G0.s);
+    expect(next.cells).toBe(0);
+    expect(a.events('gate').map((e) => e.mech)).toEqual([FW0]);
+    const took = a.events('gate')[0].tick;
+    expect(a.race.gateDark[0]).toBe(took + dark());
+    // Nothing else changes: the other gates are still lit, and the one who missed out can still score this one later.
+    expect(a.race.gateDark.slice(1).every((t) => t === 0)).toBe(true);
+    expect(next.gateMask).toBe(0);
+  });
+
+  it('it relights: a mech through once the time is up scores a full Cell', () => {
+    const a = new Arena(1);
+    approach(a, FW0, 0);
+    a.step(4);
+    const took = a.events('gate')[0].tick;
+    // Arrive one tick before it relights: nothing. Arrive after: a Cell.
+    const early = a.put(MF0, G0.s - 3, G0.d);
+    a.until(() => a.race.tick >= took + dark() - 3, 400);
+    early.s = a.base + G0.s - 0.5;
+    a.step(1);
+    expect(a.race.tick).toBeLessThan(took + dark());
+    expect(early.cells).toBe(0);
+    const late = a.put(MF1, G0.s - 3, G0.d);
+    a.until(() => late.s - a.base > G0.s, 30);
+    expect(a.race.tick).toBeGreaterThanOrEqual(took + dark());
+    expect(late.cells).toBe(1);
+  });
+
+  it('two through on the same tick: the one in front has it', () => {
+    for (const ahead of [FW0, FW1]) {
+      const behind = ahead === FW0 ? FW1 : FW0;
+      const a = new Arena(1);
+      a.put(ahead, G0.s - 1, G0.d - 3);
+      a.put(behind, G0.s - 1.4, G0.d + 3.5);
+      a.step(1);
+      expect(a.events('gate').map((e) => e.mech)).toEqual([ahead]);
+      expect(a.mech(behind).cells).toBe(0);
+    }
+  });
+
+  it('a mech already full passes without using the gate up', () => {
+    const a = new Arena(1);
+    const full = giveCells(approach(a, FW0, 0), 3);
+    const next = a.put(FW1, G0.s - 30, G0.d);
+    a.until(() => full.s - a.base > G0.s, 10);
+    expect(full.cells).toBe(3);
+    expect(a.race.gateDark[0]).toBe(0);
+    // ...so the mech behind it still finds it lit.
+    a.step(30);
+    expect(next.cells).toBe(1);
+    expect(a.events('gate').map((e) => e.mech)).toEqual([FW1]);
+  });
+
+  it('rules.gateRelight 0: never dark, every mech that threads it scores', () => {
+    const a = new Arena(1, 1, { gateRelight: 0 });
+    const first = a.put(FW0, G0.s - 3, G0.d - 3);
+    const second = a.put(FW1, G0.s - 3, G0.d + 3.5);
+    const third = a.put(MF1, G0.s - 30, G0.d);
+    a.step(30);
+    expect([first.cells, second.cells, third.cells]).toEqual([1, 1, 1]);
+    expect(a.race.gateDark[0]).toBe(0);
+  });
+
+  it('a new race starts with every gate lit', () => {
+    const race = newRace(3);
+    expect(race.gateDark).toEqual(GATES.map(() => 0));
   });
 });
 
@@ -419,7 +487,7 @@ describe('the Cell cap', () => {
     }
   });
 
-  it('rules.cellMax is the cap: 1 fills from two gates, 0 means no Cells at all', () => {
+  it('rules.cellMax is the cap: 1 fills from one gate, 0 means no Cells at all', () => {
     const one = new Arena(1, 1, { cellMax: 1 });
     const m = one.put(FW0, 0, 0);
     for (let g = 0; g < 4; g++) {
@@ -429,7 +497,7 @@ describe('the Cell cap', () => {
       one.step(4);
     }
     expect(m.cells).toBe(1);
-    expect(one.events('gate').length).toBe(2);
+    expect(one.events('gate').length).toBe(1);
 
     const none = new Arena(1, 1, { cellMax: 0 });
     const z = approach(none, FW0, 0);
@@ -470,46 +538,44 @@ describe('which laps the gates are lit', () => {
   it('by default on every lap, so a spent Cell can be earned back', () => {
     expect(DEFAULT_RULES.gateLaps).toBe(3);
     expect(DEFAULT_RULES.gateValueLater).toBe(DEFAULT_RULES.gateValue);
-    expect(onLap(0)).toBe(0.5);
-    expect(onLap(1)).toBe(0.5);
-    expect(onLap(2)).toBe(0.5);
+    expect(onLap(0)).toBe(1);
+    expect(onLap(1)).toBe(1);
+    expect(onLap(2)).toBe(1);
   });
 
   it('rules.gateLaps 1 is the formation lap only; 2 adds the battle lap; 0 never', () => {
-    expect(onLap(0, { gateLaps: 1 })).toBe(0.5);
+    expect(onLap(0, { gateLaps: 1 })).toBe(1);
     expect(onLap(1, { gateLaps: 1 })).toBe(0);
     expect(onLap(2, { gateLaps: 1 })).toBe(0);
-    expect(onLap(0, { gateLaps: 2 })).toBe(0.5);
-    expect(onLap(1, { gateLaps: 2 })).toBe(0.5);
+    expect(onLap(0, { gateLaps: 2 })).toBe(1);
+    expect(onLap(1, { gateLaps: 2 })).toBe(1);
     expect(onLap(2, { gateLaps: 2 })).toBe(0);
-    expect(onLap(2, { gateLaps: 3 })).toBe(0.5);
+    expect(onLap(2, { gateLaps: 3 })).toBe(1);
     expect(onLap(0, { gateLaps: 0 })).toBe(0);
   });
 
   it('rules.gateValueLater sets what a gate is worth after the formation lap', () => {
-    expect(onLap(0, { gateValueLater: 0.25 })).toBe(0.5);
+    expect(onLap(0, { gateValueLater: 0.25 })).toBe(1);
     expect(onLap(1, { gateValueLater: 0.25 })).toBe(0.25);
     expect(onLap(2, { gateValueLater: 0.25 })).toBe(0.25);
-    expect(onLap(1, { gateValueLater: 1 })).toBe(1);
+    expect(onLap(1, { gateValueLater: 0.5 })).toBe(0.5);
     // Nothing: the gates are out after lap 1, however many laps they are "lit" for.
     expect(onLap(1, { gateValueLater: 0 })).toBe(0);
     expect(onLap(2, { gateValueLater: 0 })).toBe(0);
-    expect(onLap(0, { gateValueLater: 0 })).toBe(0.5);
+    expect(onLap(0, { gateValueLater: 0 })).toBe(1);
   });
 
-  it('a Cell spent on the battle lap can be won back at the next two gates', () => {
+  it('a Cell spent on the battle lap can be won back at the next gate', () => {
     const a = new Arena(2);
     const m = giveCells(a.put(FW0, 0, 0), 1);
     a.ability(FW0);
     expect(m.cells).toBe(0);
-    for (const g of [0, 1]) {
-      m.s = a.base + GATES[g].s - 3;
-      m.d = GATES[g].d;
-      m.heading = 0;
-      a.step(5);
-    }
+    m.s = a.base + GATES[0].s - 3;
+    m.d = GATES[0].d;
+    m.heading = 0;
+    a.step(5);
     expect(m.cells).toBe(1);
-    expect(a.events('gate').length).toBe(2);
+    expect(a.events('gate').length).toBe(1);
   });
 
   it('it is the mech\'s own lap that counts, not the leader\'s', () => {
@@ -524,7 +590,7 @@ describe('which laps the gates are lit', () => {
     a.step(4);
     expect(a.race.lapPhase).toBe(2);
     expect(leader.lap).toBe(1);
-    expect(back.cells).toBe(0.5);
+    expect(back.cells).toBe(1);
   });
 
   it('starting a new lap clears the record of gates taken', () => {
@@ -540,7 +606,8 @@ describe('which laps the gates are lit', () => {
   });
 
   it('with the gates lit for two laps, each one pays once on each lap', () => {
-    const a = new Arena(1, 1, { gateLaps: 2, cellMax: 6 });
+    // Half a Cell a gate and no going dark, so a lap of them is three and two laps six.
+    const a = new Arena(1, 1, { gateLaps: 2, cellMax: 6, gateValue: 0.5, gateValueLater: 0.5, gateRelight: 0 });
     const m = a.put(FW0, 0, 0);
     const lapOfGates = () => {
       for (let g = 0; g < GATES.length; g++) {
@@ -581,7 +648,7 @@ describe('which laps the gates are lit', () => {
     const m = approach(a, MF1, 4);
     expect(m.s).toBeGreaterThan(L);
     a.step(4);
-    expect(m.cells).toBe(0.5);
+    expect(m.cells).toBe(1);
     expect(a.events('gate')).toMatchObject([{ mech: MF1, gate: 4 }]);
   });
 });
@@ -612,7 +679,7 @@ describe('who cannot score', () => {
     // (A mech still racing on that lap does score with this rule, for contrast.)
     const racer = a.put(MF1, G0.s - 3, G0.d);
     a.step(4);
-    expect(racer.cells).toBe(0.5);
+    expect(racer.cells).toBe(1);
   });
 
   it('nobody scores during the countdown, or after the flag', () => {
@@ -671,20 +738,20 @@ describe('a lap of gates, driven', () => {
     return { race, me, events };
   }
 
-  it('all six in one formation lap is a full set of three Cells', () => {
+  it('the first three in one formation lap are a full set of three Cells; the rest it passes full', () => {
     const { race, me, events } = gateRun(3, 6);
     expect(me.lap).toBe(1);
-    expect(events.map((e) => e.gate)).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(events.map((e) => e.cells)).toEqual([0.5, 1, 1.5, 2, 2.5, 3]);
+    expect(events.map((e) => e.gate)).toEqual([0, 1, 2]);
+    expect(events.map((e) => e.cells)).toEqual([1, 2, 3]);
     expect(me.cells).toBe(race.rules.cellMax);
     // The parked field scored nothing.
     for (const m of race.mechs) if (m !== me) expect(m.cells).toBe(0);
   });
 
-  it('three of them is a Cell and a half, and the record is wiped at the line', () => {
-    const { me, events } = gateRun(3, 3);
-    expect(events.map((e) => e.gate)).toEqual([0, 1, 2]);
-    expect(me.cells).toBe(1.5);
+  it('two of them is two Cells, and the record is wiped at the line', () => {
+    const { me, events } = gateRun(3, 2);
+    expect(events.map((e) => e.gate)).toEqual([0, 1]);
+    expect(me.cells).toBe(2);
     expect(me.gateMask).toBe(0);
   });
 
@@ -716,13 +783,15 @@ describe('a gate and a shove from behind', () => {
       expect(a.events('bump').length).toBe(1);
       expect(fw.s - a.base).toBeGreaterThan(G0.s); // through the gate, dead centre
       // Scored on the tick of the shunt itself.
-      expect(a.events('gate')).toEqual([{ type: 'gate', mech: FW0, gate: 0, cells: 0.5, tick: a.race.tick }]);
+      expect(a.events('gate')).toEqual([{ type: 'gate', mech: FW0, gate: 0, cells: 1, tick: a.race.tick }]);
       expect(a.events('bump')[0].tick).toBe(a.race.tick);
-      expect(fw.cells).toBe(0.5);
+      expect(fw.cells).toBe(1);
+      // The defender that did the shoving is through a moment later, and finds the gate dark.
       a.step(10);
-      expect(df.cells).toBe(0.5);
-      expect(fw.cells).toBe(0.5);
-      expect(a.events('gate').length).toBe(2);
+      expect(df.s - a.base).toBeGreaterThan(G0.s);
+      expect(df.cells).toBe(0);
+      expect(fw.cells).toBe(1);
+      expect(a.events('gate').length).toBe(1);
     }
   });
 
@@ -752,7 +821,7 @@ describe('a gate and a shove from behind', () => {
     expect(a.events('bump').length).toBe(1);
     expect(fw.d).toBeGreaterThan(G0.d + G0.halfW - 0.6); // moved over, still inside
     expect(fw.d).toBeLessThan(G0.d + G0.halfW);
-    expect(fw.cells).toBe(0.5);
+    expect(fw.cells).toBe(1);
     // Crossing outside the opening and nudged about outside it: nothing.
     const b = new Arena(1);
     const out = b.put(FW0, G0.s - 1, G0.d + G0.halfW + 0.3);
@@ -774,7 +843,7 @@ describe('a gate and a shove from behind', () => {
       a.step(1);
       expect(fw.s - a.base).toBeGreaterThan(G0.s);
       expect(a.events('bump').length).toBe(1);
-      expect(fw.cells).toBe(0.5);
+      expect(fw.cells).toBe(1);
     }
   });
 });
@@ -823,10 +892,11 @@ describe('AI pilots and the gates', () => {
     expect(withHumans.rng).toBe(a.rng);
   });
 
-  it('on the formation lap they go and get them: most of the gates scored were ones the pilot meant to take', () => {
+  it('on the formation lap they fight for them: every gate is taken, by a pilot who meant to', () => {
+    // The pack is together on lap 1 and a gate goes dark for seconds once
+    // taken, so each one goes to whoever gets there first.
     let meant = 0;
     let stray = 0;
-    let wanted = 0;
     for (const [seed, skill] of [
       [11, 0.9],
       [12, 0.6],
@@ -834,11 +904,12 @@ describe('AI pilots and the gates', () => {
     ] as const) {
       const race = newRace(seed, { skill });
       const masks = race.mechs.map((m) => m.ai.gates);
-      wanted += masks.reduce((s, m) => s + bitsIn(m), 0);
+      const taken = new Set<number>();
       while (race.lapPhase === 1 && race.tick < 7000) {
         stepRace(race, TRACK, []);
         for (const e of race.events) {
           if (e.type !== 'gate') continue;
+          taken.add(e.gate);
           if (masks[e.mech] & (1 << e.gate)) meant++;
           else stray++;
         }
@@ -846,12 +917,12 @@ describe('AI pilots and the gates', () => {
         expect(race.events.some((e) => e.type === 'denied' || e.type === 'ability')).toBe(false);
       }
       expect(race.lapPhase).toBe(2);
+      expect(taken.size).toBeGreaterThanOrEqual(GATES.length - 1);
       // By the time the battle lap starts, the gate record of whoever is round has been wiped.
       for (const m of race.mechs) if (m.lap >= 1) expect(m.gateMask).toBe(0);
     }
-    expect(meant).toBeGreaterThan(wanted * 0.5); // they get well over half of what they go for
-    expect(meant).toBeLessThanOrEqual(wanted);
-    expect(stray).toBeLessThan(meant * 0.15); // and few by accident
+    expect(meant).toBeGreaterThanOrEqual(3 * (GATES.length - 1));
+    expect(stray).toBeLessThan(meant * 0.2); // few by accident
   });
 
   it('a pilot with full Cells stops going for gates', () => {

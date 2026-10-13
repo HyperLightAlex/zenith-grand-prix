@@ -382,7 +382,7 @@ describe('the round the designer cares about', () => {
     expect(teamPoints(a.race, 1)).toBeGreaterThan(teamPoints(a.race, 0));
     expect(a.race.mechs.map((m) => m.points)).toEqual([15, 7, 0, 5 + 3, 0, 3 + 3]);
     const round = scoreRound(a.race);
-    expect(round).toEqual({ round: 1, points: [15, 21], place: [15, 15], ko: [0, 6], first: 0, tied: false, winner: 1 });
+    expect(round).toEqual({ round: 1, points: [15, 21], place: [15, 15], ko: [0, 6], support: [0, 0], first: 0, tied: false, winner: 1 });
   });
 
   it('one knock-out is already enough to turn it', () => {
@@ -390,14 +390,14 @@ describe('the round the designer cares about', () => {
     retire(a.race, a.mech(MF0), a.mech(MF1));
     retire(a.race, a.mech(DF0), null); // the other wreck was nobody's doing
     toFlag(a);
-    expect(scoreRound(a.race)).toMatchObject({ points: [15, 18], place: [15, 15], ko: [0, 3], first: 0, tied: false, winner: 1 });
+    expect(scoreRound(a.race)).toMatchObject({ points: [15, 18], place: [15, 15], ko: [0, 3], support: [0, 0], first: 0, tied: false, winner: 1 });
   });
 
   it('without the knock-out bonus the same race is level, and goes to the winner\'s team', () => {
     const a = headline({ koPoints: 0 });
     expect(teamPoints(a.race, 0)).toBe(15);
     expect(teamPoints(a.race, 1)).toBe(15);
-    expect(scoreRound(a.race)).toMatchObject({ points: [15, 15], ko: [0, 0], first: 0, tied: true, winner: 0 });
+    expect(scoreRound(a.race)).toMatchObject({ points: [15, 15], ko: [0, 0], support: [0, 0], first: 0, tied: true, winner: 0 });
   });
 
   it('if the wrecks were nobody\'s knock-outs it is level too', () => {

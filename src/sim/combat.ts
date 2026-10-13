@@ -38,7 +38,8 @@ import {
   type Ability,
   type AttackDef,
 } from './config';
-import { addVelocity, classOf, clearEffects, inPlay, pickTarget, retarget, sameRoute, setTarget, speedCap, syncFromSpeed } from './core';
+import { bodyguard, onHit, onKnockout, onSnare } from './awards';
+import { addVelocity, classOf, clearEffects, dropCarve, inPlay, pickTarget, retarget, sameRoute, setTarget, speedCap, syncFromSpeed } from './core';
 import { ticks } from './rules';
 import { rngNext, wrapAngle } from './math';
 import { deltaS, hwAt, medianAt, type Track } from './track';
@@ -241,10 +242,14 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
     }
     case ABILITY.AEGIS: {
       const dur = ticks(rules.aegisSecs);
+      // What this shield keeps off the team is counted toward the caster's award.
+      m.aegisSaved = 0;
+      m.aegisPaid = false;
       for (const o of race.mechs) {
         if (o.team !== m.team || !inPlay(o) || !sameRoute(track, m, o)) continue;
         if (o !== m && Math.hypot(deltaS(track, o.s, m.s), o.d - m.d) > rules.aegisRange) continue;
         o.shieldT = Math.max(o.shieldT, dur);
+        o.shieldBy = m.id;
       }
       break;
     }
@@ -283,6 +288,7 @@ export function retire(race: RaceState, m: MechState, by: MechState | null, trac
   }
   if (by) by.kos++;
   race.events.push({ type: 'ko', mech: m.id, by: by ? by.id : -1 });
+  onKnockout(race, m, by);
 }
 
 /**
@@ -322,10 +328,20 @@ export function applyHit(
   const guardDmg = a.guardDamage * (charged ? rules.momentumDamage : 1);
   const stagger = a.stagger * (charged ? MOMENTUM_STAGGER : 1);
   let blocked = false;
+  // What the victim was doing when the blow arrived, for the support awards.
+  const victimTarget = victim.target;
+  const victimMode = victim.mode;
+  const wasAttacking = victim.act === ACT.ATTACK;
+  const inWindup = wasAttacking && victim.actT < ATTACKS[victim.attack].windup;
+  let broke = false;
   // Under an Aegis, or mid-ram, nothing staggers, slows or snares the mech.
   const shielded = victim.shieldT > 0;
   const unstoppable = shielded || victim.ramT > 0;
-  if (shielded) dmg *= rules.aegisDamage;
+  let prevented = 0;
+  if (shielded) {
+    prevented = dmg * (1 - rules.aegisDamage);
+    dmg *= rules.aegisDamage;
+  }
 
   if (victim.guarding && front) {
     if (a.kind === 'melee' && victim.guardT <= PARRY_WINDOW && !a.guardBreak && !a.noParry) {
@@ -334,6 +350,7 @@ export function applyHit(
       addVelocity(att, -ux * 14, -uy * 14);
       victim.drive = Math.min(DRIVE_MAX, victim.drive + 12);
       race.events.push({ type: 'parry', mech: victim.id, attacker: att.id });
+      bodyguard(race, track, victim, att);
       return true;
     }
     victim.guard -= guardDmg;
@@ -341,7 +358,10 @@ export function applyHit(
     if (a.guardBreak || victim.guard <= 0) {
       victim.guard = classOf(victim).guardMax * 0.4;
       dmg *= 0.6;
-      if (!unstoppable) setStagger(victim, GUARD_BREAK_STAGGER);
+      if (!unstoppable) {
+        broke = wasAttacking;
+        setStagger(victim, GUARD_BREAK_STAGGER);
+      }
       addVelocity(victim, us, ud);
       race.events.push({ type: 'guardBreak', mech: victim.id, by: att.id });
     } else {
@@ -373,6 +393,7 @@ export function applyHit(
         if (dist < ESCAPE_SHOVE_RANGE) addVelocity(att, -ux * 22, -uy * 22);
         race.events.push({ type: 'escape', mech: victim.id });
       } else {
+        broke = wasAttacking;
         setStagger(victim, Math.max(4, Math.round(stagger * Math.pow(0.88, victim.chain - 1))));
         addVelocity(victim, us, ud);
       }
@@ -382,6 +403,8 @@ export function applyHit(
       victim.speed *= 1 - Math.min(HIT_SLOW_MAX, dmg * HIT_SLOW_PER_DAMAGE);
       syncFromSpeed(victim);
     }
+    // ...and whatever a carve had built up.
+    dropCarve(victim);
   }
 
   dmg = Math.min(dmg, victim.hp);
@@ -404,11 +427,13 @@ export function applyHit(
     s: victim.s,
     d: victim.d,
   });
+  onHit(race, track, att, victim, { attack: attackIdx, damage: dmg, blocked, broke, inWindup, victimTarget, victimMode, prevented });
   if (victim.hp <= 0.001) retire(race, victim, att, track);
   else if (attackIdx === ATK.MF_SNARE && !blocked && !unstoppable) {
     victim.snareT = ticks(rules.snareSecs);
     victim.boosting = false;
     race.events.push({ type: 'snared', mech: victim.id, by: att.id });
+    onSnare(race, att, victim);
   }
   return true;
 }

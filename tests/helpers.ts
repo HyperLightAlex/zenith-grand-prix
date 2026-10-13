@@ -131,6 +131,8 @@ export function stateHash(race: RaceState): string {
  * "covers every numeric field" test in determinism.test.ts fails if a field
  * is ever added to the state and not to this list.
  */
+const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
+
 function mechSum(m: MechState): number {
   const ai = m.ai;
   return (
@@ -141,7 +143,9 @@ function mechSum(m: MechState): number {
     m.act + m.actT + m.actDur + m.attack + m.attackStart + m.guardT + m.guardIdle + m.guardRest +
     m.iframes + m.chain + m.chainT + m.chainTick + m.cdPrimary + m.cdSecondary + m.cdDash +
     m.cells + m.gateMask + m.cdAbility + m.overdriveT + m.ramT + m.ramHits + m.shieldT + m.snareT + m.cloakT +
-    m.tow + m.momentum + m.wall +
+    m.tow + m.momentum + m.wall + m.towBy + m.towByTick +
+    m.maxHp + m.carveDir + m.carveCharge + m.carveTier + m.carveT + m.carveBoost + m.airT +
+    m.support + m.pressure + m.aegisSaved + m.shieldBy + sum(m.awardPts) + sum(m.awardTick) + sum(m.hurtBy) +
     m.lap + m.finishTime + m.retireTick + m.place + m.points +
     m.prevButtons + m.prevCmd + m.prevThrottle + m.throttleTick + m.throttleRest +
     m.lastHitBy + m.lastHitTick + m.deniedTick + m.dmgDealt + m.dmgTaken + m.kos +
@@ -158,7 +162,7 @@ function mechSum(m: MechState): number {
  * itself.
  */
 export function findNonFinite(race: RaceState): string | null {
-  if (!Number.isFinite(race.tick + race.phase + race.rng + race.laps + race.leaderS + race.lapPhase + race.firstFinishTick + race.endTick + race.nextProjId)) {
+  if (!Number.isFinite(race.tick + race.phase + race.rng + race.laps + race.leaderS + race.lapPhase + race.firstFinishTick + race.endTick + race.nextProjId + sum(race.gateDark))) {
     return `race header (tick ${race.tick})`;
   }
   // The rules are part of the state (and the tuning panel writes to them
@@ -288,9 +292,11 @@ export class Arena {
    * mechanism can pin (or switch off) the others. Momentum is off unless a
    * test asks for it: on stage mechs sit in each other's slipstream, which
    * would quietly turn the first blow of most tests into a momentum strike.
+   * The Drive trickle on the formation lap and the Drive for a close pass are
+   * off too, so a gauge only moves for the reason a test is about.
    */
   constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1, rules?: Partial<Rules>) {
-    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules: { momentumSecs: 0, ...rules } });
+    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules: { momentumSecs: 0, lap1Trickle: 0, drivePass: 0, ...rules } });
     this.inputs = this.race.mechs.map(() => emptyInput());
     runCountdown(this.race, this.inputs);
     this.base = (lapPhase - 1) * TRACK.length;

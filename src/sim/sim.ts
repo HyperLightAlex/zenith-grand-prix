@@ -77,13 +77,30 @@ import {
   RINGOUT_DRIVE,
   RINGOUT_STAGGER,
   MOMENTUM_TOW,
+  CARVE_BEND_MAX,
+  CARVE_BEND_MIN,
+  CARVE_BEND_RADIUS,
+  CARVE_BURST,
+  CARVE_BURST_SECS,
+  CARVE_FULL_SPEED,
+  CARVE_HOLD_STEER,
+  CARVE_HOLD_TRIGGER,
+  CARVE_MIN_SPEED,
+  CARVE_MIN_STEER,
+  CARVE_TIERS,
+  CARVE_TRIGGER,
+  CARVE_TURN,
+  LANDING_AIR_TICKS,
+  PASS_WIDTH,
   type ClassDef,
   type Tactic,
 } from './config';
+import { freshAwardTicks, freshHurtBy, onPass, onRingout } from './awards';
 import {
   addVelocity,
   classOf,
   clearEffects,
+  dropCarve,
   cycleTarget,
   distance,
   inPlay,
@@ -99,7 +116,7 @@ import {
   towBonus,
 } from './core';
 import { approach, approachAngle, clamp, lerp, rngNext, wrapAngle } from './math';
-import { makeRules } from './rules';
+import { makeRules, ticks } from './rules';
 import { deltaS, gateCrossed, gripAt, hwAt, kappaAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
 import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceState } from './types';
 
@@ -124,6 +141,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
     firstFinishTick: -1,
     endTick: -1,
     events: [],
+    gateDark: track.gates.map(() => 0),
   };
   cfg.seats.forEach((seat, id) => {
     const c = CLASSES[seat.role];
@@ -160,7 +178,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       mode: MODE.SPEED,
       target: -1,
       outOfRange: 0,
-      hp: c.maxHp,
+      hp: c.maxHp * race.rules.armourScale,
+      maxHp: c.maxHp * race.rules.armourScale,
       guard: c.guardMax,
       drive: clamp(race.rules.driveStart, 0, DRIVE_MAX),
       act: ACT.NONE,
@@ -191,10 +210,19 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       shieldT: 0,
       snareT: 0,
       cloakT: 0,
+      carving: false,
+      carveDir: 0,
+      carveCharge: 0,
+      carveTier: 0,
+      carveT: 0,
+      carveBoost: 0,
+      airT: 0,
       boosting: false,
       onStrip: false,
       drafting: false,
       tow: 0,
+      towBy: -1,
+      towByTick: -9999,
       momentum: 0,
       linked: false,
       wall: 0,
@@ -216,6 +244,14 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       dmgDealt: 0,
       dmgTaken: 0,
       kos: 0,
+      support: 0,
+      awardPts: new Array(11).fill(0),
+      awardTick: freshAwardTicks(),
+      hurtBy: freshHurtBy(),
+      pressure: 0,
+      aegisSaved: 0,
+      aegisPaid: true,
+      shieldBy: -1,
       ai: {
         intent: 0,
         intentTarget: -1,
@@ -259,9 +295,63 @@ function battleCap(race: RaceState, m: MechState, c: ClassDef, targetAhead: bool
 // Movement
 // --------------------------------------------------------------------------
 
+/** Let go of a carve: whatever tier its charge reached pays out as a burst. */
+function releaseCarve(race: RaceState, m: MechState): void {
+  const tier = m.carveTier;
+  if (tier > 0) {
+    m.carveT = ticks(CARVE_BURST_SECS[tier - 1]);
+    m.carveBoost = CARVE_BURST[tier - 1] * race.rules.carveBurst;
+    race.events.push({ type: 'carveBurst', mech: m.id, tier });
+  }
+  dropCarve(m);
+}
+
+/**
+ * Carving: the brake trigger held with the stick over. It starts with the
+ * trigger past CARVE_TRIGGER and the stick past CARVE_MIN_STEER (less stick
+ * than that and the trigger is a brake), holds while both stay on and the
+ * stick stays the same way, and ends with a burst for the tier reached. A
+ * stagger ends it with nothing; so does the end of the race.
+ */
+function stepCarve(race: RaceState, m: MechState, input: MechInput): void {
+  const mx = clamp(input.mx, -1, 1);
+  const trig = clamp(input.brake, 0, 1);
+  const knocked = m.act === ACT.STAGGER || m.finished;
+  if (m.carving) {
+    if (knocked) dropCarve(m);
+    else if (trig < CARVE_HOLD_TRIGGER || mx * m.carveDir < CARVE_HOLD_STEER || m.speed < CARVE_MIN_SPEED * 0.75) releaseCarve(race, m);
+  } else if (!knocked && !m.air && trig >= CARVE_TRIGGER && Math.abs(mx) >= CARVE_MIN_STEER && m.speed >= CARVE_MIN_SPEED) {
+    m.carving = true;
+    m.carveDir = mx > 0 ? 1 : -1;
+    m.carveCharge = 0;
+    m.carveTier = 0;
+  }
+  // Scraping the barrier takes the charge (the carve itself goes on).
+  if (m.carving && m.wall > 0) {
+    m.carveCharge = 0;
+    m.carveTier = 0;
+  }
+}
+
+/** Charge a carve: harder with more stick, a tighter bend and more speed. A straight hardly charges at all. */
+function chargeCarve(race: RaceState, track: Track, m: MechState, input: MechInput): void {
+  if (!m.carving || m.air) return;
+  const kappa = kappaAt(track, m.s);
+  const bend = kappa * m.carveDir > 0 ? clamp(CARVE_BEND_RADIUS * Math.abs(kappa), CARVE_BEND_MIN, CARVE_BEND_MAX) : CARVE_BEND_MIN;
+  const rate = Math.abs(clamp(input.mx, -1, 1)) * bend * Math.min(1, m.speed / CARVE_FULL_SPEED) * race.rules.carveCharge;
+  m.carveCharge += rate * DT;
+  let tier = 0;
+  for (let i = 0; i < CARVE_TIERS.length; i++) if (m.carveCharge >= CARVE_TIERS[i]) tier = i + 1;
+  if (tier > m.carveTier) {
+    m.carveTier = tier;
+    race.events.push({ type: 'carve', mech: m.id, tier });
+  }
+}
+
 function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef, input: MechInput): void {
   const staggered = m.act === ACT.STAGGER;
   m.steer = approach(m.steer, staggered ? 0 : clamp(input.mx, -1, 1), STEER_RATE * DT);
+  stepCarve(race, m, input);
 
   let cap = speedCap(race, m, c);
   const wasBoosting = m.boosting;
@@ -283,20 +373,29 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // A speed pad pushes harder still for a moment.
   const padded = m.padT > 0;
   if (padded) cap *= PAD_MULT;
+  // ...and so does a carve's burst.
+  const burst = m.carveT > 0;
+  if (burst) {
+    cap *= 1 + m.carveBoost;
+    m.carveT--;
+  }
 
   // A stagger takes the stick and the boost away, not the pace.
   const throttle = staggered ? Math.min(clamp(input.throttle, 0, 1), STAGGER_THROTTLE) : clamp(input.throttle, 0, 1);
-  const brake = staggered ? 0 : clamp(input.brake, 0, 1);
+  // The trigger brakes unless it is carving.
+  const brake = staggered || m.carving ? 0 : clamp(input.brake, 0, 1);
   const want = cap * throttle;
   if (m.speed < want) {
     // Acceleration tails off toward the cap.
     const room = clamp(1.2 - m.speed / cap, 0.18, 1);
-    m.speed = Math.min(want, m.speed + c.accel * (overdrive ? OVERDRIVE_ACCEL : m.boosting || padded ? BOOST_ACCEL : 1) * room * DT);
+    m.speed = Math.min(want, m.speed + c.accel * (overdrive ? OVERDRIVE_ACCEL : m.boosting || padded || burst ? BOOST_ACCEL : 1) * room * DT);
   } else if (m.speed > want) {
     const drag = COAST_DRAG + (m.speed > cap ? OVERCAP_DRAG : 0);
     m.speed = Math.max(want, m.speed - drag * DT);
   }
   if (brake > 0) m.speed -= brake * c.brake * DT;
+  // A carve bleeds a little speed, more the harder it is held over.
+  if (m.carving && !m.air) m.speed -= race.rules.carveDrag * (0.4 + 0.6 * Math.abs(clamp(input.mx, -1, 1))) * DT;
   if (staggered) m.speed -= STAGGER_DRAG * DT;
   if (m.speed < 0) m.speed = 0;
   // Whatever threw the mech forward (a dash carried out of a lock, a shove),
@@ -305,14 +404,17 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
 
   // Steering fights the bend of the road: hold a line or run wide. A turn
   // banked toward its inside grips harder; in the air there is little grip at all.
-  const grip = c.grip * gripAt(track, m.s);
-  const omegaMax = Math.min(c.turnMax, grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
+  // Carving digs the skates in: far more grip, and a tighter turn.
+  const carving = m.carving && !m.air;
+  const grip = c.grip * gripAt(track, m.s) * (carving ? race.rules.carveGrip : 1);
+  const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
   const kappa = kappaAt(track, m.s);
   const sdot = (m.speed * Math.cos(m.heading)) / Math.max(0.35, 1 - kappa * m.d);
   const align = -m.heading * ALIGN_RATE * (1 - Math.abs(m.steer));
   m.heading = clamp(m.heading + (m.steer * omegaMax - kappa * sdot + align) * DT, -MAX_HEADING, MAX_HEADING);
   m.facing = m.heading;
   syncFromSpeed(m);
+  chargeCarve(race, track, m, input);
 }
 
 function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef, input: MechInput): void {
@@ -325,6 +427,9 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
   m.facing = approachAngle(m.facing, Math.atan2(ud, us), FACE_RATE * DT);
   m.steer = approach(m.steer, 0, STEER_RATE * DT);
   m.boosting = false;
+  // Locked on, there is no carving, and a burst is spent.
+  if (m.carving) dropCarve(m);
+  m.carveT = 0;
   const limiter = limiterOf(race);
   const floor = limiter * BATTLE_MIN_FRAC;
   const move = race.rules.battleMove;
@@ -434,6 +539,7 @@ function stepAir(race: RaceState, track: Track, m: MechState): void {
     if (!on || (!magAt(track, m.s) && GRAVITY * upYAt(track, m.s) + kvAt(track, m.s) * m.vs * m.vs < 0)) {
       m.air = true;
       m.vh = 0;
+      m.airT = 0;
       race.events.push({ type: 'airborne', mech: m.id });
     } else {
       return;
@@ -444,6 +550,7 @@ function stepAir(race: RaceState, track: Track, m: MechState): void {
   const pull = magAt(track, m.s) ? -MAG_PULL : -GRAVITY * upYAt(track, m.s) - kvAt(track, m.s) * m.vs * m.vs;
   m.vh += pull * DT;
   m.h += m.vh * DT;
+  m.airT++;
   if (m.h > 0) return;
   if (on) {
     const hit = -m.vh;
@@ -453,6 +560,9 @@ function stepAir(race: RaceState, track: Track, m: MechState): void {
     if (hit > HARD_LANDING && m.mode === MODE.SPEED) {
       m.speed *= 1 - Math.min(0.12, (hit - HARD_LANDING) * 0.004);
       syncFromSpeed(m);
+    } else if (m.airT >= LANDING_AIR_TICKS && race.phase === PHASE.RACING) {
+      // A real jump, landed clean: a little Drive for it.
+      m.drive = Math.min(DRIVE_MAX, m.drive + race.rules.driveLanding);
     }
     race.events.push({ type: 'land', mech: m.id, intensity: hit });
   } else if (m.h < -FALL_DEPTH) {
@@ -482,6 +592,7 @@ function startFall(race: RaceState, track: Track, m: MechState): void {
   m.dmgTaken += dmg;
   if (by) by.dmgDealt += dmg;
   race.events.push({ type: 'fall', mech: m.id, by: by ? by.id : -1, damage: dmg });
+  onRingout(race, by, m);
   if (m.hp <= 0.001) retire(race, m, by, track);
 }
 
@@ -568,6 +679,7 @@ function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): vo
             by.drive = Math.min(DRIVE_MAX, by.drive + RINGOUT_DRIVE);
           }
           race.events.push({ type: 'splat', mech: m.id, by: by ? by.id : -1, damage: dmg, intensity: into, s: m.s, side, face });
+          onRingout(race, by, m);
           if (m.hp <= 0.001) retire(race, m, by, track);
           else bounce = RINGOUT_BOUNCE;
         }
@@ -750,6 +862,7 @@ function handleCommand(race: RaceState, m: MechState, cmd: number): void {
 // --------------------------------------------------------------------------
 
 const order: MechState[] = [];
+const gateOrder: MechState[] = [];
 
 /** Current running order. Finishers first, then by distance, wrecks last. */
 export function updatePlaces(race: RaceState): void {
@@ -778,7 +891,7 @@ export function koBonus(race: RaceState, m: MechState): number {
 
 export function teamPoints(race: RaceState, team: number): number {
   let sum = 0;
-  for (const m of race.mechs) if (m.team === team) sum += pointsFor(m) + koBonus(race, m);
+  for (const m of race.mechs) if (m.team === team) sum += pointsFor(m) + koBonus(race, m) + m.support;
   return sum;
 }
 
@@ -799,7 +912,7 @@ function finalize(race: RaceState): void {
     }
   }
   updatePlaces(race);
-  for (const m of race.mechs) m.points = pointsFor(m) + koBonus(race, m);
+  for (const m of race.mechs) m.points = pointsFor(m) + koBonus(race, m) + m.support;
   race.phase = PHASE.FINISHED;
   race.projectiles.length = 0;
   race.events.push({ type: 'raceEnd' });
@@ -928,7 +1041,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     else stepSpeedMode(race, track, m, c, controls[m.id]);
     // Momentum: racing hard (a boost, an Overdrive, a charged slipstream, a
     // speed pad) primes the next attack for a moment. A fight only spends it.
-    if (isActive(m) && m.mode === MODE.SPEED && m.act !== ACT.STAGGER && (m.boosting || m.overdriveT > 0 || m.padT > 0 || m.tow >= MOMENTUM_TOW)) {
+    if (isActive(m) && m.mode === MODE.SPEED && m.act !== ACT.STAGGER && (m.boosting || m.overdriveT > 0 || m.padT > 0 || m.carveT > 0 || m.tow >= MOMENTUM_TOW)) {
       m.momentum = Math.round(race.rules.momentumSecs * TICK_RATE);
     } else if (m.momentum > 0) {
       m.momentum--;
@@ -986,18 +1099,27 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   // laps as the rules say (the whole race by default), each gate once a lap,
   // and a full mech takes nothing.
   if (race.phase === PHASE.RACING && track.gates.length > 0) {
-    for (const m of ms) {
+    // Contested: the first mech through takes the gate and it goes dark for a
+    // few seconds. Two through on the same tick, the one in front has it. A
+    // mech already full takes nothing and leaves the gate lit.
+    gateOrder.length = 0;
+    for (const m of ms) gateOrder.push(m);
+    gateOrder.sort((a, b) => b.s - a.s || a.id - b.id);
+    for (const m of gateOrder) {
       if (!inPlay(m) || m.lap >= race.rules.gateLaps || m.cells >= race.rules.cellMax) continue;
+      let skip = m.gateMask;
+      for (let g = 0; g < track.gates.length; g++) if (race.gateDark[g] > tick) skip |= 1 << g;
       // The line has to be behind the mech when the tick ends. The opening is
       // judged on where it ended up, or on where it was when it crossed under
       // its own power, so contact cannot take a gate away.
-      let g = gateCrossed(track, startS[m.id], m.s, m.d, m.gateMask);
-      if (g < 0) g = gateCrossed(track, startS[m.id], Math.min(movedS[m.id], m.s), movedD[m.id], m.gateMask);
+      let g = gateCrossed(track, startS[m.id], m.s, m.d, skip);
+      if (g < 0) g = gateCrossed(track, startS[m.id], Math.min(movedS[m.id], m.s), movedD[m.id], skip);
       if (g < 0) continue;
       const worth = m.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
       if (worth <= 0) continue;
       m.gateMask |= 1 << g;
       m.cells = Math.min(race.rules.cellMax, m.cells + worth);
+      if (race.rules.gateRelight > 0) race.gateDark[g] = tick + ticks(race.rules.gateRelight);
       race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
     }
   }
@@ -1036,7 +1158,13 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
         if (ahead < DRAFT_MIN || ahead > towRange || Math.abs(o.d - m.d) >= DRAFT_WIDTH) continue;
         if (splitApart(track, m.s, m.d, o.s, o.d)) continue;
         m.drafting = true;
-        strength = Math.max(strength, ahead <= towNear ? 1 : lerp(1, TOW_FAR, (ahead - towNear) / (towRange - towNear)));
+        const st = ahead <= towNear ? 1 : lerp(1, TOW_FAR, (ahead - towNear) / (towRange - towNear));
+        if (st > strength) {
+          strength = st;
+          // Whose tow it is: a teammate's pays a Lead-out if the pass comes.
+          m.towBy = o.id;
+          m.towByTick = tick;
+        }
       }
     }
     if (m.tow < strength) m.tow = Math.min(strength, m.tow + DT / Math.max(0.05, rules.towBuild));
@@ -1059,7 +1187,19 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     }
   }
   if (race.phase === PHASE.RACING) {
-    // On the formation lap Drive comes from the charge strips and nowhere else.
+    // Close passes: a little Drive for going past someone close enough to touch.
+    for (const m of ms) {
+      if (!inPlay(m) || m.speed < 50) continue;
+      for (const o of ms) {
+        if (o === m || !inPlay(o)) continue;
+        if (startS[m.id] - startS[o.id] >= 0 || m.s - o.s < 0 || Math.abs(m.d - o.d) >= PASS_WIDTH) continue;
+        if (splitApart(track, m.s, m.d, o.s, o.d)) continue;
+        m.drive = Math.min(DRIVE_MAX, m.drive + rules.drivePass);
+        race.events.push({ type: 'pass', mech: m.id, other: o.id });
+        onPass(race, m, o);
+      }
+    }
+    // On the formation lap Drive comes from the charge strips (and, by rule, the trickle).
     const lap1 = race.lapPhase <= 1;
     const trickle = lap1 && rules.lap1Trickle < 0.5 ? 0 : 1;
     const strip = lap1 ? rules.driveStripLap1 : rules.driveStrip;

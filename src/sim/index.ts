@@ -6,6 +6,7 @@ export * from './track';
 export * from './circuit';
 export * from './core';
 export { abilityFor, weaponsFree } from './combat';
+export { award, AWARD_SLOTS } from './awards';
 export { createRace, stepRace, updatePlaces, pointsFor, koBonus, teamPoints, setTactic } from './sim';
 export * from './match';
 export { MERIDIAN, CANYON, HELIOS, TRACKS, trackById, type AnyTrackDef } from './tracks/index';

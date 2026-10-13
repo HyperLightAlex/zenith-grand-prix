@@ -24,10 +24,11 @@ export const DEFAULT_MATCH: Readonly<MatchConfig> = Object.freeze({ mode: 'serie
 
 export interface RoundResult {
   round: number;
-  /** Round points per team: placing points plus knockout points. */
+  /** Round points per team: placing points, knockout points and support points. */
   points: [number, number];
   place: [number, number];
   ko: [number, number];
+  support: [number, number];
   /** Team of the mech classified first. */
   first: number;
   /** The points were level and the round was settled on who came home first. */
@@ -62,16 +63,18 @@ export function roundsToWin(cfg: MatchConfig): number {
 export function scoreRound(race: RaceState, round = 1): RoundResult {
   const place: [number, number] = [0, 0];
   const ko: [number, number] = [0, 0];
+  const support: [number, number] = [0, 0];
   let first = 0;
   for (const m of race.mechs) {
     place[m.team] += pointsFor(m);
     ko[m.team] += koBonus(race, m);
+    support[m.team] += m.support;
     if (m.place === 1) first = m.team;
   }
-  const points: [number, number] = [place[0] + ko[0], place[1] + ko[1]];
+  const points: [number, number] = [place[0] + ko[0] + support[0], place[1] + ko[1] + support[1]];
   const tied = points[0] === points[1];
   const winner = tied ? first : points[0] > points[1] ? 0 : 1;
-  return { round, points, place, ko, first, tied, winner };
+  return { round, points, place, ko, support, first, tied, winner };
 }
 
 /**

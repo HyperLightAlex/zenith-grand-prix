@@ -20,6 +20,8 @@ export interface Rules {
   boostMult: number;
   /** Lap 3 top speed with no armour left, as a share of the full figure. */
   armourFloor: number;
+  /** Multiplies every frame's armour. */
+  armourScale: number;
 
   // --- slipstream
   /** Extra top speed at full tow on laps 1 and 2. */
@@ -46,6 +48,20 @@ export interface Rules {
   driveDraft: number;
   /** 1 = the formation lap also gives the passive and slipstream trickle. */
   lap1Trickle: number;
+  /** For landing a jump cleanly (not a hard landing) after real air time. */
+  driveLanding: number;
+  /** For passing a mech close enough to touch. */
+  drivePass: number;
+
+  // --- carving
+  /** Grip while carving, as a multiple of the frame's own. */
+  carveGrip: number;
+  /** Speed lost per second while carving at full lock, u/s. */
+  carveDrag: number;
+  /** Scales how fast a carve charges. */
+  carveCharge: number;
+  /** Scales the burst each tier pays out. */
+  carveBurst: number;
 
   // --- lock-on and fighting
   /** Scales how fast a mech moves around the thing it is locked on to. */
@@ -70,6 +86,8 @@ export interface Rules {
   gateValueLater: number;
   /** Gates are lit for this many laps from the start. 3 is the whole race. */
   gateLaps: number;
+  /** Seconds a gate stays dark after someone takes it. */
+  gateRelight: number;
 
   // --- abilities (each costs one cell)
   overdriveMult: number;
@@ -91,14 +109,23 @@ export interface Rules {
   // --- scoring
   /** Points to the team for each knockout it is credited with. */
   koPoints: number;
+  /** Most support points (assists, peels, saves...) one pilot can earn in a race. */
+  supportCap: number;
+  /** Seconds before the same support action can score again against the same rival. */
+  awardCooldown: number;
+  /** Damage to the rival forward that earns a Vector one Pressure point. */
+  pressureDamage: number;
+  /** Seconds before a knockout that damage still counts as an assist. */
+  assistSecs: number;
 }
 
 export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   limiter1: 110,
   limiter2: 125,
   topScale: 1,
-  boostMult: 1.2,
+  boostMult: 1.25,
   armourFloor: 0.94,
+  armourScale: 1,
 
   tow: 0.04,
   tow3: 0.08,
@@ -110,9 +137,16 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   driveStart: 0,
   drivePassive: 0.8,
   driveStrip: 10,
-  driveStripLap1: 6,
+  driveStripLap1: 10,
   driveDraft: 3,
-  lap1Trickle: 0,
+  lap1Trickle: 1,
+  driveLanding: 6,
+  drivePass: 4,
+
+  carveGrip: 1.65,
+  carveDrag: 10,
+  carveCharge: 1,
+  carveBurst: 1,
 
   battleMove: 1.6,
   momentumSecs: 0.75,
@@ -123,9 +157,10 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
 
   cellMax: 3,
   cellStart: 0,
-  gateValue: 0.5,
-  gateValueLater: 0.5,
+  gateValue: 1,
+  gateValueLater: 1,
   gateLaps: 3,
+  gateRelight: 4,
 
   overdriveMult: 1.3,
   overdriveSecs: 4,
@@ -142,6 +177,10 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   aegisDamage: 0.35,
 
   koPoints: 3,
+  supportCap: 10,
+  awardCooldown: 3,
+  pressureDamage: 200,
+  assistSecs: 5,
 });
 
 export type RuleKey = keyof Rules;
@@ -158,6 +197,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   topScale: [0.25, 3],
   boostMult: [1, 3],
   armourFloor: [0.2, 1],
+  armourScale: [0.1, 5],
 
   tow: [0, 1],
   tow3: [0, 1],
@@ -172,6 +212,13 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   driveStripLap1: [0, 1000],
   driveDraft: [0, 100],
   lap1Trickle: [0, 1],
+  driveLanding: [0, 100],
+  drivePass: [0, 100],
+
+  carveGrip: [1, 4],
+  carveDrag: [0, 200],
+  carveCharge: [0, 10],
+  carveBurst: [0, 5],
 
   battleMove: [0.1, 5],
   momentumSecs: [0, 10],
@@ -185,6 +232,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   gateValue: [0, 6],
   gateValueLater: [0, 6],
   gateLaps: [0, 99],
+  gateRelight: [0, 120],
 
   overdriveMult: [1, 3],
   overdriveSecs: [0, 60],
@@ -201,6 +249,10 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   aegisDamage: [0, 1],
 
   koPoints: [0, 100],
+  supportCap: [0, 100],
+  awardCooldown: [0, 60],
+  pressureDamage: [1, 100000],
+  assistSecs: [0, 60],
 });
 
 /** One rule value, held to its range. Not a finite number: the default. */

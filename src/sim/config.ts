@@ -9,6 +9,24 @@ export const LAPS = 3;
 export const POINTS = [15, 7, 5, 3, 2, 1];
 
 /**
+ * Support actions that score for the team (awards.ts). Each pilot's total is
+ * capped per race (rules.supportCap); most can score only once every few
+ * seconds against the same rival (rules.awardCooldown).
+ */
+export const AWARD = { ASSIST: 0, SNARE: 1, INTERRUPT: 2, PRESSURE: 3, BACKUP: 4, PEEL: 5, SAVE: 6, BODYGUARD: 7, AEGIS: 8, RINGOUT: 9, LEADOUT: 10 } as const;
+export type Award = (typeof AWARD)[keyof typeof AWARD];
+export const AWARD_COUNT = 11;
+export const AWARD_NAMES = ['Assist', 'Snare', 'Interrupt', 'Pressure', 'Back-up', 'Peel', 'Save', 'Bodyguard', 'Aegis', 'Ring-out', 'Lead-out'] as const;
+/** Points for each award. A Snare or a ring-out on the rival forward is worth one more. */
+export const AWARD_POINTS = [2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 2] as const;
+/** Bodyguard: a block or a parry within this distance of your own forward. */
+export const BODYGUARD_RANGE = 30;
+/** Aegis: damage the shield must keep off teammates (caster included) for the award. */
+export const AEGIS_SAVED = 150;
+/** Lead-out: the forward makes its pass within this many ticks of leaving a teammate's tow. */
+export const LEADOUT_TICKS = 150;
+
+/**
  * Reference pace: the default formation-lap limiter. The live limiters are
  * rules (race.rules.limiter1 and limiter2); this is for presentation code
  * that needs a "normal racing speed" to scale against.
@@ -131,6 +149,42 @@ export const RECOVER_IFRAMES = 60;
 export const MAG_PULL = 220;
 /** A landing harder than this (u/s straight down) costs a little speed. */
 export const HARD_LANDING = 22;
+/** Air time (ticks) a landing needs before it can earn Drive. */
+export const LANDING_AIR_TICKS = 20;
+/** Two mechs this close across the road when one passes the other: a close pass. */
+export const PASS_WIDTH = 10;
+
+// ---- Carving ---------------------------------------------------------------
+// Hold the brake trigger while steering: more grip, a little speed bled, and
+// charge for a burst on release. How much grip and drag, and scales on the
+// charge and the burst, are rules; the shape is here.
+/** Trigger needed to start a carve, and to keep one going. */
+export const CARVE_TRIGGER = 0.5;
+export const CARVE_HOLD_TRIGGER = 0.3;
+/** Stick needed to start a carve (below it the trigger brakes), and to keep one going. */
+export const CARVE_MIN_STEER = 0.35;
+export const CARVE_HOLD_STEER = 0.1;
+/** Too slow to carve: below this the trigger brakes. */
+export const CARVE_MIN_SPEED = 40;
+/** Turn rate ceiling while carving, as a multiple of the frame's own. */
+export const CARVE_TURN = 1.35;
+/** Seconds of full charge for each tier (a hard carve through a bend this tight charges at 1 a second). */
+export const CARVE_TIERS = [0.5, 1.1, 1.8] as const;
+/** Burst for each tier: extra top speed, and seconds it lasts. */
+export const CARVE_BURST = [0.15, 0.25, 0.35] as const;
+export const CARVE_BURST_SECS = [0.5, 0.8, 1.1] as const;
+/**
+ * How the bend sets the charge rate: a carve with the bend charges at
+ * (CARVE_BEND_RADIUS / radius), held to [CARVE_BEND_MIN, CARVE_BEND_MAX]; a
+ * straight, or a carve against the bend, at CARVE_BEND_MIN. Weaving down a
+ * straight earns next to nothing.
+ */
+export const CARVE_BEND_RADIUS = 250;
+export const CARVE_BEND_MIN = 0.15;
+export const CARVE_BEND_MAX = 1.6;
+/** Speed (u/s) at which the charge rate stops growing with speed. */
+export const CARVE_FULL_SPEED = 100;
+
 /** Speed pads: ticks of extra top speed, and how much. */
 export const PAD_TICKS = 60;
 export const PAD_MULT = 1.18;
@@ -381,7 +435,7 @@ export const CLASSES: ClassDef[] = [
   {
     role: ROLE.FW, frame: 'Swift',
     blurb: 'Lightest and fastest. Wins the sprint if it survives the fight.',
-    maxHp: 1800, radius: 3.0, mass: 0.8,
+    maxHp: 1600, radius: 3.0, mass: 0.8,
     topSpeed: 160, accel: 45, brake: 90, grip: 100, turnMax: 2.2,
     battleAccel: 80, strafe: 30, approach: 34,
     guardMax: 80, guardRegen: 18, dash: 78, dashCost: 10, dashIframes: 13,
@@ -391,7 +445,7 @@ export const CLASSES: ClassDef[] = [
   {
     role: ROLE.MF, frame: 'Vector',
     blurb: 'Balanced all-rounder. Controls space with carbine fire.',
-    maxHp: 1800, radius: 3.4, mass: 1.0,
+    maxHp: 1600, radius: 3.4, mass: 1.0,
     topSpeed: 152.5, accel: 40, brake: 90, grip: 90, turnMax: 2.0,
     battleAccel: 68, strafe: 26, approach: 30,
     guardMax: 100, guardRegen: 18, dash: 68, dashCost: 15, dashIframes: 10,
@@ -401,7 +455,7 @@ export const CLASSES: ClassDef[] = [
   {
     role: ROLE.DF, frame: 'Bulwark',
     blurb: 'Heavy bruiser. Breaks guards and shrugs off light hits.',
-    maxHp: 2200, radius: 4.0, mass: 1.45,
+    maxHp: 2000, radius: 4.0, mass: 1.45,
     topSpeed: 145, accel: 35, brake: 90, grip: 80, turnMax: 1.8,
     battleAccel: 56, strafe: 22, approach: 26,
     guardMax: 130, guardRegen: 20, dash: 58, dashCost: 18, dashIframes: 8,

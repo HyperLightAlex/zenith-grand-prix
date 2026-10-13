@@ -68,6 +68,8 @@ interface Summary {
   koEvents: number;
   koCredited: number;
   points: number[];
+  /** Support points each mech earned (inside m.points). */
+  support: number[];
   places: number[];
   retired: boolean[];
   finishedFlags: boolean[];
@@ -134,6 +136,7 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
     koEvents: 0,
     koCredited: 0,
     points: [],
+    support: [],
     places: [],
     retired: [],
     finishedFlags: [],
@@ -293,6 +296,7 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
   for (const [id, place] of announced) if (race.mechs[id].place !== place) sum.staleFinish++;
   for (const m of race.mechs) {
     sum.points.push(m.points);
+    sum.support.push(m.support);
     sum.places.push(m.place);
     sum.retired.push(m.retired);
     sum.finishedFlags.push(m.finished);
@@ -421,13 +425,15 @@ describe(`${RACES} all-AI races`, () => {
     expect(avg).toBeLessThan(84.5);
   });
 
-  it('points are handed out correctly: 15-7-5-3-2-1 down the classified runners, 0 for wrecks, plus 3 per knock-out scored', () => {
+  it('points are handed out correctly: 15-7-5-3-2-1 down the classified runners, 0 for wrecks, plus 3 per knock-out scored, plus support points', () => {
     each((s) => {
       const classified = s.retired.filter((r) => !r).length;
       expect([...s.places].sort()).toEqual([1, 2, 3, 4, 5, 6]);
       for (let id = 0; id < 6; id++) {
-        // A wreck keeps the bonus for any knock-out it scored before it went.
-        const bonus = s.kos[id] * RULES.koPoints;
+        // A wreck keeps the bonus for any knock-out it scored before it went, and its support points.
+        expect(s.support[id]).toBeGreaterThanOrEqual(0);
+        expect(s.support[id]).toBeLessThanOrEqual(RULES.supportCap);
+        const bonus = s.kos[id] * RULES.koPoints + s.support[id];
         if (s.retired[id]) {
           expect(s.points[id]).toBe(bonus);
           expect(s.places[id]).toBeGreaterThan(classified);
@@ -441,7 +447,7 @@ describe(`${RACES} all-AI races`, () => {
         }
       }
       const total = s.points.reduce((a, b) => a + b, 0);
-      expect(total).toBe(POINTS.slice(0, classified).reduce((a, b) => a + b, 0) + s.koCredited * RULES.koPoints);
+      expect(total).toBe(POINTS.slice(0, classified).reduce((a, b) => a + b, 0) + s.koCredited * RULES.koPoints + s.support.reduce((a, b) => a + b, 0));
       const t0 = s.points.filter((_, id) => s.team[id] === 0).reduce((a, b) => a + b, 0);
       const t1 = s.points.filter((_, id) => s.team[id] === 1).reduce((a, b) => a + b, 0);
       expect(t0 + t1).toBe(total);
@@ -559,14 +565,15 @@ describe(`${RACES} all-AI races`, () => {
       // Somebody in every race has at least one whole Cell to spend.
       expect(Math.max(...s.cellsAtLap2)).toBeGreaterThanOrEqual(1);
     });
-    // About 1.5 Cells per mech across the batch (measured: 1.44), i.e. about
-    // three of the six gates each.
+    // The gates are contested: the pack is together on lap 1 and a gate goes
+    // dark once taken, so the field shares about six Cells, one a mech on
+    // average (measured: 0.96), but not evenly.
     const perMech = mean(results.map((s) => mean(s.cellsAtLap2)));
-    expect(perMech).toBeGreaterThan(1.0);
-    expect(perMech).toBeLessThan(2.0);
+    expect(perMech).toBeGreaterThan(0.7);
+    expect(perMech).toBeLessThanOrEqual(TRACK.gates.length / 6);
     const gatesPerMech = mean(results.map((s) => mean(s.gatesLap1)));
-    expect(gatesPerMech).toBeGreaterThan(2.0);
-    expect(gatesPerMech).toBeLessThan(4.0);
+    expect(gatesPerMech).toBeGreaterThan(0.7);
+    expect(gatesPerMech).toBeLessThanOrEqual(TRACK.gates.length / 6);
     // Nobody has had a chance to spend one yet, so Cells held = gates x value.
     expect(perMech).toBeCloseTo(gatesPerMech * RULES.gateValue, 1);
   });

@@ -212,15 +212,17 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     const ws = wrapS(track, m.s);
     let found = false;
     // A Cell gate this pilot means to take. The formation lap is for filling
-    // up; after it a detour is only worth it to a pilot with no charge left.
+    // up; after it a detour is only worth it to a pilot running short.
     const gateWorth = m.lap <= 0 ? rules.gateValue : rules.gateValueLater;
-    if (m.lap < rules.gateLaps && gateWorth > 0 && m.cells < (m.lap <= 0 ? rules.cellMax : Math.min(1, rules.cellMax))) {
+    if (m.lap < rules.gateLaps && gateWorth > 0 && m.cells < (m.lap <= 0 ? rules.cellMax : Math.min(2, rules.cellMax))) {
       let nearest = 320;
       for (let g = 0; g < track.gates.length; g++) {
         const bit = 1 << g;
         if ((ai.gates & bit) === 0 || (m.gateMask & bit) !== 0) continue;
         let ahead = track.gates[g].s - ws;
         if (ahead < -4) ahead += track.length;
+        // Someone has just taken it: only worth lining up if it will be lit again by the time we get there.
+        if (race.gateDark[g] > tick + (Math.max(0, ahead) / Math.max(m.speed, 50)) * 60) continue;
         if (ahead < nearest) {
           nearest = ahead;
           dWant = track.gates[g].d;

@@ -215,7 +215,8 @@ describe('countdown', () => {
 describe('perfect launch', () => {
   /** Run the countdown with the forward's throttle going down at `pressTick`. */
   function launch(pressTick: number, releaseTick = Infinity): { race: RaceState; launched: boolean } {
-    const race = newRace(5, { humans: [FW0], skill: 0 });
+    // The formation-lap trickle is off: these tests count the launch's Drive exactly.
+    const race = newRace(5, { humans: [FW0], skill: 0, rules: { lap1Trickle: 0 } });
     const inputs = makeInputs(race);
     let launched = false;
     for (let t = 1; t <= COUNTDOWN_TICKS; t++) {
@@ -236,13 +237,13 @@ describe('perfect launch', () => {
     // Off the line at the launch speed (and already pulling: the GO tick is a racing tick).
     expect(m.speed).toBeGreaterThanOrEqual(LAUNCH_SPEED);
     expect(m.speed).toBeLessThan(LAUNCH_SPEED + CLASSES[m.role].accel * DT + 1e-9);
-    // +10 Drive, even though nothing else feeds the gauge on the formation lap.
+    // +10 Drive (with the formation-lap trickle switched off, nothing else feeds the gauge).
     expect(m.drive).toBe(race.rules.driveStart + LAUNCH_DRIVE);
   });
 
   it('adds its Drive on top of rules.driveStart, up to a full gauge', () => {
     const run = (driveStart: number) => {
-      const race = newRace(5, { humans: [FW0], skill: 0, rules: { driveStart } });
+      const race = newRace(5, { humans: [FW0], skill: 0, rules: { driveStart, lap1Trickle: 0 } });
       const inputs = makeInputs(race);
       for (let t = 1; t <= COUNTDOWN_TICKS; t++) {
         inputs[FW0]!.throttle = t >= COUNTDOWN_TICKS - 10 ? 1 : 0;

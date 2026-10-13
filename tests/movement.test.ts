@@ -471,12 +471,16 @@ describe('slipstream', () => {
     for (const lapPhase of [1, 2] as const) {
       const a = new Arena(lapPhase);
       const me = a.put(FW0, -250, 0);
-      a.put(FW1, -215, 0);
+      // The mech giving the tow boosts too, so the one behind sits in it for
+      // long enough to reach the ceiling instead of running past.
+      const lead = a.put(FW1, -215, 0);
       a.put(MF1, 2500, 20, 0); // far-away leader: full pack bonus for both
       me.drive = 100;
+      lead.drive = 100;
       a.hold(FW0, BTN.A);
+      a.hold(FW1, BTN.A);
       let max = 0;
-      a.step(240, () => (max = Math.max(max, me.speed)));
+      a.step(300, () => (max = Math.max(max, me.speed)));
       expect(max).toBeLessThanOrEqual(limiterCeiling(a.race) + EPS);
       expect(max).toBeGreaterThan(a.pace * (1 + PACK_BONUS) * a.race.rules.boostMult);
     }
@@ -785,8 +789,11 @@ describe('fuzz: whatever a person does with the controller', () => {
     expect(kos).toBe(race.mechs.length - classified);
     expect(race.mechs.reduce((sum, m) => sum + m.kos, 0)).toBe(credited);
     expect(race.mechs.map((m) => m.place).sort()).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(race.mechs.reduce((sum, m) => sum + m.points, 0)).toBe(POINTS.slice(0, classified).reduce((a, b) => a + b, 0) + credited * rules.koPoints);
-    for (const m of race.mechs) expect(m.points).toBe((m.retired ? 0 : POINTS[m.place - 1]) + m.kos * rules.koPoints);
+    // ...plus whatever support points each pilot earned, never more than the cap.
+    const support = race.mechs.reduce((sum, m) => sum + m.support, 0);
+    for (const m of race.mechs) expect(m.support).toBeLessThanOrEqual(rules.supportCap);
+    expect(race.mechs.reduce((sum, m) => sum + m.points, 0)).toBe(POINTS.slice(0, classified).reduce((a, b) => a + b, 0) + credited * rules.koPoints + support);
+    for (const m of race.mechs) expect(m.points).toBe((m.retired ? 0 : POINTS[m.place - 1]) + m.kos * rules.koPoints + m.support);
     return { ended: race.phase === PHASE.FINISHED, ticks: race.tick, abilities };
   }
 

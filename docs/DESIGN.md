@@ -28,6 +28,75 @@ Four decisions shape everything else:
   or Cells? Lap 2: who do you fight, and what do you spend? Lap 3: can you
   get to the front, or stay there, and is a Cell worth leaving the line for?
 
+## 1b. Version 0.4: the plan
+
+Agreed after the first play sessions of 0.3. The races were too even and
+too slow: on the formation lap all six mechs passed every landmark
+within half a second of each other, boost was rare (about 3 s of it in the
+whole first lap), forwards won 94% of races and took nearly every
+knockout, and a support pilot had no way to score. Each lap now adds a
+layer: lap 1 is a fast, pure racing lap (boost, carving, slipstream, a
+scramble for gates), lap 2 adds the weapons, lap 3 takes the limiters off.
+The numbers below are where tuning starts; section 2 gives what was built.
+
+**Boost and Drive, more of both.** Charge strips pay 10 Drive a second on
+the formation lap (6 before). Slipstream, the trickle, clean landings and
+close passes earn Drive from the start. Boost goes from +20% to +25%.
+
+**Carving replaces braking.** Hold the brake trigger (LT, or S) while
+steering and the mech drops into a carve: much more grip than free steering,
+a small steady loss of speed. Charge builds with how hard you carve and how
+tight the bend is (a straight barely charges, so weaving down one earns
+nothing), in three tiers shown by the colour of the sparks off the skates:
+cyan, gold, magenta. Let go for a burst over the limiter, bigger and longer
+for each tier. The wall or a hit loses the charge; in the air it holds. The
+trigger with the stick centred still brakes. Free steering only.
+
+**Contested gates.** A gate pays a full Cell to the first mech through, goes
+dark and relights a few seconds later. A mech already holding the most Cells
+passes through without using the gate up, so a leader with a full tank
+cannot shut gates on the chasers.
+
+**Armour down about 10%**: Swift and Vector 1600, Bulwark 2000, with an
+armour scale on the tuning panel.
+
+**Fights you can read.** A short camera punch-in (no permanent zoom) on a
+heavy hit, a parry, a guard break and a knockout; an arrow at the edge of the
+screen when someone off-screen winds up a blow at you; a trail on every
+swing and a spark colour for each weapon; slow motion for any knockout you
+took part in (landed, took, set up, or of your own target).
+
+**Support points**, counted in the team's round score. Each action scores at
+most once every few seconds per rival, and a pilot's support points are
+capped per race, so a strong support race is worth about a second place,
+never a win.
+
+| Frame | Action | Points |
+|---|---|---|
+| Vector | Snare lands on a rival (the rival forward: 2) | 1 |
+| Vector | **Interrupt**: a Disruptor or Stun Kick that breaks a wind-up | 2 |
+| Vector | **Pressure**: every 200 damage dealt to the rival forward | 1 |
+| Vector | **Back-up**: a hit on a rival who is fighting a teammate | 1 |
+| Bulwark | **Peel**: a hit on a rival who is attacking your forward | 1 |
+| Bulwark | **Save**: the same hit, breaking their attack | 2 |
+| Bulwark | **Bodyguard**: a block or parry near your forward | 1 |
+| Bulwark | Aegis shields teammates from 150 damage or more | 2 |
+| Bulwark | Ring-out a rival (the rival forward: 2) | 1 |
+| Vector, Bulwark | **Lead-out**: on lap 3 your forward pulls out of your slipstream and passes someone | 2 |
+| Anyone | **Assist**: you damaged a rival in the 5 s before a teammate knocked it out | 2 |
+
+Each award shows the moment it lands, the results break the score down by
+pilot and action, and a support pilot gets short prompts ("Your forward is
+under attack"). Computer pilots play for these too.
+
+**Circuits rebuilt for carving.** Each circuit gains hairpins and chicanes
+tight enough that carving is the quick way round, while keeping its
+landmarks (the Drop, the Loop, the Corkscrew, the Crossover).
+
+**Later**: per-role records for each player (needs accounts, so it comes with
+online play); the finish (whether lap 3's tow decides too much) waits for
+coordinated team play online.
+
 ## 2. Rules
 
 ### The race

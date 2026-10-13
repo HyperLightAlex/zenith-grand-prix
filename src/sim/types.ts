@@ -87,6 +87,8 @@ export interface MechState {
 
   // --- gauges
   hp: number;
+  /** Armour when undamaged: the frame's, scaled by the rules. */
+  maxHp: number;
   guard: number;
   drive: number;
 
@@ -130,12 +132,30 @@ export interface MechState {
   /** While this runs no enemy can lock on. */
   cloakT: number;
 
+  // --- carving
+  /** Holding a carve (the brake trigger with the stick over). */
+  carving: boolean;
+  /** Which way the carve turns: 1 right, -1 left. */
+  carveDir: number;
+  /** Charge built in this carve, in seconds of a full carve. */
+  carveCharge: number;
+  /** Tier the charge has reached, 0 to 3. */
+  carveTier: number;
+  /** Ticks left of a carve's burst, and the extra top speed it gives. */
+  carveT: number;
+  carveBoost: number;
+  /** Ticks off the ground in the current flight (for a clean landing). */
+  airT: number;
+
   // --- flags for presentation
   boosting: boolean;
   onStrip: boolean;
   drafting: boolean;
   /** Slipstream charge 0..1: builds in a tow, lingers after pulling out. */
   tow: number;
+  /** Whose slipstream this mech was last in, and when. */
+  towBy: number;
+  towByTick: number;
   /** Ticks the next attack stays primed by a boost, Overdrive or slipstream. */
   momentum: number;
   linked: boolean;
@@ -164,6 +184,23 @@ export interface MechState {
   dmgDealt: number;
   dmgTaken: number;
   kos: number;
+
+  // --- support points
+  /** Support points earned this race (capped by rules.supportCap). They count for the team. */
+  support: number;
+  /** Points earned by each kind of award (AWARD), for the results. */
+  awardPts: number[];
+  /** Tick each award kind last scored against each rival: [kind * 8 + rival]. */
+  awardTick: number[];
+  /** Tick this mech last took damage from each mech, by id: for assists. */
+  hurtBy: number[];
+  /** Damage dealt to the rival forward not yet turned into Pressure points. */
+  pressure: number;
+  /** Damage an Aegis this mech cast has kept off teammates, and whether it has scored yet. */
+  aegisSaved: number;
+  aegisPaid: boolean;
+  /** Who cast the Aegis this mech is under, or -1. */
+  shieldBy: number;
   ai: AiState;
 }
 
@@ -233,6 +270,14 @@ export type SimEvent =
   | { type: 'boost'; mech: number }
   | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' }
   | { type: 'gate'; mech: number; gate: number; cells: number }
+  /** A carve's charge reached a new tier (1 to 3). */
+  | { type: 'carve'; mech: number; tier: number }
+  /** A carve let go with charge in it: the burst. */
+  | { type: 'carveBurst'; mech: number; tier: number }
+  /** Passed another mech close enough to touch. */
+  | { type: 'pass'; mech: number; other: number }
+  /** A support action scored: `points` for the team (after the cap), against `victim` (or -1). */
+  | { type: 'award'; mech: number; kind: number; points: number; victim: number }
   | { type: 'ability'; mech: number; ability: Ability }
   | { type: 'snared'; mech: number; by: number }
   | { type: 'tactic'; team: number; tactic: Tactic; by: number; mark: number }
@@ -255,6 +300,8 @@ export interface RaceState {
   teams: TeamState[];
   firstFinishTick: number;
   endTick: number;
+  /** Tick until which each Cell gate is dark after being taken; lit once the tick passes it. */
+  gateDark: number[];
   /** Events raised during the most recent step. */
   events: SimEvent[];
 }

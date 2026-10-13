@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOOST_COST,
+  BOOST_MIN_START,
   BTN,
   CLASSES,
   DEFAULT_RULES,
@@ -37,7 +38,7 @@ const L = TRACK.length;
 const EPS = 1e-9;
 
 describe('the default rules', () => {
-  it('are the v0.2 rule sheet', () => {
+  it('are the v0.4 rule sheet', () => {
     // The whole table, on purpose: this is the one place the numbers are
     // written down a second time. Retune rules.ts and this is the test to
     // update with it; everything else reads the rules from the race.
@@ -45,8 +46,9 @@ describe('the default rules', () => {
       limiter1: 110,
       limiter2: 125,
       topScale: 1,
-      boostMult: 1.2,
+      boostMult: 1.25,
       armourFloor: 0.94,
+      armourScale: 1,
       tow: 0.04,
       tow3: 0.08,
       towRange: 46,
@@ -56,9 +58,15 @@ describe('the default rules', () => {
       driveStart: 0,
       drivePassive: 0.8,
       driveStrip: 10,
-      driveStripLap1: 6,
+      driveStripLap1: 10,
       driveDraft: 3,
-      lap1Trickle: 0,
+      lap1Trickle: 1,
+      driveLanding: 6,
+      drivePass: 4,
+      carveGrip: 1.65,
+      carveDrag: 10,
+      carveCharge: 1,
+      carveBurst: 1,
       battleMove: 1.6,
       momentumSecs: 0.75,
       momentumDamage: 1.35,
@@ -67,9 +75,10 @@ describe('the default rules', () => {
       ringoutDamage: 14,
       cellMax: 3,
       cellStart: 0,
-      gateValue: 0.5,
-      gateValueLater: 0.5,
+      gateValue: 1,
+      gateValueLater: 1,
       gateLaps: 3,
+      gateRelight: 4,
       overdriveMult: 1.3,
       overdriveSecs: 4,
       breakawaySecs: 1.5,
@@ -84,6 +93,10 @@ describe('the default rules', () => {
       aegisRange: 34,
       aegisDamage: 0.35,
       koPoints: 3,
+      supportCap: 10,
+      awardCooldown: 3,
+      pressureDamage: 200,
+      assistSecs: 5,
     });
   });
 
@@ -117,11 +130,20 @@ describe('the default rules', () => {
     expect(r.towRange3).toBeGreaterThan(r.towRange);
     expect(r.towBuild).toBeGreaterThan(0);
     expect(r.slingshot).toBeGreaterThan(0);
-    // Charge strips pay less on the formation lap than later.
-    expect(r.driveStripLap1).toBeLessThan(r.driveStrip);
+    // Charge strips pay on the formation lap, never more than later.
+    expect(r.driveStripLap1).toBeLessThanOrEqual(r.driveStrip);
     expect(r.driveStripLap1).toBeGreaterThan(0);
     // A lap through every gate fills the Cells exactly, or more than fills them.
     expect(TRACK.gates.length * r.gateValue).toBeGreaterThanOrEqual(r.cellMax);
+    // A taken gate is dark for a few seconds, not for the rest of the lap.
+    expect(r.gateRelight).toBeGreaterThan(0);
+    expect(r.gateRelight).toBeLessThan(15);
+    // Carving grips harder than free steering, and its burst is a burst.
+    expect(r.carveGrip).toBeGreaterThan(1);
+    expect(r.carveBurst).toBeGreaterThan(0);
+    // A support pilot's best race is worth less than a win.
+    expect(r.supportCap).toBeLessThan(15);
+    expect(r.supportCap).toBeGreaterThan(0);
     expect(r.cellMax).toBeGreaterThanOrEqual(1);
     expect(r.cellStart).toBeLessThanOrEqual(r.cellMax);
     // Abilities: speed-ups speed up, the Snare slows, the shield reduces.
@@ -629,7 +651,21 @@ describe('boostMult', () => {
 describe('Drive on the formation lap', () => {
   const strip = TRACK.strips[0];
 
-  it('nothing trickles in: a mech cruising off the strips keeps exactly what it had', () => {
+  it('by default the trickle runs from the start: passive Drive and the slipstream\'s', () => {
+    const a = new Arena(1, 1, { lap1Trickle: 1 });
+    const m = a.put(FW0, -250, 0);
+    m.drive = 12;
+    a.step(300, () => expect(m.onStrip).toBe(false));
+    expect(m.drive).toBeCloseTo(12 + 300 * a.race.rules.drivePassive * DT, 9);
+    const b = new Arena(1, 1, { lap1Trickle: 1 });
+    const me = b.put(FW0, -250, 0);
+    b.put(FW1, -225, 0);
+    me.drive = 12;
+    b.step(120, () => expect(me.drafting).toBe(true));
+    expect(me.drive).toBeCloseTo(12 + 120 * (b.race.rules.drivePassive + b.race.rules.driveDraft) * DT, 6);
+  });
+
+  it('with rules.lap1Trickle 0 nothing trickles in: a mech cruising off the strips keeps exactly what it had', () => {
     const a = new Arena(1);
     const m = a.put(FW0, -250, 0);
     m.drive = 12;
@@ -637,7 +673,7 @@ describe('Drive on the formation lap', () => {
     expect(m.drive).toBe(12);
   });
 
-  it('a slipstream gives the tow but no Drive', () => {
+  it('with rules.lap1Trickle 0 a slipstream gives the tow but no Drive', () => {
     const a = new Arena(1);
     const me = a.put(FW0, -250, 0);
     a.put(FW1, -225, 0);
@@ -658,11 +694,11 @@ describe('Drive on the formation lap', () => {
     expect(off.drive).toBe(20);
   });
 
-  it('the perfect-launch Drive is the only other source', () => {
+  it('with the trickle, close passes and landings switched off, a launch and the strips are all there is', () => {
     // An all-AI formation lap: whatever Drive anyone holds came from a
-    // launch (+10) or from time on a strip (6 a second). Nobody boosts it
-    // away on lap 1 unless they have it, so the gauge never exceeds that.
-    const race = newRace(21, { skill: 1 });
+    // launch (+10) or from time on a strip. Nobody boosts it away on lap 1
+    // unless they have it, so the gauge never exceeds that.
+    const race = newRace(21, { skill: 1, rules: { lap1Trickle: 0, drivePass: 0, driveLanding: 0 } });
     const launched = race.mechs.map(() => 0);
     const stripTicks = race.mechs.map(() => 0);
     while (race.lapPhase === 1 && race.tick < 7000) {
@@ -814,6 +850,7 @@ describe('rules.driveStart', () => {
     expect(race.mechs[FW0].s).toBeLessThan(TRACK.strips[0].s0);
     expect(race.mechs[FW0].s).toBeGreaterThan(50);
     expect(boosts).toBe(0);
-    expect(race.mechs[FW0].drive).toBe(0);
+    // The formation-lap trickle has started, but it is nowhere near enough to light a boost.
+    expect(race.mechs[FW0].drive).toBeLessThan(BOOST_MIN_START);
   });
 });
