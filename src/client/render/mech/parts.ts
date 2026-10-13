@@ -1,6 +1,7 @@
 // Pieces shared by the frames: thruster flames, the race number, and the
 // helpers each frame builder uses to hang merged parts on its skeleton.
 import * as THREE from 'three';
+import flameAtlasUrl from '../sprites/fx-flame.png';
 import type { Livery } from '../palette';
 import { Kit } from './kit';
 import type { Flame, MechRig } from './rig';
@@ -15,11 +16,91 @@ const flameGeo = (() => {
 
 const flameMaterials = new Map<number, THREE.ShaderMaterial>();
 
+/**
+ * The anime look's drawn flames: whether they are on, and which drawing of
+ * their three-drawing loop is showing. One object, set by the game each frame.
+ */
+export const DRAWN_FLAMES = { uDrawn: { value: 0 }, uFrame: { value: 0 } };
+
+let flameAtlas: THREE.Texture | null = null;
+const flamePlane = new THREE.PlaneGeometry(1, 1);
+
+/**
+ * A painted flame (tools/fx/build_sprites.py, sheet 7) hung from a thruster:
+ * a card that turns about the flame's axis to face the camera, sized by the
+ * thruster's own flame (its parent), the boost loop or (row 1) the overdrive
+ * one, recoloured from the sheet's cyan.
+ */
+function drawnFlameMaterial(color: number): THREE.ShaderMaterial {
+  if (!flameAtlas) {
+    flameAtlas = new THREE.TextureLoader().load(flameAtlasUrl);
+    flameAtlas.colorSpace = THREE.SRGBColorSpace;
+  }
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      ...DRAWN_FLAMES,
+      uMap: { value: flameAtlas },
+      uTint: { value: new THREE.Color(color) },
+      uRow: { value: 0 },
+      uPhase: { value: Math.floor(Math.random() * 3) },
+    },
+    vertexShader: /* glsl */ `
+      uniform float uDrawn, uRow;
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        // The parent flame's mouth, axis (its length is the flame's) and width.
+        vec3 mouth = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        vec3 axis = (modelMatrix * vec4(0.0, 0.0, -1.0, 1.0)).xyz - mouth;
+        float len = length(axis);
+        vec3 ax = axis / max(len, 1e-4);
+        float wid = length((modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz) * 2.0;
+        // The card always faces the camera, drawn along the flame's axis as it
+        // looks on screen. A flame pointing at the camera (the chase view of
+        // the back thrusters) still shows, shorter, hanging down from its nozzle.
+        vec3 toCam = normalize(cameraPosition - mouth);
+        vec3 proj = ax - toCam * dot(ax, toCam);
+        float pl = length(proj);
+        vec3 camUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+        vec3 along = pl > 0.05 ? proj / pl : -camUp;
+        vec3 right = normalize(cross(along, toCam));
+        float shown = max(pl, 0.45);
+        // The drawing hangs from a nozzle at the top of its cell. The boost
+        // drawing fills about half the cell's length and a quarter of its
+        // width; the overdrive one nearly all of it and half.
+        float cellLen = len * shown * mix(1.9, 1.15, uRow);
+        float cellWid = wid * mix(3.4, 2.0, uRow);
+        vec3 p = mouth + along * ((0.5 - position.y) * cellLen - 0.02 * cellLen) + right * (position.x * cellWid);
+        gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
+        // Off in the plain look: put it behind the far plane.
+        if (uDrawn < 0.5) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D uMap;
+      uniform vec3 uTint;
+      uniform float uRow, uFrame, uPhase;
+      varying vec2 vUv;
+      void main() {
+        float f = mod(uFrame + uPhase, 3.0);
+        vec4 t = texture2D(uMap, vec2((f + vUv.x) / 3.0, 0.5 - uRow * 0.5 + vUv.y * 0.5));
+        if (t.a < 0.02) discard;
+        vec3 c = t.rgb;
+        float hi = max(c.r, max(c.g, c.b));
+        float white = min(c.r, min(c.g, c.b)) / max(hi, 1e-3);
+        c = mix(uTint * hi, vec3(hi), white * white);
+        gl_FragColor = vec4(c * 1.35, t.a);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
 function flameMaterial(color: number): THREE.ShaderMaterial {
   let m = flameMaterials.get(color);
   if (m) return m;
   m = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(color) }, uTime: { value: 0 }, uPower: { value: 1 } },
+    uniforms: { uColor: { value: new THREE.Color(color) }, uTime: { value: 0 }, uPower: { value: 1 }, uDrawn: DRAWN_FLAMES.uDrawn },
     vertexShader: /* glsl */ `
       varying float vT;
       void main() {
@@ -28,9 +109,11 @@ function flameMaterial(color: number): THREE.ShaderMaterial {
       }`,
     fragmentShader: /* glsl */ `
       uniform vec3 uColor;
-      uniform float uTime, uPower;
+      uniform float uTime, uPower, uDrawn;
       varying float vT;
       void main() {
+        // The anime look draws its own flame (drawnFlameMaterial).
+        if (uDrawn > 0.5) discard;
         float core = smoothstep(0.55, 0.0, vT);
         float fl = 0.82 + 0.18 * sin(uTime * 60.0 + vT * 22.0);
         vec3 col = mix(uColor, vec3(1.0), core * 0.8) * (1.4 + core * 1.4) * fl;
@@ -92,7 +175,14 @@ export function frameCtx(rig: MechRig, livery: Livery): FrameCtx {
       mesh.scale.set(width, width, 0.01);
       mesh.renderOrder = 5;
       parent.add(mesh);
-      rig.flames.push({ mesh, length, width, bank });
+      // The anime look's painted flame rides on the same thruster.
+      const drawn = new THREE.Mesh(flamePlane, drawnFlameMaterial(livery.glow));
+      drawn.frustumCulled = false;
+      drawn.renderOrder = 5;
+      drawn.userData.ownMaterial = true;
+      drawn.userData.tint = livery.glow;
+      mesh.add(drawn);
+      rig.flames.push({ mesh, length, width, bank, drawn });
     },
   };
 }

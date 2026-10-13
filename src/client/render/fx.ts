@@ -680,7 +680,7 @@ export class Fx {
     // Drawn, a ring is the painted shock ring (its drawing peaks at about
     // the size the plain ring grows to).
     if (ring && this.drawn) {
-      this.sprites.spawn('ring', at, size * 1.15, { tint: color, follow, gain: 1.3, roll: Math.random() * Math.PI * 2 });
+      this.sprites.spawn('ring', at, size * 0.95, { tint: color, follow, gain: 1.3, roll: Math.random() * Math.PI * 2 });
       return;
     }
     let f = this.flashes[0];

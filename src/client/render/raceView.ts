@@ -806,7 +806,8 @@ export class RaceView {
       case 'boost': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s - 2, v.d, 3.5, v1);
-        this.fx.flash(v1, 9, v.livery.glow, 0.25, v.rig.root, true);
+        // (Drawn, the ring is smaller: the painted flames carry the boost.)
+        this.fx.flash(v1, look.on ? 5.5 : 9, v.livery.glow, 0.25, v.rig.root, true);
         this.fx.burst(v1, v.vel, 18, 36, v.livery.glow, 0.45, 0.35);
         if (e.mech === local) this.cam.shake(0.2);
         break;

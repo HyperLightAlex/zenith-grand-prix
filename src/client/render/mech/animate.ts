@@ -1,6 +1,8 @@
 // Drives a rig from simulation state: blends the pose library by mode and
 // action, adds the skating stride and body lean, and sizes thruster flames.
+import type * as THREE from 'three';
 import { ACT, ATTACKS, MODE, PACE, type MechState } from '../../../sim/index';
+import { COLORS } from '../palette';
 import { setFlameTime } from './frames';
 import { CLIPS, POSES } from './poses';
 import { blendPose, copyPose, makePose, mirrorPose, type MechRig, type Pose } from './rig';
@@ -202,6 +204,13 @@ export class MechAnimator {
       const power = f.bank === 'main' ? this.thrust : this.thrust * (battle || surging ? 0.9 : 0.35);
       f.mesh.scale.set(f.width * (0.8 + power * 0.5), f.width * (0.8 + power * 0.5), Math.max(0.01, f.length * power * flick));
       f.mesh.visible = power > 0.03;
+      if (f.drawn) {
+        // Drawn: the overdrive loop in gold while it lasts, the boost loop in the team's colour otherwise.
+        const u = (f.drawn.material as THREE.ShaderMaterial).uniforms;
+        const od = m.overdriveT > 0 && !m.retired;
+        u.uRow.value = od ? 1 : 0;
+        (u.uTint.value as THREE.Color).set(od ? COLORS.cell : (f.drawn.userData.tint as number));
+      }
     }
   }
 

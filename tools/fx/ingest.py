@@ -25,8 +25,14 @@ import numpy as np
 from PIL import Image
 
 
-def cut(src, size=256, centre=False):
-    """The six panels of a sheet, keyed and cut, as RGBA images `size` square."""
+def cut(src, size=256, centre=False, offsets=(0, 0), bands=None):
+    """
+    The six panels of a sheet, keyed and cut, as RGBA images `size` square.
+    `offsets` moves each row's window down (or up, negative) by that many
+    pixels of the sheet, for a sheet whose drawings stray over a row's edge;
+    `bands` then limits each row to its own stretch of the sheet, (top,
+    bottom) in sheet pixels, so a moved window does not pick up the other row.
+    """
     rgb = np.asarray(Image.open(src).convert('RGB')).astype(np.float32) / 255
     H, W, _ = rgb.shape
     # The background colour, from the four corners.
@@ -46,9 +52,14 @@ def cut(src, size=256, centre=False):
     out = []
     for r in range(rows):
         for c in range(cols):
-            x0, y0 = int(round(c * pw)), int(round(r * ph))
-            x1, y1 = int(round((c + 1) * pw)), int(round((r + 1) * ph))
-            p = rgba[y0:y1, x0:x1]
+            x0, y0 = int(round(c * pw)), int(round(r * ph)) + offsets[r]
+            x1, y1 = int(round((c + 1) * pw)), int(round((r + 1) * ph)) + offsets[r]
+            y0, y1 = max(0, y0), min(H, y1)
+            p = rgba[y0:y1, x0:x1].copy()
+            if bands:
+                rows_y = np.arange(y0, y1)
+                outside = (rows_y < bands[r][0]) | (rows_y >= bands[r][1])
+                p[outside, :, 3] = 0
             # Square, centred on the panel's centre.
             s = min(p.shape[0], p.shape[1])
             oy, ox = (p.shape[0] - s) // 2, (p.shape[1] - s) // 2

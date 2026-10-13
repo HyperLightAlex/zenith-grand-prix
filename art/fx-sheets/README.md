@@ -15,6 +15,7 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 5 Lance thrust | fx-05-lance-thrust.png | two variations | `rows` |
 | 6 Shock rings | fx-06-shock-rings.png | bottom row (facing ring) only; the ground ring is redone as 6B | `rows centre` |
 | 6B Ground ring | fx-06b-ground-ring.png | two variations, laid flat on the road | `rows centre` |
+| 7 Thruster flame | fx-07-thruster-flame.png | boost loop and overdrive loop; rows cut to the nozzles | build_sprites.py |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
 
