@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { drawClock, look } from './look';
 import { COLORS } from './palette';
-import explosionUrl from './sprites/explosion.png';
+import { SpriteFx, type SpriteKind, type SpriteOptions } from './sprites';
 
 const _v = new THREE.Vector3();
 
@@ -380,34 +380,6 @@ function slashTexture(): THREE.CanvasTexture {
   return t;
 }
 
-/**
- * A drawn flipbook in the air: the anime look's knockout explosion, eight
- * drawings in a strip (made by tools/fx/explosion.py), one per drawing of
- * the look's clock. It drifts with what blew up, slowing, and always faces
- * the camera upright, so its smoke rises.
- */
-interface Flipbook {
-  mesh: THREE.Mesh;
-  mat: THREE.MeshBasicMaterial;
-  tex: THREE.Texture;
-  frame: number;
-  pos: THREE.Vector3;
-  vel: THREE.Vector3;
-}
-
-const FLIP_FRAMES = 8;
-let explosionAtlas: THREE.Texture | null = null;
-
-function explosionTexture(): THREE.Texture {
-  if (!explosionAtlas) {
-    explosionAtlas = new THREE.TextureLoader().load(explosionUrl);
-    explosionAtlas.colorSpace = THREE.SRGBColorSpace;
-    explosionAtlas.generateMipmaps = true;
-    explosionAtlas.minFilter = THREE.LinearMipmapLinearFilter;
-  }
-  return explosionAtlas;
-}
-
 interface Flash {
   mesh: THREE.Mesh;
   mat: THREE.MeshBasicMaterial;
@@ -527,7 +499,8 @@ export class Fx {
   readonly sparks = new Particles(1400, true);
   readonly smoke = new Particles(260, false);
   private flashes: Flash[] = [];
-  private flipbooks: Flipbook[] = [];
+  /** The anime look's drawn effects, from painted sheets. */
+  readonly sprites = new SpriteFx();
   private slashes: Slash[] = [];
   private tells: TellRing[] = [];
   private tellFrame = 1;
@@ -588,21 +561,8 @@ export class Fx {
       this.tells.push({ mesh, mat, key: -1, seen: 0, total: 1 });
     }
 
-    // Knockout explosions (the anime look). Each has its own view of the
-    // shared atlas, to show its own drawing.
-    const atlas = explosionTexture();
-    for (let i = 0; i < 4; i++) {
-      const tex = atlas.clone();
-      tex.repeat.set(1 / FLIP_FRAMES, 1);
-      // Brighter than the paint around it: the white core blooms, the fire
-      // carries through the tone mapping.
-      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, color: new THREE.Color(1.45, 1.4, 1.35) });
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
-      mesh.visible = false;
-      mesh.renderOrder = 8;
-      this.group.add(mesh);
-      this.flipbooks.push({ mesh, mat, tex, frame: -1, pos: new THREE.Vector3(), vel: new THREE.Vector3() });
-    }
+    this.group.add(this.sprites.group);
+    this.sprites.preload();
 
     const tg = new THREE.BoxGeometry(0.22, 0.22, 1);
     tg.translate(0, 0, -0.5);
@@ -624,10 +584,7 @@ export class Fx {
     (this.sparks.points.material as THREE.Material).dispose();
     (this.smoke.points.material as THREE.Material).dispose();
     for (const f of this.flashes) f.mat.dispose();
-    for (const b of this.flipbooks) {
-      b.mat.dispose();
-      b.tex.dispose();
-    }
+    this.sprites.dispose();
     for (const t of this.tells) t.mat.dispose();
     this.tellTex.dispose();
     for (const s of this.slashes) {
@@ -720,6 +677,12 @@ export class Fx {
 
   /** Starburst. Follows `follow` (plus an offset) if given, so it stays on a moving mech. */
   flash(at: THREE.Vector3, size: number, color: number, life = 0.16, follow: THREE.Object3D | null = null, ring = false): void {
+    // Drawn, a ring is the painted shock ring (its drawing peaks at about
+    // the size the plain ring grows to).
+    if (ring && this.drawn) {
+      this.sprites.spawn('ring', at, size * 1.15, { tint: color, follow, gain: 1.3, roll: Math.random() * Math.PI * 2 });
+      return;
+    }
     let f = this.flashes[0];
     for (const c of this.flashes) {
       if (c.life <= 0) {
@@ -754,14 +717,7 @@ export class Fx {
    */
   explosion(at: THREE.Vector3, base: THREE.Vector3, size: number): boolean {
     if (!this.drawn) return false;
-    // A free one, or else the one furthest through.
-    const b = this.flipbooks.find((f) => f.frame < 0) ?? this.flipbooks.reduce((a, f) => (f.frame > a.frame ? f : a));
-    b.frame = 0;
-    b.pos.copy(at);
-    b.vel.copy(base);
-    b.mesh.scale.setScalar(size);
-    b.tex.offset.x = 0;
-    b.mesh.visible = true;
+    this.sprites.spawn('explosion', at, size, { vel: base, gain: 1.45 });
     return true;
   }
 
@@ -770,11 +726,17 @@ export class Fx {
    * painted still of a knockout is of the fireball, not the flash before it.
    */
   skipExplosionsTo(frame: number): void {
-    for (const b of this.flipbooks) {
-      if (b.frame < 0 || b.frame >= frame) continue;
-      b.frame = frame;
-      b.tex.offset.x = frame / FLIP_FRAMES;
-    }
+    this.sprites.skip('explosion', frame);
+  }
+
+  /**
+   * A drawn effect from the painted sheets, if the anime look is on. Returns
+   * whether it drew one (so the caller can leave out the plain look's).
+   */
+  drawnSprite(kind: SpriteKind, at: THREE.Vector3, size: number, o?: SpriteOptions): boolean {
+    if (!this.drawn) return false;
+    this.sprites.spawn(kind, at, size, o);
+    return true;
   }
 
   /**
@@ -870,29 +832,8 @@ export class Fx {
     }
     this.sparks.update(dt, 0, fresh, drawn);
     this.smoke.update(dt, 2.2, fresh, drawn);
-    for (const b of this.flipbooks) {
-      if (b.frame < 0) continue;
-      if (!drawn) {
-        b.frame = -1;
-        b.mesh.visible = false;
-        continue;
-      }
-      // Drift with what blew up, slowing; the smoke drawings rise a little.
-      b.vel.multiplyScalar(Math.exp(-3 * dt));
-      b.pos.addScaledVector(b.vel, dt);
-      b.pos.y += dt * 4;
-      if (drawClock.fresh && dt > 0) {
-        b.frame++;
-        if (b.frame >= FLIP_FRAMES) {
-          b.frame = -1;
-          b.mesh.visible = false;
-          continue;
-        }
-        b.tex.offset.x = b.frame / FLIP_FRAMES;
-      }
-      b.mesh.position.copy(b.pos);
-      b.mesh.quaternion.copy(camera.quaternion);
-    }
+    if (drawn) this.sprites.update(dt, camera);
+    else this.sprites.clear();
     for (const f of this.flashes) {
       if (f.life <= 0) {
         f.mesh.visible = false;

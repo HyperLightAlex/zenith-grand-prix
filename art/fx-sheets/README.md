@@ -14,5 +14,9 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 4B Light cut | fx-04b-light-cut.png | two variations | `rows` |
 | 5 Lance thrust | fx-05-lance-thrust.png | two variations | `rows` |
 | 6 Shock rings | fx-06-shock-rings.png | bottom row (facing ring) only; the ground ring is redone as 6B | `rows centre` |
+| 6B Ground ring | fx-06b-ground-ring.png | two variations, laid flat on the road | `rows centre` |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
+
+The game's atlases (src/client/render/sprites/fx-*.png) are built from these
+by `python3 tools/fx/build_sprites.py`.

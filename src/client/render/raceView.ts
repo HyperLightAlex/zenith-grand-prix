@@ -92,6 +92,9 @@ const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
 const ndc = new THREE.Vector3();
 const shadowScale = new THREE.Matrix4();
+/** A drawn ring lying on the road: the road's orientation, turned so the sprite's face is the road's. */
+const flatQ = new THREE.Quaternion();
+const layFlat = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
 const GOLD = new THREE.Color(COLORS.cell);
 const AMBER = new THREE.Color(0xffa030);
 /** Momentum: trails run hot while the next blow is primed, and a momentum strike flares in it. */
@@ -569,6 +572,37 @@ export class RaceView {
     return this.lastTarget;
   }
 
+  /**
+   * The anime look's drawn swing: a painted smear round the mech, facing the
+   * camera as a cel would. Light cuts alternate their direction through a
+   * combo; a heavy blow, a kick and a hammer use the heavy smear; the lance
+   * is a thrust pointing along the dash. Returns false in the plain look.
+   */
+  private drawnSwing(v: MechVisual, attack: number, color: number, tilt: number): boolean {
+    const { track } = this.session;
+    const atk = ATTACKS[attack];
+    if (attack === ATK.FW_LANCE) {
+      trackPoint(track, v.s + Math.cos(v.facing) * 6, v.d + Math.sin(v.facing) * 6, 4.6, v1);
+      trackDir(track, v.s, Math.cos(v.facing), Math.sin(v.facing), v3);
+      return this.fx.drawnSprite('lance', v1, 18, { tint: color, follow: v.rig.root, dir: v3, gain: 1.3 });
+    }
+    trackPoint(track, v.s, v.d, 4.8, v1);
+    const size = attack === ATK.DF_HAMMER1 || attack === ATK.DF_HAMMER2 ? 15 : attack === ATK.MF_KICK ? 9 : atk.heavy ? 13 : 10;
+    if (atk.heavy || attack === ATK.MF_KICK || attack === ATK.DF_HAMMER1) {
+      return this.fx.drawnSprite('cutHeavy', v1, size, { tint: color, follow: v.rig.root, roll: tilt, flip: v.cut % 2 === 1, gain: 1.2 });
+    }
+    return this.fx.drawnSprite('cutLight', v1, size, { tint: color, follow: v.rig.root, roll: tilt, row: v.cut % 2, gain: 1.2 });
+  }
+
+  /** A ring painted flat on the road under a mech (the anime look), or false in the plain look. */
+  private groundRing(v: MechVisual, size: number, color: number): boolean {
+    const { track } = this.session;
+    trackMatrix(track, v.s, v.d, 0.15, 0, m4);
+    m4.decompose(v1, flatQ, v2);
+    flatQ.multiply(layFlat);
+    return this.fx.drawnSprite('groundRing', v1, size, { tint: color, flat: flatQ, roll: Math.random() * Math.PI * 2, gain: 1.2 });
+  }
+
   /** React to something the simulation reported. */
   handleEvent(e: SimEvent): void {
     const { race, track } = this.session;
@@ -584,22 +618,34 @@ export class RaceView {
         v1.multiplyScalar(Math.min(2.6, gap * 0.5) / gap).add(v.pos);
         v1.y += (Math.random() - 0.3) * 1.6;
         const big = e.heavy && !e.blocked;
+        // A momentum strike lands with a shockwave in the colour of the heat it carried.
+        const surge = e.charged && !e.blocked;
+        const spin = Math.random() * Math.PI * 2;
+        const mirror = Math.random() < 0.5;
         if (e.blocked) {
           v.shieldFlash = 1;
           this.fx.burst(v1, v.vel, 8, 26, v.livery.glow, 0.4, 0.3);
-          this.fx.flash(v1, 4.5, v.livery.glow, 0.14, v.rig.root, true);
+          // Drawn: a spark in the blocker's colour.
+          if (!this.fx.drawnSprite('spark', v1, 6, { tint: v.livery.glow, follow: v.rig.root, roll: spin, flip: mirror, gain: 1.25 })) this.fx.flash(v1, 4.5, v.livery.glow, 0.14, v.rig.root, true);
         } else {
           const melee = atk.kind === 'melee';
           const wc = weaponColor(e.attack);
           this.fx.burst(v1, v.vel, melee ? (big ? 34 : 16) : 6, big ? 52 : 34, wc, melee ? 0.55 : 0.4, 0.45);
-          this.fx.flash(v1, big ? 8.5 : melee ? 5.5 : 3.2, melee ? 0xfff2c8 : wc, big ? 0.2 : 0.12, v.rig.root);
-          if (big) this.fx.flash(v1, 7, 0xffffff, 0.28, v.rig.root, true);
+          // Drawn: the heavy impact for a big blow (in the heat's colour for a
+          // momentum strike), a hit spark for the rest, gunfire's smaller.
+          const drawn = big || surge
+            ? this.fx.drawnSprite('impact', v1, surge ? 14 : 11, { tint: surge ? HOT_HEX : wc, follow: v.rig.root, gain: 1.4, roll: spin, flip: mirror })
+            : this.fx.drawnSprite('spark', v1, melee ? 6.5 : 4, { tint: wc, follow: v.rig.root, roll: spin, flip: mirror, gain: 1.25 });
+          if (!drawn) {
+            this.fx.flash(v1, big ? 8.5 : melee ? 5.5 : 3.2, melee ? 0xfff2c8 : wc, big ? 0.2 : 0.12, v.rig.root);
+            if (big) this.fx.flash(v1, 7, 0xffffff, 0.28, v.rig.root, true);
+          }
         }
-        // A momentum strike lands with a shockwave in the colour of the heat it carried.
-        const surge = e.charged && !e.blocked;
         if (surge) {
-          this.fx.flash(v1, 13, HOT_HEX, 0.3, v.rig.root, true);
-          this.fx.flash(v1, 10, 0xffe6c0, 0.18, v.rig.root);
+          if (!this.fx.drawnSprite('ring', v1, 16, { tint: HOT_HEX, follow: v.rig.root, gain: 1.3, roll: spin })) {
+            this.fx.flash(v1, 13, HOT_HEX, 0.3, v.rig.root, true);
+            this.fx.flash(v1, 10, 0xffe6c0, 0.18, v.rig.root);
+          }
           this.fx.burst(v1, v.vel, 40, 70, HOT_HEX, 0.6, 0.5);
         }
         if ((e.victim === local || e.attacker === local) && (big || surge)) {
@@ -622,8 +668,11 @@ export class RaceView {
         const v = this.mechs[e.mech];
         v.shieldFlash = 1.6;
         trackPoint(track, v.s, v.d, 4.4, v1);
-        this.fx.flash(v1, 12, 0xffffff, 0.28, v.rig.root, true);
-        this.fx.flash(v1, 9, v.livery.glow, 0.2, v.rig.root);
+        // Drawn: the glint, clean and geometric, so a parry never reads as a hit.
+        if (!this.fx.drawnSprite('parry', v1, 13, { tint: v.livery.glow, follow: v.rig.root, gain: 1.45 })) {
+          this.fx.flash(v1, 12, 0xffffff, 0.28, v.rig.root, true);
+          this.fx.flash(v1, 9, v.livery.glow, 0.2, v.rig.root);
+        }
         this.fx.burst(v1, v.vel, 30, 60, 0xffffff, 0.5, 0.4);
         if (e.mech === local || e.attacker === local) {
           this.cam.shake(0.45);
@@ -637,7 +686,7 @@ export class RaceView {
       case 'guardBreak': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 4.4, v1);
-        this.fx.flash(v1, 13, 0xff5a3c, 0.3, v.rig.root, true);
+        if (!this.fx.drawnSprite('impact', v1, 14, { tint: 0xff5a3c, follow: v.rig.root, gain: 1.4, roll: Math.random() * Math.PI * 2 })) this.fx.flash(v1, 13, 0xff5a3c, 0.3, v.rig.root, true);
         this.fx.burst(v1, v.vel, 40, 55, v.livery.glow, 0.6, 0.55);
         if (e.mech === local || e.by === local) {
           this.cam.shake(0.7);
@@ -740,7 +789,7 @@ export class RaceView {
           v.cut = (v.cut + 1) % 4;
           const tilt = atk.heavy ? 0 : [0.35, -0.3, 0.15, -0.4][v.cut];
           const wc = weaponColor(e.attack);
-          this.fx.slash(v.rig.root, wc, atk.heavy, tilt, v.cut % 2 === 1);
+          if (!this.drawnSwing(v, e.attack, wc, tilt)) this.fx.slash(v.rig.root, wc, atk.heavy, tilt, v.cut % 2 === 1);
           trackPoint(track, v.s + Math.cos(v.facing) * 3.5, v.d + Math.sin(v.facing) * 3.5, 4.6, v1);
           this.fx.burst(v1, v.vel, atk.heavy ? 10 : 5, 20, wc, 0.35, 0.22);
         }
@@ -749,7 +798,8 @@ export class RaceView {
       case 'dash': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 1.2, v1);
-        this.fx.flash(v1, 8, v.livery.glow, 0.2, null, true);
+        if (!this.groundRing(v, 11, v.livery.glow)) this.fx.flash(v1, 8, v.livery.glow, 0.2, null, true);
+        trackPoint(track, v.s, v.d, 1.2, v1);
         this.fx.burst(v1, v.vel, 14, 30, v.livery.glow, 0.4, 0.3);
         break;
       }
@@ -793,7 +843,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 0.6, v1);
         this.fx.burst(v1, v.vel, 26, 34, v.livery.glow, 0.5, 0.5);
-        this.fx.flash(v1, 8, 0xffffff, 0.2, null, true);
+        if (!this.groundRing(v, 12, v.livery.glow)) this.fx.flash(v1, 8, 0xffffff, 0.2, null, true);
         break;
       }
       case 'evade':
@@ -824,7 +874,7 @@ export class RaceView {
           this.fx.spray(v1, v.vel, v3, Math.round(6 + k * 20), 18 + k * 20, 0xffd8a0, 0.4, 0.4);
         }
         this.fx.puff(v1, v.vel, Math.round(2 + k * 5), this.dust, 2.2 + k * 2, 0.9);
-        if (k > 0.3) this.fx.flash(v1, 6 + k * 6, 0xfff2d0, 0.12, null, true);
+        if (k > 0.3 && !this.groundRing(v, 8 + k * 9, 0xfff2d0)) this.fx.flash(v1, 6 + k * 6, 0xfff2d0, 0.12, null, true);
         if (e.mech === local) {
           this.cam.shake(0.1 + k * 0.5);
           this.onImpact(Math.min(0.8, k * 0.9));
@@ -854,6 +904,7 @@ export class RaceView {
         this.fx.flash(v1, 16, v.livery.glow, 0.4, null, true);
         trackPoint(track, pos.s, pos.d, 0.5, v1);
         this.fx.spray(v1, v.vel, v3.set(0, 1, 0), 30, 30, v.livery.glow, 0.5, 0.6);
+        this.groundRing(v, 15, v.livery.glow);
         if (e.mech === local) this.flash(0.35);
         break;
       }
