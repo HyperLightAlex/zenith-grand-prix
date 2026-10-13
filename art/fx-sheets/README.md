@@ -19,6 +19,7 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 8 Smoke puffs | fx-08-smoke-puffs.png | small puff and large cloud | `rows centre` |
 | 9 Barrier strike | fx-09-barrier-strike.png | not used: redone as 9B without the smoke puffs in drawings 4 and 5 (`all 256 nosmoke` would also take them out) | |
 | 9B Barrier strike | fx-09b-barrier-strike.png | one animation of six; the game adds sheet 8 smoke | `all 256` |
+| 10 Energy crackle | fx-10-energy-crackle.png | two loops: four bolts bracketing the mech, and a ring; the drawings play in random order, flipped or turned, so a loop of three never visibly repeats | `rows centre` |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
 
