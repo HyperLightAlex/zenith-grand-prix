@@ -991,9 +991,10 @@ export function buildTrackVisual(
     crowdTex.repeat.set(3, 1);
     const standMat = new THREE.MeshLambertMaterial({ map: crowdTex });
     const roofMat = new THREE.MeshLambertMaterial({ color: 0xe9edf2 });
-    // Painted: the crowd, rows of it about 13 units deep to a repeat, and concrete stands.
+    // Painted: the crowd, five rows of it to every 18 units up the stand (big
+    // enough for its colours to carry at a distance), and concrete stands.
     const crowdPainted = paintedTexture(kit.surfaces.crowd, { repeat: true });
-    crowdPainted.repeat.set(120 / (13 * kit.crowdAspect), 2);
+    crowdPainted.repeat.set(120 / (18 * kit.crowdAspect), 26 / 18);
     swaps.push((on) => (standMat.map = on ? crowdPainted : crowdTex));
     const baseMat = paintedSurfaceMaterial(tex('concrete'), tex('concrete'), 8, 8, THREE.FrontSide, { dip: 0 });
     for (const side of [-1, 1]) {
