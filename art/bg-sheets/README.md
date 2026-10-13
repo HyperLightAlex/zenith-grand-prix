@@ -26,7 +26,7 @@ of the edge pixels; nothing painted on these sheets is green.
 | Sheet | File | Notes |
 |---|---|---|
 | M1 Sky | bg-m1-sky.png | horizon at 745 px; the edges wrap well; the sun-side half of the sky |
-| M1B Sky | | to do: the half facing away (prompt below) |
+| M1B Sky | bg-m1b-sky.png | horizon at 744 px; the sky's colour meets M1's at both edges, but its pink horizon band against M1's peach shows as a step, so the joins are blended over a few hundred pixels |
 | M2 Horizon | bg-m2-horizon.png | three strips, bottoms dead level, ends match to within a few pixels |
 | M3 Clouds | bg-m3-clouds.png | six clouds; the second is a little wider than its cell, so the clouds are cut by their outlines, not by the grid |
 | M4 Surfaces | bg-m4-surfaces.png | the squares do not quite repeat at their edges; each is cut to the length that wraps (whole window bays on the facades) and its seams blended |
