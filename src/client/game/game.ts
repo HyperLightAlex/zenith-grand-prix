@@ -493,6 +493,7 @@ export class Game {
             const hold = 0.7;
             this.renderer.impactFrame(0.11, true);
             this.renderer.paintedStill(hold);
+            this.view.fx.skipExplosionsTo(2);
             this.session.freeze(hold + 0.11);
             this.slowmo += hold + 0.11;
           }

@@ -671,10 +671,17 @@ export class RaceView {
       case 'ko': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 4.5, v1);
-        this.fx.flash(v1, 26, 0xffffff, 0.45, v.rig.root);
-        this.fx.flash(v1, 20, 0xff8a30, 0.6, v.rig.root, true);
-        this.fx.burst(v1, v.vel, 90, 80, 0xffa040, 0.8, 0.9);
-        this.fx.puff(v1, v.vel, 12, 0x2b2b33, 3.5, 1.8);
+        if (this.fx.explosion(v1, v.vel, 36)) {
+          // The anime look: a drawn explosion (flash, fireball, smoke in
+          // eight drawings), with a shock ring and a few sparks round it.
+          this.fx.flash(v1, 20, 0xff8a30, 0.5, v.rig.root, true);
+          this.fx.burst(v1, v.vel, 40, 80, 0xffa040, 0.8, 0.9);
+        } else {
+          this.fx.flash(v1, 26, 0xffffff, 0.45, v.rig.root);
+          this.fx.flash(v1, 20, 0xff8a30, 0.6, v.rig.root, true);
+          this.fx.burst(v1, v.vel, 90, 80, 0xffa040, 0.8, 0.9);
+          this.fx.puff(v1, v.vel, 12, 0x2b2b33, 3.5, 1.8);
+        }
         const near = this.mechs[local].pos.distanceTo(v.pos) < 140;
         if (inKnockout(race, e.mech, e.by, local, this.lastTarget)) this.cam.punch(1);
         if (near) {

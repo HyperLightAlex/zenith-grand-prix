@@ -87,8 +87,9 @@ const SpeedShader = {
       // Vignette, hurt tint, flash.
       float vig = smoothstep(0.55, 1.15, r);
       col *= 1.0 - vig * (0.22 + uSpeed * 0.12);
-      col = mix(col, vec3(1.0, 0.12, 0.16), vig * uHurt * 0.55);
-      col = mix(col, vec3(1.0), uFlash);
+      // (Not over a held frame: the painting is of the moment, not the flash.)
+      col = mix(col, vec3(1.0, 0.12, 0.16), vig * uHurt * 0.55 * (1.0 - uHold));
+      col = mix(col, vec3(1.0), uFlash * (1.0 - uHold));
       gl_FragColor = vec4(col, 1.0);
     }`,
 };

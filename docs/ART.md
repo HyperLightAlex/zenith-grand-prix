@@ -27,7 +27,7 @@ each limit is one piece of the code.
 | Every character traced in ink, heavier on the outside, thinner inside | An ink pass: a heavy contour round each mech that thins with distance, thin lines where parts overlap, fold or change paint, none where a paint meets its own shadow |
 | Each drawing traced again by hand, so lines shimmer | The lines are traced a fraction of a pixel off on every new drawing ("boil") |
 | Animation on twos (12 drawings a second) and threes for held poses | Mech poses at 12 a second, 8 when held (boosting, carving, a burst); effects change shape on the same drawings; movement, the camera and the race stay at 60 |
-| Effects drawn by hand: sparks as stars, smoke as shapes, glows as flat rings | Sparks are four-pointed stars with a white core, smoke is lumpy two-tone puffs that break into holes, impact flashes are ragged hard bursts, blade arcs hard crescents, light trails flat bands, the bloom cut into rings |
+| Effects drawn by hand: sparks as stars, smoke as shapes, glows as flat rings | Sparks are four-pointed stars with a white core, smoke is lumpy two-tone puffs that break into holes, a knockout is an eight-drawing explosion flipbook (flash, fireball, smoke), impact flashes are ragged hard bursts, blade arcs hard crescents, light trails flat bands, the bloom cut into rings |
 | Speed shown with drawn lines, not blur | Drawn speed lines, mostly white and a few in ink, new on every drawing; the radial blur cut to a third |
 | Shot on film | A film pass: halation (bright light bleeding orange into the emulsion), a little colour fringe and softness, gate weave, grain at 24 frames a second, a grade toward the painted palette, blacks that are paint rather than black |
 | Big moments cut to something else | Impact frames on heavy blows, the knockout held as a painted still, title cards for the lap phases, an eyecatch before the results |
@@ -129,9 +129,12 @@ style, roughly in order of payoff.
   to every colour. A cel painter mixed a shadow for each paint (the white
   armour's lavender, the red's maroon). A small table per livery would do
   it.
-- **Hand-drawn effect sprites.** The explosions and bursts are drawn shapes
-  made in code. Flipbook sprites drawn by an artist (a knockout explosion in
-  six drawings, smoke rings, debris) would be the single biggest step up.
+- **More drawn effect sprites.** The knockout explosion is a drawn
+  flipbook: eight drawings in a strip (`src/client/render/sprites/explosion.png`),
+  painted by `tools/fx/explosion.py` from circles with wobbling edges in flat
+  tones and an ink line, so it can be redrawn with a different seed, size or
+  palette. Ring-outs, guard breaks, the boost flare and a big hit would each
+  want one of their own.
 - **Coloured lines.** Lines are ink everywhere. Productions used coloured
   lines inside light areas (on a glow, on the sky side of a cloud).
 - **Lines between two overlapping mechs** fall back to the depth test, so

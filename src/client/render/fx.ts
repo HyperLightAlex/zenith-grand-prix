@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { drawClock, look } from './look';
 import { COLORS } from './palette';
+import explosionUrl from './sprites/explosion.png';
 
 const _v = new THREE.Vector3();
 
@@ -379,6 +380,34 @@ function slashTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/**
+ * A drawn flipbook in the air: the anime look's knockout explosion, eight
+ * drawings in a strip (made by tools/fx/explosion.py), one per drawing of
+ * the look's clock. It drifts with what blew up, slowing, and always faces
+ * the camera upright, so its smoke rises.
+ */
+interface Flipbook {
+  mesh: THREE.Mesh;
+  mat: THREE.MeshBasicMaterial;
+  tex: THREE.Texture;
+  frame: number;
+  pos: THREE.Vector3;
+  vel: THREE.Vector3;
+}
+
+const FLIP_FRAMES = 8;
+let explosionAtlas: THREE.Texture | null = null;
+
+function explosionTexture(): THREE.Texture {
+  if (!explosionAtlas) {
+    explosionAtlas = new THREE.TextureLoader().load(explosionUrl);
+    explosionAtlas.colorSpace = THREE.SRGBColorSpace;
+    explosionAtlas.generateMipmaps = true;
+    explosionAtlas.minFilter = THREE.LinearMipmapLinearFilter;
+  }
+  return explosionAtlas;
+}
+
 interface Flash {
   mesh: THREE.Mesh;
   mat: THREE.MeshBasicMaterial;
@@ -498,6 +527,7 @@ export class Fx {
   readonly sparks = new Particles(1400, true);
   readonly smoke = new Particles(260, false);
   private flashes: Flash[] = [];
+  private flipbooks: Flipbook[] = [];
   private slashes: Slash[] = [];
   private tells: TellRing[] = [];
   private tellFrame = 1;
@@ -558,6 +588,22 @@ export class Fx {
       this.tells.push({ mesh, mat, key: -1, seen: 0, total: 1 });
     }
 
+    // Knockout explosions (the anime look). Each has its own view of the
+    // shared atlas, to show its own drawing.
+    const atlas = explosionTexture();
+    for (let i = 0; i < 4; i++) {
+      const tex = atlas.clone();
+      tex.repeat.set(1 / FLIP_FRAMES, 1);
+      // Brighter than the paint around it: the white core blooms, the fire
+      // carries through the tone mapping.
+      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, color: new THREE.Color(1.45, 1.4, 1.35) });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+      mesh.visible = false;
+      mesh.renderOrder = 8;
+      this.group.add(mesh);
+      this.flipbooks.push({ mesh, mat, tex, frame: -1, pos: new THREE.Vector3(), vel: new THREE.Vector3() });
+    }
+
     const tg = new THREE.BoxGeometry(0.22, 0.22, 1);
     tg.translate(0, 0, -0.5);
     this.tracers = new THREE.InstancedMesh(tg, new THREE.MeshBasicMaterial({ toneMapped: false }), MAX_TRACERS);
@@ -578,6 +624,10 @@ export class Fx {
     (this.sparks.points.material as THREE.Material).dispose();
     (this.smoke.points.material as THREE.Material).dispose();
     for (const f of this.flashes) f.mat.dispose();
+    for (const b of this.flipbooks) {
+      b.mat.dispose();
+      b.tex.dispose();
+    }
     for (const t of this.tells) t.mat.dispose();
     this.tellTex.dispose();
     for (const s of this.slashes) {
@@ -698,6 +748,36 @@ export class Fx {
   }
 
   /**
+   * The drawn knockout explosion, `size` units across, at `at`, carried along
+   * by `base` (the velocity of what blew up) as it slows. Returns false (and
+   * does nothing) unless the anime look is on: the plain look keeps its own.
+   */
+  explosion(at: THREE.Vector3, base: THREE.Vector3, size: number): boolean {
+    if (!this.drawn) return false;
+    // A free one, or else the one furthest through.
+    const b = this.flipbooks.find((f) => f.frame < 0) ?? this.flipbooks.reduce((a, f) => (f.frame > a.frame ? f : a));
+    b.frame = 0;
+    b.pos.copy(at);
+    b.vel.copy(base);
+    b.mesh.scale.setScalar(size);
+    b.tex.offset.x = 0;
+    b.mesh.visible = true;
+    return true;
+  }
+
+  /**
+   * Move any explosion that has only just started on to drawing `frame`: a
+   * painted still of a knockout is of the fireball, not the flash before it.
+   */
+  skipExplosionsTo(frame: number): void {
+    for (const b of this.flipbooks) {
+      if (b.frame < 0 || b.frame >= frame) continue;
+      b.frame = frame;
+      b.tex.offset.x = frame / FLIP_FRAMES;
+    }
+  }
+
+  /**
    * A wind-up tell for one heavy blow: a notched ring round the attacker
    * that closes as the blow comes and meets the body as it lands. `left` is
    * ticks to impact (fractional, for a smooth close), `now` lights it white
@@ -790,6 +870,29 @@ export class Fx {
     }
     this.sparks.update(dt, 0, fresh, drawn);
     this.smoke.update(dt, 2.2, fresh, drawn);
+    for (const b of this.flipbooks) {
+      if (b.frame < 0) continue;
+      if (!drawn) {
+        b.frame = -1;
+        b.mesh.visible = false;
+        continue;
+      }
+      // Drift with what blew up, slowing; the smoke drawings rise a little.
+      b.vel.multiplyScalar(Math.exp(-3 * dt));
+      b.pos.addScaledVector(b.vel, dt);
+      b.pos.y += dt * 4;
+      if (drawClock.fresh && dt > 0) {
+        b.frame++;
+        if (b.frame >= FLIP_FRAMES) {
+          b.frame = -1;
+          b.mesh.visible = false;
+          continue;
+        }
+        b.tex.offset.x = b.frame / FLIP_FRAMES;
+      }
+      b.mesh.position.copy(b.pos);
+      b.mesh.quaternion.copy(camera.quaternion);
+    }
     for (const f of this.flashes) {
       if (f.life <= 0) {
         f.mesh.visible = false;
