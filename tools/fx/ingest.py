@@ -60,6 +60,14 @@ def cut(src, size=256, centre=False, offsets=(0, 0), bands=None, nosmoke=False):
             total = ndimage.sum(np.ones_like(a), lab, range(1, n + 1))
             greys = ndimage.sum(grey, lab, range(1, n + 1))
             smoke = np.concatenate([[False], greys / np.maximum(total, 1) > 0.5])
+            # And the specks left inside a puff's outline (the rim of a hole in it).
+            spans = ndimage.find_objects(lab)
+            boxes = [b for i, b in enumerate(spans, 1) if smoke[i]]
+            for i, b in enumerate(spans, 1):
+                if smoke[i] or total[i - 1] > 400:
+                    continue
+                if any(b[0].start >= o[0].start and b[0].stop <= o[0].stop and b[1].start >= o[1].start and b[1].stop <= o[1].stop for o in boxes):
+                    smoke[i] = True
             a = np.where(smoke[lab], 0, a)
     rgba = np.concatenate([col, a[..., None]], -1)
 
