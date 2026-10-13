@@ -63,8 +63,9 @@ describe('track geometry', () => {
       const dot = T.tx[i] * T.tx[j] + T.ty[i] * T.ty[j] + T.tz[i] * T.tz[j];
       worst = Math.max(worst, Math.acos(Math.min(1, dot)));
     }
-    // 4 units of the tightest corner (radius ~180) turn about 0.022 rad.
-    expect(worst).toBeLessThan(0.03);
+    // 4 units of the tightest corner (the Harbour Hairpin, radius ~108) turn
+    // about 0.037 rad.
+    expect(worst).toBeLessThan(0.045);
     const seam = T.tx[0] * T.tx[T.n - 1] + T.ty[0] * T.ty[T.n - 1] + T.tz[0] * T.tz[T.n - 1];
     expect(Math.acos(Math.min(1, seam))).toBeLessThan(0.001);
   });
@@ -109,11 +110,12 @@ describe('track geometry', () => {
     }
   });
 
-  it('keeps every corner wider than a 150 unit radius', () => {
+  it('keeps every corner wider than a 100 unit radius', () => {
     let maxK = 0;
     for (let i = 0; i < T.n; i++) maxK = Math.max(maxK, Math.abs(T.kappa[i]));
     expect(maxK).toBeGreaterThan(1 / 400); // there are real corners
-    expect(1 / maxK).toBeGreaterThan(150);
+    // The carving corners are tight on purpose; none is a kink.
+    expect(1 / maxK).toBeGreaterThan(100);
   });
 
   it('turns through exactly one clockwise lap', () => {

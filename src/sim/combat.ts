@@ -331,7 +331,8 @@ export function applyHit(
   // What the victim was doing when the blow arrived, for the support awards.
   const victimTarget = victim.target;
   const victimMode = victim.mode;
-  const wasAttacking = victim.act === ACT.ATTACK;
+  // Mid-swing: winding up or with the blow still live (recovery does not count).
+  const wasAttacking = victim.act === ACT.ATTACK && victim.actT < ATTACKS[victim.attack].windup + ATTACKS[victim.attack].active;
   const inWindup = wasAttacking && victim.actT < ATTACKS[victim.attack].windup;
   let broke = false;
   // Under an Aegis, or mid-ram, nothing staggers, slows or snares the mech.

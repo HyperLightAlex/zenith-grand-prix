@@ -3,9 +3,10 @@
 // score next to placing and knockout points.
 //
 // Each pilot's total is capped per race (rules.supportCap), so a strong
-// support race is worth about a second place and never a win. Most awards can
-// only score once every rules.awardCooldown seconds against the same rival,
-// so a burst of carbine fire is one Back-up, not six.
+// support race is worth about a second place and never a win. Awards for a
+// single act can only score once every rules.awardCooldown seconds against
+// the same rival; the ones for steady work (Back-up, Pressure) pay by the
+// damage done instead.
 
 import { AEGIS_SAVED, ATK, AWARD, AWARD_COUNT, AWARD_POINTS, BODYGUARD_RANGE, LEADOUT_TICKS, MODE, ROLE, TICK_RATE, type Award } from './config';
 import { distance, inPlay } from './core';
@@ -56,7 +57,7 @@ export interface HitFacts {
   attack: number;
   damage: number;
   blocked: boolean;
-  /** The blow turned an attack into a stagger. */
+  /** The blow turned an attack (still winding up, or live) into a stagger. */
   broke: boolean;
   /** ...and that attack was still winding up. */
   inWindup: boolean;
@@ -87,7 +88,16 @@ export function onHit(race: RaceState, track: Track, att: MechState, victim: Mec
 
   if (att.role === ROLE.MF) {
     if ((f.attack === ATK.MF_PULSE || f.attack === ATK.MF_KICK) && f.broke && f.inWindup) award(race, att, AWARD.INTERRUPT, victim.id);
-    else if (onTeammate && !f.blocked) award(race, att, AWARD.BACKUP, victim.id);
+    // Steady work pays by the damage done: helping a teammate in a fight,
+    // and wearing down the rival forward.
+    if (onTeammate) {
+      att.backup += f.damage;
+      const need = race.rules.backupDamage;
+      while (att.backup >= need) {
+        att.backup -= need;
+        award(race, att, AWARD.BACKUP, victim.id, AWARD_POINTS[AWARD.BACKUP], false);
+      }
+    }
     if (victim.role === ROLE.FW) {
       att.pressure += f.damage;
       const need = race.rules.pressureDamage;

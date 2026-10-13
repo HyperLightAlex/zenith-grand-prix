@@ -400,7 +400,10 @@ describe('boost', () => {
   });
 
   it('on the formation lap an empty gauge stays empty: the boost never relights by itself', () => {
-    const a = new Arena(1);
+    // Nobody steers this mech, and Sunrise Sweep carries it wide onto the
+    // charge strip on the outside. Riding a strip is Drive coming in, which
+    // is not what this is about: switch the strips off.
+    const a = new Arena(1, 1, { driveStripLap1: 0 });
     const m = a.put(FW0, -250);
     m.drive = 20;
     a.hold(FW0, BTN.A).step(1);

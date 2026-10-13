@@ -93,9 +93,10 @@ describe('the default rules', () => {
       aegisRange: 34,
       aegisDamage: 0.35,
       koPoints: 3,
-      supportCap: 10,
-      awardCooldown: 3,
-      pressureDamage: 200,
+      supportCap: 8,
+      awardCooldown: 6,
+      pressureDamage: 150,
+      backupDamage: 80,
       assistSecs: 5,
     });
   });
@@ -808,7 +809,9 @@ describe('Drive from the battle lap on', () => {
   it('linked team-mates share DRIVE_LINK on top (a constant, not a rule)', () => {
     const a = new Arena(2, 1, { drivePassive: 0 });
     const me = a.put(MF0, 0, 0);
-    const mate = a.put(FW0, 18, 6);
+    const mate = a.put(FW0, 18, 8); // in LINK_RANGE, clear of the tow line
+    a.step(1);
+    expect(me.drafting || mate.drafting).toBe(false);
     a.tap(MF0, BTN.ALLY);
     const d0 = [me.drive, mate.drive];
     a.step(60, () => expect(me.linked && mate.linked).toBe(true));

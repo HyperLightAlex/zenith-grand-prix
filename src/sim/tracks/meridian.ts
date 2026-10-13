@@ -13,17 +13,17 @@ export const MERIDIAN: TrackDef = {
     { straight: 760 }, //  0  Grand Straight (second half)
     { arc: [430, 78] }, //  1  T1  Sunrise Sweep, climbing
     { straight: 260 }, //  2
-    { arc: [300, -52] }, //  3  T2  the Esses, left
-    { arc: [300, 84] }, //  4  T3  the Esses, right
+    { arc: [170, -60] }, //  3  T2  the Esses, left: carve it
+    { arc: [170, 92] }, //  4  T3  the Esses, right: and carve it back
     { straight: 620 }, //  5  Crest Straight
     { arc: [540, 100] }, //  6  T4  the Carousel, long banked right
     { straight: 380 }, //  7  (closing straight A)
-    { arc: [230, -70] }, //  8  T5  Drop Left
+    { arc: [140, -70] }, //  8  T5  Drop Left
     { straight: 420 }, //  9  the descent
-    { arc: [180, 160] }, // 10  T6  Harbour Hairpin
+    { arc: [105, 160] }, // 10  T6  Harbour Hairpin: the tightest on the circuit
     { straight: 700 }, // 11  (closing straight B)
-    { arc: [270, -55] }, // 12  T7  chicane left
-    { arc: [270, 55] }, // 13  T8  chicane right
+    { arc: [130, -75] }, // 12  T7  chicane left
+    { arc: [130, 75] }, // 13  T8  chicane right
     { straight: 480 }, // 14
     { arc: [390, 60] }, // 15  T9  Final Sweep
     { straight: 420 }, // 16  Grand Straight (first half)

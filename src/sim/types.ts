@@ -46,6 +46,10 @@ export interface AiState {
   hotUntil: number;
   /** Next tick a hot approach may be considered. */
   hotNext: number;
+  /** The bend (its direction, 1 or -1; 0 for none) the carve decision below was made for. */
+  carveFor: number;
+  /** Whether this pilot carves through that bend. */
+  carveGo: boolean;
 }
 
 export interface MechState {
@@ -196,6 +200,8 @@ export interface MechState {
   hurtBy: number[];
   /** Damage dealt to the rival forward not yet turned into Pressure points. */
   pressure: number;
+  /** Damage dealt to rivals fighting a teammate, not yet turned into Back-up points. */
+  backup: number;
   /** Damage an Aegis this mech cast has kept off teammates, and whether it has scored yet. */
   aegisSaved: number;
   aegisPaid: boolean;

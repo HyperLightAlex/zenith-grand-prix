@@ -187,11 +187,15 @@ describe('ally lock', () => {
     expect(a.events('denied').map((e) => e.reason)).toEqual(['target']);
   });
 
-  /** An escort and its charge inside LINK_RANGE, and a team-mate out on its own, off every tow line. */
+  /**
+   * An escort and its charge inside LINK_RANGE, and a team-mate out on its
+   * own, off every tow line. The charge sits 8 to the side: clear of
+   * DRAFT_WIDTH, not on its edge, where a rounding error decides it.
+   */
   function escort(lapPhase: 1 | 2, rules?: ConstructorParameters<typeof Arena>[2]) {
     const a = new Arena(lapPhase, 1, rules);
     const me = a.put(MF0, 0, 0);
-    const mate = a.put(FW0, 18, 6);
+    const mate = a.put(FW0, 18, 8);
     const loner = a.put(DF0, 80, -8);
     me.drive = mate.drive = loner.drive = 10;
     a.tap(MF0, BTN.ALLY);

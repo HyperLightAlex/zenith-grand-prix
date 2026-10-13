@@ -1,7 +1,8 @@
 import { jump, type CircuitDef, type ForkSpec } from '../circuit';
 
-// Corkscrew Canyon: the technical one, built for fighting. A narrow cut
-// through the rock where nobody can get past without a fight, a corkscrew,
+// Corkscrew Canyon: the technical one, built for fighting and carving. Tight
+// corners at both ends of every straight, a narrow cut through the rock where
+// nobody can get past without a fight, a corkscrew,
 // a bowl banked so steeply it can be taken flat out, a fork whose two routes
 // cross over and under each other, a sky bridge with no barriers (a ring-out
 // there is a fall) and a short hop over a gap. Runs clockwise.
@@ -23,15 +24,15 @@ export const CANYON: CircuitDef = {
   bankGain: 70,
   maxBank: 0.3,
   pieces: [
-    /*  0 */ { straight: 260, name: 'start straight' },
-    /*  1 */ { turn: [300, 90], bank: 14, name: 'T1 Mesa Right' },
-    /*  2 */ { straight: 370 },
+    /*  0 */ { straight: 360, name: 'start straight' },
+    /*  1 */ { turn: [140, 90], bank: 14, name: 'T1 Mesa Right' },
+    /*  2 */ { straight: 620, name: 'the Mesa straight: spend the T1 burst here' },
     /*  3 */ { climb: [320, -45], name: 'down into the canyon' },
     /*  4 */ { straight: 240, width: 17, name: 'the Narrows' },
     /*  5 */ { turn: [520, -14], width: 17, name: 'the Narrows, kink left' },
     /*  6 */ { turn: [520, 14], width: 17, name: 'the Narrows, kink right' },
     /*  7 */ { straight: 140, width: 17 },
-    /*  8 */ { turn: [200, -90], width: 20, bank: 10, name: 'T2 Narrows exit' },
+    /*  8 */ { turn: [120, -90], width: 20, bank: 10, name: 'T2 Narrows exit' },
     /*  9 */ { climb: [400, 50], name: 'the climb out' },
     /* 10 */ { roll: [360, 360], name: 'the Corkscrew' },
     /* 11 */ { straight: 80 },
@@ -39,17 +40,17 @@ export const CANYON: CircuitDef = {
     /* 13 */ { straight: 160, name: 'closing A' },
     /* 14 */ { straight: 640, width: 40, fork: CROSSOVER, name: 'the Crossover' },
     /* 15 */ { climb: [300, 25], name: 'up to the bridge' },
-    /* 16 */ { turn: [300, 90], bank: 14, name: 'T4' },
+    /* 16 */ { turn: [150, 90], bank: 14, name: 'T4' },
     /* 17 */ { straight: 320, width: 24, open: 'both', name: 'the Sky Bridge' },
     /* 18 */ { straight: 70 },
     ...jump({ ramp: 9, speed: 78, gap: 0.6, land: 90 }), // 19-24 the Hop
     /* 25 */ { straight: 200, name: 'closing B' },
     /* 26 */ { climb: [360, -20], name: 'down from the rim (settles the height)' },
-    /* 27 */ { turn: [260, -45], width: 24, name: 'T5 esses left' },
-    /* 28 */ { turn: [260, 45], width: 24, name: 'T6 esses right' },
+    /* 27 */ { turn: [130, -80], width: 24, name: 'T5 esses left' },
+    /* 28 */ { turn: [130, 80], width: 24, name: 'T6 esses right' },
     /* 29 */ { straight: 40 },
-    /* 30 */ { turn: [260, 90], bank: 18, name: 'T7 Final' },
-    /* 31 */ { straight: 200, name: 'run to the line' },
+    /* 30 */ { turn: [130, 90], bank: 18, name: 'T7 Final' },
+    /* 31 */ { straight: 300, name: 'run to the line' },
   ],
   closeWith: [13, 25],
   settle: 26,

@@ -115,6 +115,8 @@ export interface Rules {
   awardCooldown: number;
   /** Damage to the rival forward that earns a Vector one Pressure point. */
   pressureDamage: number;
+  /** Damage to rivals who are fighting a teammate that earns a Vector one Back-up point. */
+  backupDamage: number;
   /** Seconds before a knockout that damage still counts as an assist. */
   assistSecs: number;
 }
@@ -177,9 +179,10 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   aegisDamage: 0.35,
 
   koPoints: 3,
-  supportCap: 10,
-  awardCooldown: 3,
-  pressureDamage: 200,
+  supportCap: 8,
+  awardCooldown: 6,
+  pressureDamage: 150,
+  backupDamage: 80,
   assistSecs: 5,
 });
 
@@ -252,6 +255,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   supportCap: [0, 100],
   awardCooldown: [0, 60],
   pressureDamage: [1, 100000],
+  backupDamage: [1, 100000],
   assistSecs: [0, 60],
 });
 

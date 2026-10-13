@@ -10,6 +10,9 @@ import {
   ATK,
   ATTACKS,
   BTN,
+  CARVE_MIN_SPEED,
+  CARVE_MIN_STEER,
+  CARVE_TURN,
   LOCK_RANGE,
   MODE,
   PHASE,
@@ -310,9 +313,11 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   }
   dWant = lo <= hi ? clamp(dWant, lo, hi) : (lo + hi) / 2;
 
-  // --- steer: feed forward the bend, correct toward the line
+  // --- steer: feed forward the bend, correct toward the line. A carve grips
+  // harder, so the same turn needs less stick.
   const kappa = kappaAt(track, m.s + m.speed * 0.12);
-  const omegaMax = Math.min(c.turnMax, c.grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) || 1;
+  const carveGrip = m.carving ? rules.carveGrip : 1;
+  const omegaMax = Math.min(c.turnMax * (m.carving ? CARVE_TURN : 1), (c.grip * carveGrip) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) || 1;
   const headingWant = clamp(Math.atan2(dWant - m.d, look), -0.5, 0.5);
   const sdot = m.speed * Math.cos(m.heading);
   const rate = kappa * sdot + (headingWant - m.heading) * 3.2;
@@ -324,8 +329,38 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // A turn banked toward its inside can be taken faster: its grip goes into the sum.
   for (let a = 0; a <= reach; a += 12) kMax = Math.max(kMax, Math.abs(kappaAt(track, m.s + a)) / gripAt(track, m.s + a));
   const vCorner = kMax > 1e-5 ? Math.sqrt((c.grip * 0.95) / kMax) * 1.04 : 999;
-  if (m.speed > vCorner + 3) {
+  // Carving through it, a turn can be taken this much faster.
+  const vCarve = vCorner * Math.sqrt(rules.carveGrip);
+
+  // --- carve: through any proper bend, for the burst on the way out. The
+  // trigger with the stick over is a carve; on the way in, stick still
+  // straight, it is the brake.
+  const bend = kappaAt(track, m.s + m.speed * 0.08);
+  const bendDir = Math.abs(bend) > 1 / 650 ? Math.sign(bend) : 0;
+  if (bendDir !== ai.carveFor) {
+    // A new bend: does this pilot carve it? The better the pilot, the likelier.
+    ai.carveFor = bendDir;
+    ai.carveGo = bendDir !== 0 && rngNext(race) < 0.35 + 0.6 * m.skill;
+  }
+  const exitAhead = kappaAt(track, m.s + m.speed * 0.3);
+  const ending = Math.abs(exitAhead) < 1 / 900 || Math.sign(exitAhead) !== m.carveDir;
+  const needGrip = m.speed > vCorner - 2 && bendDir !== 0;
+  let carve = false;
+  if (!hot && !m.finished && m.speed > CARVE_MIN_SPEED + 5 && !threading) {
+    if (m.carving) carve = !(ending && m.carveTier > 0) && out.mx * m.carveDir > 0.02;
+    else carve = bendDir !== 0 && (ai.carveGo || needGrip) && out.mx * bendDir > 0.05;
+  }
+  if (carve) {
+    out.brake = 1;
+    // Lean into it hard enough to start the carve; after that the line decides.
+    if (!m.carving) out.mx = bendDir * Math.max(Math.abs(out.mx), CARVE_MIN_STEER + 0.05);
+    if (m.speed > vCarve + 3) throttle = 0;
+    else if (m.speed > vCarve - 3) throttle = Math.min(throttle, 0.7);
+    wantBoost = false;
+  } else if (m.speed > vCorner + 3) {
     out.brake = clamp((m.speed - vCorner) / 14, 0.2, 1);
+    // Braking is done with the stick near the middle: further over and the trigger would carve.
+    if (Math.abs(out.mx) >= CARVE_MIN_STEER) out.brake = 0;
     throttle = 0;
     wantBoost = false;
   } else if (m.speed > vCorner - 3) {

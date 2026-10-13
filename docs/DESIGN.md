@@ -75,8 +75,8 @@ never a win.
 |---|---|---|
 | Vector | Snare lands on a rival (the rival forward: 2) | 1 |
 | Vector | **Interrupt**: a Disruptor or Stun Kick that breaks a wind-up | 2 |
-| Vector | **Pressure**: every 200 damage dealt to the rival forward | 1 |
-| Vector | **Back-up**: a hit on a rival who is fighting a teammate | 1 |
+| Vector | **Pressure**: every 150 damage dealt to the rival forward | 1 |
+| Vector | **Back-up**: every 80 damage dealt to a rival who is fighting a teammate | 1 |
 | Bulwark | **Peel**: a hit on a rival who is attacking your forward | 1 |
 | Bulwark | **Save**: the same hit, breaking their attack | 2 |
 | Bulwark | **Bodyguard**: a block or parry near your forward | 1 |

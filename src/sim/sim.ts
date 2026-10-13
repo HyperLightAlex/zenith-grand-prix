@@ -249,6 +249,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       awardTick: freshAwardTicks(),
       hurtBy: freshHurtBy(),
       pressure: 0,
+      backup: 0,
       aegisSaved: 0,
       aegisPaid: true,
       shieldBy: -1,
@@ -272,6 +273,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
         abilityAt: 0,
         hotUntil: 0,
         hotNext: 0,
+        carveFor: 0,
+        carveGo: false,
       },
     });
   });
