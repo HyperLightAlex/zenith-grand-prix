@@ -133,7 +133,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
       feel('lookInk', 'Ink lines', 0, 2, 0.05, 'x'),
       feel('lookBoil', 'Line boil', 0, 2, 0.05, 'x', 'How much the lines and the grain shift from one drawing to the next.'),
       feel('lookSteps', 'Drawings a second', 0, 24, 1, 'int', 'Mech poses and effects. 12 is animation on twos; 8 on threes; 0 animates smoothly. The race and the camera always run at full speed.'),
-      feel('lookImpact', 'Impact frames', 0, 1, 1, 'onoff', 'A flash of flat ink on a big hit you are part of. At most one every second and a half.'),
+      feel('lookImpact', 'Impact frames', 0, 1, 1, 'onoff', 'A flash of flat ink on a big hit you are part of. At most one every 1.2 seconds.'),
       feel('lookStill', 'Knockout still', 0, 1, 1, 'onoff', 'A painted freeze-frame when you take part in a knockout.'),
     ],
   },

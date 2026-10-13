@@ -114,6 +114,10 @@ export class Game {
   /** The eyecatch before the results: on screen in the anime look, once a round. */
   private eyecatch: Eyecatch;
   private eyecaught = false;
+  /** A ?look= on the URL: the look for this visit, not remembered (until G or the menu switches it). */
+  private lookParam: number | null = null;
+  /** Time for the scenery's own motion, which stops while a painted still is up. */
+  private worldTime = 0;
   private ownLock = -1;
   private ownLockAt = 0;
   private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
@@ -138,7 +142,7 @@ export class Game {
       onNext: () => this.next(),
       onTuning: () => this.panel.show(),
       onToggleLook: () => this.toggleLook(),
-      lookOn: () => this.tuning.feel.look >= 0.5,
+      lookOn: () => look.on,
       onQuit: () => this.showTitle(),
       onGarage: () => {
         this.menus.show('garage');
@@ -180,7 +184,7 @@ export class Game {
     if (opts.tune) this.panel.show();
     // ?look=plain or ?look=anime picks the look for this visit without remembering it.
     const lk = new URLSearchParams(location.search).get('look');
-    if (lk === 'plain' || lk === 'anime') this.tuning.feel.look = lk === 'anime' ? 1 : 0;
+    if (lk === 'plain' || lk === 'anime') this.lookParam = lk === 'anime' ? 1 : 0;
     requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -224,6 +228,7 @@ export class Game {
     this.slowmo = 0;
     this.eyecaught = false;
     this.eyecatch?.hide();
+    this.renderer.clearMoments();
     this.ownLock = -1;
     this.ownLockAt = 0;
     this.session.timeScale = 1;
@@ -278,12 +283,19 @@ export class Game {
     this.view.cam.reset();
   }
 
-  /** Switch the 80s anime look on or off (remembered like any tuning value). Returns whether it is now on. */
+  /**
+   * Switch the 80s anime look on or off (remembered like any tuning value,
+   * and it replaces a ?look= on the URL). Returns whether it is now on.
+   */
   private toggleLook(): boolean {
+    const on = !look.on;
+    this.lookParam = null;
     const item = TUNE_GROUPS.flatMap((g) => g.items).find((i) => i.key === 'look');
-    if (item) this.tuning.set(item, this.tuning.feel.look >= 0.5 ? 0 : 1);
-    this.hud.showNotice(this.tuning.feel.look >= 0.5 ? 'Look: 80s anime' : 'Look: plain', false, 1.2);
-    return this.tuning.feel.look >= 0.5;
+    if (item) this.tuning.set(item, on ? 1 : 0);
+    look.on = on;
+    this.hud.showNotice(on ? 'Look: 80s anime' : 'Look: plain', false, 1.2);
+    this.menus.refreshLook();
+    return on;
   }
 
   /** Volumes and the layer mix from the tuning panel's Sound tab. */
@@ -602,6 +614,8 @@ export class Game {
     const what = m && m.winner >= 0 && m.rounds.length > 1 ? 'the match' : 'the round';
     this.eyecatch.show(m ? `Round ${m.rounds.length}` : 'The flag', `${LIVERIES[winner].name} take ${what}`, hold);
     this.renderer.paintedStill(hold);
+    // The race has finished; hold it so nothing moves under the painting.
+    this.session.freeze(hold);
     this.hud.hide();
     this.resultsAt = this.time + hold;
     return true;
@@ -645,11 +659,14 @@ export class Game {
     const dt = Math.min(0.1, Math.max(0.0005, (now - this.last) / 1000));
     this.last = now;
     this.time += dt;
-    // The look: its settings for this frame, and the drawing clock.
+    // The look: its settings for this frame, and the drawing clock. (A held
+    // frame is a held cel: the drawings stop with it, and with the pause.)
     readLook(this.tuning.feel);
-    // (A held frame is a held cel: the drawings stop with it.)
-    tickDrawings(this.renderer.stillShowing ? 0 : dt * (this.state === 'race' ? this.session.timeScale : 1));
-    this.eyecatch.update(dt);
+    if (this.lookParam !== null) look.on = this.lookParam >= 0.5;
+    const paused = this.state === 'paused';
+    tickDrawings(this.renderer.stillShowing || paused ? 0 : dt * (this.state === 'race' ? this.session.timeScale : 1));
+    this.eyecatch.update(paused ? 0 : dt);
+    this.renderer.paused = paused;
     CEL.uCel.value = look.on ? 1 : 0;
     // The ink pass draws the mechs' contours itself; the hull outlines are for the plain look.
     setHullOutlines(!this.renderer.inking);
@@ -754,8 +771,10 @@ export class Game {
     const viewDt = this.renderer.stillShowing ? 0 : simDt * (this.state === 'race' ? this.session.timeScale : 1);
     this.view.update(viewDt, flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
     if (this.state === 'race') this.hud.update(dt, cur, this.view.plates, this.view.focusId);
-    this.trackVis.update(this.time);
-    this.world.update(this.time, this.renderer.camera);
+    // The scenery's own motion (water, lights) holds for a painted still too.
+    if (!this.renderer.stillShowing) this.worldTime += dt;
+    this.trackVis.update(this.worldTime);
+    this.world.update(this.worldTime, this.renderer.camera);
 
     // The player's own lock, remembered for a few seconds after it goes (a
     // knockout clears it), for the slow motion on knockouts they had a hand in.

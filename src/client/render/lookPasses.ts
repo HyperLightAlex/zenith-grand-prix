@@ -22,7 +22,12 @@ const VERTEX = /* glsl */ `
   void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
 const COMMON = /* glsl */ `
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  // A hash without sin(), which some GPUs evaluate at low precision for large arguments.
+  float hash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
   float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }`;
 
 const InkShader = {

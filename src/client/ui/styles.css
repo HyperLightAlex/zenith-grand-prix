@@ -617,7 +617,7 @@ html, body {
 /* ---- the anime look: eyecatch ---------------------------------------------
    Between the race and the results: the last frame held as a painted still,
    the title over it on a slanted black card, a red rule. In on a cut. */
-.eyecatch { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: flex-start; z-index: 30; }
+.eyecatch { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: flex-start; }
 .eyecatch[hidden] { display: none; }
 .eyecatch .ec-card {
   margin-left: 9%;

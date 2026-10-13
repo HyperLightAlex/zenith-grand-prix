@@ -210,12 +210,28 @@ export function celify(root: THREE.Object3D): void {
   });
 }
 
-/** Mark everything under `root` as a character, to be inked and shaded as one. */
+/**
+ * Mark everything under `root` as a character, to be inked and shaded as one.
+ * Its see-through parts (decals, the race number) blend their colour as before
+ * but leave the alpha under them alone, so the mark survives beneath them.
+ * (Additive parts, the glows, still blend it away: light is not inked.)
+ */
 export function markCharacter(root: THREE.Object3D): void {
   root.traverse((o) => {
     const mats = (o as THREE.Mesh).material;
     if (!mats) return;
-    for (const m of Array.isArray(mats) ? mats : [mats]) m.userData.celChar = true;
+    for (const m of Array.isArray(mats) ? mats : [mats]) {
+      m.userData.celChar = true;
+      if (m.transparent && m.blending === THREE.NormalBlending && !m.premultipliedAlpha) {
+        m.blending = THREE.CustomBlending;
+        m.blendEquation = THREE.AddEquation;
+        m.blendSrc = THREE.SrcAlphaFactor;
+        m.blendDst = THREE.OneMinusSrcAlphaFactor;
+        m.blendEquationAlpha = THREE.AddEquation;
+        m.blendSrcAlpha = THREE.ZeroFactor;
+        m.blendDstAlpha = THREE.OneFactor;
+      }
+    }
   });
 }
 

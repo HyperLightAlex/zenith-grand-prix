@@ -327,6 +327,11 @@ export class Menus {
     this.root.append(h('div.shade.full'), box, this.footer(['B', 'Esc', 'Back']));
   }
 
+  /** The look was switched from outside the menu (G): bring its label up to date. */
+  refreshLook(): void {
+    this.root.querySelectorAll('.look-label').forEach((el) => (el.textContent = `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`));
+  }
+
   private renderPause(): void {
     this.root.onclick = null;
     const col = h('div.col');
@@ -334,7 +339,7 @@ export class Menus {
     this.addItem(list, h('div.item', h('span', 'Resume')), () => this.cb.onResume());
     this.addItem(list, h('div.item', h('span', 'Restart this race')), () => this.cb.onRestart());
     this.addItem(list, h('div.item', h('span', 'Tuning')), () => this.cb.onTuning());
-    const lookLabel = h('span', `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`);
+    const lookLabel = h('span.look-label', `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`);
     this.addItem(list, h('div.item', lookLabel), () => {
       lookLabel.textContent = `Look: ${this.cb.onToggleLook() ? '80s anime' : 'plain'}`;
     });

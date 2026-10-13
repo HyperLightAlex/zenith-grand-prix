@@ -77,7 +77,8 @@ const SpeedShader = {
         float start = 0.36 + hash(sd + 3.1) * 0.3;
         float fd = fract(ang * n / 6.28318);
         float hw = 0.07 + 0.3 * smoothstep(start, 1.25, r);
-        float edge = fwidth(fd) * 1.2;
+        // (fwidth of the angle, not of its fract, which jumps at each cell's edge.)
+        float edge = min(fwidth(ang * n / 6.28318), 0.1) * 1.2;
         float wedge = 1.0 - smoothstep(hw - edge, hw + edge, abs(fd - 0.5));
         float drawn = on * wedge * smoothstep(start, start + 0.04, r);
         vec3 lc = hash(sd + 7.7) < 0.25 ? vec3(0.02, 0.016, 0.04) : uTint * 1.5;
@@ -116,6 +117,8 @@ export class Renderer {
   private clock = 0;
   /** Whether the look may cut in its moments: only while the player is racing, not behind the menus. */
   moments = false;
+  /** The game is paused: a cut in progress waits for it. */
+  paused = false;
   private quality: Quality = 'high';
   private frameTimes: number[] = [];
   private lastScaleChange = 0;
@@ -213,8 +216,14 @@ export class Renderer {
     return look.on && look.ink > 0 && this.quality !== 'low';
   }
 
+  /** End any cut in progress (a new race, or a restart). */
+  clearMoments(): void {
+    this.impactT = this.stillT = this.stillWait = 0;
+  }
+
   /** The look's passes and settings for this frame. `dt` is real time. */
-  private applyLook(dt: number): void {
+  private applyLook(rawDt: number): void {
+    const dt = this.paused ? 0 : rawDt;
     const on = look.on;
     const ink = this.inkPass.uniforms;
     const film = this.filmPass.uniforms;
