@@ -740,6 +740,16 @@ export class Fx {
   }
 
   /**
+   * Keep a drawn loop going (see SpriteFx.keep): call it every frame it
+   * should show. Returns false in the plain look.
+   */
+  drawnKeep(key: string, kind: SpriteKind, at: THREE.Vector3, size: number, o?: SpriteOptions): boolean {
+    if (!this.drawn) return false;
+    this.sprites.keep(key, kind, at, size, o);
+    return true;
+  }
+
+  /**
    * A wind-up tell for one heavy blow: a notched ring round the attacker
    * that closes as the blow comes and meets the body as it lands. `left` is
    * ticks to impact (fractional, for a smooth close), `now` lights it white

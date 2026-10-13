@@ -1,42 +1,85 @@
 // Drawn effects from painted sheets (the anime look). Each kind is an atlas:
 // one row per variation, one column per drawing, made by
 // tools/fx/build_sprites.py from the sheets in art/fx-sheets. A sprite plays
-// its row on the look's drawing clock, faces the camera, and is recoloured
-// on the way out: the sheets are painted in cyan, and the game turns that
-// into the team's, the weapon's or the moment's colour, keeping the white
-// cores white. Everything is pooled.
+// its row on the look's drawing clock, faces the camera (or lies flat), and
+// is recoloured on the way out: the glows are painted in cyan, and the game
+// turns that into the team's, the weapon's or the moment's colour, keeping
+// the white cores white; the smoke is painted grey, and the game shades it
+// to the dust or smoke it wants. A loop (a crackle round a snared mech) is
+// kept alive by asking for it every frame, and plays its drawings in a
+// random order. Everything is pooled.
 import * as THREE from 'three';
 import { drawClock } from './look';
+import crackleUrl from './sprites/fx-crackle.png';
 import cutHeavyUrl from './sprites/fx-cut-heavy.png';
 import cutLightUrl from './sprites/fx-cut-light.png';
+import explosionUrl from './sprites/fx-explosion.png';
+import groundRingUrl from './sprites/fx-ground-ring.png';
 import impactUrl from './sprites/fx-impact.png';
 import lanceUrl from './sprites/fx-lance.png';
 import parryUrl from './sprites/fx-parry.png';
 import ringUrl from './sprites/fx-ring.png';
+import smokeUrl from './sprites/fx-smoke.png';
 import sparkUrl from './sprites/fx-spark.png';
-import explosionUrl from './sprites/explosion.png';
-import groundRingUrl from './sprites/fx-ground-ring.png';
+import sparkleUrl from './sprites/fx-sparkle.png';
+import wallUrl from './sprites/fx-wall.png';
 
-export type SpriteKind = 'spark' | 'impact' | 'parry' | 'cutLight' | 'cutHeavy' | 'lance' | 'ring' | 'groundRing' | 'explosion';
+export type SpriteKind =
+  | 'spark'
+  | 'impact'
+  | 'parry'
+  | 'cutLight'
+  | 'cutHeavy'
+  | 'lance'
+  | 'ring'
+  | 'groundRing'
+  | 'explosion'
+  | 'smoke'
+  | 'wall'
+  | 'crackle'
+  | 'sparkle';
+
+/**
+ * How a sheet is coloured: `glow` swaps its cyan for the tint, `smoke` shades
+ * its greys with the tint, `own` keeps the painted colours.
+ */
+type Paint = 'own' | 'glow' | 'smoke';
+const PAINT: Record<Paint, number> = { own: 0, glow: 1, smoke: 2 };
 
 interface Atlas {
   url: string;
   cols: number;
   rows: number;
-  /** Recolour the cyan to the sprite's tint (the explosion keeps its own colours). */
-  tint: boolean;
+  paint: Paint;
+  /** How many drawings each column is held for (1 if left out). */
+  holds?: number[];
+  /** How fast it climbs, units a second, when it is not riding on a mech. */
+  rise?: number;
 }
 
+/** Where the barrier sits in a `wall` drawing: tools/fx/build_sprites.py lines it up 32 px into a 256 px cell. */
+export const WALL_EDGE = 32 / 256;
+
 const ATLASES: Record<SpriteKind, Atlas> = {
-  spark: { url: sparkUrl, cols: 3, rows: 2, tint: true },
-  impact: { url: impactUrl, cols: 6, rows: 1, tint: true },
-  parry: { url: parryUrl, cols: 3, rows: 2, tint: true },
-  cutLight: { url: cutLightUrl, cols: 3, rows: 2, tint: true },
-  cutHeavy: { url: cutHeavyUrl, cols: 3, rows: 1, tint: true },
-  lance: { url: lanceUrl, cols: 3, rows: 2, tint: true },
-  ring: { url: ringUrl, cols: 3, rows: 1, tint: true },
-  groundRing: { url: groundRingUrl, cols: 3, rows: 2, tint: true },
-  explosion: { url: explosionUrl, cols: 8, rows: 1, tint: false },
+  spark: { url: sparkUrl, cols: 3, rows: 2, paint: 'glow' },
+  impact: { url: impactUrl, cols: 6, rows: 1, paint: 'glow' },
+  parry: { url: parryUrl, cols: 3, rows: 2, paint: 'glow' },
+  cutLight: { url: cutLightUrl, cols: 3, rows: 2, paint: 'glow' },
+  cutHeavy: { url: cutHeavyUrl, cols: 3, rows: 1, paint: 'glow' },
+  lance: { url: lanceUrl, cols: 3, rows: 2, paint: 'glow' },
+  ring: { url: ringUrl, cols: 3, rows: 1, paint: 'glow' },
+  groundRing: { url: groundRingUrl, cols: 3, rows: 2, paint: 'glow' },
+  // The painted knockout (sheet 12): flash, fireball, smoke closing over it,
+  // smoke breaking up, the smoke held longer. The procedural one it replaced
+  // is still in sprites/explosion.png (8 drawings, from tools/fx/explosion.py).
+  explosion: { url: explosionUrl, cols: 6, rows: 1, paint: 'own', holds: [1, 1, 1, 1, 2, 2], rise: 4 },
+  // A small puff and a big cloud, each swelling then breaking into pieces.
+  smoke: { url: smokeUrl, cols: 3, rows: 2, paint: 'smoke', holds: [1, 1, 2], rise: 3 },
+  // A burst against a barrier, flat side on the barrier.
+  wall: { url: wallUrl, cols: 6, rows: 1, paint: 'glow' },
+  // Loops: four bolts bracketing a mech, and a ring.
+  crackle: { url: crackleUrl, cols: 3, rows: 2, paint: 'glow' },
+  sparkle: { url: sparkleUrl, cols: 6, rows: 1, paint: 'glow' },
 };
 
 const VERT = /* glsl */ `
@@ -47,7 +90,7 @@ const FRAG = /* glsl */ `
   uniform sampler2D uMap;
   uniform vec4 uCell;
   uniform vec3 uTint;
-  uniform float uTintK, uGain, uFlip;
+  uniform float uPaint, uGain, uFlip;
   varying vec2 vUv;
   void main() {
     vec2 uv = vUv;
@@ -55,14 +98,21 @@ const FRAG = /* glsl */ `
     vec4 t = texture2D(uMap, uCell.xy + uv * uCell.zw);
     if (t.a < 0.02) discard;
     vec3 c = t.rgb;
-    if (uTintK > 0.5) {
+    float hi = max(c.r, max(c.g, c.b));
+    if (uPaint > 1.5) {
+      // Smoke: two tones of grey and an ink line. The lit tone (about 0.6)
+      // becomes the tint, the shadow and the line keep their depth.
+      c = uTint * (dot(c, vec3(0.3, 0.59, 0.11)) / 0.6) * uGain;
+    } else if (uPaint > 0.5) {
       // Keep how bright and how white each pixel is; swap the hue for the tint.
-      float hi = max(c.r, max(c.g, c.b));
       float lo = min(c.r, min(c.g, c.b));
       float white = lo / max(hi, 1e-3);
-      c = mix(uTint * hi, vec3(hi), white * white);
+      c = mix(uTint * hi, vec3(hi), white * white) * uGain;
+    } else {
+      // Its own colours: only the bright parts (fire, not smoke) glow.
+      c *= mix(1.0, uGain, smoothstep(0.55, 0.9, hi));
     }
-    gl_FragColor = vec4(c * uGain, t.a);
+    gl_FragColor = vec4(c, t.a);
   }`;
 
 export interface SpriteOptions {
@@ -83,6 +133,14 @@ export interface SpriteOptions {
   dir?: THREE.Vector3;
   /** Lie flat in this orientation (a ring on the road) instead of facing the camera. */
   flat?: THREE.Quaternion;
+  /** Hidden behind whatever is in front of it (smoke and dust), rather than drawn over everything. */
+  depth?: boolean;
+  /** Wait this many drawings before it appears. */
+  delay?: number;
+  /** Climb, units a second (instead of the sheet's own rise). */
+  rise?: number;
+  /** A loop: turn a quarter or more on each drawing (one lying flat, so its shape never repeats). */
+  turn?: boolean;
 }
 
 interface Sprite {
@@ -98,9 +156,18 @@ interface Sprite {
   roll: number;
   dir: THREE.Vector3 | null;
   flat: THREE.Quaternion | null;
+  /** Drawings until the next column (or, before it shows, until it appears). */
+  wait: number;
+  shown: boolean;
+  rise: number;
+  /** A loop's name, or null for an effect that plays once. */
+  key: string | null;
+  /** The frame a loop was last asked for. */
+  seen: number;
+  turn: boolean;
 }
 
-const POOL = 40;
+const POOL = 64;
 const _v = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
@@ -110,6 +177,8 @@ export class SpriteFx {
   private pool: Sprite[] = [];
   private textures = new Map<SpriteKind, THREE.Texture>();
   private geo = new THREE.PlaneGeometry(1, 1);
+  /** Counts frames, for loops: one not asked for this frame ends. */
+  private tick = 1;
 
   constructor() {
     for (let i = 0; i < POOL; i++) {
@@ -118,7 +187,7 @@ export class SpriteFx {
           uMap: { value: null },
           uCell: { value: new THREE.Vector4(0, 0, 1, 1) },
           uTint: { value: new THREE.Color(1, 1, 1) },
-          uTintK: { value: 1 },
+          uPaint: { value: 1 },
           uGain: { value: 1 },
           uFlip: { value: 0 },
         },
@@ -133,7 +202,26 @@ export class SpriteFx {
       mesh.renderOrder = 8;
       mesh.frustumCulled = false;
       this.group.add(mesh);
-      this.pool.push({ mesh, mat, kind: 'spark', frame: -1, row: 0, follow: null, offset: new THREE.Vector3(), pos: new THREE.Vector3(), vel: new THREE.Vector3(), roll: 0, dir: null, flat: null });
+      this.pool.push({
+        mesh,
+        mat,
+        kind: 'spark',
+        frame: -1,
+        row: 0,
+        follow: null,
+        offset: new THREE.Vector3(),
+        pos: new THREE.Vector3(),
+        vel: new THREE.Vector3(),
+        roll: 0,
+        dir: null,
+        flat: null,
+        wait: 0,
+        shown: false,
+        rise: 0,
+        key: null,
+        seen: 0,
+        turn: false,
+      });
     }
   }
 
@@ -155,10 +243,56 @@ export class SpriteFx {
 
   /** Start a drawn effect `size` units across at `at`. */
   spawn(kind: SpriteKind, at: THREE.Vector3, size: number, o: SpriteOptions = {}): void {
-    const s = this.pool.find((p) => p.frame < 0) ?? this.pool.reduce((a, p) => (p.frame > a.frame ? p : a));
+    this.start(this.take(), kind, at, size, o);
+  }
+
+  /**
+   * Keep a looping effect going: call it every frame it should show, with
+   * the same `key`; it ends on the first frame it is not asked for. Its
+   * drawings come in a random order, never the same one twice running, and
+   * flipped at random, so three drawings read as live crackle.
+   */
+  keep(key: string, kind: SpriteKind, at: THREE.Vector3, size: number, o: SpriteOptions = {}): void {
+    let s = this.pool.find((p) => p.key === key && p.frame >= 0);
+    if (!s || s.kind !== kind) {
+      if (s) this.end(s);
+      s = this.take();
+      this.start(s, kind, at, size, o);
+      s.key = key;
+      s.turn = o.turn ?? false;
+      s.frame = Math.floor(Math.random() * ATLASES[kind].cols);
+      this.setCell(s);
+    } else {
+      // Moving along with whatever it marks.
+      s.pos.copy(at);
+      if (s.follow) {
+        s.follow.getWorldPosition(_v);
+        s.offset.copy(at).sub(_v);
+      }
+      if (o.flat && s.flat) s.flat.copy(o.flat);
+      if (o.tint !== undefined) (s.mat.uniforms.uTint.value as THREE.Color).set(o.tint);
+      if (o.gain !== undefined) s.mat.uniforms.uGain.value = o.gain;
+      s.mesh.scale.setScalar(size);
+    }
+    s.seen = this.tick;
+  }
+
+  /** A free sprite, or the one furthest through a one-off effect. */
+  private take(): Sprite {
+    let best: Sprite | null = null;
+    for (const p of this.pool) {
+      if (p.frame < 0) return p;
+      if (p.key === null && (!best || p.frame > best.frame)) best = p;
+    }
+    return best ?? this.pool[0];
+  }
+
+  private start(s: Sprite, kind: SpriteKind, at: THREE.Vector3, size: number, o: SpriteOptions): void {
     const atlas = ATLASES[kind];
     s.kind = kind;
     s.frame = 0;
+    s.key = null;
+    s.turn = false;
     s.row = o.row ?? Math.floor(Math.random() * atlas.rows);
     s.row = Math.min(atlas.rows - 1, Math.max(0, s.row));
     s.follow = o.follow ?? null;
@@ -171,32 +305,49 @@ export class SpriteFx {
     s.roll = o.roll ?? 0;
     s.dir = o.dir ? (s.dir ?? new THREE.Vector3()).copy(o.dir) : null;
     s.flat = o.flat ? (s.flat ?? new THREE.Quaternion()).copy(o.flat) : null;
+    s.rise = o.rise ?? atlas.rise ?? 0;
+    const delay = Math.max(0, Math.round(o.delay ?? 0));
+    s.shown = delay === 0;
+    s.wait = s.shown ? this.hold(s) : delay;
     const u = s.mat.uniforms;
     u.uMap.value = this.texture(kind);
-    (u.uTint.value as THREE.Color).set(o.tint ?? 0x45e8ff);
-    u.uTintK.value = atlas.tint ? 1 : 0;
-    u.uGain.value = o.gain ?? 1.5;
+    (u.uTint.value as THREE.Color).set(o.tint ?? (atlas.paint === 'smoke' ? 0x9a96a4 : 0x45e8ff));
+    u.uPaint.value = PAINT[atlas.paint];
+    u.uGain.value = o.gain ?? (atlas.paint === 'smoke' ? 1 : 1.5);
     u.uFlip.value = o.flip ? 1 : 0;
+    // Smoke sits in the scene; the glows are drawn over it and everything else.
+    s.mat.depthTest = o.depth ?? false;
+    s.mesh.renderOrder = o.depth ? 7 : 8;
     this.setCell(s);
     s.mesh.scale.setScalar(size);
-    s.mesh.visible = true;
+    s.mesh.visible = s.shown;
+  }
+
+  private hold(s: Sprite): number {
+    return ATLASES[s.kind].holds?.[s.frame] ?? 1;
+  }
+
+  private end(s: Sprite): void {
+    s.frame = -1;
+    s.key = null;
+    s.mesh.visible = false;
   }
 
   /** Move any `kind` effect that has only just started on to drawing `frame`. */
   skip(kind: SpriteKind, frame: number): void {
     for (const s of this.pool) {
-      if (s.kind !== kind || s.frame < 0 || s.frame >= frame) continue;
+      if (s.kind !== kind || s.frame < 0 || s.key !== null || s.frame >= frame) continue;
       s.frame = frame;
+      s.shown = true;
+      s.mesh.visible = true;
+      s.wait = this.hold(s);
       this.setCell(s);
     }
   }
 
   /** End every effect (the look switched off, or a new race). */
   clear(): void {
-    for (const s of this.pool) {
-      s.frame = -1;
-      s.mesh.visible = false;
-    }
+    for (const s of this.pool) this.end(s);
   }
 
   private setCell(s: Sprite): void {
@@ -207,15 +358,28 @@ export class SpriteFx {
 
   /** Advance on new drawings, follow, face the camera. `dt` 0 holds everything (a painted still). */
   update(dt: number, camera: THREE.Camera): void {
+    const fresh = drawClock.fresh && dt > 0;
     for (const s of this.pool) {
       if (s.frame < 0) continue;
-      if (drawClock.fresh && dt > 0) {
-        s.frame++;
-        if (s.frame >= ATLASES[s.kind].cols) {
-          s.frame = -1;
-          s.mesh.visible = false;
+      if (s.key !== null && s.seen !== this.tick) {
+        this.end(s);
+        continue;
+      }
+      if (fresh && --s.wait <= 0) {
+        if (!s.shown) {
+          s.shown = true;
+          s.mesh.visible = true;
+        } else if (s.key !== null) {
+          // A loop: another of its drawings, never the one just shown.
+          const cols = ATLASES[s.kind].cols;
+          s.frame = (s.frame + 1 + Math.floor(Math.random() * (cols - 1))) % cols;
+          s.mat.uniforms.uFlip.value = Math.random() < 0.5 ? 1 : 0;
+          if (s.turn) s.roll += (1 + Math.floor(Math.random() * 3)) * Math.PI * 0.5;
+        } else if (++s.frame >= ATLASES[s.kind].cols) {
+          this.end(s);
           continue;
         }
+        s.wait = this.hold(s);
         this.setCell(s);
       }
       if (s.follow) {
@@ -224,7 +388,7 @@ export class SpriteFx {
       } else {
         s.vel.multiplyScalar(Math.exp(-3 * dt));
         s.pos.addScaledVector(s.vel, dt);
-        if (s.kind === 'explosion') s.pos.y += dt * 4;
+        s.pos.y += dt * s.rise;
         s.mesh.position.copy(s.pos);
       }
       if (s.flat) {
@@ -242,6 +406,7 @@ export class SpriteFx {
       }
       if (roll) s.mesh.rotateZ(roll);
     }
+    this.tick++;
   }
 
   dispose(): void {

@@ -27,7 +27,7 @@ each limit is one piece of the code.
 | Every character traced in ink, heavier on the outside, thinner inside | An ink pass: a heavy contour round each mech that thins with distance, thin lines where parts overlap, fold or change paint, none where a paint meets its own shadow |
 | Each drawing traced again by hand, so lines shimmer | The lines are traced a fraction of a pixel off on every new drawing ("boil") |
 | Animation on twos (12 drawings a second) and threes for held poses | Mech poses at 12 a second, 8 when held (boosting, carving, a burst); effects change shape on the same drawings; movement, the camera and the race stay at 60 |
-| Effects drawn by hand: sparks as stars, smoke as shapes, glows as flat rings | Sparks are four-pointed stars with a white core, smoke is lumpy two-tone puffs that break into holes, a knockout is an eight-drawing explosion flipbook (flash, fireball, smoke), impact flashes are ragged hard bursts, blade arcs hard crescents, light trails flat bands, the bloom cut into rings |
+| Effects drawn by hand: sparks as stars, smoke as shapes, glows as flat rings | The big effects are painted cel animation, a few drawings each (see Drawn effects below); the small sparks are four-pointed stars with a white core, light trails flat bands, the bloom cut into rings |
 | Speed shown with drawn lines, not blur | Drawn speed lines, mostly white and a few in ink, new on every drawing; the radial blur cut to a third |
 | Shot on film | A film pass: halation (bright light bleeding orange into the emulsion), a little colour fringe and softness, gate weave, grain at 24 frames a second, a grade toward the painted palette, blacks that are paint rather than black |
 | Big moments cut to something else | Impact frames on heavy blows, the knockout held as a painted still, title cards for the lap phases, an eyecatch before the results |
@@ -53,6 +53,42 @@ each limit is one piece of the code.
 - **Eyecatch.** When the round ends, before the results, the last frame is
   held as a painted still for two seconds under the show's title on a
   slanted black card, the way a broadcast went to its break.
+
+## Drawn effects
+
+Each effect is a few drawings painted as cels on a sheet (`art/fx-sheets`,
+painted by an image model to one brief, then checked one at a time). Glows
+are painted in cyan with white cores and recoloured in the game to the
+team, the weapon or the moment; smoke is painted grey in two tones with an
+ink line and shaded in the game to the dust or smoke it needs; the
+knockout keeps its own colours. They play on the drawing clock.
+
+| Effect | Sheet | Where it shows |
+|---|---|---|
+| Hit spark | 1 | Light hits, blocked hits, gunfire |
+| Heavy impact | 2 | Heavy and momentum blows, guard breaks |
+| Parry glint | 3 | Parries |
+| Blade smears | 4, 4B | Light and heavy cuts, kicks, hammers |
+| Lance thrust | 5 | The lance |
+| Shock ring | 6 | Momentum strikes, and every ring flash (Pulse, Aegis, Overdrive, a snare) |
+| Ground ring | 6B | Dashes, launches, hard landings, recovery |
+| Thruster flames | 7 | Every nozzle while boosting, gold in Overdrive |
+| Smoke | 8 | Dust off landings, launches and the barrier, in the circuit's dust colour; smoke trailing a badly hurt mech, darker clouds off a wreck |
+| Barrier strike | 9B | Hitting a barrier (amber) and ring-outs (pink): flat side on the barrier, bursting back over the road |
+| Energy crackle | 10 | Bolts round a snared mech (orange) or one breaking away (its team colour); a ring on the road round a mech in Overdrive (gold) |
+| Pickup sparkle | 11 | Cell gates (gold), speed pads (magenta), recovery (team colour) |
+| Knockout explosion | 12 | Knockouts: flash, fireball, smoke closing over it, smoke breaking up; the painted still holds the fireball |
+
+`tools/fx/ingest.py` keys out a sheet's magenta and cuts its panels (and
+can take out smoke an image model painted into a glow);
+`tools/fx/build_sprites.py` makes the game's atlases from them, lining up
+what needs lining up (the barrier strike's flat side, a row painted off its
+panel). `src/client/render/sprites.ts` plays them: one-off effects run
+through their drawings once, some held for two; loops (the crackle) are
+asked for every frame they should show, and play their drawings in a
+random order, flipped and turned, so three drawings never visibly repeat.
+The procedural explosion the painted one replaced is still in
+`sprites/explosion.png` (`tools/fx/explosion.py`).
 
 ## Settings (tuning panel, Look tab)
 
@@ -129,12 +165,9 @@ style, roughly in order of payoff.
   to every colour. A cel painter mixed a shadow for each paint (the white
   armour's lavender, the red's maroon). A small table per livery would do
   it.
-- **More drawn effect sprites.** The knockout explosion is a drawn
-  flipbook: eight drawings in a strip (`src/client/render/sprites/explosion.png`),
-  painted by `tools/fx/explosion.py` from circles with wobbling edges in flat
-  tones and an ink line, so it can be redrawn with a different seed, size or
-  palette. Ring-outs, guard breaks, the boost flare and a big hit would each
-  want one of their own.
+- **The last effect sheets.** Sheets 13 to 16 (the stun kick, the breaker
+  hammer, muzzle blasts, the ram's charge) are written into the same brief
+  but not painted yet; until then those use the hit sparks and impacts.
 - **Coloured lines.** Lines are ink everywhere. Productions used coloured
   lines inside light areas (on a glow, on the sky side of a cloud).
 - **Lines between two overlapping mechs** fall back to the depth test, so

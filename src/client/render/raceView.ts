@@ -23,6 +23,7 @@ import { TELL_COLOR, tellOf, type TellKind } from '../game/tells';
 import type { Feel } from '../game/tuning';
 import { CameraRig } from './cameraRig';
 import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
+import { WALL_EDGE } from './sprites';
 import { MechAnimator } from './mech/animate';
 import { buildFrame } from './mech/frames';
 import { drawClock, drawingStep, look, markCharacter } from './look';
@@ -58,6 +59,8 @@ interface MechVisual {
   vel: THREE.Vector3;
   smokeT: number;
   sparkT: number;
+  /** A Breakaway's drawn crackle, seconds left. */
+  crackleT: number;
   /** The tier of the carve burst running now, for its colour. */
   burstTier: number;
   /** Which cut of a combo is next, for the blade arcs. */
@@ -90,6 +93,7 @@ const m4 = new THREE.Matrix4();
 const v1 = new THREE.Vector3();
 const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
+const v4 = new THREE.Vector3();
 const ndc = new THREE.Vector3();
 const shadowScale = new THREE.Matrix4();
 /** A drawn ring lying on the road: the road's orientation, turned so the sprite's face is the road's. */
@@ -204,6 +208,7 @@ export class RaceView {
         vel: new THREE.Vector3(),
         smokeT: 0,
         sparkT: 0,
+        crackleT: 0,
         burstTier: 0,
         cut: 0,
         poseAcc: 0,
@@ -354,6 +359,19 @@ export class RaceView {
         v.snare.matrix.multiplyMatrices(m4, shadowScale);
         v.snare.matrixWorldNeedsUpdate = true;
       }
+      // Drawn crackle (the anime look): bolts bracketing a snared mech in the
+      // Snare's colour, or one breaking away in its own; a ring of it on the
+      // road round a mech in Overdrive, in gold.
+      v.crackleT = Math.max(0, v.crackleT - dt);
+      if (!m.retired && (m.snareT > 0 || v.crackleT > 0)) {
+        this.fx.drawnKeep(`bracket${m.id}`, 'crackle', v.pos, 13, { row: 0, tint: m.snareT > 0 ? COLORS.snare : v.livery.glow, gain: 1.3 });
+      }
+      if (surge) {
+        trackMatrix(track, v.s, v.d, v.h + 0.2, 0, m4);
+        m4.decompose(v1, flatQ, v2);
+        flatQ.multiply(layFlat);
+        this.fx.drawnKeep(`surge${m.id}`, 'crackle', v1, 15, { row: 1, tint: COLORS.cell, flat: flatQ, turn: true, depth: true, gain: 1.25 });
+      }
 
       // Ambient sparks and smoke.
       const accel = dt > 0 ? (m.speed - v.prevSpeed) / dt : 0;
@@ -415,7 +433,7 @@ export class RaceView {
           trackDir(track, v.s, -1, 0, v3);
           this.fx.spray(v1, v.vel, v3, surge ? 2 : 1, 30, surge ? COLORS.cell : v.livery.glow, 0.35, 0.3);
         }
-        if (m.snareT > 0 && !m.retired) {
+        if (m.snareT > 0 && !m.retired && !look.on) {
           trackPoint(track, v.s, v.d, 3 + Math.random() * 3, v1);
           this.fx.burst(v1, v.vel, 1, 10, COLORS.snare, 0.3, 0.3);
         }
@@ -423,9 +441,17 @@ export class RaceView {
       if (m.retired || m.hp < m.maxHp * 0.25) {
         v.smokeT -= dt;
         if (v.smokeT <= 0) {
-          v.smokeT = m.retired ? 0.07 : 0.16;
           trackPoint(track, v.s, v.d, 5, v1);
-          this.fx.puff(v1, v.vel, 1, m.retired ? 0x2b2b33 : 0x55555f, m.retired ? 2.6 : 1.6, m.retired ? 1.5 : 0.9);
+          // Drawn, a puff every few drawings, left behind as the mech goes:
+          // a dark cloud off a wreck, a grey puff off a mech that is hurt.
+          v3.copy(v.vel).multiplyScalar(0.5);
+          const roll = (Math.random() - 0.5) * 0.6;
+          if (this.fx.drawnSprite('smoke', v1, m.retired ? 7.5 : 4.5, { row: m.retired ? 1 : 0, tint: m.retired ? 0x5a5662 : 0x8c8894, vel: v3, roll, flip: Math.random() < 0.5, depth: true })) {
+            v.smokeT = m.retired ? 0.2 : 0.24;
+          } else {
+            v.smokeT = m.retired ? 0.07 : 0.16;
+            this.fx.puff(v1, v.vel, 1, m.retired ? 0x2b2b33 : 0x55555f, m.retired ? 2.6 : 1.6, m.retired ? 1.5 : 0.9);
+          }
           if (m.retired && Math.random() < 0.25) this.fx.burst(v1, v.vel, 3, 14, 0xffa040, 0.3, 0.4);
         }
       }
@@ -603,6 +629,25 @@ export class RaceView {
     return this.fx.drawnSprite('groundRing', v1, size, { tint: color, flat: flatQ, roll: Math.random() * Math.PI * 2, gain: 1.2 });
   }
 
+  /**
+   * The anime look's barrier strike: a burst with its flat side on the
+   * barrier (the road's edge at `face`, on `side`) bursting back over the
+   * road, `h` up, carried a little way by the mech; then a puff of dust off
+   * the barrier a drawing or two later. Returns false in the plain look.
+   */
+  private wallStrike(v: MechVisual, face: number, side: number, h: number, size: number, color: number): boolean {
+    const { track } = this.session;
+    trackDir(track, v.s, 0, -side, v3);
+    // The barrier is WALL_EDGE in from the drawing's left: move its middle
+    // that far off the barrier, toward the road.
+    trackPoint(track, v.s, face - side * (0.5 - WALL_EDGE) * size, h, v1);
+    v2.copy(v.vel).multiplyScalar(0.5);
+    if (!this.fx.drawnSprite('wall', v1, size, { tint: color, dir: v3, vel: v2, gain: 1.3 })) return false;
+    trackPoint(track, v.s, face - side * size * 0.15, h, v1);
+    this.fx.drawnSprite('smoke', v1, size * 0.5, { row: 0, tint: this.dust, vel: v2, delay: 2, flip: side > 0, depth: true });
+    return true;
+  }
+
   /** React to something the simulation reported. */
   handleEvent(e: SimEvent): void {
     const { race, track } = this.session;
@@ -702,9 +747,12 @@ export class RaceView {
         const v = this.mechs[e.mech];
         const hard = Math.min(1.5, 0.6 + e.intensity / 40);
         this.trackVis.pulseWall(e.s, e.face, hard * this.feel.wallPulse, true);
+        if (!this.wallStrike(v, e.face, e.side, 3.2 + v.h, 16, 0xff6ab0)) {
+          trackPoint(track, v.s, e.face - e.side * 0.3, 3.2 + v.h, v1);
+          this.fx.flash(v1, 16, 0xff6ab0, 0.32);
+          this.fx.flash(v1, 11, 0xffffff, 0.2, null, true);
+        }
         trackPoint(track, v.s, e.face - e.side * 0.3, 3.2 + v.h, v1);
-        this.fx.flash(v1, 16, 0xff6ab0, 0.32);
-        this.fx.flash(v1, 11, 0xffffff, 0.2, null, true);
         trackDir(track, v.s, 0.2, -e.side, v3);
         this.fx.spray(v1, v.vel, v3, 46, 46, 0xffb0d8, 0.5, 0.55);
         this.fx.burst(v1, v.vel, 30, 50, 0xffb040, 0.55, 0.5);
@@ -720,9 +768,9 @@ export class RaceView {
       case 'ko': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 4.5, v1);
-        if (this.fx.explosion(v1, v.vel, 36)) {
-          // The anime look: a drawn explosion (flash, fireball, smoke in
-          // eight drawings), with a shock ring and a few sparks round it.
+        if (this.fx.explosion(v1, v.vel, 28)) {
+          // The anime look: the painted explosion (flash, fireball, smoke
+          // closing over it and breaking up), with a shock ring and sparks.
           this.fx.flash(v1, 20, 0xff8a30, 0.5, v.rig.root, true);
           this.fx.burst(v1, v.vel, 40, 80, 0xffa040, 0.8, 0.9);
         } else {
@@ -744,6 +792,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         const side = e.side;
         this.trackVis.pulseWall(e.s, e.face, Math.min(0.9, Math.max(0.25, e.intensity / 30)) * this.feel.wallPulse, false);
+        this.wallStrike(v, e.face, side, 2.4 + v.h, 6 + Math.min(6, e.intensity * 0.15), 0xffc66e);
         trackPoint(track, v.s, v.d + side * 3, 1.6, v1);
         trackDir(track, v.s, -1, -side * 0.5, v3);
         this.fx.spray(v1, v.vel, v3, Math.min(30, 6 + e.intensity), 30, 0xffc66e, 0.45, 0.45);
@@ -845,6 +894,10 @@ export class RaceView {
         trackPoint(track, v.s, v.d, 0.6, v1);
         this.fx.burst(v1, v.vel, 26, 34, v.livery.glow, 0.5, 0.5);
         if (!this.groundRing(v, 12, v.livery.glow)) this.fx.flash(v1, 8, 0xffffff, 0.2, null, true);
+        // Drawn: the road's dust kicked up behind.
+        trackPoint(track, v.s - 1.5, v.d, 1.4, v1);
+        v3.copy(v.vel).multiplyScalar(0.2);
+        this.fx.drawnSprite('smoke', v1, 6, { row: 0, tint: this.dust, vel: v3, flip: Math.random() < 0.5, depth: true });
         break;
       }
       case 'evade':
@@ -874,7 +927,14 @@ export class RaceView {
           trackDir(track, v.s, 0.2, side, v3);
           this.fx.spray(v1, v.vel, v3, Math.round(6 + k * 20), 18 + k * 20, 0xffd8a0, 0.4, 0.4);
         }
-        this.fx.puff(v1, v.vel, Math.round(2 + k * 5), this.dust, 2.2 + k * 2, 0.9);
+        // Drawn: a puff of the road's dust off each skate, a cloud for a long drop.
+        v3.copy(v.vel).multiplyScalar(0.3);
+        let dusted = false;
+        for (const side of [-1, 1]) {
+          trackPoint(track, v.s, v.d + side * 2.4, 1 + k, v4);
+          dusted = this.fx.drawnSprite('smoke', v4, 4 + k * 5, { row: k > 0.5 ? 1 : 0, tint: this.dust, vel: v3, flip: side > 0, depth: true, rise: 1.5 });
+        }
+        if (!dusted) this.fx.puff(v1, v.vel, Math.round(2 + k * 5), this.dust, 2.2 + k * 2, 0.9);
         if (k > 0.3 && !this.groundRing(v, 8 + k * 9, 0xfff2d0)) this.fx.flash(v1, 6 + k * 6, 0xfff2d0, 0.12, null, true);
         if (e.mech === local) {
           this.cam.shake(0.1 + k * 0.5);
@@ -902,7 +962,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         const pos = race.mechs[e.mech];
         trackPoint(track, pos.s, pos.d, 6, v1);
-        this.fx.flash(v1, 16, v.livery.glow, 0.4, null, true);
+        if (!this.fx.drawnSprite('sparkle', v1, 16, { tint: v.livery.glow, gain: 1.4 })) this.fx.flash(v1, 16, v.livery.glow, 0.4, null, true);
         trackPoint(track, pos.s, pos.d, 0.5, v1);
         this.fx.spray(v1, v.vel, v3.set(0, 1, 0), 30, 30, v.livery.glow, 0.5, 0.6);
         this.groundRing(v, 15, v.livery.glow);
@@ -913,7 +973,9 @@ export class RaceView {
         // A speed pad: a magenta kick of light under the skates.
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 0.6, v1);
-        this.fx.flash(v1, 9, 0xff3d9a, 0.22, null, true);
+        // Drawn: a sparkle off the skates, riding along.
+        trackPoint(track, v.s, v.d, 2.2, v4);
+        if (!this.fx.drawnSprite('sparkle', v4, 9, { tint: 0xff3d9a, follow: v.rig.root, gain: 1.35 })) this.fx.flash(v1, 9, 0xff3d9a, 0.22, null, true);
         trackDir(track, v.s, -1, 0, v3);
         this.fx.spray(v1, v.vel, v3, 22, 40, 0xff6ab8, 0.4, 0.35);
         if (e.mech === local) {
@@ -926,7 +988,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         if (e.mech === local) this.trackVis.gates.pulse(e.gate);
         trackPoint(track, v.s, v.d, 4.2, v1);
-        this.fx.flash(v1, 9, COLORS.cell, 0.22, v.rig.root, true);
+        if (!this.fx.drawnSprite('sparkle', v1, 12, { tint: COLORS.cell, follow: v.rig.root, gain: 1.4 })) this.fx.flash(v1, 9, COLORS.cell, 0.22, v.rig.root, true);
         this.fx.burst(v1, v.vel, 18, 30, COLORS.cell, 0.4, 0.4);
         if (e.mech === local) this.flash(0.12);
         break;
@@ -947,6 +1009,7 @@ export class RaceView {
             }
             break;
           case ABILITY.BREAKAWAY:
+            v.crackleT = 0.6;
             this.fx.flash(v1, 14, 0xffffff, 0.3, v.rig.root, true);
             this.fx.flash(v1, 20, v.livery.glow, 0.42, null, true);
             this.fx.burst(v1, v.vel, 36, 60, 0xffffff, 0.45, 0.4);
