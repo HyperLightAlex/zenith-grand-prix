@@ -20,6 +20,8 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 9 Barrier strike | fx-09-barrier-strike.png | not used: redone as 9B without the smoke puffs in drawings 4 and 5 (`all 256 nosmoke` would also take them out) | |
 | 9B Barrier strike | fx-09b-barrier-strike.png | one animation of six; the game adds sheet 8 smoke | `all 256` |
 | 10 Energy crackle | fx-10-energy-crackle.png | two loops: four bolts bracketing the mech, and a ring; the drawings play in random order, flipped or turned, so a loop of three never visibly repeats | `rows centre` |
+| 11 Pickup sparkle | fx-11-pickup-sparkle.png | one animation of six: pop, star, scatter, rising glints, fade; the bottom row sits 12 px high, so its window moves up to match | build_sprites.py |
+| 12 Knockout explosion | fx-12-knockout-explosion.png | one animation of six in its own colours (not recoloured): flash, fireball, smoke closing over it, smoke breaking up; the painted alternative to the procedural explosion | `all 384` |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
 
