@@ -18,7 +18,7 @@ export type SfxName =
   | 'takeoff' | 'land' | 'fall' | 'recover' | 'pad'
   | 'lap' | 'lap_phase' | 'final_lap' | 'finish' | 'win' | 'lose'
   | 'command' | 'comms'
-  | 'gate' | 'cells_full'
+  | 'gate' | 'cells_full' | 'award'
   | 'overdrive' | 'breakaway' | 'snare_shot' | 'snared' | 'pulse' | 'ram' | 'aegis';
 
 export interface SfxOptions {

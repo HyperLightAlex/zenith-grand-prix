@@ -288,6 +288,12 @@ const RECIPES: Record<SfxName, Recipe> = {
     v.noise({ d: 0.5, g: 0.4, s: 'swell', a: 0.08, ft: 'bandpass', ff: 800, ff2: 2600, fq: 2 });
     v.tone({ w: 'sawtooth', f: 160, f2: 480, d: 0.45, g: 0.22, s: 'swell', a: 0.3, lp: 1800 });
   },
+  // A support award: a quick rising pair of soft plucks (played higher for more points).
+  award: (v) => {
+    v.tone({ w: 'triangle', f: 987.8, d: 0.09, g: 0.7, a: 0.002 });
+    v.tone({ w: 'triangle', f: 1318.5, t: 0.07, d: 0.22, g: 0.8, a: 0.002, h: 0.08 });
+    v.tone({ f: 2637, t: 0.07, d: 0.14, g: 0.15 });
+  },
   // A carve reaches a tier: a bright double ping (played a step higher for
   // each tier).
   carve_tier: (v) => {
@@ -768,6 +774,7 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   // No gap for the gate: a rival threading it in the same frame must not swallow the player's own chime.
   gate: m(0.4, 0.15, 1, 0, 0),
   cells_full: m(0.39, 0.3, 2),
+  award: m(0.3, 0.15, 2, 0, 0.06),
   overdrive: m(0.53, 0.15, 2, 0, 0.03, [0.25, 0.9]),
   breakaway: m(0.35, 0.15, 2, 0.02),
   snare_shot: m(0.41, 0.08, 1, 0.04),

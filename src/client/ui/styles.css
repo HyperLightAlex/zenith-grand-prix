@@ -297,6 +297,15 @@ html, body {
 .plate .warn.block { background: var(--signal); }
 .plate .warn.now { background: #fff; color: var(--ink); transform: scale(1.18); }
 
+/* Support points as they land: above the gauges, newest on top. */
+.awards { position: absolute; left: 50%; bottom: 14.2em; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.25em; pointer-events: none; }
+.award { display: flex; align-items: baseline; gap: 0.4em; padding: 0.1em 0.8em; background: var(--ink-soft); clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%); font-size: 1em; font-weight: 500; animation: award-in 2.4s ease-out forwards; }
+.award b { color: var(--ally); font-weight: 800; }
+.award small { opacity: 0.75; }
+.award.me { font-size: 1.35em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.award.me b { color: var(--hazard); }
+@keyframes award-in { 0% { opacity: 0; transform: translateY(0.6em) scale(1.15); } 8% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-0.4em); } }
+
 /* A blow winding up at you from off screen: an arrow on the edge, pointing at it. */
 .edgewarn { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 0.2em; pointer-events: none; --c: var(--hazard); will-change: transform; }
 .edgewarn[hidden] { display: none; }
@@ -480,6 +489,19 @@ html, body {
 .results td.flag { width: 0.5em; padding: 0; background: var(--team0); }
 .results tr.t1 td.flag { background: var(--team1); }
 .results td.pts { font-weight: 800; font-size: 1.15em; }
+.results .suphead { margin-top: 0.9em; font-size: 1.05em; font-weight: 500; opacity: 0.7; }
+.results .supportlist { display: grid; gap: 0.2em; max-width: 62em; margin-top: 0.25em; font-size: 1.05em; }
+.results .supportlist .row { display: flex; align-items: center; gap: 0.8em; padding: 0.22em 0.7em; background: var(--ink-soft); border-left: 0.4em solid var(--team0); }
+.results .supportlist .row.t1 { border-left-color: var(--team1); }
+.results .supportlist .row.me { background: var(--paper); color: var(--ink); }
+.results .supportlist .who { min-width: 11em; font-weight: 700; }
+.results .supportlist .who small { margin-left: 0.5em; font-weight: 500; opacity: 0.7; }
+.results .supportlist .chips { display: flex; flex-wrap: wrap; gap: 0.35em; flex: 1; position: static; transform: none; font-size: 0.92em; }
+.results .supportlist .chip { padding: 0.04em 0.55em; background: rgba(255, 255, 255, 0.1); clip-path: polygon(0.3em 0, 100% 0, calc(100% - 0.3em) 100%, 0 100%); }
+.results .supportlist .row.me .chip { background: rgba(15, 21, 36, 0.12); }
+.results .supportlist .total { font-weight: 800; font-variant-numeric: tabular-nums; }
+.results .supportlist .cap { font-size: 0.8em; font-weight: 700; text-transform: uppercase; color: var(--hazard); }
+.results .supportlist .row.me .cap { color: var(--signal); }
 .results .list { flex-direction: row; margin-top: 1.2em; }
 .results .item { font-size: 1.5em; }
 .results .item.sel { transform: translateY(-0.2em); }

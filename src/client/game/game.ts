@@ -466,6 +466,10 @@ export class Game {
       case 'boost':
         A.play('boost', { volume: this.heard(e.mech).volume * quiet });
         break;
+      case 'award':
+        // Your own support points chime, a step higher for a 2.
+        if (e.mech === local && inRace) A.play('award', { pitch: e.points >= 2 ? 2 ** (4 / 12) : 1 });
+        break;
       case 'carve':
         // Only your own carve chimes: a field of them would be a wind chime.
         if (e.mech === this.view.focusId && inRace) {

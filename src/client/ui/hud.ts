@@ -3,6 +3,7 @@
 import {
   ABILITIES,
   ABILITY,
+  AWARD_NAMES,
   CARVE_BURST,
   CARVE_TIERS,
   CLASSES,
@@ -13,6 +14,7 @@ import {
   MODE,
   MPH_PER_UNIT,
   PHASE,
+  ROLE,
   ROLE_KEYS,
   ROLE_NAMES,
   TACTIC,
@@ -148,6 +150,13 @@ export class Hud {
   private chipMomentum = h('span.chip.momentum', 'Momentum');
   private hints = h('div.hints');
   private hintKey = '';
+  // support points: what you and your teammates just earned
+  private awardFeed = h('div.awards');
+  private awardItems: Array<{ el: HTMLElement; t: number }> = [];
+  private capShown = false;
+  /** When the next support prompt may show (seconds of HUD time), and the clock. */
+  private promptAt = 0;
+  private hudTime = 0;
   // carve meter: three segments that fill in the tier colours
   private carve = h('div.carve');
   private carveSegs: HTMLElement[] = [];
@@ -223,7 +232,7 @@ export class Hud {
       segs.append(h('div.seg', fill));
     }
     this.carve.append(this.carveLabel, segs);
-    R.append(this.carve, this.speedBox);
+    R.append(this.carve, this.speedBox, this.awardFeed);
     const tact = h('div.tactics', this.tacticHub);
     for (const [cls, tac] of [['up', TACTIC.BLITZ], ['right', TACTIC.RUN], ['down', TACTIC.SHIELD], ['left', TACTIC.MARK]] as const) {
       const el = h('div.t.' + cls);
@@ -312,6 +321,12 @@ export class Hud {
     this.comms.replaceChildren();
     this.pops.forEach((p) => p.el.remove());
     this.pops = [];
+    this.awardItems.forEach((a) => a.el.remove());
+    this.awardItems = [];
+    this.capShown = false;
+    this.promptAt = this.hudTime + 8;
+    this.carveShown = 0;
+    this.carveFade = 0;
     this.banner.hidden = true;
     this.count.hidden = true;
     this.notice.hidden = true;
@@ -708,6 +723,18 @@ export class Hud {
       }
     }
 
+    // Support awards: each line rises and fades after a couple of seconds.
+    this.hudTime += dt;
+    for (let i = this.awardItems.length - 1; i >= 0; i--) {
+      const it = this.awardItems[i];
+      it.t += dt;
+      if (it.t > 2.4) {
+        it.el.remove();
+        this.awardItems.splice(i, 1);
+      }
+    }
+    this.supportPrompt(race, me);
+
     // Damage numbers: rise and fade over the mech that took the hit.
     for (let i = this.pops.length - 1; i >= 0; i--) {
       const pop = this.pops[i];
@@ -829,6 +856,30 @@ export class Hud {
     while (this.pops.length > 12) this.pops.shift()!.el.remove();
   }
 
+  /**
+   * Short prompts for a support pilot: its forward is in a fight nearby, or on
+   * the speed lap is sitting in its tow. One at a time, and not too often.
+   */
+  private supportPrompt(race: RaceState, me: MechState): void {
+    if (me.role === ROLE.FW || me.retired || me.finished || this.hudTime < this.promptAt || race.phase !== PHASE.RACING) return;
+    const fw = race.mechs.find((m) => m.team === me.team && m.role === ROLE.FW && !m.retired && !m.finished);
+    if (!fw) return;
+    const ds = deltaS(this.track, fw.s, me.s);
+    const near = Math.hypot(ds, fw.d - me.d) < 220;
+    if (weaponsFree(race) && near) {
+      const attacker = race.mechs.find((o) => o.team !== me.team && !o.retired && o.target === fw.id && o.mode === MODE.BATTLE);
+      if (attacker && me.target !== attacker.id) {
+        this.showNotice(me.role === ROLE.DF ? `Your forward is under attack: peel ${attacker.name} off` : `Your forward is in a fight: back them up`, false, 2.2);
+        this.promptAt = this.hudTime + 12;
+        return;
+      }
+    }
+    if (race.lapPhase >= 3 && fw.towBy === me.id && fw.drafting && ds < 0 && ds > -60 && me.mode === MODE.SPEED) {
+      this.showNotice('Your forward is in your tow: hold the line for a Lead-out', false, 2.2);
+      this.promptAt = this.hudTime + 20;
+    }
+  }
+
   /** Returns a sound cue name when the event deserves one from the HUD's side. */
   onEvent(e: SimEvent, race: RaceState): void {
     const me = race.mechs[this.localId];
@@ -844,14 +895,34 @@ export class Hud {
             const laps = race.rules.gateValueLater > 0 ? Math.min(race.rules.gateLaps, race.laps) : 1;
             const worth = race.rules.gateValue === 0.5 ? 'half a Cell' : race.rules.gateValue === 1 ? 'a Cell' : `${race.rules.gateValue} of a Cell`;
             const when = laps <= 1 ? 'this lap only' : laps >= race.laps ? 'on every lap' : `for ${laps} laps`;
-            const text = `Gates are lit ${when}. Gold arches, ${worth} each.`;
+            const dark = race.rules.gateRelight > 0 ? ` Take one and it goes dark for everyone for ${race.rules.gateRelight} s.` : '';
+            const text = `Gates are lit ${when}. Gold arches, ${worth} each.${dark}`;
             window.setTimeout(() => this.say(null, text), 1400);
+          }
+          if (me.role !== ROLE.FW && race.rules.supportCap > 0) {
+            const what = me.role === ROLE.DF ? 'Peel and save for your forward, guard it, ring rivals out' : 'Snare, interrupt, back up your teammates, wear down their forward';
+            window.setTimeout(() => this.say(null, `Support points count for the team: ${what}. Up to ${race.rules.supportCap} a race.`), 4200);
           }
         }
         break;
       case 'launch':
         if (e.mech === this.localId) this.showNotice('Perfect launch');
         break;
+      case 'award': {
+        // Your own in large, your teammates' in small, theirs not at all.
+        const who = race.mechs[e.mech];
+        if (who.team !== me.team) break;
+        const mine = e.mech === this.localId;
+        const el = h('div.award' + (mine ? '.me' : ''), h('b', `+${e.points}`), h('span', AWARD_NAMES[e.kind]), mine ? '' : h('small', who.name));
+        this.awardFeed.prepend(el);
+        this.awardItems.push({ el, t: 0 });
+        while (this.awardItems.length > 5) this.awardItems.shift()!.el.remove();
+        if (mine && !this.capShown && who.support >= race.rules.supportCap) {
+          this.capShown = true;
+          window.setTimeout(() => this.showNotice(`Support points maxed: ${race.rules.supportCap} for the team this race`, false, 2.2), 600);
+        }
+        break;
+      }
       case 'gate':
         if (e.mech === this.localId) {
           const full = e.cells >= race.rules.cellMax;

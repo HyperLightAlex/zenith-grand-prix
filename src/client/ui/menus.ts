@@ -1,6 +1,6 @@
 // Menus: title, garage (pick your frame), controls, pause and results.
 // Driven by the same MenuInput from pad or keyboard; items also take clicks.
-import { ABILITIES, ATTACKS, CLASSES, ROLE_NAMES, TRACKS, roundsToWin, type MatchConfig, type MatchState, type RaceState, type Role } from '../../sim/index';
+import { ABILITIES, ATTACKS, AWARD_NAMES, CLASSES, ROLE_NAMES, TRACKS, roundsToWin, type MatchConfig, type MatchState, type RaceState, type Role } from '../../sim/index';
 import type { MenuInput } from '../input/input';
 import { LIVERIES } from '../render/palette';
 import { h, setClass, setText } from './dom';
@@ -367,12 +367,16 @@ export class Menus {
     }
 
     const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+    const fromSupport = me.support > 0 ? `, ${me.support} of them from support` : '';
     const own = me.retired
-      ? `You were knocked out${me.points > 0 ? `, but your knockouts still score ${me.points}` : ' and scored nothing'}.`
-      : `You finished ${ord[me.place - 1]} for ${me.points} point${me.points === 1 ? '' : 's'}.`;
+      ? `You were knocked out${me.points > 0 ? `, but still scored ${me.points}${fromSupport}` : ' and scored nothing'}.`
+      : `You finished ${ord[me.place - 1]} for ${me.points} point${me.points === 1 ? '' : 's'}${fromSupport}.`;
     const lines = [own];
     if (round) {
-      if (round.ko[0] + round.ko[1] > 0) lines.push(`Placing ${round.place[me.team]}–${round.place[1 - me.team]}, knockouts ${round.ko[me.team]}–${round.ko[1 - me.team]}.`);
+      const parts = [`Placing ${round.place[me.team]}–${round.place[1 - me.team]}`];
+      if (round.ko[0] + round.ko[1] > 0) parts.push(`knockouts ${round.ko[me.team]}–${round.ko[1 - me.team]}`);
+      if (round.support[0] + round.support[1] > 0) parts.push(`support ${round.support[me.team]}–${round.support[1 - me.team]}`);
+      if (parts.length > 1) lines.push(parts.join(', ') + '.');
       if (round.tied) lines.push(`Level on points, so the round goes to ${names[round.winner]}, who came home first.`);
     }
     box.append(h('div.subline', lines.join(' ')));
@@ -401,7 +405,7 @@ export class Menus {
 
     const table = h<'table'>('table');
     const head = h<'tr'>('tr');
-    for (const [label, num] of [['', false], ['', false], ['Pilot', false], ['Frame', false], ['Time', true], ['Damage dealt', true], ['Knockouts', true], ['Points', true]] as const) {
+    for (const [label, num] of [['', false], ['', false], ['Pilot', false], ['Frame', false], ['Time', true], ['Damage dealt', true], ['Knockouts', true], ['Support', true], ['Points', true]] as const) {
       const th = h<'th'>('th' + (num ? '.num' : ''), label);
       head.append(th);
     }
@@ -424,11 +428,27 @@ export class Menus {
         h<'td'>('td.num', time),
         h<'td'>('td.num', String(Math.round(m.dmgDealt))),
         h<'td'>('td.num', String(m.kos)),
+        h<'td'>('td.num', m.support > 0 ? String(m.support) : '–'),
         h<'td'>('td.num.pts', String(m.points)),
       );
       table.append(tr);
     }
     box.append(table);
+
+    // Where the support points came from, pilot by pilot: your team first.
+    const supporters = race.mechs.filter((m) => m.support > 0).sort((a, b) => (a.team === me.team ? 0 : 1) - (b.team === me.team ? 0 : 1) || b.support - a.support);
+    if (supporters.length > 0) {
+      const sup = h('div.supportlist');
+      for (const m of supporters) {
+        const chips = h('span.chips');
+        AWARD_NAMES.forEach((name, kind) => {
+          if (m.awardPts[kind] > 0) chips.append(h('span.chip', `${name} `, h('b', String(m.awardPts[kind]))));
+        });
+        const capped = m.support >= race.rules.supportCap ? h('span.cap', 'max') : '';
+        sup.append(h('div.row' + (m.team ? '.t1' : '') + (m.id === me.id ? '.me' : ''), h('span.who', m.name, h('small', ROLE_NAMES[m.role])), chips, h('span.total', `+${m.support}`), capped));
+      }
+      box.append(h('div.suphead', 'Support points'), sup);
+    }
     const list = h('div.list');
     this.addItem(list, h('div.item.go', h('span', over ? (single ? 'Race again' : 'New match') : 'Next round')), () => this.cb.onNext());
     this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
