@@ -95,6 +95,36 @@ random order, flipped and turned, so three drawings never visibly repeat.
 The procedural explosion the painted one replaced is still in
 `sprites/explosion.png` (`tools/fx/explosion.py`).
 
+## Painted backgrounds
+
+In the anime look a circuit with a painted background (so far Meridian
+Skyway) has its scenery painted, the way a background department painted
+behind the cels. The sheets are in `art/bg-sheets`, painted by an image model
+to one brief per circuit and checked one at a time.
+
+- **The sky** all the way round, horizon to zenith, in two halves: the half
+  facing the sun, with its glow, and the half facing away. Turned so the glow
+  is round the sun, which is still drawn as a hard disc on top.
+- **The horizon**: three painted strips, each on a ring round the circuit at
+  its own distance (far mountains, the coast, a city across the water),
+  standing on the sea and repeating round the circle. They move against each
+  other a little as the circuit turns, as layered paintings would.
+- **Clouds**: painted cumulus cards in place of the modelled ones, turning to
+  face the camera but staying upright.
+- **Surfaces**: the sea, three kinds of tower facade (glass offices, hotels,
+  dark glass), the platforms the towers stand on, and white panels on the
+  landmarks, as repeating painted textures under the cel shading.
+
+`tools/bg/build_backgrounds.py` turns the sheets into the game's textures:
+it matches the two sky halves' colours across their joins, cuts the strips
+and clouds out of the green with a colour-difference key, and cuts each
+surface square to the length that repeats best, blending its seams. It
+writes `src/client/render/backgrounds/<circuit>.ts`, which `painted.ts`
+collects; `world.ts` swaps between the plain scenery and the painted one
+with the look. The frame's ACES tone mapping would change a painting's
+colours (lifted mids, grey whites), so the sky, horizon, clouds and sea undo
+it first (`unTone` in `painted.ts`) and come out as painted.
+
 ## Settings (tuning panel, Look tab)
 
 | Setting | Default | |
@@ -162,10 +192,10 @@ works as before, and on the low quality setting the ink pass is skipped.
 These are the parts that would take it from a convincing pass to a finished
 style, roughly in order of payoff.
 
-- **Painted backgrounds.** The scenery is still flat-coloured geometry. A
-  background painter's work (texture in the sky and the cliffs, painted
-  light on the buildings, the sea as brushwork) needs painted textures or a
-  painterly shader per surface.
+- **Painted backgrounds for Corkscrew Canyon and Helios Drop.** Meridian
+  Skyway has its painted background (below); the other two circuits still
+  have their flat-coloured scenery in the anime look, until their sheets are
+  painted (the prompts are in `art/bg-sheets/README.md`).
 - **A shadow colour per paint.** Shadows are one tint per circuit applied
   to every colour. A cel painter mixed a shadow for each paint (the white
   armour's lavender, the red's maroon). A small table per livery would do

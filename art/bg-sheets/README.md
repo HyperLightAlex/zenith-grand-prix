@@ -23,6 +23,8 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
+Meridian Skyway's sheets are in the game (`tools/bg/build_backgrounds.py meridian`).
+
 | Sheet | File | Notes |
 |---|---|---|
 | M1 Sky | bg-m1-sky.png | horizon at 745 px; the edges wrap well; the sun-side half of the sky |

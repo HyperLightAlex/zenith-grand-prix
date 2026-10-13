@@ -3,11 +3,15 @@
 // city inside the loop. Corkscrew Canyon: dusk over red desert, mesas, the
 // rock cut the Narrows runs through and the gorge under the Sky Bridge.
 // Helios Drop: high noon above a sea of cloud, floating islands, the Sun
-// Gate over the Drop and the Helios spire. All procedural; no asset files.
+// Gate over the Drop and the Helios spire. All procedural in the plain look;
+// in the anime look a circuit with a painted background (painted.ts) has its
+// sky, far hills, clouds and surfaces painted instead.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
+import { look } from './look';
+import { HORIZON_RINGS, UNTONE, paintedCardMaterial, paintedSet, paintedTexture, whiteTexture, type PaintedSet } from './painted';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
 import { trackMatrix } from './trackSpace';
@@ -43,11 +47,37 @@ uniform vec3 uCirrus;
 uniform float uCirrusAmt;
 uniform float uTime;
 uniform float uBands;
+uniform float uPainted;
+uniform sampler2D uPano;
+uniform float uPanoSunU;
+uniform float uPanoHorizon;
+uniform float uSunAz;
 varying vec3 vDir;
 ${NOISE}
+${UNTONE}
 void main() {
   vec3 dir = normalize(vDir);
   float h = dir.y;
+  if (uPainted > 0.5) {
+    // The painted sky, round the horizon and up to the zenith, the middle of
+    // its sun-side half turned to the sun; the disc drawn over it.
+    float elev = asin(clamp(h, -1.0, 1.0));
+    float az = atan(dir.z, dir.x);
+    vec2 uv = vec2(uPanoSunU + (az - uSunAz) / 6.2831853, uPanoHorizon + (1.0 - uPanoHorizon) * clamp(elev / 1.5707963, 0.0, 1.0));
+    if (elev < 0.0) uv.y = uPanoHorizon * clamp(1.0 + elev / 0.06, 0.02, 1.0);
+    // Filter as if the texture did not wrap where the azimuth jumps round.
+    vec2 dx = dFdx(uv);
+    vec2 dy = dFdy(uv);
+    dx.x -= floor(dx.x + 0.5);
+    dy.x -= floor(dy.x + 0.5);
+    vec3 painted = unTone(textureGrad(uPano, vec2(fract(uv.x), uv.y), dx, dy).rgb);
+    float sdp = max(dot(dir, uSunDir), 0.0);
+    painted = mix(painted, vec3(1.9, 1.75, 1.45), smoothstep(0.9990, 0.9993, sdp));
+    gl_FragColor = vec4(painted, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    return;
+  }
   float t1 = smoothstep(-0.02, 0.22, h);
   float t2 = smoothstep(0.18, 0.85, h);
   if (uBands > 0.5) {
@@ -97,11 +127,29 @@ uniform vec3 uShallow;
 uniform vec3 uSky;
 uniform vec3 uSunDir;
 uniform float uTime;
+uniform float uPainted;
+uniform sampler2D uSeaMap;
+uniform float uSeaScale;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE}
+${UNTONE}
 void main() {
+  if (uPainted > 0.5) {
+    // The painted sea, drifting slowly, with the sun's road glinting on it.
+    vec2 q = vWorld.xz / uSeaScale + vec2(uTime * 0.006, uTime * 0.0025);
+    vec3 col = unTone(texture2D(uSeaMap, q).rgb);
+    vec3 V = normalize(cameraPosition - vWorld);
+    vec3 H = normalize(uSunDir + V);
+    float glit = step(0.7, noise(vWorld.xz * 0.15 + uTime * 0.4));
+    col += vec3(1.0, 0.86, 0.6) * step(0.996, max(dot(vec3(0.0, 1.0, 0.0), H), 0.0)) * glit * 0.8;
+    gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+    return;
+  }
   vec3 V = normalize(cameraPosition - vWorld);
   float dist = length(cameraPosition - vWorld);
   vec2 p = vWorld.xz;
@@ -251,6 +299,23 @@ function tower(w: number, h: number, d: number, x: number, y: number, z: number,
   return g;
 }
 
+/**
+ * Texture coordinates for a slab or drum seen mostly from above: its top and
+ * bottom mapped flat in plan, its sides round and up, `size` units to a repeat.
+ */
+function planarUvs(g: THREE.BufferGeometry, size: number): void {
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const nor = g.attributes.normal as THREE.BufferAttribute;
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    if (Math.abs(nor.getY(i)) > 0.5) uv.setXY(i, x / size, z / size);
+    else uv.setXY(i, (Math.atan2(z, x) * Math.hypot(x, z)) / size, y / size);
+  }
+}
+
 /** Give every vertex a colour from its position (non-indexed geometry). */
 function paint(g: THREE.BufferGeometry, color: (x: number, y: number, z: number) => THREE.Color): THREE.BufferGeometry {
   const pos = g.attributes.position as THREE.BufferAttribute;
@@ -311,10 +376,18 @@ interface Ctx {
   /** Distance from a point to the nearest bit of road, in plan. */
   clearance(x: number, z: number): number;
   updates: Array<(time: number, camera: THREE.Camera) => void>;
+  /** The circuit's painted background, if it has one. */
+  painted: PaintedSet | null;
+  /** Shown only in the plain look, or only with the painted background. */
+  plainOnly: THREE.Object3D[];
+  paintedOnly: THREE.Object3D[];
+  /** Material changes between the two: called with true for the painted background. */
+  swaps: Array<(painted: boolean) => void>;
 }
 
 export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World {
   const group = new THREE.Group();
+  const painted = paintedSet(theme.id);
 
   // Track bounds, to place things relative to the loop.
   let minX = 1e9;
@@ -346,6 +419,10 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       return Math.sqrt(best);
     },
     updates: [],
+    painted,
+    plainOnly: [],
+    paintedOnly: [],
+    swaps: [],
   };
 
   // ---- lights -------------------------------------------------------------
@@ -368,6 +445,11 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uCirrusAmt: { value: theme.cirrusAmount },
       uTime: { value: 0 },
       uBands: { value: 0 },
+      uPainted: { value: 0 },
+      uPano: { value: null },
+      uPanoSunU: { value: painted?.sunU ?? 0.25 },
+      uPanoHorizon: { value: painted?.horizonV ?? 0 },
+      uSunAz: { value: Math.atan2(SUN_DIR.z, SUN_DIR.x) },
     },
     side: THREE.BackSide,
     depthWrite: false,
@@ -377,6 +459,12 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   sky.frustumCulled = false;
   sky.renderOrder = -10;
   group.add(sky);
+  let skyReady = false;
+  if (painted) {
+    const pano = paintedTexture(painted.sky, { onReady: () => (skyReady = true) });
+    pano.wrapS = THREE.RepeatWrapping;
+    skyMat.uniforms.uPano.value = pano;
+  }
   ctx.updates.push((time, camera) => {
     skyMat.uniforms.uTime.value = time;
     sky.position.copy(camera.position);
@@ -385,15 +473,57 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   if (theme.ground === 'desert') buildCanyon(ctx);
   else if (theme.ground === 'clouds') buildHelios(ctx);
   else buildMeridian(ctx);
+  if (painted) horizonRings(ctx);
+
+  // Switch between the plain scenery and the painted background with the look.
+  let showing: boolean | null = null;
+  const show = (on: boolean) => {
+    showing = on;
+    for (const o of ctx.plainOnly) o.visible = !on;
+    for (const o of ctx.paintedOnly) o.visible = on;
+    for (const f of ctx.swaps) f(on);
+  };
+  show(false);
 
   return {
     group,
     sun,
     sky: skyMat,
     update(time: number, camera: THREE.Camera) {
+      const on = look.on && painted !== null;
+      if (on !== showing) show(on);
+      skyMat.uniforms.uPainted.value = on && skyReady ? 1 : 0;
       for (const u of ctx.updates) u(time, camera);
     },
   };
+}
+
+/**
+ * The painted horizon: each strip on a ring round the circuit, farthest
+ * first, standing on the ground and repeating round the full circle. Not
+ * fogged: the paintings carry their own distance.
+ */
+function horizonRings(ctx: Ctx): void {
+  const set = ctx.painted!;
+  const rings = HORIZON_RINGS[ctx.theme.id] ?? [];
+  const rnd = mulberry(4242);
+  set.horizon.forEach((strip, i) => {
+    const ring = rings[i];
+    if (!ring) return;
+    const h = ring.radius * Math.tan((ring.degrees * Math.PI) / 180);
+    const geo = new THREE.CylinderGeometry(ring.radius, ring.radius, h, 192, 1, true);
+    geo.translate(0, h / 2, 0);
+    const map = paintedTexture(strip.url);
+    map.wrapS = THREE.RepeatWrapping;
+    const mat = paintedCardMaterial(map, [0, 0, 1, 1], ring.repeats, THREE.BackSide);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(ctx.cx, ctx.theme.groundY, ctx.cz);
+    mesh.rotation.y = rnd() * Math.PI * 2;
+    mesh.renderOrder = -9 + i;
+    mesh.frustumCulled = false;
+    ctx.group.add(mesh);
+    ctx.paintedOnly.push(mesh);
+  });
 }
 
 /** A ground plane far wider than the view, drawn with one of the ground shaders. */
@@ -419,9 +549,11 @@ function groundPlane(ctx: Ctx, fragment: string, uniforms: Record<string, THREE.
 function cumulus(ctx: Ctx, seed: number, count: number, place: (rnd: () => number) => [number, number, number, number] | null, drift = 400): void {
   const rnd = mulberry(seed);
   const parts: THREE.BufferGeometry[] = [];
+  const banks: Array<[number, number, number, number]> = [];
   for (let i = 0; i < count; i++) {
     const at = place(rnd);
     if (!at) continue;
+    banks.push(at);
     const [bx, by, bz, size] = at;
     const puffs = 5 + Math.floor(rnd() * 6);
     for (let k = 0; k < puffs; k++) {
@@ -444,6 +576,47 @@ function cumulus(ctx: Ctx, seed: number, count: number, place: (rnd: () => numbe
   ctx.group.add(clouds);
   ctx.updates.push((time) => {
     clouds.position.x = Math.sin(time * 0.003) * drift;
+  });
+  if (ctx.painted) {
+    ctx.plainOnly.push(mesh);
+    paintedClouds(ctx, clouds, banks, seed);
+  }
+}
+
+/**
+ * The painted clouds: a card for each bank, standing on the bank's flat
+ * bottom and turning about the upright to face the camera, so it stays level
+ * however the camera banks.
+ */
+function paintedClouds(ctx: Ctx, clouds: THREE.Group, banks: Array<[number, number, number, number]>, seed: number): void {
+  const { cards, url } = ctx.painted!.clouds;
+  if (cards.length === 0) return;
+  const map = paintedTexture(url);
+  const rnd = mulberry(seed * 7 + 1);
+  const group = new THREE.Group();
+  const geo = new THREE.PlaneGeometry(1, 1);
+  geo.translate(0, 0.5, 0);
+  const meshes: THREE.Mesh[] = [];
+  // Two-sided: half the cards are drawn mirrored.
+  const mats = cards.map((c) => paintedCardMaterial(map, [c.u0, c.v0, c.u1 - c.u0, c.v1 - c.v0], 1, THREE.DoubleSide));
+  for (const [bx, by, bz, size] of banks) {
+    const k = Math.floor(rnd() * cards.length);
+    const w = size * (3.0 + rnd() * 0.8);
+    const m = new THREE.Mesh(geo, mats[k]);
+    m.scale.set(rnd() < 0.5 ? -w : w, w / cards[k].aspect, 1);
+    m.position.set(bx, by - size * 0.35, bz);
+    m.renderOrder = -6;
+    m.frustumCulled = false;
+    group.add(m);
+    meshes.push(m);
+  }
+  clouds.add(group);
+  ctx.paintedOnly.push(group);
+  const cam = new THREE.Vector3();
+  ctx.updates.push((_time, camera) => {
+    if (!group.visible) return;
+    camera.getWorldPosition(cam);
+    for (const m of meshes) m.rotation.y = Math.atan2(cam.x - m.position.x - clouds.position.x, cam.z - m.position.z);
   });
 }
 
@@ -492,21 +665,30 @@ function buildMeridian(ctx: Ctx): void {
   const { track, group, cx, cz, minX, maxX, minZ, maxZ, theme } = ctx;
 
   // ---- sea ----------------------------------------------------------------
-  groundPlane(
+  const seaMat = groundPlane(
     ctx,
     seaFragment,
     {
       uDeep: { value: new THREE.Color(theme.groundDeep) },
       uShallow: { value: new THREE.Color(theme.groundLight2) },
       uSky: { value: new THREE.Color(0xbfd8f5) },
+      uPainted: { value: 0 },
+      uSeaMap: { value: null },
+      uSeaScale: { value: 170 },
     },
     -6,
   );
+  const surf = ctx.painted?.surfaces;
+  if (surf) {
+    seaMat.uniforms.uSeaMap.value = paintedTexture(surf.sea, { repeat: true });
+    ctx.swaps.push((on) => (seaMat.uniforms.uPainted.value = on ? 1 : 0));
+  }
 
   // ---- city ---------------------------------------------------------------
   {
     const rnd = mulberry(2049);
-    const parts: THREE.BufferGeometry[] = [];
+    // Three kinds of tower, for the painted facades: glass offices, hotels, dark glass.
+    const parts: THREE.BufferGeometry[][] = [[], [], []];
     const decks: THREE.BufferGeometry[] = [];
     const tints = [new THREE.Color(0xffffff), new THREE.Color(0xe6ecf5), new THREE.Color(0xffe9d2), new THREE.Color(0xd5e4f7)];
     // A handful of districts: islands of towers inside and around the loop.
@@ -522,6 +704,7 @@ function buildMeridian(ctx: Ctx): void {
     for (const [dx, dz, radius, count] of districts) {
       // Low platform the towers stand on.
       const deck = new THREE.CylinderGeometry(radius * 1.04, radius * 0.98, 14, 10).toNonIndexed();
+      planarUvs(deck, 60);
       deck.translate(dx, 1, dz);
       decks.push(deck);
       for (let i = 0; i < count; i++) {
@@ -534,21 +717,48 @@ function buildMeridian(ctx: Ctx): void {
         const w = 26 + rnd() * 50;
         const d = 26 + rnd() * 50;
         const h = 50 + rnd() * 120 + core * core * (160 + rnd() * 330);
-        parts.push(tower(w, h, d, x, 8, z, rnd() * 0.6, tints[Math.floor(rnd() * tints.length)]));
+        // The tallest are offices, the low ones hotels, a few dark glass.
+        const kind = h > 260 ? (rnd() < 0.6 ? 0 : 2) : rnd() < 0.55 ? 1 : rnd() < 0.6 ? 0 : 2;
+        parts[kind].push(tower(w, h, d, x, 8, z, rnd() * 0.6, tints[Math.floor(rnd() * tints.length)]));
         if (h > 240 && rnd() < 0.7) {
           // Setback crown and a mast.
-          parts.push(tower(w * 0.6, h * 0.18, d * 0.6, x, 8 + h, z, 0, tints[0]));
-          parts.push(tower(2.5, h * 0.22, 2.5, x, 8 + h * 1.18, z, 0, tints[1]));
+          parts[kind].push(tower(w * 0.6, h * 0.18, d * 0.6, x, 8 + h, z, 0, tints[0]));
+          parts[kind].push(tower(2.5, h * 0.22, 2.5, x, 8 + h * 1.18, z, 0, tints[1]));
         }
       }
     }
-    const cityMat = new THREE.MeshLambertMaterial({ map: windowTexture(), vertexColors: true });
-    const city = new THREE.Mesh(mergeGeometries(parts)!, cityMat);
-    city.frustumCulled = false;
-    group.add(city);
-    const deckMesh = new THREE.Mesh(mergeGeometries(decks)!, new THREE.MeshLambertMaterial({ color: 0xb9c2cf }));
+    const windows = windowTexture();
+    // Painted facades, by kind, and how many units of wall each repeat covers (the plain windows: 26).
+    const facades: Array<[string, number]> = [
+      ['office', 30],
+      ['hotel', 26],
+      ['dark', 44],
+    ];
+    parts.forEach((list, kind) => {
+      if (list.length === 0) return;
+      const cityMat = new THREE.MeshLambertMaterial({ map: windows, vertexColors: true });
+      const city = new THREE.Mesh(mergeGeometries(list)!, cityMat);
+      city.frustumCulled = false;
+      group.add(city);
+      const name = facades[kind][0];
+      if (surf?.[name]) {
+        const facade = paintedTexture(surf[name], { repeat: true });
+        facade.repeat.setScalar(26 / facades[kind][1]);
+        ctx.swaps.push((on) => (cityMat.map = on ? facade : windows));
+      }
+    });
+    const blank = whiteTexture();
+    const deckMat = new THREE.MeshLambertMaterial({ color: 0xb9c2cf, map: blank });
+    const deckMesh = new THREE.Mesh(mergeGeometries(decks)!, deckMat);
     deckMesh.frustumCulled = false;
     group.add(deckMesh);
+    if (surf?.concrete) {
+      const concrete = paintedTexture(surf.concrete, { repeat: true });
+      ctx.swaps.push((on) => {
+        deckMat.map = on ? concrete : blank;
+        deckMat.color.set(on ? 0xffffff : 0xb9c2cf);
+      });
+    }
   }
 
   // ---- distant ridgeline --------------------------------------------------
@@ -567,6 +777,8 @@ function buildMeridian(ctx: Ctx): void {
     const ridge = new THREE.Mesh(mergeGeometries(parts)!, new THREE.MeshLambertMaterial({ color: theme.ridge, flatShading: true }));
     ridge.frustumCulled = false;
     group.add(ridge);
+    // The painted horizon replaces it.
+    if (ctx.painted) ctx.plainOnly.push(ridge);
   }
 
   // ---- cumulus ------------------------------------------------------------
@@ -581,7 +793,19 @@ function buildMeridian(ctx: Ctx): void {
     // The Zenith Ring: a great hoop the Crest Straight runs through.
     const m = new THREE.Matrix4();
     const s = track.length * 0.305;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(92, 7, 8, 40), toonMaterial({ color: 0xf1f4f9, vertexColors: false }));
+    const blank = whiteTexture();
+    const ringMat = toonMaterial({ color: 0xf1f4f9, vertexColors: false, map: blank });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(92, 7, 8, 40), ringMat);
+    const panels = surf?.panels ?? null;
+    if (panels) {
+      // White panels round the hoop and round its tube.
+      const ringPanels = paintedTexture(panels, { repeat: true });
+      ringPanels.repeat.set(40, 3);
+      ctx.swaps.push((on) => {
+        ringMat.map = on ? ringPanels : blank;
+        ringMat.color.set(on ? 0xffffff : 0xf1f4f9);
+      });
+    }
     trackMatrix(track, s, 0, 34, 0, m);
     ring.applyMatrix4(m);
     group.add(ring);
@@ -590,8 +814,18 @@ function buildMeridian(ctx: Ctx): void {
     group.add(inner);
     // Twin towers either side of the start with a sky-bridge.
     for (const side of [-1, 1]) {
-      const t = new THREE.Mesh(new THREE.BoxGeometry(46, 420, 46), new THREE.MeshLambertMaterial({ map: windowTexture(), color: 0xf2f5fa }));
-      (t.material as THREE.MeshLambertMaterial).map!.repeat.set(2, 16);
+      const towerMat = new THREE.MeshLambertMaterial({ map: windowTexture(), color: 0xf2f5fa });
+      const t = new THREE.Mesh(new THREE.BoxGeometry(46, 420, 46), towerMat);
+      const windowsMap = towerMat.map!;
+      windowsMap.repeat.set(2, 16);
+      if (panels) {
+        const towerPanels = paintedTexture(panels, { repeat: true });
+        towerPanels.repeat.set(2, 18);
+        ctx.swaps.push((on) => {
+          towerMat.map = on ? towerPanels : windowsMap;
+          towerMat.color.set(on ? 0xffffff : 0xf2f5fa);
+        });
+      }
       trackMatrix(track, 120, side * 150, 150, 0, m);
       t.applyMatrix4(m);
       group.add(t);
