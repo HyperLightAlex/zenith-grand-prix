@@ -10,8 +10,11 @@ is about getting your forward home first and stopping theirs.
 title lives in `index.html` and `src/client/ui/menus.ts` if you want to change
 it.
 
-This is version 0.3: three circuits, solo play with computer pilots in the
-other five seats, single races or a match of several rounds. The simulation is
+This is version 0.4: three circuits, solo play with computer pilots in the
+other five seats, single races or a match of several rounds. New in 0.4:
+carving, more boost, contested gates, support points for the midfielder and
+defender, guard on the left trigger with a guard swing, and fights that are
+easier to read. The simulation is
 already written to run on a server, which is a later milestone. See
 [docs/DESIGN.md](docs/DESIGN.md).
 
@@ -36,13 +39,15 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 |---|---|---|
 | Steer | Left stick | A D |
 | Accelerate / brake | RT / LT | W / S |
+| Carve (hold through a corner, let go for a burst) | LT with the stick pushed over | S with A or D |
 | Boost (uses Drive) | A | Space |
 | Ability (uses a Cell) | B | R |
 | Lock on to an enemy / let go (the one it would take is marked) | LB | Q |
 | Escort a teammate / let go | Click the left stick | E |
 | Attack / special | X / Y | J / K |
-| Guard (press just before a hit to parry) | RB | L |
+| Guard (while locked on; press just before a hit to parry) | LT (RB works too) | L |
 | Dash (while locked on) | A | Space |
+| Guard swing: arc round your target (while guarding) | Stick left or right + A | A or D + Space |
 | Switch target (while locked on) | Right stick left / right, hold to keep stepping | Z C |
 | Look around / look back | Right stick / R3 | V |
 | Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 |
@@ -66,8 +71,11 @@ nearest rival by itself.
 ## How a race goes
 
 1. **Formation lap.** Weapons are locked and a limiter holds everyone to
-   330 mph. Your Drive gauge starts empty and fills only on the cyan charge
-   strips. Six gold gates stand around the lap: thread one for half a Cell.
+   330 mph, so this is a pure racing lap: boost, carve, tuck into a
+   slipstream, scramble for the gates. Your Drive gauge starts empty and
+   fills on the cyan charge strips, in a slipstream, from clean landings and
+   from passing rivals close. Six gold gates stand around the lap: thread one
+   for a full Cell, and it goes dark for everyone behind you for 4 seconds.
    The gates sit across the road from the strips or on the long way round a
    corner, so you cannot have everything.
 2. **Battle lap.** Weapons and abilities free, limiter up to 375 mph. It
@@ -82,13 +90,32 @@ nearest rival by itself.
 Your two teammates follow the play you call with the D-pad. Call the same play
 again to cancel it.
 
+## Carving
+
+Pull the left trigger with the stick pushed over and the mech drops into a
+carve that way: down on its edges, gripping far harder than free steering,
+bleeding a little speed. It is a held drift. Once it is on, the stick only
+shapes it (centred it turns at about half lock, pushed into the turn it
+tightens, pushed out it opens wide), and it lasts until you let go of the
+trigger. With the stick near the middle the trigger is still a brake.
+
+While you carve, the sparks off your skates climb three colours: cyan, gold,
+then magenta. The tighter you hold it, the tighter the bend and the faster
+you go, the quicker they climb; on a straight they barely move. Let go for a
+burst over the limiter: +15%, +25% or +35%, for half a second to a second.
+Scraping the barrier loses the charge, and a blow that lands, locking on or
+going over an edge ends the carve with nothing. Every circuit has corners
+tight enough that carving is the quick way round, with a straight after
+each to spend the burst on.
+
 ## Circuits
 
 Pick one in the garage (the first row). Each has its own scenery and its own
 race music.
 
 - **Meridian Skyway.** The original: an elevated loop over the sea at golden
-  hour. Sweepers, a hairpin and long straights, barriers all the way round.
+  hour. Sweepers, the Esses, a chicane and the Harbour Hairpin (the best
+  carve on any circuit) between long straights, barriers all the way round.
 - **Corkscrew Canyon.** Built for fighting, at dusk in a red desert. The
   Narrows (a cut through the rock too narrow to pass without a fight), a
   corkscrew, the Bowl (banked so steeply you can take it flat out), the
@@ -97,7 +124,8 @@ race music.
 - **Helios Drop.** Built for speed and air, above a sea of cloud. The Drop
   (a wide jump off the top of a long climb, through the Sun Gate: at the
   formation-lap limiter you clear it by about half its width, and anything
-  much slower falls in), a full loop, the Carousel (a long banked right),
+  much slower falls in), the Switchback (a left-right flick to carve on the
+  way down), a full loop, the Carousel (a long banked right),
   the Skyline crest, and Split Decision: a fork with a speed pad and a second
   jump on one side (take the pad and you clear it easily) and the Drive strip
   and a gate on the other.
@@ -125,7 +153,9 @@ Each frame has two abilities on one button: one while free steering, another
 while locked on. Each use burns one Cell and you can hold three. Cells come
 from the gold gates, which are lit on every lap (each gate once a lap), so a
 Cell spent defending yourself on lap 2 can be earned back, at the price of
-leaving the racing line to do it.
+leaving the racing line to do it. A gate goes to whoever reaches it first and
+then stays dark for 4 seconds, so a chaser can take one from under the
+leader's nose; a mech that is already full passes through without using it.
 
 | Frame | Free steering | Locked on |
 |---|---|---|
@@ -152,7 +182,17 @@ Aegis shrugs off a Ram and a Snare, a guard blunts a Ram or a Disruptor.
   meets it as the blow lands, turning white for the moment a guard would
   parry. Gold: parry it. Red: a guard breaker, dash out of it. Orange: a heavy
   gun, guard. A rival aiming one at you also gets the answer written over its
-  name, and a warning sound.
+  name, and a warning sound; if it is off screen, an arrow at the edge of the
+  screen points to it.
+- **Guard swing.** With the guard up, push the stick left or right and press
+  A: you carve a fast half-circle round your target to that side, out of the
+  way of what was coming and onto its flank or past it. You are untouchable
+  for the first part of it, and it costs what a dash costs. From further out
+  it goes less far round.
+- **Big moments.** The camera darts in for a moment on a heavy blow, a parry,
+  a guard break or a knockout you are part of (a slider sets how much), each
+  weapon has its own colour of swing and sparks, and any knockout you had a
+  hand in plays in slow motion.
 
 ## Scoring and matches
 
@@ -160,6 +200,25 @@ Placing points are 15, 7, 5, 3, 2, 1. A mech that is knocked out scores no
 placing points, and the team that knocked it out gets 3. So a team whose
 forward wins but whose other two mechs are knocked out loses the round, 15 to
 21, to a team that finished second, third and fourth.
+
+**Support points** count for the team too, up to 8 per pilot per race:
+
+| Who | For | Points |
+|---|---|---|
+| Vector | Snare a rival (the rival forward: 2) | 1 |
+| Vector | Interrupt: break a wind-up with the Disruptor or the Stun Kick | 2 |
+| Vector | Pressure: every 150 damage on the rival forward | 1 |
+| Vector | Back-up: every 80 damage on rivals fighting a teammate | 1 |
+| Bulwark | Peel: hit a rival attacking your forward (break its attack: Save, 2) | 1 |
+| Bulwark | Bodyguard: block or parry beside your forward | 1 |
+| Bulwark | Aegis: your shield keeps 100 damage off the team | 2 |
+| Bulwark | Ring-out a rival (the rival forward: 2) | 1 |
+| Vector, Bulwark | Lead-out: on lap 3 your forward leaves your slipstream and passes someone | 2 |
+| Anyone | Assist: you hurt a rival in the 5 s before a teammate knocked it out | 2 |
+
+The same action on the same rival scores once every 6 seconds. Each one pops
+up as it lands, a support pilot gets a prompt when its forward needs it, and
+the results show where every support point came from.
 
 Pick the format in the garage:
 
@@ -174,8 +233,9 @@ The teams swap sides of the grid each round.
 ## Tuning panel
 
 Press T (or Back on a pad) at any time. It has sliders for the limiters, top
-speed, boost, the slipstream, Drive and Cells, every ability, knockout
-points, combat (lock-on movement, momentum, ring-outs), the camera, the
+speed, boost, carving, the slipstream, Drive and Cells, every ability,
+knockout and support points, combat (lock-on movement, momentum, ring-outs,
+the guard swing, armour), the camera (including the punch-in), the
 effects (including the size of the wind-up tells and the brightness of the
 barrier pulse) and the sound. Changes apply at once, to the race you are in,
 and are remembered in the browser.
@@ -197,7 +257,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then build to `dist/` |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Simulation test suite (767 tests) |
+| `npm test` | Simulation test suite (822 tests) |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |

@@ -382,6 +382,9 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // --- boost on the speed lap when the road is straight enough
   if (race.lapPhase >= 3 && !m.finished && kMax < 0.0022 && m.drive > 12) wantBoost = true;
   if (m.drive > 97 && kMax < 0.0015 && race.lapPhase >= 2) wantBoost = true;
+  // The formation lap is a racing lap: spend down to a reserve for the fights
+  // to come, on the straights (and never through a carve).
+  if (race.lapPhase <= 1 && !m.carving && m.drive > 45 && kMax < 0.0015) wantBoost = true;
   if (wantBoost && m.drive > 3 && throttle >= 1) out.buttons |= BTN.A;
   out.throttle = throttle;
 

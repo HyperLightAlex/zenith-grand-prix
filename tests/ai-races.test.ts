@@ -420,16 +420,17 @@ describe(`${RACES} all-AI races`, () => {
     });
   });
 
-  it('counted from the start of the countdown, lap 1 takes between 80 and 86 seconds', () => {
-    // (Measured at the time of writing: 82.3 to 83.7, 82.9 on average. This
-    // is the "lap 1" figure `npm run sim` prints.)
+  it('counted from the start of the countdown, lap 1 takes between 77 and 83 seconds', () => {
+    // (Measured at the time of writing: 79.5 to 80.9, 80.0 on average, now
+    // that computer pilots boost on the formation lap. This is the "lap 1"
+    // figure `npm run sim` prints.)
     each((s) => {
-      expect(s.lap2Tick * DT).toBeGreaterThan(80);
-      expect(s.lap2Tick * DT).toBeLessThan(86);
+      expect(s.lap2Tick * DT).toBeGreaterThan(77);
+      expect(s.lap2Tick * DT).toBeLessThan(83);
     });
     const avg = mean(results.map((s) => s.lap2Tick * DT));
-    expect(avg).toBeGreaterThan(81.5);
-    expect(avg).toBeLessThan(84.5);
+    expect(avg).toBeGreaterThan(78.5);
+    expect(avg).toBeLessThan(81.5);
   });
 
   it('points are handed out correctly: 15-7-5-3-2-1 down the classified runners, 0 for wrecks, plus 3 per knock-out scored, plus support points', () => {
