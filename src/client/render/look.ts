@@ -79,6 +79,12 @@ export const CEL = {
    * each paint rather than darkening it. Set per circuit by setCelTheme.
    */
   uShadeTint: { value: new THREE.Color(0.6, 0.56, 0.78) },
+  /**
+   * On the mechs' armour each paint has its own shadow colour (the livery's
+   * shades); the circuit's light only leans them, by this, keeping their
+   * brightness. Set per circuit by setCelTheme.
+   */
+  uShadeLean: { value: new THREE.Color(1, 1, 1) },
   /** The same for the painted backgrounds, which keep a gentler contrast. */
   uBgShadeTint: { value: new THREE.Color(0.74, 0.7, 0.86) },
   /** N.L a lit cel is painted at: one flat tone for the whole lit side. */
@@ -103,12 +109,18 @@ export function setCelTheme(theme: Theme): void {
   const violet = new THREE.Color(0.66, 0.56, 1.0);
   const tint = sky.clone().lerp(violet, 0.35);
   CEL.uShadeTint.value.copy(tint).multiplyScalar(0.64);
+  // Half way from neutral toward the circuit's lean, at the same brightness.
+  const ref = new THREE.Color(1, 1, 1).lerp(violet, 0.35);
+  const lean = new THREE.Color(tint.r / ref.r, tint.g / ref.g, tint.b / ref.b).lerp(new THREE.Color(1, 1, 1), 0.5);
+  const y = lean.r * 0.2126 + lean.g * 0.7152 + lean.b * 0.0722;
+  CEL.uShadeLean.value.copy(lean).multiplyScalar(1 / y);
   CEL.uBgShadeTint.value.copy(tint).lerp(new THREE.Color(1, 1, 1), 0.3).multiplyScalar(0.78);
 }
 
 const CEL_HEAD = /* glsl */ `
 uniform float uCel;
 uniform vec3 uShadeTint;
+uniform vec3 uShadeLean;
 uniform vec3 uBgShadeTint;
 uniform float uKeyRef;
 uniform float uKeyLift;
@@ -150,6 +162,10 @@ if (uCel > 0.5) {
     // Black is never quite black on a cel: a dark blue-grey paint, so the shading still reads.
     celLit += (celSun * uKeyRef + celAmb) * RECIPROCAL_PI * vec3(0.03, 0.032, 0.044);
     vec3 celShade = celLit * uShadeTint;
+    #ifdef CEL_ARMOR
+      // Each paint's own shadow colour, leant a little toward the circuit's light.
+      celShade = celLit * clamp(vShade / max(celBase, vec3(0.001)), 0.0, 1.5) * uShadeLean;
+    #endif
     // Bounce: a lighter band along the far rim of the shadow.
     float rim = 1.0 - clamp(dot(celN, celV), 0.0, 1.0);
     celShade = mix(celShade, mix(celShade, celLit, 0.45), celStep(rim, 0.62) * uBounce);

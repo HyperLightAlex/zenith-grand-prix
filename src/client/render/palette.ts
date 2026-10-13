@@ -39,6 +39,14 @@ export interface Livery {
   frame: number;
   trim: number;
   glow: number;
+  /**
+   * The anime look's shadow colour for each paint, mixed the way a cel
+   * painter mixed them: not the paint darkened but a colour of its own,
+   * leaning violet (white armour shades to lavender grey, blue to deep
+   * ultramarine-violet, red to maroon, gold to burnt orange). The circuit's
+   * light leans them a little further (see setCelTheme).
+   */
+  shades: { primary: number; secondary: number; frame: number; trim: number };
   /** CSS colour for the HUD. */
   css: string;
   cssDim: string;
@@ -54,6 +62,7 @@ export const LIVERIES: Livery[] = [
     frame: 0x2a3142,
     trim: 0xffb21a,
     glow: 0x45e8ff,
+    shades: { primary: 0xa6a3c8, secondary: 0x1e2a9c, frame: 0x171a2e, trim: 0xc0601e },
     css: '#3d8bff',
     cssDim: '#16356b',
   },
@@ -66,6 +75,7 @@ export const LIVERIES: Livery[] = [
     frame: 0x1d1d27,
     trim: 0xe6e8f0,
     glow: 0xff4a78,
+    shades: { primary: 0x2e2a44, secondary: 0x7c1036, frame: 0x100f1c, trim: 0x9a96b6 },
     css: '#ff3d5a',
     cssDim: '#6b1626',
   },

@@ -95,6 +95,17 @@ random order, flipped and turned, so three drawings never visibly repeat.
 The procedural explosion the painted one replaced is still in
 `sprites/explosion.png` (`tools/fx/explosion.py`).
 
+## Shadow colours per paint
+
+On the mechs each paint has a shadow colour of its own (`shades` in each
+livery, `palette.ts`), mixed the way a cel painter mixed them rather than the
+paint darkened: Solstice's white armour shades to lavender grey, its blue to
+deep ultramarine-violet, its gold to burnt orange; Vanta's charcoal to deep
+violet, its red to maroon, its pale grey trim to lavender. The armour carries
+each part's shadow paint as a vertex attribute beside its colour, and the
+circuit's light only leans the shadows a little (`uShadeLean`, at the same
+brightness). The rest of the scene keeps one shadow tint per circuit.
+
 ## Painted backgrounds
 
 In the anime look every circuit has its scenery painted, the way a
@@ -257,10 +268,6 @@ works as before, and on the low quality setting the ink pass is skipped.
 These are the parts that would take it from a convincing pass to a finished
 style, roughly in order of payoff.
 
-- **A shadow colour per paint.** Shadows are one tint per circuit applied
-  to every colour. A cel painter mixed a shadow for each paint (the white
-  armour's lavender, the red's maroon). A small table per livery would do
-  it.
 - **Coloured lines.** Lines are ink everywhere. Productions used coloured
   lines inside light areas (on a glow, on the sky side of a cloud).
 - **Lines between two overlapping mechs** fall back to the depth test, so

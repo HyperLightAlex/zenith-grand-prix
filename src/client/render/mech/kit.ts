@@ -158,7 +158,9 @@ export function armorMat(): THREE.MeshToonMaterial {
         '#include <common>',
         /* glsl */ `#include <common>
         attribute float aMat;
+        attribute vec3 aShade;
         varying float vMat;
+        varying vec3 vShade;
         varying vec3 vWorldN;
         varying vec3 vWorldP;`,
       )
@@ -166,6 +168,7 @@ export function armorMat(): THREE.MeshToonMaterial {
         '#include <fog_vertex>',
         /* glsl */ `#include <fog_vertex>
         vMat = aMat;
+        vShade = aShade;
         vWorldN = normalize(mat3(modelMatrix) * objectNormal);
         vWorldP = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
       );
@@ -175,6 +178,7 @@ export function armorMat(): THREE.MeshToonMaterial {
         /* glsl */ `
         varying vec3 vViewPosition;
         varying float vMat;
+        varying vec3 vShade;
         varying vec3 vWorldN;
         varying vec3 vWorldP;
         uniform vec3 uEnvHigh;
@@ -231,7 +235,7 @@ export function armorMat(): THREE.MeshToonMaterial {
         `,
       );
   };
-  mat.customProgramCacheKey = () => 'zgp-armor-v1';
+  mat.customProgramCacheKey = () => 'zgp-armor-v2';
   // The anime look paints the armour's metal and glass (see look.ts).
   mat.userData.celArmor = true;
   armorMaterial = mat;
@@ -260,8 +264,21 @@ export class Kit {
   private armor: THREE.BufferGeometry[] = [];
   private glow: THREE.BufferGeometry[] = [];
   private colors: Record<Slot, THREE.Color>;
+  /** Each slot's shadow paint, for the anime look's cel shading. */
+  private shades: Record<Slot, THREE.Color>;
 
   constructor(readonly livery: Livery) {
+    const sh = livery.shades;
+    this.shades = {
+      P: new THREE.Color(sh.primary),
+      S: new THREE.Color(sh.secondary),
+      F: new THREE.Color(sh.frame),
+      T: new THREE.Color(sh.trim),
+      D: new THREE.Color(sh.frame).multiplyScalar(0.55),
+      // Glass keeps the shading's own tint (its painting is done in the shader).
+      C: new THREE.Color(livery.glow).multiplyScalar(0.3).multiply(new THREE.Color(0.38, 0.36, 0.5)),
+      K: new THREE.Color(sh.frame).lerp(new THREE.Color(0x3a3d58), 0.45),
+    };
     this.colors = {
       P: new THREE.Color(livery.primary),
       S: new THREE.Color(livery.secondary),
@@ -282,15 +299,21 @@ export class Kit {
       this.glow.push(geo);
     } else {
       const c = this.colors[slot];
+      const sc = this.shades[slot];
       const n = geo.attributes.position.count;
       const col = new Float32Array(n * 3);
+      const shade = new Float32Array(n * 3);
       const mat = new Float32Array(n).fill(SURFACE[slot]);
       for (let i = 0; i < n; i++) {
         col[i * 3] = c.r;
         col[i * 3 + 1] = c.g;
         col[i * 3 + 2] = c.b;
+        shade[i * 3] = sc.r;
+        shade[i * 3 + 1] = sc.g;
+        shade[i * 3 + 2] = sc.b;
       }
       geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      geo.setAttribute('aShade', new THREE.BufferAttribute(shade, 3));
       geo.setAttribute('aMat', new THREE.BufferAttribute(mat, 1));
       this.armor.push(geo);
     }
