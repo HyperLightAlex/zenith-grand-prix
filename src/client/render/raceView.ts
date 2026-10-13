@@ -726,7 +726,7 @@ export class RaceView {
         const out = race.mechs[e.mech].carveDir > 0 ? 0 : 1;
         v.rig.heels[out].getWorldPosition(v1);
         this.fx.burst(v1, v.vel, 8 + e.tier * 6, 16 + e.tier * 5, CARVE_COLORS[e.tier], 0.4, 0.35);
-        if (e.tier >= 2) this.fx.flash(v1, 4 + e.tier * 2, CARVE_COLORS[e.tier], 0.16, v.rig.root, true);
+        if (e.tier >= 3) this.fx.flash(v1, 4, CARVE_COLORS[e.tier], 0.14, v.rig.root, true);
         break;
       }
       case 'carveBurst': {
@@ -734,7 +734,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         v.burstTier = e.tier;
         trackPoint(track, v.s - 2, v.d, 2.5, v1);
-        this.fx.flash(v1, 6 + e.tier * 2.5, CARVE_COLORS[e.tier], 0.22, v.rig.root, true);
+        this.fx.flash(v1, 3.5 + e.tier, CARVE_COLORS[e.tier], 0.2, v.rig.root, true);
         this.fx.burst(v1, v.vel, 10 + e.tier * 8, 26 + e.tier * 6, CARVE_COLORS[e.tier], 0.45, 0.35);
         if (e.mech === local) this.cam.shake(0.08 + e.tier * 0.05);
         break;
