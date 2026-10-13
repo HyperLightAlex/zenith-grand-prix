@@ -25,6 +25,13 @@ export interface CameraSubject {
   target: { s: number; d: number } | null;
 }
 
+/**
+ * How far past the road's edge the camera may go: over the barrier, but
+ * inside the gantry legs (which stand 3.4 out), so a fight or a swing at the
+ * edge of the road is never seen from behind a pillar.
+ */
+const CAM_EDGE = 1.5;
+
 /** Punch-in timing, seconds: in, held, and back out. */
 const PUNCH_IN = 0.05;
 const PUNCH_HOLD = 0.07;
@@ -130,7 +137,7 @@ export class CameraRig {
     const height = F.camHeight + this.tilt * 6 + this.hSmooth;
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
-    const camD = side(THREE.MathUtils.clamp(this.dSmooth - sy * dist, -(hw + 4), hw + 4));
+    const camD = side(THREE.MathUtils.clamp(this.dSmooth - sy * dist, -(hw + CAM_EDGE), hw + CAM_EDGE));
     trackPoint(track, sub.s - cy * dist, camD, height, this.chasePos);
     const ahead = F.camLookAhead;
     trackPoint(track, sub.s + cy * ahead, side(sub.d + sy * ahead), F.camLookHeight - this.tilt * 4 + this.hSmooth * 0.9, this.chaseLook);
@@ -150,7 +157,7 @@ export class CameraRig {
       const ud = Math.sin(this.battleYaw);
       const back = F.camLockDist + Math.min(10, sep * 0.22);
       const shoulder = 3.6;
-      const bd = side(THREE.MathUtils.clamp(sub.d - ud * back + us * shoulder, -(hw + 7), hw + 7));
+      const bd = side(THREE.MathUtils.clamp(sub.d - ud * back + us * shoulder, -(hw + CAM_EDGE), hw + CAM_EDGE));
       trackPoint(track, sub.s - us * back - ud * shoulder, bd, F.camLockHeight + Math.min(4, sep * 0.08) + this.hSmooth, this.battlePos);
       const f = Math.min(0.6, 8 / sep + 0.35);
       trackPoint(track, sub.s + ds * f, side(sub.d + dd * f), 3.8 + this.hSmooth, this.battleLook);

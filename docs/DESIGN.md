@@ -1,6 +1,6 @@
 # Zenith GP: design document
 
-Version 0.3. This describes the game as built, why it is built that way, and
+Version 0.4. This describes the game as built, why it is built that way, and
 what comes next. Numbers quoted here come from `src/sim/rules.ts` and
 `src/sim/config.ts`; if the document and the code disagree, the code is right.
 
@@ -28,7 +28,7 @@ Four decisions shape everything else:
   or Cells? Lap 2: who do you fight, and what do you spend? Lap 3: can you
   get to the front, or stay there, and is a Cell worth leaving the line for?
 
-## 1b. Version 0.4: the plan
+## 1b. Version 0.4: what changed, and why
 
 Agreed after the first play sessions of 0.3. The races were too even and
 too slow: on the formation lap all six mechs passed every landmark
@@ -37,38 +37,47 @@ whole first lap), forwards won 94% of races and took nearly every
 knockout, and a support pilot had no way to score. Each lap now adds a
 layer: lap 1 is a fast, pure racing lap (boost, carving, slipstream, a
 scramble for gates), lap 2 adds the weapons, lap 3 takes the limiters off.
-The numbers below are where tuning starts; section 2 gives what was built.
+This is the summary; section 2 has the rules in full.
 
 **Boost and Drive, more of both.** Charge strips pay 10 Drive a second on
-the formation lap (6 before). Slipstream, the trickle, clean landings and
-close passes earn Drive from the start. Boost goes from +20% to +25%.
+the formation lap (6 before), and the trickle, the slipstream, clean
+landings and close passes on a rival all pay from the start. Boost goes
+from +20% to +25%. Computer pilots now boost on the formation lap too.
 
-**Carving replaces braking.** Hold the brake trigger (LT, or S) while
-steering and the mech drops into a carve: much more grip than free steering,
-a small steady loss of speed. Charge builds with how hard you carve and how
-tight the bend is (a straight barely charges, so weaving down one earns
-nothing), in three tiers shown by the colour of the sparks off the skates:
-cyan, gold, magenta. Let go for a burst over the limiter, bigger and longer
-for each tier. The wall or a hit loses the charge; in the air it holds. The
-trigger with the stick centred still brakes. Free steering only.
+**Carving replaces braking.** Pull the brake trigger (LT, or S) with the
+stick pushed over and the mech drops into a carve that way: a held drift,
+with far more grip than free steering and a small, steady loss of speed.
+Once it is on, the stick only shapes it and only letting go of the trigger
+ends it. Charge builds with how tight it is held, how tight the bend is and
+how fast the mech is going (a straight barely charges, so weaving down one
+earns nothing), through three tiers shown by the colour of the sparks off
+the skates: cyan, gold, magenta. Let go for a burst over the limiter, bigger
+and longer for each tier. The trigger with the stick near the middle still
+brakes. Free steering only.
 
-**Contested gates.** A gate pays a full Cell to the first mech through, goes
-dark and relights a few seconds later. A mech already holding the most Cells
+**Contested gates.** A gate pays a full Cell to the first mech through and
+goes dark for everyone for 4 seconds. A mech already holding the most Cells
 passes through without using the gate up, so a leader with a full tank
 cannot shut gates on the chasers.
 
 **Armour down about 10%**: Swift and Vector 1600, Bulwark 2000, with an
 armour scale on the tuning panel.
 
-**Fights you can read.** A short camera punch-in (no permanent zoom) on a
-heavy hit, a parry, a guard break and a knockout; an arrow at the edge of the
-screen when someone off-screen winds up a blow at you; a trail on every
-swing and a spark colour for each weapon; slow motion for any knockout you
+**Fights you can read.** A short camera punch-in (no held zoom, and a slider
+for it) on a heavy hit, a parry, a guard break and a knockout; an arrow at
+the edge of the screen when someone off screen winds up a blow at you; a
+colour for each weapon's swing and sparks; slow motion for any knockout you
 took part in (landed, took, set up, or of your own target).
 
+**Guard on the left trigger, and the guard swing.** Locked on, there is
+nothing to brake or carve, so the left trigger raises the guard (RB still
+does; RB alongside RT was awkward). Guard up, stick to one side and A: the
+mech carves a fast arc round its target, up to half a circle, invulnerable
+for the first part. A without the guard is still the dash.
+
 **Support points**, counted in the team's round score. Each action scores at
-most once every few seconds per rival, and a pilot's support points are
-capped per race, so a strong support race is worth about a second place,
+most once every 6 seconds per rival, and a pilot's support points are
+capped at 8 a race, so a strong support race is worth about a second place,
 never a win.
 
 | Frame | Action | Points |
@@ -87,11 +96,12 @@ never a win.
 
 Each award shows the moment it lands, the results break the score down by
 pilot and action, and a support pilot gets short prompts ("Your forward is
-under attack"). Computer pilots play for these too.
+under attack"). Computer pilots earn them by playing their roles.
 
-**Circuits rebuilt for carving.** Each circuit gains hairpins and chicanes
-tight enough that carving is the quick way round, while keeping its
-landmarks (the Drop, the Loop, the Corkscrew, the Crossover).
+**Circuits rebuilt for carving.** Each circuit gains corners tight enough
+that carving is the quick way round, with a straight after each to spend
+the burst on, and keeps its landmarks (the Drop, the Loop, the Corkscrew,
+the Crossover). See "Circuits" below.
 
 **Later**: per-role records for each player (needs accounts, so it comes with
 online play); the finish (whether lap 3's tow decides too much) waits for
@@ -105,9 +115,10 @@ coordinated team play online.
   last 22 ticks (about a third of a second) before GO for a launch bonus: a
   running start and 10 Drive. Holding it early, or blipping it, earns nothing.
 - Three laps of one of three circuits, picked in the garage. On Meridian
-  Skyway (8,640 units round) laps take about 83, 70 and 61 seconds and a race
-  runs about 3:33; Corkscrew Canyon (8,167) runs about 3:19 and Helios Drop
-  (9,296) about 3:47. See "Circuits" below.
+  Skyway (8,640 units round) the leader's laps take about 80, 70 and 52
+  seconds (the first counted from the start of the countdown) and the winner
+  finishes in about 3:22; on Corkscrew Canyon (8,074) in about 3:07, on Helios
+  Drop (9,430) in about 3:40. See "Circuits" below.
 - The lap phase follows the race leader:
 
 | Lap | Name | Weapons and abilities | Speed |
@@ -123,7 +134,9 @@ coordinated team play online.
 
 On laps 1 and 2 nobody free-steering can exceed the limiter except by:
 
-- **Boost**: +20% while held, burning 15 Drive a second.
+- **Boost**: +25% while held, burning 15 Drive a second.
+- **A carve's burst**: +15%, +25% or +35% for 0.5, 0.8 or 1.1 s, by tier
+  (see "Carving" below).
 - **Slipstream**: +4% tucked in behind another mech (see below).
 - **The pack rule**: the limiter is tied to the race leader. Fall more than
   40 units behind and it opens, up to +14% at 300 units. This is what keeps
@@ -151,8 +164,9 @@ and three things make that possible:
 - **Overdrive.** One Cell, four seconds at +30%, ignoring the armour penalty.
   Worth about 150 units: it is how a forward closes a gap too big for the tow.
 
-Two corners (the Harbour Hairpin and Drop Left) are now too tight to take
-flat at a forward's top speed, so braking and line are worth time as well.
+Most corners are now too tight to take flat at a forward's top speed without
+carving, so the carve, the line and the burst out of the corner are worth
+time as well.
 
 ### Circuits
 
@@ -206,11 +220,33 @@ going (the jump only above 100 u/s), their role (forwards like the quick way)
 and the side of the road they favour; in 100 races about 63% of passes take
 the busier route.
 
-| Circuit | Lap 1 | Race | KOs a race | Falls a race | Take-offs a race |
-|---|---|---|---|---|---|
-| Meridian Skyway | 82.9 s | 3:33 | 0.50 | 0 | 0 |
-| Corkscrew Canyon | 77.5 s | 3:19 | 0.21 to 0.37 | 0.5 | 25 |
-| Helios Drop | 88.2 s | 3:47 | 0.55 | 0.05 | 39 |
+**Corners for carving.** In 0.4 each circuit was rebuilt round carving:
+corners tight enough that a carve is the quick way round (at the speed-lap
+pace most of them cannot be taken flat without one), each followed by a
+straight to spend the burst on. A 90-degree corner of radius 140 to 170 is a
+second-tier carve held normally and a third-tier one held tight; only a long
+hairpin gets a carve held loosely to the third.
+
+- **Meridian**: the Esses (radius 170, left then right), Drop Left (140), the
+  Harbour Hairpin (105, 160 degrees: the best carve on any circuit) and the
+  chicane (130, left then right). The lap is still 8,640.
+- **Canyon**: T1 Mesa Right (140), the Narrows exit (120), T4 before the Sky
+  Bridge (150), the esses (130, 80 degrees each way) and T7 Final (130), with
+  the straights after T1, the start straight and the run to the line
+  lengthened so the lap stays about 8,100 (8,074).
+- **Helios**: the Switchback, a left-right flick (140, 70 degrees each way)
+  on the way down from the Drop, and a tighter Overlook (170) and Homecoming
+  (140). 9,430 round.
+
+| Circuit | Lap 1 | Winner's time | KOs a race | Falls a race | Take-offs a race | Carve bursts a race (tiers 1 / 2 / 3) |
+|---|---|---|---|---|---|---|
+| Meridian Skyway | 80.0 s | 3:22 | 0.5 | 0 | 0 | 49 / 14 / 6 |
+| Corkscrew Canyon | 74.9 s | 3:07 | 0.1 to 0.55 | 0.2 to 0.5 | 25 | 41 / 28 / 0.5 |
+| Helios Drop | 87.6 s | 3:40 | 0.4 to 0.8 | 0.05 to 0.1 | 40 | 23 / 9 / 0 |
+
+(Twenty races each, equal computer pilots of middling skill. Computer
+pilots carve by the line they want, so they rarely hold a carve tight: a
+person who does will reach the higher tiers far more often.)
 
 Each circuit has its own setting (Meridian: golden hour over the sea and a
 city; Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
@@ -228,32 +264,68 @@ stingers are moved into the circuit's key.
 - Barriers scrub speed. Racing contact shoves a mech sideways more than it
   spins it.
 
+### Carving
+
+The brake trigger with the stick pushed over (LT, or S with A or D) starts a
+carve that way, at racing speed (40 u/s or more) and with both skates on the
+road. Less stick than 0.35 and the trigger is a brake.
+
+- **A held drift.** The carve turns the way it started for as long as the
+  trigger is held. The stick only shapes it: centred, it turns at 55% of
+  full lock; pushed into the turn, up to full lock; pushed out of it, down to
+  15%. It never straightens, so the way out of a carve is to let go.
+- **Grip.** While carving the mech grips 1.65 times as hard and can turn 35%
+  faster, for a speed loss of 4 to 10 u/s every second (more held tight).
+- **Charge.** Per second: how tight the carve is held (0.15 to 1) x the
+  bend (250 / its radius, between 0.15 and 1.6; a straight or a carve
+  against the bend counts 0.15) x the speed (full from 100 u/s). Tiers at
+  0.5, 1.1 and 1.8, each with its spark colour and a chime.
+- **Burst.** Let go and the tier reached pays out: +15% over the cap for
+  0.5 s, +25% for 0.8 s or +35% for 1.1 s. It counts as a boost for
+  momentum strikes.
+- **Losing it.** Scraping the barrier takes the charge (the carve goes on).
+  A blow that lands (not one taken on the guard, and none at all under an
+  Aegis or in a Ram), locking on, a fall or the finish end the carve with
+  nothing. In the air it holds, but does not charge.
+
+Grip, speed loss, charge rate and burst size are all on the tuning panel.
+
 ### Drive
 
 One gauge, 0 to 100. It pays for boost, dashes and the forward's Lance Dash.
 
 - It starts **empty**.
-- On the formation lap it comes from the charge strips and nowhere else, at
-  6 a second. A typical pilot starts lap 2 with about 50.
-- From lap 2 the strips give 10 a second, and it also trickles in slowly,
-  in a slipstream, when linked to an escorted teammate, and from dealing or
-  taking damage.
+- From the start: the charge strips give 10 a second; a trickle of 0.8 a
+  second, and 3 more in a slipstream; 6 for a clean landing after a real jump
+  (a third of a second in the air, landed softly); 4 for passing a rival
+  within 10 across the road, once per rival every 5 s (and not for passing
+  in a fight, or a teammate); 10 for a perfect launch. A typical pilot
+  starts lap 2 full.
+- From lap 2 it also comes from being linked to an escorted teammate and
+  from dealing or taking damage.
 
 ### Cells and gates
 
 A second resource, 0 to 3, starting at none, that pays for abilities.
 
 - Six gold gates stand on the circuit. Thread one (your centre has to pass
-  between the posts) for half a Cell. Each gate scores once a lap.
+  between the posts) for a full Cell. Each gate scores once a lap for each
+  mech.
+- **Contested.** The first mech through takes the gate and it goes dark for
+  everyone for 4 seconds, glowing back up as it comes round to relighting.
+  Two through on the same tick, the one in front has it. A mech already
+  holding three Cells passes through without taking it, so a full leader
+  cannot shut gates on the chasers, and the field on lap 1 shares about six
+  Cells: about one each, more for whoever is at the front of each scramble.
 - Each sits where taking it costs something: across the road from a charge
   strip, on the outside of a corner, or on the long way round the hairpin.
-  A clean formation lap fills you; computer pilots average about one and a
-  half.
+  Computer pilots go for the gates their skill picks out, skip one that will
+  still be dark when they get there, and enter lap 2 with about one.
 - The gates stay lit for the whole race. In the first build of 0.2 they went
   out after lap 1, which meant one Cell spent in defence on lap 2 left a
   forward with no Overdrive and no way back on lap 3. Now a spent Cell can be
-  earned back, and the cost is position: two gates off the racing line for
-  one more use.
+  earned back, and the cost is position: a gate off the racing line for one
+  more use, if nobody beats you to it.
 - What a gate is worth after lap 1 is its own rule (`gateValueLater`), so the
   later laps can be made stingier, or switched off, from the tuning panel.
   Computer pilots only go back for gates when they have no Cell left.
@@ -323,12 +395,21 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 | Vector (midfielder) | Carbine: three-round burst to 62 m, 6 a round | Stun Kick: 34 damage, big knockback |
 | Bulwark (defender) | Breaker: two hammer blows, 36 / 54, the second breaks guards | Scatter Cannon: six pellets inside 30 m, 6 each |
 
-- **Guard** (RB): hits from the front do 15% damage and drain the guard
-  gauge. At zero, or against a guard-breaking move, the guard shatters.
+- **Guard** (LT, or RB; L on the keyboard): hits from the front do 15%
+  damage and drain the guard gauge. At zero, or against a guard-breaking
+  move, the guard shatters.
 - **Parry**: raise the guard no more than 8 ticks before a melee blow lands
   and the attacker is staggered instead.
 - **Dash** (A while locked on): a burst in the stick's direction with a few
   invulnerable frames.
+- **Guard swing** (guard up, stick left or right, A): a fast arc round the
+  target to that side, up to 180 degrees in 0.45 s at the distance it starts
+  from. From further out it goes less far round, so it never carries a mech
+  round faster than 150 u/s. Invulnerable for the first 60% of it; costs a
+  dash's Drive and shares its cooldown; the guard comes down while it runs.
+  A blow that staggers the mech ends it where it is. Guard up with the stick
+  forward, back or centred, A is still the dash. Computer pilots sometimes
+  swing round a blow aimed at them instead of hopping back.
 - **Guns work at racing speed** without a lock. Melee needs a lock; pressing
   attack near an enemy takes one for you.
 - Four hits in a chain and the victim bursts free.
@@ -341,9 +422,18 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
   the carbine, kick and scatter cannon all cycle faster. Computer pilots
   attack about 40% more often, fight longer before backing off, and hardly
   lift when waiting for a rival to come back to them.
-- **Feedback.** Blade strikes draw an arc in the attacker's colour (gold for
-  a finisher), heavy hits freeze the picture for a few hundredths of a
-  second, and damage you deal or take rises off the target as a number.
+- **Feedback.** Every swing draws an arc and every hit throws sparks in its
+  weapon's colour (blade cyan, lance blue, kick green, hammer orange,
+  carbine yellow, scatter red, Disruptor violet), heavy hits freeze the
+  picture for a few hundredths of a second, and damage you deal or take
+  rises off the target as a number. On a heavy blow, a parry or a guard
+  break you are part of, and on any knockout you had a hand in, the camera
+  darts in for a third of a second and back ("Punch-in on big hits" on the
+  Camera tab sets how much, or turns it off). A knockout you had a hand in
+  (landed, took, hurt the victim in the last 5 s, or were locked on to it)
+  also plays in slow motion. A rival winding up a blow at you from off
+  screen gets an arrow on the edge of the screen, in the colour of its
+  tell.
   A button pressed during that freeze (or on a frame that ran no tick, as on
   a fast display) is kept for the next tick rather than lost.
 
@@ -398,7 +488,7 @@ Breaker Slam 20 (18).
 | | Swift | Vector | Bulwark |
 |---|---|---|---|
 | Role | Forward | Midfielder | Defender |
-| Armour | 1800 | 1800 | 2200 |
+| Armour | 1600 | 1600 | 2000 |
 | Top speed (lap 3) | 160 u/s | 152.5 | 145 |
 | Grip | 100 | 90 | 80 |
 | Guard | 80 | 100 | 130 |
@@ -424,6 +514,10 @@ current play again returns to Free.
   even if the mech that scored them is knocked out later.
 - So a team with the race winner (15) and two wrecks loses to a team placed
   second, third and fourth with both knockouts (15 + 6).
+- **Support points** (see the table in section 1b) count for the team, up to
+  8 per pilot a race. The same action on the same rival scores once every
+  6 s; Back-up and Pressure pay by the damage instead. The results list
+  each pilot's support points by action.
 
 A match is one or more races between the same two teams (`src/sim/match.ts`):
 
@@ -484,10 +578,12 @@ The teams swap sides of the grid from one round to the next.
   radial blur, streaks, vignette, flash). Mechs are assembled in code from a
   small kit, cel-shaded with an inverted-hull outline; legs are solved by
   two-bone IK; the upper body blends a pose library.
-- **Sound.** Synthesised at run time: engine, wind, 52 effects, and music
-  that follows the lap phase, in a different style on each circuit. No audio files. Every continuous layer (engine,
-  wind, afterburner, strip hum, slipstream, scrape, alarm) has its own level
-  on the tuning panel, and the panel can play any one-shot by name.
+- **Sound.** Synthesised at run time: engine, wind, 55 effects, and music
+  that follows the lap phase, in a different style on each circuit. No audio
+  files. Every continuous layer (engine, wind, afterburner, strip hum,
+  slipstream, scrape, carve, alarm) has its own level on the tuning panel
+  (the carve's edge hiss follows the scrape slider, its tier hum the strip
+  one), and the panel can play any one-shot by name.
 
 ## 4. Tuning
 
@@ -499,22 +595,25 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 
 | Measure | Value |
 |---|---|
-| Average race | 3:33 (laps of about 83, 70 and 61 s) |
-| Knockouts per race | 0.47 (81 forwards, 6 midfielders, 8 defenders) |
-| Winner's role | Forward 94%, midfielder 5.5%, defender under 1% |
-| Armour left at the flag | Forward 40%, midfielder 54%, defender 43% |
-| Damage dealt per race | About 5,300 on the battle lap, 1,000 on the speed lap |
-| Momentum strikes per race | 5.6, about 40 damage each |
-| Ring-outs per race | 7.6, about 66 damage each (500 a race) |
-| Parries per race | 11 |
-| Entering lap 2 | 1.5 Cells and 50 Drive per mech |
-| Abilities used per race | One to three of each (Ram, Overdrive and Snare most) |
-| Battle-lap pace | 369 mph against a 375 limiter (365 while locked on) |
-| Leader at the start of lap 3 goes on to win | 51% |
-| First finisher's team loses the round anyway | About 1% |
+| Average race | 3:31 (laps of about 80, 69 and 62 s) |
+| Knockouts per race | 0.56 (80 forwards, 19 midfielders, 14 defenders) |
+| Winner's role | Forward 94.5%, midfielder 4.5%, defender 1% |
+| Armour left at the flag | Forward 44%, midfielder 51%, defender 43% |
+| Damage dealt per race | About 4,800 on the battle lap, 900 on the speed lap |
+| Momentum strikes per race | 6.1, about 42 damage each |
+| Ring-outs per race | 6.6, about 66 damage each (440 a race) |
+| Parries per race | 10 |
+| Entering lap 2 | 45 Drive per mech (they boost on lap 1 down to that); Cells: forwards 1.4, midfielders 1.0, defenders 0.6 |
+| Abilities used per race | Overdrive 4.2, Break Away 3.0, Snare 2.0, Ram 1.6, Disruptor 1.2, Aegis 0.8 |
+| Battle-lap pace | 370 mph against a 375 limiter (366 while locked on) |
+| Leader at the start of lap 3 goes on to win | 55% |
+| First finisher's team loses the round anyway | About 5% |
+| Carve bursts per race (all six) | 49 at tier 1, 14 at tier 2, 6 at tier 3 (Meridian) |
+| Support points per pilot | Vector about 6, Bulwark about 7 (of 8); they decide a round about one time in twenty |
 
 And the case that prompted the lap 3 changes, two forwards alone on the
-speed lap, the one behind on 50% armour and the leader on 90%:
+speed lap, the one behind on 50% armour and the leader on 90% (measured in
+0.3):
 
 | Start gap | Chaser has | What happens |
 |---|---|---|
@@ -544,10 +643,10 @@ person with a gamepad, and all of them are on the tuning panel:
    finish between equal pilots is a coin toss. If leading feels pointless,
    lower "Tow, lap 3" or shorten the slingshot; if catching up is still too
    hard, raise them.
-4. **Gates.** Whether six half-Cells a lap is the right economy now that the
-   gates stay lit (abilities are used about twice as often as when they went
-   out after lap 1), whether they are too easy or too hard to thread, and
-   whether lap 1 has enough to do.
+4. **Gates.** Whether a full Cell a gate, contested, is the right economy:
+   whether 4 s dark is long enough to matter in a scramble and short enough
+   that a chaser behind a leader still gets one ("Gate relights after" on the
+   Drive and Cells tab), and whether they are too easy or too hard to thread.
 5. **Ability strength.** Durations and sizes were set by reasoning and by
    computer pilots using them, not by play.
 6. **Rival skill, the pack rule, how lethal lap 2 is against you**: as in 0.1.
@@ -558,11 +657,9 @@ person with a gamepad, and all of them are on the tuning panel:
    turbine whine no longer climbs past its lap 1 level, and the brightest
    hits are quieter. If another sound grates, the Sound tab plays each one by
    name and turns each layer down.
-8. **Combat tempo.** Fights now stay at race pace and every move recovers
-   sooner. Knockouts went up from 0.28 to 0.47 a race even with the forward's
-   armour raised from 1600 to 1800; if lap 2 is now too lethal for a forward,
-   that armour figure (in `config.ts`) is the first thing to raise, then
-   "Ring-out damage" on the Combat tab.
+8. **Combat tempo and armour.** Armour is back down to 1600 (2000 for the
+   Bulwark); "Armour" on the Combat tab scales every frame if a fight now
+   ends too soon or still drags.
 9. **Momentum, ring-outs and tells.** How long momentum lasts (0.75 s), what
    a momentum strike is worth (x1.35 damage, x1.5 knockback), how hard heavy
    blows throw toward the barrier (x1.3) and what a ring-out costs are all on
@@ -572,7 +669,23 @@ person with a gamepad, and all of them are on the tuning panel:
 10. **Real devices.** Rendering has only been checked in a software-rendered
    headless browser. Frame rate on a real GPU, the gamepad code path, Safari
    and Firefox are untested.
-11. **The new circuits.** Whether the Narrows is too narrow, whether the
+11. **Carving.** Everything about how it feels: whether the carve should
+   start at 55% of lock with the stick centred (too tight on a wide corner,
+   or right), how much grip it adds, what it costs in speed, how quickly the
+   tiers come and what the bursts are worth (all on the Carving tab). On the
+   keyboard A and D only push a carve tight or wide, which should be playable
+   but is untried. Whether the circuits now have the right number of tight
+   corners, and whether a third-tier carve is too easy for a person holding
+   it tight.
+12. **The guard swing.** Whether half a circle in 0.45 s is too far or too
+   fast (the camera swings round with it), whether it is too safe with 60% of
+   it invulnerable, and whether LT is the right guard (RB still works).
+13. **Support points.** Whether the actions pay the right amounts and whether
+   8 a race is the right cap. Computer pilots end races with about 5 to 6
+   (Vector) and 6 to 7 (Bulwark), and it decides a round about one time in
+   twenty; people playing their roles on purpose should earn more. The
+   Scoring tab has the cap, the cooldown and the Vector's damage figures.
+14. **The new circuits.** Whether the Narrows is too narrow, whether the
    Bowl's banking reads, how the camera feels upside down in the loop and
    the corkscrew (it turns over with the road, a little less than fully),
    whether the jumps are pitched right (the Drop was made twice as wide
@@ -591,12 +704,18 @@ a lap 3 you can come back in, knockout points, match formats, feel pass,
 tuning panel, then combat at race pace, momentum strikes, ring-outs,
 wind-up tells and a lock that takes who you are looking at.
 
-**M1.6, done (this version): the track system.** A full 3D frame at every
+**M1.6, done: the track system.** A full 3D frame at every
 point, air time, falls and the recovery drone, open edges, forks with a
 middle wall, loops, corkscrews, banking grip and speed pads, and two
 circuits that use them (Corkscrew Canyon and Helios Drop), each with its own
 scenery and music. Meridian stays as the flat test course. 767 simulation
 tests.
+
+**M1.7, done (this version): racing and roles (0.4).** Carving, more boost
+and Drive, contested gates, support points for the midfielder and defender,
+guard on the left trigger and the guard swing, fights that are easier to
+read, armour down, and the three circuits rebuilt round carving. 822
+simulation tests.
 
 **M2: two browsers in one race.**
 - A Node server (Colyseus room) runs `stepRace` as the authority. Clients
@@ -620,6 +739,12 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
   for the line.
 - Almost every knockout is a forward. Support mechs are rarely in danger, so
   the "lose the round despite winning the race" result is possible but rare.
+- Computer pilots carve by the line they want rather than holding a carve
+  tight, so they seldom reach the third tier except in long hairpins. They
+  never play for a Lead-out (it almost never happens in their races) and use
+  the guard swing only to slip a blow, not to get round a guard.
+- Support points are only shown in the results; there is nowhere to keep a
+  pilot's record by role until there are accounts.
 - Switching target is left and right only. There is no way to pick a target
   behind you, or one further than 125 units, without letting go first.
 - Computer pilots do not set up ring-outs on purpose, beyond running up on the
@@ -631,7 +756,8 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
   person has dropped out.
 - No options screen yet (volume, quality, remapping).
 - Mech-to-mech contact is a simple circle push; only a Ram does damage.
-- Mechs in the air have no pose of their own yet: they keep running.
+- The minimap marks a dark gate with an outline but does not show how long
+  it has left.
 - Computer pilots do not aim ring-outs at open edges, and never choose to
   jump a gap when slow; they also do not know a fall is credited.
 - The minimap does not show gaps, open edges or a fork's two routes.
