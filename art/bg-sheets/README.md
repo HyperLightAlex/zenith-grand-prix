@@ -33,10 +33,14 @@ Meridian Skyway's sheets are in the game (`tools/bg/build_backgrounds.py meridia
 | M3 Clouds | bg-m3-clouds.png | six clouds; the second is a little wider than its cell, so the clouds are cut by their outlines, not by the grid |
 | M4 Surfaces | bg-m4-surfaces.png | the squares do not quite repeat at their edges; each is cut to the length that wraps (whole window bays on the facades) and its seams blended |
 | C1 Sky | bg-c1-sky.png | horizon at 697 px; the glow sits right on the horizon, as asked (the sun just touching it), so the game draws the sun's disc there, not at the light's height |
-| C1B Sky | | to do: the half facing away, made with C1 attached (prompt in the Canyon section) |
+| C1B Sky | bg-c1b-sky.png | horizon at 697 px, level with C1's; C1's right edge runs into it cleanly, but C1's left edge carries more of the sunset's orange than C1B's right edge, so that join is blended over a wider band |
 | C2 Horizon | bg-c2-horizon.png | three strips (mesas, buttes and spires, hoodoos), bottoms dead level, ends matching exactly |
 | C3 Clouds | bg-c3-clouds.png | six clouds; the broken line of cloudlets has a sliver of painted sky between two of them, dropped when cut (nothing in these clouds is greener than it is red); orange edges need a stronger spill clamp than Meridian's |
 | C4 Surfaces | bg-c4-surfaces.png | squares do not quite repeat; cut and blended like M4. The desert floor's scrub tufts would repeat in a visible grid on their own, so the game breaks it up with large-scale variation |
+| H1 Sky | bg-h1-sky.png | horizon at 735 px; the light is even all the way round (high sun), so the one sheet serves as both halves; the edges wrap well |
+| H2 Horizon | bg-h2-horizon.png | three strips (far peaks, nearer peaks, cloud tops), bottoms level, ends within a few pixels |
+| H3 Clouds | bg-h3-clouds.png | six clouds; the last is a cluster of small ones, kept together as one card. The white edges against green leave a faint teal fringe, clamped when cut |
+| H4 Surfaces | bg-h4-surfaces.png | cut and blended like M4; the gold panels and the white wall have a regular rhythm, so they are cut on whole panels and courses |
 
 ## Meridian Skyway
 
