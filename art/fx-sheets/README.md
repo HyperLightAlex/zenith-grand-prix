@@ -27,6 +27,7 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 14 Breaker hammer | fx-14-breaker-hammer.png | not used: redone as 14B without the ring of dust and rocks | |
 | 14B Breaker hammer | fx-14b-breaker-hammer.png | top row: the hammer's smear coming down (the same as 14); bottom row: the cracked contact flash, glowing cracks racing outward, the cracks breaking up | `rows` |
 | 15 Muzzle blasts | fx-15-muzzle-blasts.png | top row the rifle (a star, a long spike, fragments), bottom row the scatter cannon (a cone, a bigger cone throwing pellets, fragments); the smoke puffs in drawing 6 are taken out, and the first drawing of each row is moved left onto the muzzle, where the second starts | build_sprites.py (`nosmoke`) |
+| 16 Ram charge | fx-16-ram-charge.png | top row a loop (the prow's bow shock with speed streaks trailing), bottom row the charge starting (a fan of streaks thinning to the bare prow); the tips are lined up, as the first drawing of each row sits further right | build_sprites.py |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
 
