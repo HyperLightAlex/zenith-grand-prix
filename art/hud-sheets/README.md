@@ -20,9 +20,9 @@ restyled in code to match the paintings rather than painted.
 
 | Sheet | File | Notes |
 |---|---|---|
-| U1 Icons | hud-u1-icons.png | all 24, pure white with nothing else in them, inner detail cut through as asked; each cut by its own outline (grouped by the cell its middle falls in), since a few on the bottom row run a few pixels over their cell's edge |
-| U2 Pilots | hud-u2-pilots.png | all six as briefed, one hand, framed alike and facing right; the joins sit a pixel or two off the 512 lines (514 and 1025 across, 513 down), so each is cut just inside its own edges |
-| U3 Emblems and countdown | hud-u3-emblems.png | both emblems, GO! with its star and the three numbers, cut cleanly; nothing green in the chrome |
+| U1 Icons | hud-u1-icons.png | in the game. All 24, pure white with nothing else in them, inner detail cut through as asked; each cut by its own outline (grouped by the cell its middle falls in), since a few on the bottom row run a few pixels over their cell's edge |
+| U2 Pilots | hud-u2-pilots.png | in the game. All six as briefed, one hand, framed alike and facing right; the joins sit a pixel or two off the 512 lines (514 and 1025 across, 513 down), so each is cut just inside its own edges |
+| U3 Emblems and countdown | hud-u3-emblems.png | in the game. Both emblems, GO! with its star and the three numbers, cut cleanly; nothing green in the chrome |
 
 ## The prompt
 

@@ -170,6 +170,26 @@ gates, jump stripes, the barriers' light strips and energy field and the
 start lights. They are signals, so they stay crisp and bright, over the
 paintings.
 
+## The painted HUD
+
+In the anime look the race HUD carries painted art (`art/hud-sheets`;
+`tools/bg/build_hud.py` builds it into `src/client/ui/art` and
+`src/client/ui/hudArt.ts`):
+
+- **Icons** for the abilities, team plays, status chips, wind-up warnings and
+  roles, beside their words. They are white and drawn as CSS masks, so each
+  takes the colour of the text round it: gold when an ability is ready, ink on
+  a lit chip, the team's colour on a name plate.
+- **The pilots**: a cut-in of the pilot's face beside each radio line, as on an
+  anime comms screen, and on the target panel (turned to face the middle).
+- **Team emblems** in the score and as the standings' flags.
+- **The countdown** as painted: 3, 2, 1 and GO! in chrome lettering, and the
+  place, speed and points set in the same chrome (a CSS gradient through the
+  text, with a navy outline).
+
+Every number and name is still live text, and the panels keep their shapes;
+in the plain look none of the art shows.
+
 ## Settings (tuning panel, Look tab)
 
 | Setting | Default | |

@@ -33,10 +33,11 @@ import {
   type SimEvent,
   type Track,
 } from '../../sim/index';
-import { TELL_LABEL, tellOf } from '../game/tells';
+import { TELL_LABEL, tellOf, type TellKind } from '../game/tells';
 import { CARVE_COLORS, LIVERIES } from '../render/palette';
 import type { Plate } from '../render/raceView';
 import { h, setClass, setText } from './dom';
+import { COUNT, EMBLEMS, ICONS, PILOTS, type IconName } from './hudArt';
 
 const ORD = ['st', 'nd', 'rd', 'th', 'th', 'th'];
 const PHASE_NAMES = ['', 'Formation lap', 'Battle lap', 'Speed lap'];
@@ -76,6 +77,31 @@ const LINES = {
   fell: ['I am over the edge! Drone, where are you?', 'Lost the road. Back in a moment.'],
   sentOver: ['{t} went over the side!', 'And {t} is off the circuit.'],
 };
+
+// The painted HUD art (the anime look; hidden in the plain one): white icons
+// drawn as masks in the colour of the text round them, the pilots, the emblems.
+const ABILITY_ICON: IconName[] = ['overdrive', 'breakaway', 'snare', 'disruptor', 'ram', 'aegis'];
+const ROLE_ICON: IconName[] = ['forward', 'midfielder', 'defender'];
+const TACTIC_ICON: Array<IconName | null> = [null, 'blitz', 'run', 'shield', 'mark'];
+const TELL_ICON: Record<TellKind, IconName> = { parry: 'parry', dodge: 'dodge', block: 'guard' };
+
+/** A painted icon, in the colour of the text round it. */
+function icon(name: IconName | null = null): HTMLElement {
+  const el = h('i.ico');
+  if (name) setIcon(el, name);
+  return el;
+}
+
+function setIcon(el: HTMLElement, name: IconName): void {
+  if (el.dataset.icon === name) return;
+  el.dataset.icon = name;
+  el.style.setProperty('--ico', `url(${ICONS[name]})`);
+}
+
+/** A pilot's portrait, by team and role. */
+function pilotOf(m: MechState): string {
+  return PILOTS[m.team * 3 + m.role] ?? PILOTS[0];
+}
 
 function me0(race: RaceState, id: number): number {
   return race.mechs[id]?.cells ?? 0;
@@ -137,17 +163,23 @@ export class Hud {
   private cellsVal = h('span.val', '');
   private abilityTag = h('span.ability');
   private abilityKey = h('span.key', 'B');
+  private abilityIco = icon();
   private abilityName = h('span', '');
-  private chipAbility = h('span.chip.cell', '');
-  private chipSnared = h('span.chip.snared', 'Snared');
-  private chipSling = h('span.chip.draft', 'Slingshot');
+  private chipAbilityIco = icon();
+  private chipAbilityText = h('span', '');
+  private chipAbility = h('span.chip.cell', this.chipAbilityIco, this.chipAbilityText);
+  private chipSnaredText = h('span', 'Snared');
+  private chipSnared = h('span.chip.snared', icon('snared'), this.chipSnaredText);
+  private chipSling = h('span.chip.draft', icon('slingshot'), h('span', 'Slingshot'));
   private lastCells = 0;
-  private chipLocked = h('span.chip.locked', 'Weapons locked');
-  private chipMode = h('span.chip.battle', '');
-  private chipCharge = h('span.chip.charge', 'Charging');
-  private chipDraft = h('span.chip.draft', 'Slipstream');
-  private chipLink = h('span.chip.link', 'Linked');
-  private chipMomentum = h('span.chip.momentum', 'Momentum');
+  private chipLocked = h('span.chip.locked', icon('weaponsLocked'), h('span', 'Weapons locked'));
+  private chipModeIco = icon('lockedOn');
+  private chipModeText = h('span', '');
+  private chipMode = h('span.chip.battle', this.chipModeIco, this.chipModeText);
+  private chipCharge = h('span.chip.charge', icon('charging'), h('span', 'Charging'));
+  private chipDraft = h('span.chip.draft', icon('slipstream'), h('span', 'Slipstream'));
+  private chipLink = h('span.chip.link', icon('escorting'), h('span', 'Linked'));
+  private chipMomentum = h('span.chip.momentum', icon('momentum'), h('span', 'Momentum'));
   private hints = h('div.hints');
   private hintKey = '';
   // support points: what you and your teammates just earned
@@ -174,7 +206,9 @@ export class Hud {
   // radio, target, plates
   private comms = h('div.comms');
   private target = h('div.target');
+  private targetPilot = h('div.pilot');
   private targetName = h('div.name', '');
+  private targetRoleIco = icon();
   private targetRole = h('span', '');
   private targetDist = h('span', '');
   private targetHp = h('i');
@@ -182,7 +216,21 @@ export class Hud {
   private reticle = h('div.reticle', h('i'), h('i'), h('i'), h('i'));
   /** Free steering: who the lock button would take, before you press it. */
   private preview = h('div.reticle.preview', h('i'), h('i'), h('i'), h('i'));
-  private plates: Array<{ el: HTMLElement; hp: HTMLElement; cue: HTMLElement; cueText: string; warn: HTMLElement; warnKey: string; edge: HTMLElement; edgeArrow: HTMLElement; edgeLabel: HTMLElement; edgeKey: string }> = [];
+  private plates: Array<{
+    el: HTMLElement;
+    hp: HTMLElement;
+    cue: HTMLElement;
+    cueText: string;
+    warn: HTMLElement;
+    warnIco: HTMLElement;
+    warnText: HTMLElement;
+    warnKey: string;
+    edge: HTMLElement;
+    edgeArrow: HTMLElement;
+    edgeIco: HTMLElement;
+    edgeLabel: HTMLElement;
+    edgeKey: string;
+  }> = [];
   private lastTarget = -1;
   // banners
   private banner = h('div.banner');
@@ -213,13 +261,13 @@ export class Hud {
     R.append(
       h('div.hud-place', h('div', this.placeNum, this.placeOrd), h('div.hud-lap', this.lapNum, this.phase)),
       this.tower,
-      h('div.score', h('div.side.a', this.nameA, this.ptsA), this.clock, h('div.side.b', this.nameB, this.ptsB)),
+      h('div.score', h('div.side.a', h('i.emblem.e0'), this.nameA, this.ptsA), this.clock, h('div.side.b', h('i.emblem.e1'), this.nameB, this.ptsB)),
       this.matchLine,
       h('div.mapbox', this.map),
     );
     this.armour.append(h('span.label', 'Armour'), h('div.bar', this.armourGhost, this.armourFill), this.armourVal);
     this.drive.append(h('span.label', 'Drive'), h('div.bar', this.driveFill), this.driveVal);
-    this.abilityTag.append(this.abilityKey, this.abilityName);
+    this.abilityTag.append(this.abilityKey, this.abilityIco, this.abilityName);
     this.cellsLine.append(h('span.label', 'Cells'), h('div.cellrow', this.cellPips, this.abilityTag), this.cellsVal);
     R.append(
       h('div.chips', this.chipLocked, this.chipMode, this.chipMomentum, this.chipAbility, this.chipSnared, this.chipCharge, this.chipDraft, this.chipSling, this.chipLink),
@@ -244,7 +292,7 @@ export class Hud {
       tact.append(el);
     }
     R.append(tact, this.comms);
-    this.target.append(this.targetName, h('div.sub', this.targetRole, this.targetDist), h('div.bar.hp', this.targetHp), h('div.bar.gd', this.targetGd));
+    this.target.append(this.targetPilot, h('div.info', this.targetName, h('div.sub', h('span', this.targetRoleIco, this.targetRole), this.targetDist), h('div.bar.hp', this.targetHp), h('div.bar.gd', this.targetGd)));
     R.append(this.target, this.reticle, this.preview);
     this.banner.append(h('div.strip', this.bannerKick, this.bannerBig, this.bannerSmall));
     this.notice.append(this.noticeText);
@@ -267,7 +315,7 @@ export class Hud {
     const k = KEYS[d];
     const set = (tac: number, key: string) => {
       const el = this.tacticEls[tac];
-      el.replaceChildren(h('span.key', key), TACTIC_LABEL[tac]);
+      el.replaceChildren(h('span.key', key), icon(TACTIC_ICON[tac]), TACTIC_LABEL[tac]);
     };
     set(TACTIC.BLITZ, k.up);
     set(TACTIC.RUN, k.right);
@@ -285,6 +333,8 @@ export class Hud {
     this.root.hidden = false;
     this.root.style.setProperty('--team0', LIVERIES[0].css);
     this.root.style.setProperty('--team1', LIVERIES[1].css);
+    this.root.style.setProperty('--emblem0', `url(${EMBLEMS[0]})`);
+    this.root.style.setProperty('--emblem1', `url(${EMBLEMS[1]})`);
     setText(this.nameA, LIVERIES[0].name.replace('Team ', ''));
     setText(this.nameB, LIVERIES[1].name.replace('Team ', ''));
 
@@ -299,25 +349,28 @@ export class Hud {
       const pos = h('span.pos', '');
       const hp = h('i');
       const gap = h('span.gap', '');
-      const el = h('div.row' + (m.team ? '.t1' : '') + (m.id === localId ? '.me' : ''), pos, h('span.flag'), h('span.who', m.name, h('small', ROLE_KEYS[m.role])), h('div.bar.hp', hp), gap);
+      const el = h('div.row' + (m.team ? '.t1' : '') + (m.id === localId ? '.me' : ''), pos, h('span.flag'), h('span.who', m.name, h('small', h('span.rolekey', ROLE_KEYS[m.role]), icon(ROLE_ICON[m.role]))), h('div.bar.hp', hp), gap);
       this.tower.append(el);
       this.rows.push({ el, pos, hp, gap, place: -1 });
       const php = h('i');
       const cue = h('span.cue', '');
-      const warn = h('div.warn', '');
+      const warnIco = icon();
+      const warnText = h('span', '');
+      const warn = h('div.warn', warnIco, warnText);
       warn.hidden = true;
-      const plate = h('div.plate' + (m.team ? '.t1' : ''), warn, cue, h('span.tag', `${m.name} ${ROLE_KEYS[m.role]}`), h('div.bar', php));
+      const plate = h('div.plate' + (m.team ? '.t1' : ''), warn, cue, h('span.tag', icon(ROLE_ICON[m.role]), m.name, h('span.rolekey', ` ${ROLE_KEYS[m.role]}`)), h('div.bar', php));
       plate.hidden = true;
       // Under the panels, so a name never covers the running order.
       this.root.prepend(plate);
       // An arrow at the edge of the screen for a blow winding up at you from
       // someone you cannot see.
       const edgeArrow = h('i.arrow');
-      const edgeLabel = h('span', '');
-      const edge = h('div.edgewarn', edgeArrow, edgeLabel);
+      const edgeIco = icon();
+      const edgeLabel = h('b', '');
+      const edge = h('div.edgewarn', edgeArrow, h('span', edgeIco, edgeLabel));
       edge.hidden = true;
       this.root.append(edge);
-      this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnKey: '', edge, edgeArrow, edgeLabel, edgeKey: '' });
+      this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnIco, warnText, warnKey: '', edge, edgeArrow, edgeIco, edgeLabel, edgeKey: '' });
     }
     this.buildPips(race.rules.cellMax);
     this.lastCells = me0(race, localId);
@@ -487,6 +540,7 @@ export class Hud {
 
   update(dt: number, race: RaceState, plates: Plate[], focusId: number): void {
     this.frame++;
+    setClass(this.root, 'anime', this.anime);
     const me = race.mechs[this.localId];
     const c = CLASSES[me.role];
     const k = KEYS[this.device];
@@ -532,6 +586,7 @@ export class Hud {
     const shown = ab === -1 ? c.abilityFree : ab;
     setText(this.abilityKey, k.ability);
     setText(this.abilityName, ABILITIES[shown].name);
+    setIcon(this.abilityIco, ABILITY_ICON[shown]);
     setClass(this.abilityTag, 'ready', ab !== -1 && me.cells >= 1 && weaponsFree(race) && !me.retired && !me.finished);
 
     // Chips.
@@ -540,7 +595,8 @@ export class Hud {
     this.chipMode.hidden = !battle;
     if (battle) {
       const t = race.mechs[me.target];
-      setText(this.chipMode, t.team === me.team ? `Escorting ${t.name}` : `Locked on ${t.name}`);
+      setText(this.chipModeText, t.team === me.team ? `Escorting ${t.name}` : `Locked on ${t.name}`);
+      setIcon(this.chipModeIco, t.team === me.team ? 'escorting' : 'lockedOn');
       setClass(this.chipMode, 'link', t.team === me.team);
       setClass(this.chipMode, 'battle', t.team !== me.team);
     }
@@ -553,14 +609,18 @@ export class Hud {
     // Whichever ability effect is running, with the seconds left.
     const left = (ticks: number) => (ticks / TICK_RATE).toFixed(1);
     let effect = '';
+    let effectIcon: IconName = 'overdrive';
     if (me.overdriveT > 0) effect = `Overdrive ${left(me.overdriveT)}`;
-    else if (me.ramT > 0) effect = `Ram ${left(me.ramT)}`;
-    else if (me.shieldT > 0) effect = `Aegis ${left(me.shieldT)}`;
-    else if (me.cloakT > 0) effect = 'Clear';
+    else if (me.ramT > 0) [effect, effectIcon] = [`Ram ${left(me.ramT)}`, 'ram'];
+    else if (me.shieldT > 0) [effect, effectIcon] = [`Aegis ${left(me.shieldT)}`, 'aegis'];
+    else if (me.cloakT > 0) [effect, effectIcon] = ['Clear', 'breakaway'];
     this.chipAbility.hidden = effect === '' || me.retired;
-    if (effect) setText(this.chipAbility, effect);
+    if (effect) {
+      setText(this.chipAbilityText, effect);
+      setIcon(this.chipAbilityIco, effectIcon);
+    }
     this.chipSnared.hidden = !(me.snareT > 0) || me.retired;
-    if (me.snareT > 0) setText(this.chipSnared, `Snared ${left(me.snareT)}`);
+    if (me.snareT > 0) setText(this.chipSnaredText, `Snared ${left(me.snareT)}`);
 
     // Carve meter: up while carving, and through the burst after.
     const bursting = me.carveT > 0 && me.mode === MODE.SPEED;
@@ -629,6 +689,9 @@ export class Hud {
       setClass(this.target, 'ally', ally);
       setText(this.targetName, t.name);
       setText(this.targetRole, `${ROLE_NAMES[t.role]}, ${LIVERIES[t.team].name.replace('Team ', '')}`);
+      setIcon(this.targetRoleIco, ROLE_ICON[t.role]);
+      const portrait = `url(${pilotOf(t)})`;
+      if (this.targetPilot.style.backgroundImage !== portrait) this.targetPilot.style.backgroundImage = portrait;
       const dist = Math.hypot(deltaS(this.track, t.s, focus.s), t.d - focus.d);
       setText(this.targetDist, dist > LOCK_BREAK * 0.8 ? 'Losing lock' : `${Math.round(dist)} m`);
       this.targetHp.style.transform = `scaleX(${Math.max(0, t.hp / t.maxHp).toFixed(3)})`;
@@ -694,7 +757,8 @@ export class Hud {
         pl.warnKey = warnKey;
         pl.warn.hidden = !tell;
         if (tell) {
-          setText(pl.warn, TELL_LABEL[tell.kind]);
+          setText(pl.warnText, TELL_LABEL[tell.kind]);
+          setIcon(pl.warnIco, TELL_ICON[tell.kind]);
           pl.warn.className = `warn ${tell.kind}${tell.now ? ' now' : ''}`;
         }
       }
@@ -707,6 +771,7 @@ export class Hud {
         if (offscreen && tell) {
           pl.edge.className = `edgewarn ${tell.kind}${tell.now ? ' now' : ''}`;
           setText(pl.edgeLabel, TELL_LABEL[tell.kind]);
+          setIcon(pl.edgeIco, TELL_ICON[tell.kind]);
         }
       }
       if (offscreen) {
@@ -839,7 +904,16 @@ export class Hud {
 
   showCount(text: string, go = false): void {
     this.count.className = 'count' + (go ? ' go' : '');
-    this.count.replaceChildren(h('span', text));
+    // The anime look: the numbers and GO! as painted.
+    const art = this.anime ? COUNT[text] : undefined;
+    if (art) {
+      const img = h<'img'>('img');
+      img.src = art.url;
+      img.alt = text;
+      this.count.replaceChildren(h('span.painted', img));
+    } else {
+      this.count.replaceChildren(h('span', text));
+    }
     this.count.hidden = false;
   }
 
@@ -852,7 +926,10 @@ export class Hud {
 
   /** A line on the radio from a pilot (or race control when `from` is null). */
   say(from: MechState | null, text: string): void {
-    const el = h('div.msg' + (from ? (from.team ? '.t1' : '') : '.ctl'), h('b', from ? from.name : 'Race control'), text);
+    // The anime look: a cut-in of the pilot's face beside the line, as on a comms screen.
+    const face = from ? h('i.pilot') : null;
+    if (face && from) face.style.backgroundImage = `url(${pilotOf(from)})`;
+    const el = h('div.msg' + (from ? (from.team ? '.t1' : '') : '.ctl'), face, h('span.line', h('b', from ? from.name : 'Race control'), text));
     this.comms.append(el);
     this.onRadio();
     while (this.comms.children.length > 3) this.comms.firstElementChild!.remove();

@@ -347,6 +347,8 @@ html, body {
 .target { position: absolute; right: 2.2em; top: 42%; width: 15em; padding: 0.6em 1em 0.75em; background: var(--ink-soft); border-right: 0.35em solid var(--danger); display: grid; gap: 0.4em; }
 .target.ally { border-right-color: var(--ally); }
 .target[hidden] { display: none; }
+.target .info { display: grid; gap: 0.4em; }
+.target .pilot { display: none; }
 .target .name { font-size: 1.6em; font-weight: 800; }
 .target .sub { font-weight: 500; opacity: 0.8; display: flex; justify-content: space-between; }
 .target .hp { height: 0.6em; }
@@ -444,6 +446,70 @@ html, body {
 .retired .big { display: inline-block; font-size: 3em; font-weight: 800; padding: 0.2em 1.4em; background: var(--danger); color: #fff; clip-path: polygon(0.7em 0, 100% 0, calc(100% - 0.7em) 100%, 0 100%); }
 .retired .small { margin-top: 0.6em; font-size: 1.25em; font-weight: 500; text-shadow: 0 0.08em 0.12em rgba(15, 21, 36, 0.9); }
 .retired[hidden] { display: none; }
+
+/* ---- HUD: the anime look's painted art ---------------------------------- */
+/* Icons (white masks in the colour of the text round them), the pilots'
+   faces on the radio and the target, the team emblems, the countdown as
+   painted, and the big numbers in the countdown's chrome lettering. None of
+   it shows in the plain look. */
+
+.hud .ico, .hud .emblem, .comms .msg .pilot { display: none; }
+.hud.anime .ico {
+  display: inline-block;
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.35em;
+  vertical-align: -0.2em;
+  background: currentColor;
+  -webkit-mask: var(--ico) center / contain no-repeat;
+  mask: var(--ico) center / contain no-repeat;
+}
+.hud.anime .rolekey { display: none; }
+
+.hud.anime .chip:not([hidden]) { display: inline-flex; align-items: center; }
+.hud.anime .tactics .t .ico { width: 1.05em; height: 1.05em; }
+/* The plays' icons make the pills wider: the diamond opens out so they clear the hub. */
+.hud.anime .tactics { width: 18.5em; }
+.hud.anime .gauges .ability .ico { width: 1.25em; height: 1.25em; }
+.hud.anime .plate .tag .ico { width: 1em; height: 1em; margin-right: 0.25em; vertical-align: -0.15em; }
+.hud.anime .plate .warn .ico, .hud.anime .edgewarn .ico { width: 1em; height: 1em; margin-right: 0.25em; vertical-align: -0.15em; }
+.hud.anime .tower .row .who small .ico { width: 1.05em; height: 1.05em; margin: 0 0 0 0.1em; vertical-align: -0.2em; }
+.hud.anime .target .sub .ico { width: 1.05em; height: 1.05em; margin-right: 0.3em; }
+
+/* Team emblems: in the score, and as the standings' flags. */
+.hud.anime .score .emblem { display: block; flex: none; width: 2.3em; height: 2.3em; background: var(--emblem0) center / contain no-repeat; }
+.hud.anime .score .emblem.e1 { background-image: var(--emblem1); }
+.hud.anime .tower .row { grid-template-columns: 1.5em 1.3em 1fr 2.4em 3.6em; }
+.hud.anime .tower .row .flag { height: 1.55em; background: var(--emblem0) center / contain no-repeat; transform: none; }
+.hud.anime .tower .row.t1 .flag { background-image: var(--emblem1); }
+
+/* The radio as a comms screen: the pilot's face cut in beside the line. */
+.hud.anime .comms .msg { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 0.65em; padding: 0.3em 0.9em 0.3em 0.35em; }
+.hud.anime .comms .msg .pilot { display: block; width: 3.6em; height: 3.6em; background: center / cover; border: 0.13em solid var(--team0); }
+.hud.anime .comms .msg.t1 .pilot { border-color: var(--team1); }
+
+/* The target: their face, turned toward the middle of the screen. */
+.hud.anime .target { grid-template-columns: 5.4em 1fr; column-gap: 0.85em; align-items: center; width: 20.5em; padding-left: 0.6em; }
+.hud.anime .target .pilot { display: block; width: 5.4em; height: 5.4em; background: center / cover; border: 0.14em solid var(--danger); transform: scaleX(-1); }
+.hud.anime .target.ally .pilot { border-color: var(--ally); }
+
+/* The countdown as painted. */
+.count .painted img { display: block; height: 0.88em; width: auto; filter: drop-shadow(0 0.03em 0 rgba(13, 22, 48, 0.8)); }
+
+/* The big numbers in the countdown's lettering: airbrushed chrome, white
+   through sky blue to hot orange, a dark navy outline. */
+.hud.anime .hud-place .num, .hud.anime .hud-place .ord, .hud.anime .speed .mph, .hud.anime .score .pts {
+  padding: 0 0.12em 0 0.04em;
+  background: linear-gradient(180deg, #ffffff 6%, #c4e8ff 34%, #3b8cff 50%, #ff8a1f 58%, #ffc25a 94%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 0.03em #0d1630;
+  text-shadow: none;
+  filter: drop-shadow(0.04em 0.05em 0 #0d1630);
+}
+.hud.anime .speed.boost .mph { background-image: linear-gradient(180deg, #ffffff 8%, #b6fbff 36%, #23d6f5 52%, #0e8fc4 62%, #7deaff 96%); }
 
 /* ---- menus -------------------------------------------------------------- */
 
