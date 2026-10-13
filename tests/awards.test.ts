@@ -1,9 +1,9 @@
 // Support points: what each action pays, the per-rival cooldown, the cap,
 // and that they count for the team.
 import { describe, expect, it } from 'vitest';
-import { AEGIS_SAVED, ATK, AWARD, AWARD_POINTS, BODYGUARD_RANGE, LEADOUT_TICKS, MODE, TICK_RATE, teamPoints, type MechState } from '../src/sim/index';
+import { AEGIS_SAVED, ATK, ATTACKS, AWARD, AWARD_POINTS, BODYGUARD_RANGE, GUARD_REDUCTION, LEADOUT_TICKS, MODE, TICK_RATE, teamPoints, type MechState } from '../src/sim/index';
 import { award, onHit, onKnockout, onPass, onRingout, onSnare, type HitFacts } from '../src/sim/awards';
-import { retire } from '../src/sim/combat';
+import { applyHit, retire } from '../src/sim/combat';
 import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK } from './helpers';
 
 /** A blow by `att` on `victim`, which was fighting `victimTarget` (or not fighting at all). */
@@ -126,6 +126,29 @@ describe('the Bulwark', () => {
     hook(a, () => onHit(a.race, TRACK, rival, fw, facts({ attack: ATK.MF_KICK, damage: 10, prevented: 5 })));
     hook(a, () => onHit(a.race, TRACK, rival, fw, facts({ attack: ATK.MF_KICK, damage: 10, prevented: 500 })));
     expect(awards(a, DF0)).toEqual([expect.objectContaining({ kind: AWARD.AEGIS, points: 2 })]);
+  });
+
+  it('Aegis counts what its shield really kept off: after the guard has taken its share', () => {
+    const blow = (guarding: boolean) => {
+      const a = new Arena(2);
+      const fw = a.put(FW0, 0, 0);
+      const att = a.put(MF1, 5, 0);
+      a.put(DF0, -10, 0);
+      fw.shieldT = 100;
+      fw.shieldBy = DF0;
+      fw.guarding = guarding;
+      fw.guardT = 60; // raised long ago: a block, not a parry
+      const hp = fw.hp;
+      applyHit(a.race, TRACK, att, fw, ATTACKS[ATK.MF_KICK], ATK.MF_KICK);
+      return { taken: hp - fw.hp, saved: a.mech(DF0).aegisSaved, rules: a.race.rules };
+    };
+    const open = blow(false);
+    const dmg = ATTACKS[ATK.MF_KICK].damage;
+    expect(open.taken).toBeCloseTo(dmg * open.rules.aegisDamage, 9);
+    expect(open.saved).toBeCloseTo(dmg * (1 - open.rules.aegisDamage), 9);
+    const held = blow(true);
+    expect(held.taken).toBeCloseTo(dmg * held.rules.aegisDamage * GUARD_REDUCTION, 9);
+    expect(held.saved).toBeCloseTo(dmg * GUARD_REDUCTION * (1 - held.rules.aegisDamage), 9);
   });
 
   it('Ring-out: 2 for the rival forward, 1 for anyone else; only a defender earns it', () => {

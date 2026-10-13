@@ -343,15 +343,17 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     ai.carveFor = bendDir;
     ai.carveGo = bendDir !== 0 && rngNext(race) < 0.35 + 0.6 * m.skill;
   }
+  // Is the bend running out (or turning the other way) a moment ahead?
   const exitAhead = kappaAt(track, m.s + m.speed * 0.3);
-  const ending = Math.abs(exitAhead) < 1 / 900 || Math.sign(exitAhead) !== m.carveDir;
+  const endsFor = (dir: number) => Math.abs(exitAhead) < 1 / 900 || Math.sign(exitAhead) !== dir;
   const needGrip = m.speed > vCorner - 2 && bendDir !== 0;
   let carve = false;
   if (!hot && !m.finished && m.speed > CARVE_MIN_SPEED + 5 && !threading) {
     // A carve cannot turn less than CARVE_STEER_WIDE: once the line wants
-    // less than that (or the bend runs out) it is time to let go.
-    if (m.carving) carve = !ending && out.mx * m.carveDir > CARVE_STEER_WIDE - 0.1;
-    else carve = bendDir !== 0 && (ai.carveGo || needGrip) && out.mx * bendDir > CARVE_STEER_WIDE + 0.05;
+    // less than that (or the bend runs out) it is time to let go. Nor is one
+    // started on the way out of a bend, only to be let go the next moment.
+    if (m.carving) carve = !endsFor(m.carveDir) && out.mx * m.carveDir > CARVE_STEER_WIDE - 0.1;
+    else carve = bendDir !== 0 && !endsFor(bendDir) && (ai.carveGo || needGrip) && out.mx * bendDir > CARVE_STEER_WIDE + 0.05;
   }
   if (carve) {
     out.brake = 1;
@@ -362,6 +364,10 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     if (m.speed > vCarve + 3) throttle = 0;
     else if (m.speed > vCarve - 3) throttle = Math.min(throttle, 0.7);
     wantBoost = false;
+  } else if (m.carving) {
+    // Letting go: the trigger comes all the way up, or a touch of brake
+    // would hold the carve on.
+    out.brake = 0;
   } else if (m.speed > vCorner + 3) {
     out.brake = clamp((m.speed - vCorner) / 14, 0.2, 1);
     // Braking is done with the stick near the middle: further over and the trigger would carve.

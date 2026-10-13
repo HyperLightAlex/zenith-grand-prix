@@ -22,7 +22,7 @@ export const AWARD_POINTS = [2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 2] as const;
 /** Bodyguard: a block or a parry within this distance of your own forward. */
 export const BODYGUARD_RANGE = 30;
 /** Aegis: damage the shield must keep off teammates (caster included) for the award. */
-export const AEGIS_SAVED = 150;
+export const AEGIS_SAVED = 100;
 /** Lead-out: the forward makes its pass within this many ticks of leaving a teammate's tow. */
 export const LEADOUT_TICKS = 150;
 
@@ -153,6 +153,10 @@ export const HARD_LANDING = 22;
 export const LANDING_AIR_TICKS = 20;
 /** Two mechs this close across the road when one passes the other: a close pass. */
 export const PASS_WIDTH = 10;
+/** A pass on the same rival only pays Drive again after this many ticks (no weaving to farm it). */
+export const PASS_COOLDOWN = 300;
+/** Moved further than this in one tick (put back on the road after a fall): not a pass. */
+export const PASS_JUMP = 8;
 
 // ---- Carving ---------------------------------------------------------------
 // A held drift: pull the brake trigger with the stick over and the mech digs

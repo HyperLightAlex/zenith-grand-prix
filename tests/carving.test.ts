@@ -154,6 +154,22 @@ describe('holding a carve', () => {
     expect(m.carving).toBe(false);
     expect(m.carveT).toBe(0);
     expect(a.events('carveBurst')).toEqual([]);
+
+    // A burst already running when the lock goes on is spent too.
+    const b = new Arena(2);
+    const n = b.put(FW0, 0, 0);
+    b.put(FW1, 35, 4);
+    carve(b, FW0, 0.6);
+    b.step(1);
+    n.carveCharge = CARVE_TIERS[2] + 0.01;
+    b.step(1);
+    carve(b, FW0, 0, 0);
+    b.step(1);
+    expect(n.carveT).toBeGreaterThan(0);
+    b.tap(FW0, BTN.LOCK);
+    expect(n.mode).toBe(MODE.BATTLE);
+    b.step(1);
+    expect(n.carveT).toBe(0);
   });
 });
 

@@ -80,7 +80,7 @@ never a win.
 | Bulwark | **Peel**: a hit on a rival who is attacking your forward | 1 |
 | Bulwark | **Save**: the same hit, breaking their attack | 2 |
 | Bulwark | **Bodyguard**: a block or parry near your forward | 1 |
-| Bulwark | Aegis shields teammates from 150 damage or more | 2 |
+| Bulwark | Aegis shields teammates from 100 damage or more | 2 |
 | Bulwark | Ring-out a rival (the rival forward: 2) | 1 |
 | Vector, Bulwark | **Lead-out**: on lap 3 your forward pulls out of your slipstream and passes someone | 2 |
 | Anyone | **Assist**: you damaged a rival in the 5 s before a teammate knocked it out | 2 |

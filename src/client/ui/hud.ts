@@ -874,7 +874,7 @@ export class Hud {
         return;
       }
     }
-    if (race.lapPhase >= 3 && fw.towBy === me.id && fw.drafting && ds < 0 && ds > -60 && me.mode === MODE.SPEED) {
+    if (race.lapPhase >= 3 && fw.towBy === me.id && race.tick - fw.towByTick <= 1 && ds < 0 && ds > -60 && me.mode === MODE.SPEED) {
       this.showNotice('Your forward is in your tow: hold the line for a Lead-out', false, 2.2);
       this.promptAt = this.hudTime + 20;
     }

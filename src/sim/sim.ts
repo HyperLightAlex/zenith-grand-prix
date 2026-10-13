@@ -72,6 +72,7 @@ import {
   PAD_MULT,
   PAD_TICKS,
   RECOVER_IFRAMES,
+  ROLE,
   RECOVER_SPEED,
   RINGOUT_BOUNCE,
   RINGOUT_DRIVE,
@@ -90,6 +91,8 @@ import {
   CARVE_TRIGGER,
   CARVE_TURN,
   LANDING_AIR_TICKS,
+  PASS_COOLDOWN,
+  PASS_JUMP,
   PASS_WIDTH,
   type ClassDef,
   type Tactic,
@@ -247,6 +250,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       support: 0,
       awardPts: new Array(11).fill(0),
       awardTick: freshAwardTicks(),
+      passTick: freshHurtBy(),
       hurtBy: freshHurtBy(),
       pressure: 0,
       backup: 0,
@@ -564,9 +568,12 @@ function stepAir(race: RaceState, track: Track, m: MechState): void {
     m.h = 0;
     m.vh = 0;
     m.air = false;
-    if (hit > HARD_LANDING && m.mode === MODE.SPEED) {
-      m.speed *= 1 - Math.min(0.12, (hit - HARD_LANDING) * 0.004);
-      syncFromSpeed(m);
+    if (hit > HARD_LANDING) {
+      // Landed hard: it costs pace at racing speed, and there is no Drive for it.
+      if (m.mode === MODE.SPEED) {
+        m.speed *= 1 - Math.min(0.12, (hit - HARD_LANDING) * 0.004);
+        syncFromSpeed(m);
+      }
     } else if (m.airT >= LANDING_AIR_TICKS && race.phase === PHASE.RACING) {
       // A real jump, landed clean: a little Drive for it.
       m.drive = Math.min(DRIVE_MAX, m.drive + race.rules.driveLanding);
@@ -589,6 +596,9 @@ function startFall(race: RaceState, track: Track, m: MechState): void {
   m.chain = 0;
   m.padT = 0;
   m.momentum = 0;
+  // A carve goes over the edge with it, and so does any burst.
+  dropCarve(m);
+  m.carveT = 0;
   m.iframes = Math.max(m.iframes, FALL_TICKS + RECOVER_IFRAMES);
   if (m.target >= 0) setTarget(race, m, -1);
   for (const o of race.mechs) if (o.target === m.id) retarget(race, track, o, m.id);
@@ -1166,9 +1176,9 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
         if (splitApart(track, m.s, m.d, o.s, o.d)) continue;
         m.drafting = true;
         const st = ahead <= towNear ? 1 : lerp(1, TOW_FAR, (ahead - towNear) / (towRange - towNear));
-        if (st > strength) {
-          strength = st;
-          // Whose tow it is: a teammate's pays a Lead-out if the pass comes.
+        if (st > strength) strength = st;
+        // In a support teammate's tow: a pass soon after pays it a Lead-out.
+        if (o.team === m.team && o.role !== ROLE.FW) {
           m.towBy = o.id;
           m.towByTick = tick;
         }
@@ -1194,13 +1204,20 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     }
   }
   if (race.phase === PHASE.RACING) {
-    // Close passes: a little Drive for going past someone close enough to touch.
+    // Close passes: a little Drive for going past a rival close enough to
+    // touch, racing (two mechs circling in a fight are not passing), and only
+    // once in a while on the same rival, so weaving round one cannot farm it.
+    // A mech put back on the road after a fall has not passed anyone.
     for (const m of ms) {
-      if (!inPlay(m) || m.speed < 50) continue;
+      if (!inPlay(m) || m.speed < 50 || m.mode !== MODE.SPEED || m.s - startS[m.id] > PASS_JUMP) continue;
       for (const o of ms) {
-        if (o === m || !inPlay(o)) continue;
+        if (o === m || !inPlay(o) || o.team === m.team) continue;
         if (startS[m.id] - startS[o.id] >= 0 || m.s - o.s < 0 || Math.abs(m.d - o.d) >= PASS_WIDTH) continue;
         if (splitApart(track, m.s, m.d, o.s, o.d)) continue;
+        if (o.id < m.passTick.length) {
+          if (tick - m.passTick[o.id] < PASS_COOLDOWN) continue;
+          m.passTick[o.id] = tick;
+        }
         m.drive = Math.min(DRIVE_MAX, m.drive + rules.drivePass);
         race.events.push({ type: 'pass', mech: m.id, other: o.id });
         onPass(race, m, o);

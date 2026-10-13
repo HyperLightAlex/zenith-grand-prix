@@ -7,11 +7,14 @@ import {
   ATK,
   BTN,
   CANYON,
+  CARVE_TIERS,
   CLASSES,
   COUNTDOWN_TICKS,
   FALL_DAMAGE,
   FALL_TICKS,
+  HARD_LANDING,
   HELIOS,
+  LANDING_AIR_TICKS,
   MERIDIAN,
   MODE,
   PHASE,
@@ -246,6 +249,32 @@ describe('jumps', () => {
     expect(m.hp).toBe(CLASSES[m.role].maxHp);
   });
 
+  it('a real jump landed clean is worth rules.driveLanding; a short hop or a hard landing is not', () => {
+    // Drop a mech onto the start straight from the air and see what the
+    // landing alone is worth: the same drop with rules.driveLanding at 0
+    // takes away everything else that trickles in.
+    const drop = (vh: number, airT: number, driveLanding: number) => {
+      const t = track(CANYON);
+      const race = createRace(t, { seed: 1, seats: makeSeats('all'), rules: { driveLanding } });
+      const inputs = race.mechs.map(() => emptyInput());
+      while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
+      place(race, t, 0, 120, 0, 100);
+      const m = race.mechs[0];
+      m.air = true;
+      m.h = 2;
+      m.vh = vh;
+      m.airT = airT;
+      m.drive = 20;
+      const ev = stepFor(race, t, inputs, 20).filter((e) => e.type === 'land' && e.mech === 0);
+      expect(ev).toHaveLength(1);
+      return m.drive;
+    };
+    const worth = (vh: number, airT: number) => drop(vh, airT, 6) - drop(vh, airT, 0);
+    expect(worth(-8, LANDING_AIR_TICKS + 5)).toBeCloseTo(6, 9);
+    expect(worth(-8, 3)).toBe(0);
+    expect(worth(-(HARD_LANDING + 15), LANDING_AIR_TICKS + 5)).toBe(0);
+  });
+
   it('too slow, it drops into the gap; the drone puts it back further on, armour and time lost', () => {
     const { race, t, inputs } = quietRace(CANYON);
     const [g0, g1] = gaps(t)[0];
@@ -334,6 +363,31 @@ describe('jumps', () => {
 
 describe('open edges', () => {
   const bridge = openRuns(track(CANYON))[0];
+
+  it('a carve goes over the edge with the mech: no burst on the way down, none after the drone puts it back', () => {
+    const { race, t, inputs } = quietRace(CANYON);
+    const s = bridge[0] + 80;
+    place(race, t, 0, s, 0, 110);
+    const m = race.mechs[0];
+    m.d = hwAt(t, s) - 6;
+    // Carving hard right, charged to the second tier, with a burst still running from the last one.
+    inputs[0].mx = 1;
+    inputs[0].brake = 1;
+    stepFor(race, t, inputs, 1);
+    expect(m.carving).toBe(true);
+    m.carveCharge = CARVE_TIERS[1] + 0.01;
+    m.carveTier = 2;
+    m.carveT = 30;
+    m.carveBoost = 0.25;
+    const ev = stepFor(race, t, inputs, 60);
+    expect(ev.some((e) => e.type === 'fall' && e.mech === 0)).toBe(true);
+    expect(m.carving).toBe(false);
+    expect(m.carveCharge).toBe(0);
+    expect(m.carveT).toBe(0);
+    // Still holding everything through the fall and the recovery.
+    const after = stepFor(race, t, inputs, FALL_TICKS + 30);
+    expect([...ev, ...after].some((e) => e.type === 'carveBurst')).toBe(false);
+  });
 
   it('a mech that goes over the side of the Sky Bridge falls, credited to whoever hit it last', () => {
     const { race, t, inputs } = quietRace(CANYON);

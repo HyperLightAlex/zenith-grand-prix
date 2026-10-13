@@ -10,6 +10,7 @@ import {
   MODE,
   PHASE,
   ROLE,
+  TICK_RATE,
   buildTrack,
   createMatch,
   deltaS,
@@ -106,6 +107,8 @@ export class Game {
   private prevButtons = 0;
   private lastShotKey = '';
   private slowmo = 0;
+  private ownLock = -1;
+  private ownLockAt = 0;
   private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement, private opts: GameOptions = {}) {
@@ -204,6 +207,8 @@ export class Game {
     };
     this.resultsAt = -1;
     this.slowmo = 0;
+    this.ownLock = -1;
+    this.ownLockAt = 0;
     this.session.timeScale = 1;
   }
 
@@ -440,7 +445,7 @@ export class Game {
         const h = this.heard(e.mech);
         A.play('ko', { volume: Math.max(0.35, h.volume) * quiet, pan: h.pan });
         // Slow motion for any knockout the player had a hand in.
-        if (inRace && inKnockout(race, e.mech, e.by, local, this.view.recentTarget)) this.slowmo = 0.9;
+        if (inRace && inKnockout(race, e.mech, e.by, local, this.ownLock)) this.slowmo = 0.9;
         // Lost the mech we were riding with: move the camera to a teammate.
         if (e.mech === this.view.focusId) {
           const session = this.session;
@@ -660,6 +665,16 @@ export class Game {
     if (this.state === 'race') this.hud.update(dt, cur, this.view.plates, this.view.focusId);
     this.trackVis.update(this.time);
     this.world.update(this.time, this.renderer.camera);
+
+    // The player's own lock, remembered for a few seconds after it goes (a
+    // knockout clears it), for the slow motion on knockouts they had a hand in.
+    const own = cur.mechs[this.session.localId];
+    if (own && own.target >= 0) {
+      this.ownLock = own.target;
+      this.ownLockAt = cur.tick;
+    } else if (cur.tick - this.ownLockAt > 5 * TICK_RATE) {
+      this.ownLock = -1;
+    }
 
     // Continuous sound follows whoever the camera is on.
     const f = cur.mechs[this.view.focusId];

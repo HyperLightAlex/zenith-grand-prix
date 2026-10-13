@@ -13,6 +13,8 @@ import {
   DRIVE_LINK,
   DRIVE_MAX,
   DT,
+  PASS_COOLDOWN,
+  PASS_WIDTH,
   MODE,
   PACE,
   PACK_BONUS,
@@ -32,7 +34,7 @@ import {
 } from '../src/sim/index';
 import type { MechInput, RuleKey, Rules } from '../src/sim/index';
 import { retire } from '../src/sim/combat';
-import { Arena, DF0, FW0, FW1, MF0, MF1, TRACK, findNonFinite, makeInputs, makeSeats, newRace, runCountdown, setLapPhase, snapshot } from './helpers';
+import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, findNonFinite, makeInputs, makeSeats, newRace, runCountdown, setLapPhase, snapshot } from './helpers';
 
 const L = TRACK.length;
 const EPS = 1e-9;
@@ -653,12 +655,14 @@ describe('Drive on the formation lap', () => {
   const strip = TRACK.strips[0];
 
   it('by default the trickle runs from the start: passive Drive and the slipstream\'s', () => {
-    const a = new Arena(1, 1, { lap1Trickle: 1 });
+    // (The arena switches it off for every other test; this one puts the default back.)
+    expect(DEFAULT_RULES.lap1Trickle).toBe(1);
+    const a = new Arena(1, 1, { lap1Trickle: DEFAULT_RULES.lap1Trickle });
     const m = a.put(FW0, -250, 0);
     m.drive = 12;
     a.step(300, () => expect(m.onStrip).toBe(false));
     expect(m.drive).toBeCloseTo(12 + 300 * a.race.rules.drivePassive * DT, 9);
-    const b = new Arena(1, 1, { lap1Trickle: 1 });
+    const b = new Arena(1, 1, { lap1Trickle: DEFAULT_RULES.lap1Trickle });
     const me = b.put(FW0, -250, 0);
     b.put(FW1, -225, 0);
     me.drive = 12;
@@ -767,6 +771,94 @@ describe('Drive on the formation lap', () => {
     // (Anything over 1 is clamped to 1 by the rule's range: still "on".)
     expect(gain(7)).toBeCloseTo(60 * DEFAULT_RULES.drivePassive * DT, 9);
     expect(RULE_LIMITS.lap1Trickle).toEqual([0, 1]);
+  });
+});
+
+describe('Drive for a close pass', () => {
+  /** A forward closing on a slower rival a few units across, with nothing else coming in. */
+  function closing(rules: Partial<Rules> = {}, rival = FW1) {
+    const a = new Arena(2, 1, { drivePass: 4, drivePassive: 0, driveDraft: 0, ...rules });
+    const me = a.put(FW0, 0, 0);
+    const o = a.put(rival, 25, 5, a.pace - 30);
+    a.inputs[rival].throttle = 0;
+    me.drive = 10;
+    return { a, me, o };
+  }
+
+  it('passing a rival close enough to touch pays rules.drivePass', () => {
+    const { a, me } = closing();
+    expect(a.until(() => a.events('pass').length > 0, 240)).toBeGreaterThan(0);
+    expect(a.events('pass')).toEqual([expect.objectContaining({ mech: FW0, other: FW1 })]);
+    expect(me.drive).toBe(14);
+  });
+
+  it(`the same rival again pays only after PASS_COOLDOWN ticks: no weaving round one to farm it`, () => {
+    const { a, me, o } = closing();
+    a.until(() => a.events('pass').length > 0, 240);
+    const first = a.race.tick;
+    // Put the rival back in front and go past again, at once and then after the cooldown.
+    const again = () => {
+      // (Back on the Grand Straight, both of them, the rival just ahead.)
+      me.s = a.base;
+      me.d = 0;
+      me.heading = 0;
+      o.s = me.s + 6;
+      o.d = 4;
+      a.clearLog();
+      expect(a.until(() => me.s > o.s + 1, 120)).toBeGreaterThan(0);
+      a.step(1);
+    };
+    again();
+    expect(a.events('pass')).toEqual([]);
+    expect(me.drive).toBe(14);
+    a.step(Math.max(0, first + PASS_COOLDOWN - a.race.tick));
+    again();
+    expect(a.events('pass')).toHaveLength(1);
+    expect(me.drive).toBe(18);
+  });
+
+  it('passing a teammate pays nothing', () => {
+    const { a, me } = closing({}, MF0);
+    expect(a.until(() => me.s > a.mech(MF0).s + 5, 240)).toBeGreaterThan(0);
+    expect(a.events('pass')).toEqual([]);
+    expect(me.drive).toBe(10);
+  });
+
+  it('nothing wider than PASS_WIDTH across the road', () => {
+    const a = new Arena(2, 1, { drivePass: 4, drivePassive: 0, driveDraft: 0 });
+    const me = a.put(FW0, 0, -6);
+    const o = a.put(FW1, 25, PASS_WIDTH - 6 + 1, a.pace - 30);
+    a.inputs[FW1].throttle = 0;
+    expect(a.until(() => me.s > o.s + 5, 240)).toBeGreaterThan(0);
+    expect(a.events('pass')).toEqual([]);
+  });
+});
+
+describe('the Lead-out tow', () => {
+  it('remembers the support teammate whose tow it was, not the rival tucked in behind on the way past', () => {
+    const a = new Arena(2, 1, { drivePassive: 0, driveDraft: 0 });
+    const fw = a.put(FW0, 0, 0);
+    a.put(MF0, 20, 0);
+    a.step(3);
+    expect(fw.drafting).toBe(true);
+    expect(fw.towBy).toBe(MF0);
+    const t = fw.towByTick;
+    // The teammate peels off; a rival is next up the road.
+    a.put(MF0, 600, -15);
+    a.put(DF1, fw.s - a.base + 18, 0);
+    a.step(3);
+    expect(fw.drafting).toBe(true);
+    expect(fw.towBy).toBe(MF0);
+    expect(fw.towByTick).toBe(t);
+  });
+
+  it('a forward\'s tow is not a lead-out tow', () => {
+    const a = new Arena(2);
+    const mf = a.put(MF0, 0, 0);
+    a.put(FW0, 20, 0);
+    a.step(3);
+    expect(mf.drafting).toBe(true);
+    expect(mf.towBy).toBe(-1);
   });
 });
 

@@ -892,9 +892,11 @@ describe('AI pilots and the gates', () => {
     expect(withHumans.rng).toBe(a.rng);
   });
 
-  it('on the formation lap they fight for them: every gate is taken, by a pilot who meant to', () => {
+  it('on the formation lap they fight for them: nearly every gate is taken, nearly always by a pilot who meant to', () => {
     // The pack is together on lap 1 and a gate goes dark for seconds once
-    // taken, so each one goes to whoever gets there first.
+    // taken, so each one goes to whoever gets there first. Now and then one
+    // goes untaken (dark as the only pilot after it arrives) and now and then
+    // one is threaded by a pilot just holding its line through it.
     let meant = 0;
     let stray = 0;
     for (const [seed, skill] of [

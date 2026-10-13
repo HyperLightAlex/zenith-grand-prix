@@ -157,9 +157,16 @@ export interface MechState {
   drafting: boolean;
   /** Slipstream charge 0..1: builds in a tow, lingers after pulling out. */
   tow: number;
-  /** Whose slipstream this mech was last in, and when. */
+  /**
+   * The last support teammate (a midfielder or defender) whose slipstream this
+   * mech was in, and when: a pass soon after pays that teammate a Lead-out.
+   * Rivals' tows do not count, so closing up behind the mech about to be
+   * passed does not wipe it.
+   */
   towBy: number;
   towByTick: number;
+  /** When this mech last earned Drive for passing each rival (by id). */
+  passTick: number[];
   /** Ticks the next attack stays primed by a boost, Overdrive or slipstream. */
   momentum: number;
   linked: boolean;

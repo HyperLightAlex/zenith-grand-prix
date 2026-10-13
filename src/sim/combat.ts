@@ -335,11 +335,13 @@ export function applyHit(
   const wasAttacking = victim.act === ACT.ATTACK && victim.actT < ATTACKS[victim.attack].windup + ATTACKS[victim.attack].active;
   const inWindup = wasAttacking && victim.actT < ATTACKS[victim.attack].windup;
   let broke = false;
-  // Under an Aegis, or mid-ram, nothing staggers, slows or snares the mech.
+  // Under an Aegis, or mid-ram, nothing staggers, slows or snares the mech,
+  // or breaks its carve.
   const shielded = victim.shieldT > 0;
   const unstoppable = shielded || victim.ramT > 0;
   let prevented = 0;
   if (shielded) {
+    // (A first guess; worked out properly below, once the guard has had its say.)
     prevented = dmg * (1 - rules.aegisDamage);
     dmg *= rules.aegisDamage;
   }
@@ -404,10 +406,13 @@ export function applyHit(
       victim.speed *= 1 - Math.min(HIT_SLOW_MAX, dmg * HIT_SLOW_PER_DAMAGE);
       syncFromSpeed(victim);
     }
-    // ...and whatever a carve had built up.
-    dropCarve(victim);
+    // ...and whatever a carve had built up (unless nothing can touch it).
+    if (!unstoppable) dropCarve(victim);
   }
 
+  // What the shield kept off is what would have landed without it: the guard
+  // takes its share of a blow whether or not there is a shield over it.
+  if (shielded && rules.aegisDamage > 0.001) prevented = dmg * (1 / rules.aegisDamage - 1);
   dmg = Math.min(dmg, victim.hp);
   victim.hp -= dmg;
   victim.dmgTaken += dmg;
