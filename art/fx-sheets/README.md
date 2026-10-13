@@ -16,6 +16,7 @@ strips that `tools/fx/ingest.py` cuts from them.
 | 6 Shock rings | fx-06-shock-rings.png | bottom row (facing ring) only; the ground ring is redone as 6B | `rows centre` |
 | 6B Ground ring | fx-06b-ground-ring.png | two variations, laid flat on the road | `rows centre` |
 | 7 Thruster flame | fx-07-thruster-flame.png | boost loop and overdrive loop; rows cut to the nozzles | build_sprites.py |
+| 8 Smoke puffs | fx-08-smoke-puffs.png | small puff and large cloud | `rows centre` |
 
     python3 tools/fx/ingest.py art/fx-sheets/fx-02-heavy-impact.png <outdir> all 256 centre
 
