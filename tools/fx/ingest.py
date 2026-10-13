@@ -6,13 +6,16 @@ a 3 x 2 grid of square panels on flat magenta. This keys out the magenta
 pink fringe), cuts the panels, and writes each animation as a horizontal
 strip: one row of the sheet per strip, or all six panels as one strip.
 
-    python3 tools/fx/ingest.py <sheet.png> <outdir> [rows|all] [size] [centre]
+    python3 tools/fx/ingest.py <sheet.png> <outdir> [rows|all] [size] [centre] [nosmoke]
 
 `rows` (the default) makes two strips of three drawings; `all` makes one
 strip of six. `size` is the size of each drawing in the strip (default 256).
 `centre` moves each drawing so the middle of its bounding box sits on the
 middle of the frame: for radial effects (bursts, rings, glints), which the
 model does not always place exactly. Leave it off for directional ones.
+`nosmoke` takes out any smoke the model painted into an effect (grey and
+ink shapes standing apart from the glow): the game adds its own smoke from
+sheet 8, tinted for the circuit.
 It also writes a preview of each strip over a sky and a road colour, and a
 looping GIF, to check the cut before it goes in the game.
 
@@ -23,15 +26,17 @@ import sys
 
 import numpy as np
 from PIL import Image
+from scipy import ndimage
 
 
-def cut(src, size=256, centre=False, offsets=(0, 0), bands=None):
+def cut(src, size=256, centre=False, offsets=(0, 0), bands=None, nosmoke=False):
     """
     The six panels of a sheet, keyed and cut, as RGBA images `size` square.
     `offsets` moves each row's window down (or up, negative) by that many
     pixels of the sheet, for a sheet whose drawings stray over a row's edge;
     `bands` then limits each row to its own stretch of the sheet, (top,
     bottom) in sheet pixels, so a moved window does not pick up the other row.
+    `nosmoke` drops every separate shape that is mostly grey or ink.
     """
     rgb = np.asarray(Image.open(src).convert('RGB')).astype(np.float32) / 255
     H, W, _ = rgb.shape
@@ -45,6 +50,17 @@ def cut(src, size=256, centre=False, offsets=(0, 0), bands=None):
     # Unmix: an edge pixel is this colour laid over magenta at that alpha.
     col = np.where(a[..., None] > 0.01, (rgb - (1 - a[..., None]) * bg) / np.maximum(a[..., None], 0.01), 0)
     col = np.clip(col, 0, 1)
+    if nosmoke:
+        # Glow is cyan or white; smoke is grey with an ink line. Each shape
+        # stands apart on the magenta, so drop the shapes that are mostly grey.
+        hi, lo = rgb.max(-1), rgb.min(-1)
+        grey = (a > 0.9) & (hi - lo < 0.15) & (hi < 0.8)
+        lab, n = ndimage.label(a > 0.05)
+        if n:
+            total = ndimage.sum(np.ones_like(a), lab, range(1, n + 1))
+            greys = ndimage.sum(grey, lab, range(1, n + 1))
+            smoke = np.concatenate([[False], greys / np.maximum(total, 1) > 0.5])
+            a = np.where(smoke[lab], 0, a)
     rgba = np.concatenate([col, a[..., None]], -1)
 
     cols, rows = 3, 2
@@ -89,10 +105,12 @@ def main():
     src, out = sys.argv[1], sys.argv[2]
     mode = sys.argv[3] if len(sys.argv) > 3 else 'rows'
     size = int(sys.argv[4]) if len(sys.argv) > 4 else 256
-    centre = len(sys.argv) > 5 and sys.argv[5] == 'centre'
+    flags = sys.argv[5:]
+    centre = 'centre' in flags
+    nosmoke = 'nosmoke' in flags
     name = os.path.splitext(os.path.basename(src))[0]
     os.makedirs(out, exist_ok=True)
-    panels = cut(src, size, centre)
+    panels = cut(src, size, centre, nosmoke=nosmoke)
     groups = [panels[:3], panels[3:]] if mode == 'rows' else [panels]
     for gi, frames in enumerate(groups):
         tag = f'{name}-{"ab"[gi]}' if mode == 'rows' else name
