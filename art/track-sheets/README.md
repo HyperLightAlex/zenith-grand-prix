@@ -24,7 +24,7 @@ stay crisp and bright, so the paintings go underneath them, never over them.
 |---|---|---|
 | T1 Surfaces | track-t1-surfaces.png | the grid sits a pixel or two off the 512 lines (the joins are at 511 and 1022 across, 510 down), so each square is cut inside its own edges. Road, steel, gantry steel and concrete repeat once cut to their best length. The armour has a panel seam at both side edges and two panels stacked; it repeats along the barrier only, the face taking its full height. The crowd's rows repeat every 85 px or so, so it is cut on whole rows. The road's scuffs would show a grid repeated panel after panel, so each 24-unit panel of road takes the texture from its own place in it |
 | T2 Sponsor boards | track-t2-boards.png | all six spelt right; each cut cleanly by its outline, a clean rectangle about 2.9:1, a little taller than the plain look's 3.2:1 boards, so the painted boards stand in frames of their own shape |
-| T3 Circuit boards and banner | | to do |
+| T3 Circuit boards and banner | track-t3-circuits.png | all spelt right, each emblem as asked; cut cleanly. The boards came out 2.25:1 and the banner 9.9:1 (not 3.2:1 and 14.7:1), so they too stand in frames of their own shape: the banner over the line a little deeper than the plain one |
 
 ## The prompt
 
