@@ -75,6 +75,8 @@ const STINGER_KEY: Record<string, Partial<Record<SfxName, number>>> = {
 };
 /** Semitones above the gate chime's home note for each gate banked: steps of A minor. */
 const GATE_STEPS = [0, 2, 3, 5, 7];
+/** The carve chime climbs with the tier: root, a fourth, then the octave. */
+const CARVE_TIER_PITCH = [1, 2 ** (5 / 12), 2];
 
 export class Game {
   readonly renderer: Renderer;
@@ -462,6 +464,19 @@ export class Game {
       case 'boost':
         A.play('boost', { volume: this.heard(e.mech).volume * quiet });
         break;
+      case 'carve':
+        // Only your own carve chimes: a field of them would be a wind chime.
+        if (e.mech === this.view.focusId && inRace) {
+          A.play('carve_tier', { pitch: CARVE_TIER_PITCH[e.tier - 1] });
+          if (e.mech === local) this.input.rumble(0.12 + e.tier * 0.08, 70);
+        }
+        break;
+      case 'carveBurst': {
+        const h = this.heard(e.mech);
+        A.play('carve_burst', { volume: Math.max(e.mech === this.view.focusId ? 0.55 + e.tier * 0.15 : 0, h.volume * 0.6) * quiet, pan: h.pan, pitch: 1 + (e.tier - 1) * 0.06 });
+        if (e.mech === local && inRace) this.input.rumble(0.25 + e.tier * 0.12, 120 + e.tier * 40);
+        break;
+      }
       case 'lock':
         if (e.mech === local && inRace) A.play('lock');
         break;
@@ -653,7 +668,9 @@ export class Game {
     sc.onStrip = f.onStrip;
     sc.drafting = f.drafting;
     sc.scraping = f.wall > 0 && f.speed > 20;
-    sc.critical = f.hp > 0 && f.hp < 0.25 * CLASSES[f.role].maxHp && !f.retired && this.state === 'race';
+    sc.carve = f.carving && !f.air ? Math.max(0.15, Math.abs(f.steer)) : 0;
+    sc.carveTier = f.carving ? f.carveTier : 0;
+    sc.critical = f.hp > 0 && f.hp < 0.25 * f.maxHp && !f.retired && this.state === 'race';
     this.audio.update(dt, sc);
 
     this.renderer.render(dt, this.time);
@@ -678,6 +695,8 @@ export class Game {
     if (m.ramT > 0) strong += 0.18;
     if (m.wall > 0 && m.speed > 20) strong += 0.4;
     if (m.mode === MODE.SPEED && Math.abs(m.steer) > 0.6) weak += (Math.abs(m.steer) - 0.6) * 0.3 * sf;
+    // Carving: the edges chatter, harder as the charge climbs.
+    if (m.carving && !m.air) weak += 0.08 + m.carveTier * 0.05;
     if (weak + strong > 0.015) this.input.rumbleRoad(strong, weak, 130);
   }
 

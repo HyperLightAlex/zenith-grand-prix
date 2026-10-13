@@ -23,6 +23,12 @@ export const COLORS = {
   outline: 0x141a2a,
 };
 
+/**
+ * Carve sparks by tier: pale while it builds, then cyan, gold and magenta as
+ * it climbs. The HUD and the burst use the same.
+ */
+export const CARVE_COLORS = [0xd8ecff, 0x36dcff, 0xffbd2a, 0xff3fd8] as const;
+
 export interface Livery {
   id: string;
   name: string;

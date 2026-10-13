@@ -3,6 +3,8 @@
 import {
   ABILITIES,
   ABILITY,
+  CARVE_BURST,
+  CARVE_TIERS,
   CLASSES,
   CRITICAL_HP,
   DRIVE_MAX,
@@ -30,7 +32,7 @@ import {
   type Track,
 } from '../../sim/index';
 import { TELL_LABEL, tellOf } from '../game/tells';
-import { LIVERIES } from '../render/palette';
+import { CARVE_COLORS, LIVERIES } from '../render/palette';
 import type { Plate } from '../render/raceView';
 import { h, setClass, setText } from './dom';
 
@@ -41,8 +43,8 @@ const TACTIC_LABEL = ['Free', 'Blitz', 'Run', 'Shield', 'Mark'];
 type Device = 'pad' | 'keys';
 
 const KEYS: Record<Device, Record<string, string>> = {
-  pad: { accel: 'RT', brake: 'LT', boost: 'A', dash: 'A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'RB', swap: 'R stick ◀ ▶', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
-  keys: { accel: 'W', brake: 'S', boost: 'Space', dash: 'Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
+  pad: { accel: 'RT', brake: 'LT', carve: 'LT + stick', boost: 'A', dash: 'A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'RB', swap: 'R stick ◀ ▶', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
+  keys: { accel: 'W', brake: 'S', carve: 'S + A/D', boost: 'Space', dash: 'Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
 };
 
 /** Radio lines. {t} is replaced by a target's callsign. */
@@ -87,6 +89,11 @@ interface Row {
   hp: HTMLElement;
   gap: HTMLElement;
   place: number;
+}
+
+/** A colour number as CSS. */
+function hex(c: number): string {
+  return '#' + c.toString(16).padStart(6, '0');
 }
 
 export class Hud {
@@ -141,6 +148,13 @@ export class Hud {
   private chipMomentum = h('span.chip.momentum', 'Momentum');
   private hints = h('div.hints');
   private hintKey = '';
+  // carve meter: three segments that fill in the tier colours
+  private carve = h('div.carve');
+  private carveSegs: HTMLElement[] = [];
+  private carveLabel = h('span.label', 'Carve');
+  private carveFade = 0;
+  /** The tier the last carve reached, held through its burst. */
+  private carveShown = 0;
   // speed
   private speedBox = h('div.speed');
   private mph = h('span.mph', '0');
@@ -201,7 +215,15 @@ export class Hud {
       this.hints,
     );
     this.speedBox.append(h('div', this.mph, h('span.unit', 'mph')), this.limiter);
-    R.append(this.speedBox);
+    const segs = h('div.segs');
+    for (let i = 0; i < CARVE_TIERS.length; i++) {
+      const fill = h('i');
+      fill.style.background = hex(CARVE_COLORS[i + 1]);
+      this.carveSegs.push(fill);
+      segs.append(h('div.seg', fill));
+    }
+    this.carve.append(this.carveLabel, segs);
+    R.append(this.carve, this.speedBox);
     const tact = h('div.tactics', this.tacticHub);
     for (const [cls, tac] of [['up', TACTIC.BLITZ], ['right', TACTIC.RUN], ['down', TACTIC.SHIELD], ['left', TACTIC.MARK]] as const) {
       const el = h('div.t.' + cls);
@@ -449,7 +471,7 @@ export class Hud {
     setText(this.clock, `${Math.floor(secs / 60)}:${(secs % 60).toFixed(1).padStart(4, '0')}`);
 
     // Gauges.
-    const hpF = Math.max(0, me.hp / c.maxHp);
+    const hpF = Math.max(0, me.hp / me.maxHp);
     this.armourFill.style.transform = `scaleX(${hpF.toFixed(3)})`;
     this.armourGhost.style.transform = `scaleX(${hpF.toFixed(3)})`;
     setText(this.armourVal, String(Math.ceil(me.hp)));
@@ -505,9 +527,28 @@ export class Hud {
     this.chipSnared.hidden = !(me.snareT > 0) || me.retired;
     if (me.snareT > 0) setText(this.chipSnared, `Snared ${left(me.snareT)}`);
 
+    // Carve meter: up while carving, and through the burst after.
+    const bursting = me.carveT > 0 && me.mode === MODE.SPEED;
+    const carveOn = (me.carving || bursting) && !me.retired;
+    this.carveFade = carveOn ? 0.5 : Math.max(0, this.carveFade - dt);
+    setClass(this.carve, 'on', carveOn || this.carveFade > 0);
+    if (carveOn) {
+      let lo = 0;
+      for (let i = 0; i < CARVE_TIERS.length; i++) {
+        const f = me.carving ? Math.min(1, Math.max(0, (me.carveCharge - lo) / (CARVE_TIERS[i] - lo))) : i < this.carveShown ? 1 : 0;
+        this.carveSegs[i].style.transform = `scaleX(${f.toFixed(3)})`;
+        lo = CARVE_TIERS[i];
+      }
+      const tier = me.carving ? me.carveTier : this.carveShown;
+      if (me.carving) this.carveShown = me.carveTier;
+      this.carve.style.setProperty('--tier', hex(CARVE_COLORS[tier]));
+      setClass(this.carve, 'burst', bursting && !me.carving);
+      setText(this.carveLabel, bursting && !me.carving ? `Burst +${Math.round(CARVE_BURST[Math.max(0, tier - 1)] * race.rules.carveBurst * 100)}%` : 'Carve');
+    }
+
     // Speed and limiter.
     setText(this.mph, String(Math.round(me.speed * MPH_PER_UNIT)));
-    setClass(this.speedBox, 'boost', me.boosting);
+    setClass(this.speedBox, 'boost', me.boosting || bursting);
     if (race.lapPhase >= 3) {
       setText(this.limiter, 'Limiter off');
       this.limiter.className = 'limiter off';
@@ -537,7 +578,7 @@ export class Hud {
       } else if (battle) {
         items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], [k.lock, 'Let go']);
       } else {
-        items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);
+        items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.carve, 'Carve'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);
         if (race.lapPhase >= 2) items.push([k.x, 'Attack'], [k.ability, ABILITIES[shown].name]);
       }
       this.hints.replaceChildren(...items.map(([key, label]) => h('span', h('span.key', key), label)));
@@ -555,7 +596,7 @@ export class Hud {
       setText(this.targetRole, `${ROLE_NAMES[t.role]}, ${LIVERIES[t.team].name.replace('Team ', '')}`);
       const dist = Math.hypot(deltaS(this.track, t.s, focus.s), t.d - focus.d);
       setText(this.targetDist, dist > LOCK_BREAK * 0.8 ? 'Losing lock' : `${Math.round(dist)} m`);
-      this.targetHp.style.transform = `scaleX(${Math.max(0, t.hp / tc.maxHp).toFixed(3)})`;
+      this.targetHp.style.transform = `scaleX(${Math.max(0, t.hp / t.maxHp).toFixed(3)})`;
       this.targetGd.style.transform = `scaleX(${Math.max(0, t.guard / tc.guardMax).toFixed(3)})`;
       const p = plates[t.id];
       this.reticle.hidden = !p.visible;
@@ -625,7 +666,7 @@ export class Hud {
       if (show) {
         const sc = Math.max(0.62, Math.min(1.05, 60 / p.dist + 0.5));
         pl.el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, -100%) scale(${sc.toFixed(2)})`;
-        pl.hp.style.transform = `scaleX(${Math.max(0, m.hp / CLASSES[m.role].maxHp).toFixed(2)})`;
+        pl.hp.style.transform = `scaleX(${Math.max(0, m.hp / m.maxHp).toFixed(2)})`;
       }
     }
 
@@ -654,7 +695,7 @@ export class Hud {
           row.el.style.transform = `translateY(${(m.place - 1) * 2.1}em)`;
           setText(row.pos, String(m.place));
         }
-        row.hp.style.transform = `scaleX(${Math.max(0, m.hp / CLASSES[m.role].maxHp).toFixed(2)})`;
+        row.hp.style.transform = `scaleX(${Math.max(0, m.hp / m.maxHp).toFixed(2)})`;
         setClass(row.el, 'out', m.retired);
         setClass(row.el, 'done', m.finished && !m.retired);
         let gap = '';
@@ -690,8 +731,8 @@ export class Hud {
 
     // Radio lines that depend on thresholds rather than events.
     for (const m of race.mechs) {
-      const before = this.lastHp[m.id] / CLASSES[m.role].maxHp;
-      const now = m.hp / CLASSES[m.role].maxHp;
+      const before = this.lastHp[m.id] / m.maxHp;
+      const now = m.hp / m.maxHp;
       this.lastHp[m.id] = m.hp;
       if (m.team !== me.team || m.retired) continue;
       if (m.id !== this.localId) {

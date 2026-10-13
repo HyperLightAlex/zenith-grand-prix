@@ -35,6 +35,25 @@ const boost = makePose({
   wingR: [0.2, -0.8, -0.4],
 });
 
+/**
+ * Carving to the right: down low, the outside skate pushed wide and the
+ * inside hand trailing along the road. Mirrored for a left carve.
+ */
+const carveRight = makePose({
+  hips: [-2.1, -0.15, 0.62, 0, 0],
+  spine: [0.4, 0, -0.08],
+  chest: [0.25, 0, -0.06],
+  head: [-1.0, -0.15, 0],
+  shL: [1.25, 0, 0.35],
+  elL: [-0.3, 0, 0],
+  shR: [0.35, 0, -0.95],
+  elR: [-0.25, 0, 0],
+  footL: [1.6, 0, -0.55, 0, -0.18],
+  footR: [-0.55, 0, 0.75, 0, 0.12],
+  wingL: [0.2, 0.75, 0.4],
+  wingR: [0.2, -0.75, -0.4],
+});
+
 /** Battle mode: upright, hands up, weight on the back foot. */
 const battle = makePose({
   hips: [-0.65, 0, 0.12, 0.25, 0],
@@ -346,6 +365,7 @@ export const POSES = {
   stand: makePose(),
   tuck,
   boost,
+  carveRight,
   battle,
   guard,
   stagger,

@@ -288,6 +288,20 @@ const RECIPES: Record<SfxName, Recipe> = {
     v.noise({ d: 0.5, g: 0.4, s: 'swell', a: 0.08, ft: 'bandpass', ff: 800, ff2: 2600, fq: 2 });
     v.tone({ w: 'sawtooth', f: 160, f2: 480, d: 0.45, g: 0.22, s: 'swell', a: 0.3, lp: 1800 });
   },
+  // A carve reaches a tier: a bright double ping (played a step higher for
+  // each tier).
+  carve_tier: (v) => {
+    v.bell({ f: 1318.5, ratio: 2, idx: 0.8, d: 0.35, g: 0.5 });
+    v.bell({ f: 1975.5, ratio: 3.01, idx: 0.5, t: 0.045, d: 0.3, g: 0.32 });
+    v.noise({ d: 0.05, g: 0.18, ft: 'highpass', ff: 7000 });
+  },
+  // Let go of a carve: the edges snap off the road and the burst kicks in.
+  carve_burst: (v) => {
+    v.noise({ d: 0.08, g: 0.6, a: 0.002, ft: 'highpass', ff: 3500 });
+    v.noise({ k: 'p', d: 0.5, g: 1.4, a: 0.01, ft: 'bandpass', ff: 600, ff2: 2800, fq: 1.1, wide: true });
+    v.tone({ f: 120, f2: 60, d: 0.22, g: 0.8, a: 0.003 });
+    v.tone({ w: 'triangle', f: 440, f2: 880, d: 0.28, g: 0.25, s: 'swell', a: 0.12, lp: 2400 });
+  },
   dash: (v) => {
     v.noise({ d: 0.2, g: 1, a: 0.004, ft: 'bandpass', ff: 2600, ff2: 600, fq: 1.1 });
     v.noise({ d: 0.06, g: 0.35, ft: 'highpass', ff: 4500 });
@@ -712,6 +726,8 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   count_go: m(0.325, 0.2, 2, 0, 0.03, [0.25, 0.5]),
   launch: m(0.6, 0.25, 2),
   boost: m(0.3, 0.1, 1),
+  carve_tier: m(0.22, 0.2, 2, 0, 0.05),
+  carve_burst: m(0.36, 0.1, 1, 0.04),
   dash: m(0.77, 0.05, 1, 0.05),
   lock: m(0.3, 0.05, 2),
   unlock: m(0.25, 0.05, 2),

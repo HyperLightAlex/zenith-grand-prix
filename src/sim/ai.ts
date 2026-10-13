@@ -12,6 +12,7 @@ import {
   BTN,
   CARVE_MIN_SPEED,
   CARVE_MIN_STEER,
+  CARVE_STEER_WIDE,
   CARVE_TURN,
   LOCK_RANGE,
   MODE,
@@ -20,7 +21,7 @@ import {
   TACTIC,
   type Tactic,
 } from './config';
-import { classOf, distance, hpFraction, inPlay, lockable, sameRoute, setTarget, speedCap } from './core';
+import { carveStick, classOf, distance, hpFraction, inPlay, lockable, sameRoute, setTarget, speedCap } from './core';
 import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
 import { deltaS, forkAt, gripAt, hwAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
@@ -347,13 +348,17 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   const needGrip = m.speed > vCorner - 2 && bendDir !== 0;
   let carve = false;
   if (!hot && !m.finished && m.speed > CARVE_MIN_SPEED + 5 && !threading) {
-    if (m.carving) carve = !(ending && m.carveTier > 0) && out.mx * m.carveDir > 0.02;
-    else carve = bendDir !== 0 && (ai.carveGo || needGrip) && out.mx * bendDir > 0.05;
+    // A carve cannot turn less than CARVE_STEER_WIDE: once the line wants
+    // less than that (or the bend runs out) it is time to let go.
+    if (m.carving) carve = !ending && out.mx * m.carveDir > CARVE_STEER_WIDE - 0.1;
+    else carve = bendDir !== 0 && (ai.carveGo || needGrip) && out.mx * bendDir > CARVE_STEER_WIDE + 0.05;
   }
   if (carve) {
     out.brake = 1;
-    // Lean into it hard enough to start the carve; after that the line decides.
+    // Lean into it hard enough to start the carve; after that, the stick
+    // that makes the carve turn the way the line wants.
     if (!m.carving) out.mx = bendDir * Math.max(Math.abs(out.mx), CARVE_MIN_STEER + 0.05);
+    else out.mx = carveStick(m.carveDir, out.mx);
     if (m.speed > vCarve + 3) throttle = 0;
     else if (m.speed > vCarve - 3) throttle = Math.min(throttle, 0.7);
     wantBoost = false;

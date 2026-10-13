@@ -24,7 +24,7 @@ import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareR
 import { MechAnimator } from './mech/animate';
 import { buildFrame } from './mech/frames';
 import type { MechRig } from './mech/rig';
-import { COLORS, LIVERIES, SUN_DIR, type Livery } from './palette';
+import { CARVE_COLORS, COLORS, LIVERIES, SUN_DIR, type Livery } from './palette';
 import type { Renderer } from './renderer';
 import type { TrackVisual } from './trackMesh';
 import { trackDir, trackMatrix, trackPoint, worldDirToTrackAngle } from './trackSpace';
@@ -55,6 +55,8 @@ interface MechVisual {
   vel: THREE.Vector3;
   smokeT: number;
   sparkT: number;
+  /** The tier of the carve burst running now, for its colour. */
+  burstTier: number;
   /** Which cut of a combo is next, for the blade arcs. */
   cut: number;
 }
@@ -83,6 +85,7 @@ const AMBER = new THREE.Color(0xffa030);
 /** Momentum: trails run hot while the next blow is primed, and a momentum strike flares in it. */
 const HOT = new THREE.Color(0xff7a2a);
 const HOT_HEX = 0xff8a3a;
+const CARVE = CARVE_COLORS.map((c) => new THREE.Color(c));
 const WHITE = new THREE.Color(0xffffff);
 const tint = new THREE.Color();
 /** Speed the effects treat as "flat out": a forward's top speed on the speed lap. */
@@ -162,6 +165,7 @@ export class RaceView {
         vel: new THREE.Vector3(),
         smokeT: 0,
         sparkT: 0,
+        burstTier: 0,
         cut: 0,
       });
       this.plates.push({ id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false });
@@ -244,17 +248,22 @@ export class RaceView {
       const surge = m.overdriveT > 0 && !m.retired;
       const ramming = m.ramT > 0 && !m.retired;
       const primed = m.momentum > 0 && !m.retired && armed;
+      // A carve's tier, and then its burst, run in the carve's colour.
+      const carveTier = m.carving && !m.retired && m.carveTier > 0 ? m.carveTier : 0;
+      const bursting = m.carveT > 0 && !m.retired && !battle;
       let glow = Math.min(1, Math.max(0, (m.speed - 25) / 70)) * (battle ? 0.7 : 0.9);
       if (primed) glow = Math.max(glow, 1.3);
-      if (m.boosting) glow = 1.7;
+      if (carveTier > 0) glow = Math.max(glow, 1 + carveTier * 0.25);
+      if (m.boosting || bursting) glow = 1.7;
       if (surge) glow = 2.4;
       if (m.retired) glow = 0;
-      v.trailColor.lerp(surge ? GOLD : ramming ? AMBER : primed ? HOT : v.glow, 1 - Math.exp(-10 * dt));
+      const tint = surge ? GOLD : ramming ? AMBER : bursting ? CARVE[v.burstTier] : carveTier > 0 ? CARVE[carveTier] : primed ? HOT : v.glow;
+      v.trailColor.lerp(tint, 1 - Math.exp(-10 * dt));
       trackDir(track, v.s, 0, 1, v2);
       for (let i = 0; i < 2; i++) {
         v.rig.heels[i].getWorldPosition(v1);
         v.trails[i].setColor(v.trailColor);
-        v.trails[i].update(v1, v2, glow * 0.8 * this.feel.trails, surge ? 0.5 : m.boosting ? 0.34 : 0.2);
+        v.trails[i].update(v1, v2, glow * 0.8 * this.feel.trails, surge ? 0.5 : m.boosting || bursting ? 0.34 : 0.2);
       }
 
       // Guard shield, which also serves as the prow of a ram.
@@ -309,6 +318,20 @@ export class RaceView {
             this.fx.spray(v1, v3, v2, n, 16, surge ? COLORS.cell : hard ? 0xffb060 : 0xffe2b0, 0.26, 0.28);
           }
         }
+        if (m.carving && !m.air && !m.retired && this.feel.sparks > 0) {
+          // Carve sparks off the outside skate, thicker and brighter with
+          // each tier, and from the inside one as well once it is charged.
+          const tier = m.carveTier;
+          const want = (1.4 + tier * 1.1) * this.feel.sparks;
+          const n = Math.floor(want) + (Math.random() < want % 1 ? 1 : 0);
+          const out = m.carveDir > 0 ? 0 : 1;
+          v3.copy(v.vel).multiplyScalar(0.3);
+          for (const heel of tier > 0 ? [out, 1 - out] : [out]) {
+            v.rig.heels[heel].getWorldPosition(v1);
+            trackDir(track, v.s, -0.55, heel === 0 ? -0.75 : 0.75, v2);
+            this.fx.spray(v1, v3, v2, heel === out ? n : Math.ceil(n / 2), 18 + tier * 5, CARVE_COLORS[tier], 0.28 + tier * 0.07, 0.3 + tier * 0.04);
+          }
+        }
         if (m.onStrip && !m.retired) {
           trackPoint(track, v.s, v.d + (Math.random() - 0.5) * 3, 0.3, v1);
           this.fx.spray(v1, v.vel, v3.set(0, 1, 0), 2, 9, COLORS.charge, 0.4, 0.5);
@@ -329,7 +352,7 @@ export class RaceView {
           this.fx.burst(v1, v.vel, 1, 10, COLORS.snare, 0.3, 0.3);
         }
       }
-      if (m.retired || m.hp < CLASSES[m.role].maxHp * 0.25) {
+      if (m.retired || m.hp < m.maxHp * 0.25) {
         v.smokeT -= dt;
         if (v.smokeT <= 0) {
           v.smokeT = m.retired ? 0.07 : 0.16;
@@ -440,7 +463,7 @@ export class RaceView {
     this.flashUniform = Math.max(0, this.flashUniform - dt * 4.5);
     this.hurt = Math.max(0, this.hurt - dt * 1.8);
     u.uFlash.value = this.flashUniform * 0.55;
-    const critical = focus.hp < CLASSES[focus.role].maxHp * 0.25 && !focus.retired ? 0.35 + Math.sin(this.time * 6) * 0.15 : 0;
+    const critical = focus.hp < focus.maxHp * 0.25 && !focus.retired ? 0.35 + Math.sin(this.time * 6) * 0.15 : 0;
     u.uHurt.value = Math.max(this.hurt, critical);
 
     // ---- screen positions for the HUD
@@ -634,6 +657,25 @@ export class RaceView {
         this.fx.flash(v1, 9, v.livery.glow, 0.25, v.rig.root, true);
         this.fx.burst(v1, v.vel, 18, 36, v.livery.glow, 0.45, 0.35);
         if (e.mech === local) this.cam.shake(0.2);
+        break;
+      }
+      case 'carve': {
+        // A tier reached: a pop of its colour off the skates.
+        const v = this.mechs[e.mech];
+        const out = race.mechs[e.mech].carveDir > 0 ? 0 : 1;
+        v.rig.heels[out].getWorldPosition(v1);
+        this.fx.burst(v1, v.vel, 8 + e.tier * 6, 16 + e.tier * 5, CARVE_COLORS[e.tier], 0.4, 0.35);
+        if (e.tier >= 2) this.fx.flash(v1, 4 + e.tier * 2, CARVE_COLORS[e.tier], 0.16, v.rig.root, true);
+        break;
+      }
+      case 'carveBurst': {
+        // Let go: the charge goes out the back in a flash of its colour.
+        const v = this.mechs[e.mech];
+        v.burstTier = e.tier;
+        trackPoint(track, v.s - 2, v.d, 2.5, v1);
+        this.fx.flash(v1, 6 + e.tier * 2.5, CARVE_COLORS[e.tier], 0.22, v.rig.root, true);
+        this.fx.burst(v1, v.vel, 10 + e.tier * 8, 26 + e.tier * 6, CARVE_COLORS[e.tier], 0.45, 0.35);
+        if (e.mech === local) this.cam.shake(0.08 + e.tier * 0.05);
         break;
       }
       case 'launch': {

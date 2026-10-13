@@ -69,6 +69,7 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Steer', 'Left stick', 'A D'],
       ['Accelerate', 'RT', 'W'],
       ['Brake', 'LT', 'S'],
+      ['Carve (hold through a corner, let go to burst)', 'LT + left stick', 'S + A or D'],
       ['Boost (uses Drive)', 'A', 'Space'],
       ['Ability (uses a Cell)', 'B', 'R'],
       ['Look around', 'Right stick', ''],

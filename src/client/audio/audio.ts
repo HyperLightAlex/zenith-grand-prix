@@ -10,6 +10,7 @@ export type SfxName =
   | 'ui_move' | 'ui_select' | 'ui_back'
   | 'count_beep' | 'count_go' | 'launch'
   | 'boost' | 'dash' | 'lock' | 'unlock' | 'denied'
+  | 'carve_tier' | 'carve_burst'
   | 'swing_light' | 'swing_heavy' | 'hit_light' | 'hit_heavy' | 'block' | 'parry' | 'guard_break'
   | 'tell' | 'tell_dodge' | 'momentum' | 'momentum_hit' | 'ringout'
   | 'shot_carbine' | 'shot_scatter' | 'bullet_hit'
@@ -55,6 +56,12 @@ export interface AudioScene {
   drafting: boolean;
   /** Scraping along a barrier. */
   scraping: boolean;
+  /**
+   * Carving: how tight it is held (0 for no carve, up to 1), and the tier its
+   * charge has reached (0 to 3). Optional: left out, there is no carve.
+   */
+  carve?: number;
+  carveTier?: number;
   /** Armour below a quarter. */
   critical: boolean;
 }

@@ -19,8 +19,15 @@ const LEVEL = {
   boostNoise: 0.8,
   strip: 0.12,
   scrape: 1.6,
+  carveHiss: 0.5,
+  carveHum: 0.05,
   alarm: 0.08,
 };
+
+/** The carve's hum for each tier: a root, then its fifth, octave and the fifth above. */
+const CARVE_HUM_HZ = [220, 330, 440, 660];
+/** ...and its shimmer, faster with each tier. */
+const CARVE_SHIMMER_HZ = [5, 8, 11, 15];
 
 /**
  * The player's own mix of the continuous layers, 0..1 each (the tuning
@@ -123,6 +130,12 @@ export class EngineLayers {
   private readonly stripPatch: Patch;
   private readonly scrapeGain: Glide;
   private readonly scrapePatch: Patch;
+  private readonly carvePatch: Patch;
+  private readonly carveHiss: Glide;
+  private readonly carveHissCut: Glide;
+  private readonly carveHum: Glide;
+  private readonly carveHumF: Glide[];
+  private readonly carveShimmer: Glide;
   private readonly alarmGain: AudioParam;
   private readonly alarmPatch: Patch;
 
@@ -240,6 +253,33 @@ export class EngineLayers {
       bp.connect(this.gain(g, rough));
     }
 
+    // --- carving: the skates' edges hissing on the road, and under it a soft
+    // hum that steps up a fifth or a fourth with each tier of charge, its
+    // shimmer quickening. Kept low and round: the afterburner's old climbing
+    // tone was taken out for being shrill.
+    const carveOut = this.gain(1, null);
+    this.carvePatch = new Patch(carveOut, out);
+    const edgeBp = this.filter('bandpass', 3800, 1.6);
+    this.carveHissCut = new Glide(edgeBp.frequency, 0.1, 3800);
+    const edgeG = this.gain(0, carveOut);
+    this.carveHiss = new Glide(edgeG.gain, 0.05, 0);
+    hiss.connect(edgeBp);
+    edgeBp.connect(edgeG);
+    const humLp = this.filter('lowpass', 1400, 0.7);
+    const shimmer = this.gain(0.75, null);
+    const shimOsc = this.osc('sine', CARVE_SHIMMER_HZ[0]);
+    shimOsc.connect(this.gain(0.25, shimmer.gain));
+    this.carveShimmer = new Glide(shimOsc.frequency, 0.08, CARVE_SHIMMER_HZ[0]);
+    const humG = this.gain(0, carveOut);
+    this.carveHum = new Glide(humG.gain, 0.08, 0);
+    humLp.connect(shimmer);
+    shimmer.connect(humG);
+    const h1 = this.osc('triangle', CARVE_HUM_HZ[0]);
+    const h2 = this.osc('sine', CARVE_HUM_HZ[0] * 2.003);
+    h1.connect(this.gain(1, this.pan(-0.25, humLp)));
+    h2.connect(this.gain(0.35, this.pan(0.25, humLp)));
+    this.carveHumF = [new Glide(h1.frequency, 0.05, CARVE_HUM_HZ[0]), new Glide(h2.frequency, 0.05, CARVE_HUM_HZ[0] * 2.003)];
+
     // --- low-armour alarm: a soft beep, scheduled ahead like the music.
     const alarmG = this.gain(0, null);
     this.alarmGain = alarmG.gain;
@@ -247,7 +287,7 @@ export class EngineLayers {
     this.osc('sine', 659.3).connect(alarmG);
     this.osc('sine', 1318.5).connect(this.gain(0.25, alarmG));
 
-    this.taps = { engine: engG, whine: whineG, wind: windG, road: roadG, draft: draftG, boostNoise: boostNG, strip: stripG, scrape: scrapeG, alarm: alarmG };
+    this.taps = { engine: engG, whine: whineG, wind: windG, road: roadG, draft: draftG, boostNoise: boostNG, strip: stripG, scrape: scrapeG, carveHiss: edgeG, carveHum: humG, alarm: alarmG };
   }
 
   /** The player's mix of the layers. Values are 0..1; anything else is ignored. */
@@ -364,6 +404,19 @@ export class EngineLayers {
     const scrape = on && s.scraping;
     this.scrapePatch.set(scrape, now, TAIL);
     this.scrapeGain.to(scrape ? LEVEL.scrape * mix.scrape * (0.5 + 0.5 * x1) : 0, now, scrape ? 0.03 : 0.08);
+
+    // Carving. The hiss follows how tight the carve is held; the hum's pitch
+    // and shimmer step with the tier.
+    const carveAmt = on && !s.battle ? clamp(Number.isFinite(s.carve) ? (s.carve as number) : 0, 0, 1) : 0;
+    const tier = clamp(Math.round(Number.isFinite(s.carveTier) ? (s.carveTier as number) : 0), 0, 3);
+    const carving = carveAmt > 0;
+    this.carvePatch.set(carving, now, TAIL);
+    this.carveHissCut.to(3000 + 2200 * carveAmt + 400 * tier, now);
+    this.carveHiss.to(carving ? LEVEL.carveHiss * mix.scrape * (0.35 + 0.65 * carveAmt) * (0.4 + 0.6 * x1) : 0, now, carving ? 0.04 : 0.1);
+    this.carveHumF[0].to(CARVE_HUM_HZ[tier], now);
+    this.carveHumF[1].to(CARVE_HUM_HZ[tier] * 2.003, now);
+    this.carveShimmer.to(CARVE_SHIMMER_HZ[tier], now);
+    this.carveHum.to(carving ? LEVEL.carveHum * mix.strip * (0.5 + 0.5 * (tier / 3)) : 0, now, carving ? 0.06 : 0.12);
 
     // Alarm: a few soft beeps when armour first goes critical, queued ahead of
     // the clock like the music, and then quiet. (It used to beep twice a

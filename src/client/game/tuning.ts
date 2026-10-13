@@ -121,6 +121,16 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('momentumKnock', 'Momentum strike knockback', 1, 2.5, 0.05, 'x'),
       rule('ringoutThrow', 'Heavy blows: throw across the road', 0.8, 2, 0.05, 'x', 'How hard heavy blows throw a mech toward the barrier.'),
       rule('ringoutDamage', 'Ring-out damage', 0, 60, 1, 'int', 'Damage for being thrown into the barrier, before the part that grows with the impact.'),
+      rule('armourScale', 'Armour', 0.5, 1.5, 0.05, 'x', 'Scales every frame. 1.00 is 1600 for the Swift and Vector, 2000 for the Bulwark.'),
+    ],
+  },
+  {
+    title: 'Carving',
+    items: [
+      rule('carveGrip', 'Grip while carving', 1, 2.5, 0.05, 'x'),
+      rule('carveDrag', 'Speed lost carving', 0, 30, 1, 'int', 'Per second, with the stick hard over. Less with less stick.'),
+      rule('carveCharge', 'Charge rate', 0.3, 3, 0.05, 'x', 'How fast a carve climbs the three spark colours.'),
+      rule('carveBurst', 'Burst on release', 0, 2, 0.05, 'x', 'Scales the burst: +15%, +25% or +35% for 0.5, 0.8 or 1.1 seconds. 0 turns it off.'),
     ],
   },
   {
@@ -139,11 +149,14 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('driveStart', 'Drive on the grid', 0, 100, 5, 'int'),
       rule('driveStripLap1', 'Charge strip, lap 1', 0, 20, 0.5, 'int', 'Drive per second.'),
       rule('driveStrip', 'Charge strip, later laps', 0, 20, 0.5, 'int'),
-      rule('lap1Trickle', 'Free Drive on lap 1', 0, 1, 1, 'onoff', 'Off: on lap 1 Drive comes only from the strips.'),
+      rule('lap1Trickle', 'Free Drive on lap 1', 0, 1, 1, 'onoff', 'Off: on lap 1 Drive comes only from the strips, landings and passes.'),
+      rule('driveLanding', 'Drive for a clean landing', 0, 20, 1, 'int'),
+      rule('drivePass', 'Drive for a close pass', 0, 20, 1, 'int'),
       rule('cellStart', 'Cells on the grid', 0, 3, 0.5, 'int'),
       rule('gateValue', 'Cells per gate, lap 1', 0.25, 1, 0.25, 'int'),
       rule('gateValueLater', 'Cells per gate, later laps', 0, 1, 0.25, 'int', 'Lower this to make a spent Cell harder to earn back. 0 puts the gates out after lap 1.'),
       rule('gateLaps', 'Laps the gates are lit', 1, 3, 1, 'int'),
+      rule('gateRelight', 'Gate relights after', 0, 15, 0.5, 'sec', 'A gate goes dark for everyone when someone takes it. 0: never dark.'),
     ],
   },
   {
@@ -165,7 +178,14 @@ export const TUNE_GROUPS: TuneGroup[] = [
   },
   {
     title: 'Scoring',
-    items: [rule('koPoints', 'Points per knockout', 0, 10, 1, 'int')],
+    items: [
+      rule('koPoints', 'Points per knockout', 0, 10, 1, 'int'),
+      rule('supportCap', 'Support points per pilot', 0, 20, 1, 'int', 'The most one pilot can add to the team score with support actions in a race. 0 turns them off.'),
+      rule('awardCooldown', 'Same action, same rival: again after', 0, 20, 0.5, 'sec'),
+      rule('pressureDamage', 'Vector Pressure: damage per point', 50, 500, 10, 'int'),
+      rule('backupDamage', 'Vector Back-up: damage per point', 40, 400, 10, 'int'),
+      rule('assistSecs', 'Assist window', 1, 15, 0.5, 'sec'),
+    ],
   },
   {
     title: 'Camera',
@@ -237,7 +257,9 @@ export function showValue(item: TuneItem, v: number): string {
   }
 }
 
-const STORE_KEY = 'zenith-gp.tuning.v2';
+const STORE_KEY = 'zenith-gp.tuning.v3';
+/** 0.3 and earlier: the rules have moved on since, so only the feel carries over. */
+const OLD_STORE_KEY = 'zenith-gp.tuning.v2';
 
 export class Tuning {
   /** Live values. The camera and effects read these every frame. */
@@ -328,7 +350,11 @@ export class Tuning {
   private load(): void {
     try {
       const raw = window.localStorage.getItem(STORE_KEY);
-      if (!raw) return;
+      if (!raw) {
+        const old = window.localStorage.getItem(OLD_STORE_KEY);
+        if (old) this.takeFeel((JSON.parse(old) as { feel?: Partial<Feel> }).feel);
+        return;
+      }
       const data = JSON.parse(raw) as { rules?: Partial<Rules>; feel?: Partial<Feel> };
       this.rules = makeRules(data.rules);
       this.takeFeel(data.feel);

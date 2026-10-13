@@ -1,6 +1,6 @@
 // Helpers shared by movement, combat and AI.
 
-import { CLASSES, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, ROLE, type ClassDef } from './config';
+import { CARVE_STEER_MID, CARVE_STEER_WIDE, CLASSES, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, ROLE, type ClassDef } from './config';
 import { clamp, wrapAngle } from './math';
 import { deltaS, splitApart, type Track } from './track';
 import type { MechState, RaceState } from './types';
@@ -92,6 +92,19 @@ export function clearEffects(m: MechState): void {
   dropCarve(m);
   m.carveT = 0;
   m.carveBoost = 0;
+}
+
+/** How hard a carve turning `dir` (1 right, -1 left) turns, as a fraction of full lock, for stick `mx`. */
+export function carveSteer(dir: number, mx: number): number {
+  const lean = clamp(mx * dir, -1, 1);
+  return dir * (lean >= 0 ? CARVE_STEER_MID + lean * (1 - CARVE_STEER_MID) : CARVE_STEER_MID + lean * (CARVE_STEER_MID - CARVE_STEER_WIDE));
+}
+
+/** The stick that makes a carve turning `dir` turn at `want` (the inverse of carveSteer, held to the stick's travel). */
+export function carveStick(dir: number, want: number): number {
+  const w = want * dir;
+  const lean = w >= CARVE_STEER_MID ? (w - CARVE_STEER_MID) / (1 - CARVE_STEER_MID) : (w - CARVE_STEER_MID) / (CARVE_STEER_MID - CARVE_STEER_WIDE);
+  return dir * clamp(lean, -1, 1);
 }
 
 /** A carve ends with nothing to show for it: knocked about, locked on, or out of the race. */

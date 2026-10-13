@@ -155,20 +155,28 @@ export const LANDING_AIR_TICKS = 20;
 export const PASS_WIDTH = 10;
 
 // ---- Carving ---------------------------------------------------------------
-// Hold the brake trigger while steering: more grip, a little speed bled, and
-// charge for a burst on release. How much grip and drag, and scales on the
-// charge and the burst, are rules; the shape is here.
+// A held drift: pull the brake trigger with the stick over and the mech digs
+// its skates in, turning that way for as long as the trigger stays held. More
+// grip, a little speed bled, and charge for a burst on release. How much grip
+// and drag, and scales on the charge and the burst, are rules; the shape is here.
 /** Trigger needed to start a carve, and to keep one going. */
 export const CARVE_TRIGGER = 0.5;
 export const CARVE_HOLD_TRIGGER = 0.3;
-/** Stick needed to start a carve (below it the trigger brakes), and to keep one going. */
+/** Stick needed to start a carve: below it the trigger brakes. */
 export const CARVE_MIN_STEER = 0.35;
-export const CARVE_HOLD_STEER = 0.1;
+/**
+ * Once a carve is on, the stick only shapes it, it cannot straighten it: with
+ * the stick in the middle the carve turns at CARVE_STEER_MID of full lock,
+ * pushed into the turn it tightens to full lock, pushed out of it it opens to
+ * CARVE_STEER_WIDE. The tighter the carve, the faster it charges.
+ */
+export const CARVE_STEER_MID = 0.55;
+export const CARVE_STEER_WIDE = 0.15;
 /** Too slow to carve: below this the trigger brakes. */
 export const CARVE_MIN_SPEED = 40;
 /** Turn rate ceiling while carving, as a multiple of the frame's own. */
 export const CARVE_TURN = 1.35;
-/** Seconds of full charge for each tier (a hard carve through a bend this tight charges at 1 a second). */
+/** Charge for each tier: a carve at full lock through a bend of CARVE_BEND_RADIUS charges 1 a second. */
 export const CARVE_TIERS = [0.5, 1.1, 1.8] as const;
 /** Burst for each tier: extra top speed, and seconds it lasts. */
 export const CARVE_BURST = [0.15, 0.25, 0.35] as const;

@@ -246,6 +246,16 @@ html, body {
 .speed .limiter.pack { background: var(--paper); color: var(--ink); }
 .speed.boost .mph { color: var(--charge); }
 
+/* Carve meter, over the speed: three skewed segments filling cyan, gold, magenta. */
+.carve { position: absolute; right: 2.2em; bottom: 10.6em; display: flex; align-items: center; gap: 0.7em; opacity: 0; transform: translateX(0.6em); transition: opacity 0.18s, transform 0.18s; --tier: #d8ecff; }
+.carve.on { opacity: 1; transform: none; }
+.carve .label { font-weight: 700; font-size: 1.15em; color: var(--tier); text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.6); min-width: 5.5em; text-align: right; }
+.carve .segs { display: flex; gap: 0.3em; width: 11em; }
+.carve .seg { position: relative; flex: 1; height: 0.75em; background: rgba(15, 21, 36, 0.72); transform: skewX(-18deg); overflow: hidden; }
+.carve .seg > i { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); }
+.carve.burst .segs { filter: drop-shadow(0 0 0.5em var(--tier)); animation: carve-burst 0.35s ease-out; }
+@keyframes carve-burst { from { transform: scale(1.12); } to { transform: none; } }
+
 /* ---- HUD: bottom left, tactics ------------------------------------------ */
 
 .tactics { position: absolute; left: 2.2em; bottom: 1.6em; width: 15em; height: 8.6em; }

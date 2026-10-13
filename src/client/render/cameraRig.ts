@@ -80,7 +80,8 @@ export class CameraRig {
     const speedFrac = Math.min(1.45, m.speed / FULL_SPEED);
     const inBattle = m.mode === MODE.BATTLE && sub.target !== null && !m.retired;
     this.battleW = toward(this.battleW, inBattle ? 1 : 0, 6, dt);
-    this.boostW = toward(this.boostW, m.boosting ? 1 : 0, 5, dt);
+    // A carve's burst opens the view like a boost.
+    this.boostW = toward(this.boostW, m.boosting || (m.carveT > 0 && m.mode === MODE.SPEED) ? 1 : 0, 5, dt);
     this.surgeW = toward(this.surgeW, m.overdriveT > 0 ? 1 : 0, 5, dt);
     this.lookBackW = toward(this.lookBackW, lookBack ? 1 : 0, 14, dt);
     this.pan = toward(this.pan, inBattle ? 0 : panX * 1.15, 9, dt);

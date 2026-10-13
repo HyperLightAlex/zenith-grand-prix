@@ -83,7 +83,6 @@ import {
   CARVE_BURST,
   CARVE_BURST_SECS,
   CARVE_FULL_SPEED,
-  CARVE_HOLD_STEER,
   CARVE_HOLD_TRIGGER,
   CARVE_MIN_SPEED,
   CARVE_MIN_STEER,
@@ -99,6 +98,7 @@ import { freshAwardTicks, freshHurtBy, onPass, onRingout } from './awards';
 import {
   addVelocity,
   classOf,
+  carveSteer,
   clearEffects,
   dropCarve,
   cycleTarget,
@@ -310,11 +310,12 @@ function releaseCarve(race: RaceState, m: MechState): void {
 }
 
 /**
- * Carving: the brake trigger held with the stick over. It starts with the
- * trigger past CARVE_TRIGGER and the stick past CARVE_MIN_STEER (less stick
- * than that and the trigger is a brake), holds while both stay on and the
- * stick stays the same way, and ends with a burst for the tier reached. A
- * stagger ends it with nothing; so does the end of the race.
+ * Carving, a held drift: it starts with the trigger past CARVE_TRIGGER and the
+ * stick past CARVE_MIN_STEER (less stick than that and the trigger is a
+ * brake), turns the way the stick was pushed for as long as the trigger stays
+ * held (the stick only tightens or opens it, see carveSteer), and ends with a
+ * burst for the tier reached when the trigger comes up. A stagger ends it with
+ * nothing; so does the end of the race.
  */
 function stepCarve(race: RaceState, m: MechState, input: MechInput): void {
   const mx = clamp(input.mx, -1, 1);
@@ -322,7 +323,7 @@ function stepCarve(race: RaceState, m: MechState, input: MechInput): void {
   const knocked = m.act === ACT.STAGGER || m.finished;
   if (m.carving) {
     if (knocked) dropCarve(m);
-    else if (trig < CARVE_HOLD_TRIGGER || mx * m.carveDir < CARVE_HOLD_STEER || m.speed < CARVE_MIN_SPEED * 0.75) releaseCarve(race, m);
+    else if (trig < CARVE_HOLD_TRIGGER || m.speed < CARVE_MIN_SPEED * 0.75) releaseCarve(race, m);
   } else if (!knocked && !m.air && trig >= CARVE_TRIGGER && Math.abs(mx) >= CARVE_MIN_STEER && m.speed >= CARVE_MIN_SPEED) {
     m.carving = true;
     m.carveDir = mx > 0 ? 1 : -1;
@@ -336,12 +337,12 @@ function stepCarve(race: RaceState, m: MechState, input: MechInput): void {
   }
 }
 
-/** Charge a carve: harder with more stick, a tighter bend and more speed. A straight hardly charges at all. */
-function chargeCarve(race: RaceState, track: Track, m: MechState, input: MechInput): void {
+/** Charge a carve: faster the tighter it is held, the tighter the bend and the quicker the mech. A straight hardly charges at all. */
+function chargeCarve(race: RaceState, track: Track, m: MechState, sharp: number): void {
   if (!m.carving || m.air) return;
   const kappa = kappaAt(track, m.s);
   const bend = kappa * m.carveDir > 0 ? clamp(CARVE_BEND_RADIUS * Math.abs(kappa), CARVE_BEND_MIN, CARVE_BEND_MAX) : CARVE_BEND_MIN;
-  const rate = Math.abs(clamp(input.mx, -1, 1)) * bend * Math.min(1, m.speed / CARVE_FULL_SPEED) * race.rules.carveCharge;
+  const rate = sharp * bend * Math.min(1, m.speed / CARVE_FULL_SPEED) * race.rules.carveCharge;
   m.carveCharge += rate * DT;
   let tier = 0;
   for (let i = 0; i < CARVE_TIERS.length; i++) if (m.carveCharge >= CARVE_TIERS[i]) tier = i + 1;
@@ -353,8 +354,11 @@ function chargeCarve(race: RaceState, track: Track, m: MechState, input: MechInp
 
 function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef, input: MechInput): void {
   const staggered = m.act === ACT.STAGGER;
-  m.steer = approach(m.steer, staggered ? 0 : clamp(input.mx, -1, 1), STEER_RATE * DT);
   stepCarve(race, m, input);
+  // Carving, the stick shapes the turn rather than choosing it.
+  const steerIn = m.carving ? carveSteer(m.carveDir, input.mx) : clamp(input.mx, -1, 1);
+  const sharp = m.carving ? Math.abs(steerIn) : 0;
+  m.steer = approach(m.steer, staggered ? 0 : steerIn, STEER_RATE * DT);
 
   let cap = speedCap(race, m, c);
   const wasBoosting = m.boosting;
@@ -397,8 +401,8 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
     m.speed = Math.max(want, m.speed - drag * DT);
   }
   if (brake > 0) m.speed -= brake * c.brake * DT;
-  // A carve bleeds a little speed, more the harder it is held over.
-  if (m.carving && !m.air) m.speed -= race.rules.carveDrag * (0.4 + 0.6 * Math.abs(clamp(input.mx, -1, 1))) * DT;
+  // A carve bleeds a little speed, more the tighter it is held.
+  if (m.carving && !m.air) m.speed -= race.rules.carveDrag * (0.4 + 0.6 * sharp) * DT;
   if (staggered) m.speed -= STAGGER_DRAG * DT;
   if (m.speed < 0) m.speed = 0;
   // Whatever threw the mech forward (a dash carried out of a lock, a shove),
@@ -417,7 +421,7 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   m.heading = clamp(m.heading + (m.steer * omegaMax - kappa * sdot + align) * DT, -MAX_HEADING, MAX_HEADING);
   m.facing = m.heading;
   syncFromSpeed(m);
-  chargeCarve(race, track, m, input);
+  chargeCarve(race, track, m, sharp);
 }
 
 function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef, input: MechInput): void {

@@ -11,6 +11,7 @@ const clamp01 = (t: number) => (t < 0 ? 0 : t > 1 ? 1 : t);
 const toward = (v: number, target: number, rate: number, dt: number) => v + (target - v) * (1 - Math.exp(-rate * dt));
 
 const staggerMirror = mirrorPose(POSES.stagger);
+const carveLeft = mirrorPose(POSES.carveRight);
 
 export class MechAnimator {
   private pose = makePose();
@@ -18,6 +19,8 @@ export class MechAnimator {
   private battleW = 0;
   private guardW = 0;
   private boostW = 0;
+  /** Carving, signed: positive to the right. */
+  private carveW = 0;
   private koW = 0;
   private winW = 0;
   private airW = 0;
@@ -47,14 +50,18 @@ export class MechAnimator {
     this.winW = toward(this.winW, m.finished && !m.retired ? 1 : 0, 2.5, dt);
     this.airW = toward(this.airW, m.air && !m.retired ? 1 : 0, 10, dt);
     this.fallW = toward(this.fallW, m.fallT > 0 && !m.retired ? 1 : 0, 6, dt);
+    this.carveW = toward(this.carveW, m.carving && !m.air && !m.retired ? m.carveDir : 0, 12, dt);
     const speedFrac = clamp01(m.speed / (PACE * 1.25));
     const P = this.pose;
 
     // ---- base: tuck, with a skating stride that settles into a glide
     copyPose(P, POSES.tuck);
     blendPose(P, POSES.boost, this.boostW);
-    // No stride in the air: the skates have nothing to push on.
-    const amp = (1 - ease(clamp01((speedFrac - 0.25) / 0.6)) * 0.8) * clamp01(m.speed / 8) * (1 - this.airW);
+    // Carving: down on the edges, no stride.
+    const carving = Math.abs(this.carveW);
+    if (carving > 0.001) blendPose(P, this.carveW > 0 ? POSES.carveRight : carveLeft, ease(carving));
+    // No stride in the air (the skates have nothing to push on), or carving.
+    const amp = (1 - ease(clamp01((speedFrac - 0.25) / 0.6)) * 0.8) * clamp01(m.speed / 8) * (1 - this.airW) * (1 - carving);
     this.stride += dt * (2.4 + speedFrac * 3.2);
     const ph = this.stride;
     const sn = Math.sin(ph);
@@ -166,7 +173,8 @@ export class MechAnimator {
     // ---- whole-body lean: bank into turns, pitch with acceleration
     const accel = dt > 0 ? (m.speed - this.prevSpeed) / dt : 0;
     this.prevSpeed = m.speed;
-    const wantLean = battle ? 0 : m.steer * 0.42 * clamp01(m.speed / 40);
+    // A carve leans in further than a turn.
+    const wantLean = battle ? 0 : m.steer * (0.42 + 0.26 * carving) * clamp01(m.speed / 40);
     this.lean = toward(this.lean, wantLean * (1 - this.koW), 8, dt);
     this.pitch = toward(this.pitch, Math.max(-0.12, Math.min(0.1, accel * 0.0022)) * (1 - this.battleW), 5, dt);
     this.rig.body.rotation.set(-this.pitch, 0, this.lean);
