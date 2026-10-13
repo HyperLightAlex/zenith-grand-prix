@@ -6,13 +6,30 @@ sheets in `art/fx-sheets`. Each circuit has four sheets:
 
 | Sheet | What | How the game uses it |
 |---|---|---|
-| 1 Sky | One painting of the whole sky, unrolled, the left edge continuing into the right; the horizon level, three quarters down; the sun's glow at the middle | Wrapped round the sky dome in place of the gradient, the middle turned to face the sun |
+| 1 Sky | Half the sky, the half facing the sun, unrolled: the horizon level about three quarters down, the zenith along the top, the sun's glow at the middle | Half the sky dome, horizon to zenith, in place of the gradient, the middle turned to face the sun |
+| 1B Sky | The other half, facing away from the sun, painted to join sheet 1 at both edges (made with sheet 1 attached) | The other half of the dome. Helios has no sun side, so its sheet 1 is simply used twice |
 | 2 Horizon | Three silhouette strips on green, each tiling end to end, farthest at the top | Rings round the circuit at three distances, for depth, in place of the cone mountains |
 | 3 Clouds | Six clouds on green, one per cell of a 3x2 grid | Painted cards in place of the cumulus |
 | 4 Surfaces | Six tiling squares, 512 px, in a 3x2 grid, evenly lit | Textures on the scenery (sea, rock, buildings), under the cel shading |
 
-The green (`#00FF00`) is keyed out the same way as the effect sheets'
-magenta (`tools/fx/ingest.py` reads the key colour from the corners).
+Why half a sky to a sheet: a sheet is 1536 px wide and its sky 745 px tall.
+Stretched round all 360 degrees but only up to the zenith, it would be four
+times as coarse across as it is up and down, the clouds pulled out sideways.
+As half the sky it has the same detail both ways, about 8.5 px a degree.
+
+The green (`#00FF00`) is keyed out by how far the green stands above the
+other two channels (a colour-difference key), with the green taken back out
+of the edge pixels; nothing painted on these sheets is green.
+
+## Status
+
+| Sheet | File | Notes |
+|---|---|---|
+| M1 Sky | bg-m1-sky.png | horizon at 745 px; the edges wrap well; the sun-side half of the sky |
+| M1B Sky | | to do: the half facing away (prompt below) |
+| M2 Horizon | bg-m2-horizon.png | three strips, bottoms dead level, ends match to within a few pixels |
+| M3 Clouds | bg-m3-clouds.png | six clouds; the second is a little wider than its cell, so the clouds are cut by their outlines, not by the grid |
+| M4 Surfaces | bg-m4-surfaces.png | the squares do not quite repeat at their edges; each is cut to the length that wraps (whole window bays on the facades) and its seams blended |
 
 ## Meridian Skyway
 
@@ -66,10 +83,22 @@ SHEET M4: SURFACES (six tiling squares, full bleed)
 - 6, bottom right: white painted metal panels with fine seams and rivets, for the landmark towers and the great white ring over the track.
 ```
 
+Sheet M1B, made with M1 attached:
+
+```
+SHEET M1B: THE OTHER HALF OF THE MERIDIAN SKY (attach sheet M1)
+
+Same size (1536x1024), same style and palette as the attached sheet, the horizon at exactly the same height, the same flat warm haze below it and the same plain deep blue along the top edge.
+
+The attached sheet is the half of the sky that faces the low sun. Paint the other half, the sky behind the viewer, facing away from the sun. Its left edge must continue seamlessly from the attached sheet's right edge, and its right edge must continue seamlessly into the attached sheet's left edge, so that the two sheets side by side make the whole sky round.
+
+No sun and no golden glow here: the sky facing away from a low sun is cooler and a clearer blue, with a soft band of pink and lavender just above the horizon. The high cirrus streaks and the broken band of flat-bottomed altocumulus carry on across it, a little sparser than on the sun side, their faces lit warm pink-gold by the sun behind the viewer, lavender-blue in shadow. No big towering cumulus. No sun disc, no text, no outlines.
+```
+
 ## Corkscrew Canyon
 
 ```
-ZENITH GP: CIRCUIT BACKGROUNDS. CORKSCREW CANYON (four sheets; make them one at a time, in order, each as its own image)
+ZENITH GP: CIRCUIT BACKGROUNDS. CORKSCREW CANYON (five sheets; make them one at a time, in order C1, C2, C3, C4, then C1B with C1 attached, each as its own image)
 
 The setting: a racing circuit through a red-rock desert at dusk, the copper light of the setting sun low across mesas, buttes, hoodoos and a deep cut through the rock, under a violet sky. The game draws the road, the mechs and the nearby rock; these sheets are the painted world around them.
 
@@ -87,8 +116,8 @@ SHEETS 2 AND 3 ARE CUT OUT BY THE GAME
 - Nothing in the art itself may be green or close to it.
 - Crisp edges against the green, with no soft halo.
 
-SHEET C1: SKY (full bleed, no green)
-- The whole sky around the viewer, unrolled into one painting: the left edge must continue seamlessly into the right edge.
+SHEET C1: SKY, THE HALF FACING THE SUN (full bleed, no green)
+- Half the sky around the viewer, the half facing the sun, unrolled into one painting from the horizon at the bottom to straight overhead at the top edge. Its left edge should also continue seamlessly into its right edge.
 - The horizon is a perfectly straight, level line exactly three quarters of the way down (768 px from the top). Below it, only flat coral haze (#D88A6A); paint nothing there.
 - The sun is just touching the horizon at the middle of the image. Paint its orange glow spreading along the horizon but not the sun disc itself (the game draws it). Away from it, towards the left and right edges, the sky deepens to violet and indigo, with a few small stars near the top at the edges.
 - An airbrushed gradient from deep indigo at the top through violet to orange at the horizon.
@@ -116,6 +145,11 @@ SHEET C4: SURFACES (six tiling squares, full bleed)
 - 4, bottom left: deep shadowed gorge rock, dark red-violet with vertical cracks and fallen scree, for the walls of a narrow gorge.
 - 5, bottom middle: the softer stone of hoodoos and spires, pink-orange bands with rounded erosion pockets.
 - 6, bottom right: a cracked dry lakebed, pale salmon clay broken into polygons.
+
+SHEET C1B: SKY, THE HALF FACING AWAY (make it after C1, with C1 attached)
+- Same size, style and palette as C1, the horizon at exactly the same height, the same flat haze below it and the same plain deep indigo along the top edge.
+- The other half of the sky, behind the viewer, facing away from the setting sun. Its left edge must continue seamlessly from C1's right edge, and its right edge seamlessly into C1's left edge, so the two side by side make the whole sky round.
+- No sun glow here: a deep violet-blue dusk sky, darkening to indigo higher up with more small stars, and a soft band of dusky pink just above the horizon. The bands of high cloud carry on across it, sparser, their undersides catching only a faint coral light, mostly violet-grey.
 ```
 
 ## Helios Drop
@@ -140,7 +174,7 @@ SHEETS 2 AND 3 ARE CUT OUT BY THE GAME
 - Crisp edges against the green, with no soft halo.
 
 SHEET H1: SKY (full bleed, no green)
-- The whole sky around the viewer, unrolled into one painting: the left edge must continue seamlessly into the right edge.
+- Half the sky around the viewer, unrolled into one painting from the horizon at the bottom to straight overhead at the top edge; the game uses it twice to go all the way round, so its left edge must continue seamlessly into its right edge.
 - The horizon is a perfectly straight, level line exactly three quarters of the way down (768 px from the top). Below it, only flat pale haze (#BCD3F2); paint nothing there.
 - The sun is high overhead, out of the picture: the light is even all the way round, with no warm glow and no brighter side.
 - An airbrushed gradient from deep ultramarine at the top, almost the dark blue of the upper air, through bright blue to pale blue at the horizon.
