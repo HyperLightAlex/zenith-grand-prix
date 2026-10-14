@@ -108,13 +108,16 @@ FORMAT
 Attach `hud-sheets/hud-u2-pilots.png` and `faction-f1-pilots.png` (the
 pilots' hand), `hud-sheets/hud-u3-emblems.png` and
 `faction-f2b-mirage-emblem.png` (the emblems' style, breaking out of the
-shield), and `faction-f2-emblems.png` (the lettering).
+shield), and `faction-f2-emblems.png` (the lettering). If one image is too
+much for the model, it can come as two: the portraits across the top of a
+1536x1024 image with the rest plain black (`faction-t1a-tempest-pilots.png`),
+and the emblem and name on magenta (`faction-t1b-tempest-emblem.png`).
 
 ```
 ZENITH GP: TEAM TEMPEST (one sheet: three pilots, the emblem and the team's name)
 
 The game: a mech racing game in the style of a 1980s Japanese TV mecha anime, teams of giant robots racing and fighting on circuits in the sky. Four teams are already drawn (the attached sheets); this is the fifth, drawn by the same hand.
-- Team Tempest, the storm samurai: armour like a samurai's, lacquered jade green with black and gold, with lightning for light; storm gods, wind and thunder.
+- Team Tempest, the storm team: storm machines with a samurai's touch. Jade green, black and gold, with lightning for light; thunder, lightning and wind first, with a samurai crest or a curved blade here and there for flavour.
 
 STYLE
 - Art from a 1980s Japanese TV mecha anime: the pilots like the cels of the series' cast, the emblem and lettering like the logos and title lettering of the period. Match the attached sheets exactly.

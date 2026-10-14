@@ -73,10 +73,10 @@ export const ICONS = {
 } as const;
 export type IconName = keyof typeof ICONS;
 
-/** By team (Solstice, Vanta, Mirage, Aurora), then role (forward, midfielder, defender). */
+/** By team (Solstice, Vanta, Mirage, Aurora, then Tempest once painted), then role (forward, midfielder, defender). */
 export const PILOTS: string[] = [pilot_kite, pilot_lark, pilot_atlas, pilot_shrike, pilot_moth, pilot_golem, pilot_sirocco, pilot_ibis, pilot_dune, pilot_orion, pilot_vesper, pilot_bastion];
 
-/** By team: Solstice, Vanta, Mirage, Aurora. */
+/** By team: Solstice, Vanta, Mirage, Aurora, then Tempest once painted. */
 export const EMBLEMS: string[] = [art_solstice, art_vanta, art_mirage, art_aurora];
 
 /** The countdown, as painted: 3, 2, 1 and GO!, each with its width over its height. */

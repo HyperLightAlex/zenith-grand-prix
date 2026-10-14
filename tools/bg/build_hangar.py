@@ -18,7 +18,8 @@ What it does to the sheets:
 - Signs: each cut out of the green by everything in its own cell of the
   3x2 grid (the team names' letters are separate pieces), trimmed a pixel
   inside its edge, kept at its own shape. Mirage's and Aurora's names are cut
-  the same way from the bottom row of F2's 2x2 grid.
+  the same way from the bottom row of F2's 2x2 grid, and Tempest's from its
+  own sheet (see build_hud.py) once it is painted.
 """
 import json
 import os
@@ -28,6 +29,7 @@ from PIL import Image
 from scipy import ndimage
 
 from build_backgrounds import fade, best_len, keyed, save
+from build_hud import tempest_sheets
 from build_track import join_near, to_size
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
@@ -115,8 +117,14 @@ def main():
         files[name] = save(t, os.path.join(d, f'{name}.webp'), 84)
     # F2's top row is the emblems (build_hud.py); its bottom row, the names.
     signs = cut_cells(sheet('hangar-h2-signs.png')) + cut_cells(sheet('faction-f2-emblems.png', FACTION_SHEETS), 2, 2)[2:]
+    # Tempest's name, once its sheet (T1, keyed on magenta) is painted.
+    names = list(SIGNS)
+    _, _, t_name = tempest_sheets()
+    if t_name is not None:
+        signs.append(t_name)
+        names.append('tempest')
     aspect = {}
-    for name, s in zip(SIGNS, signs):
+    for name, s in zip(names, signs):
         files[name] = save(s, os.path.join(d, f'sign-{name}.webp'), 90)
         aspect[name] = round(s.shape[1] / s.shape[0], 4)
     lines = [
@@ -125,14 +133,14 @@ def main():
     ]
     for name in surfaces:
         lines.append(f"import {name} from './hangar/{name}.webp';")
-    for name in SIGNS:
+    for name in names:
         lines.append(f"import {name}Sign from './hangar/sign-{name}.webp';")
     lines += [
         '',
         'const kit: PaintedHangar = {',
         f"  surfaces: {{ {', '.join(surfaces)} }},",
         f"  servicesAspect: {round(surfaces['services'].shape[1] / surfaces['services'].shape[0], 4)},",
-        f"  signs: {{ {', '.join(f'{n}: {{ url: {n}Sign, aspect: {aspect[n]} }}' for n in SIGNS)} }},",
+        f"  signs: {{ {', '.join(f'{n}: {{ url: {n}Sign, aspect: {aspect[n]} }}' for n in names)} }},",
         '};',
         'export default kit;',
         '',
