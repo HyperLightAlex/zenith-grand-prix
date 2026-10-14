@@ -32,9 +32,9 @@ What to attach:
 | F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Its emblems are to be redone (F2b): Mirage's sits off-centre in its slanted shield, and Aurora's star in a ring is too close to Vanta's |
 | F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | in the game, in place of F2's |
 | F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | in the game, in place of F2's |
-| T1 Tempest | faction-t1-tempest.png | in the game (pilots and emblem cut by `tools/bg/build_hud.py`, the name by `tools/bg/build_hangar.py`). Tempest's art is green, so this sheet is keyed on magenta. Gale and Anvil are to be redone (T2): Gale's silver hair and brown skin are too like Moth's, and Anvil is too like Golem and Atlas |
-| T2 Gale, redone | faction-t2-gale.png | to paint; the build takes it in place of T1's Gale when the file is there |
-| T2 Anvil, redone | faction-t2-anvil.png | to paint; the build takes it in place of T1's Anvil when the file is there |
+| T1 Tempest | faction-t1-tempest.png | in the game (pilots and emblem cut by `tools/bg/build_hud.py`, the name by `tools/bg/build_hangar.py`). Tempest's art is green, so this sheet is keyed on magenta. Gale and Anvil were redone (T2): Gale's silver hair and brown skin are too like Moth's, and Anvil is too like Golem and Atlas |
+| T2 Gale, redone | faction-t2-gale.png | in the game, in place of T1's Gale |
+| T2 Anvil, redone | faction-t2-anvil.png | in the game, in place of T1's Anvil |
 
 ## The prompt
 
