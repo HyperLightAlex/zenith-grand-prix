@@ -2,7 +2,9 @@
 // caution stripes, stencils and warning marks) and stuck on the armour as
 // little planes, lit like the armour so they sit in its shadows.
 import * as THREE from 'three';
+import { EMBLEMS } from '../../ui/hudArt';
 import { toonGradient, type Livery } from '../palette';
+import { MARKS, type MarkName } from './mechArt';
 
 export type DecalKind = 'emblem' | 'caution' | 'stencil' | 'warning' | 'text' | 'arrow' | 'stripes' | 'lift';
 const CELLS: DecalKind[] = ['emblem', 'caution', 'stencil', 'warning', 'text', 'arrow', 'stripes', 'lift'];
@@ -141,6 +143,132 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
   return c;
 }
 
+// ---- the anime look's painted markings ----------------------------------------
+// The same eight cells, painted (art/mech-sheets, P2), with the team emblem
+// from the HUD's U3 sheet: the white markings coloured for the team (dark on
+// Solstice's white, light on Vanta's charcoal; the stripes in the trim), the
+// caution stripes and the warning triangle as painted. Swapped in for the
+// drawn sheet while the look is on (setPaintedMarkings).
+
+const PAINTED_CELL = 256;
+const images = new Map<string, Promise<HTMLImageElement>>();
+
+function image(url: string): Promise<HTMLImageElement> {
+  let p = images.get(url);
+  if (!p) {
+    const img = new Image();
+    img.src = url;
+    p = img.decode().then(() => img);
+    images.set(url, p);
+  }
+  return p;
+}
+
+/** The colour for a team's white markings: dark on white armour, light on dark. */
+function inkFor(livery: Livery): string {
+  return livery.id === 'vanta' ? css(livery.trim) : '#151a26';
+}
+
+/**
+ * Draw `img` fitted inside a cell (`pad` of it clear round the edge), centred.
+ * `tint`: 'fill' recolours it entirely (a white marking), 'multiply' keeps its
+ * dark outline (the race numbers), null leaves it as painted.
+ */
+function drawFitted(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, size: number, pad: number, tint: string | null, mode: 'fill' | 'multiply' = 'fill'): void {
+  const room = size * (1 - 2 * pad);
+  const s = Math.min(room / img.width, room / img.height);
+  const w = img.width * s;
+  const h = img.height * s;
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w));
+  c.height = Math.max(1, Math.round(h));
+  const cg = c.getContext('2d')!;
+  cg.drawImage(img, 0, 0, c.width, c.height);
+  if (tint) {
+    cg.globalCompositeOperation = mode === 'fill' ? 'source-in' : 'multiply';
+    cg.fillStyle = tint;
+    cg.fillRect(0, 0, c.width, c.height);
+    if (mode === 'multiply') {
+      cg.globalCompositeOperation = 'destination-in';
+      cg.drawImage(img, 0, 0, c.width, c.height);
+    }
+  }
+  g.drawImage(c, x + (size - w) / 2, y + (size - h) / 2);
+}
+
+/** The painted sheet for a team, in the drawn sheet's layout; filled in once its pictures are in. */
+function paintedSheet(livery: Livery): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = PAINTED_CELL * 4;
+  c.height = PAINTED_CELL * 2;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  t.userData.shared = true;
+  const ink = inkFor(livery);
+  const trim = css(livery.trim);
+  const cells: Record<DecalKind, [string, string | null, number]> = {
+    emblem: [EMBLEMS[livery.id === 'vanta' ? 1 : 0], null, 0.04],
+    caution: [MARKS.caution.url, null, 0.02],
+    stencil: [MARKS.stencil.url, ink, 0.08],
+    warning: [MARKS.warning.url, null, 0.08],
+    text: [MARKS.text.url, ink, 0.04],
+    arrow: [MARKS.arrow.url, ink, 0.06],
+    stripes: [MARKS.stripes.url, trim, 0.0],
+    lift: [MARKS.lift.url, ink, 0.12],
+  };
+  const g = c.getContext('2d')!;
+  Promise.all(CELLS.map((k) => image(cells[k][0]))).then((imgs) => {
+    imgs.forEach((img, i) => {
+      const [, tint, pad] = cells[CELLS[i]];
+      drawFitted(g, img, (i % 4) * PAINTED_CELL, Math.floor(i / 4) * PAINTED_CELL, PAINTED_CELL, pad, tint);
+    });
+    t.needsUpdate = true;
+  });
+  return t;
+}
+
+/** Materials whose map has a painted twin: [material, drawn map, painted map (made when first wanted)]. */
+const swappable = new Set<{ mat: THREE.MeshToonMaterial | THREE.MeshBasicMaterial; plain: THREE.Texture; painted: () => THREE.Texture; made?: THREE.Texture }>();
+let paintedOn = false;
+
+/** Show the painted markings (the anime look) or the drawn ones. */
+export function setPaintedMarkings(on: boolean): void {
+  if (on === paintedOn) return;
+  paintedOn = on;
+  for (const s of swappable) swapMarking(s);
+}
+
+function swapMarking(s: { mat: THREE.MeshToonMaterial | THREE.MeshBasicMaterial; plain: THREE.Texture; painted: () => THREE.Texture; made?: THREE.Texture }): void {
+  if (paintedOn && !s.made) s.made = s.painted();
+  s.mat.map = paintedOn ? s.made! : s.plain;
+}
+
+/** Register a material whose map swaps with the look; it leaves the list when disposed. */
+export function paintedTwin(mat: THREE.MeshToonMaterial | THREE.MeshBasicMaterial, painted: () => THREE.Texture): void {
+  const entry = { mat, plain: mat.map!, painted };
+  swappable.add(entry);
+  mat.addEventListener('dispose', () => swappable.delete(entry));
+  swapMarking(entry);
+}
+
+/** A race number as painted, in the team's trim colour with its dark outline kept. */
+export function paintedNumber(text: string, livery: Livery): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const name: MarkName | undefined = ({ '1': 'one', '2': 'two', '3': 'three' } as Record<string, MarkName>)[text];
+  if (name) {
+    image(MARKS[name].url).then((img) => {
+      drawFitted(c.getContext('2d')!, img, 0, 0, 256, 0.1, css(livery.trim), 'multiply');
+      t.needsUpdate = true;
+    });
+  }
+  return t;
+}
+
 /** The decal material for a team: one canvas, shared by every decal on its mechs. */
 function sheetMaterial(livery: Livery): THREE.MeshToonMaterial {
   let m = sheets.get(livery.id);
@@ -160,6 +288,7 @@ function sheetMaterial(livery: Livery): THREE.MeshToonMaterial {
       polygonOffsetUnits: -2,
     });
     sheets.set(livery.id, m);
+    paintedTwin(m, () => paintedSheet(livery));
   }
   return m;
 }

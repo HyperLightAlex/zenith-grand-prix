@@ -194,6 +194,11 @@ if (uCel > 0.5) {
       vec3 celR = reflect(-celV, celN);
       float above = celStep(dot(celR, celUp), 0.0);
       celCol = mix(celCol, mix(celLit * 0.35, celLit * 1.1 + celAmb * 0.12, above), cGlass * 0.7);
+      // Panel lines, in a deeper mix of the paint's own shadow colour; wear lighter.
+      vec2 celPanel = panelInk();
+      vec3 celLine = clamp(vShade / max(celBase, vec3(0.001)), 0.0, 1.5) * 0.5;
+      celCol *= mix(vec3(1.0), celLine, celPanel.x * 0.9);
+      celCol *= 1.0 - celPanel.y * 0.3;
     #endif
   #else
     vec3 celCol = mix(celLit * uBgShadeTint, celLit, litK);

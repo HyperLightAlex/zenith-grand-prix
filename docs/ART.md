@@ -106,6 +106,28 @@ each part's shadow paint as a vertex attribute beside its colour, and the
 circuit's light only leans the shadows a little (`uShadeLean`, at the same
 brightness). The rest of the scene keeps one shadow tint per circuit.
 
+## Panel lines and markings on the mechs
+
+In the anime look the mechs wear painted panel lines and markings
+(`art/mech-sheets`; `tools/bg/build_mech.py` builds them into
+`src/client/render/mech/art` and `mechArt.ts`):
+
+- **Panel lines** break the armour into plates the way a mecha cel did. Each
+  part wears the drawing for its paint (big plates on the body's primary
+  armour, limb segments on the arms and legs, smaller panels on the
+  secondary colour and trim, the mechanical frame, grilles on the dark
+  parts) and a little wear on the paint. The parts have no texture
+  coordinates, so the drawing is projected flat along whichever axis each
+  face looks down, in the part's own space so it moves with it, and repeated
+  mirrored, which joins at every edge. The lines are drawn in a deeper mix of
+  the paint's own shadow colour and fade out where they would be too fine.
+- **Markings**: the caution stripes, warning triangle, stencils, small print,
+  arrow, lifting point and racing stripes painted, the white ones coloured
+  for the team (dark on Solstice, light on Vanta, the stripes in the trim),
+  the team emblem from the HUD's sheet, and the race numbers in the trim
+  colour with their dark outline. They swap in for the drawn sheet while the
+  look is on (`setPaintedMarkings`).
+
 ## Painted backgrounds
 
 In the anime look every circuit has its scenery painted, the way a

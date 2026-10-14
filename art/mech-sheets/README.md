@@ -16,8 +16,8 @@ The team emblems on the mechs come from the HUD's U3 sheet. The shading
 
 | Sheet | File | Notes |
 |---|---|---|
-| P1 Panel lines | | to do |
-| P2 Markings | | to do |
+| P1 Panel lines | mech-p1-panels.png | in the game. Clean, even lines, all six as asked. The squares do not repeat at their edges (line drawings seldom do), so the game repeats them mirrored, which always joins: a seam reaching an edge carries on as its own reflection, and the plates come out symmetrical, as a mech's are. Each is cut just inside the grid lines drawn between them; the lines are thickened a pixel so they still draw at the size a mech is usually seen |
+| P2 Markings | mech-p2-markings.png | in the game. All twelve, spelt right, cut cleanly by their outlines (the cutter keeps even the thinnest letters, the T and I). The chevrons and the roundel are cut and ready but not yet placed on the frames |
 
 ## The prompt
 

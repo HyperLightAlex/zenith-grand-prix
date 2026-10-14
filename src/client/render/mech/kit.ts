@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
 import { COLORS, toonGradient, type Livery } from '../palette';
+import { PANELS } from './mechArt';
 
 /**
  * P primary armour, S secondary panels, T trim (all painted); F frame (bare
@@ -18,6 +19,36 @@ export type Slot = 'P' | 'S' | 'F' | 'T' | 'D' | 'C' | 'K';
 
 /** Surface type per slot: 0 paint, 1 metal, 2 rubber and dark metal, 3 glass. */
 const SURFACE: Record<Slot, number> = { P: 0, S: 0, T: 0, F: 1, K: 1, D: 2, C: 3 };
+
+/**
+ * Which painted panel lines each slot wears in the anime look (art/mech-sheets,
+ * P1): 0 big plates, 1 smaller panels, 2 limb segments, 3 the mechanical frame,
+ * 4 grilles and rubber, -1 none. The primary armour wears limb segments on the
+ * arms and legs, big plates everywhere else.
+ */
+const PANEL_BODY: Record<Slot, number> = { P: 0, S: 1, T: 1, F: 3, K: 3, D: 4, C: -1 };
+const PANEL_LIMB: Record<Slot, number> = { ...PANEL_BODY, P: 2 };
+
+/** How many units of a part one repeat of each panel drawing covers (plates, panels, limbs, frame, dark, wear). */
+const PANEL_SIZE = [2.0, 1.4, 1.2, 1.0, 0.7, 2.4];
+
+let panelTextures: [THREE.Texture, THREE.Texture] | null = null;
+
+/** The panel-line masks, repeated mirrored so every edge meets itself. */
+function panelMaps(): [THREE.Texture, THREE.Texture] {
+  if (!panelTextures) {
+    const load = (url: string) => {
+      const t = new THREE.TextureLoader().load(url);
+      t.wrapS = THREE.MirroredRepeatWrapping;
+      t.wrapT = THREE.MirroredRepeatWrapping;
+      t.anisotropy = 8;
+      t.userData.shared = true;
+      return t;
+    };
+    panelTextures = [load(PANELS.a), load(PANELS.b)];
+  }
+  return panelTextures;
+}
 
 export interface Xf {
   at?: [number, number, number];
@@ -153,14 +184,21 @@ export function armorMat(): THREE.MeshToonMaterial {
   const mat = new THREE.MeshToonMaterial({ gradientMap: toonGradient(), vertexColors: true });
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, ENV);
+    const [pa, pb] = panelMaps();
+    shader.uniforms.uPanelA = { value: pa };
+    shader.uniforms.uPanelB = { value: pb };
+    shader.uniforms.uPanelSize = { value: PANEL_SIZE };
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
         /* glsl */ `#include <common>
         attribute float aMat;
         attribute vec3 aShade;
+        attribute float aPanel;
         varying float vMat;
         varying vec3 vShade;
+        varying float vPanel;
+        varying vec3 vObjPos;
         varying vec3 vWorldN;
         varying vec3 vWorldP;`,
       )
@@ -169,6 +207,8 @@ export function armorMat(): THREE.MeshToonMaterial {
         /* glsl */ `#include <fog_vertex>
         vMat = aMat;
         vShade = aShade;
+        vPanel = aPanel;
+        vObjPos = transformed;
         vWorldN = normalize(mat3(modelMatrix) * objectNormal);
         vWorldP = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
       );
@@ -179,6 +219,38 @@ export function armorMat(): THREE.MeshToonMaterial {
         varying vec3 vViewPosition;
         varying float vMat;
         varying vec3 vShade;
+        varying float vPanel;
+        varying vec3 vObjPos;
+        uniform sampler2D uPanelA;
+        uniform sampler2D uPanelB;
+        uniform float uPanelSize[6];
+        // The anime look's panel lines (art/mech-sheets, P1), 0..1 ink: the
+        // drawing for this part's paint, projected flat along whichever axis
+        // the face looks down (taken from the face itself, so a face never
+        // changes projection part way across), fading out where it would be
+        // too fine to draw. Wear (lighter, on paint only) in the second.
+        vec2 panelInk() {
+          float idx = floor(vPanel + 0.5);
+          if (idx < -0.5) return vec2(0.0);
+          vec3 dx = dFdx(vObjPos);
+          vec3 dy = dFdy(vObjPos);
+          vec3 n = abs(normalize(cross(dx, dy)));
+          vec2 uv; vec2 ux; vec2 uy;
+          if (n.x >= n.y && n.x >= n.z) { uv = vObjPos.zy; ux = dx.zy; uy = dy.zy; }
+          else if (n.y >= n.z) { uv = vObjPos.xz; ux = dx.xz; uy = dy.xz; }
+          else { uv = vObjPos.xy; ux = dx.xy; uy = dy.xy; }
+          float size = idx < 0.5 ? uPanelSize[0] : idx < 1.5 ? uPanelSize[1] : idx < 2.5 ? uPanelSize[2] : idx < 3.5 ? uPanelSize[3] : uPanelSize[4];
+          vec3 ta = textureGrad(uPanelA, uv / size, ux / size, uy / size).rgb;
+          vec3 tb = textureGrad(uPanelB, uv / size, ux / size, uy / size).rgb;
+          float ink = idx < 0.5 ? ta.r : idx < 1.5 ? ta.g : idx < 2.5 ? ta.b : idx < 3.5 ? tb.r : tb.g;
+          // Texels of the drawing to a pixel of screen: much past four the lines are mush.
+          float tpp = 512.0 * max(length(ux), length(uy)) / size;
+          ink *= 1.0 - smoothstep(4.0, 9.0, tpp);
+          float wsize = uPanelSize[5];
+          float wear = idx < 2.5 ? textureGrad(uPanelB, uv / wsize + 0.37, ux / wsize, uy / wsize).b : 0.0;
+          wear *= 1.0 - smoothstep(4.0, 9.0, 512.0 * max(length(ux), length(uy)) / wsize);
+          return vec2(ink, wear);
+        }
         varying vec3 vWorldN;
         varying vec3 vWorldP;
         uniform vec3 uEnvHigh;
@@ -235,7 +307,7 @@ export function armorMat(): THREE.MeshToonMaterial {
         `,
       );
   };
-  mat.customProgramCacheKey = () => 'zgp-armor-v2';
+  mat.customProgramCacheKey = () => 'zgp-armor-v3';
   // The anime look paints the armour's metal and glass (see look.ts).
   mat.userData.celArmor = true;
   armorMaterial = mat;
@@ -262,6 +334,7 @@ export interface Built {
 
 export class Kit {
   private armor: THREE.BufferGeometry[] = [];
+  private armorSlots: Slot[] = [];
   private glow: THREE.BufferGeometry[] = [];
   private colors: Record<Slot, THREE.Color>;
   /** Each slot's shadow paint, for the anime look's cel shading. */
@@ -316,6 +389,7 @@ export class Kit {
       geo.setAttribute('aShade', new THREE.BufferAttribute(shade, 3));
       geo.setAttribute('aMat', new THREE.BufferAttribute(mat, 1));
       this.armor.push(geo);
+      this.armorSlots.push(slot);
     }
     return this;
   }
@@ -447,11 +521,17 @@ export class Kit {
     return this.push(new THREE.IcosahedronGeometry(r, 1), slot, o);
   }
 
-  /** Merge everything added so far into meshes under one group. */
-  build(): Built {
+  /**
+   * Merge everything added so far into meshes under one group. `limb`: these
+   * parts are an arm or a leg, so the primary armour wears limb segments
+   * rather than big plates (the anime look's panel lines).
+   */
+  build(limb = false): Built {
     const group = new THREE.Group();
     let armor: THREE.Mesh | null = null;
     let glow: THREE.Mesh | null = null;
+    const table = limb ? PANEL_LIMB : PANEL_BODY;
+    this.armor.forEach((g, i) => g.setAttribute('aPanel', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(table[this.armorSlots[i]]), 1)));
     if (this.armor.length) {
       const geo = mergeGeometries(this.armor)!;
       geo.computeVertexNormals();
@@ -473,6 +553,7 @@ export class Kit {
       group.add(glow);
     }
     this.armor = [];
+    this.armorSlots = [];
     this.glow = [];
     return { group, armor, glow };
   }

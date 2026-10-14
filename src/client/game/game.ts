@@ -31,6 +31,7 @@ import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
 import { buildWorld, type World } from '../render/world';
 import { disposeTree, themeFor } from '../render/themes';
 import { CEL, celify, drawClock, look, readLook, setCelTheme, tickDrawings } from '../render/look';
+import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
 import { LIVERIES } from '../render/palette';
@@ -672,6 +673,8 @@ export class Game {
     CEL.uCel.value = look.on ? 1 : 0;
     // The ink pass draws the mechs' contours itself; the hull outlines are for the plain look.
     setHullOutlines(!this.renderer.inking);
+    // The painted markings on the mechs, with the look.
+    setPaintedMarkings(look.on);
     // Painted thruster flames, on the look's drawings.
     DRAWN_FLAMES.uDrawn.value = look.on ? 1 : 0;
     DRAWN_FLAMES.uFrame.value = drawClock.drawing % 3;

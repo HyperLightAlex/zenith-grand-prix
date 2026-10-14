@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import flameAtlasUrl from '../sprites/fx-flame.png';
 import type { Livery } from '../palette';
+import { paintedNumber, paintedTwin } from './decals';
 import { Kit } from './kit';
 import type { Flame, MechRig } from './rig';
 
@@ -164,7 +165,8 @@ export function frameCtx(rig: MechRig, livery: Livery): FrameCtx {
     rig,
     livery,
     put(joint, k) {
-      const built = k.build();
+      // Arms and legs wear the limb segments' panel lines.
+      const built = k.build(/^(el|wr|hip[LR]|knee|ankle)/.test(joint.name));
       joint.add(built.group);
       if (built.glow) rig.glowMeshes.push(built.glow);
     },
