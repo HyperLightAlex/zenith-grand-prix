@@ -6,6 +6,7 @@ import {
   BTN,
   CHAIN_LIMIT,
   CHARGE_BONUS,
+  INPUT_BUFFER,
   ROLE,
   CHAIN_TICKS,
   CLASSES,
@@ -1513,5 +1514,48 @@ describe('charged heavies', () => {
     const hits = a.events('hit').filter((e) => e.attacker === DF0);
     expect(hits.length).toBeGreaterThan(0);
     for (const h of hits) expect(h.damage).toBeCloseTo(scatter.damage * (1 + CHARGE_BONUS), 9);
+  });
+});
+
+describe('the input buffer', () => {
+  it('a heavy pressed a beat before the move it is in ends goes the moment it can', () => {
+    const { a, att } = duel(FW0, FW1, 11);
+    a.tap(FW0, BTN.X);
+    const edge = ATTACKS[ATK.FW_SLASH1];
+    const end = edge.windup + edge.active + edge.recovery;
+    // Press Y a few ticks before the slash is over: kept, then thrown.
+    a.step(end - 5);
+    expect(att.act).toBe(ACT.ATTACK);
+    a.tap(FW0, BTN.Y);
+    const slashEnds = a.until(() => att.act !== ACT.ATTACK, 20);
+    expect(slashEnds).toBeGreaterThan(0);
+    // The very next tick, with no new press.
+    a.step(1);
+    expect(att.act).toBe(ACT.ATTACK);
+    expect(att.attack).toBe(ATK.FW_LANCE);
+  });
+
+  it(`a press older than INPUT_BUFFER ticks is let go`, () => {
+    const { a, att } = duel(FW0, FW1, 11);
+    a.tap(FW0, BTN.X);
+    a.tap(FW0, BTN.Y);
+    a.until(() => att.act !== ACT.ATTACK, 60);
+    expect(att.act).toBe(ACT.NONE);
+    a.step(2);
+    expect(att.act).toBe(ACT.NONE);
+  });
+
+  it('a trigger pulled while the gun cools down fires as soon as it is ready', () => {
+    const { a, att } = duel(MF0, FW1, 30);
+    a.tap(MF0, BTN.X);
+    a.until(() => att.act === ACT.NONE && att.cdPrimary > 0 && att.cdPrimary < INPUT_BUFFER, 80);
+    const left = att.cdPrimary;
+    a.tap(MF0, BTN.X);
+    // Not yet: still cooling down. Then the burst goes the tick it is ready.
+    expect(att.act).toBe(ACT.NONE);
+    a.step(left);
+    expect(att.act).toBe(ACT.ATTACK);
+    a.step(30);
+    expect(a.events('shot').length).toBe(6);
   });
 });

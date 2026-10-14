@@ -430,6 +430,10 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
   blow's arc whether or not its invulnerability lasts that long. (Blows
   used to turn after their target at 12 rad/s throughout, and followed a
   swing round to land the moment its invulnerability ran out.)
+- **Presses are buffered.** An attack, a heavy or (locked on) a dash pressed
+  while the mech cannot do it yet, still in another move, staggered or
+  cooling down, is kept for 8 ticks and done the moment it can be, so a
+  press a beat early is not lost.
 - **Guns work at racing speed** without a lock. Melee needs a lock; pressing
   attack near an enemy takes one for you.
 - Four hits in a chain and the victim bursts free. A burst from a gun is one

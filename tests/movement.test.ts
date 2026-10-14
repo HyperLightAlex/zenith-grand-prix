@@ -832,8 +832,9 @@ describe('fuzz: whatever a person does with the controller', () => {
     expect(fuzzRace(55, [FW1, DF0]).ended).toBe(true);
     const full = fuzzRace(66, [FW0, FW1, MF0, MF1, DF0, DF1]);
     expect(full.ended).toBe(true);
-    // Nobody steers a masher through a gate on purpose, so a grid of them has few Cells to burn.
-    expect(full.abilities).toBeLessThanOrEqual(6 * DEFAULT_RULES.cellMax);
+    // Nobody steers a masher through a gate on purpose, so a grid of them has
+    // few Cells to burn: a tank each, and the teammates' shares of it.
+    expect(full.abilities).toBeLessThanOrEqual(6 * DEFAULT_RULES.cellMax * (1 + 2 * DEFAULT_RULES.gateShare));
   });
 
   it('out-of-range (but finite) stick and trigger values are clamped, not trusted', () => {

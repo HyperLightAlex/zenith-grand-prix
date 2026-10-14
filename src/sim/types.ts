@@ -122,6 +122,9 @@ export interface MechState {
   chainTick: number;
   /** Who last added to the chain, and with what (attacker id * 64 + attack), for CHAIN_SAME_SHOT. */
   chainKey: number;
+  /** A press of X, Y or A waiting to be done (see INPUT_BUFFER), and ticks it has left. */
+  bufBtn: number;
+  bufT: number;
   /** Ticks the current attack has been held charging (see AttackDef.charge). */
   chargeT: number;
   /** The current attack was started by its own button, which may still be held to charge it. */

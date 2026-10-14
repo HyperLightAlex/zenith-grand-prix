@@ -273,6 +273,12 @@ export const DASH_OVER = 0.3;
 export const DASH_BLEED = 300;
 export const DASH_COOLDOWN = 26;
 export const COMBO_CANCEL_DELAY = 3;
+/**
+ * An attack, heavy or dash pressed while the mech cannot do it yet (still in
+ * another move, staggered, cooling down) is held this many ticks and done
+ * the moment it can be, so a press a beat early is not lost.
+ */
+export const INPUT_BUFFER = 8;
 export const CHAIN_LIMIT = 4; // hits in one stagger chain before a free escape
 /**
  * The rounds of one burst from one gun, landing inside this many ticks of

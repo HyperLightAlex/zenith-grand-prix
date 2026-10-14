@@ -15,6 +15,7 @@ import {
   CHAIN_LIMIT,
   CHAIN_SAME_SHOT,
   CHARGE_BONUS,
+  INPUT_BUFFER,
   CHAIN_TICKS,
   COMBO_CANCEL_DELAY,
   COUNTER_HIT,
@@ -633,13 +634,26 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
     if (m.guardIdle > GUARD_REGEN_DELAY) m.guard = Math.min(c.guardMax, m.guard + c.guardRegen * DT);
   }
 
+  // The buffer: the latest press of X, Y or A (A only locked on, where it is
+  // the dash; free, it is the boost and is held) waits INPUT_BUFFER ticks.
+  const buffered = BTN.X | BTN.Y | (m.mode === MODE.BATTLE ? BTN.A : 0);
+  if (pressed & buffered) {
+    m.bufBtn = pressed & buffered;
+    m.bufT = INPUT_BUFFER;
+  } else if (m.bufT > 0 && --m.bufT === 0) {
+    m.bufBtn = 0;
+  }
+  const want = pressed | (m.bufT > 0 ? m.bufBtn : 0);
+
   switch (m.act) {
     case ACT.NONE: {
       // A gun keeps firing while its trigger is held.
       const autofire = (input.buttons & BTN.X) !== 0 && ATTACKS[c.primary].kind === 'shot' && m.cdPrimary === 0;
-      if (pressed & BTN.X || autofire) tryAttack(race, track, m, 0);
-      else if (pressed & BTN.Y) tryAttack(race, track, m, 1);
-      else if (pressed & BTN.A && m.mode === MODE.BATTLE) tryDash(race, track, m, input);
+      let done = false;
+      if (want & BTN.X || autofire) done = tryAttack(race, track, m, 0);
+      else if (want & BTN.Y) done = tryAttack(race, track, m, 1);
+      else if (want & BTN.A && m.mode === MODE.BATTLE) done = tryDash(race, track, m, input);
+      if (done) m.bufBtn = m.bufT = 0;
       break;
     }
     case ACT.ATTACK: {

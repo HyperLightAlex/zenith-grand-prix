@@ -141,7 +141,7 @@ function mechSum(m: MechState): number {
     m.mode + m.target + m.outOfRange +
     m.hp + m.guard + m.drive +
     m.act + m.actT + m.actDur + m.attack + m.attackStart + m.guardT + m.guardIdle + m.guardRest +
-    m.iframes + m.chain + m.chainT + m.chainTick + m.chainKey + m.chargeT + m.cdPrimary + m.cdSecondary + m.cdDash +
+    m.iframes + m.chain + m.chainT + m.chainTick + m.chainKey + m.chargeT + m.bufBtn + m.bufT + m.cdPrimary + m.cdSecondary + m.cdDash +
     m.cells + m.gateMask + m.cdAbility + m.overdriveT + m.ramT + m.ramHits + m.shieldT + m.snareT + m.cloakT +
     m.tow + m.momentum + m.wall + m.towBy + m.towByTick +
     m.boostT + m.relightT + m.maxHp + m.carveDir + m.carveCharge + m.carveTier + m.carveT + m.carveBoost + m.airT + m.arcDir + m.arcFrom + m.arcSweep + m.arcR +

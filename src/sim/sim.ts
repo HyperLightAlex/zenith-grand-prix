@@ -207,6 +207,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       chainKey: -1,
       chargeT: 0,
       chargeOn: false,
+      bufBtn: 0,
+      bufT: 0,
       cdPrimary: 0,
       cdSecondary: 0,
       cdDash: 0,
