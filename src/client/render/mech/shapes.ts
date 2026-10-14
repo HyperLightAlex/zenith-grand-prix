@@ -83,3 +83,37 @@ export function curvedPlate(k: Kit, slot: 'P' | 'S' | 'T', c: P3, r: number, a: 
     }),
   );
 }
+
+/**
+ * Rings for a loft along a path in the (x, y) plane at `z`: at each point
+ * (x, y, hw, ht) a band `hw` each side across the path and `ht` each side
+ * along z, set square to the path. Ribbons, sashes, horns seen from the front.
+ */
+export function sweepXY(path: Array<[number, number, number, number]>, z = 0): P3[][] {
+  return path.map(([x, y, hw, ht], i) => {
+    const a = path[Math.max(0, i - 1)];
+    const b = path[Math.min(path.length - 1, i + 1)];
+    let tx = b[0] - a[0];
+    let ty = b[1] - a[1];
+    const l = Math.hypot(tx, ty) || 1;
+    tx /= l;
+    ty /= l;
+    const at = (u: number, v: number): P3 => [x - u * ty, y + u * tx, z + v];
+    return [at(hw, ht), at(hw, -ht), at(-hw, -ht), at(-hw, ht)];
+  });
+}
+
+/** A hoop: a ring `r` across, its band `w` wide and `d` deep, facing +z until turned by `rot`. */
+export function hoop(k: Kit, slot: 'P' | 'S' | 'T' | 'G', r: number, at: P3, rot: P3 = [0, 0, 0], w = 0.08, d = 0.07): void {
+  const rings: P3[][] = [];
+  const n = 32;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const lo = r - w / 2;
+    const hi = r + w / 2;
+    rings.push([[c * lo, s * lo, -d / 2], [c * hi, s * hi, -d / 2], [c * hi, s * hi, d / 2], [c * lo, s * lo, d / 2]]);
+  }
+  k.loft(slot, rings, { at, rot });
+}
