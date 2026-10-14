@@ -10,9 +10,11 @@ and checked one sheet at a time, like the other sheets in `art/`.
 | F1 Pilots | Six head-and-shoulders portraits, full bleed, 3x2: Mirage's three, then Aurora's | The comms cut-ins, the target panel and the results, as for Solstice's and Vanta's pilots |
 | F2 Emblems and lettering | The two emblems and the two teams' names as painted on their hangar walls, on green, 2x2 | The score panel, the standings, the results, the garage, the mechs' markings and the hangar's back wall; the name on the hangar walls |
 
-All of it is in the game. Mirage's emblem is to be redone (F2b) so its
-symbols sit on the slanted shield's middle; the build takes the redo in place
-of F2's when the file is there.
+All of it is in the game. F2's two emblems were redone (F2b): Mirage's so
+its symbols sit on the slanted shield's middle (done), Aurora's so it is
+nothing like Vanta's (to come). The build takes each redo, on its own sheet,
+in place of F2's when the file is there; the prompt below asks for both on
+one sheet, but either can come on its own.
 
 What to attach:
 
@@ -27,8 +29,9 @@ What to attach:
 | Sheet | File | Notes |
 |---|---|---|
 | F1 Pilots | faction-f1-pilots.png | in the game (cut by `tools/bg/build_hud.py`). Aurora's genders changed from the prompt: Iris and Bastion are men, Vesper a woman |
-| F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Mirage's emblem sits off-centre in its slanted shield; a redo is below |
-| F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | to make; replaces F2's Mirage emblem when it is there |
+| F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Its emblems are to be redone (F2b): Mirage's sits off-centre in its slanted shield, and Aurora's star in a ring is too close to Vanta's |
+| F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | in the game, in place of F2's |
+| F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | to make; replaces F2's when it is there |
 
 ## The prompt
 
@@ -71,26 +74,30 @@ SHEET F2: EMBLEMS AND HANGAR LETTERING (four pieces on green, cut out by the gam
 - Spell both names exactly as given.
 ```
 
-## The prompt for F2b (Mirage's emblem, redone)
+## The prompt for F2b (both emblems, redone)
 
 ```
-ZENITH GP: TEAM MIRAGE EMBLEM (redo; one piece on green)
+ZENITH GP: TEAM MIRAGE AND TEAM AURORA EMBLEMS (redo; two pieces on green, one image)
 
-A team emblem for a mech racing game in the style of a 1980s Japanese TV mecha anime, drawn by the same hand as the attached emblems. Match them exactly: the same slanted shield outline (the attached Mirage emblem's shield, kept as it is: a thick white border inside a thin navy outline), flat colour, hard edges, a clean logo of the period. Not a photo or 3D render; no gradients, glow, texture, blur or grain. Original design: nothing that resembles an existing logo or brand. No letters.
+Two team emblems for a mech racing game in the style of a 1980s Japanese TV mecha anime, drawn by the same hand as the attached emblems. Match them exactly: the same slanted shield outline as the attached Mirage and Aurora emblems (a thick white border inside a thin navy #0D1630 outline), flat colour, hard edges, a clean logo of the period. Not a photo or 3D render; no gradients, glow, texture, blur or grain. Original designs: nothing that resembles an existing logo or brand. No letters.
 
-Colours: rust orange #C75F2A field, gold #E9B43C, sand #DCC59A, dark brown #3B2A22 for any inner lines; white border, navy #0D1630 outline.
-
-THE COMPOSITION (this is the point of the redo)
+THE COMPOSITION, BOTH EMBLEMS (this is the point of the redo)
 - The shield leans like italic lettering, so its middle shifts right toward the top. Centre every symbol on that slanted middle line: halfway between the shield's left and right edges at the height where the symbol sits. Do not centre on the image, or on an upright shield.
-- Anything wider than the shield runs right across it, edge to edge, and is cut off cleanly by the white border, the way the attached Solstice emblem's rays and horizon lines are.
+- Like the attached Solstice and Vanta emblems, the boldest parts may break out past the shield: drawn over the white border and beyond it onto the green, with the same navy outline, so the emblem's outline isn't just the shield's.
 - Nothing floats near one edge while leaving empty space at the other.
 
-THE DESIGN
-- Upper half: a big gold sun disc on the slanted middle line, with a pair of outspread falcon wings either side of it in gold with brown feather lines. The wings sweep out and up and run past the shield's edges, cut off by the border.
-- Lower third: a sand-coloured pyramid with its apex on the slanted middle line and a thin gold line down one face. It stands on three level bands of sand and gold dunes that run edge to edge across the bottom of the shield, cut off by the border at both sides.
-- The pyramid's apex nearly touches the underside of the sun disc.
+LEFT: TEAM MIRAGE (rust orange #C75F2A field; gold #E9B43C, sand #DCC59A, dark brown #3B2A22 inner lines)
+- Upper half: a big gold sun disc on the slanted middle line, with outspread falcon wings either side in gold with brown feather lines. The wings sweep out and up, and their tips break out past the shield's sides.
+- Lower third: a sand pyramid with its apex on the slanted middle line, nearly touching the underside of the sun disc, and a thin gold line down one face. It stands on three level bands of sand and gold dunes that run edge to edge across the bottom of the shield, cut off by the border.
+
+RIGHT: TEAM AURORA (deep violet #5A3EA6 field; pearl #ECE8F4 and silver #C8CCDA; dark indigo #241F3A inner lines)
+- An upright knight's sword on the slanted middle line, point up: a long straight pearl blade with a silver fuller line, a broad silver crossguard, a round pommel. The point breaks out past the top edge of the shield; the pommel sits just inside the bottom point.
+- A silver halo ring around the sword where the blade meets the crossguard, a little wider than the crossguard.
+- A pair of swept pearl wings rising from behind the halo, one either side of the blade, feathers outlined in indigo. Their tips break out past the shield's sides.
+- No star anywhere.
 
 FORMAT
-- One emblem, about 600 px tall, centred on a 1024x1024 image of perfectly flat pure green #00FF00: no shading, texture or glow on the green, and nothing green in the art.
-- Crisp edges against the green, no soft halo; at least 100 px of green on every side.
+- One image, 1536x1024, perfectly flat pure green #00FF00: no shading, texture or glow on the green, and nothing green in the art.
+- Mirage centred in the left half, Aurora centred in the right half, each about 600 px tall including what breaks out of the shield; at least 80 px of green between each emblem and the image's edges, and between the two.
+- Crisp edges against the green, no soft halo.
 ```
