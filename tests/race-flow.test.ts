@@ -16,6 +16,7 @@ import {
   TACTIC,
   TICK_RATE,
   emptyInput,
+  limiterOf,
   stepRace,
 } from '../src/sim/index';
 import type { MechState, RaceState, SimEvent } from '../src/sim/index';
@@ -641,5 +642,29 @@ describe('team tactics', () => {
     expect(race.lapPhase).toBe(3);
     expect(byTeam[1]).toEqual([]);
     expect(race.teams[1].tactic).toBe(TACTIC.FREE);
+  });
+});
+
+describe('after the line', () => {
+  it("a person's mech drives itself on round the course once home, hands off the controls", () => {
+    const race = newRace(5, { humans: [FW0], laps: 1 });
+    const me = race.mechs[FW0];
+    // The computer drives it to the line (a person who races well)...
+    me.human = false;
+    runCountdown(race);
+    for (let i = 0; i < 20000 && !me.finished; i++) stepRace(race, TRACK, []);
+    expect(me.finished).toBe(true);
+    // ...and from there the person lets go of everything.
+    me.human = true;
+    const inputs = makeInputs(race);
+    const s0 = me.s;
+    let slowest = Infinity;
+    for (let i = 0; i < 180; i++) {
+      stepRace(race, TRACK, inputs);
+      if (i > 60) slowest = Math.min(slowest, me.speed);
+    }
+    expect(slowest).toBeGreaterThan(0.5 * limiterOf(race));
+    expect(me.s - s0).toBeGreaterThan(150);
+    expect(me.wall).toBe(0);
   });
 });

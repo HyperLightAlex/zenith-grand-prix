@@ -129,6 +129,9 @@ coordinated team play online.
 
 - The race stays open for 25 seconds after the winner finishes. Anyone still
   running then is classified by distance and still scores.
+- Past the line a mech, a person's included, is driven on by the computer
+  round a cool-down lap at three-quarters of the limiter, as in a kart
+  racer: it never stops dead on the road.
 
 ### The limiter and the pack
 

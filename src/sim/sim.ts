@@ -1071,9 +1071,11 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     }
   }
 
-  // 1. Gather controls. AI fills every seat without a live input.
+  // 1. Gather controls. AI fills every seat without a live input, and a
+  // person's once they are home: past the line the computer drives them
+  // on round the cool-down lap, as it does everyone else.
   for (const m of ms) {
-    const inp = m.human ? inputs[m.id] : null;
+    const inp = m.human && !m.finished ? inputs[m.id] : null;
     controls[m.id] = inp ? sanitize(inp, scratch[m.id]) : aiControl(race, track, m, scratch[m.id]);
   }
   if (race.phase === PHASE.RACING) {

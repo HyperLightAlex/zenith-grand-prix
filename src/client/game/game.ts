@@ -805,7 +805,8 @@ export class Game {
     const sc = this.scene;
     sc.racing = (this.state === 'race' || this.state === 'results') && cur.phase !== PHASE.COUNTDOWN && !f.retired;
     sc.speed = f.speed;
-    sc.throttle = this.state === 'race' && f.id === local ? Math.max(this.input.state.throttle, f.mode === MODE.BATTLE ? 0.6 : 0) : 0.8;
+    // (Home, the computer drives it on: the engine is its throttle, not the pad's.)
+    sc.throttle = this.state === 'race' && f.id === local && !f.finished ? Math.max(this.input.state.throttle, f.mode === MODE.BATTLE ? 0.6 : 0) : 0.8;
     sc.boosting = f.boosting || f.overdriveT > 0;
     sc.surge = f.overdriveT > 0;
     sc.battle = f.mode === MODE.BATTLE;
