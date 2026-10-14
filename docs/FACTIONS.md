@@ -12,7 +12,7 @@ then painted light), the pilots' call signs and the models' names. The race
 maps its two teams to factions (`Game.factions`); the sim never knows which
 factions are racing. Emblems and portraits come from `ui/factionArt.ts`:
 painted where they have been painted, otherwise a stand-in drawn in the
-faction's colours.
+faction's colours (none needs one now).
 
 | | Solstice | Vanta | Mirage | Aurora |
 |---|---|---|---|---|
@@ -76,5 +76,5 @@ out so they don't.
 |---|---|---|---|---|
 | Solstice | in the game | painted | painted | painted |
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
-| Mirage | in the game, first pass (`render/mech/mirage/`) | stand-in | painted | drawn |
-| Aurora | Solstice's for now | stand-in | painted | drawn |
+| Mirage | in the game (`render/mech/mirage/`) | painted (a redo to centre it is coming) | painted | painted |
+| Aurora | Solstice's for now | painted | painted | painted |

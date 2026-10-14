@@ -1,5 +1,6 @@
 """Build the painted hangar kit (the anime look) from the sheets in
-art/hangar-sheets: the surface textures and the signs.
+art/hangar-sheets: the surface textures and the signs; and the newer teams'
+names from the F2 sheet in art/faction-sheets.
 
     python3 tools/bg/build_hangar.py
 
@@ -16,7 +17,8 @@ What it does to the sheets:
   whole height.
 - Signs: each cut out of the green by everything in its own cell of the
   3x2 grid (the team names' letters are separate pieces), trimmed a pixel
-  inside its edge, kept at its own shape.
+  inside its edge, kept at its own shape. Mirage's and Aurora's names are cut
+  the same way from the bottom row of F2's 2x2 grid.
 """
 import json
 import os
@@ -33,11 +35,15 @@ SHEETS = os.path.join(ROOT, 'art', 'hangar-sheets')
 OUT = os.path.join(ROOT, 'src', 'client', 'render', 'backgrounds')
 
 SURFACES = ['floor', 'cladding', 'roof', 'grating', 'hazard', 'services']
-SIGNS = ['solstice', 'vanta', 'caution', 'noSmoking', 'firePoint', 'voltage']
+FACTION_SHEETS = os.path.join(ROOT, 'art', 'faction-sheets')
+
+SIGNS_H2 = ['solstice', 'vanta', 'caution', 'noSmoking', 'firePoint', 'voltage']
+SIGNS_F2 = ['mirage', 'aurora']
+SIGNS = SIGNS_H2 + SIGNS_F2
 
 
-def sheet(name):
-    return np.asarray(Image.open(os.path.join(SHEETS, name)).convert('RGB')).astype(np.float32) / 255
+def sheet(name, where=SHEETS):
+    return np.asarray(Image.open(os.path.join(where, name)).convert('RGB')).astype(np.float32) / 255
 
 
 def joint_at(profile, reach=80):
@@ -107,7 +113,8 @@ def main():
     surfaces = build_surfaces()
     for name, t in surfaces.items():
         files[name] = save(t, os.path.join(d, f'{name}.webp'), 84)
-    signs = cut_cells(sheet('hangar-h2-signs.png'))
+    # F2's top row is the emblems (build_hud.py); its bottom row, the names.
+    signs = cut_cells(sheet('hangar-h2-signs.png')) + cut_cells(sheet('faction-f2-emblems.png', FACTION_SHEETS), 2, 2)[2:]
     aspect = {}
     for name, s in zip(SIGNS, signs):
         files[name] = save(s, os.path.join(d, f'sign-{name}.webp'), 90)

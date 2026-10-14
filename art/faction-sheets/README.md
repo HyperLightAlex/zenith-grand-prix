@@ -10,8 +10,9 @@ and checked one sheet at a time, like the other sheets in `art/`.
 | F1 Pilots | Six head-and-shoulders portraits, full bleed, 3x2: Mirage's three, then Aurora's | The comms cut-ins, the target panel and the results, as for Solstice's and Vanta's pilots |
 | F2 Emblems and lettering | The two emblems and the two teams' names as painted on their hangar walls, on green, 2x2 | The score panel, the standings, the results, the garage, the mechs' markings and the hangar's back wall; the name on the hangar walls |
 
-Until F2 comes, the game draws stand-ins in each faction's colours (a badge
-for the emblem, the name on the hangar wall in code).
+All of it is in the game. Mirage's emblem is to be redone (F2b) so its
+symbols sit on the slanted shield's middle; the build takes the redo in place
+of F2's when the file is there.
 
 What to attach:
 
@@ -19,13 +20,15 @@ What to attach:
 |---|---|
 | F1 | `hud-sheets/hud-u2-pilots.png` (the hand, the framing and the backgrounds to match) |
 | F2 | `hud-sheets/hud-u3-emblems.png` (the emblems' style) and `hangar-sheets/hangar-h2-signs.png` (the hangar lettering to match exactly) |
+| F2b | `hud-sheets/hud-u3-emblems.png` and `faction-f2-emblems.png` (the shield and colours) |
 
 ## Status
 
 | Sheet | File | Notes |
 |---|---|---|
 | F1 Pilots | faction-f1-pilots.png | in the game (cut by `tools/bg/build_hud.py`). Aurora's genders changed from the prompt: Iris and Bastion are men, Vesper a woman |
-| F2 Emblems and lettering | faction-f2-emblems.png | to make |
+| F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Mirage's emblem sits off-centre in its slanted shield; a redo is below |
+| F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | to make; replaces F2's Mirage emblem when it is there |
 
 ## The prompt
 
@@ -66,4 +69,28 @@ SHEET F2: EMBLEMS AND HANGAR LETTERING (four pieces on green, cut out by the gam
 - Bottom left: MIRAGE, the team's name as painted high on its hangar wall, about 640 px wide: exactly the same lettering as SOLSTICE and VANTA on the attached signs sheet, huge, heavy, forward-slanting italic capitals in white with a thick navy #0D1630 outline and a navy drop shadow down and to the right. Nothing else.
 - Bottom right: AURORA, in exactly the same lettering, colours and outline, about 640 px wide. Nothing else.
 - Spell both names exactly as given.
+```
+
+## The prompt for F2b (Mirage's emblem, redone)
+
+```
+ZENITH GP: TEAM MIRAGE EMBLEM (redo; one piece on green)
+
+A team emblem for a mech racing game in the style of a 1980s Japanese TV mecha anime, drawn by the same hand as the attached emblems. Match them exactly: the same slanted shield outline (the attached Mirage emblem's shield, kept as it is: a thick white border inside a thin navy outline), flat colour, hard edges, a clean logo of the period. Not a photo or 3D render; no gradients, glow, texture, blur or grain. Original design: nothing that resembles an existing logo or brand. No letters.
+
+Colours: rust orange #C75F2A field, gold #E9B43C, sand #DCC59A, dark brown #3B2A22 for any inner lines; white border, navy #0D1630 outline.
+
+THE COMPOSITION (this is the point of the redo)
+- The shield leans like italic lettering, so its middle shifts right toward the top. Centre every symbol on that slanted middle line: halfway between the shield's left and right edges at the height where the symbol sits. Do not centre on the image, or on an upright shield.
+- Anything wider than the shield runs right across it, edge to edge, and is cut off cleanly by the white border, the way the attached Solstice emblem's rays and horizon lines are.
+- Nothing floats near one edge while leaving empty space at the other.
+
+THE DESIGN
+- Upper half: a big gold sun disc on the slanted middle line, with a pair of outspread falcon wings either side of it in gold with brown feather lines. The wings sweep out and up and run past the shield's edges, cut off by the border.
+- Lower third: a sand-coloured pyramid with its apex on the slanted middle line and a thin gold line down one face. It stands on three level bands of sand and gold dunes that run edge to edge across the bottom of the shield, cut off by the border at both sides.
+- The pyramid's apex nearly touches the underside of the sun disc.
+
+FORMAT
+- One emblem, about 600 px tall, centred on a 1024x1024 image of perfectly flat pure green #00FF00: no shading, texture or glow on the green, and nothing green in the art.
+- Crisp edges against the green, no soft halo; at least 100 px of green on every side.
 ```

@@ -69,7 +69,7 @@ export interface PaintedHangar {
   /** The services strip's width over its height. */
   servicesAspect: number;
   /** The teams' names as painted on their walls, and the safety signs. */
-  signs: Record<'solstice' | 'vanta' | 'caution' | 'noSmoking' | 'firePoint' | 'voltage', PaintedSign>;
+  signs: Record<'solstice' | 'vanta' | 'mirage' | 'aurora' | 'caution' | 'noSmoking' | 'firePoint' | 'voltage', PaintedSign>;
 }
 
 export const paintedHangar: PaintedHangar = hangarKit;

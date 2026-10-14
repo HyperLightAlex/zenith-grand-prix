@@ -1,8 +1,7 @@
 // Each faction's emblem and pilots' portraits, by faction (an index into
-// LIVERIES). Painted ones come from hudArt.ts (the HUD and faction sheets):
-// every faction's pilots, and Solstice's and Vanta's emblems. Art still to be
-// painted gets a stand-in drawn here in the faction's own colours: a badge for
-// the emblem, and the badge on a dark card for a pilot.
+// LIVERIES), painted, from hudArt.ts (the HUD and faction sheets). A faction
+// added before its art is painted gets a stand-in drawn here in its own
+// colours: a badge for the emblem, and the badge on a dark card for a pilot.
 import { LIVERIES } from '../render/palette';
 import { EMBLEMS, PILOTS } from './hudArt';
 
