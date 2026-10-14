@@ -10,7 +10,8 @@ import { Game } from './game/game';
 // Dev shortcuts, all optional:
 //   ?auto=FW|MF|DF  jump straight into a race     &demo=1   computer flies your mech
 //   &skip=95        start that many seconds in    &seed=7   repeatable race
-//   &team=1         fly for Vanta                 &rivals=0..2
+//   &team=1         fly for Vanta                 &rivals=0..2 (their skill)
+//   &rival=2        race against Mirage
 //   &mute=1         no sound                      ?debug=mechs  model viewer
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   &track=canyon   circuit: meridian, canyon or helios
@@ -51,6 +52,7 @@ async function boot(): Promise<void> {
     skip: q.has('skip') ? Number(q.get('skip')) : undefined,
     seed: q.has('seed') ? Number(q.get('seed')) : undefined,
     team: q.has('team') ? Number(q.get('team')) : undefined,
+    rival: q.has('rival') ? Number(q.get('rival')) : undefined,
     rivals: q.has('rivals') ? Number(q.get('rivals')) : undefined,
     match: q.has('match') ? Number(q.get('match')) : undefined,
     tune: q.has('tune'),

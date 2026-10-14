@@ -61,6 +61,8 @@ export interface GameOptions {
   skip?: number;
   seed?: number;
   team?: number;
+  /** The rival team (a faction index); otherwise one is picked at random. */
+  rival?: number;
   rivals?: number;
   /** Match format, an index into MATCH_OPTIONS. */
   match?: number;
@@ -179,6 +181,7 @@ export class Game {
       if (document.hidden && this.state === 'race') this.pause();
     });
     if (opts.team !== undefined) this.choice.team = opts.team;
+    if (opts.rival !== undefined) this.choice.rival = opts.rival;
     if (opts.rivals !== undefined) this.choice.rivals = opts.rivals;
     if (opts.match !== undefined && MATCH_OPTIONS[opts.match]) this.choice.match = opts.match;
     else if (opts.auto !== undefined) this.choice.match = 0;
