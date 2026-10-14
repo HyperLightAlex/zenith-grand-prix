@@ -144,14 +144,14 @@ function mechSum(m: MechState): number {
     m.iframes + m.chain + m.chainT + m.chainTick + m.cdPrimary + m.cdSecondary + m.cdDash +
     m.cells + m.gateMask + m.cdAbility + m.overdriveT + m.ramT + m.ramHits + m.shieldT + m.snareT + m.cloakT +
     m.tow + m.momentum + m.wall + m.towBy + m.towByTick +
-    m.maxHp + m.carveDir + m.carveCharge + m.carveTier + m.carveT + m.carveBoost + m.airT + m.arcDir + m.arcFrom + m.arcSweep + m.arcR +
+    m.boostT + m.relightT + m.maxHp + m.carveDir + m.carveCharge + m.carveTier + m.carveT + m.carveBoost + m.airT + m.arcDir + m.arcFrom + m.arcSweep + m.arcR +
     m.support + m.pressure + m.backup + m.aegisSaved + m.shieldBy + sum(m.awardPts) + sum(m.awardTick) + sum(m.hurtBy) + sum(m.passTick) +
     m.lap + m.finishTime + m.retireTick + m.place + m.points +
     m.prevButtons + m.prevCmd + m.prevThrottle + m.throttleTick + m.throttleRest +
     m.lastHitBy + m.lastHitTick + m.deniedTick + m.dmgDealt + m.dmgTaken + m.kos +
     ai.intent + ai.intentTarget + ai.nextThink + ai.lane + ai.orbit + ai.orbitUntil +
     ai.attackAt + ai.guardFrom + ai.guardUntil + ai.dodgeAt + ai.reactedTo + ai.comboLeft +
-    ai.boostUntil + ai.boutUntil + ai.restUntil + ai.gates + ai.abilityAt + ai.hotUntil + ai.hotNext + ai.carveFor
+    ai.boostUntil + ai.boutUntil + ai.restUntil + ai.gates + ai.abilityAt + ai.hotUntil + ai.hotNext + ai.carveFor + ai.boostFloor
   );
 }
 

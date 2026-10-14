@@ -100,6 +100,8 @@ interface Summary {
   /** Ticks somebody spent with a tow charge, and in the slingshot after pulling out. */
   towTicks: number;
   slingshotTicks: number;
+  /** Boosts lit, per mech. */
+  boosts: number[];
   /** Tick the leader started lap 2, counted from the start of the countdown. */
   lap2Tick: number;
   winner: number;
@@ -161,6 +163,7 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
     snared: 0,
     towTicks: 0,
     slingshotTicks: 0,
+    boosts: race.mechs.map(() => 0),
     lap2Tick: -1,
     winner: -1,
     roundPoints: [0, 0],
@@ -261,6 +264,9 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
       // An event belongs to lap 1 if the formation phase was on when the tick began.
       if (phaseBefore === 1 && COMBAT_EVENTS.has(e.type)) sum.lap1Combat.push(`${tick}:${e.type}`);
       switch (e.type) {
+        case 'boost':
+          sum.boosts[e.mech]++;
+          break;
         case 'lapPhase':
           sum.phaseEvents.push([tick, e.lap]);
           if (e.lap === 2) {
@@ -348,11 +354,22 @@ describe(`${RACES} all-AI races`, () => {
     });
   });
 
-  it('an average race lasts between 3.5 and 3.8 minutes', () => {
-    // (Measured at the time of writing: 3:38 on average, 3:31 to 3:45.)
+  it('an average race lasts between 3.4 and 3.8 minutes', () => {
+    // (Measured at the time of writing: 3:38 on average, 3:31 to 3:45. Since
+    // a boost burns for at least half a second the pilots' boosts on the
+    // formation lap are real ones, not taps, and it is about 3:30.)
     const minutes = mean(results.map((s) => s.ticks * DT)) / 60;
-    expect(minutes).toBeGreaterThan(3.5);
+    expect(minutes).toBeGreaterThan(3.4);
     expect(minutes).toBeLessThan(3.8);
+  });
+
+  it('pilots boost in burns, not a tap at a time', () => {
+    // Pilots used to tick a full gauge off at the brim, a boost lit every
+    // other tick: 390 a race each on average, up to 582. Now each one burns
+    // at least BOOST_MIN_BURN. (Measured when written: 24 on average, at most 33.)
+    each((s) => {
+      for (const n of s.boosts) expect(n).toBeLessThan(60);
+    });
   });
 
   it('no NaN or Infinity ever appears in the state', () => {
@@ -400,16 +417,16 @@ describe(`${RACES} all-AI races`, () => {
     });
   });
 
-  it('first laps take between 75 and 86 seconds from GO, for the whole field', () => {
+  it('first laps take between 74 and 86 seconds from GO, for the whole field', () => {
     // 8640 units at the formation limiter (110 u/s) is 78.5 seconds. The pack
-    // bonus and the tow let the followers do it a little quicker than that;
-    // a detour through the gates costs a little.
+    // bonus, the tow and a boost or two on the straights let the followers do
+    // it a little quicker than that; a detour through the gates costs a little.
     const flat = TRACK.length / RULES.limiter1;
     expect(flat).toBeGreaterThan(75);
     expect(flat).toBeLessThan(86);
     each((s) => {
       for (const t of s.firstLap) {
-        expect(t).toBeGreaterThan(75);
+        expect(t).toBeGreaterThan(74);
         expect(t).toBeLessThan(86);
       }
       // The leader's first lap is the moment the battle phase starts.

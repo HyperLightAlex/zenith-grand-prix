@@ -4,7 +4,9 @@ import {
   BATTLE_CAP_LAP3,
   BATTLE_CAP_MULT,
   BOOST_COST,
+  BOOST_MIN_BURN,
   BOOST_MIN_START,
+  BOOST_RELIGHT,
   BTN,
   BTN_MASK,
   CLASSES,
@@ -359,11 +361,31 @@ describe('boost', () => {
     expect(m.drive).toBeGreaterThan(60);
   });
 
-  it('each new press is a new boost event', () => {
+  it('each new boost, once the last has gone out, is a new boost event', () => {
     const a = new Arena(1);
     a.put(FW0, -250).drive = 60;
-    a.hold(FW0, BTN.A).step(10).release(FW0, BTN.A).step(10).hold(FW0, BTN.A).step(10);
+    a.hold(FW0, BTN.A).step(BOOST_MIN_BURN).release(FW0, BTN.A).step(BOOST_RELIGHT + 5).hold(FW0, BTN.A).step(10);
     expect(a.events('boost').length).toBe(2);
+  });
+
+  it('a tap burns for BOOST_MIN_BURN ticks, paid for in full', () => {
+    const a = new Arena(2);
+    const m = a.put(FW0, -250);
+    m.drive = 60;
+    a.tap(FW0, BTN.A);
+    a.step(BOOST_MIN_BURN - 1, () => expect(m.boosting).toBe(true));
+    a.step(1);
+    expect(m.boosting).toBe(false);
+    expect(m.drive).toBeCloseTo(60 - BOOST_MIN_BURN * BOOST_COST * DT + (BOOST_MIN_BURN + 1) * a.race.rules.drivePassive * DT, 6);
+    expect(a.events('boost').length).toBe(1);
+  });
+
+  it('picked straight back up, it is the same boost: no new event', () => {
+    const a = new Arena(2);
+    a.put(FW0, -250).drive = 60;
+    a.hold(FW0, BTN.A).step(BOOST_MIN_BURN).release(FW0, BTN.A).step(BOOST_RELIGHT - 5).hold(FW0, BTN.A).step(10);
+    expect(a.mech(FW0).boosting).toBe(true);
+    expect(a.events('boost').length).toBe(1);
   });
 
   it('stops when the Drive gauge is empty, even with the button held', () => {

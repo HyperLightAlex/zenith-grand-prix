@@ -381,10 +381,17 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
 
   // --- boost on the speed lap when the road is straight enough
   if (race.lapPhase >= 3 && !m.finished && kMax < 0.0022 && m.drive > 12) wantBoost = true;
-  if (m.drive > 97 && kMax < 0.0015 && race.lapPhase >= 2) wantBoost = true;
+  // At the brim, what the trickle brings in is spent rather than wasted: one
+  // short burn (about the minimum) each time it fills, not a tap per tick.
+  if (m.drive > 97 && kMax < 0.0015 && race.lapPhase >= 2) ai.boostFloor = Math.max(ai.boostFloor, 90);
   // The formation lap is a racing lap: spend down to a reserve for the fights
-  // to come, on the straights (and never through a carve).
-  if (race.lapPhase <= 1 && !m.carving && m.drive > 45 && kMax < 0.0015) wantBoost = true;
+  // to come, on the straights (and never through a carve), a real burn at a time.
+  if (race.lapPhase <= 1 && !m.carving && m.drive > 55 && kMax < 0.0015) ai.boostFloor = Math.max(ai.boostFloor, 45);
+  // A burn for the gauge runs down to its floor while the road stays straight.
+  if (ai.boostFloor >= 0) {
+    if (m.drive > ai.boostFloor && kMax < 0.0015 && !m.carving && !m.finished) wantBoost = true;
+    else ai.boostFloor = -1;
+  }
   if (wantBoost && m.drive > 3 && throttle >= 1) out.buttons |= BTN.A;
   out.throttle = throttle;
 

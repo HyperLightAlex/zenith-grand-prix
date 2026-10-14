@@ -95,8 +95,21 @@ export const DRIVE_PER_DAMAGE_TAKEN = 0.05;
 export const BOOST_ACCEL = 1.6;
 export const OVERDRIVE_ACCEL = 2.4;
 export const BOOST_COST = 15; // per second
-/** Drive needed to light the boost; once lit it burns to empty. */
+/** Drive needed to light the boost; once lit it burns while A is held, to empty. */
 export const BOOST_MIN_START = 6;
+/**
+ * Once lit, a boost burns for at least this many ticks (half a second) with
+ * A held or not. Without it a boost could be tapped a tick at a time: a
+ * sliver of speed over the cap for no more Drive than the trickle brings in,
+ * and a fresh ignition every other tick.
+ */
+export const BOOST_MIN_BURN = 30;
+/**
+ * A boost picked straight back up, inside this many ticks of going out, is
+ * the same boost carried on: no fresh ignition (no flash, no sound), so
+ * mashing A sounds like holding it. Lighting it still takes BOOST_MIN_START.
+ */
+export const BOOST_RELIGHT = 20;
 /** Nothing free-steering goes faster than this multiple of its current cap. */
 export const SPEED_CEILING = 1.22;
 export const DRAFT_MIN = 4;

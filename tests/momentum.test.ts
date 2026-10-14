@@ -4,6 +4,7 @@ import {
   ACT,
   ATK,
   ATTACKS,
+  BOOST_MIN_BURN,
   BTN,
   CLASSES,
   DRIVE_PER_DAMAGE_DEALT,
@@ -34,7 +35,8 @@ describe('momentum', () => {
   it('a boost primes the next attack, and it lingers for rules.momentumSecs after', () => {
     const a = arena({ tow: 0 });
     const me = a.put(FW0, 300, 0);
-    a.hold(FW0, BTN.A).step(10);
+    // (Held past its minimum burn, so letting go puts it out at once.)
+    a.hold(FW0, BTN.A).step(BOOST_MIN_BURN);
     expect(me.boosting).toBe(true);
     expect(me.momentum).toBe(window);
     a.release(FW0, BTN.A).step(1);

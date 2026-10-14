@@ -18,7 +18,9 @@ import {
   BATTLE_STAGGER_DRAG,
   BOOST_ACCEL,
   BOOST_COST,
+  BOOST_MIN_BURN,
   BOOST_MIN_START,
+  BOOST_RELIGHT,
   BTN,
   BTN_MASK,
   BUMP_TURN,
@@ -225,6 +227,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       arcR: 0,
       airT: 0,
       boosting: false,
+      boostT: 0,
+      relightT: 0,
       onStrip: false,
       drafting: false,
       tow: 0,
@@ -276,6 +280,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
         reactedTo: -1,
         comboLeft: 0,
         boostUntil: 0,
+        boostFloor: -1,
         boutUntil: 0,
         restUntil: 0,
         gates,
@@ -376,12 +381,24 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // A tick of boost has to be paid for in full: with `drive > 0` the passive
   // trickle alone kept an empty gauge boosting for as long as A was held.
   // Overdrive takes the place of boost, and a snared mech cannot light it.
+  // Once lit it burns for BOOST_MIN_BURN ticks whether A is still held or
+  // not, so a tap is a short boost paid for in full, not a free sliver; and
+  // one picked straight back up is the same boost, not a new ignition.
   const fuel = wasBoosting ? BOOST_COST * DT : BOOST_MIN_START;
-  if (!staggered && !m.finished && !overdrive && m.snareT <= 0 && (input.buttons & BTN.A) !== 0 && m.drive >= fuel && input.throttle > 0.2) {
+  const wantsIt = (input.buttons & BTN.A) !== 0 || (wasBoosting && m.boostT > 0);
+  if (!staggered && !m.finished && !overdrive && m.snareT <= 0 && wantsIt && m.drive >= fuel && input.throttle > 0.2) {
     m.boosting = true;
     cap *= race.rules.boostMult;
     m.drive = Math.max(0, m.drive - BOOST_COST * DT);
-    if (!wasBoosting) race.events.push({ type: 'boost', mech: m.id });
+    if (!wasBoosting) {
+      m.boostT = BOOST_MIN_BURN;
+      if (m.relightT <= 0) race.events.push({ type: 'boost', mech: m.id });
+    }
+    m.boostT = Math.max(0, m.boostT - 1);
+    m.relightT = 0;
+  } else {
+    m.relightT = wasBoosting ? BOOST_RELIGHT : Math.max(0, m.relightT - 1);
+    m.boostT = 0;
   }
   // The tow: full strength after a moment behind someone, and it lingers for
   // a moment after pulling out, which is what makes a slingshot pass.

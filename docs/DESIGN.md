@@ -134,7 +134,11 @@ coordinated team play online.
 
 On laps 1 and 2 nobody free-steering can exceed the limiter except by:
 
-- **Boost**: +25% while held, burning 15 Drive a second.
+- **Boost**: +25% while held, burning 15 Drive a second. It takes 6 Drive
+  to light, and once lit burns for at least half a second, held or not, so
+  a tap is a short boost paid for in full (tapping used to buy a sliver over
+  the cap for no more than the trickle). Picked back up within a third of a
+  second it is the same boost: no new ignition, flash or sound.
 - **A carve's burst**: +15%, +25% or +35% for 0.5, 0.8 or 1.1 s, by tier
   (see "Carving" below).
 - **Slipstream**: +4% tucked in behind another mech (see below).
@@ -607,7 +611,7 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 | Momentum strikes per race | 6.1, about 42 damage each |
 | Ring-outs per race | 6.6, about 66 damage each (440 a race) |
 | Parries per race | 10 |
-| Entering lap 2 | 45 Drive per mech (they boost on lap 1 down to that); Cells: forwards 1.4, midfielders 1.0, defenders 0.6 |
+| Entering lap 2 | 48 Drive per mech (they boost on lap 1 down to 45, a burn at a time); Cells: forwards 1.5, midfielders 0.9, defenders 0.5 |
 | Abilities used per race | Overdrive 4.2, Break Away 3.0, Snare 2.0, Ram 1.6, Disruptor 1.2, Aegis 0.8 |
 | Battle-lap pace | 370 mph against a 375 limiter (366 while locked on) |
 | Leader at the start of lap 3 goes on to win | 55% |

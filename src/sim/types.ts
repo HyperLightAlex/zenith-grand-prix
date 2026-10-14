@@ -37,6 +37,8 @@ export interface AiState {
   reactedTo: number;
   comboLeft: number;
   boostUntil: number;
+  /** A burn started to spend the gauge runs down to this much Drive (-1: none under way). */
+  boostFloor: number;
   /** AI fights in bouts: engaged until boutUntil, then rests until restUntil. */
   boutUntil: number;
   restUntil: number;
@@ -164,6 +166,10 @@ export interface MechState {
 
   // --- flags for presentation
   boosting: boolean;
+  /** Ticks left of a lit boost's minimum burn (see BOOST_MIN_BURN). */
+  boostT: number;
+  /** Ticks left in which a boost that went out can be picked back up as the same one (see BOOST_RELIGHT). */
+  relightT: number;
   onStrip: boolean;
   drafting: boolean;
   /** Slipstream charge 0..1: builds in a tow, lingers after pulling out. */
