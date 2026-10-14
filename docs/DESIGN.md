@@ -446,7 +446,12 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
   guard damage and knockback), half a charge 30%. A tap throws it as before.
   The cooldown waits for the charge. Charging is a long tell: the mech is
   still in its wind-up, so a counter-hit catches it and a swing reads it.
-  Computer pilots do not charge yet.
+  Computer pilots charge too: a staggered rival is a free hit worth a full
+  charge, a lance from a long run-up often, and otherwise now and then, the
+  better pilot more often, but never with a blow coming their way (about 11
+  charges a race across the six). Midfielders gunning at range close in now
+  and then to kick, at once on a rival their carbine has staggered (about 9
+  kicks a race, from one or two).
 - **A hit costs control, not the race.** A clean hit takes about 1% of the
   victim's pace per 9 damage, never more than 12% (it was 1% per 4, up to
   35%). A mech staggered at racing speed keeps 90% of its throttle, and a

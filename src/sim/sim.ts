@@ -294,6 +294,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
         hotUntil: 0,
         hotNext: 0,
         carveFor: 0,
+        holdUntil: 0,
+        closeUntil: 0,
         carveGo: false,
       },
     });

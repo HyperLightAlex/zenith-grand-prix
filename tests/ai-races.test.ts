@@ -3,6 +3,7 @@ import {
   ABILITIES,
   ABILITY,
   ACT,
+  ATK,
   CLASSES,
   COUNTDOWN_TICKS,
   DEFAULT_RULES,
@@ -105,6 +106,9 @@ interface Summary {
   slingshotTicks: number;
   /** Boosts lit, per mech. */
   boosts: number[];
+  /** Heavies held to charge, and kicks thrown by the midfielders. */
+  charges: number;
+  kicks: number;
   /** Tick the leader started lap 2, counted from the start of the countdown. */
   lap2Tick: number;
   winner: number;
@@ -169,6 +173,8 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
     towTicks: 0,
     slingshotTicks: 0,
     boosts: race.mechs.map(() => 0),
+    charges: 0,
+    kicks: 0,
     lap2Tick: -1,
     winner: -1,
     roundPoints: [0, 0],
@@ -291,6 +297,12 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
         case 'boost':
           sum.boosts[e.mech]++;
           break;
+        case 'charge':
+          if (!e.full) sum.charges++;
+          break;
+        case 'swing':
+          if (e.attack === ATK.MF_KICK) sum.kicks++;
+          break;
         case 'lapPhase':
           sum.phaseEvents.push([tick, e.lap]);
           if (e.lap === 2) {
@@ -385,6 +397,12 @@ describe(`${RACES} all-AI races`, () => {
     const minutes = mean(results.map((s) => s.ticks * DT)) / 60;
     expect(minutes).toBeGreaterThan(3.4);
     expect(minutes).toBeLessThan(3.8);
+  });
+
+  it('pilots charge their heavies now and then, and the midfielders close in to kick', () => {
+    // (Measured when written: about 11 charges a race across the six, and 9 kicks.)
+    expect(mean(results.map((s) => s.charges))).toBeGreaterThan(4);
+    expect(mean(results.map((s) => s.kicks))).toBeGreaterThan(4);
   });
 
   it('pilots boost in burns, not a tap at a time', () => {

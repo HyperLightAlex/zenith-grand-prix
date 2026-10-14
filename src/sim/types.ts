@@ -54,6 +54,10 @@ export interface AiState {
   carveFor: number;
   /** Whether this pilot carves through that bend. */
   carveGo: boolean;
+  /** A heavy held to charge: Y stays down until this tick. */
+  holdUntil: number;
+  /** A midfielder closing in for a kick, until this tick. */
+  closeUntil: number;
 }
 
 export interface MechState {

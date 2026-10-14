@@ -25,6 +25,7 @@ import { carveStick, classOf, distance, hpFraction, inPlay, lockable, sameRoute,
 import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
 import { deltaS, forkAt, gripAt, hwAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
+import type { AttackDef } from './config';
 import type { MechInput, MechState, RaceState } from './types';
 
 const INTENT = { RACE: 0, ENGAGE: 1, ESCORT: 2 } as const;
@@ -32,6 +33,31 @@ const INTENT = { RACE: 0, ENGAGE: 1, ESCORT: 2 } as const;
 /** Set a button only on a tick where it was up before, so the sim sees a press. */
 function press(out: MechInput, m: MechState, bit: number): void {
   if ((m.prevButtons & bit) === 0) out.buttons |= bit;
+}
+
+/**
+ * Whether to hold a heavy just thrown and charge it, and for how long. A
+ * rival already staggered is a free hit worth charging, and so is a lance
+ * from a long run-up; otherwise now and then, the better pilot more often,
+ * so the charge is a tell a person learns to read. Never when a blow is
+ * coming its way.
+ */
+function holdHeavy(race: RaceState, ai: MechState['ai'], m: MechState, t: MechState, a: AttackDef, out: MechInput): void {
+  const full = a.charge ?? 0;
+  if (full <= 0 || (out.buttons & BTN.Y) === 0) return;
+  const threatened = race.mechs.some((e) => e.team !== m.team && e.act === ACT.ATTACK && e.target === m.id && e.actT < ATTACKS[e.attack].windup);
+  if (threatened) return;
+  const free = t.act === ACT.STAGGER;
+  const runUp = a.advance >= 60 && distanceS(t, m) > 22;
+  const p = free ? 0.7 : runUp ? 0.35 : 0.1 + 0.25 * m.skill;
+  if (rngNext(race) >= p) return;
+  const share = free ? 1 : 0.4 + 0.6 * rngNext(race);
+  ai.holdUntil = race.tick + a.windup + Math.round(full * share);
+}
+
+/** Rough distance down the road between two mechs (enough for a run-up). */
+function distanceS(a: MechState, b: MechState): number {
+  return Math.abs(a.s - b.s);
 }
 
 function ownForward(race: RaceState, m: MechState): MechState | null {
@@ -566,6 +592,13 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // Melee pilots hang back between bursts, then step in to strike.
   let pref = c.aiRange > 0 ? c.aiRange : radii + 4.2;
   if (c.aiRange === 0 && m.act === ACT.NONE && tick < ai.attackAt - 24) pref = radii + (m.role === ROLE.FW ? 15 : 9);
+  // A midfielder gunning at range now and then closes in to kick: on a rival
+  // its carbine has staggered, or between bursts, the better pilot more often.
+  if (m.role === ROLE.MF && m.cdSecondary === 0 && tick >= ai.closeUntil + 60 && weaponsFree(race)) {
+    const stunned = t.act === ACT.STAGGER;
+    if ((stunned && dist < 40) || (m.act === ACT.NONE && rngNext(race) < (0.004 + 0.01 * m.skill))) ai.closeUntil = tick + 100;
+  }
+  if (m.role === ROLE.MF && tick < ai.closeUntil && m.cdSecondary === 0) pref = radii + 3;
   if (m.role === ROLE.MF && dist < 13 && m.cdSecondary > 0) pref = 34;
   out.my = clamp((dist - pref) / 5, -1, 1);
   if (tick > ai.orbitUntil) {
@@ -595,11 +628,14 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
         used = true;
       } else if (dist > 12 && dist < 36 && m.cdSecondary === 0 && m.drive >= secondary.driveCost && r < 0.3) {
         press(out, m, BTN.Y);
+        holdHeavy(race, ai, m, t, secondary, out);
         used = true;
       }
     } else if (m.role === ROLE.MF) {
       if (dist <= secondary.reach + radii + 1 && m.cdSecondary === 0) {
         press(out, m, BTN.Y);
+        holdHeavy(race, ai, m, t, secondary, out);
+        ai.closeUntil = 0;
         used = true;
       } else if (dist <= primary.shot!.range - 6 && m.cdPrimary === 0) {
         press(out, m, BTN.X);
@@ -608,6 +644,7 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     } else {
       if (dist <= 22 && m.cdSecondary === 0 && r < 0.55) {
         press(out, m, BTN.Y);
+        holdHeavy(race, ai, m, t, secondary, out);
         used = true;
       } else if (dist <= primary.reach + radii + 1.5) {
         press(out, m, BTN.X);
@@ -617,6 +654,9 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     }
     // Attack in bursts with a breather between, so there is a rhythm to read.
     if (used) ai.attackAt = tick + Math.round(lerp(105, 45, m.skill) + rngNext(race) * 40);
+  } else if (m.act === ACT.ATTACK && m.chargeOn && tick < ai.holdUntil) {
+    // Charging a heavy: keep it held.
+    out.buttons |= BTN.Y;
   } else if (m.act === ACT.ATTACK && ai.comboLeft > 0) {
     const a = ATTACKS[m.attack];
     if (a.next >= 0 && m.actT >= a.windup && !m.comboQueued && (m.attackHit || m.actT >= a.windup + a.active)) {

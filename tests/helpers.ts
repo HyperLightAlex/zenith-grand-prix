@@ -151,7 +151,7 @@ function mechSum(m: MechState): number {
     m.lastHitBy + m.lastHitTick + m.deniedTick + m.dmgDealt + m.dmgTaken + m.kos +
     ai.intent + ai.intentTarget + ai.nextThink + ai.lane + ai.orbit + ai.orbitUntil +
     ai.attackAt + ai.guardFrom + ai.guardUntil + ai.dodgeAt + ai.reactedTo + ai.comboLeft +
-    ai.boostUntil + ai.boutUntil + ai.restUntil + ai.gates + ai.abilityAt + ai.hotUntil + ai.hotNext + ai.carveFor + ai.boostFloor
+    ai.boostUntil + ai.boutUntil + ai.restUntil + ai.gates + ai.abilityAt + ai.hotUntil + ai.hotNext + ai.carveFor + ai.boostFloor + ai.holdUntil + ai.closeUntil
   );
 }
 
