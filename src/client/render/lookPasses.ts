@@ -28,7 +28,8 @@ const COMMON = /* glsl */ `
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
   }
-  float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }`;
+  float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+  vec3 saturated(vec3 c, float k) { float l = luma(c); return max(mix(vec3(l), c, k), 0.0); }`;
 
 const InkShader = {
   name: 'InkShader',
@@ -114,10 +115,22 @@ const InkShader = {
       float bgFade = 1.0 - smoothstep(uFade.x, uFade.y, zc);
       float charLine = max(contour, inner) * me * mix(1.0, breaks, 0.7);
       float bgLine = outline * (1.0 - me) * breaks * bgFade * 0.7;
-      // Ink is ink on a character; on a background the line is the paint's own colour, darker.
+      // Coloured lines: inside a light area (a lit sky, the sunny side of a
+      // cloud, a glow, a sunlit panel) the cel's line was traced in a deeper
+      // shade of that colour, not in ink. A character's outer contour stays ink.
+      // "Inside" a light area: both sides of the line are light, so the
+      // darkest of the samples round it is what counts.
+      vec3 round4 = (al.rgb + ar.rgb + ab.rgb + at.rgb) * 0.25;
+      float lo = min(min(min(luma(al.rgb), luma(ar.rgb)), min(luma(ab.rgb), luma(at.rgb))), luma(src));
+      float lit = smoothstep(0.4, 0.75, lo);
+      vec3 trace = saturated(max(round4, src), 1.8) * 0.55;
       float shade = 0.55 + 0.45 * min(luma(src), 1.0);
-      vec3 col = mix(src, uInkColor * shade, clamp(charLine * uInk, 0.0, 1.0));
-      col = mix(col, mix(src * 0.4, uInkColor * shade, 0.5), clamp(bgLine * uInk, 0.0, 1.0));
+      vec3 ink = uInkColor * shade;
+      float innerShare = inner / max(max(contour, inner), 1e-3);
+      vec3 charInk = mix(ink, trace, lit * innerShare * 0.85);
+      vec3 bgInk = mix(mix(src * 0.4, ink, 0.5), trace, lit);
+      vec3 col = mix(src, charInk, clamp(charLine * uInk, 0.0, 1.0));
+      col = mix(col, bgInk, clamp(bgLine * uInk, 0.0, 1.0));
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
