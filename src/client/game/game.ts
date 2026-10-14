@@ -235,7 +235,12 @@ export class Game {
     this.rivalFaction = choice.rival >= 0 && choice.rival !== choice.team ? choice.rival : others[(Math.random() * others.length) | 0];
   }
 
-  private setSession(choice: GarageChoice | null, seed: number, gridFlip = false): void {
+  /**
+   * Start a session: the factions, the seats, the circuit (unless `keepTrack`:
+   * the garage, which hides the circuit, keeps whichever is built), the race
+   * and its view.
+   */
+  private setSession(choice: GarageChoice | null, seed: number, gridFlip = false, keepTrack = false): void {
     this.view?.dispose();
     // The factions: yours and the rival's; between races on the title screen, any two.
     if (choice) this.factions = [choice.team, this.rivalFor(choice)];
@@ -245,7 +250,7 @@ export class Game {
     }
     this.menus.factions = this.factions;
     const { seats, localId } = this.seats(choice);
-    this.useTrack(choice?.track ?? this.trackId);
+    if (!keepTrack) this.useTrack(choice?.track ?? this.trackId);
     this.session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
     this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.factions);
     // Out of the hangar, if the garage had it up: the circuit is back.
@@ -317,11 +322,17 @@ export class Game {
   }
 
   private showGarage(choice: GarageChoice): void {
+    // The garage shows only your mech in your team's hangar, so a change of
+    // circuit, rival or match changes nothing on screen: it is remembered,
+    // and the circuit is built when the match starts. Only a new team or
+    // frame rebuilds the scene.
+    const same = this.state === 'garage' && choice.team === this.choice.team && choice.role === this.choice.role;
     this.choice = choice;
+    if (same) return;
     this.state = 'garage';
     this.hud.hide();
-    // The grid, stationary, with your mech in front of the camera.
-    this.setSession(choice, 1);
+    // The grid, stationary, with your mech in front of the camera, on whichever circuit is built.
+    this.setSession(choice, 1, false, true);
     this.view.cam.mode = 'orbit';
     this.view.cam.shiftX = GARAGE_SHIFT;
     this.view.cam.reset();
