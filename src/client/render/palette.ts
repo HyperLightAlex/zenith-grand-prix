@@ -50,7 +50,7 @@ export interface Livery {
   /** CSS colour for the HUD. */
   css: string;
   cssDim: string;
-  /** Dark armour (Vanta's charcoal, Aurora's violet): its markings are painted light rather than dark. */
+  /** Dark armour (Vanta's charcoal, Aurora's violet, Tempest's jade): its markings are painted light rather than dark. */
   darkArmour: boolean;
   /** The pilots' call signs, by role: forward, midfielder, defender. */
   pilots: [string, string, string];
@@ -129,6 +129,22 @@ export const LIVERIES: Livery[] = [
     darkArmour: true,
     pilots: ['Iris', 'Vesper', 'Bastion'],
     models: ['Seraph', 'Longbow', 'Paladin'],
+  },
+  {
+    id: 'tempest',
+    name: 'Team Tempest',
+    short: 'TMP',
+    primary: 0x2e9e6b,
+    secondary: 0x23292a,
+    frame: 0x1a2421,
+    trim: 0xd9b13b,
+    glow: 0xb6ffd8,
+    shades: { primary: 0x1a5a5e, secondary: 0x111523, frame: 0x0b0f18, trim: 0xa0601f },
+    css: '#3ddc84',
+    cssDim: '#145c36',
+    darkArmour: true,
+    pilots: ['Gale', 'Squall', 'Anvil'],
+    models: ['Kamaitachi', 'Fujin', 'Raijin'],
   },
 ];
 

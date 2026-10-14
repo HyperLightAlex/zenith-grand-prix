@@ -157,22 +157,36 @@ def build_sky(spec):
 
 # ---- keyed sheets ------------------------------------------------------------
 
+def key_channels(bg):
+    """The key's channels (those it is bright in: green's one, magenta's two) and the rest."""
+    K = [c for c in range(3) if bg[c] > 0.5]
+    return K, [c for c in range(3) if c not in K]
+
+
+def keyness(x, K, O):
+    """How far a colour leans toward the key: its weakest key channel over its strongest other one."""
+    return np.min(x[..., K], -1) - np.max(x[..., O], -1)
+
+
 def keyed(rgb, refine=True):
-    """Cut a sheet out of its flat key colour. Alpha is how little the key's
-    channel stands above the other two; edge pixels have the key taken back
-    out; any of the key's hue left over is clamped away (nothing painted on
-    these sheets is that colour); and the hidden colour under transparent
-    pixels is filled from the nearest solid one, so filtering never pulls in
-    the key."""
+    """Cut a sheet out of its flat key colour (green, or magenta for art that
+    is itself green). Alpha is how little the key's channels stand above the
+    rest; edge pixels have the key taken back out; any of the key's hue left
+    over is clamped away (nothing painted on these sheets is that colour); and
+    the hidden colour under transparent pixels is filled from the nearest
+    solid one, so filtering never pulls in the key."""
     bg = np.median(np.concatenate([rgb[:24, :24], rgb[-24:, -24:]]).reshape(-1, 3), 0)
-    k = int(np.argmax(bg))
-    o = [c for c in range(3) if c != k]
-    excess = rgb[..., k] - np.maximum(rgb[..., o[0]], rgb[..., o[1]])
-    full = bg[k] - max(bg[o[0]], bg[o[1]])
+    K, O = key_channels(bg)
+    excess = keyness(rgb, K, O)
+    full = float(keyness(bg, K, O))
     a = np.clip(1 - (excess - 0.04) / (full * 0.9 - 0.04), 0, 1)
     col = np.where(a[..., None] > 0.02, (rgb - (1 - a[..., None]) * bg) / np.maximum(a[..., None], 0.02), 0)
     col = np.clip(col, 0, 1)
-    col[..., k] = np.minimum(col[..., k], np.maximum(col[..., o[0]], col[..., o[1]]))
+    if len(K) == 1:
+        k, o = K[0], O
+        col[..., k] = np.minimum(col[..., k], np.maximum(col[..., o[0]], col[..., o[1]]))
+    else:
+        col[..., K] -= np.maximum(keyness(col, K, O), 0)[..., None]
     _, (iy, ix) = ndimage.distance_transform_edt(a < 0.98, return_indices=True)
     solid = a >= 0.98
     col = np.where(solid[..., None], col, col[iy, ix])
@@ -196,11 +210,14 @@ def refine_edges(rgb, bg, a, col, inset=3, reach=40):
     edge = ~core & (dist <= reach)
     a2 = np.where(edge, np.minimum(a, al), a)
     un = np.clip((rgb - (1 - a2[..., None]) * bg) / np.maximum(a2[..., None], 0.02), 0, 1)
-    k = int(np.argmax(bg))
-    o = [c for c in range(3) if c != k]
+    K, O = key_channels(bg)
     # Nothing on the sheets leans further toward the key than the colour inside it.
-    lim = np.maximum(np.maximum(un[..., o[0]], un[..., o[1]]), F[..., k] - np.maximum(F[..., o[0]], F[..., o[1]]) + np.maximum(un[..., o[0]], un[..., o[1]]))
-    un[..., k] = np.minimum(un[..., k], lim)
+    if len(K) == 1:
+        k, o = K[0], O
+        lim = np.maximum(np.maximum(un[..., o[0]], un[..., o[1]]), F[..., k] - np.maximum(F[..., o[0]], F[..., o[1]]) + np.maximum(un[..., o[0]], un[..., o[1]]))
+        un[..., k] = np.minimum(un[..., k], lim)
+    else:
+        un[..., K] -= np.maximum(keyness(un, K, O) - np.maximum(keyness(F, K, O), 0), 0)[..., None]
     w = np.clip((a2 - 0.2) / 0.5, 0, 1)[..., None]
     c2 = un * w + F * (1 - w)
     col = np.where(edge[..., None], c2, col)

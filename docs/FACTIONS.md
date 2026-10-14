@@ -1,6 +1,6 @@
 # Factions
 
-Four factions. A race is still two teams of three, so it is always two
+Five factions. A race is still two teams of three, so it is always two
 factions: yours and a rival (picked in the garage, or drawn at random at the
 start of each match). Every faction flies the same three frame types with
 the same stats; the difference is cosmetic. Each faction has its own colours,
@@ -12,17 +12,17 @@ then painted light), the pilots' call signs and the models' names. The race
 maps its two teams to factions (`Game.factions`); the sim never knows which
 factions are racing. Emblems and portraits come from `ui/factionArt.ts`:
 painted where they have been painted, otherwise a stand-in drawn in the
-faction's colours (none needs one now).
+faction's colours (Tempest's, until its sheet is painted).
 
-| | Solstice | Vanta | Mirage | Aurora |
-|---|---|---|---|---|
-| Who | The heroes | The black team | The desert dynasty | The knights |
-| Colours | White, royal blue, gold | Charcoal, crimson, gunmetal | Sand, rust orange, dark brown; gold trim, amber eyes | Deep violet, pearl, silver; lavender light |
-| Team colour | Blue | Red | Orange | Violet |
-| Pilots | Kite (f), Lark (m), Atlas (m) | Shrike (f), Moth (m), Golem (f) | Sirocco (m), Ibis (f), Dune (m) | Iris (m), Vesper (f), Bastion (m) |
-| Swift class (forward) | Sunhawk | Razor | Anubis | Seraph |
-| Vector class (midfielder) | Daystar | Stinger | Horus | Longbow |
-| Bulwark class (defender) | Rampart | Maul | Sobek | Paladin |
+| | Solstice | Vanta | Mirage | Aurora | Tempest |
+|---|---|---|---|---|---|
+| Who | The heroes | The black team | The desert dynasty | The knights | The storm samurai |
+| Colours | White, royal blue, gold | Charcoal, crimson, gunmetal | Sand, rust orange, dark brown; gold trim, amber eyes | Deep violet, pearl, silver; lavender light | Jade green, black lacquer, gold; pale lightning light |
+| Team colour | Blue | Red | Orange | Violet | Green |
+| Pilots | Kite (f), Lark (m), Atlas (m) | Shrike (f), Moth (m), Golem (f) | Sirocco (m), Ibis (f), Dune (m) | Iris (m), Vesper (f), Bastion (m) | Gale (m), Squall (f), Anvil (f) |
+| Swift class (forward) | Sunhawk | Razor | Anubis | Seraph | Kamaitachi |
+| Vector class (midfielder) | Daystar | Stinger | Horus | Longbow | Fujin |
+| Bulwark class (defender) | Rampart | Maul | Sobek | Paladin | Raijin |
 
 ## Design languages
 
@@ -74,6 +74,16 @@ the head, the shoulders, the backpack and the weapons' styling.
     vambraces and armoured fists; the scatter cannon in a silver-banded
     housing; two banners on poles either side of the backpack, which swing
     round to stream behind at speed.
+- **Tempest**: samurai armour for storm gods. Lacquered jade plate laced in
+  lames, black and gold; crested helms with face masks; broad layered
+  shoulder plates; skirts of lames; lightning for light.
+  - Kamaitachi: a lean wind-blade duellist, a crested helm, curved blades
+    along the forearms.
+  - Fujin: the wind god; a long matchlock rifle, a chain-weight Snare
+    launcher, a war fan on its back for the Disruptor, a billowing wind-sash
+    arching over the shoulders.
+  - Raijin: the thunder god; a horned helm, great layered shoulder plates,
+    a ring of thunder drums round its back.
 
 The poses turn the wing joints (the wings sweep back at speed), so a
 design's own wing angle sits on a group inside the joint. Fins that run back
@@ -87,4 +97,5 @@ out so they don't.
 | Solstice | in the game | painted | painted | painted |
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
 | Mirage | in the game (`render/mech/mirage/`) | painted | painted | painted |
-| Aurora | first pass (`render/mech/aurora/`) | painted (a redo, a sword through a halo, is coming) | painted | painted |
+| Aurora | in the game (`render/mech/aurora/`) | painted (a redo, a sword through a halo, is coming) | painted | painted |
+| Tempest | Solstice's for now | stand-in | stand-in | drawn |

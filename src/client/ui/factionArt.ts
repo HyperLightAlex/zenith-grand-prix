@@ -15,77 +15,46 @@ function canvas(size: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   return [c, c.getContext('2d')!];
 }
 
-/** Mirage: a winged sun disc in gold on a rust gateway. Aurora: a four-point star in a halo on a violet shield. Anyone else: their initial on a disc. Drawn 192 px square. */
+/** Tempest: a lightning bolt through three curls of wind on a jade shield. Anyone else: their initial on a disc. Drawn 192 px square. */
 function paintEmblem(g: CanvasRenderingContext2D, f: number): void {
   const l = LIVERIES[f];
   const ink = '#0d1630';
   g.lineJoin = 'round';
   g.lineWidth = 7;
   g.strokeStyle = ink;
-  if (l.id === 'mirage') {
-    // The gateway: a pylon, wider at its foot.
+  if (l.id === 'tempest') {
+    // The shield, leaning like the painted ones.
     g.beginPath();
-    g.moveTo(40, 22);
-    g.lineTo(152, 22);
-    g.lineTo(170, 170);
-    g.lineTo(22, 170);
-    g.closePath();
-    g.fillStyle = hex(l.secondary);
-    g.fill();
-    g.stroke();
-    // The wings, three feathers a side.
-    g.fillStyle = hex(l.trim);
-    for (const s of [-1, 1]) {
-      for (let k = 0; k < 3; k++) {
-        g.beginPath();
-        g.moveTo(96 + s * 18, 86 + k * 10);
-        g.lineTo(96 + s * (84 - k * 12), 70 + k * 16);
-        g.lineTo(96 + s * (78 - k * 12), 84 + k * 16);
-        g.lineTo(96 + s * 18, 100 + k * 10);
-        g.closePath();
-        g.fill();
-        g.stroke();
-      }
-    }
-    // The sun.
-    g.beginPath();
-    g.arc(96, 92, 24, 0, Math.PI * 2);
-    g.fillStyle = hex(l.trim);
-    g.fill();
-    g.stroke();
-    g.beginPath();
-    g.arc(96, 92, 11, 0, Math.PI * 2);
-    g.fillStyle = hex(l.secondary);
-    g.fill();
-  } else if (l.id === 'aurora') {
-    // A heater shield.
-    g.beginPath();
-    g.moveTo(30, 24);
-    g.lineTo(162, 24);
-    g.lineTo(162, 92);
-    g.quadraticCurveTo(160, 150, 96, 176);
-    g.quadraticCurveTo(32, 150, 30, 92);
+    g.moveTo(48, 30);
+    g.lineTo(170, 14);
+    g.lineTo(150, 128);
+    g.lineTo(92, 178);
+    g.lineTo(26, 120);
     g.closePath();
     g.fillStyle = hex(l.primary);
     g.fill();
     g.stroke();
-    // The halo.
-    g.beginPath();
-    g.ellipse(96, 92, 50, 16, 0, 0, Math.PI * 2);
+    // The wind.
+    g.strokeStyle = '#f4f6fb';
     g.lineWidth = 9;
-    g.strokeStyle = hex(l.trim);
-    g.stroke();
-    // The star.
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2;
+      g.beginPath();
+      g.arc(98 + Math.cos(a) * 20, 92 + Math.sin(a) * 20, 34, a + 0.4, a + 2.2);
+      g.stroke();
+    }
+    // The bolt, breaking out top and bottom.
     g.lineWidth = 6;
     g.strokeStyle = ink;
     g.beginPath();
-    for (let k = 0; k < 8; k++) {
-      const a = -Math.PI / 2 + (k / 8) * Math.PI * 2;
-      const r = k % 2 === 0 ? 60 : 15;
-      g.lineTo(96 + Math.cos(a) * r, 92 + Math.sin(a) * r);
-    }
+    g.moveTo(118, 4);
+    g.lineTo(78, 98);
+    g.lineTo(102, 94);
+    g.lineTo(80, 188);
+    g.lineTo(124, 80);
+    g.lineTo(100, 84);
     g.closePath();
-    g.fillStyle = hex(l.secondary);
+    g.fillStyle = hex(l.trim);
     g.fill();
     g.stroke();
   } else {

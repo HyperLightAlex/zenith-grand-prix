@@ -1,6 +1,6 @@
 # Faction sheets
 
-The painted art for the two new factions, Mirage and Aurora
+The painted art for the newer factions, Mirage, Aurora and Tempest
 (`docs/FACTIONS.md`), made to match the HUD sheets' pilots and emblems and
 the hangar's painted lettering. Made by an image model from the prompt below
 and checked one sheet at a time, like the other sheets in `art/`.
@@ -32,6 +32,7 @@ What to attach:
 | F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Its emblems are to be redone (F2b): Mirage's sits off-centre in its slanted shield, and Aurora's star in a ring is too close to Vanta's |
 | F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | in the game, in place of F2's |
 | F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | to make; replaces F2's when it is there |
+| T1 Tempest | faction-t1-tempest.png | to make. Tempest's art is green, so this sheet is keyed on magenta |
 
 ## The prompt
 
@@ -100,4 +101,43 @@ FORMAT
 - One image, 1536x1024, perfectly flat pure green #00FF00: no shading, texture or glow on the green, and nothing green in the art.
 - Mirage centred in the left half, Aurora centred in the right half, each about 600 px tall including what breaks out of the shield; at least 80 px of green between each emblem and the image's edges, and between the two.
 - Crisp edges against the green, no soft halo.
+```
+
+## The prompt for T1 (Tempest: pilots, emblem and name)
+
+Attach `hud-sheets/hud-u2-pilots.png` and `faction-f1-pilots.png` (the
+pilots' hand), `hud-sheets/hud-u3-emblems.png` and
+`faction-f2b-mirage-emblem.png` (the emblems' style, breaking out of the
+shield), and `faction-f2-emblems.png` (the lettering).
+
+```
+ZENITH GP: TEAM TEMPEST (one sheet: three pilots, the emblem and the team's name)
+
+The game: a mech racing game in the style of a 1980s Japanese TV mecha anime, teams of giant robots racing and fighting on circuits in the sky. Four teams are already drawn (the attached sheets); this is the fifth, drawn by the same hand.
+- Team Tempest, the storm samurai: armour like a samurai's, lacquered jade green with black and gold, with lightning for light; storm gods, wind and thunder.
+
+STYLE
+- Art from a 1980s Japanese TV mecha anime: the pilots like the cels of the series' cast, the emblem and lettering like the logos and title lettering of the period. Match the attached sheets exactly.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, blur, film grain or noise (the game adds its own grain).
+- Original designs only: nothing that resembles an existing anime, character, logo or brand.
+
+LAYOUT: one image, 1536x1024, landscape.
+- Top half: three square portraits, each exactly 512x512, side by side edge to edge across the top, with no borders, gaps or labels.
+- Bottom half: perfectly flat pure magenta #FF00FF, with no shading, texture, gradient, glow or shadow on the magenta. On it, the emblem centred in the bottom-left square (about 400 px tall), and the name TEMPEST centred across the bottom-middle and bottom-right squares (about 900 px wide). Nothing in the emblem or the name may be magenta, pink or purple. Crisp edges against the magenta, with no soft halo, and neither may touch the portraits or the image's edges.
+
+THE PILOTS (top half, left to right)
+- 1980s TV anime character cels: clean dark ink outlines of even weight, flat colour with one hard-edged shadow tone, a hard highlight band on the hair, large expressive eyes with two catch-lights, drawn by the same hand as the attached pilots.
+- Framed exactly like the attached pilots: head and shoulders, the head turned three-quarters toward the right edge, the eyes about 40% down from the top, the shoulders running off the bottom edge. Adults, each with a distinct face, build, hair and skin tone.
+- Black pilot suits with jade green panels and gold trim, a headset and boom mic. Background: a flat airbrushed gradient from jade green #2E9E6B down to deep green-black #0C1A14, with a few thin pale horizontal scan lines across it, like a comms screen. No scenery, text or logos.
+  1. Gale, the forward: a young man about 20, light tan skin, a high black ponytail whipping to one side, a white headband with a small gold lightning mark, a fierce grin.
+  2. Squall, the midfielder: a woman in her late 20s, medium-brown skin, short spiky silver-white hair, narrow dark green eyes, a small gold earring, a calm, focused look.
+  3. Anvil, the defender: a tall, broad woman in her 40s, dark skin, close-cropped grey hair, a heavy jaw, a stern look with smile lines at the eyes, a heavy armoured collar with a gold storm-cloud clasp.
+
+THE EMBLEM (bottom left)
+- The same slanted shield outline as the attached emblems (a thick white border inside a thin navy #0D1630 outline), flat colour, hard edges, no letters.
+- A jade green #2E9E6B field. On it, a storm: three white curling streaks of wind swirling round the centre of the shield. Down through the middle of the swirl strikes a gold #D9B13B lightning bolt, outlined in black, breaking out past the top and the bottom of the shield the way the attached emblems' boldest parts do.
+- Centre everything on the shield's slanted middle line (halfway between its left and right edges at each height), not on the image.
+
+THE NAME (bottom middle and right)
+- TEMPEST, exactly the same lettering as SOLSTICE, VANTA, MIRAGE and AURORA on the attached sheets: huge, heavy, forward-slanting italic capitals in white with a thick navy #0D1630 outline and a navy drop shadow down and to the right. Nothing else. Spell it exactly as given.
 ```

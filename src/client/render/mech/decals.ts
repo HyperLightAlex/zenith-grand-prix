@@ -35,7 +35,8 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
     g.restore();
   };
   // Team emblem: Solstice a rising sun, Vanta a split chevron, Mirage a
-  // winged sun disc, Aurora a four-point star in a halo.
+  // winged sun disc, Aurora a sword through a halo, Tempest a lightning bolt
+  // through a swirl of wind.
   cell(0, () => {
     g.fillStyle = trim;
     g.strokeStyle = trim;
@@ -56,18 +57,42 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
         }
       }
     } else if (livery.id === 'aurora') {
+      // The sword, point up, through a halo.
       g.beginPath();
-      for (let k = 0; k < 8; k++) {
-        const a = -Math.PI / 2 + (k / 8) * Math.PI * 2;
-        const r = k % 2 === 0 ? 50 : 12;
-        g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r);
-      }
+      g.moveTo(64, 10);
+      g.lineTo(72, 26);
+      g.lineTo(72, 78);
+      g.lineTo(56, 78);
+      g.lineTo(56, 26);
       g.closePath();
+      g.fill();
+      g.fillRect(36, 76, 56, 9);
+      g.fillRect(60, 85, 8, 22);
+      g.beginPath();
+      g.arc(64, 112, 7, 0, Math.PI * 2);
       g.fill();
       g.lineWidth = 6;
       g.beginPath();
-      g.ellipse(64, 64, 44, 13, 0, 0, Math.PI * 2);
+      g.arc(64, 80, 24, 0, Math.PI * 2);
       g.stroke();
+    } else if (livery.id === 'tempest') {
+      // Three curls of wind round the middle, a lightning bolt through them.
+      g.lineWidth = 7;
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2;
+        g.beginPath();
+        g.arc(64 + Math.cos(a) * 16, 64 + Math.sin(a) * 16, 26, a + 0.4, a + 2.2);
+        g.stroke();
+      }
+      g.beginPath();
+      g.moveTo(74, 6);
+      g.lineTo(46, 68);
+      g.lineTo(66, 66);
+      g.lineTo(52, 122);
+      g.lineTo(84, 54);
+      g.lineTo(64, 56);
+      g.closePath();
+      g.fill();
     } else if (livery.id === 'vanta') {
       g.beginPath();
       g.moveTo(14, 26);
