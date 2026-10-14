@@ -245,6 +245,10 @@ the painted logo on its black card too.
   frame (on its parts' geometry, since the materials are shared within a
   team), and the ink pass draws a contour wherever one mech meets another,
   so two side by side in a pack, at the same depth, still part with a line.
+- **Simpler further off.** A mech's lines where paints meet (the edges of
+  its numbers and emblems among them) fade between 22 and 60 units, and its
+  creases soften, as a cel drew a distant figure; its outline and overlaps
+  stay. (They made a far mech busy.)
 
 ## Feel of speed: the boost lurch
 
@@ -320,9 +324,6 @@ works as before, and on the low quality setting the ink pass is skipped.
 These are the parts that would take it from a convincing pass to a finished
 style, roughly in order of payoff.
 
-- **Faces and decals.** Number decals and the team emblems are textures
-  that the ink pass reads as paint edges, which is mostly right but can be
-  busy at a distance.
 - **A 30 frames a second option** for the whole picture, as Orbitals does.
   Racing feels worse at 30, so it would be a setting, not the default.
 - **The garage** uses the look as it is; it has no composition of its own

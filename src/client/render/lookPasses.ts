@@ -117,6 +117,12 @@ const InkShader = {
         float rx = abs(log((max(luma(cr), 0.0) + 0.015) / (max(luma(cl), 0.0) + 0.015)));
         float ry = abs(log((max(luma(ct), 0.0) + 0.015) / (max(luma(cb), 0.0) + 0.015)));
         float colour = smoothstep(0.85, 1.25, max(rx, ry)) * (1.0 - smoothstep(0.9, 1.3, hot)) * 0.8;
+        // A mech further off is drawn simpler, as a cel did: the lines where
+        // paints meet (the edges of its numbers and emblems among them) and
+        // its creases fade, its outline and overlaps stay.
+        float near = 1.0 - smoothstep(22.0, 60.0, zc);
+        colour *= near;
+        fold *= mix(0.4, 1.0, near);
         inner = max(max(over, fold), colour) * 0.72;
       }
 
