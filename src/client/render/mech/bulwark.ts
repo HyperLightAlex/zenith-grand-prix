@@ -83,11 +83,16 @@ export function buildBulwark(c: FrameCtx, number: string): void {
     }
     c.put(J.chest, k);
     for (const s of [1, -1]) c.flame(J.chest, [s * 0.72, 0.4, -2.36], [-0.25, 0, 0], 0.4, 3.0, 'main');
+    // The number on the backpack's face (it sat inside it, out of sight),
+    // above the nozzles, on a roundel; hazard chevrons between the nozzles.
     const num = numberDecal(number, livery);
-    num.scale.setScalar(1.1);
-    num.position.set(0, 1.0, -1.66);
+    num.scale.setScalar(0.85);
+    num.position.set(0, 1.22, -1.77);
     num.rotation.y = Math.PI;
+    num.renderOrder = 3;
     J.chest.add(num);
+    decal(J.chest, livery, 'roundel', [0, 1.22, -1.765], [0, Math.PI, 0], 0.95);
+    decal(J.chest, livery, 'chevrons', [0, 0.42, -1.765], [0, Math.PI, -Math.PI / 2], 0.5, 0.2);
     decal(J.chest, livery, 'caution', [0, 1.78, -1.49], [0, Math.PI, 0], 1.1, 0.4);
   }
 

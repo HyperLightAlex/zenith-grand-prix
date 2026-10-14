@@ -63,7 +63,11 @@ export function buildSwift(c: FrameCtx, number: string): void {
     num.scale.setScalar(0.5);
     num.position.set(0, 1.0, -0.94);
     num.rotation.y = Math.PI;
+    num.renderOrder = 3;
     J.chest.add(num);
+    // A roundel under the number on the busy back, and hazard chevrons over the nozzles.
+    decal(J.chest, livery, 'roundel', [0, 1.0, -0.936], [0, Math.PI, 0], 0.6);
+    decal(J.chest, livery, 'chevrons', [0, 0.665, -0.936], [0, Math.PI, 0], 0.5, 0.13);
   }
 
   // ---- tendrils ------------------------------------------------------------------------

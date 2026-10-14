@@ -6,9 +6,11 @@ import { EMBLEMS } from '../../ui/hudArt';
 import { toonGradient, type Livery } from '../palette';
 import { MARKS, type MarkName } from './mechArt';
 
-export type DecalKind = 'emblem' | 'caution' | 'stencil' | 'warning' | 'text' | 'arrow' | 'stripes' | 'lift';
-const CELLS: DecalKind[] = ['emblem', 'caution', 'stencil', 'warning', 'text', 'arrow', 'stripes', 'lift'];
+export type DecalKind = 'emblem' | 'caution' | 'stencil' | 'warning' | 'text' | 'arrow' | 'stripes' | 'lift' | 'chevrons' | 'roundel';
+const CELLS: DecalKind[] = ['emblem', 'caution', 'stencil', 'warning', 'text', 'arrow', 'stripes', 'lift', 'chevrons', 'roundel'];
 const CELL = 128;
+/** The sheet is four cells across and this many down. */
+const ROWS = 3;
 
 const sheets = new Map<string, THREE.MeshToonMaterial>();
 
@@ -17,7 +19,7 @@ const css = (c: number) => `#${new THREE.Color(c).getHexString()}`;
 function drawSheet(livery: Livery): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = CELL * 4;
-  c.height = CELL * 2;
+  c.height = CELL * ROWS;
   const g = c.getContext('2d')!;
   const trim = css(livery.trim);
   const dark = '#151a26';
@@ -128,6 +130,32 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
     g.fillRect(0, 26, CELL, 26);
     g.fillRect(0, 76, CELL, 26);
   });
+  // Hazard chevrons for the thrusters: four, pointing along the cell.
+  cell(8, () => {
+    g.fillStyle = livery.id === 'vanta' ? light : dark;
+    for (let k = 0; k < 4; k++) {
+      const x = 6 + k * 30;
+      g.beginPath();
+      g.moveTo(x, 34);
+      g.lineTo(x + 16, 34);
+      g.lineTo(x + 34, 64);
+      g.lineTo(x + 16, 94);
+      g.lineTo(x, 94);
+      g.lineTo(x + 18, 64);
+      g.closePath();
+      g.fill();
+    }
+  });
+  // A racing roundel to set a number on: white on Solstice, the team's red on Vanta.
+  cell(9, () => {
+    g.beginPath();
+    g.arc(64, 64, 56, 0, Math.PI * 2);
+    g.fillStyle = livery.id === 'vanta' ? css(livery.secondary) : '#f4f4f8';
+    g.fill();
+    g.lineWidth = 5;
+    g.strokeStyle = dark;
+    g.stroke();
+  });
   // Lifting point: a ringed target.
   cell(7, () => {
     g.strokeStyle = livery.id === 'vanta' ? light : dark;
@@ -144,7 +172,7 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
 }
 
 // ---- the anime look's painted markings ----------------------------------------
-// The same eight cells, painted (art/mech-sheets, P2), with the team emblem
+// The same ten cells, painted (art/mech-sheets, P2), with the team emblem
 // from the HUD's U3 sheet: the white markings coloured for the team (dark on
 // Solstice's white, light on Vanta's charcoal; the stripes in the trim), the
 // caution stripes and the warning triangle as painted. Swapped in for the
@@ -200,14 +228,14 @@ function drawFitted(g: CanvasRenderingContext2D, img: HTMLImageElement, x: numbe
 function paintedSheet(livery: Livery): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = PAINTED_CELL * 4;
-  c.height = PAINTED_CELL * 2;
+  c.height = PAINTED_CELL * ROWS;
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
   t.userData.shared = true;
   const ink = inkFor(livery);
   const trim = css(livery.trim);
-  const cells: Record<DecalKind, [string, string | null, number]> = {
+  const cells: Record<DecalKind, [string, string | null, number, ('fill' | 'multiply')?]> = {
     emblem: [EMBLEMS[livery.id === 'vanta' ? 1 : 0], null, 0.04],
     caution: [MARKS.caution.url, null, 0.02],
     stencil: [MARKS.stencil.url, ink, 0.08],
@@ -216,12 +244,15 @@ function paintedSheet(livery: Livery): THREE.CanvasTexture {
     arrow: [MARKS.arrow.url, ink, 0.06],
     stripes: [MARKS.stripes.url, trim, 0.0],
     lift: [MARKS.lift.url, ink, 0.12],
+    chevrons: [MARKS.chevrons.url, ink, 0.04],
+    // White on Solstice; the team's red on Vanta, so its pale number reads.
+    roundel: [MARKS.roundel.url, livery.id === 'vanta' ? css(livery.secondary) : null, 0.04, 'multiply'],
   };
   const g = c.getContext('2d')!;
   Promise.all(CELLS.map((k) => image(cells[k][0]))).then((imgs) => {
     imgs.forEach((img, i) => {
-      const [, tint, pad] = cells[CELLS[i]];
-      drawFitted(g, img, (i % 4) * PAINTED_CELL, Math.floor(i / 4) * PAINTED_CELL, PAINTED_CELL, pad, tint);
+      const [, tint, pad, mode] = cells[CELLS[i]];
+      drawFitted(g, img, (i % 4) * PAINTED_CELL, Math.floor(i / 4) * PAINTED_CELL, PAINTED_CELL, pad, tint, mode);
     });
     t.needsUpdate = true;
   });
@@ -302,8 +333,8 @@ export function decal(parent: THREE.Object3D, livery: Livery, kind: DecalKind, a
   const geo = new THREE.PlaneGeometry(w, h);
   const uv = geo.attributes.uv as THREE.BufferAttribute;
   const u0 = (i % 4) / 4;
-  const v0 = 1 - (Math.floor(i / 4) + 1) / 2;
-  for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) / 4, v0 + uv.getY(k) / 2);
+  const v0 = 1 - (Math.floor(i / 4) + 1) / ROWS;
+  for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) / 4, v0 + uv.getY(k) / ROWS);
   const mesh = new THREE.Mesh(geo, sheetMaterial(livery));
   mesh.position.set(at[0], at[1], at[2]);
   mesh.rotation.set(rot[0], rot[1], rot[2]);

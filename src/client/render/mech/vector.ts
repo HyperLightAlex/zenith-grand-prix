@@ -73,6 +73,8 @@ export function buildVector(c: FrameCtx, number: string): void {
     for (const s of [1, -1]) c.flame(J.chest, [s * 0.44, 0.39, -1.79], [-0.25, 0, 0], 0.24, 3.2, 'main');
     decal(J.chest, livery, 'stripes', [0, 0.86, 1.15], [-1.0, 0, Math.PI / 2], 0.52, 0.44);
     decal(J.chest, livery, 'stencil', [0, 0.84, -1.3], [0, Math.PI, 0], 0.42);
+    // Hazard chevrons between the nozzles, pointing down the exhaust.
+    decal(J.chest, livery, 'chevrons', [0, 0.44, -1.3], [0, Math.PI, -Math.PI / 2], 0.32, 0.14);
   }
 
   // ---- canards ------------------------------------------------------------------------
