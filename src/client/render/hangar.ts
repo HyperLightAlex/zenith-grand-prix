@@ -20,6 +20,8 @@ const DOOR_H = 13;
 const APRON = 44; // how far the floor runs out past the door
 
 export interface HangarTeam {
+  /** The team's name, painted on the walls. */
+  name: string;
   /** Paint for the stripes, as CSS. */
   css: string;
   /** The team's glow, for the pad's lamps and the control room's screens. */
@@ -190,6 +192,125 @@ function numberTexture(): [THREE.CanvasTexture, (n: number) => void] {
   return [t, draw];
 }
 
+/**
+ * A painted light: added to what is behind it, leaving the frame's alpha (the
+ * anime look's character mark) as it was, so a shaft of light across a mech
+ * neither inks nor un-inks it.
+ */
+function lightMaterial(map: THREE.Texture, color: THREE.ColorRepresentation, opacity: number, side: THREE.Side = THREE.DoubleSide): THREE.MeshBasicMaterial {
+  const m = new THREE.MeshBasicMaterial({ map, color, transparent: true, opacity, depthWrite: false, side, fog: false });
+  m.blending = THREE.CustomBlending;
+  m.blendEquation = THREE.AddEquation;
+  m.blendSrc = THREE.SrcAlphaFactor;
+  m.blendDst = THREE.OneFactor;
+  m.blendEquationAlpha = THREE.AddEquation;
+  m.blendSrcAlpha = THREE.ZeroFactor;
+  m.blendDstAlpha = THREE.OneFactor;
+  return m;
+}
+
+/** A shaft or beam: bright at its top (v = 1), gone at its foot, soft at its sides. */
+function beamTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(64, 256);
+  const img = g.createImageData(64, 256);
+  for (let y = 0; y < 256; y++) {
+    const along = Math.pow(1 - y / 255, 0.25) * (1 - Math.pow(y / 255, 6)) ;
+    for (let x = 0; x < 64; x++) {
+      const u = Math.abs(x / 63 - 0.5) * 2;
+      const across = 1 - Math.min(1, Math.max(0, (u - 0.55) / 0.45));
+      const a = (1 - y / 255) * across * along;
+      const i = (y * 64 + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(a * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return texture(c);
+}
+
+/** A soft round glow, for pools of light and the haloes round lamps. */
+function glowTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(128, 128);
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  return texture(c);
+}
+
+/** A soft-edged oblong of light, for the haloes round the roof's lamp panels. */
+function haloTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(128, 64);
+  const img = g.createImageData(128, 64);
+  const edge = (u: number) => {
+    const d = Math.abs(u - 0.5) * 2;
+    const t = Math.min(1, Math.max(0, (d - 0.35) / 0.65));
+    return 1 - t * t * (3 - 2 * t);
+  };
+  for (let y = 0; y < 64; y++) {
+    for (let x = 0; x < 128; x++) {
+      const i = (y * 128 + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(edge(x / 127) * edge(y / 63) * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return texture(c);
+}
+
+/** Painted wall lettering: white heavy italic capitals with a navy outline and shadow, on clear. */
+function letteringTexture(w: number, h: number): [THREE.CanvasTexture, (text: string) => void] {
+  const [c, g] = canvas(w, h);
+  const t = texture(c);
+  const draw = (text: string) => {
+    g.clearRect(0, 0, w, h);
+    let size = h * 0.78;
+    const font = (px: number) => `italic 800 ${px}px 'Barlow Condensed', 'DIN Condensed', 'Arial Narrow', sans-serif`;
+    g.font = font(size);
+    const wide = g.measureText(text).width;
+    if (wide > w * 0.9) size *= (w * 0.9) / wide;
+    g.font = font(size);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineJoin = 'round';
+    const x = w / 2;
+    const y = h * 0.52;
+    g.fillStyle = '#0d1630';
+    g.fillText(text, x + size * 0.05, y + size * 0.06);
+    g.lineWidth = size * 0.09;
+    g.strokeStyle = '#0d1630';
+    g.strokeText(text, x, y);
+    g.fillStyle = '#f4f6fb';
+    g.fillText(text, x, y);
+    t.needsUpdate = true;
+  };
+  return [t, draw];
+}
+
+/** A bay's board on its cradle: BAY over a big number, white on dark. */
+function bayBoardTexture(): [THREE.CanvasTexture, (n: number) => void] {
+  const [c, g] = canvas(256, 192);
+  const t = texture(c);
+  const draw = (n: number) => {
+    g.fillStyle = '#1b2130';
+    g.fillRect(0, 0, 256, 192);
+    g.fillStyle = '#f0bf2c';
+    g.fillRect(0, 0, 256, 10);
+    g.fillRect(0, 182, 256, 10);
+    g.fillStyle = '#e8ecf2';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = "italic 700 34px 'Barlow Condensed', 'DIN Condensed', 'Arial Narrow', sans-serif";
+    g.fillText('BAY', 128, 40);
+    g.font = "italic 800 128px 'Barlow Condensed', 'DIN Condensed', 'Arial Narrow', sans-serif";
+    g.fillText(String(n), 128, 116);
+    t.needsUpdate = true;
+  };
+  return [t, draw];
+}
+
 export class Hangar {
   /** Add this to the scene: the hangar and its sky. Hidden until `show`. */
   readonly root = new THREE.Group();
@@ -201,6 +322,10 @@ export class Hangar {
   private readonly screenMat = new THREE.MeshBasicMaterial({ color: 0x45e8ff, transparent: true, opacity: 0.75 });
   private readonly emblemMat = new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.4 });
   private readonly drawNumber: (n: number) => void;
+  private readonly drawName: (text: string) => void;
+  private readonly drawBays: Array<(n: number) => void> = [];
+  /** The daylight in through the door, in the circuit's light. */
+  private readonly spillMat: THREE.MeshBasicMaterial;
   private emblemUrl = '';
   private readonly loader = new THREE.TextureLoader();
   /** The emblems, loaded once each. */
@@ -403,16 +528,222 @@ export class Hangar {
     }
     box(3.4, 1.0, 1.6, steel, 18, 0.9, -3.5);
     box(3.0, 0.5, 1.2, this.teamMat, 18, 1.65, -3.5);
+
+    // ================= light =================
+    // No more real lights (a circuit has one key and one fill, and so does
+    // the hangar, so nothing recompiles): the rest is painted light, added
+    // over the scene.
+    const beam = beamTexture();
+    const glow = glowTexture();
+    const warm = 0xfff1dc;
+
+    // ---- high windows down the left wall, and the shafts of daylight through them
+    const windowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.05, 1.08, 1.12) });
+    const shaftDir = new THREE.Vector3(-0.6, -0.78, 0.16).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const shaftLen = 15 / -shaftDir.y;
+    for (const z of [-15, -7, 1, 9]) {
+      const pane = plane(2.6, 3.2, windowMat);
+      pane.position.set(W / 2 - 0.05, 15, z);
+      pane.rotation.y = -Math.PI / 2;
+      add(pane);
+      for (const dz of [-0.45, 0.45]) box(0.1, 3.2, 0.1, steel, W / 2 - 0.1, 15, z + dz);
+      box(0.1, 0.12, 2.6, steel, W / 2 - 0.1, 15, z);
+      const shaft = new THREE.Mesh(new THREE.BoxGeometry(2.4, shaftLen, 2.0), lightMaterial(beam, warm, 0.075));
+      shaft.position.set(W / 2 - 0.3, 15, z).addScaledVector(shaftDir, shaftLen / 2);
+      shaft.quaternion.setFromUnitVectors(up, shaftDir.clone().negate());
+      shaft.renderOrder = 2;
+      add(shaft);
+      // Where it lands: a patch of brighter floor.
+      const pool = plane(6.5, 3.4, lightMaterial(glow, warm, 0.22, THREE.FrontSide));
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set(W / 2 - 0.3 + shaftDir.x * shaftLen, 0.02, z + shaftDir.z * shaftLen);
+      pool.renderOrder = 1;
+      add(pool);
+    }
+
+    // ---- floodlights on the cradles and the catwalks, all aimed at the mech
+    const target = new THREE.Vector3(0, 4.5, 0);
+    const lensMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.25, 1.2, 1.1) });
+    const flood = (x: number, y: number, z: number) => {
+      const at = new THREE.Vector3(x, y, z);
+      const dir = target.clone().sub(at).normalize();
+      const lamp = new THREE.Group();
+      lamp.position.copy(at);
+      lamp.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+      const housing = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.75, 0.6), steel);
+      const lens = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.58), lensMat);
+      lens.position.z = 0.31;
+      lamp.add(housing, lens);
+      add(lamp);
+      // The beam: a faint cone out to just short of the mech.
+      const len = at.distanceTo(target) * 0.8;
+      const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 3.2, len, 20, 1, true), lightMaterial(beam, warm, 0.07));
+      cone.position.copy(at).addScaledVector(dir, len / 2 + 0.3);
+      cone.quaternion.setFromUnitVectors(up, dir.clone().negate());
+      cone.renderOrder = 2;
+      add(cone);
+    };
+    for (const sx of [-1, 1]) {
+      flood(sx * 14.2, 12.9, BACK + 8);
+      flood(sx * 19.8, 12.9, BACK + 8);
+      flood(sx * (W / 2 - 2.5), 8.9, 4);
+    }
+    // The turntable stands in a pool of their light.
+    const stage = plane(17, 17, lightMaterial(glow, warm, 0.2, THREE.FrontSide));
+    stage.rotation.x = -Math.PI / 2;
+    stage.position.y = 0.03;
+    stage.renderOrder = 1;
+    add(stage);
+
+    // ---- haloes round the roof's lamps
+    const haloTex = haloTexture();
+    for (let z = BACK + 8; z < FRONT - 2; z += 8) {
+      for (const x of [-15, 0, 15]) {
+        const halo = plane(9.5, 3.2, lightMaterial(haloTex, warm, 0.2, THREE.FrontSide));
+        halo.rotation.x = Math.PI / 2;
+        // Just above the panel's face, which hides its middle: the glow shows round it and never piles up into bloom on it.
+        halo.position.set(x, ROOF - 0.6, z);
+        halo.renderOrder = 2;
+        add(halo);
+      }
+    }
+
+    // ---- daylight in through the door, across the floor
+    this.spillMat = lightMaterial(beam, warm, 0.16, THREE.FrontSide);
+    const spill = plane(DOOR_W, 16, this.spillMat);
+    spill.rotation.x = -Math.PI / 2;
+    // The texture's bright end (v = 1) at the door.
+    spill.rotation.z = Math.PI;
+    spill.position.set(0, 0.025, FRONT - 8);
+    spill.renderOrder = 1;
+    add(spill);
+
+    // ================= set dressing =================
+    const primer = new THREE.MeshLambertMaterial({ color: 0x9aa1ad });
+    const dark = new THREE.MeshLambertMaterial({ color: 0x232936 });
+    const red = new THREE.MeshLambertMaterial({ color: 0xc23b33 });
+
+    // ---- a spare arm on trestles by the right-hand wall
+    {
+      const arm = new THREE.Group();
+      arm.position.set(-19.6, 0, 1.5);
+      const part = (w: number, h: number, d: number, mat: THREE.Material, x: number, y: number, z: number, rx = 0) => {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        b.position.set(x, y, z);
+        b.rotation.x = rx;
+        arm.add(b);
+        return b;
+      };
+      for (const z of [-2.2, 2.4]) {
+        part(2.6, 0.25, 0.5, dark, 0, 2.0, z);
+        for (const sx of [-1, 1]) part(0.18, 2.2, 0.18, dark, sx * 1.1, 1.0, z).rotation.z = sx * 0.18;
+      }
+      part(1.7, 1.6, 5.6, primer, 0, 2.95, 0.2);
+      part(1.9, 0.3, 4.8, this.teamMat, 0, 3.85, 0.2);
+      const elbow = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 1.9, 14), dark);
+      elbow.rotation.z = Math.PI / 2;
+      elbow.position.set(0, 2.95, -2.9);
+      arm.add(elbow);
+      part(1.9, 1.3, 1.6, primer, 0, 2.85, 3.8);
+      for (let k = 0; k < 4; k++) part(0.36, 0.42, 1.1, dark, -0.6 + k * 0.4, 2.55, 4.85, 0.7);
+      part(0.42, 0.42, 0.9, dark, 0.95, 3.15, 4.4, 0.3);
+      for (const z of [-1.2, 1.6]) part(0.5, 0.35, 0.5, hazardMat(0.5, 0.35), 0, 3.9, z);
+      add(arm);
+    }
+
+    // ---- tool chests and shelving
+    const chest = (x: number, z: number, ry: number) => {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.rotation.y = ry;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.9, 0.9), red);
+      body.position.y = 1.15;
+      g.add(body);
+      for (let k = 0; k < 5; k++) {
+        const line = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.02), dark);
+        line.position.set(0, 0.45 + k * 0.33, 0.46);
+        g.add(line);
+      }
+      for (const sx of [-0.6, 0.6]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 8), dark);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(sx, 0.1, 0.3);
+        g.add(wheel);
+      }
+      add(g);
+    };
+    chest(23.6, 5.5, -Math.PI / 2);
+    chest(23.6, 7.4, -Math.PI / 2);
+    chest(-10.5, BACK + 0.9, 0);
+    const shelving = (x: number) => {
+      for (const sx of [-1.6, 1.6]) for (const sz of [-0.5, 0.5]) box(0.1, 4.6, 0.1, dark, x + sx, 2.3, BACK + 1.0 + sz);
+      for (const y of [0.4, 1.9, 3.4, 4.5]) box(3.3, 0.08, 1.1, dark, x, y, BACK + 1.0);
+      const bins = [primer, this.teamMat, red, primer];
+      for (let k = 0; k < 6; k++) box(0.75, 0.6, 0.8, bins[k % 4], x - 1.1 + (k % 3) * 1.1, (k < 3 ? 0.4 : 1.9) + 0.34, BACK + 1.0);
+      box(1.4, 0.9, 0.9, primer, x - 0.7, 3.4 + 0.49, BACK + 1.0);
+    };
+    shelving(10.5);
+
+    // ---- cables: sagging between the trusses near the walls, and a power feed across the floor to the turntable
+    const cable = (pts: THREE.Vector3[], r: number) => {
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 8, r, 6), dark);
+      add(tube);
+    };
+    for (const x of [-21, -19.5, 20.5]) {
+      for (let z = BACK + 4; z < FRONT - 8; z += 8) {
+        const sag = 1.1 + ((x * 7 + z) % 3) * 0.25;
+        const y = ROOF - 2.75;
+        cable([new THREE.Vector3(x, y, z), new THREE.Vector3(x, y - sag * 0.75, z + 2), new THREE.Vector3(x, y - sag, z + 4), new THREE.Vector3(x, y - sag * 0.75, z + 6), new THREE.Vector3(x, y, z + 8)], 0.05);
+      }
+    }
+    // The feed: from a junction box on the right-hand wall, down and across the floor to a plug at the turntable's rim.
+    box(1.2, 1.6, 0.5, dark, -W / 2 + 0.35, 2.4, -7);
+    box(0.9, 0.5, 0.6, hazardMat(0.9, 0.5), -6.9, 0.25, -2.6);
+    cable(
+      [
+        new THREE.Vector3(-W / 2 + 0.5, 1.7, -7),
+        new THREE.Vector3(-W / 2 + 1.0, 0.12, -7.3),
+        new THREE.Vector3(-20, 0.12, -6.2),
+        new THREE.Vector3(-15, 0.12, -7.6),
+        new THREE.Vector3(-10.5, 0.12, -4.5),
+        new THREE.Vector3(-7.2, 0.12, -2.8),
+      ],
+      0.13,
+    );
+
+    // ---- painted lettering: the team's name on the right-hand wall and over the door
+    const [nameTex, drawName] = letteringTexture(1024, 200);
+    this.drawName = drawName;
+    const nameMat = new THREE.MeshLambertMaterial({ map: nameTex, transparent: true, alphaTest: 0.35 });
+    const side1 = plane(22, 4.3, nameMat);
+    side1.position.set(-W / 2 + 0.06, 12.4, 2);
+    side1.rotation.y = Math.PI / 2;
+    add(side1);
+    const overDoor = plane(18, 3.5, nameMat);
+    overDoor.position.set(0, 15.9, FRONT - 0.06);
+    overDoor.rotation.y = Math.PI;
+    add(overDoor);
+    // The other two bays' boards, on the front of their cradles.
+    for (const sx of [-1, 1]) {
+      const [t, draw] = bayBoardTexture();
+      this.drawBays.push(draw);
+      const board = plane(3.4, 2.55, new THREE.MeshLambertMaterial({ map: t }));
+      board.position.set(sx * 17, 10.6, BACK + 5.5 + 2.65);
+      add(board);
+    }
   }
 
-  /** The circuit's sky material (a new circuit brings a new one). */
-  setSky(material: THREE.Material): void {
+  /** The circuit's sky material (a new circuit brings a new one), and its daylight for the spill through the door. */
+  setSky(material: THREE.Material, daylight: THREE.ColorRepresentation = 0xfff1dc): void {
     this.sky.material = material;
+    this.spillMat.color.set(daylight);
   }
 
   /** Dress the hangar in a team's colours and emblem. */
   setTeam(team: HangarTeam): void {
     this.teamMat.color.set(team.css);
+    this.drawName(team.name);
     this.glowMat.color.setHex(team.glow);
     this.screenMat.color.setHex(team.glow);
     if (team.emblem !== this.emblemUrl) {
@@ -437,9 +768,11 @@ export class Hangar {
     return t;
   }
 
-  /** The number painted on the bay's floor. */
+  /** The number painted on the bay's floor; the empty cradles either side are the other two bays, in order. */
   setBay(n: number): void {
     this.drawNumber(n);
+    const others = [1, 2, 3].filter((k) => k !== n);
+    this.drawBays.forEach((draw, i) => draw(others[i]));
   }
 
   /** Stand the hangar round a mech whose transform is `frame`, and show it. */

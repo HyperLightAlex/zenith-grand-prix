@@ -275,6 +275,19 @@ the mech. The hangar brings its own key and fill light in place of the
 circuit's, the same kinds and number, so no material recompiles going in or
 out.
 
+Everything else that looks like light is painted on: shafts of daylight down
+from the high windows and the patches where they land, floodlights on the
+cradles and catwalks with faint beams toward the mech, the pool of their
+light on the turntable, glows round the roof's lamps, and the daylight
+spilling in across the floor from the door in the circuit's own light. They
+are added over the frame but leave its alpha alone, so a shaft across a mech
+does not disturb the anime look's ink. The dressing: a spare arm on trestles,
+tool chests and shelving, cables sagging in the roof and a power feed across
+the floor to the turntable, the team's name painted on a wall and over the
+door, and the other two bays' boards on their cradles. The painted surfaces
+and signs for it are asked for in `art/hangar-sheets`; until they come the
+surfaces are drawn in code.
+
 ## Lines: coloured, and between mechs
 
 - **Coloured lines.** A line with light on both sides of it (a fold in white

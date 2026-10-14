@@ -265,7 +265,7 @@ export class Game {
     const theme = themeFor(def.theme);
     this.trackVis = buildTrackVisual(track, theme);
     this.world = buildWorld(track, theme);
-    this.hangar.setSky(this.world.sky);
+    this.hangar.setSky(this.world.sky, theme.sunLight);
     this.renderer.setTheme(theme);
     setCelTheme(theme);
     celify(this.trackVis.group);
@@ -303,7 +303,7 @@ export class Game {
     const m = this.session.race.mechs[this.session.localId];
     const livery = LIVERIES[choice.team];
     trackMatrix(this.session.track, m.s, m.d, 0, m.facing, this.hangarFrame);
-    this.hangar.setTeam({ css: livery.css, glow: livery.glow, emblem: EMBLEMS[choice.team] });
+    this.hangar.setTeam({ name: livery.name.replace('Team ', '').toUpperCase(), css: livery.css, glow: livery.glow, emblem: EMBLEMS[choice.team] });
     this.hangar.setBay(choice.role + 1);
     this.hangar.show(this.hangarFrame);
     this.trackVis.group.visible = false;
