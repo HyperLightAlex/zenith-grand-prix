@@ -110,7 +110,7 @@ export const LIVERIES: Livery[] = [
     css: '#ff8f2e',
     cssDim: '#6b3a12',
     darkArmour: false,
-    pilots: ['Asp', 'Ibis', 'Sphinx'],
+    pilots: ['Sirocco', 'Ibis', 'Dune'],
     models: ['Anubis', 'Horus', 'Sobek'],
   },
   {

@@ -19,7 +19,7 @@ faction's colours.
 | Who | The heroes | The black team | The desert dynasty | The knights |
 | Colours | White, royal blue, gold | Charcoal, crimson, gunmetal | Sand, rust orange, dark brown; gold trim, amber eyes | Deep violet, pearl, silver; lavender light |
 | Team colour | Blue | Red | Orange | Violet |
-| Pilots | Kite, Lark, Atlas | Shrike, Moth, Golem | Asp, Ibis, Sphinx | Iris, Vesper, Bastion |
+| Pilots | Kite (f), Lark (m), Atlas (m) | Shrike (f), Moth (m), Golem (f) | Sirocco (m), Ibis (f), Dune (m) | Iris (f), Vesper (m), Bastion (f) |
 | Swift class (forward) | Sunhawk | Razor | Anubis | Seraph |
 | Vector class (midfielder) | Daystar | Stinger | Horus | Longbow |
 | Bulwark class (defender) | Rampart | Maul | Sobek | Paladin |

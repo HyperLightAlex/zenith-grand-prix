@@ -44,14 +44,16 @@ export function buildRazor(c: FrameCtx, number: string): void {
     const k = new Kit(livery);
     k.box('K', 1.1, 1.1, 0.9, { at: [0, 0.78, -0.08], taper: [1.2, 1] });
     // The torso, wide at the shoulders and narrowing to a point at the waist.
-    k.plate('P', [[-0.25, 0.12], [0.25, 0.12], [0.78, 0.62], [1.0, 1.32], [0.62, 1.58], [-0.62, 1.58], [-1.0, 1.32], [-0.78, 0.62]], 1.02, { at: [0, 0, -0.08] });
+    k.plate('P', [[-0.25, 0.12], [0.25, 0.12], [0.8, 0.62], [1.12, 1.2], [1.1, 1.42], [0.62, 1.6], [-0.62, 1.6], [-1.1, 1.42], [-1.12, 1.2], [-0.8, 0.62]], 1.02, { at: [0, 0, -0.08] });
     // The keel: a narrow ridge jutting forward and down the middle of it.
     k.prism('S', [[0.3, 0.2], [0.72, 0.62], [0.62, 1.28], [0.3, 1.46]], 0.5);
     k.prism('T', [[0.66, 0.6], [0.76, 0.66], [0.68, 1.22], [0.6, 1.2]], 0.16);
     // A slatted jaw under the keel.
     k.vent(0.46, 0.3, 4, { at: [0, 0.36, 0.46], rot: [0.3, 0, 0], depth: 0.1, lit: true });
     for (const s of [1, -1]) {
-      k.cyl('D', 0.3, 0.3, 0.44, 8, { axis: 'x', at: [s * (d.shoulderX - 0.26), d.shoulderY, 0] });
+      // The shoulder: a yoke out from the torso to a joint the arm hangs from.
+      k.box('K', 0.56, 0.42, 0.62, { at: [s * (d.shoulderX - 0.42), d.shoulderY + 0.02, -0.04], taper: [0.9, 0.9] });
+      k.cyl('D', 0.34, 0.34, 0.5, 8, { axis: 'x', at: [s * (d.shoulderX - 0.2), d.shoulderY, 0] });
       // Layered plates either side of the keel.
       const layer: Array<[number, number]> = [[0, 0], [0.44, 0.14], [0.36, 0.3], [0, 0.18]];
       k.plate('S', s === 1 ? layer : mirrorX(layer), 0.9, { at: [s * 0.36, 1.18, -0.1], rot: [0, 0, s * -0.3] });
@@ -120,12 +122,12 @@ export function buildRazor(c: FrameCtx, number: string): void {
     const wr = s === 1 ? J.wrL : J.wrR;
     {
       const k = new Kit(livery);
-      k.ball('K', 0.3);
+      k.ball('K', 0.36);
       k.cyl('D', 0.2, 0.24, d.upperArm - 0.2, 8, { at: [0, -d.upperArm / 2 - 0.05, 0] });
       k.box('P', 0.16, d.upperArm * 0.45, 0.38, { at: [s * 0.22, -d.upperArm * 0.52, 0], taper: [1.1, 1] });
       // The pauldron: three layered plates, the top one spiked.
       for (let i = 0; i < 3; i++) {
-        k.box(i === 1 ? 'S' : 'P', 0.62 - i * 0.06, 0.2, 0.84 - i * 0.1, { at: [s * (0.3 + i * 0.06), 0.28 - i * 0.2, 0], rot: [0, 0, s * (-0.4 - i * 0.15)] });
+        k.box(i === 1 ? 'S' : 'P', 0.74 - i * 0.06, 0.2, 0.84 - i * 0.1, { at: [s * (0.16 + i * 0.08), 0.3 - i * 0.2, 0], rot: [0, 0, s * (-0.32 - i * 0.15)] });
       }
       for (const [z, h] of [[-0.24, 0.7], [0.12, 0.5]] as const) {
         k.plate('T', [[-0.07, 0], [0.07, 0], [0, h]], 0.14, { at: [s * 0.36, 0.34, z], rot: [0, 0, s * -0.55] });
