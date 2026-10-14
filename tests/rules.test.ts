@@ -83,6 +83,7 @@ describe('the default rules', () => {
       gateValueLater: 1,
       gateLaps: 3,
       gateRelight: 4,
+      gateShare: 0.5,
       overdriveMult: 1.3,
       overdriveSecs: 4,
       breakawaySecs: 1.5,

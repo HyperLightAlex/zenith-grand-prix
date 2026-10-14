@@ -91,6 +91,11 @@ export interface Rules {
   gateLaps: number;
   /** Seconds a gate stays dark after someone takes it. */
   gateRelight: number;
+  /**
+   * Share of a gate's Cells that each teammate still racing gets when a mech
+   * takes one (0: only the mech through it).
+   */
+  gateShare: number;
 
   // --- abilities (each costs one cell)
   overdriveMult: number;
@@ -168,6 +173,7 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   gateValueLater: 1,
   gateLaps: 3,
   gateRelight: 4,
+  gateShare: 0.5,
 
   overdriveMult: 1.3,
   overdriveSecs: 4,
@@ -243,6 +249,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   gateValueLater: [0, 6],
   gateLaps: [0, 99],
   gateRelight: [0, 120],
+  gateShare: [0, 1],
 
   overdriveMult: [1, 3],
   overdriveSecs: [0, 60],

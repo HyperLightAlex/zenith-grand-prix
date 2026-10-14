@@ -162,7 +162,8 @@ function routeSide(race: RaceState, track: Track, m: MechState, look: number): n
   if (!fork) return 0;
   const lap3 = race.lapPhase >= 3;
   const wantDrive = m.drive < 55 ? 2 : m.drive < 85 ? 0.5 : 0;
-  const wantCell = m.cells < Math.min(1, race.rules.cellMax) && m.lap < race.rules.gateLaps ? 2.5 : m.cells < race.rules.cellMax ? 0.6 : 0;
+  // (A gate is no use to a pilot that could not bank a whole Cell from it.)
+  const wantCell = m.cells > race.rules.cellMax - 1 ? 0 : m.cells < Math.min(1, race.rules.cellMax) && m.lap < race.rules.gateLaps ? 2.5 : 0.6;
   // Forwards are racers first: they like the quick way (the pad, the jump)
   // better than the others do, so the field splits instead of queueing.
   const racer = m.role === ROLE.FW;
@@ -215,10 +216,21 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   } else if (!m.finished) {
     const ws = wrapS(track, m.s);
     let found = false;
-    // A Cell gate this pilot means to take. The formation lap is for filling
-    // up; after it a detour is only worth it to a pilot running short.
+    // A Cell gate this pilot means to take. Only one that can bank a whole
+    // Cell can take one at all. The formation lap is for filling up; after
+    // it a detour is worth it to a pilot running short, or to the team: the
+    // gate pays each teammate its share, so a support goes for the gates a
+    // forward cannot reach.
     const gateWorth = m.lap <= 0 ? rules.gateValue : rules.gateValueLater;
-    if (m.lap < rules.gateLaps && gateWorth > 0 && m.cells < (m.lap <= 0 ? rules.cellMax : Math.min(2, rules.cellMax))) {
+    const canTake = rules.cellMax > 0 && m.cells <= rules.cellMax - Math.min(gateWorth, rules.cellMax);
+    let teamNeed = 0;
+    if (rules.gateShare > 0) {
+      for (const t of race.mechs) {
+        if (t !== m && t.team === m.team && inPlay(t)) teamNeed += Math.min(gateWorth * rules.gateShare, rules.cellMax - t.cells);
+      }
+    }
+    const worthIt = m.lap <= 0 || m.cells < Math.min(2, rules.cellMax) || teamNeed >= 0.5;
+    if (m.lap < rules.gateLaps && gateWorth > 0 && canTake && worthIt) {
       let nearest = 320;
       for (let g = 0; g < track.gates.length; g++) {
         const bit = 1 << g;

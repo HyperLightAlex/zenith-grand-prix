@@ -55,10 +55,10 @@ the skates: cyan, gold, magenta. Let go for a burst over the limiter, bigger
 and longer for each tier. The trigger with the stick near the middle still
 brakes. Free steering only.
 
-**Contested gates.** A gate pays a full Cell to the first mech through and
-goes dark for everyone for 4 seconds. A mech already holding the most Cells
-passes through without using the gate up, so a leader with a full tank
-cannot shut gates on the chasers.
+**Contested gates.** A gate pays a full Cell to the first mech through, half
+a Cell to each of its teammates, and goes dark for everyone for 4 seconds.
+A mech that could not bank a whole Cell passes through without using the
+gate up, so a leader with a full tank cannot shut gates on the chasers.
 
 **Armour down about 10%**: Swift and Vector 1600, Bulwark 2000, with an
 armour scale on the tuning panel.
@@ -316,14 +316,19 @@ One gauge, 0 to 100. It pays for boost, dashes and the forward's Lance Dash.
 A second resource, 0 to 3, starting at none, that pays for abilities.
 
 - Six gold gates stand on the circuit. Thread one (your centre has to pass
-  between the posts) for a full Cell. Each gate scores once a lap for each
-  mech.
+  between the posts) for a full Cell, and **each teammate still racing gets
+  half a Cell** (rules.gateShare). Each gate pays each team once a lap: a
+  teammate through a gate the team has already scored this lap passes it by
+  and leaves it lit. (Each mech used to score for itself alone, and the
+  supports went into lap 2 short: forwards 1.5 Cells, midfielders 0.9,
+  defenders 0.5. Now it is about two each, and the supports' abilities come
+  out two or three times as often.)
 - **Contested.** The first mech through takes the gate and it goes dark for
   everyone for 4 seconds, glowing back up as it comes round to relighting.
-  Two through on the same tick, the one in front has it. A mech already
-  holding three Cells passes through without taking it, so a full leader
-  cannot shut gates on the chasers, and the field on lap 1 shares about six
-  Cells: about one each, more for whoever is at the front of each scramble.
+  Two through on the same tick, the one in front has it. A mech that could
+  not bank a whole Cell (more than two in hand) passes through
+  without taking it, whatever its teammates hold, so a full leader cannot
+  shut gates on the chasers, and the lap 3 comeback stays open.
 - Each sits where taking it costs something: across the road from a charge
   strip, on the outside of a corner, or on the long way round the hairpin.
   Computer pilots go for the gates their skill picks out, skip one that will
@@ -632,7 +637,7 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 | Momentum strikes per race | 6.1, about 42 damage each |
 | Ring-outs per race | 6.6, about 66 damage each (440 a race) |
 | Parries per race | 10 |
-| Entering lap 2 | 48 Drive per mech (they boost on lap 1 down to 45, a burn at a time); Cells: forwards 1.5, midfielders 0.9, defenders 0.5 |
+| Entering lap 2 | 48 Drive per mech (they boost on lap 1 down to 45, a burn at a time); Cells: forwards 2.2, midfielders 1.9, defenders 1.7 |
 | Abilities used per race | Overdrive 4.2, Break Away 3.0, Snare 2.0, Ram 1.6, Disruptor 1.2, Aegis 0.8 |
 | Battle-lap pace | 370 mph against a 375 limiter (366 while locked on) |
 | Leader at the start of lap 3 goes on to win | 55% |

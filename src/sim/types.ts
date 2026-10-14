@@ -311,6 +311,8 @@ export type SimEvent =
   | { type: 'boost'; mech: number }
   | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' }
   | { type: 'gate'; mech: number; gate: number; cells: number }
+  /** A teammate's gate paid this mech its share (see rules.gateShare). */
+  | { type: 'gateShare'; mech: number; from: number; gate: number; cells: number }
   /** A carve's charge reached a new tier (1 to 3). */
   | { type: 'carve'; mech: number; tier: number }
   /** A carve let go with charge in it: the burst. */

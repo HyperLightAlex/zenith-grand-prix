@@ -1170,17 +1170,23 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
 
   // Cell gates. Checked over everything a mech moved this tick, shoves
   // included, so being shunted through an arch still counts. Lit for as many
-  // laps as the rules say (the whole race by default), each gate once a lap,
-  // and a full mech takes nothing.
+  // laps as the rules say (the whole race by default). Each gate pays each
+  // team once a lap: the mech through it a Cell, each teammate still racing
+  // its share (rules.gateShare), and the gate counts as scored for them all.
   if (race.phase === PHASE.RACING && track.gates.length > 0) {
     // Contested: the first mech through takes the gate and it goes dark for a
     // few seconds. Two through on the same tick, the one in front has it. A
-    // mech already full takes nothing and leaves the gate lit.
+    // mech that could not bank all the gate is worth (more than 2 Cells, as
+    // the rules stand) takes nothing and leaves the gate lit, whatever its
+    // teammates hold, so a leader with a full tank cannot shut gates on the
+    // chasers; nor does one through a gate its team has already scored this lap.
     gateOrder.length = 0;
     for (const m of ms) gateOrder.push(m);
     gateOrder.sort((a, b) => b.s - a.s || a.id - b.id);
     for (const m of gateOrder) {
-      if (!inPlay(m) || m.lap >= race.rules.gateLaps || m.cells >= race.rules.cellMax) continue;
+      const worth = m.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
+      // (Room for all of it, or for a full tank of a gate worth more than that.)
+      if (!inPlay(m) || m.lap >= race.rules.gateLaps || worth <= 0 || race.rules.cellMax <= 0 || m.cells > race.rules.cellMax - Math.min(worth, race.rules.cellMax)) continue;
       let skip = m.gateMask;
       for (let g = 0; g < track.gates.length; g++) if (race.gateDark[g] > tick) skip |= 1 << g;
       // The line has to be behind the mech when the tick ends. The opening is
@@ -1189,12 +1195,19 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
       let g = gateCrossed(track, startS[m.id], m.s, m.d, skip);
       if (g < 0) g = gateCrossed(track, startS[m.id], Math.min(movedS[m.id], m.s), movedD[m.id], skip);
       if (g < 0) continue;
-      const worth = m.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
-      if (worth <= 0) continue;
       m.gateMask |= 1 << g;
       m.cells = Math.min(race.rules.cellMax, m.cells + worth);
       if (race.rules.gateRelight > 0) race.gateDark[g] = tick + ticks(race.rules.gateRelight);
       race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
+      // (With no share it is the old rule: each mech scores each gate once a lap.)
+      const share = worth * race.rules.gateShare;
+      for (const t of share > 0 ? ms : []) {
+        if (t === m || t.team !== m.team || !inPlay(t)) continue;
+        t.gateMask |= 1 << g;
+        if (t.cells >= race.rules.cellMax) continue;
+        t.cells = Math.min(race.rules.cellMax, t.cells + share);
+        race.events.push({ type: 'gateShare', mech: t.id, from: m.id, gate: g, cells: t.cells });
+      }
     }
   }
 

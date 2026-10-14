@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { BTN, CLASSES, DEFAULT_RULES, MERIDIAN, MODE, PHASE, buildTrack, gateCrossed, stepRace } from '../src/sim/index';
 import type { MechInput, Rules, TrackDef } from '../src/sim/index';
 import { retire } from '../src/sim/combat';
-import { Arena, DF0, FW0, FW1, MF0, MF1, TRACK, giveCells, makeInputs, newRace, runCountdown, steerToward } from './helpers';
+import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, giveCells, makeInputs, newRace, runCountdown, steerToward } from './helpers';
 
 const L = TRACK.length;
 const GATES = TRACK.gates;
@@ -15,6 +15,18 @@ const GATES = TRACK.gates;
 const G0 = GATES[0];
 
 /** A mech `before` units short of gate `g`, `off` units from the middle of its opening. */
+/**
+ * The mechanics of a gate (contact, relighting, the cap) are tested one mech
+ * at a time, with the share to teammates off: rules.gateShare 0 is the old
+ * rule exactly. The share has its own tests at the end.
+ */
+const SOLO: Partial<Rules> = { gateShare: 0 };
+class SoloArena extends Arena {
+  constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1, rules?: Partial<Rules>) {
+    super(lapPhase, seed, { ...SOLO, ...rules });
+  }
+}
+
 function approach(a: Arena, id: number, g: number, off = 0, before = 3) {
   const gate = GATES[g];
   return a.put(id, gate.s - before, gate.d + off);
@@ -170,7 +182,7 @@ describe('gateCrossed', () => {
 describe('threading a gate', () => {
   it('scores rules.gateValue of a Cell, sets the gate\'s bit and raises a gate event', () => {
     for (let g = 0; g < GATES.length; g++) {
-      const a = new Arena(1);
+      const a = new SoloArena(1);
       const m = approach(a, MF0, g);
       expect(m.cells).toBe(0);
       expect(m.gateMask).toBe(0);
@@ -193,7 +205,7 @@ describe('threading a gate', () => {
 
   it('every frame scores the same', () => {
     for (const id of [FW0, MF0, DF0, FW1]) {
-      const a = new Arena(1);
+      const a = new SoloArena(1);
       const m = approach(a, id, 0);
       a.step(5);
       expect(m.cells).toBe(1);
@@ -202,12 +214,12 @@ describe('threading a gate', () => {
 
   it('is a matter of where the centre of the mech is: just inside the opening scores, just outside does not', () => {
     for (const side of [1, -1]) {
-      const inside = new Arena(1);
+      const inside = new SoloArena(1);
       const mi = approach(inside, FW0, 0, side * (G0.halfW - 0.2));
       inside.step(5);
       expect(mi.cells).toBe(1);
 
-      const outside = new Arena(1);
+      const outside = new SoloArena(1);
       const mo = approach(outside, FW0, 0, side * (G0.halfW + 0.2));
       outside.step(5);
       expect(mo.s - outside.base).toBeGreaterThan(G0.s);
@@ -217,7 +229,7 @@ describe('threading a gate', () => {
     }
     // Down the middle of the road, or through the mirror-image spot: nothing.
     for (const d of [0, -G0.d]) {
-      const a = new Arena(1);
+      const a = new SoloArena(1);
       const m = a.put(FW0, G0.s - 3, d);
       a.step(5);
       expect(m.cells).toBe(0);
@@ -226,7 +238,7 @@ describe('threading a gate', () => {
 
   it('a miss can be put right: the gate stays open for a mech that has not scored it', () => {
     // (Nothing drives backwards, but a shove can put a mech back behind the line.)
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = approach(a, FW0, 0, G0.halfW + 2);
     a.step(5);
     expect(m.cells).toBe(0);
@@ -237,7 +249,7 @@ describe('threading a gate', () => {
   });
 
   it('once per lap per gate, even if the mech is shoved back across the line', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = approach(a, FW0, 0);
     a.step(5);
     expect(m.cells).toBe(1);
@@ -256,7 +268,7 @@ describe('threading a gate', () => {
     // Its own move takes it over the line, and the collision in the same tick
     // throws it back behind the line again. A gate is judged on where the
     // mech ends the tick, shoves included, so that is not a crossing yet...
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = approach(a, FW0, 0, 0, 1.7);
     const block = a.put(DF0, G0.s + 6.13, G0.d, 0);
     a.inputs[DF0].brake = 1;
@@ -284,7 +296,7 @@ describe('threading a gate', () => {
   it('knocked back and forth over the line again and again: still one score in total', () => {
     // The same forward, held against the line by hand so that it is thrown
     // back behind it every time it gets across: over, back, over, back.
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = approach(a, FW0, 0, 0, 1.7);
     let crossings = 0;
     let wasPast = false;
@@ -303,7 +315,7 @@ describe('threading a gate', () => {
   });
 
   it('each gate of the lap pays separately; three fill the Cells, and a full mech takes no more', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = a.put(FW0, 0, 0);
     for (let g = 0; g < GATES.length; g++) {
       m.s = a.base + GATES[g].s - 3;
@@ -325,7 +337,7 @@ describe('threading a gate', () => {
 
 
   it('counts in battle mode too: it is about where the mech goes, not how it is flown', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = a.put(MF0, G0.s - 20, G0.d);
     a.put(FW1, G0.s + 10, G0.d - 12);
     a.tap(MF0, BTN.LOCK);
@@ -341,7 +353,7 @@ describe('threading a gate', () => {
     for (const speed of [20, 55, 110, 130]) {
       const perTick = speed / 60;
       for (const before of [0.01, perTick / 2, perTick * 0.95]) {
-        const a = new Arena(1);
+        const a = new SoloArena(1);
         const m = a.put(FW0, G0.s - before, G0.d, speed);
         a.inputs[FW0].throttle = speed / a.pace; // hold that speed (or be dragged down toward it)
         const s0 = m.s;
@@ -354,7 +366,7 @@ describe('threading a gate', () => {
         expect(a.events('gate').length).toBe(1);
       }
       // Starting a hair past the line never scores.
-      const b = new Arena(1);
+      const b = new SoloArena(1);
       const past = b.put(FW0, G0.s + 0.01, G0.d, speed);
       b.step(3);
       expect(past.cells).toBe(0);
@@ -362,7 +374,7 @@ describe('threading a gate', () => {
   });
 
   it('the event says how many Cells the mech now has', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = approach(a, FW0, 2);
     m.cells = 1.25;
     a.step(4);
@@ -376,7 +388,7 @@ describe('contested gates', () => {
   const dark = () => Math.round(DEFAULT_RULES.gateRelight * 60);
 
   it('the first mech through takes it, and it goes dark for rules.gateRelight seconds', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const first = approach(a, FW0, 0);
     const next = a.put(FW1, G0.s - 30, G0.d); // half a second behind
     a.step(30);
@@ -392,7 +404,7 @@ describe('contested gates', () => {
   });
 
   it('it relights: a mech through once the time is up scores a full Cell', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     approach(a, FW0, 0);
     a.step(4);
     const took = a.events('gate')[0].tick;
@@ -412,7 +424,7 @@ describe('contested gates', () => {
   it('two through on the same tick: the one in front has it', () => {
     for (const ahead of [FW0, FW1]) {
       const behind = ahead === FW0 ? FW1 : FW0;
-      const a = new Arena(1);
+      const a = new SoloArena(1);
       a.put(ahead, G0.s - 1, G0.d - 3);
       a.put(behind, G0.s - 1.4, G0.d + 3.5);
       a.step(1);
@@ -422,7 +434,7 @@ describe('contested gates', () => {
   });
 
   it('a mech already full passes without using the gate up', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const full = giveCells(approach(a, FW0, 0), 3);
     const next = a.put(FW1, G0.s - 30, G0.d);
     a.until(() => full.s - a.base > G0.s, 10);
@@ -435,7 +447,7 @@ describe('contested gates', () => {
   });
 
   it('rules.gateRelight 0: never dark, every mech that threads it scores', () => {
-    const a = new Arena(1, 1, { gateRelight: 0 });
+    const a = new SoloArena(1, 1, { gateRelight: 0 });
     const first = a.put(FW0, G0.s - 3, G0.d - 3);
     const second = a.put(FW1, G0.s - 3, G0.d + 3.5);
     const third = a.put(MF1, G0.s - 30, G0.d);
@@ -451,17 +463,25 @@ describe('contested gates', () => {
 });
 
 describe('the Cell cap', () => {
-  it('a gate tops the Cells up to rules.cellMax and no further', () => {
-    const a = new Arena(1);
+  it('a gate is taken only by a mech that can bank all of it: up to the cap, never over', () => {
+    const a = new SoloArena(1);
     const m = approach(a, FW0, 0);
-    m.cells = 2.75;
+    m.cells = 2;
     a.step(4);
     expect(m.cells).toBe(3);
     expect(a.events('gate')).toMatchObject([{ gate: 0, cells: 3 }]);
+    // With 2.75 it could bank only a quarter: it passes, and the gate stays lit.
+    const b = new SoloArena(1);
+    const n = approach(b, FW0, 0);
+    n.cells = 2.75;
+    b.step(4);
+    expect(n.cells).toBe(2.75);
+    expect(b.events('gate')).toEqual([]);
+    expect(b.race.gateDark[0]).toBe(0);
   });
 
   it('a full mech takes nothing: no Cell, no event, and the gate is not marked', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = approach(a, FW0, 0);
     giveCells(m, 3);
     a.step(4);
@@ -479,7 +499,7 @@ describe('the Cell cap', () => {
       [5, 3],
       [1e9, 3],
     ] as const) {
-      const a = new Arena(1, 1, { gateValue });
+      const a = new SoloArena(1, 1, { gateValue });
       const m = approach(a, FW0, 0);
       a.step(4);
       expect(m.cells).toBe(want);
@@ -488,7 +508,7 @@ describe('the Cell cap', () => {
   });
 
   it('rules.cellMax is the cap: 1 fills from one gate, 0 means no Cells at all', () => {
-    const one = new Arena(1, 1, { cellMax: 1 });
+    const one = new SoloArena(1, 1, { cellMax: 1 });
     const m = one.put(FW0, 0, 0);
     for (let g = 0; g < 4; g++) {
       m.s = one.base + GATES[g].s - 3;
@@ -499,7 +519,7 @@ describe('the Cell cap', () => {
     expect(m.cells).toBe(1);
     expect(one.events('gate').length).toBe(1);
 
-    const none = new Arena(1, 1, { cellMax: 0 });
+    const none = new SoloArena(1, 1, { cellMax: 0 });
     const z = approach(none, FW0, 0);
     none.step(4);
     expect(z.cells).toBe(0);
@@ -515,7 +535,7 @@ describe('the Cell cap', () => {
   });
 
   it('a gate worth nothing is dark: no Cell, no event, and it is not marked', () => {
-    const a = new Arena(1, 1, { gateValue: 0 });
+    const a = new SoloArena(1, 1, { gateValue: 0 });
     const m = approach(a, FW0, 0);
     a.step(4);
     expect(m.cells).toBe(0);
@@ -527,7 +547,7 @@ describe('the Cell cap', () => {
 describe('which laps the gates are lit', () => {
   /** A mech on its lap `lapIndex + 1` driven through gate 0. Returns its Cells afterwards. */
   function onLap(lapIndex: number, rules?: Partial<Rules>): number {
-    const a = new Arena((Math.min(lapIndex, 2) + 1) as 1 | 2 | 3, 1, rules);
+    const a = new SoloArena((Math.min(lapIndex, 2) + 1) as 1 | 2 | 3, 1, rules);
     const m = approach(a, FW0, 0);
     expect(m.lap).toBe(lapIndex);
     a.step(4);
@@ -566,7 +586,7 @@ describe('which laps the gates are lit', () => {
   });
 
   it('a Cell spent on the battle lap can be won back at the next gate', () => {
-    const a = new Arena(2);
+    const a = new SoloArena(2);
     const m = giveCells(a.put(FW0, 0, 0), 1);
     a.ability(FW0);
     expect(m.cells).toBe(0);
@@ -581,7 +601,7 @@ describe('which laps the gates are lit', () => {
   it('it is the mech\'s own lap that counts, not the leader\'s', () => {
     // The race is on its battle lap (the leader started lap 2), but this
     // back-marker is still on its first lap: the gates are lit for it.
-    const a = new Arena(2);
+    const a = new SoloArena(2);
     const leader = a.put(FW1, 500, 0);
     const back = a.put(MF0, 0, 0);
     back.s = G0.s - 3; // lap 1 distance, not a.base + ...
@@ -594,7 +614,7 @@ describe('which laps the gates are lit', () => {
   });
 
   it('starting a new lap clears the record of gates taken', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = a.put(FW0, L - 20, 0);
     m.gateMask = 0b101101;
     m.cells = 2;
@@ -607,7 +627,7 @@ describe('which laps the gates are lit', () => {
 
   it('with the gates lit for two laps, each one pays once on each lap', () => {
     // Half a Cell a gate and no going dark, so a lap of them is three and two laps six.
-    const a = new Arena(1, 1, { gateLaps: 2, cellMax: 6, gateValue: 0.5, gateValueLater: 0.5, gateRelight: 0 });
+    const a = new SoloArena(1, 1, { gateLaps: 2, cellMax: 6, gateValue: 0.5, gateValueLater: 0.5, gateRelight: 0 });
     const m = a.put(FW0, 0, 0);
     const lapOfGates = () => {
       for (let g = 0; g < GATES.length; g++) {
@@ -644,7 +664,7 @@ describe('which laps the gates are lit', () => {
   });
 
   it('gates work at unwrapped distances: the same gate on lap 2 is at s + one lap', () => {
-    const a = new Arena(2, 1, { gateLaps: 2 });
+    const a = new SoloArena(2, 1, { gateLaps: 2 });
     const m = approach(a, MF1, 4);
     expect(m.s).toBeGreaterThan(L);
     a.step(4);
@@ -655,7 +675,7 @@ describe('which laps the gates are lit', () => {
 
 describe('who cannot score', () => {
   it('a wreck coasting through a gate scores nothing', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const m = a.put(FW0, G0.s - 30, G0.d);
     retire(a.race, m, null);
     a.step(120);
@@ -666,7 +686,7 @@ describe('who cannot score', () => {
   });
 
   it('nor does a finished mech on its cool-down lap, even with the gates lit all race', () => {
-    const a = new Arena(3, 1, { gateLaps: 99 });
+    const a = new SoloArena(3, 1, { gateLaps: 99 });
     const m = a.put(FW0, L - 30, 0);
     a.until(() => m.finished, 60);
     expect(m.finished).toBe(true);
@@ -683,7 +703,7 @@ describe('who cannot score', () => {
   });
 
   it('nobody scores during the countdown, or after the flag', () => {
-    const race = newRace(4, { humans: 'all', laps: 1, rules: { gateLaps: 99 } });
+    const race = newRace(4, { humans: 'all', laps: 1, rules: { ...SOLO, gateLaps: 99 } });
     const inputs = makeInputs(race);
     // Parked on the grid with a gate moved onto it would be the only way; the
     // real check is simply that nothing changes before GO.
@@ -714,7 +734,7 @@ describe('who cannot score', () => {
 describe('a lap of gates, driven', () => {
   /** A human steering for each gate in turn through plain MechInput. Returns the race at the end of lap 1. */
   function gateRun(seed: number, gatesWanted: number) {
-    const race = newRace(seed, { humans: 'all' });
+    const race = newRace(seed, { humans: "all", rules: SOLO });
     const inputs = makeInputs(race) as MechInput[];
     runCountdown(race, inputs);
     for (const m of race.mechs) if (m.id !== MF0) m.d = Math.sign(m.d) * 23; // parked out of the way
@@ -775,7 +795,7 @@ describe('a gate and a shove from behind', () => {
     // A forward doing 40 u/s, a little short of gate 0 and in line with it;
     // a defender at the limiter 8.5 units behind runs into the back of it.
     for (const short of [1.4, 1.6, 1.8]) {
-      const a = new Arena(1);
+      const a = new SoloArena(1);
       const fw = a.put(FW0, G0.s - short, G0.d, 40);
       a.inputs[FW0].throttle = 40 / a.pace;
       const df = a.put(DF0, G0.s - short - 8.5, G0.d);
@@ -796,7 +816,7 @@ describe('a gate and a shove from behind', () => {
   });
 
   it('(the shunt itself: the mech in front ends the tick past the line, in the opening)', () => {
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const fw = a.put(FW0, G0.s - 1.6, G0.d, 40);
     a.inputs[FW0].throttle = 40 / a.pace;
     a.put(DF0, G0.s - 1.6 - 8.5, G0.d);
@@ -813,7 +833,7 @@ describe('a gate and a shove from behind', () => {
 
   it('a shove decides it sideways too: where the mech ends the tick is what counts', () => {
     // Crossing well inside the opening and nudged about within it: scores.
-    const a = new Arena(1);
+    const a = new SoloArena(1);
     const fw = a.put(FW0, G0.s - 1, G0.d + G0.halfW - 0.6);
     const df = a.put(DF0, G0.s - 1, G0.d + G0.halfW - 0.6 - 7.05); // alongside, almost touching
     df.heading = 0.25; // swinging out into it
@@ -823,7 +843,7 @@ describe('a gate and a shove from behind', () => {
     expect(fw.d).toBeLessThan(G0.d + G0.halfW);
     expect(fw.cells).toBe(1);
     // Crossing outside the opening and nudged about outside it: nothing.
-    const b = new Arena(1);
+    const b = new SoloArena(1);
     const out = b.put(FW0, G0.s - 1, G0.d + G0.halfW + 0.3);
     b.put(DF0, G0.s - 1, G0.d + G0.halfW + 0.3 - 7.05).heading = 0.25;
     b.step(1);
@@ -837,7 +857,7 @@ describe('a gate and a shove from behind', () => {
   // where it was when it crossed under its own power.
   it('a mech that crosses inside the opening scores even if contact then nudges it out of it', () => {
     for (const inside of [0.1, 0.2]) {
-      const a = new Arena(1);
+      const a = new SoloArena(1);
       const fw = a.put(FW0, G0.s - 1, G0.d + G0.halfW - inside);
       a.put(DF0, G0.s - 1, G0.d + G0.halfW - inside - 7.05).heading = 0.25;
       a.step(1);
@@ -936,5 +956,78 @@ describe('AI pilots and the gates', () => {
     }
     expect(gates).toBe(0);
     expect(race.mechs.every((m) => m.cells === 3)).toBe(true);
+  });
+});
+
+describe('the share: a gate pays the whole team (rules.gateShare)', () => {
+  it('the mech through it a Cell, each teammate still racing half of one, the other team nothing', () => {
+    const a = new Arena(1);
+    expect(a.race.rules.gateShare).toBe(0.5);
+    approach(a, FW0, 0);
+    a.step(4);
+    expect([FW0, MF0, DF0].map((id) => a.mech(id).cells)).toEqual([1, 0.5, 0.5]);
+    expect([FW1, MF1, DF1].map((id) => a.mech(id).cells)).toEqual([0, 0, 0]);
+    expect(a.events('gate').map((e) => e.mech)).toEqual([FW0]);
+    expect(a.events('gateShare')).toMatchObject([
+      { mech: MF0, from: FW0, gate: 0, cells: 0.5 },
+      { mech: DF0, from: FW0, gate: 0, cells: 0.5 },
+    ]);
+    // The gate counts as scored for the whole team this lap.
+    for (const id of [FW0, MF0, DF0]) expect(a.mech(id).gateMask).toBe(1);
+  });
+
+  it('each gate pays each team once a lap: a teammate through it later passes it by and leaves it lit; the other team still scores it', () => {
+    const a = new Arena(1);
+    approach(a, FW0, 0);
+    a.step(4);
+    const took = a.events('gate')[0].tick;
+    a.until(() => a.race.tick >= took + Math.round(a.race.rules.gateRelight * 60) + 1, 400);
+    expect(a.race.gateDark[0]).toBeLessThanOrEqual(a.race.tick);
+    const mate = approach(a, MF0, 0);
+    a.step(4);
+    expect(mate.s - a.base).toBeGreaterThan(G0.s);
+    expect(mate.cells).toBe(0.5);
+    expect(a.events('gate').length).toBe(1);
+    expect(a.race.gateDark[0]).toBeLessThanOrEqual(a.race.tick);
+    const rival = approach(a, FW1, 0);
+    a.step(4);
+    expect(rival.cells).toBe(1);
+    expect(a.events('gate').map((e) => e.mech)).toEqual([FW0, FW1]);
+  });
+
+  it('more than two Cells and it passes without taking the gate, whatever its teammates hold: the chaser behind finds it lit', () => {
+    const a = new Arena(1);
+    const leader = approach(a, FW0, 0);
+    leader.cells = 2.5;
+    const chaser = approach(a, FW1, 0, 0, 12);
+    a.step(12);
+    expect(chaser.s - a.base).toBeGreaterThan(G0.s);
+    expect(leader.cells).toBe(2.5);
+    expect(a.mech(MF0).cells).toBe(0);
+    expect(a.events('gate').map((e) => e.mech)).toEqual([FW1]);
+    expect(chaser.cells).toBe(1);
+  });
+
+  it('a teammate knocked out, or home, gets nothing', () => {
+    const a = new Arena(1);
+    retire(a.race, a.mech(MF0), null);
+    a.mech(DF0).finished = true;
+    approach(a, FW0, 0);
+    a.step(4);
+    expect(a.mech(FW0).cells).toBe(1);
+    expect(a.mech(MF0).cells).toBe(0);
+    expect(a.mech(DF0).cells).toBe(0);
+    expect(a.events('gateShare')).toEqual([]);
+  });
+
+  it('the share tops a teammate up to the cap and no further', () => {
+    const a = new Arena(1);
+    a.mech(MF0).cells = 2.75;
+    a.mech(DF0).cells = 3;
+    approach(a, FW0, 0);
+    a.step(4);
+    expect(a.mech(MF0).cells).toBe(3);
+    expect(a.mech(DF0).cells).toBe(3);
+    expect(a.events('gateShare').map((e) => e.mech)).toEqual([MF0]);
   });
 });
