@@ -39,6 +39,8 @@ export class MechAnimator {
   private thrust = 0;
   private time = Math.random() * 10;
   private prevSpeed = 0;
+  /** The garage: stand at rest in the bay instead of the grid's crouch. */
+  display = false;
 
   constructor(readonly rig: MechRig) {}
 
@@ -176,6 +178,18 @@ export class MechAnimator {
     if (this.koW > 0.001) blendPose(P, POSES.ko, ease(this.koW));
     if (this.winW > 0.001) blendPose(P, POSES.victory, ease(this.winW) * (1 - this.koW));
 
+    // ---- the garage: at rest in the bay, breathing, looking about now and then
+    if (this.display) {
+      copyPose(P, POSES.standby);
+      const breath = Math.sin(this.time * 1.3);
+      P.hips[0] += breath * 0.03;
+      P.chest[0] -= breath * 0.02;
+      P.shL[2] += breath * 0.015;
+      P.shR[2] -= breath * 0.015;
+      P.head[1] += Math.sin(this.time * 0.31) * 0.16;
+      P.head[0] += Math.sin(this.time * 0.23 + 1) * 0.04;
+    }
+
     this.rig.apply(P);
 
     // ---- whole-body lean: bank into turns, pitch with acceleration
@@ -196,6 +210,8 @@ export class MechAnimator {
       // Thrusters hold it level in the air, and fight the drop in a fall.
       if (m.air) want = Math.max(want, m.fallT > 0 ? 1.3 : 0.75);
       if (m.finished) want = 0.25;
+      // Indoors, standing: only the pilot lights.
+      if (this.display) want = 0.08;
     }
     this.thrust = toward(this.thrust, want, 10, dt);
     setFlameTime(this.rig, this.time);

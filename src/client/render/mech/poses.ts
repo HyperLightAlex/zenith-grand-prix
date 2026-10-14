@@ -361,8 +361,29 @@ const braceKick = makePose({ ...brace, hips: [-1.05, -0.6, 0.05, 0.35, 0], shR: 
 const tuckBrace = makePose({ ...tuck, shR: [-2.62, 0, -0.06], elR: [-0.05, 0, 0] });
 const tuckBraceKick = makePose({ ...tuckBrace, shR: [-2.95, 0, -0.06], elR: [-0.45, 0, 0] });
 
+// The garage: standing at rest in the bay. Upright with the knees soft, the
+// weight a little on the right leg, the arms loose and a touch out from the
+// body, the head tipped down to whoever is looking it over.
+const standby = makePose({
+  hips: [-0.28, 0.02, 0.04, 0.05, 0.035],
+  spine: [-0.05, 0, 0],
+  chest: [-0.05, -0.04, 0],
+  head: [0.12, 0.08, 0],
+  shL: [0.1, 0.05, 0.26],
+  elL: [-0.42, 0, 0],
+  wrL: [0, 0.1, 0],
+  shR: [0.02, -0.05, -0.22],
+  elR: [-0.3, 0, 0],
+  wrR: [0, -0.1, 0],
+  footL: [1.12, 0, 0.32, 0, -0.22],
+  footR: [-1.02, 0, -0.12, 0, 0.16],
+  wingL: [0, 0, 0],
+  wingR: [0, 0, 0],
+});
+
 export const POSES = {
   stand: makePose(),
+  standby,
   tuck,
   boost,
   carveRight,

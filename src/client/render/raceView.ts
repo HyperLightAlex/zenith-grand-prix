@@ -304,6 +304,7 @@ export class RaceView {
       const step = drawingStep(held ? 8 : 0);
       const idx = step > 0 ? Math.floor(drawClock.time / step) : -2;
       if (step <= 0 || idx !== v.poseIdx) {
+        v.anim.display = this.solo && m.id === this.focusId;
         v.anim.update(v.poseAcc, m, alpha);
         v.poseAcc = 0;
         v.poseIdx = idx;

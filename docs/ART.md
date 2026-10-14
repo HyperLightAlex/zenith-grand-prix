@@ -267,7 +267,9 @@ cradles, a crane in the roof, and the bay door open onto the apron and the
 circuit's own sky. It is built once and stood round your mech while the
 garage is up; the circuit, its scenery and the other mechs are hidden
 meanwhile (`RaceView.solo`), and the camera circles the mech in the hangar's
-frame (`CameraRig.orbitFrame`) rather than along the road. Nothing tall
+frame (`CameraRig.orbitFrame`) rather than along the road. The mech stands
+at rest there (`POSES.standby`, with breathing and a slow look about, and
+only its pilot lights lit) instead of crouching as on the grid. Nothing tall
 stands inside the camera's circle, so nothing passes between the lens and
 the mech. The hangar brings its own key and fill light in place of the
 circuit's, the same kinds and number, so no material recompiles going in or
