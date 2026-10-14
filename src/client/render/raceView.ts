@@ -185,7 +185,7 @@ export class RaceView {
       rig.root.matrixAutoUpdate = false;
       // Inked and shaded as a cel character in the anime look; and left sharp
       // by the speed stretch, since it travels with the camera.
-      markCharacter(rig.root);
+      markCharacter(rig.root, m.id);
       markTraveller(rig.root);
       const shield = makeShield(livery.glow);
       const bubble = makeBubble(COLORS.cell, CLASSES[m.role].radius * 1.5 + 2.4);

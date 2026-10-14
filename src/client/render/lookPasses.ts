@@ -87,6 +87,16 @@ const InkShader = {
       // is always lined, even where the depths are close (a foot on the road).
       vec4 al = texture2D(tDiffuse, uv - ox), ar = texture2D(tDiffuse, uv + ox), ab = texture2D(tDiffuse, uv - oy), at = texture2D(tDiffuse, uv + oy);
       float contour = me * (1.0 - min(min(charAt(al), charAt(ar)), min(charAt(ab), charAt(at))));
+      // ...and where it meets another mech: each carries its own mark, so two
+      // at the same depth (side by side in a pack) still part with a line.
+      // (Only from the lower mark's side, so the line is drawn once.)
+      float a0 = texture2D(tDiffuse, uv).a;
+      float other = 0.0;
+      other = max(other, charAt(al) * step(0.03, al.a - a0));
+      other = max(other, charAt(ar) * step(0.03, ar.a - a0));
+      other = max(other, charAt(ab) * step(0.03, ab.a - a0));
+      other = max(other, charAt(at) * step(0.03, at.a - a0));
+      contour = max(contour, me * other);
 
       // ---- inner lines, characters only, thinner: one part over another,
       // creases, and where two paints meet. Not where a paint meets its own

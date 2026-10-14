@@ -235,6 +235,17 @@ chrome as GO!). The race between computer pilots still runs underneath, so
 switching the look shows it again. The eyecatch before the results carries
 the painted logo on its black card too.
 
+## Lines: coloured, and between mechs
+
+- **Coloured lines.** A line with light on both sides of it (a fold in white
+  armour, the edge of a pale barrier or of the Zenith Ring against the sky)
+  is traced in a deeper shade of that colour, as the cels did, not in ink. A
+  mech's outer contour stays ink.
+- **Mech against mech.** Each mech carries its own mark in the alpha of the
+  frame (on its parts' geometry, since the materials are shared within a
+  team), and the ink pass draws a contour wherever one mech meets another,
+  so two side by side in a pack, at the same depth, still part with a line.
+
 ## Feel of speed: the boost lurch
 
 As a boost lights (and harder as Overdrive does), the view jumps a few
@@ -309,11 +320,6 @@ works as before, and on the low quality setting the ink pass is skipped.
 These are the parts that would take it from a convincing pass to a finished
 style, roughly in order of payoff.
 
-- **Coloured lines.** Lines are ink everywhere. Productions used coloured
-  lines inside light areas (on a glow, on the sky side of a cloud).
-- **Lines between two overlapping mechs** fall back to the depth test, so
-  two mechs at the same distance can merge. An id buffer would separate
-  them.
 - **Faces and decals.** Number decals and the team emblems are textures
   that the ink pass reads as paint edges, which is mostly right but can be
   busy at a distance.

@@ -211,9 +211,17 @@ if (uCel > 0.5) {
 // the ink pass can line them as cels and the backgrounds as paintings.
 const CEL_MARK = /* glsl */ `
 #ifdef CEL_CHAR
-  if (uCel > 0.5) gl_FragColor.a = 0.5;
+  if (uCel > 0.5) gl_FragColor.a = vCharMark;
 #endif
 `;
+
+/**
+ * The mark a character pixel carries in alpha, under 0.75 (the background
+ * is 1). Each mech has its own, carried on its parts' geometry (the
+ * materials are shared within a team), so the ink pass can outline one
+ * mech against another at the same depth. Without one, 0.5.
+ */
+const markOf = (id: number) => 0.1 + 0.065 * (id % 6);
 
 /**
  * Give every toon and Lambert material under `root` the cel shading (once
@@ -237,10 +245,21 @@ export function celify(root: THREE.Object3D): void {
  * but leave the alpha under them alone, so the mark survives beneath them.
  * (Additive parts, the glows, still blend it away: light is not inked.)
  */
-export function markCharacter(root: THREE.Object3D): void {
+export function markCharacter(root: THREE.Object3D, id = -1): void {
+  const value = id >= 0 ? markOf(id) : 0.5;
   root.traverse((o) => {
     const mats = (o as THREE.Mesh).material;
     if (!mats) return;
+    // This mech's own mark, on the geometry of each of its opaque parts (a
+    // geometry another mech has marked already is copied first).
+    const mesh = o as THREE.Mesh;
+    const opaque = (Array.isArray(mats) ? mats : [mats]).some((m) => !m.transparent);
+    if (id >= 0 && opaque && mesh.geometry) {
+      if (mesh.geometry.userData.charMark !== undefined && mesh.geometry.userData.charMark !== value) mesh.geometry = mesh.geometry.clone();
+      const n = mesh.geometry.getAttribute('position')?.count ?? 0;
+      mesh.geometry.setAttribute('aCharMark', new THREE.Float32BufferAttribute(new Float32Array(n).fill(value), 1));
+      mesh.geometry.userData.charMark = value;
+    }
     for (const m of Array.isArray(mats) ? mats : [mats]) {
       m.userData.celChar = true;
       if (m.transparent && m.blending === THREE.NormalBlending && !m.premultipliedAlpha) {
@@ -268,8 +287,13 @@ export function celMaterial(m: THREE.MeshToonMaterial | THREE.MeshLambertMateria
   m.onBeforeCompile = (shader, renderer) => {
     before(shader, renderer);
     Object.assign(shader.uniforms, CEL);
+    if (mark) {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aCharMark;\nvarying float vCharMark;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvCharMark = aCharMark > 0.0 ? aCharMark : 0.5;');
+    }
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + CEL_HEAD)
+      .replace('#include <common>', '#include <common>\n' + CEL_HEAD + (mark ? '\nvarying float vCharMark;' : ''))
       .replace('#include <opaque_fragment>', CEL_BODY + '\n#include <opaque_fragment>\n' + (mark ? CEL_MARK : ''));
     const defines: Record<string, string> = {};
     if (char) defines.CEL_CHAR = '';
