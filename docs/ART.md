@@ -235,6 +235,28 @@ chrome as GO!). The race between computer pilots still runs underneath, so
 switching the look shows it again. The eyecatch before the results carries
 the painted logo on its black card too.
 
+## The menus: production paperwork
+
+In the anime look the other menus are drawn as the show's paperwork, on
+cool photocopy-white animation paper with peg holes along the top and a
+printed frame in non-photo blue. Titles are in the eyecatch's Mincho, the
+rows in the HUD's condensed italic, all in ink.
+
+- **The garage is a model sheet.** A title block (the frame's name and role,
+  its team's three paints as swatches, "Sheet 1 of 3"), the rows ruled in
+  blue, and the specs on rulers filled in marker in the team's colour. The
+  mech itself turns to the sheet's right as the turnaround: the garage
+  camera shifts its lens (`CameraRig.shiftX`) so the mech stands clear of
+  the menu, in both looks. The weapons and abilities are on a card of notes.
+- **Pause, controls and results** are on the same paper; the results are a
+  ruled timing sheet.
+- **Red pencil** marks the row you are on: a ring drawn fresh round it each
+  time you move (`src/client/ui/pencil.ts`, a little different each time),
+  and a line under your own result. With reduced motion the ring appears
+  without being drawn.
+
+In the plain look the menus are unchanged, apart from the garage's camera.
+
 ## Lines: coloured, and between mechs
 
 - **Coloured lines.** A line with light on both sides of it (a fold in white
@@ -323,8 +345,9 @@ RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Fi
   stay smooth: they are for timing a parry.
 - `src/client/render/raceView.ts`: poses on the drawing clock, and the
   triggers for impact frames.
-- `src/client/ui/hud.ts`, `src/client/ui/eyecatch.ts`, `styles.css`: the
-  title cards and the eyecatch.
+- `src/client/ui/hud.ts`, `src/client/ui/eyecatch.ts`, `menus.ts`,
+  `pencil.ts`, `styles.css`: the title cards, the eyecatch and the paper
+  menus.
 
 ## Cost
 
@@ -333,14 +356,6 @@ Two full-screen passes (ink, about 17 texture reads a pixel; film, about
 whole frame costs about 17% more than the plain look; on a GPU the passes
 are a small part of the frame. The renderer's resolution scaling still
 works as before, and on the low quality setting the ink pass is skipped.
-
-## What it does not do yet
-
-These are the parts that would take it from a convincing pass to a finished
-style, roughly in order of payoff.
-
-- **The garage** uses the look as it is; it has no composition of its own
-  yet (a model sheet garage).
 
 ## Checking it
 

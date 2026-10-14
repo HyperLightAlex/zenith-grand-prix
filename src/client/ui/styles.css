@@ -591,9 +591,10 @@ html, body {
 .controls { position: absolute; left: 5.5em; right: 5.5em; top: 50%; transform: translateY(-50%); }
 .controls .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.2em 3.5em; margin-top: 0.9em; }
 .controls h2 { margin: 0.7em 0 0.25em; font-size: 1.6em; font-weight: 800; color: var(--signal); }
-.controls .rowc { display: grid; grid-template-columns: 1fr 8.5em 8em; align-items: center; gap: 0.6em; font-size: 1.2em; font-weight: 500; padding: 0.16em 0; }
+.controls .rowc { display: grid; grid-template-columns: 1fr 9em 9.5em; align-items: center; gap: 0.6em; font-size: 1.2em; font-weight: 500; padding: 0.16em 0; }
 .controls .rowc.head { font-size: 0.95em; opacity: 0.65; padding-bottom: 0; }
-.controls .rowc .keys { white-space: nowrap; }
+.controls .rowc .keys { display: flex; flex-wrap: wrap; align-items: center; row-gap: 0.2em; white-space: nowrap; }
+.controls .rowc .keys .word { margin-right: 0.3em; }
 
 .results { position: absolute; left: 5.5em; right: 5.5em; top: 50%; transform: translateY(-50%); }
 .results .headline { font-size: 5em; font-weight: 800; line-height: 0.9; }
@@ -636,9 +637,172 @@ html, body {
 .results .item { font-size: 1.5em; }
 .results .item.sel { transform: translateY(-0.2em); }
 
+/* ---- the anime look: menus on paper ---------------------------------------
+   The menus as the show's production paperwork. The garage is a model sheet:
+   a title block, the rows ruled in non-photo blue, the frame's specs on
+   rulers, and the mech itself turning beside it as the turnaround. Pause,
+   controls and results are on the same animation paper. Ink throughout; the
+   row you are on is ringed in red pencil, and your own result underlined. */
+.pegs, .menu .tb, .pencil { display: none; }
+.menu.anime {
+  --sheet: #eef1f4;
+  --sheet-ink: #151a26;
+  --sheet-soft: #586174;
+  --rule: #7fb0dc;
+  --pencil: #d8232c;
+  --hole: #0b101c;
+  --mincho: 'Hiragino Mincho ProN', 'Hiragino Mincho Pro', 'Yu Mincho', YuMincho, 'Noto Serif JP', 'Noto Serif CJK JP', 'Times New Roman', Times, serif;
+}
+
+/* The paper: photocopy white, lifted off the screen, a printed frame inside
+   its margins and the peg holes along the top. */
+.menu.anime[data-screen='garage'] .col,
+.menu.anime[data-screen='pause'] .col,
+.menu.anime .controls,
+.menu.anime .results,
+.menu.anime .kit {
+  background: var(--sheet);
+  color: var(--sheet-ink);
+  box-shadow: 0 0.5em 1.6em rgba(4, 7, 18, 0.5);
+  text-shadow: none;
+}
+.menu.anime[data-screen='garage'] .col::after,
+.menu.anime[data-screen='pause'] .col::after,
+.menu.anime .controls::after,
+.menu.anime .results::after {
+  content: '';
+  position: absolute;
+  inset: 2.1em 0.7em 0.7em;
+  border: 0.07em solid var(--rule);
+  pointer-events: none;
+}
+.menu.anime .pegs { display: flex; align-items: center; gap: 4.5em; position: absolute; top: 0.7em; left: 50%; transform: translateX(-50%); }
+.menu.anime .pegs i { width: 2.4em; height: 0.5em; border-radius: 0.3em; background: var(--hole); box-shadow: inset 0 0.1em 0.14em rgba(0, 0, 0, 0.7); }
+.menu.anime .pegs i:nth-child(2) { width: 0.85em; height: 0.85em; border-radius: 50%; }
+
+/* Titles in the eyecatch's Mincho, upright. */
+.menu.anime h1,
+.menu.anime .tb-name b,
+.menu.anime .tb-side > span:first-child,
+.menu.anime .kit h2,
+.menu.anime .controls h2,
+.menu.anime .results .headline {
+  font-family: var(--mincho);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.menu.anime h1 { font-size: 3.1em; line-height: 1; margin: 0 0 0.15em; }
+.menu.anime p { font-size: 1.2em; }
+
+/* Rows on blue rules; the chosen one ringed in red pencil. */
+.menu.anime .list { gap: 0; margin-top: 0.2em; }
+.menu.anime .item {
+  padding: 0.36em 0.45em 0.4em;
+  font-size: 1.5em;
+  color: var(--sheet-ink);
+  background: none;
+  clip-path: none;
+  border-bottom: 0.05em solid var(--rule);
+  transition: none;
+}
+.menu.anime .list .item:first-child { border-top: 0.05em solid var(--rule); }
+.menu.anime .item.sel, .menu.anime .item.go.sel { background: none; color: var(--sheet-ink); transform: none; }
+.menu.anime .item.sel::before { content: none; }
+.menu.anime .item .choice { font-weight: 600; }
+.menu.anime .item .choice::before, .menu.anime .item .choice::after { color: var(--sheet-soft); opacity: 1; }
+.menu.anime .item.go > span { font-weight: 800; }
+.menu.anime .pencil { display: block; position: absolute; overflow: visible; pointer-events: none; fill: none; stroke: var(--pencil); stroke-linecap: round; stroke-linejoin: round; }
+.menu.anime .pencil.ring { left: -0.45em; top: -0.25em; width: calc(100% + 0.9em); height: calc(100% + 0.5em); }
+.menu.anime .pencil path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: pencil 0.2s ease-out forwards; }
+@keyframes pencil { to { stroke-dashoffset: 0; } }
+
+.menu.anime .footer-hints { left: 4em; bottom: 1.5em; text-shadow: 0 0.06em 0.35em rgba(8, 12, 40, 0.85); }
+.menu.anime .shade { background: linear-gradient(90deg, rgba(10, 16, 34, 0.4) 0%, rgba(10, 16, 34, 0) 60%); }
+.menu.anime .shade.full { background: rgba(10, 16, 34, 0.5); }
+
+/* The garage: the model sheet on the left, the mech turning to its right,
+   the notes on the frame's kit beside it; both papers sit on one line above
+   the footer. */
+.menu.anime[data-screen='garage'] .col { left: 4em; top: auto; bottom: 4.4em; width: 35em; padding: 2.9em 2em 1.5em; justify-content: flex-start; gap: 0.8em; }
+.menu.anime[data-screen='garage'] .col > h1 { display: none; }
+.menu.anime .tb { display: grid; grid-template-columns: 1fr auto; border: 0.1em solid var(--sheet-ink); }
+.menu.anime .tb-main { padding: 0.5em 0.8em 0.6em; }
+.menu.anime .tb-name { display: flex; align-items: baseline; gap: 0.45em; }
+.menu.anime .tb-name b { font-size: 3em; line-height: 1; }
+.menu.anime .tb-name .role { font-size: 1.35em; font-weight: 600; color: var(--sheet-soft); }
+.menu.anime .tb-paint { display: flex; align-items: center; gap: 0.3em; margin-top: 0.5em; font-size: 1.05em; font-weight: 600; }
+.menu.anime .tb-paint i { width: 1.15em; height: 1.15em; border: 0.08em solid var(--sheet-ink); }
+.menu.anime .tb-paint span { margin-left: 0.35em; }
+.menu.anime .tb-side { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: 0.55em 0.8em 0.6em; border-left: 0.08em solid var(--sheet-ink); }
+.menu.anime .tb-side > span:first-child { font-size: 1.5em; }
+.menu.anime .tb-side .no { font-size: 1.05em; font-weight: 600; color: var(--sheet-soft); }
+.menu.anime .match-blurb { margin: 0; font-size: 1.05em; color: var(--sheet-soft); opacity: 1; }
+/* The specs on rulers, filled in marker in the team's colour. */
+.menu.anime .frame-info { gap: 0.5em; margin-top: 0.2em; }
+.menu.anime .frame-info .stat { grid-template-columns: 7em 1fr; font-size: 1.1em; font-weight: 600; }
+.menu.anime .frame-info .stat .bar {
+  height: 0.8em;
+  transform: none;
+  overflow: visible;
+  background:
+    repeating-linear-gradient(90deg, var(--sheet-ink) 0 0.07em, transparent 0.07em 10%) left bottom / 100% 100% no-repeat,
+    repeating-linear-gradient(90deg, var(--sheet-ink) 0 0.05em, transparent 0.05em 2%) left bottom / 100% 40% no-repeat;
+  border-bottom: 0.07em solid var(--sheet-ink);
+  border-right: 0.07em solid var(--sheet-ink);
+}
+.menu.anime .frame-info .stat .bar > i { top: 25%; background: var(--mine, var(--team0)); opacity: 0.7; mix-blend-mode: multiply; }
+/* The weapons and abilities on a card of notes. */
+.menu.anime .kit { right: 3em; bottom: 4.4em; width: 27em; padding: 1.1em 1.4em 1.2em; border-right: 0; }
+.menu.anime .kit h2, .menu.anime .kit h2.cells { font-size: 1.3em; color: var(--sheet-ink); }
+.menu.anime .kit i, .menu.anime .kit .note { color: var(--sheet-soft); opacity: 1; }
+.menu.anime .kit .key, .menu.anime .controls .key { background: none; color: var(--sheet-ink); box-shadow: inset 0 0 0 0.09em var(--sheet-ink); }
+.menu.anime .kit .cellkit .key { background: var(--cell); }
+
+/* Pause: a card of the same paper, the race dimmed behind it. */
+.menu.anime[data-screen='pause'] .shade { background: linear-gradient(90deg, rgba(10, 16, 34, 0.7) 0%, rgba(10, 16, 34, 0.45) 45%, rgba(10, 16, 34, 0.2) 100%); }
+.menu.anime[data-screen='pause'] .col { left: 4em; top: 50%; bottom: auto; width: 27em; transform: translateY(-50%); padding: 2.9em 1.8em 1.5em; justify-content: flex-start; gap: 0.4em; }
+
+/* Controls. */
+.menu.anime .controls { left: 4em; right: 4em; padding: 2.9em 2.4em 1.6em; }
+.menu.anime .controls h2 { font-size: 1.4em; color: var(--sheet-ink); }
+.menu.anime .controls .rowc { border-bottom: 0.05em solid var(--rule); padding: 0.22em 0; }
+.menu.anime .controls .rowc.head { border-bottom: 0; color: var(--sheet-soft); opacity: 1; }
+
+/* Results: a timing sheet. */
+.menu.anime .results { left: 50%; right: auto; width: min(calc(100% - 8em), 86em); transform: translate(-50%, -50%); padding: 2.9em 2.4em 1.6em; }
+.menu.anime .results .headline { font-size: 3.6em; line-height: 1; }
+.menu.anime .results .headline .pts { color: inherit; }
+.menu.anime .results .subline { font-size: 1.3em; }
+.menu.anime .sheet-table { position: relative; max-width: 80.6em; }
+.menu.anime .results table { border-spacing: 0; }
+.menu.anime .results th { opacity: 1; color: var(--sheet-soft); border-bottom: 0.08em solid var(--sheet-ink); }
+.menu.anime .results td { background: none; border-bottom: 0.05em solid var(--rule); }
+.menu.anime .results tr.me td { background: none; color: var(--sheet-ink); font-weight: 800; }
+.menu.anime .results tr.out td { opacity: 0.55; }
+.menu.anime .results td.flag { width: 1.2em; background: none; }
+.menu.anime .results td.flag::before { content: ''; display: block; width: 0.55em; height: 1.05em; margin: 0 auto; background: var(--team0); }
+.menu.anime .results tr.t1 td.flag::before { background: var(--team1); }
+.menu.anime .pencil.line { left: 0; width: 100%; height: 0.7em; }
+.menu.anime .pencil.line path { animation-duration: 0.3s; animation-delay: 0.35s; }
+.menu.anime .matchstrip .side b { font-weight: 800; }
+.menu.anime .matchstrip .pips i { background: none; box-shadow: inset 0 0 0 0.09em var(--sheet-ink); }
+.menu.anime .matchstrip .pips i.on { background: var(--sheet-ink); }
+.menu.anime .matchstrip .bar { background: none; box-shadow: inset 0 0 0 0.08em var(--sheet-ink); }
+.menu.anime .matchstrip .bar > i { background: var(--sheet-ink); }
+.menu.anime .matchstrip .note, .menu.anime .results .suphead { color: var(--sheet-soft); opacity: 1; }
+.menu.anime .results .supportlist { gap: 0; }
+.menu.anime .results .supportlist .row, .menu.anime .results .supportlist .row.me { background: none; color: var(--sheet-ink); border-bottom: 0.05em solid var(--rule); border-left-width: 0.3em; }
+.menu.anime .results .supportlist .chip, .menu.anime .results .supportlist .row.me .chip { background: none; clip-path: none; border-radius: 0.2em; box-shadow: inset 0 0 0 0.07em var(--sheet-soft); }
+.menu.anime .results .supportlist .cap, .menu.anime .results .supportlist .row.me .cap { color: var(--pencil); text-transform: none; }
+.menu.anime .results .list { gap: 1.4em; }
+.menu.anime .results .list .item { border: 0; padding: 0.3em 0.6em; font-size: 1.4em; }
+.menu.anime .results .item.sel { transform: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .banner .strip, .count span, .comms .msg, .reticle.snap i { animation: none; }
   .tower .row, .item { transition: none; }
+  .menu.anime .pencil path { animation: none; stroke-dashoffset: 0; }
 }
 
 /* Narrow or short screens: drop the secondary panels. */

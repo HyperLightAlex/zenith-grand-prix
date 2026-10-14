@@ -46,6 +46,12 @@ export class CameraRig {
   trauma = 0;
   /** Seconds into the intro or orbit move. */
   clock = 0;
+  /**
+   * In orbit, how far right of centre the subject sits, as a fraction of the
+   * screen's width: the garage keeps your mech clear of its menu. A lens
+   * shift, so the view does not turn.
+   */
+  shiftX = 0;
   introLength = 4;
   private yaw = 0;
   private battleYaw = 0;
@@ -254,5 +260,9 @@ export class CameraRig {
       cam.fov = shown;
       cam.updateProjectionMatrix();
     }
+    const shift = this.mode === 'orbit' ? this.shiftX : 0;
+    const view = cam.view;
+    if (shift !== 0 && (!view || !view.enabled || view.offsetX !== -shift)) cam.setViewOffset(1, 1, -shift, 0, 1, 1);
+    else if (shift === 0 && view?.enabled) cam.clearViewOffset();
   }
 }

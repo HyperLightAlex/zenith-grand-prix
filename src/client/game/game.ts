@@ -50,6 +50,8 @@ const NAMES = [
   ['Shrike', 'Moth', 'Golem'],
 ];
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
+/** The garage's mech sits this far right of centre (of the screen's width), clear of the menu. */
+const GARAGE_SHIFT = 0.07;
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -282,6 +284,7 @@ export class Game {
     // The grid, stationary, with your mech in front of the camera.
     this.setSession(choice, 1);
     this.view.cam.mode = 'orbit';
+    this.view.cam.shiftX = GARAGE_SHIFT;
     this.view.cam.reset();
   }
 
@@ -646,6 +649,7 @@ export class Game {
       this.audio.play(round.winner === race.mechs[this.session.localId].team ? 'win' : 'lose');
     }
     this.view.cam.mode = 'orbit';
+    this.view.cam.shiftX = 0;
     this.view.cam.clock = 0;
   }
 
