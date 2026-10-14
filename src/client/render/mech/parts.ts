@@ -262,6 +262,20 @@ export function frameCtx(rig: MechRig, livery: Livery): FrameCtx {
   };
 }
 
+/** An annular sector in a profile: radii r0 < r1, angles a0..a1 round (cx, cy). */
+export function arc(r0: number, r1: number, a0: number, a1: number, cx: number, cy: number, n = 14): Array<[number, number]> {
+  const pts: Array<[number, number]> = [];
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + ((a1 - a0) * i) / n;
+    pts.push([cx + Math.cos(a) * r1, cy + Math.sin(a) * r1]);
+  }
+  for (let i = n; i >= 0; i--) {
+    const a = a0 + ((a1 - a0) * i) / n;
+    pts.push([cx + Math.cos(a) * r0, cy + Math.sin(a) * r0]);
+  }
+  return pts;
+}
+
 /** Mirror a front profile (x, y) left to right, keeping its winding. */
 export function mirrorX(pts: Array<[number, number]>): Array<[number, number]> {
   return pts.map(([x, y]) => [-x, y] as [number, number]).reverse();

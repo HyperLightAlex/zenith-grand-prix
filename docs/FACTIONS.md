@@ -57,13 +57,23 @@ the head, the shoulders, the backpack and the weapons' styling.
     papyrus columns (the scatter cannon in a toothed housing under the
     right), a scarab's shell for a backpack with a scarab's outspread wings
     either side of it, a pleated kilt, clawed feet.
-- **Aurora**: elegant and knightly. Flowing curved armour, helm visors, halo
-  crests, wing-like fins, tabard waist plates.
-  - Seraph: a slender duellist, swept helm and halo crest, rapier forearm
-    blades, wing-fin thrusters.
-  - Longbow: a tall archer carrying a slender lance-rifle, cape-like rear
-    fins.
-  - Paladin: tower-shield shoulders, a great helm, gauntlet fists.
+- **Aurora**: elegant and knightly. Ridged cuirasses (pearl below a silver
+  band, violet above), lamed pauldrons, tabards and surcoats, poleyns,
+  greaves and pointed sabatons, halos, and the team's sigil (an upright
+  sword through a halo, wings behind) where another team would wear a badge.
+  - Seraph: a slender duellist; a swept helm with a pearl visor, a lit slit
+    and small temple wings, a halo behind it; a rapier along each forearm;
+    three long feathered fins a side, fanned either side of the power unit.
+  - Longbow: a tall archer; a sallet with a pearl plume rising through a
+    floating halo; a crossbow on the left forearm for the Snare launcher; a
+    lance-rifle behind a silver vamplate; a split surcoat; two pearl cape
+    fins hanging either side of the power unit; a halo on its back for the
+    Disruptor.
+  - Paladin: a great helm with a crossed, lit visor and a silver crown, a
+    great halo behind it; tower shields hung on the shoulders; flared
+    vambraces and armoured fists; the scatter cannon in a silver-banded
+    housing; two banners on poles either side of the backpack, which swing
+    round to stream behind at speed.
 
 The poses turn the wing joints (the wings sweep back at speed), so a
 design's own wing angle sits on a group inside the joint. Fins that run back
@@ -76,5 +86,5 @@ out so they don't.
 |---|---|---|---|---|
 | Solstice | in the game | painted | painted | painted |
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
-| Mirage | in the game (`render/mech/mirage/`) | painted (a redo to centre it is coming) | painted | painted |
-| Aurora | Solstice's for now | painted | painted | painted |
+| Mirage | in the game (`render/mech/mirage/`) | painted | painted | painted |
+| Aurora | first pass (`render/mech/aurora/`) | painted (a redo, a sword through a halo, is coming) | painted | painted |

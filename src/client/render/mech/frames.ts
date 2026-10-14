@@ -13,6 +13,9 @@ import { frameCtx } from './parts';
 import { MechRig, type FrameDims } from './rig';
 import { buildSwift } from './swift';
 import { buildVector } from './vector';
+import { buildLongbow } from './aurora/longbow';
+import { buildPaladin } from './aurora/paladin';
+import { buildSeraph } from './aurora/seraph';
 import { buildAnubis } from './mirage/anubis';
 import { buildHorus } from './mirage/horus';
 import { buildSobek } from './mirage/sobek';
@@ -38,6 +41,7 @@ const DESIGNS: Record<string, Partial<Record<Role, Builder>>> = {
   solstice: { [ROLE.FW]: buildSwift, [ROLE.MF]: buildVector, [ROLE.DF]: buildBulwark },
   vanta: { [ROLE.FW]: buildRazor, [ROLE.MF]: buildStinger, [ROLE.DF]: buildMaul },
   mirage: { [ROLE.FW]: buildAnubis, [ROLE.MF]: buildHorus, [ROLE.DF]: buildSobek },
+  aurora: { [ROLE.FW]: buildSeraph, [ROLE.MF]: buildLongbow, [ROLE.DF]: buildPaladin },
 };
 
 export function buildFrame(role: Role, livery: Livery, number: string): MechRig {

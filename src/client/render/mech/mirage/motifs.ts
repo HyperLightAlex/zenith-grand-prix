@@ -2,20 +2,7 @@
 // the gold bands round the limbs, the striped headdress and the sun disc.
 // Each adds parts to a kit, in the space of the part it is building.
 import type { Kit } from '../kit';
-
-/** An annular sector in a front profile (x, y): radii r0 < r1, angles a0..a1 round (cx, cy). */
-export function arc(r0: number, r1: number, a0: number, a1: number, cx: number, cy: number, n = 14): Array<[number, number]> {
-  const pts: Array<[number, number]> = [];
-  for (let i = 0; i <= n; i++) {
-    const a = a0 + ((a1 - a0) * i) / n;
-    pts.push([cx + Math.cos(a) * r1, cy + Math.sin(a) * r1]);
-  }
-  for (let i = n; i >= 0; i--) {
-    const a = a0 + ((a1 - a0) * i) / n;
-    pts.push([cx + Math.cos(a) * r0, cy + Math.sin(a) * r0]);
-  }
-  return pts;
-}
+import { arc } from '../parts';
 
 /**
  * The broad collar: concentric bands of gold, rust, sand and gold hanging

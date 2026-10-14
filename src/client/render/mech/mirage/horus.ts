@@ -12,8 +12,8 @@
 import * as THREE from 'three';
 import { decal } from '../decals';
 import { Kit } from '../kit';
-import { fist, numberDecal, wheels, type FrameCtx } from '../parts';
-import { arc, band, broadCollar, headdress, kilt, sunDisc } from './motifs';
+import { arc, fist, numberDecal, wheels, type FrameCtx } from '../parts';
+import { band, broadCollar, headdress, kilt, sunDisc } from './motifs';
 
 export function buildHorus(c: FrameCtx, number: string): void {
   const { rig, livery } = c;
