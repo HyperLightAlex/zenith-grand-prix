@@ -4,8 +4,8 @@ import { ABILITIES, ATTACKS, AWARD_NAMES, CLASSES, ROLE_NAMES, TRACKS, roundsToW
 import type { MenuInput } from '../input/input';
 import { LIVERIES } from '../render/palette';
 import { h, setClass, setText } from './dom';
+import { EMBLEMS, PILOTS } from './hudArt';
 import { COVER, LOGO } from './keyArt';
-import { pencilLine, pencilRing } from './pencil';
 
 export type Screen = 'title' | 'garage' | 'controls' | 'pause' | 'results' | null;
 type Device = 'pad' | 'keys';
@@ -123,10 +123,12 @@ export class Menus {
   private returnTo: Screen = 'title';
   private lastRace: RaceState | null = null;
   private lastLocal = 0;
-  private ring: SVGSVGElement | null = null;
 
   constructor(parent: HTMLElement, private cb: MenuCallbacks) {
     this.root.hidden = true;
+    // The team emblems, for the anime look's results.
+    this.root.style.setProperty('--emblem0', `url(${EMBLEMS[0]})`);
+    this.root.style.setProperty('--emblem1', `url(${EMBLEMS[1]})`);
     parent.append(this.root);
   }
 
@@ -145,7 +147,7 @@ export class Menus {
     this.screen = screen;
     this.sel = 0;
     this.root.hidden = screen === null;
-    setClass(this.root, 'anime', this.cb.lookOn());
+    this.syncLook();
     if (screen) this.render();
   }
 
@@ -178,28 +180,15 @@ export class Menus {
     if (!this.items.length) return;
     this.sel = (i + this.items.length) % this.items.length;
     this.items.forEach((it, k) => setClass(it.el, 'sel', k === this.sel));
-    this.ringRow(this.items[this.sel].el);
     if (sound) this.cb.onSound('ui_move');
-  }
-
-  /** The anime look's paper menus mark the chosen row with a red pencil ring (hidden in the plain look). */
-  private ringRow(el: HTMLElement): void {
-    this.ring?.remove();
-    const em = parseFloat(getComputedStyle(el).fontSize) || 16;
-    // The ring's box runs past the row a little (see .pencil.ring in the styles).
-    const w = (el.offsetWidth || 300) + em * 0.9;
-    const ht = (el.offsetHeight || 40) + em * 0.5;
-    this.ring = pencilRing(w, ht, Math.max(1.6, em * 0.11));
-    el.append(this.ring);
   }
 
   private render(): void {
     const R = this.root;
     R.replaceChildren();
-    // The styles lay each screen out by name (the anime look's paper sheets).
+    // The styles lay each screen out by name (the anime look's hangar and broadcast screens).
     R.dataset.screen = this.screen ?? '';
     this.items = [];
-    this.ring = null;
     switch (this.screen) {
       case 'title':
         this.renderTitle();
@@ -248,11 +237,12 @@ export class Menus {
   private matchBlurb = h('div.match-blurb', '');
   private blurb = h('p', '');
   private kit = h('div.kit');
-  // The anime look's title block, as on a model sheet.
-  private sheetName = h('b', '');
-  private sheetRole = h('span.role', '');
-  private sheetPaint = h('div.tb-paint');
-  private sheetNo = h('span.no', '');
+  // The anime look's hangar computer: its header, and the bay the mech stands in.
+  private hangarTeam = h('span', '');
+  private hangarEmblem = h('i');
+  private hangarName = h('b', '');
+  private hangarRole = h('span', '');
+  private bayLabel = h('span.bay-label', '');
 
   private renderGarage(): void {
     this.root.onclick = null;
@@ -298,13 +288,14 @@ export class Menus {
       this.frameInfo.append(h('div.stat', h('span', name), h('div.bar', fill)));
     }
     this.kit = h('div.kit');
-    this.sheetName = h('b', '');
-    this.sheetRole = h('span.role', '');
-    this.sheetPaint = h('div.tb-paint');
-    this.sheetNo = h('span.no', '');
-    const titleBlock = h('div.tb', h('div.tb-main', h('div.tb-name', this.sheetName, this.sheetRole), this.sheetPaint), h('div.tb-side', h('span', 'Garage'), this.sheetNo));
-    col.append(pegs(), titleBlock, h('h1', 'Garage'), this.blurb, list, this.matchBlurb, this.frameInfo);
-    this.root.append(h('div.shade'), col, this.kit, this.footer(['D-pad', '↑ ↓', 'Choose'], ['◀ ▶', '← →', 'Change'], ['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Back']));
+    this.hangarTeam = h('span', '');
+    this.hangarEmblem = h('i');
+    this.hangarName = h('b', '');
+    this.hangarRole = h('span', '');
+    this.bayLabel = h('span.bay-label', '');
+    const head = h('div.hh', h('div.hh-bar', this.hangarTeam, h('span', 'Frame setup')), h('div.hh-name', this.hangarEmblem, this.hangarName, this.hangarRole));
+    col.append(head, h('h1', 'Garage'), this.blurb, list, this.matchBlurb, this.frameInfo);
+    this.root.append(h('div.shade'), h('div.bay', this.bayLabel), col, this.kit, this.footer(['D-pad', '↑ ↓', 'Choose'], ['◀ ▶', '← →', 'Change'], ['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Back']));
     this.refreshGarage(true);
   }
 
@@ -319,20 +310,17 @@ export class Menus {
     setText(this.trackLabel, circuit.name);
     setText(this.matchBlurb, `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`);
     setText(this.blurb, c.blurb);
+    // The hangar is your team's: its screens glow in the team's colour.
     const livery = LIVERIES[this.choice.team];
-    setText(this.sheetName, c.frame);
-    setText(this.sheetRole, ROLE_NAMES[c.role].toLowerCase());
-    setText(this.sheetNo, `Sheet ${c.role + 1} of ${CLASSES.length}`);
-    const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
-    this.sheetPaint.replaceChildren(...[livery.primary, livery.secondary, livery.trim].map((col) => {
-      const chip = h('i');
-      chip.style.background = hex(col);
-      return chip;
-    }), h('span', `${livery.name.replace('Team ', '')} paint`));
-    this.root.style.setProperty('--mine', livery.css);
+    setText(this.hangarTeam, `${livery.name.replace('Team ', '')} hangar`);
+    this.hangarEmblem.style.backgroundImage = `url(${EMBLEMS[this.choice.team]})`;
+    setText(this.hangarName, c.frame);
+    setText(this.hangarRole, ROLE_NAMES[c.role].toLowerCase());
+    setText(this.bayLabel, `Bay ${c.role + 1}: ${c.frame}`);
+    this.root.style.setProperty('--phos', '#' + livery.glow.toString(16).padStart(6, '0'));
     const power = [0.6, 0.55, 1][c.role];
     const stats = [(c.topSpeed - 130) / 30, c.maxHp / 2200, (c.grip - 60) / 40, power];
-    stats.forEach((v, i) => (this.statEls[i].style.transform = `scaleX(${Math.max(0.08, Math.min(1, v)).toFixed(2)})`));
+    stats.forEach((v, i) => this.statEls[i].style.setProperty('--v', Math.max(0.08, Math.min(1, v)).toFixed(2)));
     const [p, s] = KIT_TEXT[c.role];
     const free = ABILITIES[c.abilityFree];
     const locked = ABILITIES[c.abilityLocked];
@@ -350,7 +338,7 @@ export class Menus {
 
   private renderControls(): void {
     this.root.onclick = null;
-    const box = h('div.controls', pegs(), h('h1', 'Controls'), h('p', 'Free steering while you race. Lock on and the track carries you, so the stick moves you around your target instead.'));
+    const box = h('div.controls', h('h1', 'Controls'), h('p', 'Free steering while you race. Lock on and the track carries you, so the stick moves you around your target instead.'));
     const grid = h('div.grid');
     const left = h('div');
     const right = h('div');
@@ -368,17 +356,9 @@ export class Menus {
     this.root.append(h('div.shade.full'), box, this.footer(['B', 'Esc', 'Back']));
   }
 
-  /**
-   * The anime look's art (the cover, the painted logo, the paper sheets)
-   * shows by the root's class. The pencil marks were drawn to the old look's
-   * layout, so they are drawn again.
-   */
+  /** The anime look's art (the cover, the painted logo, the hangar and broadcast screens) shows by the root's class. */
   private syncLook(): void {
-    const on = this.cb.lookOn();
-    if (this.root.classList.contains('anime') === on) return;
-    setClass(this.root, 'anime', on);
-    if (this.screen === 'results') this.render();
-    else if (this.items.length) this.ringRow(this.items[this.sel].el);
+    setClass(this.root, 'anime', this.cb.lookOn());
   }
 
   /** The look was switched from outside the menu (G): bring its label up to date. */
@@ -401,7 +381,9 @@ export class Menus {
     this.addItem(list, h('div.item', h('span', 'Controls')), () => this.show('controls'));
     this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
     this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());
-    col.append(pegs(), h('h1', 'Paused'), list);
+    // In the anime look the show has cut to its eyecatch card, as for a break.
+    const card = h('div.ec-pause', h('div.ec-kick', 'Paused'), art(LOGO.url, 'img', 'Zenith Grand Prix'));
+    col.append(card, h('h1', 'Paused'), list);
     this.root.append(h('div.shade'), col, this.footer(['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Resume']));
   }
 
@@ -418,7 +400,13 @@ export class Menus {
     const theirs = pts[1 - me.team];
     const names = LIVERIES.map((l) => l.name.replace('Team ', ''));
     const myTeam = names[me.team];
-    const box = h('div.results', pegs());
+    const box = h('div.results');
+    // The anime look shows the team's emblem before its name.
+    const emblem = (team: number) => {
+      const el = h('i.emb');
+      el.style.backgroundImage = `url(${EMBLEMS[team]})`;
+      return el;
+    };
     const single = !match || (match.cfg.mode === 'series' && match.cfg.bestOf === 1);
     const over = !match || match.winner >= 0;
     const roundWinner = round ? round.winner : mine >= theirs ? me.team : 1 - me.team;
@@ -427,12 +415,12 @@ export class Menus {
     if (match && !single && over) {
       const won = match.winner === me.team;
       const tally = match.cfg.mode === 'series' ? `${match.wins[me.team]}–${match.wins[1 - me.team]}` : `${match.totals[me.team]}–${match.totals[1 - me.team]}`;
-      box.append(h('div.headline', `${myTeam} ${won ? 'win' : 'lose'} the match `, h('span.pts', tally)));
+      box.append(h('div.headline', emblem(me.team), `${myTeam} ${won ? 'win' : 'lose'} the match `, h('span.pts', tally)));
     } else if (single) {
-      box.append(h('div.headline', `${myTeam} ${roundWinner === me.team ? 'win' : 'lose'} `, h('span.pts', `${mine}–${theirs}`)));
+      box.append(h('div.headline', emblem(me.team), `${myTeam} ${roundWinner === me.team ? 'win' : 'lose'} `, h('span.pts', `${mine}–${theirs}`)));
     } else {
       // The winner's score first, to match the name in front of it.
-      box.append(h('div.headline', `${names[roundWinner]} take round ${round ? round.round : 1} `, h('span.pts', `${pts[roundWinner]}–${pts[1 - roundWinner]}`)));
+      box.append(h('div.headline', emblem(roundWinner), `${names[roundWinner]} take round ${round ? round.round : 1} `, h('span.pts', `${pts[roundWinner]}–${pts[1 - roundWinner]}`)));
     }
 
     const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
@@ -474,8 +462,10 @@ export class Menus {
 
     const table = h<'table'>('table');
     const head = h<'tr'>('tr');
-    for (const [label, num] of [['', false], ['', false], ['Pilot', false], ['Frame', false], ['Time', true], ['Damage dealt', true], ['Knockouts', true], ['Support', true], ['Points', true]] as const) {
+    for (const [label, num] of [['', false], ['', false], ['', false], ['Pilot', false], ['Frame', false], ['Time', true], ['Damage dealt', true], ['Knockouts', true], ['Support', true], ['Points', true]] as const) {
       const th = h<'th'>('th' + (num ? '.num' : ''), label);
+      // The third column is the pilots' faces (the anime look only).
+      if (head.children.length === 2) th.className = 'face';
       head.append(th);
     }
     table.append(head);
@@ -489,21 +479,23 @@ export class Menus {
         else if (winner && m !== winner && winner.finishTime < 1e6) time = `+${(m.finishTime - winner.finishTime).toFixed(2)}`;
         else time = fmt(m.finishTime - 4);
       }
+      const face = h('i');
+      face.style.backgroundImage = `url(${PILOTS[m.team * 3 + m.role] ?? PILOTS[0]})`;
       tr.append(
         h<'td'>('td.flag'),
         h<'td'>('td', String(m.place)),
+        h<'td'>('td.face', face),
         h<'td'>('td', m.name + (m.id === me.id ? ' (you)' : '')),
         h<'td'>('td', `${CLASSES[m.role].frame}, ${ROLE_NAMES[m.role].toLowerCase()}`),
         h<'td'>('td.num', time),
         h<'td'>('td.num', String(Math.round(m.dmgDealt))),
         h<'td'>('td.num', String(m.kos)),
         h<'td'>('td.num', m.support > 0 ? String(m.support) : '–'),
-        h<'td'>('td.num.pts', String(m.points)),
+        h<'td'>('td.num.pts', h('span', String(m.points))),
       );
       table.append(tr);
     }
-    const sheet = h('div.sheet-table', table);
-    box.append(sheet);
+    box.append(table);
 
     // Where the support points came from, pilot by pilot: your team first.
     const supporters = race.mechs.filter((m) => m.support > 0).sort((a, b) => (a.team === me.team ? 0 : 1) - (b.team === me.team ? 0 : 1) || b.support - a.support);
@@ -525,14 +517,6 @@ export class Menus {
     this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());
     box.append(list);
     this.root.append(h('div.shade.full'), box);
-    // Your own row underlined in red pencil (the anime look only), once the table is laid out.
-    const myRow = table.querySelector<HTMLElement>('tr.me');
-    if (myRow) {
-      const em = parseFloat(getComputedStyle(sheet).fontSize) || 16;
-      const line = pencilLine(sheet.offsetWidth || 600, em * 0.7, Math.max(1.6, em * 0.13));
-      line.style.top = `${((table.offsetTop + myRow.offsetTop + myRow.offsetHeight) / em - 0.3).toFixed(3)}em`;
-      sheet.append(line);
-    }
   }
 
   private confirm(): void {
@@ -579,11 +563,6 @@ export class Menus {
       }
     }
   }
-}
-
-/** Animation paper's peg holes, along the top of a paper sheet (the anime look only). */
-function pegs(): HTMLElement {
-  return h('div.pegs', h('i'), h('i'), h('i'));
 }
 
 /** A painted image, as an element. */

@@ -179,6 +179,10 @@ export class RaceView {
     this.dust = DUST[session.track.def.theme ?? 'meridian'] ?? DUST.meridian;
     this.focusId = session.localId >= 0 ? session.localId : 0;
     this.cam = new CameraRig(renderer.camera, session.track, feel);
+    // A new session is a cut: the last one's speed effects end with it (the
+    // garage would otherwise open smeared by the title screen's race).
+    const u = renderer.speedPass.uniforms;
+    u.uSpeed.value = u.uBoost.value = u.uTravel.value = 0;
     for (const m of race.mechs) {
       const livery = LIVERIES[m.team];
       const rig = buildFrame(m.role, livery, String(m.role + 1));

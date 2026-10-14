@@ -235,27 +235,27 @@ chrome as GO!). The race between computer pilots still runs underneath, so
 switching the look shows it again. The eyecatch before the results carries
 the painted logo on its black card too.
 
-## The menus: production paperwork
+## The menus: the hangar and the broadcast
 
-In the anime look the other menus are drawn as the show's paperwork, on
-cool photocopy-white animation paper with peg holes along the top and a
-printed frame in non-photo blue. Titles are in the eyecatch's Mincho, the
-rows in the HUD's condensed italic, all in ink.
+In the anime look the menus are screens inside the show's world.
 
-- **The garage is a model sheet.** A title block (the frame's name and role,
-  its team's three paints as swatches, "Sheet 1 of 3"), the rows ruled in
-  blue, and the specs on rulers filled in marker in the team's colour. The
-  mech itself turns to the sheet's right as the turnaround: the garage
-  camera shifts its lens (`CameraRig.shiftX`) so the mech stands clear of
-  the menu, in both looks. The weapons and abilities are on a card of notes.
-- **Pause, controls and results** are on the same paper; the results are a
-  ruled timing sheet.
-- **Red pencil** marks the row you are on: a ring drawn fresh round it each
-  time you move (`src/client/ui/pencil.ts`, a little different each time),
-  and a line under your own result. With reduced motion the ring appears
-  without being drawn.
+- **In the pits, the hangar computer.** The garage and the controls are your
+  team's hangar screens: dark glass with scan lines, rounded like a tube,
+  the type glowing in the team's colour (Solstice cyan, Vanta pink: change
+  the team and the screens change with it). They switch on like a CRT as you
+  arrive. The chosen row is lit, with a cursor. The specs are segmented
+  bars, and the weapons and abilities are on a second screen. Your mech
+  turns in its bay, marked with corner brackets: the garage camera shifts
+  its lens (`CameraRig.shiftX`) so the mech stands clear of the menu, in
+  both looks.
+- **On air, the broadcast.** Pause cuts to the show's eyecatch card (the
+  logo on the slanted black card, as before the results), with the choices
+  as the broadcast's slabs. The results are the broadcast's standings, like
+  the HUD's tower: team emblems, the pilots' faces, chrome points and score.
 
-In the plain look the menus are unchanged, apart from the garage's camera.
+With reduced motion the screens appear without switching on and the cursor
+does not blink. In the plain look the menus are unchanged, apart from the
+garage's camera.
 
 ## Lines: coloured, and between mechs
 
@@ -346,8 +346,7 @@ RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Fi
 - `src/client/render/raceView.ts`: poses on the drawing clock, and the
   triggers for impact frames.
 - `src/client/ui/hud.ts`, `src/client/ui/eyecatch.ts`, `menus.ts`,
-  `pencil.ts`, `styles.css`: the title cards, the eyecatch and the paper
-  menus.
+  `styles.css`: the title cards, the eyecatch and the menus.
 
 ## Cost
 
