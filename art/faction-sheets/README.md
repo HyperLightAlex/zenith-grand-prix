@@ -32,7 +32,9 @@ What to attach:
 | F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Its emblems are to be redone (F2b): Mirage's sits off-centre in its slanted shield, and Aurora's star in a ring is too close to Vanta's |
 | F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | in the game, in place of F2's |
 | F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | in the game, in place of F2's |
-| T1 Tempest | faction-t1-tempest.png | in the game (pilots and emblem cut by `tools/bg/build_hud.py`, the name by `tools/bg/build_hangar.py`). Tempest's art is green, so this sheet is keyed on magenta |
+| T1 Tempest | faction-t1-tempest.png | in the game (pilots and emblem cut by `tools/bg/build_hud.py`, the name by `tools/bg/build_hangar.py`). Tempest's art is green, so this sheet is keyed on magenta. Gale and Anvil are to be redone (T2): Gale's silver hair and brown skin are too like Moth's, and Anvil is too like Golem and Atlas |
+| T2 Gale, redone | faction-t2-gale.png | to paint; the build takes it in place of T1's Gale when the file is there |
+| T2 Anvil, redone | faction-t2-anvil.png | to paint; the build takes it in place of T1's Anvil when the file is there |
 
 ## The prompt
 
@@ -143,4 +145,41 @@ THE EMBLEM (bottom left)
 
 THE NAME (bottom middle and right)
 - TEMPEST, exactly the same lettering as SOLSTICE, VANTA, MIRAGE and AURORA on the attached sheets: huge, heavy, forward-slanting italic capitals in white with a thick navy #0D1630 outline and a navy drop shadow down and to the right. Nothing else. Spell it exactly as given.
+```
+
+## The prompt for T2 (Gale and Anvil, redone)
+
+Attach `faction-t1-tempest.png` (Squall: the hand, the suit and the
+background to match) and `faction-f1-pilots.png`. Make each portrait as its
+own image; either can come on its own.
+
+```
+ZENITH GP: TWO TEAM TEMPEST PILOTS, REDONE (two images, one portrait each; make them one at a time)
+
+The game: a mech racing game in the style of a 1980s Japanese TV mecha anime. Team Tempest is the storm team: jade green, black and gold, with lightning for light. These two pilots join Squall, the forward on the attached Tempest sheet, drawn by the same hand.
+
+STYLE, BOTH IMAGES
+- A 1980s TV anime character cel: clean dark ink outlines of even weight, flat colour with one hard-edged shadow tone, a hard highlight band on the hair, large expressive eyes with two catch-lights. Match Squall on the attached sheet exactly.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, blur, film grain or noise (the game adds its own grain).
+- Original designs only: nothing that resembles an existing anime, character or brand. Each must look clearly different from every pilot on the attached sheets.
+
+FORMAT, BOTH IMAGES
+- One square portrait, 1024x1024, filling the image edge to edge with no border or label.
+- Framed exactly like Squall: head and shoulders, the head turned three-quarters toward the right edge, the eyes about 40% down from the top, the shoulders running off the bottom edge.
+- A black pilot suit with jade green panels and gold trim, a headset and boom mic, as Squall wears.
+- Background: a flat airbrushed gradient from jade green #2E9E6B down to deep green-black #0C1A14, with a few thin pale horizontal scan lines across it, like a comms screen. No scenery, text or logos.
+
+IMAGE 1: GALE, THE MIDFIELDER
+- A woman in her late 20s with fair skin and a light flush on her cheeks.
+- Long, layered copper-red hair, blown back off her face by the wind and streaming out behind her toward the left edge.
+- Pale grey-green eyes. A thin gold-framed targeting lens on a small arm from her headset, over one eye.
+- A calm, knowing half-smile.
+
+IMAGE 2: ANVIL, THE DEFENDER
+- A tall, very broad Japanese woman in her mid-40s, with warm medium-tan skin weathered by the sun.
+- A broad, round face with strong cheekbones and laugh lines.
+- Thick black hair with a broad streak of grey at each temple, pulled up into a high, heavy topknot bound with gold cord.
+- A thick neck, and massive shoulders filling the bottom of the frame, broader than any other pilot's.
+- A big booming laugh, her mouth open and her eyes narrowed with it.
+- A heavy armoured collar with a gold storm-cloud clasp.
 ```

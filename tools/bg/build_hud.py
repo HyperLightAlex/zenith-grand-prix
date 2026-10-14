@@ -162,6 +162,13 @@ def main():
         for i, name in enumerate(names):
             r, c = divmod(i, 3)
             t = a[ys[r] + (inset if r else 0):ys[r + 1] - (inset if r == 0 else 0), xs[c] + (inset if c else 0):xs[c + 1] - (inset if c < 2 else 0)]
+            # A pilot redone on its own square image (T2) replaces the sheet's.
+            redo = f'faction-t2-{name}.png'
+            if os.path.exists(os.path.join(FACTION_SHEETS, redo)):
+                t = sheet(redo, FACTION_SHEETS)
+                side = min(t.shape[:2])
+                y0, x0 = (t.shape[0] - side) // 2, (t.shape[1] - side) // 2
+                t = t[y0:y0 + side, x0:x0 + side]
             im = Image.fromarray((t * 255).astype(np.uint8)).resize((256, 256), Image.LANCZOS)
             files[name] = save(np.asarray(im).astype(np.float32) / 255, os.path.join(d, f'pilot-{name}.webp'), 88)
     # Emblems and the countdown.
