@@ -143,3 +143,43 @@ describe('the guard swing', () => {
     expect(a.events('dash')).toHaveLength(1);
   });
 });
+
+describe('a blow commits to its aim', () => {
+  // A blow used to turn after its target all through its wind-up and its live
+  // frames, so a swing that read the tell was followed round and hit as soon
+  // as its invulnerability ran out: flashy, and no dodge at all.
+  function duel() {
+    const { a, me, them } = fight(12);
+    them.drive = 60;
+    a.tap(FW1, BTN.LOCK);
+    expect(them.mode).toBe(MODE.BATTLE);
+    expect(them.target).toBe(FW0);
+    a.step(20);
+    return { a, me, them };
+  }
+
+  it('a guard swing on the tell carries the mech out of a Lance Dash, invulnerable or not', () => {
+    const { a, me, them } = duel();
+    const hp = me.hp;
+    a.tap(FW1, BTN.Y);
+    expect(them.act).toBe(ACT.ATTACK);
+    a.inputs[FW0].mx = 1;
+    a.tap(FW0, BTN.A);
+    expect(me.arcDir).toBe(1);
+    // No invulnerability: only the swing's own movement can take it out of the way.
+    me.iframes = 0;
+    a.step(50, () => (me.iframes = 0));
+    expect(me.hp).toBe(hp);
+    expect(a.events('evade')).toEqual([]);
+  });
+
+  it('it still follows a rival strafing at fighting range', () => {
+    const { a, me, them } = duel();
+    a.release(FW0, BTN.GUARD).step(1);
+    const hp = me.hp;
+    a.inputs[FW0].mx = 1;
+    a.tap(FW1, BTN.Y);
+    a.step(50);
+    expect(me.hp).toBeLessThan(hp);
+  });
+});

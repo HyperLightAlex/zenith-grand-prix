@@ -58,8 +58,14 @@ export function weaponsFree(race: RaceState): boolean {
   return race.phase === PHASE.RACING && race.lapPhase >= 2;
 }
 
-function beginAttack(race: RaceState, m: MechState, idx: number): void {
+function beginAttack(race: RaceState, track: Track, m: MechState, idx: number): void {
   const a = ATTACKS[idx];
+  // Locked on, a blow is aimed at its target as it starts; from then on it
+  // commits (see ATTACK_TRACK_RATE), so a swing that reads it gets away.
+  if (m.mode === MODE.BATTLE && m.target >= 0) {
+    const t = race.mechs[m.target];
+    m.facing = Math.atan2(t.d - m.d, deltaS(track, t.s, m.s));
+  }
   m.act = ACT.ATTACK;
   m.actT = 0;
   m.actDur = attackTotal(a);
@@ -111,7 +117,7 @@ export function tryAttack(race: RaceState, track: Track, m: MechState, slot: num
     }
   }
   m.drive -= a.driveCost;
-  beginAttack(race, m, idx);
+  beginAttack(race, track, m, idx);
   return true;
 }
 
@@ -634,7 +640,7 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
       m.actT++;
       const activeEnd = a.windup + a.active;
       if (m.comboQueued && a.next >= 0 && m.actT >= activeEnd + COMBO_CANCEL_DELAY) {
-        beginAttack(race, m, a.next);
+        beginAttack(race, track, m, a.next);
       } else if (m.actT >= m.actDur) {
         m.act = ACT.NONE;
       }

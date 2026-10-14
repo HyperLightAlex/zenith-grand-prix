@@ -414,6 +414,14 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
   A blow that staggers the mech ends it where it is. Guard up with the stick
   forward, back or centred, A is still the dash. Computer pilots sometimes
   swing round a blow aimed at them instead of hopping back.
+- **A blow commits.** Locked on, an attack is aimed at its target as it
+  starts; through its wind-up it turns after the target at only 3 rad/s
+  (enough to follow a rival strafing at fighting range, nowhere near a
+  guard swing), once live it does not turn at all, and its lunge goes the
+  way it faces. So a swing that reads the tell takes the mech out of the
+  blow's arc whether or not its invulnerability lasts that long. (Blows
+  used to turn after their target at 12 rad/s throughout, and followed a
+  swing round to land the moment its invulnerability ran out.)
 - **Guns work at racing speed** without a lock. Melee needs a lock; pressing
   attack near an enemy takes one for you.
 - Four hits in a chain and the victim bursts free.

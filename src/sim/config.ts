@@ -227,6 +227,16 @@ export const BATTLE_STAGGER_DRAG = 6;
 /** How far a lock's carry leans toward race pace rather than the target's own speed. */
 export const BATTLE_CARRY_PACE = 0.3;
 export const FACE_RATE = 12;
+/**
+ * How fast an attacker still turns after its target while an attack winds
+ * up (rad/s); once the blow is live it turns no more, and its lunge goes the
+ * way it faces. Quick enough to follow a rival strafing at fighting range
+ * (about 3 rad/s at 10 units), far too slow to follow a guard swing, so a
+ * swing that reads the tell takes the mech out of the blow's arc. At
+ * FACE_RATE every blow turned with the swing and landed once its
+ * invulnerability ran out.
+ */
+export const ATTACK_TRACK_RATE = 3;
 export const ATTACK_MOVE_SCALE = 0.35;
 export const LINK_RANGE = 26; // escorting an ally inside this shares Drive
 export const DRIVE_LINK = 2.5;

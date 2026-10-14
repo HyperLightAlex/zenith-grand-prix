@@ -34,6 +34,7 @@ import {
   DRIVE_LINK,
   DRIVE_MAX,
   DT,
+  ATTACK_TRACK_RATE,
   FACE_RATE,
   FINISH_GRACE_TICKS,
   LAPS,
@@ -457,7 +458,13 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
   const dist = Math.hypot(ds, dd) || 1e-3;
   const us = ds / dist;
   const ud = dd / dist;
-  m.facing = approachAngle(m.facing, Math.atan2(ud, us), FACE_RATE * DT);
+  // An attack commits: slow to turn while it winds up, and not at all once live.
+  let turn = FACE_RATE;
+  if (m.act === ACT.ATTACK) {
+    const a = ATTACKS[m.attack];
+    turn = m.actT < a.windup ? ATTACK_TRACK_RATE : m.actT < a.windup + a.active ? 0 : FACE_RATE;
+  }
+  m.facing = approachAngle(m.facing, Math.atan2(ud, us), turn * DT);
   m.steer = approach(m.steer, 0, STEER_RATE * DT);
   m.boosting = false;
   // Locked on, there is no carving, and a burst is spent.
@@ -524,8 +531,11 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     }
     if (m.guarding) scale *= 0.5;
     scale *= move;
-    const rs = (us * my * c.approach - ud * mx * c.strafe) * scale + us * advance;
-    const rd = (ud * my * c.approach + us * mx * c.strafe) * scale + ud * advance;
+    // A lunge goes the way the attack faces, not after the target.
+    const fs = Math.cos(m.facing);
+    const fd = Math.sin(m.facing);
+    const rs = (us * my * c.approach - ud * mx * c.strafe) * scale + fs * advance;
+    const rd = (ud * my * c.approach + us * mx * c.strafe) * scale + fd * advance;
 
     // The track carries you at your target's pace, easing toward the
     // limiter so a long fight does not grind to a halt.
