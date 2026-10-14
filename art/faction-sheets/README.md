@@ -32,7 +32,7 @@ What to attach:
 | F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Its emblems are to be redone (F2b): Mirage's sits off-centre in its slanted shield, and Aurora's star in a ring is too close to Vanta's |
 | F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | in the game, in place of F2's |
 | F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | in the game, in place of F2's |
-| T1 Tempest | faction-t1-tempest.png | to make. Tempest's art is green, so this sheet is keyed on magenta |
+| T1 Tempest | faction-t1-tempest.png | in the game (pilots and emblem cut by `tools/bg/build_hud.py`, the name by `tools/bg/build_hangar.py`). Tempest's art is green, so this sheet is keyed on magenta |
 
 ## The prompt
 

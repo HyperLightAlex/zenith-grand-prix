@@ -36,6 +36,9 @@ import pilot_dune from './art/pilot-dune.webp';
 import pilot_orion from './art/pilot-orion.webp';
 import pilot_vesper from './art/pilot-vesper.webp';
 import pilot_bastion from './art/pilot-bastion.webp';
+import pilot_squall from './art/pilot-squall.webp';
+import pilot_gale from './art/pilot-gale.webp';
+import pilot_anvil from './art/pilot-anvil.webp';
 import art_solstice from './art/solstice.webp';
 import art_vanta from './art/vanta.webp';
 import art_go from './art/go.webp';
@@ -44,6 +47,7 @@ import art_two from './art/two.webp';
 import art_one from './art/one.webp';
 import art_mirage from './art/mirage.webp';
 import art_aurora from './art/aurora.webp';
+import art_tempest from './art/tempest.webp';
 
 export const ICONS = {
   overdrive: icon_overdrive,
@@ -74,10 +78,10 @@ export const ICONS = {
 export type IconName = keyof typeof ICONS;
 
 /** By team (Solstice, Vanta, Mirage, Aurora, then Tempest once painted), then role (forward, midfielder, defender). */
-export const PILOTS: string[] = [pilot_kite, pilot_lark, pilot_atlas, pilot_shrike, pilot_moth, pilot_golem, pilot_sirocco, pilot_ibis, pilot_dune, pilot_orion, pilot_vesper, pilot_bastion];
+export const PILOTS: string[] = [pilot_kite, pilot_lark, pilot_atlas, pilot_shrike, pilot_moth, pilot_golem, pilot_sirocco, pilot_ibis, pilot_dune, pilot_orion, pilot_vesper, pilot_bastion, pilot_squall, pilot_gale, pilot_anvil];
 
 /** By team: Solstice, Vanta, Mirage, Aurora, then Tempest once painted. */
-export const EMBLEMS: string[] = [art_solstice, art_vanta, art_mirage, art_aurora];
+export const EMBLEMS: string[] = [art_solstice, art_vanta, art_mirage, art_aurora, art_tempest];
 
 /** The countdown, as painted: 3, 2, 1 and GO!, each with its width over its height. */
 export const COUNT: Record<string, { url: string; aspect: number }> = {

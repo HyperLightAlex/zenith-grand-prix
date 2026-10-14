@@ -14,10 +14,11 @@ import firePointSign from './hangar/sign-firePoint.webp';
 import voltageSign from './hangar/sign-voltage.webp';
 import mirageSign from './hangar/sign-mirage.webp';
 import auroraSign from './hangar/sign-aurora.webp';
+import tempestSign from './hangar/sign-tempest.webp';
 
 const kit: PaintedHangar = {
   surfaces: { floor, cladding, roof, grating, hazard, services },
   servicesAspect: 0.9534,
-  signs: { solstice: { url: solsticeSign, aspect: 3.1024 }, vanta: { url: vantaSign, aspect: 2.4835 }, caution: { url: cautionSign, aspect: 1.0026 }, noSmoking: { url: noSmokingSign, aspect: 0.7121 }, firePoint: { url: firePointSign, aspect: 0.6624 }, voltage: { url: voltageSign, aspect: 0.8351 }, mirage: { url: mirageSign, aspect: 3.1195 }, aurora: { url: auroraSign, aspect: 3.1556 } },
+  signs: { solstice: { url: solsticeSign, aspect: 3.1024 }, vanta: { url: vantaSign, aspect: 2.4835 }, caution: { url: cautionSign, aspect: 1.0026 }, noSmoking: { url: noSmokingSign, aspect: 0.7121 }, firePoint: { url: firePointSign, aspect: 0.6624 }, voltage: { url: voltageSign, aspect: 0.8351 }, mirage: { url: mirageSign, aspect: 3.1195 }, aurora: { url: auroraSign, aspect: 3.1556 }, tempest: { url: tempestSign, aspect: 3.7978 } },
 };
 export default kit;

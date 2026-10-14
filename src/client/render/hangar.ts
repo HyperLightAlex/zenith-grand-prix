@@ -807,7 +807,7 @@ export class Hangar {
     strip(W, 0, BACK + 0.05, 0);
     strip(D, W / 2 - 0.05, midZ, -Math.PI / 2);
     strip(D, -W / 2 + 0.05, midZ, Math.PI / 2);
-    const sign = (name: keyof typeof paintedHangar.signs, height: number, x: number, y: number, z: number, ry: number) => {
+    const sign = (name: 'caution' | 'noSmoking' | 'firePoint' | 'voltage', height: number, x: number, y: number, z: number, ry: number) => {
       const s = paintedHangar.signs[name];
       const p = plane(height * s.aspect, height, keepAlpha(new THREE.MeshLambertMaterial({ map: paintedTexture(s.url), alphaTest: 0.4 })));
       p.position.set(x, y, z);
