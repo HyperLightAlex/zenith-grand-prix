@@ -10,6 +10,8 @@
 // so the materials keep the same lights and never recompile; and its own sky
 // mesh on the circuit's sky material, seen through the door.
 import * as THREE from 'three';
+import { look } from './look';
+import { paintedHangar, paintedTexture } from './painted';
 
 const W = 52; // inside width (x)
 const BACK = -24; // back wall (z)
@@ -20,6 +22,8 @@ const DOOR_H = 13;
 const APRON = 44; // how far the floor runs out past the door
 
 export interface HangarTeam {
+  /** The team's id, for its painted lettering if there is one. */
+  id: string;
   /** The team's name, painted on the walls. */
   name: string;
   /** Paint for the stripes, as CSS. */
@@ -85,8 +89,12 @@ function wallTexture(): THREE.CanvasTexture {
   return texture(c);
 }
 
-/** The hangar floor: concrete slabs, the bay's hazard square, the turntable ring, the lines out to the door. */
-function floorTexture(): THREE.CanvasTexture {
+/**
+ * The hangar floor's markings: the bay's hazard square, the turntable, the
+ * lines out to the door, and the wear round the bay. With `base`, on concrete
+ * slabs (the plain look); without, on clear, to lie over the painted floor.
+ */
+function floorTexture(base: boolean): THREE.CanvasTexture {
   const S = 1024;
   const [c, g] = canvas(S, S);
   const D = FRONT - BACK;
@@ -94,22 +102,24 @@ function floorTexture(): THREE.CanvasTexture {
   // The canvas's top is the back wall; its bottom the door.
   const pz = (z: number) => ((z - BACK) / D) * S;
   const m = S / W; // pixels a metre (across)
-  g.fillStyle = '#5f6878';
-  g.fillRect(0, 0, S, S);
-  // Slabs, 4 m.
-  g.strokeStyle = '#535b6b';
-  g.lineWidth = 2;
-  for (let x = -24; x <= 24; x += 4) {
-    g.beginPath();
-    g.moveTo(px(x), 0);
-    g.lineTo(px(x), S);
-    g.stroke();
-  }
-  for (let z = BACK; z <= FRONT; z += 4) {
-    g.beginPath();
-    g.moveTo(0, pz(z));
-    g.lineTo(S, pz(z));
-    g.stroke();
+  if (base) {
+    g.fillStyle = '#5f6878';
+    g.fillRect(0, 0, S, S);
+    // Slabs, 4 m.
+    g.strokeStyle = '#535b6b';
+    g.lineWidth = 2;
+    for (let x = -24; x <= 24; x += 4) {
+      g.beginPath();
+      g.moveTo(px(x), 0);
+      g.lineTo(px(x), S);
+      g.stroke();
+    }
+    for (let z = BACK; z <= FRONT; z += 4) {
+      g.beginPath();
+      g.moveTo(0, pz(z));
+      g.lineTo(S, pz(z));
+      g.stroke();
+    }
   }
   // Oil and wear, darker round the bay.
   const wear = g.createRadialGradient(px(0), pz(0), m * 3, px(0), pz(0), m * 14);
@@ -207,6 +217,30 @@ function lightMaterial(map: THREE.Texture, color: THREE.ColorRepresentation, opa
   m.blendSrcAlpha = THREE.ZeroFactor;
   m.blendDstAlpha = THREE.OneFactor;
   return m;
+}
+
+/**
+ * A see-through decal (a sign, the emblem, painted lettering) blends its
+ * colour as usual but leaves the frame's alpha alone, so its soft edges do
+ * not read to the anime look's ink as anything but background.
+ */
+function keepAlpha<M extends THREE.Material>(m: M): M {
+  m.transparent = true;
+  m.blending = THREE.CustomBlending;
+  m.blendEquation = THREE.AddEquation;
+  m.blendSrc = THREE.SrcAlphaFactor;
+  m.blendDst = THREE.OneMinusSrcAlphaFactor;
+  m.blendEquationAlpha = THREE.AddEquation;
+  m.blendSrcAlpha = THREE.ZeroFactor;
+  m.blendDstAlpha = THREE.OneFactor;
+  return m;
+}
+
+/** A painted tile from the hangar kit, repeated `rx` by `ry` times across what it covers. */
+function tile(name: keyof typeof paintedHangar.surfaces, rx: number, ry: number): THREE.Texture {
+  const t = paintedTexture(paintedHangar.surfaces[name], { repeat: true });
+  t.repeat.set(rx, ry);
+  return t;
 }
 
 /** A shaft or beam: bright at its top (v = 1), gone at its foot, soft at its sides. */
@@ -319,10 +353,23 @@ export class Hangar {
   private readonly sky: THREE.Mesh;
   private readonly teamMat = new THREE.MeshLambertMaterial({ color: 0x3d8bff });
   private readonly glowMat = new THREE.MeshBasicMaterial({ color: 0x45e8ff });
-  private readonly screenMat = new THREE.MeshBasicMaterial({ color: 0x45e8ff, transparent: true, opacity: 0.75 });
-  private readonly emblemMat = new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.4 });
+  private readonly screenMat = keepAlpha(new THREE.MeshBasicMaterial({ color: 0x45e8ff, opacity: 0.75 }));
+  private readonly emblemMat = keepAlpha(new THREE.MeshLambertMaterial({ alphaTest: 0.4 }));
   private readonly drawNumber: (n: number) => void;
   private readonly drawName: (text: string) => void;
+  /**
+   * The anime look's painted kit: each plain material's painted twin, the
+   * things shown only with it, and which look the hangar is dressed for.
+   */
+  private readonly twins = new Map<THREE.Material, THREE.Material>();
+  private readonly paintedOnly: THREE.Object3D[] = [];
+  private readonly swaps: Array<(painted: boolean) => void> = [];
+  private painted: boolean | null = null;
+  /** The team's name on the walls: drawn in code, or painted (for a team whose lettering has been painted). */
+  private readonly names: Array<{ mesh: THREE.Mesh; plainWidth: number; paintedWidth: number }> = [];
+  private readonly nameDrawn: THREE.MeshLambertMaterial;
+  private readonly namePainted: THREE.MeshLambertMaterial;
+  private teamId = '';
   private readonly drawBays: Array<(n: number) => void> = [];
   /** The daylight in through the door, in the circuit's light. */
   private readonly spillMat: THREE.MeshBasicMaterial;
@@ -361,7 +408,9 @@ export class Hangar {
       const t = hazard.clone();
       t.repeat.set(across, up);
       t.needsUpdate = true;
-      return new THREE.MeshLambertMaterial({ map: t });
+      const plain = new THREE.MeshLambertMaterial({ map: t });
+      this.twins.set(plain, new THREE.MeshLambertMaterial({ map: tile('hazard', across, up) }));
+      return plain;
     };
     const wallTex = wallTexture();
 
@@ -375,10 +424,19 @@ export class Hangar {
     add(new THREE.HemisphereLight(0xb4c4dc, 0x3c4354, 1.0));
 
     // ---- floor, and the apron out through the door
-    const floor = plane(W, FRONT - BACK, new THREE.MeshLambertMaterial({ map: floorTexture() }));
+    const floorPlain = new THREE.MeshLambertMaterial({ map: floorTexture(true) });
+    this.twins.set(floorPlain, new THREE.MeshLambertMaterial({ map: tile('floor', W / 4, (FRONT - BACK) / 4) }));
+    const floor = plane(W, FRONT - BACK, floorPlain);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, -0.01, (FRONT + BACK) / 2);
     add(floor);
+    // Over the painted floor, the markings on their own.
+    const marks = plane(W, FRONT - BACK, keepAlpha(new THREE.MeshLambertMaterial({ map: floorTexture(false), depthWrite: false })));
+    marks.rotation.x = -Math.PI / 2;
+    marks.position.set(0, -0.005, (FRONT + BACK) / 2);
+    marks.renderOrder = 1;
+    add(marks);
+    this.paintedOnly.push(marks);
     const apronTex = apronTexture();
     apronTex.wrapS = apronTex.wrapT = THREE.RepeatWrapping;
     apronTex.repeat.set(1, 2);
@@ -393,7 +451,7 @@ export class Hangar {
     // The bay's number, painted on the floor behind the mech, read from the door.
     const [numTex, draw] = numberTexture();
     this.drawNumber = draw;
-    const num = plane(6, 6, new THREE.MeshLambertMaterial({ map: numTex, transparent: true, alphaTest: 0.3 }));
+    const num = plane(6, 6, keepAlpha(new THREE.MeshLambertMaterial({ map: numTex, alphaTest: 0.3 })));
     num.rotation.x = -Math.PI / 2;
     num.position.set(0, 0.0, -12.5);
     add(num);
@@ -412,7 +470,9 @@ export class Hangar {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.repeat.set(w / 4, h / 4);
       t.needsUpdate = true;
-      const p = plane(w, h, new THREE.MeshLambertMaterial({ map: t }));
+      const plain = new THREE.MeshLambertMaterial({ map: t });
+      this.twins.set(plain, new THREE.MeshLambertMaterial({ map: tile('cladding', w / 4, h / 4) }));
+      const p = plane(w, h, plain);
       p.position.set(x, y, z);
       p.rotation.y = ry;
       add(p);
@@ -430,7 +490,7 @@ export class Hangar {
     const trim = (len: number, x: number, z: number, ry: number) => {
       const skirt = box(len, 1.1, 0.12, hazardMat(len, 1), x, 0.55, z);
       skirt.rotation.y = ry;
-      const stripe = box(len, 0.55, 0.1, this.teamMat, x, 3.2, z);
+      const stripe = box(len, 0.55, 0.1, this.teamMat, x, 5.4, z);
       stripe.rotation.y = ry;
     };
     trim(W, 0, BACK + 0.1, 0);
@@ -449,6 +509,7 @@ export class Hangar {
     add(emblem);
 
     // ---- the roof: trusses, light panels, and an overhead crane
+    this.twins.set(roofMat, new THREE.MeshLambertMaterial({ map: tile('roof', W / 4, D / 4) }));
     const roof = plane(W, D, roofMat);
     roof.rotation.x = Math.PI / 2;
     roof.position.set(0, ROOF, midZ);
@@ -474,7 +535,9 @@ export class Hangar {
     // ---- catwalks along the side walls, and the control room on the left one
     for (const sx of [-1, 1]) {
       const x = sx * (W / 2 - 1.2);
-      box(2.4, 0.25, D - 2, steel, x, 7.4, midZ);
+      const deck = new THREE.MeshLambertMaterial({ color: 0x3d475a });
+      this.twins.set(deck, new THREE.MeshLambertMaterial({ map: tile('grating', 2.4 / 1.5, (D - 2) / 1.5) }));
+      box(2.4, 0.25, D - 2, deck, x, 7.4, midZ);
       box(0.08, 0.08, D - 2, rail, x - sx * 1.15, 8.5, midZ);
       box(0.08, 0.08, D - 2, rail, x - sx * 1.15, 7.95, midZ);
       for (let z = BACK + 2; z <= FRONT - 2; z += 3) {
@@ -492,6 +555,8 @@ export class Hangar {
 
     // ---- empty maintenance cradles either side of the back wall
     const cradleFoot = hazardMat(0.5, 1.2);
+    const cradleDeck = new THREE.MeshLambertMaterial({ color: 0x3d475a });
+    this.twins.set(cradleDeck, new THREE.MeshLambertMaterial({ map: tile('grating', 7.2 / 1.5, 4.8 / 1.5) }));
     for (const sx of [-1, 1]) {
       const cx = sx * 17;
       const cz = BACK + 5.5;
@@ -502,7 +567,7 @@ export class Hangar {
         }
       }
       for (const y of [4.2, 8.4]) {
-        box(7.2, 0.25, 4.8, steel, cx, y, cz);
+        box(7.2, 0.25, 4.8, cradleDeck, cx, y, cz);
         box(7.2, 0.08, 0.08, rail, cx, y + 1.1, cz + 2.4);
       }
       box(7.6, 0.6, 5.2, this.teamMat, cx, 12.2, cz);
@@ -712,18 +777,48 @@ export class Hangar {
       0.13,
     );
 
-    // ---- painted lettering: the team's name on the right-hand wall and over the door
+    // ---- the team's name on the right-hand wall and over the door: drawn
+    // in code, or as painted in the anime look (sized by `fitNames`)
     const [nameTex, drawName] = letteringTexture(1024, 200);
     this.drawName = drawName;
-    const nameMat = new THREE.MeshLambertMaterial({ map: nameTex, transparent: true, alphaTest: 0.35 });
-    const side1 = plane(22, 4.3, nameMat);
+    this.nameDrawn = keepAlpha(new THREE.MeshLambertMaterial({ map: nameTex, alphaTest: 0.35 }));
+    this.namePainted = keepAlpha(new THREE.MeshLambertMaterial({ map: null, alphaTest: 0.35 }));
+    const side1 = plane(1, 1, this.nameDrawn);
     side1.position.set(-W / 2 + 0.06, 12.4, 2);
     side1.rotation.y = Math.PI / 2;
     add(side1);
-    const overDoor = plane(18, 3.5, nameMat);
-    overDoor.position.set(0, 15.9, FRONT - 0.06);
+    this.names.push({ mesh: side1, plainWidth: 22, paintedWidth: 16 });
+    const overDoor = plane(1, 1, this.nameDrawn);
+    overDoor.position.set(0, 15.7, FRONT - 0.06);
     overDoor.rotation.y = Math.PI;
     add(overDoor);
+    this.names.push({ mesh: overDoor, plainWidth: 18, paintedWidth: 12 });
+
+    // ---- the anime look's own: pipes along the foot of the walls, and the safety signs
+    const strip = (len: number, x: number, z: number, ry: number) => {
+      const t = tile('services', len / (4 * paintedHangar.servicesAspect), 1);
+      t.wrapT = THREE.ClampToEdgeWrapping;
+      const p = plane(len, 4, new THREE.MeshLambertMaterial({ map: t }));
+      p.position.set(x, 1.1 + 2, z);
+      p.rotation.y = ry;
+      add(p);
+      this.paintedOnly.push(p);
+    };
+    strip(W, 0, BACK + 0.05, 0);
+    strip(D, W / 2 - 0.05, midZ, -Math.PI / 2);
+    strip(D, -W / 2 + 0.05, midZ, Math.PI / 2);
+    const sign = (name: keyof typeof paintedHangar.signs, height: number, x: number, y: number, z: number, ry: number) => {
+      const s = paintedHangar.signs[name];
+      const p = plane(height * s.aspect, height, keepAlpha(new THREE.MeshLambertMaterial({ map: paintedTexture(s.url), alphaTest: 0.4 })));
+      p.position.set(x, y, z);
+      p.rotation.y = ry;
+      add(p);
+      this.paintedOnly.push(p);
+    };
+    for (const sx of [-1, 1]) sign('caution', 2.6, sx * 19.5, 7.6, FRONT - 0.08, Math.PI);
+    sign('noSmoking', 1.35, -W / 2 + 0.08, 6.45, -3.5, Math.PI / 2);
+    sign('voltage', 1.35, -W / 2 + 0.08, 6.45, -7, Math.PI / 2);
+    sign('firePoint', 1.35, W / 2 - 0.08, 6.45, 9.5, -Math.PI / 2);
     // The other two bays' boards, on the front of their cradles.
     for (const sx of [-1, 1]) {
       const [t, draw] = bayBoardTexture();
@@ -731,6 +826,37 @@ export class Hangar {
       const board = plane(3.4, 2.55, new THREE.MeshLambertMaterial({ map: t }));
       board.position.set(sx * 17, 10.6, BACK + 5.5 + 2.65);
       add(board);
+    }
+
+    // Every mesh whose material has a painted twin wears it in the anime look.
+    this.inside.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      const plain = mesh.material as THREE.Material | undefined;
+      const twin = plain && !Array.isArray(plain) ? this.twins.get(plain) : undefined;
+      if (twin) this.swaps.push((on) => (mesh.material = on ? twin : plain!));
+    });
+  }
+
+  /** Dress the hangar for a look: the painted kit in the anime look, drawn in code in the plain one. */
+  private dress(painted: boolean): void {
+    this.painted = painted;
+    for (const f of this.swaps) f(painted);
+    for (const o of this.paintedOnly) o.visible = painted;
+    this.fitNames();
+  }
+
+  /** The team's name: painted, where it has been, in the anime look; drawn in code otherwise. */
+  private fitNames(): void {
+    const sign = this.painted ? paintedHangar.signs[this.teamId as keyof typeof paintedHangar.signs] : undefined;
+    if (sign && this.namePainted.userData.url !== sign.url) {
+      this.namePainted.map = paintedTexture(sign.url);
+      this.namePainted.userData.url = sign.url;
+      this.namePainted.needsUpdate = true;
+    }
+    for (const n of this.names) {
+      const w = sign ? n.paintedWidth : n.plainWidth;
+      n.mesh.material = sign ? this.namePainted : this.nameDrawn;
+      n.mesh.scale.set(w, w / (sign ? sign.aspect : 5.12), 1);
     }
   }
 
@@ -744,6 +870,8 @@ export class Hangar {
   setTeam(team: HangarTeam): void {
     this.teamMat.color.set(team.css);
     this.drawName(team.name);
+    this.teamId = team.id;
+    this.fitNames();
     this.glowMat.color.setHex(team.glow);
     this.screenMat.color.setHex(team.glow);
     if (team.emblem !== this.emblemUrl) {
@@ -793,5 +921,6 @@ export class Hangar {
   /** Each frame while it is up: the sky stays round the camera. */
   update(camera: THREE.Camera): void {
     this.sky.position.copy(camera.position);
+    if (look.on !== this.painted) this.dress(look.on);
   }
 }

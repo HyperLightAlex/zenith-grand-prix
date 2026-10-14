@@ -29,8 +29,8 @@ What to attach:
 
 | Sheet | File | Notes |
 |---|---|---|
-| H1 Surfaces | hangar-h1-surfaces.png | to make |
-| H2 Signs | hangar-h2-signs.png | to make |
+| H1 Surfaces | hangar-h1-surfaces.png | in the game. All six as asked. The floor is cut from one of its joints and the rest to the length that wraps best each way, seams blended; the hazard stripes are not quite at 45 degrees, so they are cut to a whole number of stripes each way and the small offset at the seams blended. The pipes repeat along the walls every 3.8 m, keeping their whole height, between the hazard skirt and the team's stripe |
+| H2 Signs | hangar-h2-signs.png | in the game. All six spelt right. Each cut from the pieces whose middles fall in its cell (SOLSTICE runs a little over its cell's edge); the team names stand in for the lettering drawn in code, the safety signs go by the door, the tanks, the power feed and the tool chests |
 
 ## The prompt
 

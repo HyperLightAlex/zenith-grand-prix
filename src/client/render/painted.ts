@@ -14,6 +14,7 @@ import canyon from './backgrounds/canyon';
 import helios from './backgrounds/helios';
 import meridian from './backgrounds/meridian';
 import trackKit from './backgrounds/track';
+import hangarKit from './backgrounds/hangar';
 
 export interface PaintedCard {
   u0: number;
@@ -60,6 +61,18 @@ export interface PaintedTrack {
 }
 
 export const paintedTrack: PaintedTrack = trackKit;
+
+/** The painted hangar kit (art/hangar-sheets), for the garage. */
+export interface PaintedHangar {
+  /** Repeating textures: the floor (a 4 m slab), the wall cladding (a 4 m panel), the roof's underside, the catwalks' grating, hazard stripes (about 1 m), and the pipes along the foot of the walls (repeating along only). */
+  surfaces: Record<'floor' | 'cladding' | 'roof' | 'grating' | 'hazard' | 'services', string>;
+  /** The services strip's width over its height. */
+  servicesAspect: number;
+  /** The teams' names as painted on their walls, and the safety signs. */
+  signs: Record<'solstice' | 'vanta' | 'caution' | 'noSmoking' | 'firePoint' | 'voltage', PaintedSign>;
+}
+
+export const paintedHangar: PaintedHangar = hangarKit;
 
 const SETS: Record<string, PaintedSet> = { meridian, canyon, helios };
 

@@ -284,9 +284,16 @@ are added over the frame but leave its alpha alone, so a shaft across a mech
 does not disturb the anime look's ink. The dressing: a spare arm on trestles,
 tool chests and shelving, cables sagging in the roof and a power feed across
 the floor to the turntable, the team's name painted on a wall and over the
-door, and the other two bays' boards on their cradles. The painted surfaces
-and signs for it are asked for in `art/hangar-sheets`; until they come the
-surfaces are drawn in code.
+door, and the other two bays' boards on their cradles.
+
+In the anime look the hangar is painted (`art/hangar-sheets`;
+`tools/bg/build_hangar.py` builds it into `src/client/render/backgrounds/hangar`):
+the concrete floor with the markings laid over it, the wall cladding, the
+roof's underside, the catwalks' grating and the hazard stripes, each
+material swapping for its painted twin with the look; the pipes and conduits
+along the foot of the walls; the team's name as painted (for a team whose
+lettering has been painted; drawn in code otherwise); and the safety signs.
+The decals keep the frame's alpha, so their soft edges are not inked.
 
 ## Lines: coloured, and between mechs
 

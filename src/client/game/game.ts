@@ -303,7 +303,7 @@ export class Game {
     const m = this.session.race.mechs[this.session.localId];
     const livery = LIVERIES[choice.team];
     trackMatrix(this.session.track, m.s, m.d, 0, m.facing, this.hangarFrame);
-    this.hangar.setTeam({ name: livery.name.replace('Team ', '').toUpperCase(), css: livery.css, glow: livery.glow, emblem: EMBLEMS[choice.team] });
+    this.hangar.setTeam({ id: livery.id, name: livery.name.replace('Team ', '').toUpperCase(), css: livery.css, glow: livery.glow, emblem: EMBLEMS[choice.team] });
     this.hangar.setBay(choice.role + 1);
     this.hangar.show(this.hangarFrame);
     this.trackVis.group.visible = false;
