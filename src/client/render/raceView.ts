@@ -171,13 +171,19 @@ export class RaceView {
   /** Colour of the dust a landing kicks up: red sand in the canyon, cloud white up high. */
   private readonly dust: number;
 
+  /** Each race team's livery: the factions racing. */
+  readonly liveries: Livery[];
+
   constructor(
     private renderer: Renderer,
     private session: Session,
     private trackVis: TrackVisual,
     private feel: Feel,
+    /** Which faction each race team is (an index into LIVERIES). */
+    factions: [number, number] = [0, 1],
   ) {
     const race = session.race;
+    this.liveries = factions.map((f) => LIVERIES[f] ?? LIVERIES[0]);
     this.dust = DUST[session.track.def.theme ?? 'meridian'] ?? DUST.meridian;
     this.focusId = session.localId >= 0 ? session.localId : 0;
     this.cam = new CameraRig(renderer.camera, session.track, feel);
@@ -186,7 +192,7 @@ export class RaceView {
     const u = renderer.speedPass.uniforms;
     u.uSpeed.value = u.uBoost.value = u.uTravel.value = 0;
     for (const m of race.mechs) {
-      const livery = LIVERIES[m.team];
+      const livery = this.liveries[m.team];
       const rig = buildFrame(m.role, livery, String(m.role + 1));
       rig.root.matrixAutoUpdate = false;
       // Inked and shaded as a cel character in the anime look; and left sharp
@@ -534,7 +540,7 @@ export class RaceView {
       const ang = Math.atan2(p.vd - focus.vd, p.vs - focus.vs);
       trackMatrix(track, ps, pd, 4.3, ang, m4);
       const snareBolt = p.attack === ATK.MF_SNARE;
-      this.fx.tracer(m4, snareBolt ? 9 : ATTACKS[p.attack].shot!.pellets > 1 ? 2.2 : 4.2, snareBolt ? COLORS.snare : LIVERIES[p.team].glow);
+      this.fx.tracer(m4, snareBolt ? 9 : ATTACKS[p.attack].shot!.pellets > 1 ? 2.2 : 4.2, snareBolt ? COLORS.snare : this.liveries[p.team].glow);
     }
     this.fx.endTracers();
 

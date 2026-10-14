@@ -80,7 +80,7 @@ export function runMechDebug(): void {
   } else if (poseList.length) {
     rigs = poseList.map((name, i) => place(buildFrame(role, LIVERIES[team], String(role + 1)), (i - (poseList.length - 1) / 2) * 9, 0, 0, name, name === 'tuck' || name === 'boost' ? 0.7 : 0.15));
   } else {
-    rigs = [ROLE.FW, ROLE.MF, ROLE.DF].flatMap((r, i) => LIVERIES.map((liv, t) => place(buildFrame(r, liv, String(i + 1)), (i - 1) * 8, t === 0 ? 0 : -11, 0, poseName, 0.3)));
+    rigs = [ROLE.FW, ROLE.MF, ROLE.DF].flatMap((r, i) => LIVERIES.map((liv, t) => place(buildFrame(r, liv, String(i + 1)), (i - 1) * 8, -11 * t, 0, poseName, 0.3)));
   }
   const yaw = Number(q.get('yaw') ?? (turn ? 0 : 30)) * (Math.PI / 180);
   const dist = Number(q.get('dist') ?? (turn ? 80 : 26));

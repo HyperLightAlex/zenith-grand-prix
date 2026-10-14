@@ -2,7 +2,7 @@
 // caution stripes, stencils and warning marks) and stuck on the armour as
 // little planes, lit like the armour so they sit in its shadows.
 import * as THREE from 'three';
-import { EMBLEMS } from '../../ui/hudArt';
+import { emblemUrlFor } from '../../ui/factionArt';
 import { toonGradient, type Livery } from '../palette';
 import { MARKS, type MarkName } from './mechArt';
 
@@ -34,12 +34,41 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
     draw();
     g.restore();
   };
-  // Team emblem: Solstice a rising sun, Vanta a split chevron.
+  // Team emblem: Solstice a rising sun, Vanta a split chevron, Mirage a
+  // winged sun disc, Aurora a four-point star in a halo.
   cell(0, () => {
     g.fillStyle = trim;
     g.strokeStyle = trim;
     g.lineWidth = 7;
-    if (livery.id === 'vanta') {
+    if (livery.id === 'mirage') {
+      g.beginPath();
+      g.arc(64, 64, 18, 0, Math.PI * 2);
+      g.fill();
+      for (const s of [-1, 1]) {
+        for (let k = 0; k < 3; k++) {
+          g.beginPath();
+          g.moveTo(64 + s * 20, 56 + k * 8);
+          g.lineTo(64 + s * (60 - k * 9), 44 + k * 13);
+          g.lineTo(64 + s * (56 - k * 9), 54 + k * 13);
+          g.lineTo(64 + s * 20, 66 + k * 8);
+          g.closePath();
+          g.fill();
+        }
+      }
+    } else if (livery.id === 'aurora') {
+      g.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = -Math.PI / 2 + (k / 8) * Math.PI * 2;
+        const r = k % 2 === 0 ? 50 : 12;
+        g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r);
+      }
+      g.closePath();
+      g.fill();
+      g.lineWidth = 6;
+      g.beginPath();
+      g.ellipse(64, 64, 44, 13, 0, 0, Math.PI * 2);
+      g.stroke();
+    } else if (livery.id === 'vanta') {
       g.beginPath();
       g.moveTo(14, 26);
       g.lineTo(64, 112);
@@ -132,7 +161,7 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
   });
   // Hazard chevrons for the thrusters: four, pointing along the cell.
   cell(8, () => {
-    g.fillStyle = livery.id === 'vanta' ? light : dark;
+    g.fillStyle = livery.darkArmour ? light : dark;
     for (let k = 0; k < 4; k++) {
       const x = 6 + k * 30;
       g.beginPath();
@@ -146,11 +175,11 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
       g.fill();
     }
   });
-  // A racing roundel to set a number on: white on Solstice, the team's red on Vanta.
+  // A racing roundel to set a number on: white on light armour, the team's secondary colour on dark.
   cell(9, () => {
     g.beginPath();
     g.arc(64, 64, 56, 0, Math.PI * 2);
-    g.fillStyle = livery.id === 'vanta' ? css(livery.secondary) : '#f4f4f8';
+    g.fillStyle = livery.darkArmour ? css(livery.secondary) : '#f4f4f8';
     g.fill();
     g.lineWidth = 5;
     g.strokeStyle = dark;
@@ -158,7 +187,7 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
   });
   // Lifting point: a ringed target.
   cell(7, () => {
-    g.strokeStyle = livery.id === 'vanta' ? light : dark;
+    g.strokeStyle = livery.darkArmour ? light : dark;
     g.lineWidth = 9;
     g.beginPath();
     g.arc(64, 64, 40, 0, Math.PI * 2);
@@ -194,7 +223,7 @@ function image(url: string): Promise<HTMLImageElement> {
 
 /** The colour for a team's white markings: dark on white armour, light on dark. */
 function inkFor(livery: Livery): string {
-  return livery.id === 'vanta' ? css(livery.trim) : '#151a26';
+  return livery.darkArmour ? css(livery.trim) : '#151a26';
 }
 
 /**
@@ -236,7 +265,7 @@ function paintedSheet(livery: Livery): THREE.CanvasTexture {
   const ink = inkFor(livery);
   const trim = css(livery.trim);
   const cells: Record<DecalKind, [string, string | null, number, ('fill' | 'multiply')?]> = {
-    emblem: [EMBLEMS[livery.id === 'vanta' ? 1 : 0], null, 0.04],
+    emblem: [emblemUrlFor(livery.id), null, 0.04],
     caution: [MARKS.caution.url, null, 0.02],
     stencil: [MARKS.stencil.url, ink, 0.08],
     warning: [MARKS.warning.url, null, 0.08],
@@ -245,8 +274,8 @@ function paintedSheet(livery: Livery): THREE.CanvasTexture {
     stripes: [MARKS.stripes.url, trim, 0.0],
     lift: [MARKS.lift.url, ink, 0.12],
     chevrons: [MARKS.chevrons.url, ink, 0.04],
-    // White on Solstice; the team's red on Vanta, so its pale number reads.
-    roundel: [MARKS.roundel.url, livery.id === 'vanta' ? css(livery.secondary) : null, 0.04, 'multiply'],
+    // White on light armour; the team's secondary colour on dark, so its pale number reads.
+    roundel: [MARKS.roundel.url, livery.darkArmour ? css(livery.secondary) : null, 0.04, 'multiply'],
   };
   const g = c.getContext('2d')!;
   Promise.all(CELLS.map((k) => image(cells[k][0]))).then((imgs) => {

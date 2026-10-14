@@ -50,6 +50,17 @@ export interface Livery {
   /** CSS colour for the HUD. */
   css: string;
   cssDim: string;
+  /** Dark armour (Vanta's charcoal, Aurora's violet): its markings are painted light rather than dark. */
+  darkArmour: boolean;
+  /** The pilots' call signs, by role: forward, midfielder, defender. */
+  pilots: [string, string, string];
+  /** The faction's own design of each frame type, by role (Swift, Vector, Bulwark class). Cosmetic: every faction's frames have the same stats. */
+  models: [string, string, string];
+}
+
+/** A faction's name without "Team". */
+export function factionName(l: Livery): string {
+  return l.name.replace('Team ', '');
 }
 
 export const LIVERIES: Livery[] = [
@@ -65,6 +76,9 @@ export const LIVERIES: Livery[] = [
     shades: { primary: 0xa6a3c8, secondary: 0x1e2a9c, frame: 0x171a2e, trim: 0xc0601e },
     css: '#3d8bff',
     cssDim: '#16356b',
+    darkArmour: false,
+    pilots: ['Kite', 'Lark', 'Atlas'],
+    models: ['Sunhawk', 'Daystar', 'Rampart'],
   },
   {
     id: 'vanta',
@@ -78,6 +92,43 @@ export const LIVERIES: Livery[] = [
     shades: { primary: 0x2e2a44, secondary: 0x7c1036, frame: 0x100f1c, trim: 0x9a96b6 },
     css: '#ff3d5a',
     cssDim: '#6b1626',
+    darkArmour: true,
+    pilots: ['Shrike', 'Moth', 'Golem'],
+    models: ['Razor', 'Stinger', 'Maul'],
+  },
+  {
+    // The desert dynasty: sand and rust orange with dark brown frames, gold trim, amber eyes.
+    id: 'mirage',
+    name: 'Team Mirage',
+    short: 'MRG',
+    primary: 0xdcc59a,
+    secondary: 0xc75f2a,
+    frame: 0x3b2a22,
+    trim: 0xe9b43c,
+    glow: 0xffb347,
+    shades: { primary: 0x9a7f72, secondary: 0x7a2c2c, frame: 0x1f1418, trim: 0xa8601e },
+    css: '#ff8f2e',
+    cssDim: '#6b3a12',
+    darkArmour: false,
+    pilots: ['Asp', 'Ibis', 'Sphinx'],
+    models: ['Anubis', 'Horus', 'Sobek'],
+  },
+  {
+    // The knights: deep violet and pearl with silver trim and lavender light.
+    id: 'aurora',
+    name: 'Team Aurora',
+    short: 'AUR',
+    primary: 0x5a3ea6,
+    secondary: 0xece8f4,
+    frame: 0x241f3a,
+    trim: 0xc8ccda,
+    glow: 0xc58bff,
+    shades: { primary: 0x31226e, secondary: 0x9d94bc, frame: 0x120f22, trim: 0x7c7d9c },
+    css: '#a66bff',
+    cssDim: '#3e2470',
+    darkArmour: true,
+    pilots: ['Iris', 'Vesper', 'Bastion'],
+    models: ['Seraph', 'Longbow', 'Paladin'],
   },
 ];
 

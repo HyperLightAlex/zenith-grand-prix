@@ -37,10 +37,11 @@ import {
   type Track,
 } from '../../sim/index';
 import { TELL_LABEL, tellOf, type TellKind } from '../game/tells';
-import { CARVE_COLORS, LIVERIES } from '../render/palette';
+import { CARVE_COLORS, LIVERIES, factionName } from '../render/palette';
 import type { Plate } from '../render/raceView';
 import { h, setClass, setText } from './dom';
-import { COUNT, EMBLEMS, ICONS, PILOTS, type IconName } from './hudArt';
+import { emblemUrl, pilotUrl } from './factionArt';
+import { COUNT, ICONS, type IconName } from './hudArt';
 
 const ORD = ['st', 'nd', 'rd', 'th', 'th', 'th'];
 const PHASE_NAMES = ['', 'Formation lap', 'Battle lap', 'Speed lap'];
@@ -101,9 +102,15 @@ function setIcon(el: HTMLElement, name: IconName): void {
   el.style.setProperty('--ico', `url(${ICONS[name]})`);
 }
 
-/** A pilot's portrait, by team and role. */
+/** Which faction each race team is, for the race on now (set by `begin`). */
+let teamFactions: [number, number] = [0, 1];
+
+/** A race team's livery. */
+const liveryOf = (team: number) => LIVERIES[teamFactions[team]] ?? LIVERIES[0];
+
+/** A pilot's portrait, by faction and role. */
 function pilotOf(m: MechState): string {
-  return PILOTS[m.team * 3 + m.role] ?? PILOTS[0];
+  return pilotUrl(teamFactions[m.team] ?? 0, m.role);
 }
 
 function me0(race: RaceState, id: number): number {
@@ -334,20 +341,21 @@ export class Hud {
     set(TACTIC.MARK, k.left);
   }
 
-  /** Set up for a new race. */
-  begin(race: RaceState, track: Track, localId: number): void {
+  /** Set up for a new race between `factions` (which faction each race team is). */
+  begin(race: RaceState, track: Track, localId: number, factions: [number, number] = [0, 1]): void {
+    teamFactions = factions;
     this.track = track;
     this.localId = localId;
     this.names = race.mechs.map((m) => m.name);
     this.lastHp = race.mechs.map((m) => m.hp);
     this.spoke = race.mechs.map(() => -9999);
     this.root.hidden = false;
-    this.root.style.setProperty('--team0', LIVERIES[0].css);
-    this.root.style.setProperty('--team1', LIVERIES[1].css);
-    this.root.style.setProperty('--emblem0', `url(${EMBLEMS[0]})`);
-    this.root.style.setProperty('--emblem1', `url(${EMBLEMS[1]})`);
-    setText(this.nameA, LIVERIES[0].name.replace('Team ', ''));
-    setText(this.nameB, LIVERIES[1].name.replace('Team ', ''));
+    this.root.style.setProperty('--team0', liveryOf(0).css);
+    this.root.style.setProperty('--team1', liveryOf(1).css);
+    this.root.style.setProperty('--emblem0', `url(${emblemUrl(factions[0])})`);
+    this.root.style.setProperty('--emblem1', `url(${emblemUrl(factions[1])})`);
+    setText(this.nameA, factionName(liveryOf(0)));
+    setText(this.nameB, factionName(liveryOf(1)));
 
     this.tower.replaceChildren();
     this.rows = [];
@@ -540,7 +548,7 @@ export class Hud {
       const r = size * (me ? 0.05 : 0.036);
       g.beginPath();
       g.arc(x * size, y * size, r, 0, Math.PI * 2);
-      g.fillStyle = m.retired ? '#5b6272' : LIVERIES[m.team].css;
+      g.fillStyle = m.retired ? '#5b6272' : liveryOf(m.team).css;
       g.fill();
       g.lineWidth = size * (me ? 0.02 : 0.012);
       g.strokeStyle = me ? '#ffffff' : 'rgba(15,21,36,0.9)';
@@ -713,7 +721,7 @@ export class Hud {
       this.target.hidden = false;
       setClass(this.target, 'ally', ally);
       setText(this.targetName, t.name);
-      setText(this.targetRole, `${ROLE_NAMES[t.role]}, ${LIVERIES[t.team].name.replace('Team ', '')}`);
+      setText(this.targetRole, `${liveryOf(t.team).models[t.role]}, ${factionName(liveryOf(t.team))}`);
       setIcon(this.targetRoleIco, ROLE_ICON[t.role]);
       const portrait = `url(${pilotOf(t)})`;
       if (this.targetPilot.style.backgroundImage !== portrait) this.targetPilot.style.backgroundImage = portrait;

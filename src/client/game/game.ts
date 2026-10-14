@@ -35,10 +35,10 @@ import { CEL, celify, drawClock, look, readLook, setCelTheme, tickDrawings } fro
 import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
-import { LIVERIES } from '../render/palette';
+import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
-import { EMBLEMS } from '../ui/hudArt';
+import { emblemUrl } from '../ui/factionArt';
 import { Hud } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice } from '../ui/menus';
 import { TuningPanel } from '../ui/tuningPanel';
@@ -48,10 +48,6 @@ import { TUNE_GROUPS, Tuning } from './tuning';
 
 type State = 'title' | 'garage' | 'race' | 'paused' | 'results';
 
-const NAMES = [
-  ['Kite', 'Lark', 'Atlas'],
-  ['Shrike', 'Moth', 'Golem'],
-];
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
 /** The garage's mech sits this far right of centre (of the screen's width), clear of the menu. */
 const GARAGE_SHIFT = 0.07;
@@ -109,7 +105,7 @@ export class Game {
   private session!: LocalSession;
   private view!: RaceView;
   private state: State = 'title';
-  private choice: GarageChoice = { role: ROLE.FW, team: 0, rivals: 1, match: 1, track: 'meridian' };
+  private choice: GarageChoice = { role: ROLE.FW, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian' };
   /** The match being played: one or more rounds between the same two teams. */
   private match: MatchState | null = null;
   private roundScored = false;
@@ -136,7 +132,7 @@ export class Game {
     this.audio = opts.audio ?? new NullAudio();
     this.renderer = new Renderer(canvas);
     this.renderer.scene.add(this.hangar.root);
-    this.hangar.preload(EMBLEMS);
+    this.hangar.preload(LIVERIES.map((_, f) => emblemUrl(f)));
     if (opts.track && trackById(opts.track)) this.choice.track = opts.track;
     // The circuit and its surroundings are built when it is chosen and
     // shared by every race on it.
@@ -202,26 +198,56 @@ export class Game {
 
   // ---- sessions -----------------------------------------------------------
 
+  /**
+   * The grid. You are always race team 0, flying for your faction; race team
+   * 1 is the rival faction. Each seat is named for its faction's pilot.
+   */
   private seats(choice: GarageChoice | null): { seats: SeatConfig[]; localId: number } {
     const seats: SeatConfig[] = [];
     let localId = -1;
     for (const role of [ROLE.FW, ROLE.MF, ROLE.DF]) {
       for (let team = 0; team < 2; team++) {
-        const human = choice !== null && choice.team === team && choice.role === role;
+        const human = choice !== null && team === 0 && choice.role === role;
         if (human) localId = seats.length;
-        const rival = choice !== null && team !== choice.team;
-        seats.push({ team, role, human, name: NAMES[team][role], skill: rival ? RIVAL_SKILL[choice.rivals] : 0.6 });
+        const rival = choice !== null && team === 1;
+        const name = (LIVERIES[this.factions[team]] ?? LIVERIES[team]).pilots[role];
+        seats.push({ team, role, human, name, skill: rival ? RIVAL_SKILL[choice.rivals] : 0.6 });
       }
     }
     return { seats, localId };
   }
 
+  /** Which faction each race team is, for the race on now. */
+  private factions: [number, number] = [0, 1];
+  /** The match's rival faction (a random rival is drawn once, at the start of the match). */
+  private rivalFaction = 1;
+
+  /** The rival faction for a choice: as picked, or this match's draw when the garage says Random. */
+  private rivalFor(choice: GarageChoice): number {
+    if (choice.rival >= 0 && choice.rival !== choice.team && choice.rival < LIVERIES.length) return choice.rival;
+    if (this.rivalFaction !== choice.team) return this.rivalFaction;
+    return (choice.team + 1) % LIVERIES.length;
+  }
+
+  /** Draw a rival faction other than yours. */
+  private drawRival(choice: GarageChoice): void {
+    const others = LIVERIES.map((_, f) => f).filter((f) => f !== choice.team);
+    this.rivalFaction = choice.rival >= 0 && choice.rival !== choice.team ? choice.rival : others[(Math.random() * others.length) | 0];
+  }
+
   private setSession(choice: GarageChoice | null, seed: number, gridFlip = false): void {
     this.view?.dispose();
+    // The factions: yours and the rival's; between races on the title screen, any two.
+    if (choice) this.factions = [choice.team, this.rivalFor(choice)];
+    else {
+      const a = (Math.random() * LIVERIES.length) | 0;
+      this.factions = [a, (a + 1 + ((Math.random() * (LIVERIES.length - 1)) | 0)) % LIVERIES.length];
+    }
+    this.menus.factions = this.factions;
     const { seats, localId } = this.seats(choice);
     this.useTrack(choice?.track ?? this.trackId);
     this.session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
-    this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel);
+    this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.factions);
     // Out of the hangar, if the garage had it up: the circuit is back.
     this.hangar.hide();
     this.trackVis.group.visible = true;
@@ -301,9 +327,9 @@ export class Game {
     this.view.cam.reset();
     // Your mech alone, in your team's hangar: the circuit and the others are hidden.
     const m = this.session.race.mechs[this.session.localId];
-    const livery = LIVERIES[choice.team];
+    const livery = LIVERIES[choice.team] ?? LIVERIES[0];
     trackMatrix(this.session.track, m.s, m.d, 0, m.facing, this.hangarFrame);
-    this.hangar.setTeam({ id: livery.id, name: livery.name.replace('Team ', '').toUpperCase(), css: livery.css, glow: livery.glow, emblem: EMBLEMS[choice.team] });
+    this.hangar.setTeam({ id: livery.id, name: factionName(livery).toUpperCase(), css: livery.css, glow: livery.glow, emblem: emblemUrl(choice.team) });
     this.hangar.setBay(choice.role + 1);
     this.hangar.show(this.hangarFrame);
     this.trackVis.group.visible = false;
@@ -352,6 +378,7 @@ export class Game {
   private startMatch(choice: GarageChoice): void {
     this.choice = choice;
     this.match = createMatch((MATCH_OPTIONS[choice.match] ?? MATCH_OPTIONS[0]).cfg);
+    this.drawRival(choice);
     this.startRound();
   }
 
@@ -359,8 +386,8 @@ export class Game {
   private matchLabel(): string {
     const m = this.match;
     if (!m || (m.cfg.mode === 'series' && m.cfg.bestOf === 1)) return '';
-    const a = LIVERIES[0].name.replace('Team ', '');
-    const b = LIVERIES[1].name.replace('Team ', '');
+    const a = factionName(LIVERIES[this.factions[0]]);
+    const b = factionName(LIVERIES[this.factions[1]]);
     const round = `Round ${m.rounds.length + 1}`;
     if (m.cfg.mode === 'series') return `Best of ${m.cfg.bestOf} · ${round} · ${a} ${m.wins[0]}–${m.wins[1]} ${b}`;
     return `First to ${m.cfg.target} · ${round} · ${a} ${m.totals[0]}–${m.totals[1]} ${b}`;
@@ -379,7 +406,7 @@ export class Game {
     this.setSession(choice, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
     if (this.opts.demo) this.session.race.mechs[this.session.localId].human = false;
     if (this.opts.skip) this.session.fastForward(this.opts.skip);
-    this.hud.begin(this.session.race, this.session.track, this.session.localId);
+    this.hud.begin(this.session.race, this.session.track, this.session.localId, this.factions);
     this.hud.setMatch(this.matchLabel());
     this.hud.setDevice(this.input.device);
     this.view.cam.reset();
@@ -652,7 +679,7 @@ export class Game {
     const round = m?.rounds[m.rounds.length - 1];
     const winner = m && m.winner >= 0 ? m.winner : round ? round.winner : me ? me.team : 0;
     const what = m && m.winner >= 0 && m.rounds.length > 1 ? 'the match' : 'the round';
-    this.eyecatch.show(m ? `Round ${m.rounds.length}` : 'The flag', `${LIVERIES[winner].name} take ${what}`, hold);
+    this.eyecatch.show(m ? `Round ${m.rounds.length}` : 'The flag', `${LIVERIES[this.factions[winner]].name} take ${what}`, hold);
     this.renderer.paintedStill(hold);
     // The race has finished; hold it so nothing moves under the painting.
     this.session.freeze(hold);

@@ -2,9 +2,9 @@
 // Driven by the same MenuInput from pad or keyboard; items also take clicks.
 import { ABILITIES, ATTACKS, AWARD_NAMES, CLASSES, ROLE_NAMES, TRACKS, roundsToWin, type MatchConfig, type MatchState, type RaceState, type Role } from '../../sim/index';
 import type { MenuInput } from '../input/input';
-import { LIVERIES } from '../render/palette';
+import { LIVERIES, factionName } from '../render/palette';
 import { h, setClass, setText } from './dom';
-import { EMBLEMS, PILOTS } from './hudArt';
+import { emblemUrl, pilotUrl } from './factionArt';
 import { COVER, LOGO } from './keyArt';
 
 export type Screen = 'title' | 'garage' | 'controls' | 'pause' | 'results' | null;
@@ -12,7 +12,10 @@ type Device = 'pad' | 'keys';
 
 export interface GarageChoice {
   role: Role;
+  /** Your faction (an index into LIVERIES). */
   team: number;
+  /** The rival faction, or -1 for one drawn at random at the start of each match. */
+  rival: number;
   /** 0 rookie, 1 pro, 2 ace. */
   rivals: number;
   /** Index into MATCH_OPTIONS. */
@@ -114,7 +117,9 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
 export class Menus {
   readonly root = h('div.ui.menu');
   screen: Screen = null;
-  choice: GarageChoice = { role: 0, team: 0, rivals: 1, match: 1, track: 'meridian' };
+  choice: GarageChoice = { role: 0, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian' };
+  /** Which faction each race team is, for the race the results report on. */
+  factions: [number, number] = [0, 1];
   /** The match the results screen reports on. */
   match: MatchState | null = null;
   private items: Item[] = [];
@@ -127,8 +132,7 @@ export class Menus {
   constructor(parent: HTMLElement, private cb: MenuCallbacks) {
     this.root.hidden = true;
     // The team emblems, for the anime look's results.
-    this.root.style.setProperty('--emblem0', `url(${EMBLEMS[0]})`);
-    this.root.style.setProperty('--emblem1', `url(${EMBLEMS[1]})`);
+
     parent.append(this.root);
   }
 
@@ -232,6 +236,7 @@ export class Menus {
   private frameLabel = h('span.choice', '');
   private trackLabel = h('span.choice', '');
   private teamLabel = h('span.choice', '');
+  private rivalTeamLabel = h('span.choice', '');
   private rivalLabel = h('span.choice', '');
   private matchLabel = h('span.choice', '');
   private matchBlurb = h('div.match-blurb', '');
@@ -251,6 +256,7 @@ export class Menus {
     this.frameLabel = h('span.choice', '');
     this.trackLabel = h('span.choice', '');
     this.teamLabel = h('span.choice', '');
+    this.rivalTeamLabel = h('span.choice', '');
     this.rivalLabel = h('span.choice', '');
     this.matchLabel = h('span.choice', '');
     this.matchBlurb = h('div.match-blurb', '');
@@ -263,9 +269,18 @@ export class Menus {
       this.choice.role = ((this.choice.role + dir + 3) % 3) as Role;
       this.refreshGarage(true);
     });
+    const n = LIVERIES.length;
     this.addItem(list, h('div.item', h('span', 'Team'), this.teamLabel), undefined, (dir) => {
-      this.choice.team = (this.choice.team + dir + 2) % 2;
+      this.choice.team = (this.choice.team + dir + n) % n;
+      if (this.choice.rival === this.choice.team) this.choice.rival = -1;
       this.refreshGarage(true);
+    });
+    this.addItem(list, h('div.item', h('span', 'Rival team'), this.rivalTeamLabel), undefined, (dir) => {
+      // Random, then every faction but yours.
+      const options = [-1, ...LIVERIES.map((_, f) => f).filter((f) => f !== this.choice.team)];
+      const i = Math.max(0, options.indexOf(this.choice.rival));
+      this.choice.rival = options[(i + dir + options.length) % options.length];
+      this.refreshGarage(false);
     });
     this.addItem(list, h('div.item', h('span', 'Rival pilots'), this.rivalLabel), undefined, (dir) => {
       this.choice.rivals = (this.choice.rivals + dir + 3) % 3;
@@ -301,8 +316,11 @@ export class Menus {
 
   private refreshGarage(preview: boolean): void {
     const c = CLASSES[this.choice.role];
-    setText(this.frameLabel, `${c.frame}, ${ROLE_NAMES[c.role].toLowerCase()}`);
-    setText(this.teamLabel, LIVERIES[this.choice.team].name.replace('Team ', ''));
+    const livery = LIVERIES[this.choice.team] ?? LIVERIES[0];
+    const model = livery.models[c.role];
+    setText(this.frameLabel, `${model} (${c.frame})`);
+    setText(this.teamLabel, factionName(livery));
+    setText(this.rivalTeamLabel, this.choice.rival >= 0 ? factionName(LIVERIES[this.choice.rival]) : 'Random');
     setText(this.rivalLabel, RIVALS[this.choice.rivals]);
     const opt = MATCH_OPTIONS[this.choice.match] ?? MATCH_OPTIONS[0];
     setText(this.matchLabel, opt.label);
@@ -311,12 +329,11 @@ export class Menus {
     setText(this.matchBlurb, `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`);
     setText(this.blurb, c.blurb);
     // The hangar is your team's: its screens glow in the team's colour.
-    const livery = LIVERIES[this.choice.team];
     setText(this.hangarTeam, `${livery.name.replace('Team ', '')} hangar`);
-    this.hangarEmblem.style.backgroundImage = `url(${EMBLEMS[this.choice.team]})`;
-    setText(this.hangarName, c.frame);
-    setText(this.hangarRole, ROLE_NAMES[c.role].toLowerCase());
-    setText(this.bayLabel, `Bay ${c.role + 1}: ${c.frame}`);
+    this.hangarEmblem.style.backgroundImage = `url(${emblemUrl(this.choice.team)})`;
+    setText(this.hangarName, model);
+    setText(this.hangarRole, `${c.frame} class, ${ROLE_NAMES[c.role].toLowerCase()}`);
+    setText(this.bayLabel, `Bay ${c.role + 1}: ${model}`);
     this.root.style.setProperty('--phos', '#' + livery.glow.toString(16).padStart(6, '0'));
     const power = [0.6, 0.55, 1][c.role];
     const stats = [(c.topSpeed - 130) / 30, c.maxHp / 2200, (c.grip - 60) / 40, power];
@@ -325,7 +342,7 @@ export class Menus {
     const free = ABILITIES[c.abilityFree];
     const locked = ABILITIES[c.abilityLocked];
     this.kit.replaceChildren(
-      h('h2', `${c.frame}: weapons`),
+      h('h2', `${model}: weapons`),
       h('div', this.key('X', 'J'), h('b', ATTACKS[c.primary].name + '. '), p),
       h('div', this.key('Y', 'K'), h('b', ATTACKS[c.secondary].name + '. '), s),
       h('h2.cells', 'Abilities, one Cell each'),
@@ -398,13 +415,19 @@ export class Menus {
     if (!round) for (const m of race.mechs) pts[m.team] += m.points;
     const mine = pts[me.team];
     const theirs = pts[1 - me.team];
-    const names = LIVERIES.map((l) => l.name.replace('Team ', ''));
+    // The two factions racing, by race team.
+    const sides = this.factions.map((f) => LIVERIES[f] ?? LIVERIES[0]);
+    const names = sides.map(factionName);
+    this.root.style.setProperty('--team0', sides[0].css);
+    this.root.style.setProperty('--team1', sides[1].css);
+    this.root.style.setProperty('--emblem0', `url(${emblemUrl(this.factions[0])})`);
+    this.root.style.setProperty('--emblem1', `url(${emblemUrl(this.factions[1])})`);
     const myTeam = names[me.team];
     const box = h('div.results');
     // The anime look shows the team's emblem before its name.
     const emblem = (team: number) => {
       const el = h('i.emb');
-      el.style.backgroundImage = `url(${EMBLEMS[team]})`;
+      el.style.backgroundImage = `url(${emblemUrl(this.factions[team])})`;
       return el;
     };
     const single = !match || (match.cfg.mode === 'series' && match.cfg.bestOf === 1);
@@ -480,13 +503,13 @@ export class Menus {
         else time = fmt(m.finishTime - 4);
       }
       const face = h('i');
-      face.style.backgroundImage = `url(${PILOTS[m.team * 3 + m.role] ?? PILOTS[0]})`;
+      face.style.backgroundImage = `url(${pilotUrl(this.factions[m.team], m.role)})`;
       tr.append(
         h<'td'>('td.flag'),
         h<'td'>('td', String(m.place)),
         h<'td'>('td.face', face),
         h<'td'>('td', m.name + (m.id === me.id ? ' (you)' : '')),
-        h<'td'>('td', `${CLASSES[m.role].frame}, ${ROLE_NAMES[m.role].toLowerCase()}`),
+        h<'td'>('td', `${sides[m.team].models[m.role]}, ${ROLE_NAMES[m.role].toLowerCase()}`),
         h<'td'>('td.num', time),
         h<'td'>('td.num', String(Math.round(m.dmgDealt))),
         h<'td'>('td.num', String(m.kos)),
