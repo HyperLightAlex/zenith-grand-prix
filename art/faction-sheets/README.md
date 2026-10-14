@@ -11,8 +11,8 @@ and checked one sheet at a time, like the other sheets in `art/`.
 | F2 Emblems and lettering | The two emblems and the two teams' names as painted on their hangar walls, on green, 2x2 | The score panel, the standings, the results, the garage, the mechs' markings and the hangar's back wall; the name on the hangar walls |
 
 All of it is in the game. F2's two emblems were redone (F2b): Mirage's so
-its symbols sit on the slanted shield's middle (done), Aurora's so it is
-nothing like Vanta's (to come). The build takes each redo, on its own sheet,
+its symbols sit on the slanted shield's middle, Aurora's so it is nothing
+like Vanta's. The build takes each redo, on its own sheet,
 in place of F2's when the file is there; the prompt below asks for both on
 one sheet, but either can come on its own.
 
@@ -31,7 +31,7 @@ What to attach:
 | F1 Pilots | faction-f1-pilots.png | in the game (cut by `tools/bg/build_hud.py`). Aurora's genders changed from the prompt: the forward (renamed Orion from Iris) and Bastion are men, Vesper a woman |
 | F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Its emblems are to be redone (F2b): Mirage's sits off-centre in its slanted shield, and Aurora's star in a ring is too close to Vanta's |
 | F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | in the game, in place of F2's |
-| F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | to make; replaces F2's when it is there |
+| F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | in the game, in place of F2's |
 | T1 Tempest | faction-t1-tempest.png | to make. Tempest's art is green, so this sheet is keyed on magenta |
 
 ## The prompt

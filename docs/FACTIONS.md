@@ -97,5 +97,5 @@ out so they don't.
 | Solstice | in the game | painted | painted | painted |
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
 | Mirage | in the game (`render/mech/mirage/`) | painted | painted | painted |
-| Aurora | in the game (`render/mech/aurora/`) | painted (a redo, a sword through a halo, is coming) | painted | painted |
+| Aurora | in the game (`render/mech/aurora/`) | painted | painted | painted |
 | Tempest | Solstice's for now | stand-in | stand-in | drawn |
