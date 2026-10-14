@@ -44,11 +44,15 @@ the head, the shoulders, the backpack and the weapons' styling.
   the chest, tapering obelisk-like limbs, sun-disc and scarab motifs, banded
   wraps on the limbs. Stately, not rugged.
   - Anubis: a slender jackal-headed runner, its tall ears for antennas,
-    sickle-sword blades.
-  - Horus: falcon-headed, folded falcon-wing fins, a staff-like rifle crowned
-    with a sun disc.
-  - Sobek: a crocodile-jawed helm, a scarab-shell backpack, gauntlets like
-    temple columns.
+    sickle-sword blades along the forearms, two obelisk fins off the back.
+  - Horus: falcon-headed and crowned with a sun disc, folded falcon wings
+    hanging down the back like a cloak, feather-fringed pauldrons, a cobra
+    of a Snare launcher, a staff of a rifle crowned with a sun disc, the
+    falcon's eye lit on its back for the Disruptor, taloned feet.
+  - Sobek: crocodile-headed under a sun disc, pauldrons like temple pylons,
+    gauntlets like papyrus columns (the scatter cannon in a toothed housing
+    under the right), a scarab's shell for a backpack with a scarab's
+    outspread wings, a pleated kilt, clawed feet.
 - **Aurora**: elegant and knightly. Flowing curved armour, helm visors, halo
   crests, wing-like fins, tabard waist plates.
   - Seraph: a slender duellist, swept helm and halo crest, rapier forearm
@@ -57,11 +61,16 @@ the head, the shoulders, the backpack and the weapons' styling.
     fins.
   - Paladin: tower-shield shoulders, a great helm, gauntlet fists.
 
+The poses turn the wing joints (the wings sweep back at speed), so a
+design's own wing angle sits on a group inside the joint. Fins that run back
+along the body cross each other when they sweep; Mirage's hang down or splay
+out so they don't.
+
 ## Status
 
 | | Designs | Emblem | Pilots | Hangar lettering |
 |---|---|---|---|---|
 | Solstice | in the game | painted | painted | painted |
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
-| Mirage | Solstice's for now | stand-in | stand-in | drawn |
+| Mirage | in the game, first pass (`render/mech/mirage/`) | stand-in | stand-in | drawn |
 | Aurora | Solstice's for now | stand-in | stand-in | drawn |

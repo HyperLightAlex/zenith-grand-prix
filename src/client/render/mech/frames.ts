@@ -13,6 +13,9 @@ import { frameCtx } from './parts';
 import { MechRig, type FrameDims } from './rig';
 import { buildSwift } from './swift';
 import { buildVector } from './vector';
+import { buildAnubis } from './mirage/anubis';
+import { buildHorus } from './mirage/horus';
+import { buildSobek } from './mirage/sobek';
 import { buildMaul } from './vanta/maul';
 import { buildRazor } from './vanta/razor';
 import { buildStinger } from './vanta/stinger';
@@ -34,6 +37,7 @@ type Builder = (c: ReturnType<typeof frameCtx>, number: string) => void;
 const DESIGNS: Record<string, Partial<Record<Role, Builder>>> = {
   solstice: { [ROLE.FW]: buildSwift, [ROLE.MF]: buildVector, [ROLE.DF]: buildBulwark },
   vanta: { [ROLE.FW]: buildRazor, [ROLE.MF]: buildStinger, [ROLE.DF]: buildMaul },
+  mirage: { [ROLE.FW]: buildAnubis, [ROLE.MF]: buildHorus, [ROLE.DF]: buildSobek },
 };
 
 export function buildFrame(role: Role, livery: Livery, number: string): MechRig {
