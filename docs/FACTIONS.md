@@ -62,6 +62,6 @@ the head, the shoulders, the backpack and the weapons' styling.
 | | Designs | Emblem | Pilots | Hangar lettering |
 |---|---|---|---|---|
 | Solstice | in the game | painted | painted | painted |
-| Vanta | Solstice's for now | painted | painted | painted |
+| Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
 | Mirage | Solstice's for now | stand-in | stand-in | drawn |
 | Aurora | Solstice's for now | stand-in | stand-in | drawn |
