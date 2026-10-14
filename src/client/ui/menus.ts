@@ -247,6 +247,8 @@ export class Menus {
   private hangarEmblem = h('i');
   private hangarName = h('b', '');
   private hangarRole = h('span', '');
+  private hangarPilot = h('i');
+  private hangarPilotName = h('span', '');
   private bayLabel = h('span.bay-label', '');
 
   private renderGarage(): void {
@@ -307,8 +309,15 @@ export class Menus {
     this.hangarEmblem = h('i');
     this.hangarName = h('b', '');
     this.hangarRole = h('span', '');
+    this.hangarPilot = h('i');
+    this.hangarPilotName = h('span', '');
     this.bayLabel = h('span.bay-label', '');
-    const head = h('div.hh', h('div.hh-bar', this.hangarTeam, h('span', 'Frame setup')), h('div.hh-name', this.hangarEmblem, this.hangarName, this.hangarRole));
+    // The mech's card: the team's emblem, the model and its class, and on the right the pilot who flies it.
+    const head = h(
+      'div.hh',
+      h('div.hh-bar', this.hangarTeam, h('span', 'Frame setup')),
+      h('div.hh-name', this.hangarEmblem, this.hangarName, this.hangarRole, h('div.hh-pilot', this.hangarPilot, this.hangarPilotName)),
+    );
     col.append(head, h('h1', 'Garage'), this.blurb, list, this.matchBlurb, this.frameInfo);
     this.root.append(h('div.shade'), h('div.bay', this.bayLabel), col, this.kit, this.footer(['D-pad', '↑ ↓', 'Choose'], ['◀ ▶', '← →', 'Change'], ['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Back']));
     this.refreshGarage(true);
@@ -333,6 +342,11 @@ export class Menus {
     this.hangarEmblem.style.backgroundImage = `url(${emblemUrl(this.choice.team)})`;
     setText(this.hangarName, model);
     setText(this.hangarRole, `${c.frame} class, ${ROLE_NAMES[c.role].toLowerCase()}`);
+    this.hangarPilot.style.backgroundImage = `url(${pilotUrl(this.choice.team, c.role)})`;
+    setText(this.hangarPilotName, livery.pilots[c.role]);
+    // Fitted now, and again once the screen is laid out and its type loaded.
+    this.fitHangarName();
+    requestAnimationFrame(() => this.fitHangarName());
     setText(this.bayLabel, `Bay ${c.role + 1}: ${model}`);
     this.root.style.setProperty('--phos', '#' + livery.glow.toString(16).padStart(6, '0'));
     const power = [0.6, 0.55, 1][c.role];
@@ -351,6 +365,22 @@ export class Menus {
       h('div.note', 'Cells come from the gold gates. They are lit on every lap, so a spent Cell can be earned back.'),
     );
     if (preview) this.cb.onPreview({ ...this.choice });
+  }
+
+  /**
+   * The model's name at its full size if it fits beside the emblem and the
+   * pilot, else stepped down until it does (the longest names, Kamaitachi
+   * among them, would otherwise crowd the pilot).
+   */
+  private fitHangarName(): void {
+    const el = this.hangarName;
+    el.style.fontSize = '';
+    if (!el.isConnected || el.clientWidth === 0) return;
+    let size = 3.3;
+    while (el.scrollWidth > el.clientWidth + 1 && size > 2.2) {
+      size -= 0.1;
+      el.style.fontSize = `${size.toFixed(2)}em`;
+    }
   }
 
   private renderControls(): void {
