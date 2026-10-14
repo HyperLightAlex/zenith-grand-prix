@@ -257,6 +257,22 @@ With reduced motion the screens appear without switching on and the cursor
 does not blink. In the plain look the menus are unchanged, apart from the
 garage's camera.
 
+## The garage's hangar
+
+The garage is set in your team's hangar (`src/client/render/hangar.ts`), in
+both looks: your mech alone on a turntable in its bay, the team's emblem high
+on the back wall on a band of its colour, the bay's number on the floor,
+catwalks, a control room glowing in the team's colour, empty maintenance
+cradles, a crane in the roof, and the bay door open onto the apron and the
+circuit's own sky. It is built once and stood round your mech while the
+garage is up; the circuit, its scenery and the other mechs are hidden
+meanwhile (`RaceView.solo`), and the camera circles the mech in the hangar's
+frame (`CameraRig.orbitFrame`) rather than along the road. Nothing tall
+stands inside the camera's circle, so nothing passes between the lens and
+the mech. The hangar brings its own key and fill light in place of the
+circuit's, the same kinds and number, so no material recompiles going in or
+out.
+
 ## Lines: coloured, and between mechs
 
 - **Coloured lines.** A line with light on both sides of it (a fold in white

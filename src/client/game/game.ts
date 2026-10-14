@@ -25,6 +25,7 @@ import {
 } from '../../sim/index';
 import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
 import { Input } from '../input/input';
+import { Hangar } from '../render/hangar';
 import { RaceView } from '../render/raceView';
 import { Renderer } from '../render/renderer';
 import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
@@ -35,7 +36,9 @@ import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
 import { LIVERIES } from '../render/palette';
+import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
+import { EMBLEMS } from '../ui/hudArt';
 import { Hud } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice } from '../ui/menus';
 import { TuningPanel } from '../ui/tuningPanel';
@@ -98,6 +101,9 @@ export class Game {
   audio: AudioEngine;
   private trackVis!: TrackVisual;
   private world!: World;
+  /** The garage's set, built once; stood round your mech while the garage is up. */
+  private readonly hangar = new Hangar();
+  private readonly hangarFrame = new THREE.Matrix4();
   /** Id of the circuit whose scenery is built. */
   private trackId = '';
   private session!: LocalSession;
@@ -129,6 +135,8 @@ export class Game {
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement, private opts: GameOptions = {}) {
     this.audio = opts.audio ?? new NullAudio();
     this.renderer = new Renderer(canvas);
+    this.renderer.scene.add(this.hangar.root);
+    this.hangar.preload(EMBLEMS);
     if (opts.track && trackById(opts.track)) this.choice.track = opts.track;
     // The circuit and its surroundings are built when it is chosen and
     // shared by every race on it.
@@ -214,6 +222,10 @@ export class Game {
     this.useTrack(choice?.track ?? this.trackId);
     this.session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
     this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel);
+    // Out of the hangar, if the garage had it up: the circuit is back.
+    this.hangar.hide();
+    this.trackVis.group.visible = true;
+    this.world.group.visible = true;
     // The mechs (and anything else the view made) take the cel shading too.
     celify(this.renderer.scene);
     this.view.onImpact = (strength) => {
@@ -253,6 +265,7 @@ export class Game {
     const theme = themeFor(def.theme);
     this.trackVis = buildTrackVisual(track, theme);
     this.world = buildWorld(track, theme);
+    this.hangar.setSky(this.world.sky);
     this.renderer.setTheme(theme);
     setCelTheme(theme);
     celify(this.trackVis.group);
@@ -286,6 +299,17 @@ export class Game {
     this.view.cam.mode = 'orbit';
     this.view.cam.shiftX = GARAGE_SHIFT;
     this.view.cam.reset();
+    // Your mech alone, in your team's hangar: the circuit and the others are hidden.
+    const m = this.session.race.mechs[this.session.localId];
+    const livery = LIVERIES[choice.team];
+    trackMatrix(this.session.track, m.s, m.d, 0, m.facing, this.hangarFrame);
+    this.hangar.setTeam({ css: livery.css, glow: livery.glow, emblem: EMBLEMS[choice.team] });
+    this.hangar.setBay(choice.role + 1);
+    this.hangar.show(this.hangarFrame);
+    this.trackVis.group.visible = false;
+    this.world.group.visible = false;
+    this.view.solo = true;
+    this.view.cam.orbitFrame = this.hangarFrame;
   }
 
   /**
@@ -801,6 +825,7 @@ export class Game {
     if (!this.renderer.stillShowing) this.worldTime += dt;
     this.trackVis.update(this.worldTime);
     this.world.update(this.worldTime, this.renderer.camera);
+    if (this.hangar.showing) this.hangar.update(this.renderer.camera);
 
     // The player's own lock, remembered for a few seconds after it goes (a
     // knockout clears it), for the slow motion on knockouts they had a hand in.

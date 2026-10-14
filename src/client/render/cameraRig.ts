@@ -52,6 +52,11 @@ export class CameraRig {
    * shift, so the view does not turn.
    */
   shiftX = 0;
+  /**
+   * In orbit, circle a fixed frame (the garage's hangar: the mech at its
+   * origin facing +Z) instead of following the road, which may bend.
+   */
+  orbitFrame: THREE.Matrix4 | null = null;
   introLength = 4;
   private yaw = 0;
   private battleYaw = 0;
@@ -207,8 +212,15 @@ export class CameraRig {
       fov = 50 + e * 12;
     } else if (this.mode === 'orbit') {
       const ang = this.clock * 0.35 + 2.4;
-      trackPoint(track, sub.s - Math.cos(ang) * 17, sub.d - Math.sin(ang) * 15, 5 + Math.sin(this.clock * 0.3) * 1.5, pos);
-      trackPoint(track, sub.s, sub.d, 4.4, look);
+      const rise = 5 + Math.sin(this.clock * 0.3) * 1.5;
+      if (this.orbitFrame) {
+        // The frame's +X is the mech's left, the road's -d.
+        pos.set(Math.sin(ang) * 17.5, rise, -Math.cos(ang) * 17.5).applyMatrix4(this.orbitFrame);
+        look.set(0, 4.4, 0).applyMatrix4(this.orbitFrame);
+      } else {
+        trackPoint(track, sub.s - Math.cos(ang) * 17, sub.d - Math.sin(ang) * 15, rise, pos);
+        trackPoint(track, sub.s, sub.d, 4.4, look);
+      }
       fov = 50;
     }
 

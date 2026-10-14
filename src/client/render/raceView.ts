@@ -150,6 +150,8 @@ export class RaceView {
   private lastTarget = -1;
   private lastTargetAt = 0;
   readonly group = new THREE.Group();
+  /** The garage: only the mech being followed is shown, lit from overhead in its hangar. */
+  solo = false;
   readonly cam: CameraRig;
   readonly fx = new Fx();
   readonly plates: Plate[] = [];
@@ -312,8 +314,10 @@ export class RaceView {
 
       // Shadow: a soft blob stretched away from the low sun, shrinking as the
       // mech climbs away from the road, and gone with no road under it.
+      // (In the hangar the light is overhead, so the blob sits right under it.)
       const sh = worldDirToTrackAngle(track, v.s, -SUN_DIR.x, -SUN_DIR.z);
-      trackMatrix(track, v.s + Math.cos(sh) * 2.2, v.d + Math.sin(sh) * 2.2, 0.05, sh, m4);
+      const off = this.solo ? 0 : 2.2;
+      trackMatrix(track, v.s + Math.cos(sh) * off, v.d + Math.sin(sh) * off, 0.05, sh, m4);
       const r = CLASSES[m.role].radius;
       const lift = v.h > 0 ? Math.max(0.25, 1 - v.h / 40) : 1;
       v.shadow.visible = v.h > -2 && roadAt(track, m.s, m.d);
@@ -573,7 +577,8 @@ export class RaceView {
     // A mech right on top of the lens would fill the frame: drop it for a moment.
     for (const m of race.mechs) {
       const v = this.mechs[m.id];
-      v.rig.root.visible = m.id === this.focusId || v.pos.distanceToSquared(this.renderer.camera.position) > 7.5 * 7.5;
+      v.rig.root.visible = m.id === this.focusId || (!this.solo && v.pos.distanceToSquared(this.renderer.camera.position) > 7.5 * 7.5);
+      if (this.solo && m.id !== this.focusId) v.shadow.visible = v.snare.visible = v.trails[0].mesh.visible = v.trails[1].mesh.visible = false;
     }
 
     // ---- post effects
