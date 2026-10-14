@@ -22,6 +22,8 @@ export interface Feel {
   lookImpact: number;
   /** A painted still when you take part in a knockout. */
   lookStill: number;
+  /** The anime look drawn at 30 frames a second (the race still runs at 60). */
+  lookThirty: number;
   camHeight: number;
   camDist: number;
   camDistSpeed: number;
@@ -69,6 +71,7 @@ export const DEFAULT_FEEL: Readonly<Feel> = Object.freeze({
   lookSteps: 12,
   lookImpact: 1,
   lookStill: 1,
+  lookThirty: 0,
   camHeight: 8.4,
   camDist: 13,
   camDistSpeed: 2.4,
@@ -138,6 +141,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
       feel('lookSteps', 'Drawings a second', 0, 24, 1, 'int', 'Mech poses and effects. 12 is animation on twos; 8 on threes; 0 animates smoothly. The race and the camera always run at full speed.'),
       feel('lookImpact', 'Impact frames', 0, 1, 1, 'onoff', 'A flash of flat ink on a big hit you are part of. At most one every 1.2 seconds.'),
       feel('lookStill', 'Knockout still', 0, 1, 1, 'onoff', 'A painted freeze-frame when you take part in a knockout.'),
+      feel('lookThirty', '30 frames a second', 0, 1, 1, 'onoff', 'Draw the anime look at 30 frames a second, as the series was shown. The race, the controls and the HUD still run at full speed.'),
     ],
   },
   {

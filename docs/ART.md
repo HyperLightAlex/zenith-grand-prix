@@ -250,6 +250,21 @@ the painted logo on its black card too.
   creases soften, as a cel drew a distant figure; its outline and overlaps
   stay. (They made a far mech busy.)
 
+## 30 frames a second
+
+"30 frames a second" on the Look tab draws the anime look at 30, as the
+series was shown; the race, the controls and the sound still run at the
+display's rate. A frame left undrawn hands its time on to the next one, and
+the HUD (its marks over the mechs above all) updates only on the frames
+drawn, so it moves with the picture. Off by default: racing feels better at
+60.
+
+## Feel of speed: the walls' light strips
+
+The light strip along the top of each barrier runs in dashes, 8 units lit
+and 8 dark, so it streams past at about ten a second at full speed; one
+unbroken line gave the eye nothing to measure the speed by.
+
 ## Feel of speed: the boost lurch
 
 As a boost lights (and harder as Overdrive does), the view jumps a few
@@ -324,8 +339,6 @@ works as before, and on the low quality setting the ink pass is skipped.
 These are the parts that would take it from a convincing pass to a finished
 style, roughly in order of payoff.
 
-- **A 30 frames a second option** for the whole picture, as Orbitals does.
-  Racing feels worse at 30, so it would be a setting, not the default.
 - **The garage** uses the look as it is; it has no composition of its own
   yet (a model sheet garage).
 

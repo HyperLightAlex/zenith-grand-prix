@@ -170,6 +170,10 @@ export class Renderer {
   /** The game is paused: a cut in progress waits for it. */
   paused = false;
   private quality: Quality = 'high';
+  /** Draw at most this many frames a second (0: every frame): the anime look's 30 fps option. */
+  frameCap = 0;
+  private capAcc = 0;
+  private capDt = 0;
   /** The travellers drawn white on black at a quarter of the size, for the stretch. */
   private travelMask = new THREE.WebGLRenderTarget(320, 180, { depthBuffer: false });
   private travelMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
@@ -370,8 +374,30 @@ export class Renderer {
     }
   }
 
-  render(dt: number, now: number): void {
+  /**
+   * Start a frame: whether it is drawn, and the time the drawing covers (0:
+   * not drawn, under frameCap; a frame left undrawn hands its time on to the
+   * next one drawn). The resolution scaling still sees every frame, so a cap
+   * does not read as a slow machine.
+   */
+  beginFrame(dt: number, now: number): number {
     this.adapt(dt, now);
+    if (this.frameCap <= 0) {
+      this.capAcc = this.capDt = 0;
+      return dt;
+    }
+    const step = 1 / this.frameCap;
+    this.capAcc += dt;
+    this.capDt += dt;
+    if (this.capAcc < step * 0.95) return 0;
+    this.capAcc = Math.min(this.capAcc - step, step);
+    const covered = this.capDt;
+    this.capDt = 0;
+    return covered;
+  }
+
+  /** Draw the frame (after beginFrame, with the time it returned). */
+  render(dt: number, now: number): void {
     this.applyLook(dt);
     this.speedPass.uniforms.uTime.value = now;
     if (this.speedPass.uniforms.uTravel.value > 0.001) this.drawTravellers();

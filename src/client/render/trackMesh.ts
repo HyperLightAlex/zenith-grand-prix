@@ -656,19 +656,22 @@ export function buildTrackVisual(
     group.add(mesh);
     swapMaterial(mesh, kitMaterial(tex('armour'), tex('steel'), tex('concrete')));
 
-    // Light strip along each wall: cyan on the straights, amber into corners.
+    // Light strip along each wall: cyan on the straights, amber into corners,
+    // in dashes (8 units lit, 8 dark) so it streams past with the speed,
+    // where one unbroken line gave the eye nothing to measure it by.
+    const dash = (i: number) => i % 4 < 3;
     const cool = new THREE.Color(0x4fe6ff).multiplyScalar(1.5);
     const warm = new THREE.Color(0xff8a1f).multiplyScalar(1.7);
     const tint = (i: number, _seg: number, _base: THREE.Color, out: THREE.Color) =>
       out.copy(cool).lerp(warm, THREE.MathUtils.smoothstep(track.kappaAhead[i % n], 0.0016, 0.003));
     const strips = [
-      sweep(-1, (i) => [[-(hwOf(i) - 0.04), 1.55], [-(hwOf(i) - 0.04), 1.95]], [cool], wallL, tint),
-      sweep(1, (i) => [[hwOf(i) - 0.04, 1.55], [hwOf(i) - 0.04, 1.95]], [cool], wallR, tint),
+      sweep(-1, (i) => [[-(hwOf(i) - 0.04), 1.55], [-(hwOf(i) - 0.04), 1.95]], [cool], (i) => wallL(i) && dash(i), tint),
+      sweep(1, (i) => [[hwOf(i) - 0.04, 1.55], [hwOf(i) - 0.04, 1.95]], [cool], (i) => wallR(i) && dash(i), tint),
     ];
     if (track.forks.length > 0) {
       strips.push(
-        sweep(-1, (i) => [[-(medOf(i) + 0.04), 1.55], [-(medOf(i) + 0.04), 1.95]], [cool], medWallL, tint),
-        sweep(1, (i) => [[medOf(i) + 0.04, 1.55], [medOf(i) + 0.04, 1.95]], [cool], medWallR, tint),
+        sweep(-1, (i) => [[-(medOf(i) + 0.04), 1.55], [-(medOf(i) + 0.04), 1.95]], [cool], (i) => medWallL(i) && dash(i), tint),
+        sweep(1, (i) => [[medOf(i) + 0.04, 1.55], [medOf(i) + 0.04, 1.95]], [cool], (i) => medWallR(i) && dash(i), tint),
       );
     }
     const sm = new THREE.Mesh(mergeGeometries(strips.filter((g) => g.attributes.position.count > 0))!, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }));

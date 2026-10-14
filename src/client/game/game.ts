@@ -784,11 +784,15 @@ export class Game {
     }
 
     const cur = this.session.race;
+    // Whether this frame is drawn (the anime look's 30 fps option skips every
+    // other): the HUD's marks over the mechs move with the picture.
+    this.renderer.frameCap = look.on && this.tuning.feel.lookThirty >= 0.5 ? 30 : 0;
+    const drawDt = this.renderer.beginFrame(dt, this.time);
     const flyingNow = this.state === 'race' && this.view.focusId === local;
     // A painted still holds everything, the camera and the sparks included.
     const viewDt = this.renderer.stillShowing ? 0 : simDt * (this.state === 'race' ? this.session.timeScale : 1);
     this.view.update(viewDt, flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
-    if (this.state === 'race') this.hud.update(dt, cur, this.view.plates, this.view.focusId);
+    if (this.state === 'race' && drawDt > 0) this.hud.update(drawDt, cur, this.view.plates, this.view.focusId);
     // The scenery's own motion (water, lights) holds for a painted still too.
     if (!this.renderer.stillShowing) this.worldTime += dt;
     this.trackVis.update(this.worldTime);
@@ -823,7 +827,7 @@ export class Game {
     sc.critical = f.hp > 0 && f.hp < 0.25 * f.maxHp && !f.retired && this.state === 'race';
     this.audio.update(dt, sc);
 
-    this.renderer.render(dt, this.time);
+    if (drawDt > 0) this.renderer.render(drawDt, this.time);
   }
 
   /** A low rumble that follows the road: speed, charge strips, the wall, boost and Overdrive. */
