@@ -74,21 +74,29 @@ the head, the shoulders, the backpack and the weapons' styling.
     vambraces and armoured fists; the scatter cannon in a silver-banded
     housing; two banners on poles either side of the backpack, which swing
     round to stream behind at speed.
-- **Tempest**: samurai armour for storm gods. Lacquered jade plate laced in
-  lames, black and gold; crested helms with face masks; broad layered
-  shoulder plates; skirts of lames; lightning for light.
-  - Kamaitachi: a lean wind-blade duellist, a crested helm, curved blades
-    along the forearms.
-  - Fujin: the wind god; a long matchlock rifle, a chain-weight Snare
-    launcher, a war fan on its back for the Disruptor, a billowing wind-sash
-    arching over the shoulders.
-  - Raijin: the thunder god; a horned helm, great layered shoulder plates,
-    a ring of thunder drums round its back.
+- **Tempest**: storm machines with a samurai's touch. Lightning first: bolts
+  lit on the breast, jagged lit streaks running down the plates like veins,
+  lightning rods, tassets cut jagged like lightning; wind in crescent blades,
+  turbines and a billowing sash. The samurai is in the accents: a crest on
+  the brow of a smooth storm helm, one bold shoulder plate a side (jade over
+  black, edged in gold), a black sash knotted in gold, a curved blade, a
+  chain and weight.
+  - Kamaitachi: a lean storm duellist; a small gold crescent on the brow,
+    dark curved blades along the forearms with lit edges, wind vanes at the
+    calves, two crescent wind blades a side either side of the power unit.
+  - Fujin: the wind god; a small gold war fan on the brow, a turbine
+    breathing from each shoulder plate, a storm rifle ringed with lit coils
+    and forked at the muzzle, a chain-weight Snare launcher, a turbine on its
+    back for the Disruptor, a wind sash arching over the head with lightning
+    jagging along it.
+  - Raijin: the thunder god; gold horns and a fanged faceplate, lightning
+    rods standing on its shoulder plates, gauntlets ringed with lit coils, a
+    gold hoop of eight thunder drums round its back.
 
 The poses turn the wing joints (the wings sweep back at speed), so a
 design's own wing angle sits on a group inside the joint. Fins that run back
-along the body cross each other when they sweep; Mirage's hang down or splay
-out so they don't.
+along the body cross each other when they sweep; the newer factions' hang
+down, splay out or stand on the chest so they don't.
 
 ## Status
 
@@ -98,4 +106,4 @@ out so they don't.
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
 | Mirage | in the game (`render/mech/mirage/`) | painted | painted | painted |
 | Aurora | in the game (`render/mech/aurora/`) | painted | painted | painted |
-| Tempest | Solstice's for now | stand-in | stand-in | drawn |
+| Tempest | first pass (`render/mech/tempest/`) | stand-in | stand-in | drawn |

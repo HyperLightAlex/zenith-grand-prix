@@ -19,6 +19,9 @@ import { buildSeraph } from './aurora/seraph';
 import { buildAnubis } from './mirage/anubis';
 import { buildHorus } from './mirage/horus';
 import { buildSobek } from './mirage/sobek';
+import { buildFujin } from './tempest/fujin';
+import { buildKamaitachi } from './tempest/kamaitachi';
+import { buildRaijin } from './tempest/raijin';
 import { buildMaul } from './vanta/maul';
 import { buildRazor } from './vanta/razor';
 import { buildStinger } from './vanta/stinger';
@@ -42,6 +45,7 @@ const DESIGNS: Record<string, Partial<Record<Role, Builder>>> = {
   vanta: { [ROLE.FW]: buildRazor, [ROLE.MF]: buildStinger, [ROLE.DF]: buildMaul },
   mirage: { [ROLE.FW]: buildAnubis, [ROLE.MF]: buildHorus, [ROLE.DF]: buildSobek },
   aurora: { [ROLE.FW]: buildSeraph, [ROLE.MF]: buildLongbow, [ROLE.DF]: buildPaladin },
+  tempest: { [ROLE.FW]: buildKamaitachi, [ROLE.MF]: buildFujin, [ROLE.DF]: buildRaijin },
 };
 
 export function buildFrame(role: Role, livery: Livery, number: string): MechRig {
