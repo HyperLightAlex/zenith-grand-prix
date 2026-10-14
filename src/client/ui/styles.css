@@ -254,6 +254,16 @@ html, body {
 .carve .seg { position: relative; flex: 1; height: 0.75em; background: rgba(15, 21, 36, 0.72); transform: skewX(-18deg); overflow: hidden; }
 .carve .seg > i { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); }
 .carve.burst .segs { filter: drop-shadow(0 0 0.5em var(--tier)); animation: carve-burst 0.35s ease-out; }
+
+/* The charge meter: a heavy held to charge, just under the mech, gold when full. */
+.chargebar { position: absolute; left: 50%; top: 67%; display: flex; flex-direction: column; align-items: center; gap: 0.3em; opacity: 0; transform: translate(-50%, 0.4em); transition: opacity 0.12s, transform 0.12s; pointer-events: none; --charge: #d8ecff; }
+.chargebar.on { opacity: 1; transform: translate(-50%, 0); }
+.chargebar .label { font-weight: 800; font-size: 1.1em; color: var(--charge); text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.7); letter-spacing: 0.04em; }
+.chargebar .bar { position: relative; width: 12em; height: 0.7em; background: rgba(15, 21, 36, 0.72); transform: skewX(-18deg); overflow: hidden; }
+.chargebar .bar > i { position: absolute; inset: 0; background: var(--charge); transform-origin: left center; transform: scaleX(0); }
+.chargebar.full { --charge: #ffc93a; }
+.chargebar.full .bar { filter: drop-shadow(0 0 0.5em var(--charge)); animation: carve-burst 0.35s ease-out; }
+.hud.anime .chargebar .bar { border: 0.12em solid #151a26; }
 @keyframes carve-burst { from { transform: scale(1.12); } to { transform: none; } }
 
 /* ---- HUD: bottom left, tactics ------------------------------------------ */

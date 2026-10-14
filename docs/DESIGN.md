@@ -319,7 +319,8 @@ A second resource, 0 to 3, starting at none, that pays for abilities.
   between the posts) for a full Cell, and **each teammate still racing gets
   half a Cell** (rules.gateShare). Each gate pays each team once a lap: a
   teammate through a gate the team has already scored this lap passes it by
-  and leaves it lit. (Each mech used to score for itself alone, and the
+  and leaves it lit. A teammate's gate paying you shows on the HUD with a
+  softer chime. (Each mech used to score for itself alone, and the
   supports went into lap 2 short: forwards 1.5 Cells, midfielders 0.9,
   defenders 0.5. Now it is about two each, and the supports' abilities come
   out two or three times as often.)
@@ -446,7 +447,8 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
   guard damage and knockback), half a charge 30%. A tap throws it as before.
   The cooldown waits for the charge. Charging is a long tell: the mech is
   still in its wind-up, so a counter-hit catches it and a swing reads it.
-  Computer pilots charge too: a staggered rival is a free hit worth a full
+  On the HUD a meter under the mech fills as it charges, with the bonus
+  it has reached, and turns gold when full. Computer pilots charge too: a staggered rival is a free hit worth a full
   charge, a lance from a long run-up often, and otherwise now and then, the
   better pilot more often, but never with a blow coming their way (about 11
   charges a race across the six). Midfielders gunning at range close in now

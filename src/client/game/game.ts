@@ -568,6 +568,10 @@ export class Game {
       case 'tactic':
         if (inRace && local >= 0 && e.team === race.mechs[local].team) A.play('command');
         break;
+      case 'gateShare':
+        // A teammate's gate paid you: the gate's chime, softer and lower.
+        if (e.mech === local && inRace) A.play('gate', { volume: 0.5, pitch: 0.84 });
+        break;
       case 'gate':
         if (e.mech === local && inRace) {
           // Each gate rings a step higher up the scale; the last one resolves.

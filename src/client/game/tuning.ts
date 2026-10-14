@@ -30,6 +30,8 @@ export interface Feel {
   camFov: number;
   camFovSpeed: number;
   camFovBoost: number;
+  /** Degrees the view jumps wider for a moment as a boost lights. */
+  camLurch: number;
   camLockDist: number;
   camLockHeight: number;
   camShake: number;
@@ -75,6 +77,7 @@ export const DEFAULT_FEEL: Readonly<Feel> = Object.freeze({
   camFov: 64,
   camFovSpeed: 18,
   camFovBoost: 9,
+  camLurch: 7,
   camLockDist: 12.5,
   camLockHeight: 8.2,
   camShake: 1,
@@ -236,6 +239,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
       feel('camFov', 'Field of view', 45, 90, 1),
       feel('camFovSpeed', 'Wider with speed', 0, 40, 1),
       feel('camFovBoost', 'Wider on boost', 0, 30, 1),
+      feel('camLurch', 'Boost lurch', 0, 20, 0.5, undefined, 'The view jumps this much wider for a moment as a boost lights, and settles back.'),
       feel('camLockDist', 'Locked on: distance', 6, 24, 0.5),
       feel('camLockHeight', 'Locked on: height', 3, 14, 0.1),
       feel('camShake', 'Shake on hits', 0, 2, 0.05, 'x'),

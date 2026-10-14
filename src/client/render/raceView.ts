@@ -975,7 +975,10 @@ export class RaceView {
         // (Drawn, the ring is smaller: the painted flames carry the boost.)
         this.fx.flash(v1, look.on ? 5.5 : 9, v.livery.glow, 0.25, v.rig.root, true);
         this.fx.burst(v1, v.vel, 18, 36, v.livery.glow, 0.45, 0.35);
-        if (e.mech === local) this.cam.shake(0.2);
+        if (e.mech === local) {
+          this.cam.shake(0.2);
+          this.cam.lurch(1);
+        }
         break;
       }
       case 'arc': {
@@ -1121,6 +1124,7 @@ export class RaceView {
             this.fx.burst(v1, v.vel, 44, 46, COLORS.cell, 0.5, 0.5);
             if (mine) {
               this.cam.shake(0.4);
+              this.cam.lurch(1.4);
               this.flash(0.3);
               this.onImpact(0.7);
             }

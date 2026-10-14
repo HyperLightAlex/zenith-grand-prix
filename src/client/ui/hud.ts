@@ -3,7 +3,10 @@
 import {
   ABILITIES,
   ABILITY,
+  ACT,
+  ATTACKS,
   AWARD_NAMES,
+  CHARGE_BONUS,
   CARVE_BURST,
   CARVE_TIERS,
   CLASSES,
@@ -194,6 +197,12 @@ export class Hud {
   private carveSegs: HTMLElement[] = [];
   private carveLabel = h('span.label', 'Carve');
   private carveFade = 0;
+  /** The charge meter: a heavy held to charge, how far, and a moment's linger after. */
+  private chargeBox = h('div.chargebar');
+  private chargeLabel = h('span.label', 'Charge');
+  private chargeFill = h('i');
+  private chargeFade = 0;
+  private chargeShown = 0;
   /** The tier the last carve reached, held through its burst. */
   private carveShown = 0;
   // speed
@@ -284,6 +293,8 @@ export class Hud {
     }
     this.carve.append(this.carveLabel, segs);
     R.append(this.carve, this.speedBox, this.awardFeed);
+    this.chargeBox.append(this.chargeLabel, h('div.bar', this.chargeFill));
+    R.append(this.chargeBox);
     const tact = h('div.tactics', this.tacticHub);
     for (const [cls, tac] of [['up', TACTIC.BLITZ], ['right', TACTIC.RUN], ['down', TACTIC.SHIELD], ['left', TACTIC.MARK]] as const) {
       const el = h('div.t.' + cls);
@@ -494,7 +505,8 @@ export class Hud {
     // Cell gates still open to the player.
     const pilot = race.mechs[this.localId];
     const gateWorth = pilot.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
-    if (pilot.lap < race.rules.gateLaps && gateWorth > 0 && !pilot.retired && !pilot.finished && pilot.cells < race.rules.cellMax) {
+    // (Only while there is room to bank one: fuller than that, a gate is passed by.)
+    if (pilot.lap < race.rules.gateLaps && gateWorth > 0 && !pilot.retired && !pilot.finished && race.rules.cellMax > 0 && pilot.cells <= race.rules.cellMax - Math.min(gateWorth, race.rules.cellMax)) {
       g.fillStyle = '#ffc93a';
       this.track.gates.forEach((gt, i) => {
         if (pilot.gateMask & (1 << i)) return;
@@ -621,6 +633,19 @@ export class Hud {
     }
     this.chipSnared.hidden = !(me.snareT > 0) || me.retired;
     if (me.snareT > 0) setText(this.chipSnaredText, `Snared ${left(me.snareT)}`);
+
+    // Charge meter: up while a heavy is held charging, lingering a moment after.
+    {
+      const a = me.act === ACT.ATTACK ? ATTACKS[me.attack] : null;
+      const full = a?.charge ?? 0;
+      const charging = !!a && full > 0 && me.chargeOn && me.chargeT > 0 && me.actT === a.windup - 1 && !me.retired;
+      if (charging) this.chargeShown = Math.min(1, me.chargeT / full);
+      this.chargeFade = charging ? 0.35 : Math.max(0, this.chargeFade - dt);
+      setClass(this.chargeBox, 'on', charging || this.chargeFade > 0);
+      setClass(this.chargeBox, 'full', this.chargeShown >= 1);
+      this.chargeFill.style.transform = `scaleX(${this.chargeShown.toFixed(3)})`;
+      setText(this.chargeLabel, this.chargeShown >= 1 ? `Charged +${Math.round(CHARGE_BONUS * 100)}%` : `Charge +${Math.round(CHARGE_BONUS * this.chargeShown * 100)}%`);
+    }
 
     // Carve meter: up while carving, and through the burst after.
     const bursting = me.carveT > 0 && me.mode === MODE.SPEED;
@@ -1010,6 +1035,16 @@ export class Hud {
         }
         break;
       }
+      case 'gateShare':
+        if (e.mech === this.localId) {
+          // A teammate's gate paid this pilot its share.
+          const from = race.mechs[e.from];
+          const share = (from.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater) * race.rules.gateShare;
+          const amount = share === 0.5 ? '½' : String(Math.round(share * 100) / 100);
+          const total = Math.round(e.cells * 10) / 10;
+          this.showNotice(e.cells >= race.rules.cellMax ? `${from.name}'s gate: Cells full` : `${from.name}'s gate: +${amount} Cell (${total} of ${race.rules.cellMax})`, false, 1.3);
+        }
+        break;
       case 'gate':
         if (e.mech === this.localId) {
           const full = e.cells >= race.rules.cellMax;

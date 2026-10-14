@@ -235,6 +235,13 @@ chrome as GO!). The race between computer pilots still runs underneath, so
 switching the look shows it again. The eyecatch before the results carries
 the painted logo on its black card too.
 
+## Feel of speed: the boost lurch
+
+As a boost lights (and harder as Overdrive does), the view jumps a few
+degrees wider in a twentieth of a second and settles back over a third, on
+top of the steady widening the boost brings, so the kick of it is felt
+("Boost lurch" on the tuning panel's camera tab, 7 degrees by default).
+
 ## Settings (tuning panel, Look tab)
 
 | Setting | Default | |

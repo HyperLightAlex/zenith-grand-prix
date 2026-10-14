@@ -34,6 +34,9 @@ const CAM_EDGE = 1.5;
 
 /** Punch-in timing, seconds: in, held, and back out. */
 const PUNCH_IN = 0.05;
+/** The boost lurch: in, and how fast it settles (an exponential's time). */
+const LURCH_IN = 0.05;
+const LURCH_SETTLE = 0.11;
 const PUNCH_HOLD = 0.07;
 const PUNCH_OUT = 0.3;
 
@@ -59,6 +62,8 @@ export class CameraRig {
   private boostW = 0;
   private punchT = 1;
   private punchAmt = 0;
+  private lurchT = 1;
+  private lurchAmt = 0;
   private first = true;
   private chasePos = new THREE.Vector3();
   private chaseLook = new THREE.Vector3();
@@ -90,7 +95,20 @@ export class CameraRig {
     }
   }
 
+  /**
+   * The lurch as a boost lights: the view jumps wider in a twentieth of a
+   * second and settles back over a third, on top of the steady widening the
+   * boost brings, so the kick of it is felt. `amount` is 0..1.5.
+   */
+  lurch(amount: number): void {
+    const a = amount * this.feel.camLurch;
+    if (a <= 0) return;
+    this.lurchAmt = Math.max(a, this.lurchT < LURCH_IN ? this.lurchAmt : 0);
+    this.lurchT = 0;
+  }
+
   reset(): void {
+    this.lurchAmt = 0;
     this.first = true;
     this.clock = 0;
     this.trauma = 0;
@@ -223,7 +241,15 @@ export class CameraRig {
       cam.rotateZ(Math.sin(this.rumbleT * 0.63) * amp * 0.012);
     }
     this.fov = toward(this.fov, fov, 6, sdt);
-    const shown = this.fov - punch * 8;
+    let lurch = 0;
+    if (this.lurchAmt > 0 && this.mode === 'play') {
+      this.lurchT += dt;
+      const t = this.lurchT;
+      const env = t < LURCH_IN ? t / LURCH_IN : Math.exp(-(t - LURCH_IN) / LURCH_SETTLE);
+      lurch = this.lurchAmt * env;
+      if (env < 0.01) this.lurchAmt = 0;
+    }
+    const shown = this.fov - punch * 8 + lurch;
     if (Math.abs(cam.fov - shown) > 0.01) {
       cam.fov = shown;
       cam.updateProjectionMatrix();
