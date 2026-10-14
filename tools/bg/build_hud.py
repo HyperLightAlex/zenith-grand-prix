@@ -41,7 +41,7 @@ ICONS = [
 ]
 # By team (Solstice, Vanta from U2; Mirage, Aurora from F1), then role.
 PILOTS_U2 = ['kite', 'lark', 'atlas', 'shrike', 'moth', 'golem']
-PILOTS_F1 = ['sirocco', 'ibis', 'dune', 'iris', 'vesper', 'bastion']
+PILOTS_F1 = ['sirocco', 'ibis', 'dune', 'orion', 'vesper', 'bastion']
 PILOTS = PILOTS_U2 + PILOTS_F1
 U3 = ['solstice', 'vanta', 'go', 'three', 'two', 'one']
 F2 = ['mirage', 'aurora']

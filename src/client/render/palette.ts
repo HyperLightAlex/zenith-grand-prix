@@ -127,7 +127,7 @@ export const LIVERIES: Livery[] = [
     css: '#a66bff',
     cssDim: '#3e2470',
     darkArmour: true,
-    pilots: ['Iris', 'Vesper', 'Bastion'],
+    pilots: ['Orion', 'Vesper', 'Bastion'],
     models: ['Seraph', 'Longbow', 'Paladin'],
   },
   {
@@ -143,7 +143,7 @@ export const LIVERIES: Livery[] = [
     css: '#3ddc84',
     cssDim: '#145c36',
     darkArmour: true,
-    pilots: ['Gale', 'Squall', 'Anvil'],
+    pilots: ['Squall', 'Gale', 'Anvil'],
     models: ['Kamaitachi', 'Fujin', 'Raijin'],
   },
 ];

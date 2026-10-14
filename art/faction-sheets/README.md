@@ -28,7 +28,7 @@ What to attach:
 
 | Sheet | File | Notes |
 |---|---|---|
-| F1 Pilots | faction-f1-pilots.png | in the game (cut by `tools/bg/build_hud.py`). Aurora's genders changed from the prompt: Iris and Bastion are men, Vesper a woman |
+| F1 Pilots | faction-f1-pilots.png | in the game (cut by `tools/bg/build_hud.py`). Aurora's genders changed from the prompt: the forward (renamed Orion from Iris) and Bastion are men, Vesper a woman |
 | F2 Emblems and lettering | faction-f2-emblems.png | in the game (emblems cut by `tools/bg/build_hud.py`, names by `tools/bg/build_hangar.py`). Its emblems are to be redone (F2b): Mirage's sits off-centre in its slanted shield, and Aurora's star in a ring is too close to Vanta's |
 | F2b Mirage emblem, redone | faction-f2b-mirage-emblem.png | in the game, in place of F2's |
 | F2b Aurora emblem, redone | faction-f2b-aurora-emblem.png | to make; replaces F2's when it is there |
@@ -129,8 +129,8 @@ THE PILOTS (top half, left to right)
 - 1980s TV anime character cels: clean dark ink outlines of even weight, flat colour with one hard-edged shadow tone, a hard highlight band on the hair, large expressive eyes with two catch-lights, drawn by the same hand as the attached pilots.
 - Framed exactly like the attached pilots: head and shoulders, the head turned three-quarters toward the right edge, the eyes about 40% down from the top, the shoulders running off the bottom edge. Adults, each with a distinct face, build, hair and skin tone.
 - Black pilot suits with jade green panels and gold trim, a headset and boom mic. Background: a flat airbrushed gradient from jade green #2E9E6B down to deep green-black #0C1A14, with a few thin pale horizontal scan lines across it, like a comms screen. No scenery, text or logos.
-  1. Gale, the forward: a young man about 20, light tan skin, a high black ponytail whipping to one side, a white headband with a small gold lightning mark, a fierce grin.
-  2. Squall, the midfielder: a woman in her late 20s, medium-brown skin, short spiky silver-white hair, narrow dark green eyes, a small gold earring, a calm, focused look.
+  1. Squall, the forward: a young man about 20, light tan skin, a high black ponytail whipping to one side, a white headband with a small gold lightning mark, a fierce grin.
+  2. Gale, the midfielder: a woman in her late 20s, medium-brown skin, short spiky silver-white hair, narrow dark green eyes, a small gold earring, a calm, focused look.
   3. Anvil, the defender: a tall, broad woman in her 40s, dark skin, close-cropped grey hair, a heavy jaw, a stern look with smile lines at the eyes, a heavy armoured collar with a gold storm-cloud clasp.
 
 THE EMBLEM (bottom left)

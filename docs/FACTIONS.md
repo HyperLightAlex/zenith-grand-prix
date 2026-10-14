@@ -19,7 +19,7 @@ faction's colours (Tempest's, until its sheet is painted).
 | Who | The heroes | The black team | The desert dynasty | The knights | The storm samurai |
 | Colours | White, royal blue, gold | Charcoal, crimson, gunmetal | Sand, rust orange, dark brown; gold trim, amber eyes | Deep violet, pearl, silver; lavender light | Jade green, black lacquer, gold; pale lightning light |
 | Team colour | Blue | Red | Orange | Violet | Green |
-| Pilots | Kite (f), Lark (m), Atlas (m) | Shrike (f), Moth (m), Golem (f) | Sirocco (m), Ibis (f), Dune (m) | Iris (m), Vesper (f), Bastion (m) | Gale (m), Squall (f), Anvil (f) |
+| Pilots | Kite (f), Lark (m), Atlas (m) | Shrike (f), Moth (m), Golem (f) | Sirocco (m), Ibis (f), Dune (m) | Orion (m), Vesper (f), Bastion (m) | Squall (m), Gale (f), Anvil (f) |
 | Swift class (forward) | Sunhawk | Razor | Anubis | Seraph | Kamaitachi |
 | Vector class (midfielder) | Daystar | Stinger | Horus | Longbow | Fujin |
 | Bulwark class (defender) | Rampart | Maul | Sobek | Paladin | Raijin |
