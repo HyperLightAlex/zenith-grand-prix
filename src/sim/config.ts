@@ -485,7 +485,10 @@ export const ATTACKS: AttackDef[] = [
     windup: 13, active: 2, recovery: 26,
     reach: 0, arc: 0.5,
     damage: 6, guardDamage: 5, stagger: 7, knockback: 5,
-    guardBreak: false, armor: true, advance: 0, driveCost: 0, cooldown: 160, next: -1, heavy: true, charge: 36,
+    // (Its cooldown was 160 ticks: at about 11 a second point blank it was the
+    // weakest heavy of the three, and the defender's second button seldom
+    // worth pressing.)
+    guardBreak: false, armor: true, advance: 0, driveCost: 0, cooldown: 90, next: -1, heavy: true, charge: 36,
     shot: { count: 1, interval: 1, pellets: 6, speed: 210, spread: 0.22, range: 30 },
   },
   // Midfielder abilities: the Snare bolt and the Disruptor pulse.

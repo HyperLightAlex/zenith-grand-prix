@@ -405,7 +405,7 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 |---|---|---|
 | Swift (forward) | Edge: three blade strikes, 20 / 22 / 40 damage | Lance Dash: armoured lunge across a 30 m gap, 56 damage, 12 Drive |
 | Vector (midfielder) | Carbine: three-round burst to 62 m, 7 a round, a burst every 0.55 s; hold the trigger to keep firing (about 38 a second, against the blades' 75 to 80) | Stun Kick: 34 damage, big knockback |
-| Bulwark (defender) | Breaker: two hammer blows, 36 / 54, the second breaks guards | Scatter Cannon: six pellets inside 30 m, 6 each |
+| Bulwark (defender) | Breaker: two hammer blows, 36 / 54, the second breaks guards | Scatter Cannon: six pellets inside 30 m, 6 each, ready again 1.5 s after the blast (it was 2.7 s) |
 
 - **Guard** (LT, or RB; L on the keyboard): hits from the front do 15%
   damage and drain the guard gauge. At zero, or against a guard-breaking

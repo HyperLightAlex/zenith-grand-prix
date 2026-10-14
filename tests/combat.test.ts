@@ -548,7 +548,7 @@ describe('drive costs and cooldowns', () => {
     { name: 'Lance Dash', att: FW0, btn: BTN.Y, atk: ATK.FW_LANCE, cd: 120, gap: 11 },
     { name: 'Carbine', att: MF0, btn: BTN.X, atk: ATK.MF_BURST, cd: 10, gap: 30 },
     { name: 'Stun Kick', att: MF0, btn: BTN.Y, atk: ATK.MF_KICK, cd: 55, gap: 11 },
-    { name: 'Scatter Cannon', att: DF0, btn: BTN.Y, atk: ATK.DF_SCATTER, cd: 160, gap: 15 },
+    { name: 'Scatter Cannon', att: DF0, btn: BTN.Y, atk: ATK.DF_SCATTER, cd: 90, gap: 15 },
   ];
   for (const mv of cooled) {
     it(`${mv.name} cannot be used again for ${mv.cd} ticks after it ends`, () => {
@@ -598,7 +598,7 @@ describe('drive costs and cooldowns', () => {
     expect(a.events('shot').length).toBe(6);
     expect(df.act).toBe(ACT.STAGGER);
     a.until(() => df.act === ACT.NONE, 100);
-    expect(df.cdSecondary).toBeGreaterThan(100);
+    expect(df.cdSecondary).toBeGreaterThan(ATTACKS[ATK.DF_SCATTER].cooldown / 2);
     foe.s = df.s + 15;
     a.step(1);
     a.clearLog();
