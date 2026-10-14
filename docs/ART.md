@@ -72,7 +72,7 @@ knockout keeps its own colours. They play on the drawing clock.
 | Lance thrust | 5 | The lance |
 | Shock ring | 6 | Momentum strikes, and every ring flash (Pulse, Aegis, Overdrive, a snare) |
 | Ground ring | 6B | Dashes, launches, hard landings, recovery |
-| Thruster flames | 7 | Every nozzle while boosting, gold in Overdrive |
+| Thruster flames | 7 | Every nozzle while boosting, gold in Overdrive. A card along the flame, so it shows side on; end on (the chase camera looking into the back thrusters) a drawn burner takes over: a flat white core in rings of the team's colour with spikes that grow with the thrust, a new drawing on each of the flame loop's three, fading in as the view comes round to look into the nozzle (drawn in code, not from the sheet) |
 | Smoke | 8 | Dust off landings, launches and the barrier, in the circuit's dust colour; smoke trailing a badly hurt mech, darker clouds off a wreck |
 | Barrier strike | 9B | Hitting a barrier (amber) and ring-outs (pink): flat side on the barrier, bursting back over the road |
 | Energy crackle | 10 | Bolts round a snared mech (orange) or one breaking away (its team colour); a ring on the road round a mech in Overdrive (gold) |

@@ -210,6 +210,12 @@ export class MechAnimator {
         const od = m.overdriveT > 0 && !m.retired;
         u.uRow.value = od ? 1 : 0;
         (u.uTint.value as THREE.Color).set(od ? COLORS.cell : (f.drawn.userData.tint as number));
+        if (f.burner) {
+          const b = (f.burner.material as THREE.ShaderMaterial).uniforms;
+          b.uRow.value = u.uRow.value;
+          b.uPower.value = power;
+          (b.uTint.value as THREE.Color).copy(u.uTint.value as THREE.Color);
+        }
       }
     }
   }

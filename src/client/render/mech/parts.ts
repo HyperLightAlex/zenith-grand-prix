@@ -97,6 +97,73 @@ function drawnFlameMaterial(color: number): THREE.ShaderMaterial {
   });
 }
 
+/**
+ * The anime look's burner: a thruster seen end on, as the chase camera sees
+ * the back ones, drawn the way the series drew it. A flat white core in rings
+ * of the team's colour, spikes out of it that grow with the thrust, a new
+ * drawing of it on each of the flame loop's drawings; gold in Overdrive. It
+ * fades in as the view comes round to look into the nozzle, where the
+ * painted flame (a card along the flame) has the least to show.
+ */
+function burnerMaterial(color: number): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      ...DRAWN_FLAMES,
+      uTint: { value: new THREE.Color(color) },
+      uRow: { value: 0 },
+      uPower: { value: 0 },
+      uPhase: { value: Math.random() * 6.28 },
+    },
+    vertexShader: /* glsl */ `
+      uniform float uDrawn, uPower;
+      varying vec2 vUv;
+      varying float vFace;
+      void main() {
+        vUv = uv * 2.0 - 1.0;
+        vec3 mouth = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        vec3 axis = (modelMatrix * vec4(0.0, 0.0, -1.0, 1.0)).xyz - mouth;
+        vec3 ax = axis / max(length(axis), 1e-4);
+        float wid = length((modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+        vec3 toCam = normalize(cameraPosition - mouth);
+        // Looking into the nozzle (the exhaust coming at the camera): 1.
+        vFace = smoothstep(0.25, 0.8, dot(ax, toCam));
+        vec3 camRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+        vec3 camUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+        float size = wid * (3.0 + 2.6 * min(uPower, 1.5));
+        // A little way down the exhaust and toward the camera: a nozzle's
+        // mouth sits inside its housing, which would hide it.
+        vec3 c = mouth + ax * min(length(axis) * 0.15, 1.2) + toCam * wid * 1.5;
+        vec3 p = c + (camRight * position.x + camUp * position.y) * size * 2.0;
+        gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
+        if (uDrawn < 0.5 || vFace < 0.01 || uPower < 0.05) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uTint;
+      uniform float uRow, uFrame, uPhase, uPower;
+      varying vec2 vUv;
+      varying float vFace;
+      void main() {
+        float r = length(vUv);
+        float a = atan(vUv.y, vUv.x);
+        // A new drawing each frame of the loop: the spikes turned and resized.
+        float f = mod(uFrame, 3.0);
+        float rot = uPhase + f * 1.9;
+        float n = uRow > 0.5 ? 4.0 : 3.0;
+        float lobe = pow(abs(cos(a * n + rot)), 18.0);
+        float reach = clamp(0.25 + 0.55 * uPower, 0.0, 1.0) * (0.85 + 0.15 * fract(sin(f * 12.9 + uPhase) * 437.5));
+        float edge = 0.5 + 0.12 * sin(a * 7.0 + rot * 2.0) * step(0.5, uRow);
+        float rim = mix(edge, edge + 0.5 * reach, lobe);
+        if (r > rim) discard;
+        vec3 col = uTint;
+        col = mix(col, mix(uTint, vec3(1.0), 0.55), step(r, rim * 0.72));
+        col = mix(col, vec3(1.0), step(r, min(0.3, rim * 0.5)));
+        gl_FragColor = vec4(col * 1.35, vFace);
+      }`,
+    transparent: true,
+    depthWrite: false,
+  });
+}
+
 function flameMaterial(color: number): THREE.ShaderMaterial {
   let m = flameMaterials.get(color);
   if (m) return m;
@@ -184,7 +251,13 @@ export function frameCtx(rig: MechRig, livery: Livery): FrameCtx {
       drawn.userData.ownMaterial = true;
       drawn.userData.tint = livery.glow;
       mesh.add(drawn);
-      rig.flames.push({ mesh, length, width, bank, drawn });
+      // ...and its burner, seen end on.
+      const burner = new THREE.Mesh(flamePlane, burnerMaterial(livery.glow));
+      burner.frustumCulled = false;
+      burner.renderOrder = 6;
+      burner.userData.ownMaterial = true;
+      mesh.add(burner);
+      rig.flames.push({ mesh, length, width, bank, drawn, burner });
     },
   };
 }

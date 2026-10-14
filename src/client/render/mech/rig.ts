@@ -127,6 +127,8 @@ export interface Flame {
   bank: 'main' | 'leg';
   /** The anime look's painted flame on the same thruster. */
   drawn?: THREE.Mesh;
+  /** ...and its burner, the thruster seen end on. */
+  burner?: THREE.Mesh;
 }
 
 const qh = new THREE.Quaternion();
