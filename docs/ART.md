@@ -223,6 +223,18 @@ In the anime look the race HUD carries painted art (`art/hud-sheets`;
 Every number and name is still live text, and the panels keep their shapes;
 in the plain look none of the art shows.
 
+## The title screen
+
+In the anime look the title screen is the show's cover (`art/key-sheets`;
+`tools/bg/build_key.py` builds it into `src/client/ui/art` and
+`src/client/ui/keyArt.ts`): a painting composed like a mid-80s soundtrack
+cover, the hero pilot close up with her Swift behind her against a sunset,
+its left 40% open sky. The logo, tagline and menu sit over that sky, the
+lettered logo swapped for the painted one (ZENITH GRAND PRIX in the same
+chrome as GO!). The race between computer pilots still runs underneath, so
+switching the look shows it again. The eyecatch before the results carries
+the painted logo on its black card too.
+
 ## Settings (tuning panel, Look tab)
 
 | Setting | Default | |
@@ -300,8 +312,8 @@ style, roughly in order of payoff.
   busy at a distance.
 - **A 30 frames a second option** for the whole picture, as Orbitals does.
   Racing feels worse at 30, so it would be a setting, not the default.
-- **The garage and title screens** use the look as it is; neither has a
-  composition of its own yet (a key-art title, a model sheet garage).
+- **The garage** uses the look as it is; it has no composition of its own
+  yet (a model sheet garage).
 
 ## Checking it
 

@@ -2,6 +2,7 @@
 // last frame of the race is held as a painted still and the show's title
 // comes up over it, the way an 80s broadcast went to its break.
 import { h, setText } from './dom';
+import { LOGO } from './keyArt';
 
 export class Eyecatch {
   private el: HTMLElement;
@@ -10,7 +11,11 @@ export class Eyecatch {
   private timer = 0;
 
   constructor(root: HTMLElement) {
-    this.el = h('div.eyecatch', h('div.ec-card', this.kick, h('div.ec-title', 'Zenith'), h('div.ec-title2', 'Grand Prix'), h('div.ec-rule'), this.sub));
+    // The show's logo, as painted.
+    const logo = h<'img'>('img.ec-logo');
+    logo.src = LOGO.url;
+    logo.alt = 'Zenith Grand Prix';
+    this.el = h('div.eyecatch', h('div.ec-card', this.kick, logo, this.sub));
     this.el.hidden = true;
     root.append(this.el);
   }

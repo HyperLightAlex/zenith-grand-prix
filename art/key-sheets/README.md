@@ -31,8 +31,8 @@ What to attach:
 
 | Image | File | Notes |
 |---|---|---|
-| K1 Cover image | key-k1-cover.png | waiting. A first prompt asked for a racing poster with six robots, two pilots and a whole circuit; the model could not hold that many designs (it drew one robot twice, left another out and blurred the rest) and drew everything at the same high detail. Redrafted as a cover: one pilot, part of one robot, an empty sky |
-| K2 Logo | key-k2-logo.png | waiting |
+| K1 Cover image | key-k1-cover.png | in the game. Kite and her Swift against a sunset, the left 40% open sky as asked; Swift's head, crest, shoulder pods and chest diamond as the renders show them. Kept whole; on screens narrower than 16:9 the crop keeps the sky side. A first prompt asked for a racing poster with six robots, two pilots and a whole circuit; the model could not hold that many designs (it drew one robot twice, left another out and blurred the rest) and drew everything at the same high detail, so it was redrafted as a cover: one pilot, part of one robot, an empty sky |
+| K2 Logo | key-k2-logo.png | in the game. Spelt right, the chrome as GO!'s, a star glint on the I; cut cleanly by its outline (the green flat, the edges crisp). On the title screen and the eyecatch |
 
 ## The prompt
 

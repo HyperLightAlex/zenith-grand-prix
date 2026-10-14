@@ -527,6 +527,15 @@ html, body {
 .sound-hint { font-size: 1.1em; font-weight: 500; opacity: 0.85; max-width: 24em; line-height: 1.25; }
 .small-print { position: absolute; left: 5.5em; bottom: 2em; font-size: 1em; font-weight: 500; opacity: 0.7; }
 
+/* The anime look's title screen: the show's cover behind it (its left 40% is
+   open sky, where the column sits) and the painted logo for the lettering. */
+.menu .cover, .logo .logo-art { display: none; }
+.menu.anime .cover { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 20% 50%; user-select: none; }
+.menu.anime .shade.title { background: linear-gradient(90deg, rgba(10, 18, 52, 0.5) 0%, rgba(10, 18, 52, 0.3) 32%, rgba(10, 18, 52, 0) 50%); }
+.menu.anime .logo .a, .menu.anime .logo .b, .menu.anime .logo .rule { display: none; }
+.menu.anime .logo .logo-art { display: block; width: 34em; margin-left: -0.6em; filter: drop-shadow(0 0.3em 0.5em rgba(8, 12, 40, 0.45)); }
+.menu.anime .tagline, .menu.anime .press, .menu.anime .sound-hint, .menu.anime .small-print { text-shadow: 0 0.06em 0.35em rgba(8, 12, 40, 0.8); }
+
 .menu h1 { margin: 0 0 0.2em; font-size: 4.2em; font-weight: 800; line-height: 0.9; }
 .menu p { margin: 0; font-size: 1.3em; font-weight: 500; line-height: 1.25; max-width: 26em; }
 
@@ -682,7 +691,7 @@ html, body {
 
 /* ---- the anime look: eyecatch ---------------------------------------------
    Between the race and the results: the last frame held as a painted still,
-   the title over it on a slanted black card, a red rule. In on a cut. */
+   the show's logo over it on a slanted black card. In on a cut. */
 .eyecatch { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: flex-start; }
 .eyecatch[hidden] { display: none; }
 .eyecatch .ec-card {
@@ -696,8 +705,5 @@ html, body {
 }
 .eyecatch.in .ec-card { animation: card-in 0.17s steps(1, end) both; }
 .eyecatch .ec-kick { font-size: 1.3em; font-weight: 600; letter-spacing: 0.4em; text-transform: uppercase; color: #e8323a; }
-.eyecatch .ec-title, .eyecatch .ec-title2 { font-weight: 800; text-transform: uppercase; line-height: 0.92; transform: scaleY(1.25); transform-origin: 0 80%; }
-.eyecatch .ec-title { font-size: 7.4em; letter-spacing: -0.01em; margin-top: 0.12em; }
-.eyecatch .ec-title2 { font-size: 3.6em; letter-spacing: 0.18em; margin: 0.2em 0 0 0.1em; }
-.eyecatch .ec-rule { height: 0.18em; width: 62%; background: #d8232c; margin: 0.9em 0 0.5em; }
-.eyecatch .ec-sub { font-size: 1.45em; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }
+.eyecatch .ec-logo { display: block; width: 32em; margin: 0.7em 0 0 -0.4em; }
+.eyecatch .ec-sub { margin-top: 0.7em; font-size: 1.45em; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }

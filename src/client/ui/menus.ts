@@ -4,6 +4,7 @@ import { ABILITIES, ATTACKS, AWARD_NAMES, CLASSES, ROLE_NAMES, TRACKS, roundsToW
 import type { MenuInput } from '../input/input';
 import { LIVERIES } from '../render/palette';
 import { h, setClass, setText } from './dom';
+import { COVER, LOGO } from './keyArt';
 
 export type Screen = 'title' | 'garage' | 'controls' | 'pause' | 'results' | null;
 type Device = 'pad' | 'keys';
@@ -142,6 +143,7 @@ export class Menus {
     this.screen = screen;
     this.sel = 0;
     this.root.hidden = screen === null;
+    this.syncLook();
     if (screen) this.render();
   }
 
@@ -206,13 +208,14 @@ export class Menus {
   private renderTitle(): void {
     const col = h('div.col');
     col.append(
-      h('div.logo', h('div.a', 'ZENITH'), h('div.b', 'GRAND PRIX'), h('div.rule')),
+      h('div.logo', h('div.a', 'ZENITH'), h('div.b', 'GRAND PRIX'), h('div.rule'), art(LOGO.url, 'img.logo-art', 'Zenith Grand Prix')),
       h('div.tagline', 'Three mechs a side. Three laps. First across the line takes fifteen points, and nobody said you had to let them get there.'),
       h('div.press', this.key('A', 'Enter'), 'Start'),
     );
     // Browsers only allow sound after a click or key press; a pad button does not count.
     if (this.device === 'pad') col.append(h('div.sound-hint', 'On a gamepad? Click the page once so the browser lets the sound through.'));
-    this.root.append(h('div.shade'), col, h('div.small-print', 'Working title. Version 0.2, solo play against computer pilots.'));
+    // In the anime look the show's cover is up behind it (the race runs on underneath).
+    this.root.append(art(COVER, 'img.cover', ''), h('div.shade.title'), col, h('div.small-print', 'Working title. Version 0.2, solo play against computer pilots.'));
     this.root.onclick = () => {
       if (this.screen === 'title') this.confirm();
     };
@@ -327,8 +330,14 @@ export class Menus {
     this.root.append(h('div.shade.full'), box, this.footer(['B', 'Esc', 'Back']));
   }
 
+  /** The anime look's art (the cover, the painted logo) shows by the root's class. */
+  private syncLook(): void {
+    setClass(this.root, 'anime', this.cb.lookOn());
+  }
+
   /** The look was switched from outside the menu (G): bring its label up to date. */
   refreshLook(): void {
+    this.syncLook();
     this.root.querySelectorAll('.look-label').forEach((el) => (el.textContent = `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`));
   }
 
@@ -497,6 +506,8 @@ export class Menus {
 
   /** Feed navigation presses, in the order they happened. */
   handle(presses: MenuInput[]): void {
+    // The look can change from the tuning panel too; this runs every frame a menu is up.
+    this.syncLook();
     for (const m of presses) {
       if (!this.screen) return;
       const horizontal = this.screen === 'results';
@@ -513,4 +524,13 @@ export class Menus {
       }
     }
   }
+}
+
+/** A painted image, as an element. */
+function art(url: string, spec: string, alt: string): HTMLImageElement {
+  const img = h<'img'>(spec);
+  img.src = url;
+  img.alt = alt;
+  img.draggable = false;
+  return img;
 }
