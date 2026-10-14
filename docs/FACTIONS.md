@@ -19,7 +19,7 @@ faction's colours.
 | Who | The heroes | The black team | The desert dynasty | The knights |
 | Colours | White, royal blue, gold | Charcoal, crimson, gunmetal | Sand, rust orange, dark brown; gold trim, amber eyes | Deep violet, pearl, silver; lavender light |
 | Team colour | Blue | Red | Orange | Violet |
-| Pilots | Kite (f), Lark (m), Atlas (m) | Shrike (f), Moth (m), Golem (f) | Sirocco (m), Ibis (f), Dune (m) | Iris (f), Vesper (m), Bastion (f) |
+| Pilots | Kite (f), Lark (m), Atlas (m) | Shrike (f), Moth (m), Golem (f) | Sirocco (m), Ibis (f), Dune (m) | Iris (m), Vesper (f), Bastion (m) |
 | Swift class (forward) | Sunhawk | Razor | Anubis | Seraph |
 | Vector class (midfielder) | Daystar | Stinger | Horus | Longbow |
 | Bulwark class (defender) | Rampart | Maul | Sobek | Paladin |
@@ -72,5 +72,5 @@ out so they don't.
 |---|---|---|---|---|
 | Solstice | in the game | painted | painted | painted |
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
-| Mirage | in the game, first pass (`render/mech/mirage/`) | stand-in | stand-in | drawn |
-| Aurora | Solstice's for now | stand-in | stand-in | drawn |
+| Mirage | in the game, first pass (`render/mech/mirage/`) | stand-in | painted | drawn |
+| Aurora | Solstice's for now | stand-in | painted | drawn |

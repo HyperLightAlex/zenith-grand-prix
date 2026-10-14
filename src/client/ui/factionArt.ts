@@ -1,8 +1,8 @@
 // Each faction's emblem and pilots' portraits, by faction (an index into
-// LIVERIES). Solstice and Vanta have painted ones (hudArt.ts, from the HUD
-// sheets); a faction whose art is still to be painted gets a stand-in drawn
-// here in its own colours: a badge for the emblem, and the badge on a dark
-// card for each pilot.
+// LIVERIES). Painted ones come from hudArt.ts (the HUD and faction sheets):
+// every faction's pilots, and Solstice's and Vanta's emblems. Art still to be
+// painted gets a stand-in drawn here in the faction's own colours: a badge for
+// the emblem, and the badge on a dark card for a pilot.
 import { LIVERIES } from '../render/palette';
 import { EMBLEMS, PILOTS } from './hudArt';
 
@@ -128,7 +128,7 @@ export function emblemUrlFor(id: string): string {
 
 /** A pilot's portrait, as an image URL: painted, or the faction's badge on a dark card. */
 export function pilotUrl(f: number, role: number): string {
-  if (f < EMBLEMS.length && PILOTS[f * 3 + role]) return PILOTS[f * 3 + role];
+  if (PILOTS[f * 3 + role]) return PILOTS[f * 3 + role];
   const key = `pilot-${f}`;
   let url = drawn.get(key);
   if (!url) {

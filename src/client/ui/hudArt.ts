@@ -30,6 +30,12 @@ import pilot_atlas from './art/pilot-atlas.webp';
 import pilot_shrike from './art/pilot-shrike.webp';
 import pilot_moth from './art/pilot-moth.webp';
 import pilot_golem from './art/pilot-golem.webp';
+import pilot_sirocco from './art/pilot-sirocco.webp';
+import pilot_ibis from './art/pilot-ibis.webp';
+import pilot_dune from './art/pilot-dune.webp';
+import pilot_iris from './art/pilot-iris.webp';
+import pilot_vesper from './art/pilot-vesper.webp';
+import pilot_bastion from './art/pilot-bastion.webp';
 import art_solstice from './art/solstice.webp';
 import art_vanta from './art/vanta.webp';
 import art_go from './art/go.webp';
@@ -65,8 +71,8 @@ export const ICONS = {
 } as const;
 export type IconName = keyof typeof ICONS;
 
-/** By team, then role (forward, midfielder, defender): Kite, Lark, Atlas, Shrike, Moth, Golem. */
-export const PILOTS: string[] = [pilot_kite, pilot_lark, pilot_atlas, pilot_shrike, pilot_moth, pilot_golem];
+/** By team (Solstice, Vanta, Mirage, Aurora), then role (forward, midfielder, defender). */
+export const PILOTS: string[] = [pilot_kite, pilot_lark, pilot_atlas, pilot_shrike, pilot_moth, pilot_golem, pilot_sirocco, pilot_ibis, pilot_dune, pilot_iris, pilot_vesper, pilot_bastion];
 
 /** By team: Solstice, Vanta. */
 export const EMBLEMS: string[] = [art_solstice, art_vanta];

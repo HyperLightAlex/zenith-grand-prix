@@ -1,5 +1,6 @@
-"""Build the HUD art for the anime look from the sheets in art/hud-sheets:
-the icons, the pilots' portraits, the team emblems and the countdown.
+"""Build the HUD art for the anime look from the sheets in art/hud-sheets
+and art/faction-sheets: the icons, the pilots' portraits, the team emblems
+and the countdown.
 
     python3 tools/bg/build_hud.py
 
@@ -11,8 +12,9 @@ What it does to the sheets:
   by the cell of the 6x4 grid their middle falls in (a few run a little over
   their cell's edge), centred on a square and kept white, so the HUD can
   colour it as a mask.
-- Pilots (U2): each square found by the joins between them (the grid can sit
-  a pixel or two off the 512 lines) and cut just inside them.
+- Pilots (U2, and F1 for the two newer teams): each square found by the
+  joins between them (the grid can sit a pixel or two off the 512 lines) and
+  cut just inside them.
 - Emblems and countdown (U3): each piece cut out by its outline; the emblems
   centred on squares, the lettering kept at its own shape.
 """
@@ -26,6 +28,7 @@ from build_backgrounds import keyed, save
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 SHEETS = os.path.join(ROOT, 'art', 'hud-sheets')
+FACTION_SHEETS = os.path.join(ROOT, 'art', 'faction-sheets')
 OUT = os.path.join(ROOT, 'src', 'client', 'ui')
 
 ICONS = [
@@ -34,12 +37,15 @@ ICONS = [
     'weaponsLocked', 'lockedOn', 'escorting', 'momentum', 'snared', 'charging',
     'parry', 'dodge', 'guard', 'forward', 'midfielder', 'defender',
 ]
-PILOTS = ['kite', 'lark', 'atlas', 'shrike', 'moth', 'golem']
+# By team (Solstice, Vanta from U2; Mirage, Aurora from F1), then role.
+PILOTS_U2 = ['kite', 'lark', 'atlas', 'shrike', 'moth', 'golem']
+PILOTS_F1 = ['sirocco', 'ibis', 'dune', 'iris', 'vesper', 'bastion']
+PILOTS = PILOTS_U2 + PILOTS_F1
 U3 = ['solstice', 'vanta', 'go', 'three', 'two', 'one']
 
 
-def sheet(name):
-    return np.asarray(Image.open(os.path.join(SHEETS, name)).convert('RGB')).astype(np.float32) / 255
+def sheet(name, where=SHEETS):
+    return np.asarray(Image.open(os.path.join(where, name)).convert('RGB')).astype(np.float32) / 255
 
 
 def pieces(rgb, cols, rows, min_size=30):
@@ -101,16 +107,16 @@ def main():
     for name, p in zip(ICONS, pieces(sheet('hud-u1-icons.png'), 6, 4)):
         p[..., :3] = 1.0
         files[name] = save(on_square(p, 128), os.path.join(d, f'icon-{name}.webp'), 92)
-    # Pilots.
-    a = sheet('hud-u2-pilots.png')
-    xs = [0, join_near(a.mean(0), 512), join_near(a.mean(0), 1024), a.shape[1]]
-    ys = [0, join_near(a.mean(1), 512), a.shape[0]]
-    inset = 3
-    for i, name in enumerate(PILOTS):
-        r, c = divmod(i, 3)
-        t = a[ys[r] + (inset if r else 0):ys[r + 1] - (inset if r == 0 else 0), xs[c] + (inset if c else 0):xs[c + 1] - (inset if c < 2 else 0)]
-        im = Image.fromarray((t * 255).astype(np.uint8)).resize((256, 256), Image.LANCZOS)
-        files[name] = save(np.asarray(im).astype(np.float32) / 255, os.path.join(d, f'pilot-{name}.webp'), 88)
+    # Pilots: two sheets of six, each 3x2.
+    for a, names in ((sheet('hud-u2-pilots.png'), PILOTS_U2), (sheet('faction-f1-pilots.png', FACTION_SHEETS), PILOTS_F1)):
+        xs = [0, join_near(a.mean(0), 512), join_near(a.mean(0), 1024), a.shape[1]]
+        ys = [0, join_near(a.mean(1), 512), a.shape[0]]
+        inset = 3
+        for i, name in enumerate(names):
+            r, c = divmod(i, 3)
+            t = a[ys[r] + (inset if r else 0):ys[r + 1] - (inset if r == 0 else 0), xs[c] + (inset if c else 0):xs[c + 1] - (inset if c < 2 else 0)]
+            im = Image.fromarray((t * 255).astype(np.uint8)).resize((256, 256), Image.LANCZOS)
+            files[name] = save(np.asarray(im).astype(np.float32) / 255, os.path.join(d, f'pilot-{name}.webp'), 88)
     # Emblems and the countdown.
     aspect = {}
     for name, p in zip(U3, pieces(sheet('hud-u3-emblems.png'), 3, 2, 2000)):
@@ -138,7 +144,7 @@ def main():
         '} as const;',
         'export type IconName = keyof typeof ICONS;',
         '',
-        '/** By team, then role (forward, midfielder, defender): Kite, Lark, Atlas, Shrike, Moth, Golem. */',
+        '/** By team (Solstice, Vanta, Mirage, Aurora), then role (forward, midfielder, defender). */',
         f"export const PILOTS: string[] = [{', '.join(f'pilot_{n}' for n in PILOTS)}];",
         '',
         '/** By team: Solstice, Vanta. */',

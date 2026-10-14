@@ -10,8 +10,8 @@ and checked one sheet at a time, like the other sheets in `art/`.
 | F1 Pilots | Six head-and-shoulders portraits, full bleed, 3x2: Mirage's three, then Aurora's | The comms cut-ins, the target panel and the results, as for Solstice's and Vanta's pilots |
 | F2 Emblems and lettering | The two emblems and the two teams' names as painted on their hangar walls, on green, 2x2 | The score panel, the standings, the results, the garage, the mechs' markings and the hangar's back wall; the name on the hangar walls |
 
-Until they come, the game draws stand-ins in each faction's colours (a badge
-for the emblem, the badge on a dark card for each pilot, the name in code).
+Until F2 comes, the game draws stand-ins in each faction's colours (a badge
+for the emblem, the name on the hangar wall in code).
 
 What to attach:
 
@@ -24,7 +24,7 @@ What to attach:
 
 | Sheet | File | Notes |
 |---|---|---|
-| F1 Pilots | faction-f1-pilots.png | to make |
+| F1 Pilots | faction-f1-pilots.png | in the game (cut by `tools/bg/build_hud.py`). Aurora's genders changed from the prompt: Iris and Bastion are men, Vesper a woman |
 | F2 Emblems and lettering | faction-f2-emblems.png | to make |
 
 ## The prompt
