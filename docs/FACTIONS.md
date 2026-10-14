@@ -45,14 +45,18 @@ the head, the shoulders, the backpack and the weapons' styling.
   wraps on the limbs. Stately, not rugged.
   - Anubis: a slender jackal-headed runner, its tall ears for antennas,
     sickle-sword blades along the forearms, two obelisk fins off the back.
-  - Horus: falcon-headed and crowned with a sun disc, folded falcon wings
-    hanging down the back like a cloak, feather-fringed pauldrons, a cobra
-    of a Snare launcher, a staff of a rifle crowned with a sun disc, the
-    falcon's eye lit on its back for the Disruptor, taloned feet.
-  - Sobek: crocodile-headed under a sun disc, pauldrons like temple pylons,
-    gauntlets like papyrus columns (the scatter cannon in a toothed housing
-    under the right), a scarab's shell for a backpack with a scarab's
-    outspread wings, a pleated kilt, clawed feet.
+  - Horus: a big falcon's head crowned with a sun disc, sitting low on a
+    ruff of feathers, its deep hooked beak curving down over the collar;
+    folded falcon wings hanging either side of the jet pack like a cloak,
+    feather-fringed pauldrons, a cobra of a Snare launcher, a staff of a
+    rifle crowned with a sun disc, the falcon's eye lit on its back for the
+    Disruptor, taloned feet.
+  - Sobek: a great crocodile's head, half as wide as the chest, lying in a
+    saddle between the shoulders with its toothed jaws hanging open over the
+    collar and the throat lit; pauldrons like temple pylons, gauntlets like
+    papyrus columns (the scatter cannon in a toothed housing under the
+    right), a scarab's shell for a backpack with a scarab's outspread wings
+    either side of it, a pleated kilt, clawed feet.
 - **Aurora**: elegant and knightly. Flowing curved armour, helm visors, halo
   crests, wing-like fins, tabard waist plates.
   - Seraph: a slender duellist, swept helm and halo crest, rapier forearm

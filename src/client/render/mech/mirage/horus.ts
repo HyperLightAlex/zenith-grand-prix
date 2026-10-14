@@ -1,7 +1,8 @@
-// Mirage's Horus, the Vector-class midfielder: falcon-headed. A round-browed
-// falcon's head with a short hooked beak, the falcon's dark stripe under each
-// eye, crowned with a sun disc and a rearing cobra; the broad jewelled collar
-// across a broad chest; round pauldrons fringed with feathers; folded falcon
+// Mirage's Horus, the Vector-class midfielder: falcon-headed. A big
+// round-browed falcon's head sits low on a ruff of feathers that joins it to
+// the chest, its beak deep, short and hooked down over the collar, the
+// falcon's dark stripe under each eye, crowned with a sun disc and a rearing
+// cobra; the broad jewelled collar across a broad chest; round pauldrons fringed with feathers; folded falcon
 // wings hanging down the back like a cloak; a rearing cobra of a Snare
 // launcher on the left forearm; and in the right hand a staff of a rifle
 // crowned with a sun disc held in gold horns. The Disruptor on the back is the
@@ -63,7 +64,15 @@ export function buildHorus(c: FrameCtx, number: string): void {
       k.cyl('K', 0.29, 0.29, 0.28, 10, { axis: 'z', at: [s * 0.44, 0.5, -1.27], rot: [-0.25, 0, 0] });
       k.nozzle(0.26, 0.46, { at: [s * 0.44, 0.5, -1.34], rot: [-0.25, 0, 0] });
     }
-    for (const s of [1, -1]) k.box('K', 0.34, 0.3, 0.4, { at: [s * 0.72, 1.0, -1.06] });
+    for (const s of [1, -1]) k.box('K', 0.3, 0.32, 0.3, { at: [s * 1.12, 1.22, -0.88] });
+    // The ruff: layered feathers round the neck, joining the head to the chest.
+    k.lathe('P', [[0, 1.5], [0.72, 1.5], [0.64, 1.74], [0.46, 1.92], [0, 1.92]], 10, { at: [0, 0, 0.06] });
+    for (let i = 0; i < 9; i++) {
+      const phi = (i / 8 - 0.5) * 3.4;
+      const dx = Math.sin(phi);
+      const dz = Math.cos(phi);
+      k.plate(i % 2 ? 'S' : 'P', [[-0.16, 0], [0.16, 0], [0.14, -0.34], [0, -0.46], [-0.14, -0.34]], 0.08, { at: [dx * 0.66, 1.86, 0.06 + dz * 0.66], rot: [-0.25, Math.atan2(dx, dz), 0] });
+    }
     // The Disruptor: the falcon's eye on the back of the power unit, lit, its
     // brow above it, the falcon's stripe falling from it and its tail curling.
     {
@@ -98,40 +107,47 @@ export function buildHorus(c: FrameCtx, number: string): void {
     k.prism('T', [[0.1, 0.1], [-0.05, 0.45], [-0.4, 0.6], [-0.4, 0.5], [-0.1, 0.36], [0.02, 0.06]], 0.14);
     // The poses turn the wing joint, so the wing's own hang rides on a group inside it.
     const wing = s === 1 ? J.wingL : J.wingR;
-    wing.position.set(s * 0.84, 1.0, -1.06);
+    wing.position.set(s * 1.12, 1.22, -0.92);
     const hang = new THREE.Group();
-    hang.rotation.set(0.16, s * -0.4, s * 0.1);
+    hang.rotation.set(0.16, s * -0.22, s * 0.08);
     wing.add(hang);
     c.put(hang, k);
   }
 
-  // ---- head: the falcon --------------------------------------------------------------------
+  // ---- head: the falcon, low on the ruff, its beak hooked down over the collar ---------------
   {
     const k = new Kit(livery);
-    k.cyl('K', 0.2, 0.24, 0.44, 8, { at: [0, -0.1, -0.04] });
-    // The skull: round, a heavy brow over the eyes.
-    k.ball('P', 0.36, { at: [0, 0.3, -0.04], scale: [0.92, 0.9, 1.05] });
-    k.box('P', 0.6, 0.14, 0.34, { at: [0, 0.45, 0.14], taper: [0.9, 0.8] });
-    // The beak: hooked and dark, a gold cere at its root.
-    k.prism('F', [[0.24, 0.4], [0.5, 0.38], [0.7, 0.28], [0.78, 0.1], [0.72, -0.04], [0.64, 0.06], [0.56, 0.14], [0.36, 0.14], [0.24, 0.2]], 0.24);
-    k.box('T', 0.28, 0.12, 0.16, { at: [0, 0.38, 0.32] });
-    // Amber eyes, the falcon's dark stripe falling under each.
+    k.cyl('K', 0.24, 0.3, 0.5, 8, { at: [0, 0.05, -0.08] });
+    // The skull: round, a heavy brow over a broad face.
+    k.ball('P', 0.5, { at: [0, 0.6, -0.08], scale: [1.04, 0.9, 1.08] });
+    k.box('P', 1.0, 0.18, 0.42, { at: [0, 0.84, 0.24], taper: [0.88, 0.8] });
+    k.box('P', 0.88, 0.46, 0.46, { at: [0, 0.5, 0.22] });
+    // The beak: deep at its root and short, hooked down to a point, dark under a gold cere.
+    const sec = (z: number, w: number, top: number, bot: number): Array<[number, number, number]> => {
+      const sh = top - (top - bot) * 0.3;
+      return [[0, top, z], [w, sh, z], [w * 0.8, bot, z], [-w * 0.8, bot, z], [-w, sh, z]];
+    };
+    const BEAK: Array<[number, number, number, number]> = [[0.36, 0.3, 0.78, 0.3], [0.54, 0.26, 0.76, 0.27], [0.7, 0.21, 0.68, 0.23], [0.84, 0.15, 0.55, 0.15], [0.94, 0.1, 0.38, 0.03], [0.99, 0.06, 0.22, -0.09], [1.01, 0.03, 0.08, -0.16]];
+    k.loft('F', BEAK.map(([z, w, top, bot]) => sec(z, w, top, bot)));
+    k.loft('T', [sec(0.34, 0.33, 0.84, 0.56), sec(0.5, 0.29, 0.82, 0.56)]);
+    k.loft('F', [sec(0.38, 0.24, 0.31, 0.14), sec(0.6, 0.18, 0.27, 0.13), sec(0.78, 0.1, 0.2, 0.1)]);
+    // Amber eyes at the corners of the face, the falcon's dark stripe falling under each.
     for (const s of [1, -1]) {
-      k.box('D', 0.2, 0.12, 0.05, { at: [s * 0.2, 0.33, 0.27], rot: [0, s * 0.55, 0] });
-      k.box('G', 0.12, 0.08, 0.05, { at: [s * 0.2, 0.33, 0.29], rot: [0, s * 0.55, 0] });
-      k.box('D', 0.06, 0.26, 0.05, { at: [s * 0.23, 0.14, 0.24], rot: [0, s * 0.55, s * 0.12] });
+      k.box('D', 0.26, 0.15, 0.05, { at: [s * 0.39, 0.6, 0.42], rot: [0, s * 0.65, 0] });
+      k.box('G', 0.17, 0.1, 0.05, { at: [s * 0.39, 0.6, 0.44], rot: [0, s * 0.65, 0] });
+      k.box('D', 0.07, 0.3, 0.05, { at: [s * 0.4, 0.36, 0.42], rot: [0, s * 0.65, s * 0.1] });
+      k.box('D', 0.05, 0.05, 0.32, { at: [s * 0.5, 0.62, 0.1] });
     }
     // The headdress: striped lappets down to the shoulders, a gold band round the crown.
-    headdress(k, 0.33, 0.36, 0.86, -0.14, 6);
-    k.box('T', 0.5, 0.1, 0.5, { at: [0, 0.6, -0.08] });
+    headdress(k, 0.57, 0.62, 0.95, -0.2, 6);
+    k.box('T', 0.62, 0.1, 0.62, { at: [0, 1.02, -0.1] });
     // The crown: a sun disc, a rearing cobra at its foot.
-    k.box('S', 0.22, 0.14, 0.2, { at: [0, 0.7, -0.1] });
-    sunDisc(k, 0.3, [0, 1.02, -0.1]);
-    k.plate('T', [[-0.07, 0], [0.07, 0], [0.1, 0.12], [0, 0.24], [-0.1, 0.12]], 0.05, { at: [0, 0.7, 0.0] });
-    k.box('G', 0.035, 0.035, 0.02, { at: [0, 0.82, 0.035] });
+    k.box('S', 0.24, 0.16, 0.22, { at: [0, 1.12, -0.12] });
+    sunDisc(k, 0.3, [0, 1.44, -0.12]);
+    k.plate('T', [[-0.07, 0], [0.07, 0], [0.1, 0.12], [0, 0.24], [-0.1, 0.12]], 0.05, { at: [0, 1.14, 0.02] });
+    k.box('G', 0.035, 0.035, 0.02, { at: [0, 1.26, 0.055] });
     const head = new THREE.Group();
-    head.position.set(0, 0.3, 0.16);
-    head.scale.setScalar(1.2);
+    head.position.set(0, 0.12, 0.0);
     J.head.add(head);
     c.put(head, k);
   }

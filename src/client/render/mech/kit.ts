@@ -517,6 +517,42 @@ export class Kit {
     return this;
   }
 
+  /**
+   * A skin through rings of points, each ring the same count and wound the
+   * same way round, its two ends capped: snouts, beaks, horns. Whichever way
+   * the rings are wound, the faces come out facing outward.
+   */
+  loft(slot: Slot | 'G', rings: Array<Array<[number, number, number]>>, o: Xf = {}): this {
+    type P = [number, number, number];
+    const tris: Array<[P, P, P]> = [];
+    const n = rings[0].length;
+    for (let i = 0; i + 1 < rings.length; i++) {
+      const a = rings[i];
+      const b = rings[i + 1];
+      for (let j = 0; j < n; j++) {
+        const k = (j + 1) % n;
+        tris.push([a[j], a[k], b[k]], [a[j], b[k], b[j]]);
+      }
+    }
+    const caps: Array<[P[], boolean]> = [[rings[0], true], [rings[rings.length - 1], false]];
+    for (const [ring, flip] of caps) {
+      const c: P = [0, 0, 0];
+      for (const p of ring) for (let d = 0; d < 3; d++) c[d] += p[d] / ring.length;
+      for (let j = 0; j < n; j++) {
+        const k = (j + 1) % n;
+        tris.push(flip ? [c, ring[k], ring[j]] : [c, ring[j], ring[k]]);
+      }
+    }
+    // Six times the signed volume: negative if the rings were wound the other way.
+    let vol = 0;
+    for (const [p, q, r] of tris) vol += p[0] * (q[1] * r[2] - q[2] * r[1]) - p[1] * (q[0] * r[2] - q[2] * r[0]) + p[2] * (q[0] * r[1] - q[1] * r[0]);
+    const pos = new Float32Array(tris.length * 9);
+    tris.forEach(([p, q, r], i) => pos.set(vol < 0 ? [...p, ...r, ...q] : [...p, ...q, ...r], i * 9));
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    return this.push(g, slot, o);
+  }
+
   ball(slot: Slot | 'G', r: number, o: Xf = {}): this {
     return this.push(new THREE.IcosahedronGeometry(r, 1), slot, o);
   }

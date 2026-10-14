@@ -1,7 +1,9 @@
 // Mirage's Sobek, the Bulwark-class defender: crocodile-headed and built like
-// a temple. A long, flat crocodile's head with gold teeth along its jaws and
-// amber eyes raised on its brow, under a striped headdress; the broad
-// jewelled collar across a massive chest; pauldrons like a temple's pylon
+// a temple. A great crocodile's head half as wide as the chest lies in a
+// saddle between the shoulders, its jaws hanging open over the collar, gold
+// teeth along both, the throat lit, amber eyes raised on turrets, a striped
+// headdress and a sun disc crest; the broad jewelled collar across a massive
+// chest, a ridged neck behind the head; pauldrons like a temple's pylon
 // gateways, battered walls under a flared cornice; gauntlets like papyrus
 // columns, the scatter cannon slung under the right one in a toothed housing;
 // a scarab's shell for a backpack, with a scarab's outspread feathered wings;
@@ -60,10 +62,13 @@ export function buildSobek(c: FrameCtx, number: string): void {
   {
     const k = new Kit(livery);
     const cw = d.shoulderX - 0.45;
-    k.box('K', 2.1, 1.55, 1.5, { at: [0, 0.82, -0.1] });
-    k.plate('P', [[-0.7, 0.05], [0.7, 0.05], [cw, 0.86], [cw + 0.1, 1.5], [0.86, 1.86], [-0.86, 1.86], [-cw - 0.1, 1.5], [-cw, 0.86]], 1.8, { at: [0, 0, -0.08] });
-    k.plate('S', [[-0.5, 0.08], [0.5, 0.08], [0.72, 0.5], [-0.72, 0.5]], 0.1, { at: [0, 0, 0.82] });
-    broadCollar(k, 1.5, 1.86, 0.84, -0.16, 1.3);
+    k.box('K', 2.1, 1.3, 1.5, { at: [0, 0.76, -0.1] });
+    // The chest dips between the shoulders into a saddle the crocodile's head lies in.
+    k.plate('P', [[-0.7, 0.05], [0.7, 0.05], [cw, 0.86], [cw + 0.1, 1.5], [1.3, 1.86], [1.05, 1.86], [0.95, 1.4], [-0.95, 1.4], [-1.05, 1.86], [-1.3, 1.86], [-cw - 0.1, 1.5], [-cw, 0.86]], 1.8, { at: [0, 0, -0.08] });
+    broadCollar(k, 1.2, 1.4, 0.84, -0.16, 1.25);
+    // Behind the head, the crocodile's neck: a hump ridged with scutes.
+    k.box('P', 1.9, 0.36, 0.76, { at: [0, 1.56, -0.62], taper: [0.9, 0.9] });
+    for (const x of [-0.32, 0.32]) for (const z of [-0.4, -0.62, -0.84]) k.cyl('F', 0, 0.1, 0.18, 4, { at: [x, 1.82, z], bevel: 0 });
     for (const s of [1, -1]) {
       k.box('K', 0.6, 0.5, 0.8, { at: [s * (cw - 0.05), d.shoulderY + 0.02, -0.06] });
       k.cyl('D', 0.5, 0.5, 0.6, 10, { axis: 'x', at: [s * (d.shoulderX - 0.34), d.shoulderY, 0] });
@@ -71,6 +76,8 @@ export function buildSobek(c: FrameCtx, number: string): void {
     }
     // The backpack: a core between the twin nozzles, under the scarab's domed shell.
     k.box('F', 2.0, 1.5, 0.6, { at: [0, 0.95, -1.1], taper: [0.86, 0.9] });
+    // The wings' mounts, either side of the backpack.
+    for (const s of [1, -1]) k.box('K', 0.36, 0.42, 0.34, { at: [s * 1.44, 1.62, -1.02] });
     for (const s of [1, -1]) k.nozzle(0.42, 0.66, { at: [s * 0.72, 0.56, -1.72], rot: [-0.25, 0, 0] });
     const zc = -1.2;
     const cy = 1.25;
@@ -136,46 +143,92 @@ export function buildSobek(c: FrameCtx, number: string): void {
     for (const x of [0.6, 1.0, 1.4, 1.8]) k.plate('T', side([[x - 0.025, -0.06], [x + 0.025, -0.06], [x + 0.025, -0.38], [x - 0.025, -0.38]]), 0.14);
     // The poses turn the wing joint, so the wing's own sweep rides on a group inside it.
     const wing = s === 1 ? J.wingL : J.wingR;
-    wing.position.set(s * 0.92, 1.9, -1.5);
+    wing.position.set(s * 1.5, 1.62, -1.1);
     const spread = new THREE.Group();
-    spread.rotation.set(0, s * 0.72, s * 0.34);
+    spread.rotation.set(0, s * 0.72, s * 0.24);
     wing.add(spread);
     c.put(spread, k);
   }
 
-  // ---- head: the crocodile ----------------------------------------------------------------------
+  // ---- head: the crocodile, its jaws the mech's face -------------------------------------------
   {
-    const k = new Kit(livery);
-    k.cyl('K', 0.3, 0.36, 0.42, 8, { at: [0, -0.08, -0.05] });
-    k.box('P', 0.82, 0.5, 0.8, { at: [0, 0.26, -0.05], taper: [0.85, 0.85] });
-    // The upper jaw: long, flat and tapering, nostrils at its tip; the lower jaw a little open.
-    k.box('P', 0.56, 1.1, 0.2, { at: [0, 0.26, 0.86], rot: [Math.PI / 2, 0, 0], taper: [0.68, 1] });
-    k.box('D', 0.16, 0.06, 0.1, { at: [0, 0.37, 1.32] });
-    k.box('F', 0.5, 1.0, 0.12, { at: [0, 0.04, 0.78], rot: [Math.PI / 2 + 0.16, 0, 0], taper: [0.7, 1] });
-    for (const s of [1, -1]) {
-      for (let i = 0; i < 5; i++) {
-        const z = 0.48 + i * 0.2;
-        const x = 0.27 - (z - 0.31) * 0.08;
-        k.plate('T', [[-0.04, 0], [0.04, 0], [0, -0.13]], 0.04, { at: [s * x, 0.16, z], rot: [0, (s * Math.PI) / 2, 0] });
-        // The lower teeth stand on the lower jaw, where it has opened away from the upper.
-        const zl = z - 0.1;
-        if (i > 0) k.plate('T', [[-0.035, 0], [0.035, 0], [0, 0.1]], 0.04, { at: [s * (0.25 - (zl - 0.28) * 0.075), 0.1 - (zl - 0.78) * 0.16, zl], rot: [0, (s * Math.PI) / 2, 0] });
+    // Sections across the head, each (z, half-width, top, bottom), back to front.
+    type Sec = [number, number, number, number];
+    const along = (T: Sec[], z: number, col: 1 | 2 | 3) => {
+      for (let i = 0; i + 1 < T.length; i++) {
+        if (z <= T[i + 1][0]) {
+          const t = Math.max(0, (z - T[i][0]) / (T[i + 1][0] - T[i][0]));
+          return T[i][col] + (T[i + 1][col] - T[i][col]) * t;
+        }
       }
-    }
-    // The eyes, raised on the brow, amber.
+      return T[T.length - 1][col];
+    };
+    // A flat-topped section for the skull and upper jaw, a round-bottomed one for the lower jaw.
+    const upper = ([z, w, top, bot]: Sec): Array<[number, number, number]> => {
+      const sh = top - (top - bot) * 0.32;
+      return [[w * 0.55, top, z], [w, sh, z], [w, bot, z], [-w, bot, z], [-w, sh, z], [-w * 0.55, top, z]];
+    };
+    const lower = ([z, w, top, bot]: Sec): Array<[number, number, number]> => {
+      const sh = bot + (top - bot) * 0.4;
+      return [[w, top, z], [w, sh, z], [w * 0.55, bot, z], [-w * 0.55, bot, z], [-w, sh, z], [-w, top, z]];
+    };
+    const k = new Kit(livery);
+    k.cyl('K', 0.5, 0.56, 0.7, 8, { at: [0, -0.2, -0.3] });
+    // The skull and upper jaw: broad at the cheeks, a long flat snout, a bulb at its tip.
+    const UP: Sec[] = [[-0.5, 0.72, 0.8, 0.1], [-0.1, 0.96, 0.94, 0.02], [0.35, 0.92, 0.76, 0.02], [0.9, 0.74, 0.54, 0.04], [1.5, 0.58, 0.43, 0.06], [2.0, 0.52, 0.39, 0.08], [2.3, 0.54, 0.41, 0.1], [2.5, 0.38, 0.35, 0.12], [2.6, 0.2, 0.29, 0.15]];
+    k.loft('P', UP.map(upper));
+    // The palate, dark, and the throat behind it lit.
+    k.loft('D', UP.slice(1, -1).map(([z, w, , bot]) => upper([z, w - 0.08, bot + 0.08, bot - 0.025])));
+    k.plate('G', [[-0.6, 0.0], [0.6, 0.0], [0.56, -0.15], [-0.56, -0.15]], 0.02, { at: [0, 0, 0.5] });
+    // The nostrils on the bulb of the snout.
+    k.box('P', 0.42, 0.1, 0.26, { at: [0, 0.45, 2.32] });
+    for (const s of [1, -1]) k.box('D', 0.08, 0.04, 0.1, { at: [s * 0.1, 0.5, 2.36] });
+    // The upper teeth, gold, down both sides, a long fang among them and two at the front.
     for (const s of [1, -1]) {
-      k.box('P', 0.2, 0.16, 0.26, { at: [s * 0.22, 0.54, 0.16] });
-      k.box('D', 0.16, 0.07, 0.04, { at: [s * 0.22, 0.56, 0.29] });
-      k.box('G', 0.1, 0.05, 0.04, { at: [s * 0.22, 0.56, 0.305] });
+      for (let i = 0; i < 11; i++) {
+        const z = 0.35 + i * 0.21;
+        const len = i === 7 ? 0.32 : 0.19;
+        k.cyl('T', 0.06, 0, len, 5, { at: [s * (along(UP, z, 1) - 0.05), along(UP, z, 3) - len / 2 + 0.01, z], bevel: 0 });
+      }
+      k.cyl('T', 0.06, 0, 0.26, 5, { at: [s * 0.18, 0.02, 2.5], bevel: 0 });
     }
-    // The headdress, and a sun disc crest.
-    headdress(k, 0.46, 0.38, 0.78, -0.2, 5);
-    k.box('T', 0.7, 0.1, 0.6, { at: [0, 0.54, -0.16] });
-    sunDisc(k, 0.24, [0, 0.86, -0.22]);
+    // The jaw's hinge, a gold boss each side.
+    for (const s of [1, -1]) k.cyl('T', 0.2, 0.2, 0.08, 10, { axis: 'x', at: [s * 0.95, 0.0, -0.14] });
+    // The eyes: raised on turrets at the back of the skull, amber, slit like a crocodile's.
+    for (const s of [1, -1]) {
+      k.ball('P', 0.22, { at: [s * 0.56, 0.9, -0.02], scale: [1, 0.8, 1.25] });
+      k.box('D', 0.25, 0.14, 0.04, { at: [s * 0.56, 0.93, 0.24], rot: [0, s * 0.35, 0] });
+      k.box('G', 0.18, 0.09, 0.04, { at: [s * 0.56, 0.93, 0.255], rot: [0, s * 0.35, 0] });
+      k.box('D', 0.03, 0.1, 0.05, { at: [s * 0.56, 0.93, 0.265], rot: [0, s * 0.35, 0] });
+    }
+    // The headdress, and a sun disc crest with a cobra at its foot.
+    headdress(k, 0.86, 0.72, 1.0, -0.38, 6);
+    k.box('T', 0.7, 0.1, 0.5, { at: [0, 0.88, -0.36] });
+    k.box('S', 0.26, 0.16, 0.22, { at: [0, 0.98, -0.36] });
+    sunDisc(k, 0.28, [0, 1.3, -0.36]);
+    k.plate('T', [[-0.07, 0], [0.07, 0], [0.1, 0.12], [0, 0.24], [-0.1, 0.12]], 0.05, { at: [0, 1.0, -0.22] });
     const head = new THREE.Group();
-    head.position.set(0, 0.3, 0.18);
+    head.position.set(0, 0.42, 0.0);
     J.head.add(head);
     c.put(head, k);
+    // The lower jaw, hinged under the eyes and hanging open.
+    const LO: Sec[] = [[-0.25, 0.9, 0.02, -0.44], [0.35, 0.88, 0.0, -0.38], [1.0, 0.7, 0.0, -0.3], [1.7, 0.55, 0.0, -0.25], [2.3, 0.48, 0.0, -0.22], [2.55, 0.32, 0.0, -0.18], [2.65, 0.18, 0.0, -0.14]];
+    const j = new Kit(livery);
+    j.loft('P', LO.map(lower));
+    j.loft('D', LO.slice(1, -1).map(([z, w, top]) => lower([z, w - 0.08, top + 0.025, top - 0.08])));
+    j.loft('T', [lower([2.16, 0.51, 0.01, -0.235]), lower([2.28, 0.5, 0.01, -0.23])]);
+    for (const s of [1, -1]) {
+      for (let i = 0; i < 9; i++) {
+        const z = 0.45 + i * 0.24;
+        const len = i === 6 ? 0.28 : 0.16;
+        j.cyl('T', 0, 0.055, len, 5, { at: [s * (along(LO, z, 1) - 0.05), len / 2 - 0.01, z], bevel: 0 });
+      }
+    }
+    const jaw = new THREE.Group();
+    jaw.position.set(0, 0.02, -0.15);
+    jaw.rotation.x = 0.26;
+    head.add(jaw);
+    c.put(jaw, j);
   }
 
   // ---- arms: pylon pauldrons, column gauntlets ----------------------------------------------------
