@@ -5,6 +5,8 @@ import {
   ATTACKS,
   BTN,
   CHAIN_LIMIT,
+  CHARGE_BONUS,
+  ROLE,
   CHAIN_TICKS,
   CLASSES,
   COMBO_CANCEL_DELAY,
@@ -396,7 +398,7 @@ describe('shots and projectiles', () => {
   const burst = ATTACKS[ATK.MF_BURST];
   const scatter = ATTACKS[ATK.DF_SCATTER];
 
-  it('Midfielder primary (Carbine) fires three rounds that hit for 6 each', () => {
+  it('Midfielder primary (Carbine) fires three rounds that each hit for its damage', () => {
     const { a, att, vic } = duel(MF0, FW1, 30);
     const T = a.tap(MF0, BTN.X);
     // Guns need no lock.
@@ -408,11 +410,11 @@ describe('shots and projectiles', () => {
     expect(shots.every((e) => e.mech === MF0 && e.attack === ATK.MF_BURST)).toBe(true);
     expect(new Set(shots.map((e) => e.proj)).size).toBe(3);
     const hits = a.events('hit');
-    expect(hits.map((e) => e.damage)).toEqual([6, 6, 6]);
+    expect(hits.map((e) => e.damage)).toEqual([ATTACKS[ATK.MF_BURST].damage, ATTACKS[ATK.MF_BURST].damage, ATTACKS[ATK.MF_BURST].damage]);
     expect(hits.every((e) => e.attacker === MF0 && e.victim === FW1 && !e.blocked && !e.heavy)).toBe(true);
     expect(a.events('projEnd').map((e) => e.hit)).toEqual([true, true, true]);
     expect(a.events('projEnd').map((e) => e.proj).sort()).toEqual(shots.map((e) => e.proj).sort());
-    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - 18);
+    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - 3 * ATTACKS[ATK.MF_BURST].damage);
     expect(a.race.projectiles.length).toBe(0);
   });
 
@@ -450,13 +452,13 @@ describe('shots and projectiles', () => {
     a.tap(MF0, BTN.X);
     a.step(60);
     expect(a.events('hit').length).toBe(3);
-    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - 18);
+    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - 3 * ATTACKS[ATK.MF_BURST].damage);
   });
 
   it('rounds that leave the road are removed', () => {
     const a = arena(2);
     a.put(MF0, 300, 0);
-    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, charged: false, s: a.base + 300, d: 26, h: 0, vs: a.pace, vd: 240, life: 30 });
+    a.race.projectiles.push({ id: 900, owner: MF0, team: 0, attack: ATK.MF_BURST, charged: false, power: 1, s: a.base + 300, d: 26, h: 0, vs: a.pace, vd: 240, life: 30 });
     a.step(1);
     expect(a.events('projEnd')).toMatchObject([{ proj: 900, hit: false }]);
     expect(a.race.projectiles.length).toBe(0);
@@ -471,7 +473,7 @@ describe('shots and projectiles', () => {
     a.step(50);
     expect(a.events('hit').map((e) => e.victim)).toEqual([FW1, FW1, FW1]);
     expect(mate.hp).toBe(CLASSES[mate.role].maxHp);
-    expect(foe.hp).toBe(CLASSES[foe.role].maxHp - 18);
+    expect(foe.hp).toBe(CLASSES[foe.role].maxHp - 3 * ATTACKS[ATK.MF_BURST].damage);
   });
 
   it('Defender secondary (Scatter Cannon) fires six pellets at once, 6 damage each', () => {
@@ -543,7 +545,7 @@ describe('drive costs and cooldowns', () => {
 
   const cooled = [
     { name: 'Lance Dash', att: FW0, btn: BTN.Y, atk: ATK.FW_LANCE, cd: 120, gap: 11 },
-    { name: 'Carbine', att: MF0, btn: BTN.X, atk: ATK.MF_BURST, cd: 40, gap: 30 },
+    { name: 'Carbine', att: MF0, btn: BTN.X, atk: ATK.MF_BURST, cd: 10, gap: 30 },
     { name: 'Stun Kick', att: MF0, btn: BTN.Y, atk: ATK.MF_KICK, cd: 55, gap: 11 },
     { name: 'Scatter Cannon', att: DF0, btn: BTN.Y, atk: ATK.DF_SCATTER, cd: 160, gap: 15 },
   ];
@@ -873,7 +875,7 @@ describe('parry', () => {
     const hits = a.events('hit');
     expect(hits.length).toBe(3);
     expect(hits.every((e) => e.blocked)).toBe(true);
-    expect(vic.hp).toBeCloseTo(CLASSES[vic.role].maxHp - 3 * 6 * GUARD_REDUCTION, 9);
+    expect(vic.hp).toBeCloseTo(CLASSES[vic.role].maxHp - 3 * ATTACKS[ATK.MF_BURST].damage * GUARD_REDUCTION, 9);
     expect(vic.guard).toBe(CLASSES[vic.role].guardMax - 3 * ATTACKS[ATK.MF_BURST].guardDamage);
   });
 });
@@ -1235,10 +1237,10 @@ describe('knock-outs', () => {
 
   it('a bullet can score the knock-out', () => {
     const { a, att, vic } = duel(MF0, FW1, 30);
-    vic.hp = 8;
+    vic.hp = ATTACKS[ATK.MF_BURST].damage + 2;
     a.tap(MF0, BTN.X);
     a.step(40);
-    expect(a.events('hit').map((e) => e.damage)).toEqual([6, 2]);
+    expect(a.events('hit').map((e) => e.damage)).toEqual([ATTACKS[ATK.MF_BURST].damage, 2]);
     expect(a.events('ko')).toMatchObject([{ mech: FW1, by: MF0 }]);
     expect(att.kos).toBe(1);
   });
@@ -1437,5 +1439,79 @@ describe('who can be hurt', () => {
     // Hitting a wreck's object again cannot resurrect or double-count it.
     for (let i = 0; i < 3; i++) stepRace(a.race, TRACK, a.inputs);
     expect(att.kos).toBe(1);
+  });
+});
+
+describe('the carbine', () => {
+  const burst = ATTACKS[ATK.MF_BURST];
+  const cycle = burst.windup + burst.active + burst.recovery + burst.cooldown;
+
+  it('keeps firing while the trigger is held, a burst every cycle', () => {
+    const { a } = duel(MF0, FW1, 30);
+    a.hold(MF0, BTN.X).step(cycle * 3);
+    expect(a.events('shot').length).toBe(9);
+  });
+
+  it('a burst counts once toward a stagger chain, so four in a row do not set the target free', () => {
+    const { a, vic } = duel(MF0, FW1, 30);
+    a.hold(MF0, BTN.X).step(cycle * 4 - burst.cooldown);
+    expect(a.events('hit').length).toBe(12);
+    expect(vic.chain).toBe(4);
+    expect(a.events('escape')).toEqual([]);
+    // The fifth does.
+    a.step(cycle);
+    expect(a.events('escape').length).toBe(1);
+  });
+});
+
+describe('charged heavies', () => {
+  const lance = ATTACKS[ATK.FW_LANCE];
+  const full = lance.charge!;
+
+  function lanceHit(holdFor: number) {
+    const { a } = duel(FW0, FW1, 11);
+    a.hold(FW0, BTN.Y).step(holdFor).release(FW0, BTN.Y).step(80);
+    const hits = a.events('hit').filter((e) => e.attacker === FW0);
+    expect(hits.length).toBe(1);
+    return { a, hit: hits[0] };
+  }
+
+  it('the heavies charge; nothing else does', () => {
+    for (const r of [ROLE.FW, ROLE.MF, ROLE.DF]) expect(ATTACKS[CLASSES[r].secondary].charge).toBeGreaterThan(0);
+    for (const r of [ROLE.FW, ROLE.MF, ROLE.DF]) expect(ATTACKS[CLASSES[r].primary].charge ?? 0).toBe(0);
+  });
+
+  it('a tap throws it as it always was', () => {
+    const { a, hit } = lanceHit(1);
+    expect(a.events('charge')).toEqual([]);
+    expect(hit.damage).toBeCloseTo(lance.damage, 9);
+  });
+
+  it('held through the wind-up it holds there and charges; full, it hits CHARGE_BONUS harder', () => {
+    const { a, hit } = lanceHit(lance.windup + full + 20);
+    expect(a.events('charge').map((e) => e.full)).toEqual([false, true]);
+    expect(hit.damage).toBeCloseTo(lance.damage * (1 + CHARGE_BONUS), 9);
+  });
+
+  it('let go half way, half the bonus', () => {
+    // (Held from the press: the wind-up's last tick is where it starts to charge.)
+    const { hit } = lanceHit(lance.windup + full / 2);
+    expect(hit.damage).toBeCloseTo(lance.damage * (1 + CHARGE_BONUS / 2), 9);
+  });
+
+  it('the cooldown waits for the charge: it runs from the end of the move as usual', () => {
+    const { a, att } = duel(FW0, FW1, 11);
+    a.hold(FW0, BTN.Y).step(lance.windup + full + 20).release(FW0, BTN.Y);
+    a.until(() => att.act !== ACT.ATTACK, 200);
+    expect(att.cdSecondary).toBe(lance.cooldown);
+  });
+
+  it('a charged scatter blast hits harder pellet by pellet', () => {
+    const scatter = ATTACKS[ATK.DF_SCATTER];
+    const { a } = duel(DF0, FW1, 12);
+    a.hold(DF0, BTN.Y).step(scatter.windup + scatter.charge! + 5).release(DF0, BTN.Y).step(40);
+    const hits = a.events('hit').filter((e) => e.attacker === DF0);
+    expect(hits.length).toBeGreaterThan(0);
+    for (const h of hits) expect(h.damage).toBeCloseTo(scatter.damage * (1 + CHARGE_BONUS), 9);
   });
 });

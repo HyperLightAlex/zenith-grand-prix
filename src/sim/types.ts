@@ -120,6 +120,12 @@ export interface MechState {
   chainT: number;
   /** Tick the chain counter last went up (one count per tick, however many pellets land). */
   chainTick: number;
+  /** Who last added to the chain, and with what (attacker id * 64 + attack), for CHAIN_SAME_SHOT. */
+  chainKey: number;
+  /** Ticks the current attack has been held charging (see AttackDef.charge). */
+  chargeT: number;
+  /** The current attack was started by its own button, which may still be held to charge it. */
+  chargeOn: boolean;
   cdPrimary: number;
   cdSecondary: number;
   cdDash: number;
@@ -241,6 +247,8 @@ export interface Projectile {
   attack: number;
   /** Fired as a momentum strike. */
   charged: boolean;
+  /** How hard it hits from a held charge: 1, up to 1 + CHARGE_BONUS. */
+  power: number;
   s: number;
   d: number;
   /** Height above the road it was fired at. */
@@ -267,6 +275,8 @@ export type SimEvent =
   | { type: 'finish'; mech: number; place: number }
   | { type: 'raceEnd' }
   | { type: 'swing'; mech: number; attack: number }
+  /** A heavy held to charge: `full` false as the charge starts, true when it is full. */
+  | { type: 'charge'; mech: number; attack: number; full: boolean }
   | { type: 'windup'; mech: number; attack: number; charged: boolean }
   | { type: 'shot'; mech: number; attack: number; proj: number }
   | { type: 'hit'; attacker: number; victim: number; attack: number; damage: number; blocked: boolean; heavy: boolean; charged: boolean; s: number; d: number }

@@ -131,8 +131,8 @@ const WHITE = new THREE.Color(0xffffff);
 const tint = new THREE.Color();
 /** Speed the effects treat as "flat out": a forward's top speed on the speed lap. */
 const FULL_SPEED = 160;
-/** The speed stretch's shutter, in seconds: a quarter of a frame at 60. */
-const STRETCH_SHUTTER = 0.004;
+/** The speed stretch's shutter, in seconds: about a seventh of a frame at 60. */
+const STRETCH_SHUTTER = 0.0024;
 
 function lerpAngle(a: number, b: number, t: number): number {
   let d = b - a;
@@ -583,13 +583,11 @@ export class RaceView {
     u.uBoost.value = toward(u.uBoost.value, surging ? 1.5 : focus.boosting ? 1 : focus.ramT > 0 ? 0.5 : 0, 6, dt);
     u.uBlurK.value = F.speedBlur;
     u.uLineK.value = F.speedLines;
-    // The stretch: how far the camera goes in the blur's shutter (about a
-    // quarter of a frame), so near things smear by how fast they go past.
+    // The stretch: how far the camera goes in the blur's shutter, so near
+    // things smear by how fast they go past. It smears away from the middle
+    // of the frame, the way the camera is going: never toward a bend ahead,
+    // which set the streaks at an angle to the travel through a corner.
     u.uTravel.value = toward(u.uTravel.value, (focus.retired ? 0 : focus.speed) * STRETCH_SHUTTER * fxScale, 8, dt);
-    // ...away from the point the camera is heading for: the road well ahead.
-    trackPoint(track, fv.s + 220, fv.d * 0.5, 4, v1);
-    v1.project(this.renderer.camera);
-    if (v1.z < 1) (u.uFocus.value as THREE.Vector2).set(THREE.MathUtils.clamp(v1.x * 0.5 + 0.5, 0.25, 0.75), THREE.MathUtils.clamp(v1.y * 0.5 + 0.5, 0.3, 0.7));
     tint.copy(surging ? GOLD : WHITE);
     (u.uTint.value as THREE.Vector3).set(tint.r, tint.g, tint.b);
     this.renderer.setBloom(F.bloom);
@@ -959,6 +957,16 @@ export class RaceView {
         if (!this.groundRing(v, 11, v.livery.glow)) this.fx.flash(v1, 8, v.livery.glow, 0.2, null, true);
         trackPoint(track, v.s, v.d, 1.2, v1);
         this.fx.burst(v1, v.vel, 14, 30, v.livery.glow, 0.4, 0.3);
+        break;
+      }
+      case 'charge': {
+        // A heavy held to charge: a ring in the pilot's colour as it starts,
+        // a bigger one and a jolt when it is full.
+        const v = this.mechs[e.mech];
+        trackPoint(track, v.s, v.d, 4.2, v1);
+        this.fx.flash(v1, e.full ? 10 : 5, v.livery.glow, e.full ? 0.3 : 0.2, v.rig.root, true);
+        if (e.full) this.fx.burst(v1, v.vel, 14, 26, v.livery.glow, 0.4, 0.3);
+        if (e.full && e.mech === local) this.cam.shake(0.15);
         break;
       }
       case 'boost': {

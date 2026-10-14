@@ -13,6 +13,8 @@ import {
   BREAKAWAY_IFRAMES,
   BTN,
   CHAIN_LIMIT,
+  CHAIN_SAME_SHOT,
+  CHARGE_BONUS,
   CHAIN_TICKS,
   COMBO_CANCEL_DELAY,
   COUNTER_HIT,
@@ -79,6 +81,8 @@ function beginAttack(race: RaceState, track: Track, m: MechState, idx: number): 
   m.attack = idx;
   m.attackStart = race.tick;
   m.attackHit = false;
+  m.chargeT = 0;
+  m.chargeOn = false;
   // Momentum from a boost or a slipstream goes into the first blow thrown,
   // not into a whole combo (a follow-up starts from a standing fight), and
   // only into a blow: guns already work at racing speed, and a gunner sat in
@@ -118,7 +122,14 @@ export function tryAttack(race: RaceState, track: Track, m: MechState, slot: num
   }
   m.drive -= a.driveCost;
   beginAttack(race, track, m, idx);
+  m.chargeOn = slot === 1 && (a.charge ?? 0) > 0;
   return true;
+}
+
+/** How hard a mech's current attack hits from a held charge: 1 uncharged, up to 1 + CHARGE_BONUS. */
+export function chargePower(m: MechState): number {
+  const full = ATTACKS[m.attack].charge ?? 0;
+  return full > 0 ? 1 + (CHARGE_BONUS * Math.min(m.chargeT, full)) / full : 1;
 }
 
 export function tryDash(race: RaceState, track: Track, m: MechState, input: MechInput): boolean {
@@ -357,6 +368,7 @@ export function applyHit(
   a: AttackDef,
   attackIdx: number,
   charged = false,
+  power = 1,
 ): boolean {
   if (victim.iframes > 0) {
     race.events.push({ type: 'evade', mech: victim.id });
@@ -372,13 +384,13 @@ export function applyHit(
   let ux = ds / dist;
   const uy = dd / dist;
   if (ux > 0) ux *= 0.1;
-  const kb = a.knockback * (charged ? rules.momentumKnock : 1);
+  const kb = a.knockback * (charged ? rules.momentumKnock : 1) * power;
   const us = ux * kb;
   const ud = uy * kb * (a.heavy ? rules.ringoutThrow : 1);
   const toAttacker = Math.atan2(-dd, -ds);
   const front = Math.abs(wrapAngle(toAttacker - victim.facing)) <= GUARD_ARC;
-  let dmg = a.damage * (charged ? rules.momentumDamage : 1);
-  const guardDmg = a.guardDamage * (charged ? rules.momentumDamage : 1);
+  let dmg = a.damage * (charged ? rules.momentumDamage : 1) * power;
+  const guardDmg = a.guardDamage * (charged ? rules.momentumDamage : 1) * power;
   const stagger = a.stagger * (charged ? MOMENTUM_STAGGER : 1);
   let blocked = false;
   // What the victim was doing when the blow arrived, for the support awards.
@@ -435,11 +447,13 @@ export function applyHit(
     if (armored) {
       addVelocity(victim, us * 0.3, ud * 0.3);
     } else {
-      // One count per tick: a scatter blast is one hit for this purpose.
-      if (victim.chainTick !== race.tick) {
-        victim.chainTick = race.tick;
-        victim.chain++;
-      }
+      // One count per tick (a scatter blast is one hit for this purpose), and
+      // one per burst of the same gun: a carbine's rounds are one hit too.
+      const key = att.id * 64 + attackIdx;
+      const sameBurst = a.kind === 'shot' && victim.chainKey === key && race.tick - victim.chainTick <= CHAIN_SAME_SHOT;
+      if (victim.chainTick !== race.tick && !sameBurst) victim.chain++;
+      victim.chainTick = race.tick;
+      victim.chainKey = key;
       victim.chainT = CHAIN_TICKS;
       if (victim.chain > CHAIN_LIMIT) {
         // Enough: the victim bursts free rather than being juggled forever.
@@ -517,7 +531,7 @@ function resolveMelee(race: RaceState, track: Track, m: MechState, a: AttackDef)
   }
   if (victim) {
     m.attackHit = true;
-    applyHit(race, track, m, victim, a, m.attack, m.atkCharged);
+    applyHit(race, track, m, victim, a, m.attack, m.atkCharged, chargePower(m));
   }
 }
 
@@ -566,6 +580,7 @@ function fireShot(race: RaceState, track: Track, m: MechState, a: AttackDef, idx
       team: m.team,
       attack: idx,
       charged,
+      power: chargePower(m),
       s: m.s + cs * (c.radius + 0.5),
       d: m.d + sn * (c.radius + 0.5),
       h: m.h,
@@ -620,7 +635,9 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
 
   switch (m.act) {
     case ACT.NONE: {
-      if (pressed & BTN.X) tryAttack(race, track, m, 0);
+      // A gun keeps firing while its trigger is held.
+      const autofire = (input.buttons & BTN.X) !== 0 && ATTACKS[c.primary].kind === 'shot' && m.cdPrimary === 0;
+      if (pressed & BTN.X || autofire) tryAttack(race, track, m, 0);
       else if (pressed & BTN.Y) tryAttack(race, track, m, 1);
       else if (pressed & BTN.A && m.mode === MODE.BATTLE) tryDash(race, track, m, input);
       break;
@@ -628,6 +645,17 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
     case ACT.ATTACK: {
       const a = ATTACKS[m.attack];
       if (pressed & BTN.X && a.next >= 0) m.comboQueued = true;
+      // A heavy held through its wind-up holds at the end of it and charges,
+      // the clock (and the cooldown) standing still, until let go or full.
+      if (m.chargeOn && (input.buttons & BTN.Y) === 0) m.chargeOn = false;
+      const full = a.charge ?? 0;
+      if (m.chargeOn && m.actT === a.windup - 1 && m.chargeT < full) {
+        if (m.chargeT === 0) race.events.push({ type: 'charge', mech: m.id, attack: m.attack, full: false });
+        m.chargeT++;
+        m.cdSecondary++;
+        if (m.chargeT === full) race.events.push({ type: 'charge', mech: m.id, attack: m.attack, full: true });
+        break;
+      }
       const t = m.actT;
       if (t === a.windup) race.events.push({ type: 'swing', mech: m.id, attack: m.attack });
       if (a.kind === 'melee') {
@@ -685,7 +713,7 @@ export function stepProjectiles(race: RaceState, track: Track): void {
         const dh = o.h - p.h;
         const r = classOf(o).radius + 0.9;
         if (ds * ds + dd * dd + dh * dh <= r * r) {
-          applyHit(race, track, race.mechs[p.owner], o, ATTACKS[p.attack], p.attack, p.charged);
+          applyHit(race, track, race.mechs[p.owner], o, ATTACKS[p.attack], p.attack, p.charged, p.power);
           done = true;
           hit = true;
           break;

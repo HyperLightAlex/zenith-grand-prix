@@ -457,6 +457,12 @@ export class Game {
         }
         break;
       }
+      case 'charge': {
+        // A heavy held to charge: a rising note as it starts, the charged chord when it is full.
+        const h = this.heard(e.mech);
+        if (h.volume > 0.02) A.play(e.full ? 'momentum' : 'tell', { volume: h.volume * (e.full ? 1 : 0.6) * quiet, pan: h.pan, pitch: e.full ? 1 : 1.5 });
+        break;
+      }
       case 'windup':
         if (e.charged) {
           const h = this.heard(e.mech);

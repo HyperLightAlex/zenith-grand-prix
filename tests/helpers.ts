@@ -141,7 +141,7 @@ function mechSum(m: MechState): number {
     m.mode + m.target + m.outOfRange +
     m.hp + m.guard + m.drive +
     m.act + m.actT + m.actDur + m.attack + m.attackStart + m.guardT + m.guardIdle + m.guardRest +
-    m.iframes + m.chain + m.chainT + m.chainTick + m.cdPrimary + m.cdSecondary + m.cdDash +
+    m.iframes + m.chain + m.chainT + m.chainTick + m.chainKey + m.chargeT + m.cdPrimary + m.cdSecondary + m.cdDash +
     m.cells + m.gateMask + m.cdAbility + m.overdriveT + m.ramT + m.ramHits + m.shieldT + m.snareT + m.cloakT +
     m.tow + m.momentum + m.wall + m.towBy + m.towByTick +
     m.boostT + m.relightT + m.maxHp + m.carveDir + m.carveCharge + m.carveTier + m.carveT + m.carveBoost + m.airT + m.arcDir + m.arcFrom + m.arcSweep + m.arcR +
@@ -185,7 +185,7 @@ export function findNonFinite(race: RaceState): string | null {
     return `mech ${m.id} (tick ${race.tick})`;
   }
   for (const p of race.projectiles) {
-    if (!Number.isFinite(p.id + p.owner + p.team + p.attack + p.s + p.d + p.h + p.vs + p.vd + p.life)) return `projectile ${p.id} (tick ${race.tick})`;
+    if (!Number.isFinite(p.id + p.owner + p.team + p.attack + p.s + p.d + p.h + p.vs + p.vd + p.life + p.power)) return `projectile ${p.id} (tick ${race.tick})`;
   }
   for (const t of race.teams) {
     if (!Number.isFinite(t.tactic + t.mark + t.captainAt + t.captainPhase)) return `team state (tick ${race.tick})`;

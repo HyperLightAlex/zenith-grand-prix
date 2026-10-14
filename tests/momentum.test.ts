@@ -141,7 +141,7 @@ describe('momentum', () => {
     a.step(40);
     const hits = a.events('hit').filter((e) => e.attacker === MF0);
     expect(hits.length).toBe(3);
-    for (const h of hits) expect(h).toMatchObject({ charged: false, damage: 6 });
+    for (const h of hits) expect(h).toMatchObject({ charged: false, damage: ATTACKS[ATK.MF_BURST].damage });
     expect(mf.mode).toBe(MODE.SPEED); // guns need no lock
   });
 });

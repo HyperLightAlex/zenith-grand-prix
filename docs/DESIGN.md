@@ -396,7 +396,7 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 | Frame | X (primary) | Y (secondary) |
 |---|---|---|
 | Swift (forward) | Edge: three blade strikes, 20 / 22 / 40 damage | Lance Dash: armoured lunge across a 30 m gap, 56 damage, 12 Drive |
-| Vector (midfielder) | Carbine: three-round burst to 62 m, 6 a round | Stun Kick: 34 damage, big knockback |
+| Vector (midfielder) | Carbine: three-round burst to 62 m, 7 a round, a burst every 0.55 s; hold the trigger to keep firing (about 38 a second, against the blades' 75 to 80) | Stun Kick: 34 damage, big knockback |
 | Bulwark (defender) | Breaker: two hammer blows, 36 / 54, the second breaks guards | Scatter Cannon: six pellets inside 30 m, 6 each |
 
 - **Guard** (LT, or RB; L on the keyboard): hits from the front do 15%
@@ -424,7 +424,17 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
   swing round to land the moment its invulnerability ran out.)
 - **Guns work at racing speed** without a lock. Melee needs a lock; pressing
   attack near an enemy takes one for you.
-- Four hits in a chain and the victim bursts free.
+- Four hits in a chain and the victim bursts free. A burst from a gun is one
+  hit for this purpose (a carbine's three rounds, a scatter blast's pellets),
+  so a carbine kept on a target sets it free on the fifth burst, not the
+  second.
+- **Heavies charge** (Y held): held through its wind-up, the Lance Dash,
+  the Stun Kick or the Scatter Cannon holds at the end of it and charges for
+  up to 0.6 s, then goes when let go: a full charge hits 60% harder (damage,
+  guard damage and knockback), half a charge 30%. A tap throws it as before.
+  The cooldown waits for the charge. Charging is a long tell: the mech is
+  still in its wind-up, so a counter-hit catches it and a swing reads it.
+  Computer pilots do not charge yet.
 - **A hit costs control, not the race.** A clean hit takes about 1% of the
   victim's pace per 9 damage, never more than 12% (it was 1% per 4, up to
   35%). A mech staggered at racing speed keeps 90% of its throttle, and a

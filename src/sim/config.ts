@@ -274,6 +274,14 @@ export const DASH_BLEED = 300;
 export const DASH_COOLDOWN = 26;
 export const COMBO_CANCEL_DELAY = 3;
 export const CHAIN_LIMIT = 4; // hits in one stagger chain before a free escape
+/**
+ * The rounds of one burst from one gun, landing inside this many ticks of
+ * each other, count once toward a stagger chain: a carbine's three rounds
+ * are one hit for this purpose, as a scatter blast already was.
+ */
+export const CHAIN_SAME_SHOT = 20;
+/** How much harder a fully charged heavy hits (see AttackDef.charge). */
+export const CHARGE_BONUS = 0.6;
 export const CHAIN_TICKS = 75;
 export const ESCAPE_IFRAMES = 50;
 export const ESCAPE_SHOVE_RANGE = 14;
@@ -402,6 +410,12 @@ export interface AttackDef {
   heavy: boolean;
   /** A guard blocks it but cannot turn it. */
   noParry?: boolean;
+  /**
+   * Held through its wind-up, it holds there and charges for up to this many
+   * ticks (0: it cannot be charged); let go, or fully charged, it goes. A
+   * full charge hits CHARGE_BONUS harder (damage, guard damage, knockback).
+   */
+  charge?: number;
   shot?: ShotDef;
 }
 
@@ -443,17 +457,20 @@ export const ATTACKS: AttackDef[] = [
   melee({ key: 'fw_slash1', name: 'Edge', windup: 5, active: 4, recovery: 11, damage: 20, stagger: 14, knockback: 8, advance: 24, next: ATK.FW_SLASH2 }),
   melee({ key: 'fw_slash2', name: 'Edge', windup: 5, active: 4, recovery: 11, damage: 22, stagger: 14, knockback: 8, advance: 24, next: ATK.FW_SLASH3 }),
   melee({ key: 'fw_slash3', name: 'Edge Finish', windup: 11, active: 5, recovery: 20, damage: 40, stagger: 24, knockback: 30, advance: 28, heavy: true }),
-  melee({ key: 'fw_lance', name: 'Lance Dash', windup: 15, active: 10, recovery: 22, damage: 56, stagger: 28, knockback: 34, reach: 6.5, advance: 75, armor: true, driveCost: 12, cooldown: 120, heavy: true }),
+  melee({ key: 'fw_lance', name: 'Lance Dash', windup: 15, active: 10, recovery: 22, damage: 56, stagger: 28, knockback: 34, reach: 6.5, advance: 75, armor: true, driveCost: 12, cooldown: 120, heavy: true, charge: 36 }),
   // Midfielder: carbine bursts at range, and a kick to make space.
   {
+    // A burst about every half second, 21 to a burst: about 38 a second at
+    // range, against the blades' 75 to 80 up close. Hold the trigger to keep
+    // firing. (It was a burst every 1.2 s, 18 to a burst: 15 a second.)
     key: 'mf_burst', name: 'Carbine', kind: 'shot',
-    windup: 7, active: 15, recovery: 12,
+    windup: 5, active: 10, recovery: 8,
     reach: 0, arc: 0.4,
-    damage: 6, guardDamage: 3, stagger: 4, knockback: 2,
-    guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 40, next: -1, heavy: false,
-    shot: { count: 3, interval: 5, pellets: 1, speed: 240, spread: 0.065, range: 62 },
+    damage: 7, guardDamage: 3, stagger: 4, knockback: 2,
+    guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 10, next: -1, heavy: false,
+    shot: { count: 3, interval: 4, pellets: 1, speed: 240, spread: 0.065, range: 62 },
   },
-  melee({ key: 'mf_kick', name: 'Stun Kick', windup: 12, active: 5, recovery: 18, damage: 34, stagger: 28, knockback: 38, reach: 6, cooldown: 55, heavy: true }),
+  melee({ key: 'mf_kick', name: 'Stun Kick', windup: 12, active: 5, recovery: 18, damage: 34, stagger: 28, knockback: 38, reach: 6, cooldown: 55, heavy: true, charge: 36 }),
   // Defender: slow hammer blows that break guards, and a scatter cannon.
   melee({ key: 'df_hammer1', name: 'Breaker', windup: 14, active: 5, recovery: 15, damage: 36, guardDamage: 30, stagger: 20, knockback: 14, reach: 6.5, arc: 1.15, advance: 14, armor: true, next: ATK.DF_HAMMER2 }),
   melee({ key: 'df_hammer2', name: 'Breaker Slam', windup: 20, active: 6, recovery: 25, damage: 54, guardDamage: 60, stagger: 30, knockback: 44, reach: 6.5, arc: 1.15, advance: 16, armor: true, guardBreak: true, heavy: true }),
@@ -462,7 +479,7 @@ export const ATTACKS: AttackDef[] = [
     windup: 13, active: 2, recovery: 26,
     reach: 0, arc: 0.5,
     damage: 6, guardDamage: 5, stagger: 7, knockback: 5,
-    guardBreak: false, armor: true, advance: 0, driveCost: 0, cooldown: 160, next: -1, heavy: true,
+    guardBreak: false, armor: true, advance: 0, driveCost: 0, cooldown: 160, next: -1, heavy: true, charge: 36,
     shot: { count: 1, interval: 1, pellets: 6, speed: 210, spread: 0.22, range: 30 },
   },
   // Midfielder abilities: the Snare bolt and the Disruptor pulse.

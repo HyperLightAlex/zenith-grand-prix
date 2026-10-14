@@ -418,7 +418,7 @@ describe('the test suite\'s own NaN detector', () => {
     const inputs = makeInputs(race);
     (inputs[FW0] as MechInput).throttle = 1;
     for (let i = 0; i < 300; i++) stepRace(race, TRACK, inputs);
-    race.projectiles.push({ id: 1, owner: 0, team: 0, attack: 4, charged: false, s: 0, d: 0, h: 0, vs: 0, vd: 0, life: 5 });
+    race.projectiles.push({ id: 1, owner: 0, team: 0, attack: 4, charged: false, power: 1, s: 0, d: 0, h: 0, vs: 0, vd: 0, life: 5 });
     expect(findNonFinite(race)).toBe(null);
     let poisoned = 0;
     const poison = (label: string, obj: object) => {

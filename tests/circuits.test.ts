@@ -441,7 +441,7 @@ describe('forks', () => {
       expect(race.mechs[0].target).toBe(-1);
 
       // A round fired straight across stops at the wall.
-      race.projectiles.push({ id: 991, owner: 0, team: 0, attack: ATK.MF_BURST, charged: false, s: race.mechs[0].s, d: -12, h: 0, vs: 60, vd: 240, life: 40 });
+      race.projectiles.push({ id: 991, owner: 0, team: 0, attack: ATK.MF_BURST, charged: false, power: 1, s: race.mechs[0].s, d: -12, h: 0, vs: 60, vd: 240, life: 40 });
       const hp = enemy.hp;
       const ev = stepFor(race, t, inputs, 10);
       expect(ev.find((e) => e.type === 'projEnd')).toMatchObject({ proj: 991, hit: false });
