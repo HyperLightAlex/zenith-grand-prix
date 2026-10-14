@@ -66,7 +66,7 @@ const SpeedShader = {
       // camera), and a little blur toward the edges, as before, on top.
       float z = max(-perspectiveDepthToViewZ(texture2D(tDepth, vUv).x, uNear, uFar), uNear);
       float mask = smoothstep(0.1, 0.6, r);
-      float stretch = min(uTravel / z, 0.16) * mask * (1.0 - texture2D(tTravel, vUv).r);
+      float stretch = min(uTravel / z, 0.09) * mask * (1.0 - texture2D(tTravel, vUv).r);
       float edge = (uSpeed * 0.012 + uBoost * 0.03) * smoothstep(0.3, 0.95, r);
       float amt = (stretch + edge) * uBlurK * (1.0 - uHold);
       vec3 col = vec3(0.0);
@@ -101,9 +101,9 @@ const SpeedShader = {
         // More of them, reaching further in, the faster it goes.
         float n = 56.0;
         float sd = floor(ang * n / 6.28318);
-        float dens = clamp(0.1 + 0.16 * uSpeed + 0.22 * uBoost, 0.0, 0.6);
+        float dens = clamp(0.14 + 0.06 * uSpeed + 0.16 * uBoost, 0.0, 0.45);
         float on = step(1.0 - dens, hash(sd * 1.71 + uLineSeed * 31.7));
-        float start = 0.36 + hash(sd + 3.1) * 0.3 - 0.08 * min(uBoost, 1.0);
+        float start = 0.36 + hash(sd + 3.1) * 0.3 - 0.04 * min(uBoost, 1.0);
         float fd = fract(ang * n / 6.28318);
         float hw = 0.07 + 0.3 * smoothstep(start, 1.25, r);
         // (fwidth of the angle, not of its fract, which jumps at each cell's edge.)
