@@ -1,8 +1,10 @@
 // WebGL renderer plus the post-processing chain: bloom, then a "speed" pass
-// (radial blur, streaks, vignette, impact flash), then tone-mapped output.
+// (the stretch of the world going by, streaks, vignette, impact flash), then
+// tone-mapped output.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Pass } from 'three/addons/postprocessing/Pass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -15,6 +17,15 @@ const SpeedShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
     uSpeed: { value: 0 }, // 0..1 radial blur and streak strength
+    // The depth of the frame, for the stretch: how far the camera travels in
+    // the blur's "shutter" (world units), over each pixel's distance, is how
+    // far that pixel smears away from the point the camera is heading for.
+    tDepth: { value: null as THREE.Texture | null },
+    // What travels with the camera (the mechs), drawn small: left sharp.
+    tTravel: { value: null as THREE.Texture | null },
+    uNear: { value: 0.5 },
+    uFar: { value: 40000 },
+    uTravel: { value: 0 },
     uBoost: { value: 0 },
     uFlash: { value: 0 }, // white impact flash
     uHurt: { value: 0 }, // red edge when hit
@@ -34,8 +45,11 @@ const SpeedShader = {
     varying vec2 vUv;
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */ `
+    #include <packing>
     uniform sampler2D tDiffuse;
-    uniform float uSpeed, uBoost, uFlash, uHurt, uTime, uAspect, uBlurK, uLineK, uDrawn, uLineSeed, uHold;
+    uniform sampler2D tDepth;
+    uniform sampler2D tTravel;
+    uniform float uSpeed, uBoost, uFlash, uHurt, uTime, uAspect, uBlurK, uLineK, uDrawn, uLineSeed, uHold, uNear, uFar, uTravel;
     uniform vec2 uFocus;
     uniform vec3 uTint;
     varying vec2 vUv;
@@ -44,14 +58,27 @@ const SpeedShader = {
       vec2 to = vUv - uFocus;
       vec2 asp = vec2(to.x * uAspect, to.y);
       float r = length(asp);
-      // Radial blur that grows toward the edges of the frame.
-      float amt = (uSpeed * 0.04 + uBoost * 0.05) * uBlurK * smoothstep(0.12, 0.85, r) * mix(1.0, 0.3, uDrawn) * (1.0 - uHold);
+      // The world stretching past: a pixel smears away from the point the
+      // camera is heading for by as far as the camera travels in the
+      // "shutter" over that pixel's distance, so the road and the barriers
+      // close by streak and the sky and far hills hold still. Kept off the
+      // middle of the frame (the mech being followed travels with the
+      // camera), and a little blur toward the edges, as before, on top.
+      float z = max(-perspectiveDepthToViewZ(texture2D(tDepth, vUv).x, uNear, uFar), uNear);
+      float mask = smoothstep(0.1, 0.6, r);
+      float stretch = min(uTravel / z, 0.16) * mask * (1.0 - texture2D(tTravel, vUv).r);
+      float edge = (uSpeed * 0.012 + uBoost * 0.03) * smoothstep(0.3, 0.95, r);
+      float amt = (stretch + edge) * uBlurK * (1.0 - uHold);
       vec3 col = vec3(0.0);
       float tw = 0.0;
-      for (int i = 0; i < 8; i++) {
-        float t = float(i) / 7.0;
-        float w = 1.0 - t * 0.6;
-        col += texture2D(tDiffuse, vUv - to * amt * t).rgb * w;
+      // Jittered along the streak, so a long one is a smear and not a row of copies.
+      float jit = hash(dot(floor(vUv * 1024.0), vec2(1.0, 57.0)) + uTime) / 12.0;
+      for (int i = 0; i < 12; i++) {
+        float t = float(i) / 12.0 + jit;
+        vec2 at = vUv - to * amt * t;
+        // (Not smeared out of a mech: it is not what is going by.)
+        float w = (1.0 - t * 0.55) * (1.0 - 0.9 * texture2D(tTravel, at).r * step(0.001, amt));
+        col += texture2D(tDiffuse, at).rgb * w;
         tw += w;
       }
       col /= tw;
@@ -71,10 +98,12 @@ const SpeedShader = {
         // Drawn speed lines: hard-edged wedges from the edge of the frame,
         // thicker toward the edge, mostly white with a few in ink, a new set
         // on every drawing.
+        // More of them, reaching further in, the faster it goes.
         float n = 56.0;
         float sd = floor(ang * n / 6.28318);
-        float on = step(0.8, hash(sd * 1.71 + uLineSeed * 31.7));
-        float start = 0.36 + hash(sd + 3.1) * 0.3;
+        float dens = clamp(0.1 + 0.16 * uSpeed + 0.22 * uBoost, 0.0, 0.6);
+        float on = step(1.0 - dens, hash(sd * 1.71 + uLineSeed * 31.7));
+        float start = 0.36 + hash(sd + 3.1) * 0.3 - 0.08 * min(uBoost, 1.0);
         float fd = fract(ang * n / 6.28318);
         float hw = 0.07 + 0.3 * smoothstep(start, 1.25, r);
         // (fwidth of the angle, not of its fract, which jumps at each cell's edge.)
@@ -93,6 +122,26 @@ const SpeedShader = {
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
+
+/** The layer of what travels with the camera (the mechs), which the speed stretch leaves sharp. */
+export const TRAVELLER_LAYER = 5;
+
+/** Put an object (and everything in it) on the traveller layer as well as its own. */
+export function markTraveller(root: THREE.Object3D): void {
+  root.traverse((o) => o.layers.enable(TRAVELLER_LAYER));
+}
+
+/** Draws nothing: hands the depth of the frame just rendered to the passes after it. */
+class DepthTap extends Pass {
+  constructor(private readonly out: { value: THREE.Texture | null }) {
+    super();
+    this.needsSwap = false;
+  }
+
+  override render(_r: THREE.WebGLRenderer, _w: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+    this.out.value = readBuffer.depthTexture;
+  }
+}
 
 export type Quality = 'low' | 'medium' | 'high';
 
@@ -121,6 +170,10 @@ export class Renderer {
   /** The game is paused: a cut in progress waits for it. */
   paused = false;
   private quality: Quality = 'high';
+  /** The travellers drawn white on black at a quarter of the size, for the stretch. */
+  private travelMask = new THREE.WebGLRenderTarget(320, 180, { depthBuffer: false });
+  private travelMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
+  private clearColor = new THREE.Color();
   private frameTimes: number[] = [];
   private lastScaleChange = 0;
   private scale = 1;
@@ -143,6 +196,9 @@ export class Renderer {
     target.depthTexture = new THREE.DepthTexture(size.x, size.y);
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.speedPass = new ShaderPass(SpeedShader);
+    this.speedPass.uniforms.tTravel.value = this.travelMask.texture;
+    this.composer.addPass(new DepthTap(this.speedPass.uniforms.tDepth));
     this.inkPass = new InkPass();
     this.composer.addPass(this.inkPass);
     this.bloomThreshold = hdr ? 1.0 : 0.9;
@@ -161,7 +217,6 @@ export class Renderer {
       float bloomAlpha =`,
     );
     comp.needsUpdate = true;
-    this.speedPass = new ShaderPass(SpeedShader);
     this.composer.addPass(this.speedPass);
     this.filmPass = new FilmPass();
     this.composer.addPass(this.filmPass);
@@ -260,8 +315,10 @@ export class Renderer {
     // Only what is meant to glow blooms: a lit surface keeps its flat colour.
     this.bloom.threshold = on ? this.bloomThreshold + 0.3 : this.bloomThreshold;
     this.bloomBands.value = on ? 1 : 0;
-    // Speed is drawn, not blurred.
+    // Speed is drawn as well as blurred.
     this.speedPass.uniforms.uDrawn.value = on ? 1 : 0;
+    this.speedPass.uniforms.uNear.value = this.camera.near;
+    this.speedPass.uniforms.uFar.value = this.camera.far;
     if (drawClock.fresh) this.speedPass.uniforms.uLineSeed.value = drawClock.drawing % 89;
   }
 
@@ -288,6 +345,7 @@ export class Renderer {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.speedPass.uniforms.uAspect.value = w / h;
+    this.travelMask.setSize(Math.max(1, Math.round((w * ratio) / 4)), Math.max(1, Math.round((h * ratio) / 4)));
     const pw = Math.round(w * ratio);
     const ph = Math.round(h * ratio);
     (this.inkPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
@@ -316,6 +374,27 @@ export class Renderer {
     this.adapt(dt, now);
     this.applyLook(dt);
     this.speedPass.uniforms.uTime.value = now;
+    if (this.speedPass.uniforms.uTravel.value > 0.001) this.drawTravellers();
     this.composer.render(dt);
+  }
+
+  /** The mask of what travels with the camera: the mechs alone, flat white. */
+  private drawTravellers(): void {
+    const r = this.renderer;
+    const cam = this.camera;
+    const layers = cam.layers.mask;
+    const override = this.scene.overrideMaterial;
+    r.getClearColor(this.clearColor);
+    const alpha = r.getClearAlpha();
+    cam.layers.set(TRAVELLER_LAYER);
+    this.scene.overrideMaterial = this.travelMat;
+    r.setRenderTarget(this.travelMask);
+    r.setClearColor(0x000000, 1);
+    r.clear(true, false, false);
+    r.render(this.scene, cam);
+    r.setRenderTarget(null);
+    r.setClearColor(this.clearColor, alpha);
+    this.scene.overrideMaterial = override;
+    cam.layers.mask = layers;
   }
 }
