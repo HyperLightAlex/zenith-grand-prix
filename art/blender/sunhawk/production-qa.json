@@ -56,5 +56,29 @@
     "cycles": 2,
     "warnings": 0,
     "errors": 0
+  },
+  "rear_jet_regression_fix": {
+    "date": "2026-10-15",
+    "cause": "Circular flare was reduced independently of the painted flame, making the flame dominate the rear view.",
+    "fix": "Restore updated-model burner size to 0.72 and use complementary viewing-angle opacity for its painted flame.",
+    "reference_effects_preserved": true,
+    "visual_checks": [
+      "Direct rear view: circular jets visible",
+      "Side view: painted exhaust visible",
+      "Three-quarter view: smooth overlap",
+      "Production Canyon chase camera",
+      "Plain-mode cones"
+    ],
+    "console_warnings": 0,
+    "console_errors": 0,
+    "tests": 863,
+    "typecheck": "passed",
+    "production_build": "passed",
+    "single_file_build": "passed",
+    "screenshots": [
+      "previews/production/jet-rear.png",
+      "previews/production/jet-side.png",
+      "previews/production/jet-race.png"
+    ]
   }
 }

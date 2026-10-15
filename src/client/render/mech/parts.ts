@@ -26,6 +26,13 @@ export const DRAWN_FLAMES = { uDrawn: { value: 0 }, uFrame: { value: 0 } };
 let flameAtlas: THREE.Texture | null = null;
 const flamePlane = new THREE.PlaneGeometry(1, 1);
 
+// Both drawings must agree about when we are looking into the exhaust.
+const jetFacingGLSL = /* glsl */ `
+  float jetFacing(vec3 axis, vec3 toCamera) {
+    return smoothstep(0.25, 0.8, dot(axis, toCamera));
+  }
+`;
+
 /**
  * A painted flame (tools/fx/build_sprites.py, sheet 7) hung from a thruster:
  * a card that turns about the flame's axis to face the camera, sized by the
@@ -43,11 +50,14 @@ function drawnFlameMaterial(color: number): THREE.ShaderMaterial {
       uMap: { value: flameAtlas },
       uTint: { value: new THREE.Color(color) },
       uRow: { value: 0 },
+      uEndOnFade: { value: 0 },
       uPhase: { value: Math.floor(Math.random() * 3) },
     },
     vertexShader: /* glsl */ `
-      uniform float uDrawn, uRow;
+      uniform float uDrawn, uRow, uEndOnFade;
       varying vec2 vUv;
+      varying float vFlameAlpha;
+      ${jetFacingGLSL}
       void main() {
         vUv = uv;
         // The parent flame's mouth, axis (its length is the flame's) and width.
@@ -56,10 +66,13 @@ function drawnFlameMaterial(color: number): THREE.ShaderMaterial {
         float len = length(axis);
         vec3 ax = axis / max(len, 1e-4);
         float wid = length((modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz) * 2.0;
-        // The card always faces the camera, drawn along the flame's axis as it
-        // looks on screen. A flame pointing at the camera (the chase view of
-        // the back thrusters) still shows, shorter, hanging down from its nozzle.
+        // The card faces the camera along the projected exhaust axis. The
+        // legacy overlap mode keeps a shortened drawing in the head-on view;
+        // frames using uEndOnFade hand that view to the circular burner.
         vec3 toCam = normalize(cameraPosition - mouth);
+        // Updated frames hand the head-on view to the circular burner. The
+        // reference frames keep their original overlapping drawings.
+        vFlameAlpha = 1.0 - uEndOnFade * jetFacing(ax, toCam);
         vec3 proj = ax - toCam * dot(ax, toCam);
         float pl = length(proj);
         vec3 camUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
@@ -74,13 +87,14 @@ function drawnFlameMaterial(color: number): THREE.ShaderMaterial {
         vec3 p = mouth + along * ((0.5 - position.y) * cellLen - 0.02 * cellLen) + right * (position.x * cellWid);
         gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
         // Off in the plain look: put it behind the far plane.
-        if (uDrawn < 0.5) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+        if (uDrawn < 0.5 || vFlameAlpha < 0.01) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
       }`,
     fragmentShader: /* glsl */ `
       uniform sampler2D uMap;
       uniform vec3 uTint;
       uniform float uRow, uFrame, uPhase;
       varying vec2 vUv;
+      varying float vFlameAlpha;
       void main() {
         float f = mod(uFrame + uPhase, 3.0);
         vec4 t = texture2D(uMap, vec2((f + vUv.x) / 3.0, 0.5 - uRow * 0.5 + vUv.y * 0.5));
@@ -89,7 +103,7 @@ function drawnFlameMaterial(color: number): THREE.ShaderMaterial {
         float hi = max(c.r, max(c.g, c.b));
         float white = min(c.r, min(c.g, c.b)) / max(hi, 1e-3);
         c = mix(uTint * hi, vec3(hi), white * white);
-        gl_FragColor = vec4(c * 1.35, t.a);
+        gl_FragColor = vec4(c * 1.35, t.a * vFlameAlpha);
       }`,
     transparent: true,
     depthWrite: false,
@@ -119,6 +133,7 @@ function burnerMaterial(color: number): THREE.ShaderMaterial {
       uniform float uDrawn, uPower, uSize;
       varying vec2 vUv;
       varying float vFace;
+      ${jetFacingGLSL}
       void main() {
         vUv = uv * 2.0 - 1.0;
         vec3 mouth = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -127,7 +142,7 @@ function burnerMaterial(color: number): THREE.ShaderMaterial {
         float wid = length((modelMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
         vec3 toCam = normalize(cameraPosition - mouth);
         // Looking into the nozzle (the exhaust coming at the camera): 1.
-        vFace = smoothstep(0.25, 0.8, dot(ax, toCam));
+        vFace = jetFacing(ax, toCam);
         vec3 camRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
         vec3 camUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
         float size = wid * (3.0 + 2.6 * min(uPower, 1.5)) * uSize;

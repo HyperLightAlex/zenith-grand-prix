@@ -291,6 +291,9 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 ## Sunhawk model comparison
 
 The two Blender models are in the game on `alexander/sunhawk-blender-comparison`.
+The updated Sunhawk is the approved visual standard for future frame work:
+broad readable armor, controlled cel shadows, restrained surface detail and
+distinct mechanical joints. Its production blend is the reference asset.
 Select Solstice's forward in the garage. **Sunhawk design** cycles between the
 updated art design (default), **Current reference**, and the previous code-built
 game model. Keyboard **B** does the same in the garage, during a race, or while
@@ -305,6 +308,10 @@ open `?debug=mechs&compare=1&pose=standby&bg=e4e6ec`; `pose` also accepts
 This studio viewer uses the base materials; use the garage/race for the full anime
 postprocessing and animated effects. Add `&bank=0.45` to inspect grounded skates
 under body lean, or `&lod=0|1|2` to inspect the updated model's near/medium/far mesh.
+For jet-angle checks use `&jets=0.7&yaw=180` with a single pose; change `yaw` to
+inspect the circular rear jet fading into the side flame. `&look=plain` checks
+the plain cone instead. The updated model blends these two anime drawings with
+complementary opacity; the current reference retains its original effects.
 
 The production source is **`art/blender/sunhawk/sunhawk-production.blend`**.
 The original `sunhawk-comparison.blend` remains an unchanged art-study checkpoint;

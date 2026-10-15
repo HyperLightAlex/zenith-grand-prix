@@ -6,6 +6,7 @@
 //   &yaw &dist &h &cx &cz &ly   camera
 //   &ortho=10.67       an orthographic camera showing that many metres top to bottom (for model sheets)
 //   &bg=e4e6ec         a flat background of that colour, no floor (to compare against a model sheet)
+//   &jets=0.7          hold jet power for angle checks; &look=plain checks the plain cone
 //   &sun=-0.5,0.6,0.6  where the light comes from
 import * as THREE from 'three';
 import { ROLE } from '../sim/config';
@@ -15,6 +16,7 @@ import { makePose, type MechRig } from './render/mech/rig';
 import { POSES } from './render/mech/poses';
 import { getSunhawkModel, setSunhawkModel } from './render/mech/sunhawkSelection';
 import { setMechDetail } from './render/mech/detail';
+import { DRAWN_FLAMES } from './render/mech/parts';
 
 export function runMechDebug(): void {
   const q = new URLSearchParams(location.search);
@@ -79,13 +81,22 @@ export function runMechDebug(): void {
   const team = Number(q.get('team') ?? 0);
   const poseName = q.get('pose') ?? 'stand';
   const poseList = (q.get('poses') ?? '').split(',').filter(Boolean);
+  const jetPower = q.has('jets') ? Math.max(0, Math.min(1.5, Number(q.get('jets')) || 0)) : null;
+  if (jetPower !== null) DRAWN_FLAMES.uDrawn.value = q.get('look') === 'plain' ? 0 : 1;
   const place = (rig: MechRig, x: number, z: number, yaw: number, pose: string, flame: number) => {
     rig.root.position.set(x, 0, z);
     rig.root.rotation.y = yaw;
     rig.body.rotation.z = Number(q.get('bank') ?? 0);
     rig.apply(lib[pose] ?? makePose());
     setMechDetail(rig, Number(q.get('lod') ?? 0));
-    for (const f of rig.flames) f.mesh.scale.z = f.length * flame;
+    for (const f of rig.flames) {
+      f.mesh.scale.z = f.length * (jetPower ?? flame);
+      if (jetPower !== null) {
+        f.mesh.scale.x = f.mesh.scale.y = f.width * (.8 + jetPower * .5);
+        f.mesh.visible = jetPower > .03;
+        if (f.burner) (f.burner.material as THREE.ShaderMaterial).uniforms.uPower.value = jetPower;
+      }
+    }
     scene.add(rig.root);
     return rig;
   };
@@ -130,5 +141,11 @@ export function runMechDebug(): void {
   cam.position.set(cx + Math.sin(yaw) * dist, camH, cz + Math.cos(yaw) * dist);
   cam.lookAt(cx, Number(q.get('ly') ?? 4.4), cz);
   renderer.render(scene, cam);
+  // Keep texture loading and the three-frame jet loop visible in this focused
+  // effects check. Ordinary model-sheet views remain a single render.
+  if (jetPower !== null) renderer.setAnimationLoop((now) => {
+    DRAWN_FLAMES.uFrame.value = Math.floor(now * .012) % 3;
+    renderer.render(scene, cam);
+  });
   (window as unknown as { __info: unknown }).__info = { rigs: rigs.length, pose: poseName };
 }

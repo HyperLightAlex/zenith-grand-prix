@@ -70,9 +70,10 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
   num.renderOrder = 3; // Draw over the transparent roundel (order 2).
   J.chest.add(num);
   if (u) for (const f of rig.flames) {
-    // The paired backpack nozzles are close together. Keep their end-on flares
-    // inside the back silhouette so a boost does not hide the armor and fins.
-    if (f.burner) (f.burner.material as THREE.ShaderMaterial).uniforms.uSize.value = f.bank === 'main' ? .38 : .55;
+    // Head-on: a visible circular jet. Off-axis: the painted exhaust. Reducing
+    // only the circle made the unchanged flame dominate the chase view.
+    if (f.burner) (f.burner.material as THREE.ShaderMaterial).uniforms.uSize.value = .72;
+    if (f.drawn) (f.drawn.material as THREE.ShaderMaterial).uniforms.uEndOnFade.value = 1;
   }
   rig.root.userData.sunhawkModel=variant;
 }
