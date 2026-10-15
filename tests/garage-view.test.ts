@@ -10,6 +10,7 @@ import { buildFrame } from '../src/client/render/mech/frames';
 import { fitCameraToViewport } from '../src/client/render/viewport';
 import type { Renderer } from '../src/client/render/renderer';
 import type { TrackVisual } from '../src/client/render/trackMesh';
+import { drawClock, look } from '../src/client/render/look';
 
 // Keep real scene ownership, animation, cameras and simulation. Substitute
 // only GPU effects and mesh construction so lifecycle checks can run in Node.
@@ -24,7 +25,7 @@ vi.mock('../src/client/render/mech/frames', () => ({
 vi.mock('../src/client/render/fx', () => {
   const mesh = () => new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
   return {
-    Fx: class { group = new THREE.Group(); resize() {} update() {} dispose() {} beginTracers() {} endTracers() {} },
+    Fx: class { group = new THREE.Group(); resize() {} update() {} dispose() {} beginTracers() {} endTracers() {} spray() {} },
     Trail: class { mesh = mesh(); setColor() {} update() {} },
     makeBubble: mesh, makeLockRing: mesh, makeShadow: mesh, makeShield: mesh, makeSnareRing: mesh, shadowTexture: () => null,
   };
@@ -93,5 +94,42 @@ describe('garage preview lifecycle', () => {
     view.update(1/60,0,0,false);
     for (let id=0;id<6;id++) expect(view.positionOf(id).toArray().every(Number.isFinite)).toBe(true);
     view.dispose();
+  });
+});
+
+describe('steering presentation', () => {
+  it('responds between anime drawings while keeping the stride and other pilots on held poses', () => {
+    const previous = {on: look.on, steps: look.steps, time: drawClock.time};
+    look.on = true;
+    look.steps = 12;
+    drawClock.time = 1;
+    const {view, session} = setup(0, false);
+    try {
+      const me = session.race.mechs[0], other = session.race.mechs[1];
+      me.speed = other.speed = 60;
+      me.boosting = other.boosting = true; // the slower 8 Hz pose cadence
+      const rigs = vi.mocked(buildFrame).mock.results.map(r => r.value as MechRig);
+      const rig = rigs[0];
+      view.update(1/60,0,0,false);
+      const stride = rig.joints.hips.position.clone();
+      me.steer = other.steer = 1;
+      view.update(1/60,0,0,false); // same drawing: no wait for its next boundary
+      expect(rig.body.rotation.z).toBeGreaterThan(0);
+      expect(rigs[1].body.rotation.z).toBe(0);
+      expect(rig.joints.hips.position).toEqual(stride);
+      const lean = rig.body.rotation.z;
+      me.steer = -1;
+      view.update(1/60,0,0,false);
+      expect(rig.body.rotation.z).toBeLessThan(lean);
+      const pausedLean = rig.body.rotation.z;
+      me.steer = 1;
+      view.update(0,0,0,false);
+      expect(rig.body.rotation.z).toBe(pausedLean);
+    } finally {
+      view.dispose();
+      look.on = previous.on;
+      look.steps = previous.steps;
+      drawClock.time = previous.time;
+    }
   });
 });

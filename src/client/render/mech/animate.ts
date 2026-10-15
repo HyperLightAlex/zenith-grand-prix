@@ -50,8 +50,9 @@ export class MechAnimator {
     rig.apply(this.pose);
   }
 
-  /** `alpha` is the fraction of a tick since the state was current. */
-  update(dt: number, m: MechState, alpha: number): void {
+  /** `alpha` is the fraction of a tick since the state was current.
+   * `bodyDt` can run at display rate while the pose uses the drawing clock. */
+  update(dt: number, m: MechState, alpha: number, bodyDt = dt): void {
     this.time += dt;
     const battle = m.mode === MODE.BATTLE && !m.retired;
     this.battleW = toward(this.battleW, battle ? 1 : 0, 9, dt);
@@ -196,15 +197,7 @@ export class MechAnimator {
       P.head[0] += Math.sin(this.time * 0.23 + 1) * 0.04;
     }
 
-    // ---- whole-body lean: bank into turns, pitch with acceleration
-    const accel = dt > 0 ? (m.speed - this.prevSpeed) / dt : 0;
-    this.prevSpeed = m.speed;
-    // A carve leans in further than a turn.
-    const wantLean = battle ? this.arcW * 0.45 : m.steer * (0.42 + 0.26 * carving) * clamp01(m.speed / 40);
-    this.lean = toward(this.lean, wantLean * (1 - this.koW), 8, dt);
-    this.pitch = toward(this.pitch, Math.max(-0.12, Math.min(0.1, accel * 0.0022)) * (1 - this.battleW), 5, dt);
-    this.rig.body.rotation.set(-this.pitch, 0, this.lean);
-    this.rig.apply(P);
+    this.updateSteering(bodyDt, m);
 
     // ---- thrusters
     let want = 0;
@@ -239,6 +232,19 @@ export class MechAnimator {
         }
       }
     }
+  }
+
+  /** Bank on the latest simulation state even while an anime drawing is held.
+   * Reapply the held pose so the foot solver keeps the skates on the road. */
+  updateSteering(dt: number, m: MechState): void {
+    const accel = dt > 0 ? (m.speed - this.prevSpeed) / dt : 0;
+    this.prevSpeed = m.speed;
+    const battle = m.mode === MODE.BATTLE && !m.retired;
+    const wantLean = battle ? this.arcW * 0.45 : m.steer * (0.42 + 0.26 * Math.abs(this.carveW)) * clamp01(m.speed / 40);
+    this.lean = toward(this.lean, wantLean * (1 - this.koW), 8, dt);
+    this.pitch = toward(this.pitch, Math.max(-0.12, Math.min(0.1, accel * 0.0022)) * (1 - this.battleW), 5, dt);
+    this.rig.body.rotation.set(-this.pitch, 0, this.lean);
+    this.rig.apply(this.pose);
   }
 
   /** Current battle-stance weight, for effects that differ by mode. */

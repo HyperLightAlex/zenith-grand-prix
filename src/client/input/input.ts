@@ -185,7 +185,9 @@ export class Input {
       }
       this.prevFlick = flick;
       const pc = b(PAD.UP) ? 1 : b(PAD.RIGHT) ? 2 : b(PAD.DOWN) ? 3 : b(PAD.LEFT) ? 4 : 0;
-      const active = mag > 0.3 || rt > 0.1 || lt > 0.1 || pb !== 0 || pc !== 0 || Math.abs(rx) > 0.3 || b(PAD.START);
+      // Use the same dead zones for device selection and movement. A second,
+      // larger threshold silently discarded gentle steering after key navigation.
+      const active = lx !== 0 || ly !== 0 || rt > 0.1 || lt > 0.1 || pb !== 0 || pc !== 0 || rx !== 0 || ry !== 0 || b(PAD.START);
       if (active) this.touch('pad');
       if (this.device === 'pad') {
         mx = lx;

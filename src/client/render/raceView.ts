@@ -356,11 +356,16 @@ export class RaceView {
       const held = !m.retired && (m.boosting || m.carving || m.overdriveT > 0 || (m.carveT > 0 && m.mode === MODE.SPEED));
       const step = drawingStep(held ? 8 : 0);
       const idx = step > 0 ? Math.floor(drawClock.time / step) : -2;
+      // Steering feedback must not wait up to 125 ms for an 8 Hz drawing.
+      // Only the human pilot's bank runs every frame; stride/actions stay on twos.
+      const responsive = !this.solo && m.id === this.session.localId && m.human;
       if (step <= 0 || idx !== v.poseIdx) {
         v.anim.display = this.solo && m.id === this.focusId;
-        v.anim.update(v.poseAcc, m, alpha);
+        v.anim.update(v.poseAcc, m, alpha, responsive ? dt : v.poseAcc);
         v.poseAcc = 0;
         v.poseIdx = idx;
+      } else if (responsive) {
+        v.anim.updateSteering(dt, m);
       }
       v.rig.root.updateMatrixWorld(true);
       trackPoint(track, v.s, v.d, 4.2 + v.h, v.pos);
