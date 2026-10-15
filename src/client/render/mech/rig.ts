@@ -168,6 +168,8 @@ export class MechRig {
   detailLevel = 0;
   /** Optional frame-specific retargeting; never mutate a shared pose. */
   fitPose?: (pose: Pose) => void;
+  /** Secondary armor hinges driven by the final, fitted arm pose. */
+  poseArmor?: (pose: Pose) => void;
   keepFeetOnRoad = false;
   private fittedPose = makePose();
   /**
@@ -235,6 +237,7 @@ export class MechRig {
     J.wrR.rotation.set(p.wrR[0], p.wrR[1], p.wrR[2]);
     J.wingL.rotation.set(p.wingL[0], p.wingL[1], p.wingL[2]);
     J.wingR.rotation.set(p.wingR[0], p.wingR[1], p.wingR[2]);
+    this.poseArmor?.(p);
     qh.setFromEuler(J.hips.rotation);
     qInv.copy(qh).invert();
     qBodyInv.copy(this.body.quaternion).invert();

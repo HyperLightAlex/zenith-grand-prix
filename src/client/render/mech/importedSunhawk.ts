@@ -4,7 +4,7 @@ import { Kit } from './kit';
 import { numberDecal, type FrameCtx } from './parts';
 import { sunhawkAsset, type AssetJoint } from './sunhawkAsset';
 import { getSunhawkPanels, type SunhawkAssetVariant } from './sunhawkSelection';
-import { fitSunhawkPose } from './sunhawkMotion';
+import { attachSunhawkTowers, fitSunhawkPose } from './sunhawkMotion';
 import { sunhawkDetailMaterial } from './sunhawkDetails';
 import { setMechDetail } from './detail';
 
@@ -18,7 +18,8 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
     rig.fitPose = fitSunhawkPose;
     rig.keepFeetOnRoad = true;
   }
-  const joints = { ...J, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back };
+  const towers = attachSunhawkTowers(rig);
+  const joints = { ...J, ...towers, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back };
   rig.skirts.l.position.set(.65,.11,.36);
   rig.skirts.r.position.set(-.65,.11,.36);
   rig.skirts.back.position.set(0,.15,-.34);
@@ -56,7 +57,8 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
   setMechDetail(rig, 0);
   for (const s of [1,-1]) {
     const towerX = s*(u ? 1.63 : 1.83);
-    decal(J.chest,livery,s === -1 ? 'emblem' : 'warning',[towerX,1.79,.39],[-.08,0,0],.29);
+    decal(s === 1 ? towers.towerL : towers.towerR,livery,s === -1 ? 'emblem' : 'warning',
+      [towerX-s*rig.dims.shoulderX,1.79-rig.dims.shoulderY,.39],[-.08,0,0],.29);
     c.flame(J.chest,[s*.30,.21,-1.06],[-.38,0,0],u ? .22 : .20,3.4,'main');
     c.flame(s === 1 ? J.kneeL : J.kneeR,[0,-1.25,u ? -.77 : -.57],[-.38,0,0],u ? .18 : .13,1.6,'leg');
     (s === 1 ? rig.handL : rig.handR).position.set(0,-.3,.2);

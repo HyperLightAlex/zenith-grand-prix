@@ -2,14 +2,15 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OBB } from 'three/addons/math/OBB.js';
 import { readSunhawkAsset } from '../src/client/render/mech/sunhawkAsset';
 import { Kit } from '../src/client/render/mech/kit';
 import { LIVERIES } from '../src/client/render/palette';
-import { MechRig, copyPose, makePose } from '../src/client/render/mech/rig';
+import { MechRig, blendPose, copyPose, makePose, mirrorPose } from '../src/client/render/mech/rig';
 import { POSES } from '../src/client/render/mech/poses';
 import { MechAnimator } from '../src/client/render/mech/animate';
 import { Arena, FW0 } from './helpers';
-import { fitSunhawkPose } from '../src/client/render/mech/sunhawkMotion';
+import { attachSunhawkTowers, fitSunhawkPose } from '../src/client/render/mech/sunhawkMotion';
 import { detailLevelForPixels, setMechDetail } from '../src/client/render/mech/detail';
 
 for (const variant of ['current', 'updated'] as const) {
@@ -39,7 +40,7 @@ for (const variant of ['current', 'updated'] as const) {
       // Catch accidentally exporting the outline shells, stage or both variants.
       expect(triangles).toBeGreaterThan(18_000);
       expect(triangles).toBeLessThan(30_000);
-      // Fixed towers must not follow the upper arms into the knees in a tuck.
+      // Towers need their own shoulder-local pivots for raised-arm clearance.
       const bounds = (joint: string) => {
         const box = new THREE.Box3();
         for (const part of asset.parts.filter((p) => p.joint === joint)) {
@@ -48,9 +49,59 @@ for (const variant of ['current', 'updated'] as const) {
         }
         return box;
       };
-      expect(bounds('chest').max.y).toBeGreaterThan(2.7);
+      expect(bounds('chest').max.y).toBeLessThan(1.5);
+      expect(bounds('towerL').max.y).toBeGreaterThan(1.8);
+      expect(bounds('towerR').max.y).toBeGreaterThan(1.8);
       expect(bounds('shL').max.y).toBeLessThan(.6);
       expect(bounds('shR').max.y).toBeLessThan(.6);
+    });
+
+    it('clears the raised arm through victory transitions and leaves racing towers upright', async () => {
+      const asset = readSunhawkAsset((await load()).scene, variant);
+      const rig = new MechRig(asset.dims);
+      if (variant === 'updated') rig.fitPose = fitSunhawkPose;
+      rig.joints.elL.position.x = rig.joints.wrL.position.x = .13;
+      rig.joints.elR.position.x = rig.joints.wrR.position.x = -.13;
+      const towers = attachSunhawkTowers(rig);
+      const joints = { ...rig.joints, ...towers };
+      const box = (joint: keyof typeof joints, slot: string) => {
+        const geometry = asset.parts.find((p) => p.joint === joint && p.slot === slot && !p.detail)!.geometry;
+        geometry.computeBoundingBox();
+        const obb = new OBB().fromBox3(geometry.boundingBox!).applyMatrix4(joints[joint].matrixWorld);
+        geometry.boundingBox!.getCenter(obb.center).applyMatrix4(joints[joint].matrixWorld);
+        return obb;
+      };
+      for (const end of [POSES.victory, mirrorPose(POSES.victory)]) {
+        for (const start of [POSES.standby, POSES.boost, POSES.guard]) {
+          let previous: THREE.Quaternion[] | undefined;
+          for (let i = 0; i <= 100; i++) {
+            const p = blendPose(copyPose(makePose(), start), end, i / 100);
+            const before = JSON.stringify(p);
+            rig.apply(p); rig.root.updateMatrixWorld(true);
+            expect(JSON.stringify(p)).toBe(before);
+            for (const side of ['L', 'R'] as const) {
+              // The tower's white shell must clear the arm. Its blue mounting
+              // collar shares the shoulder's swivel volume by design.
+              const armor = box(`tower${side}`, 'P');
+              for (const arm of ['sh','el','wr'] as const) {
+                expect(armor.intersectsOBB(box(`${arm}${side}`, 'P')), `${variant} ${side} / ${arm} at ${i}`).toBe(false);
+              }
+            }
+            const now = [towers.towerL.quaternion.clone(), towers.towerR.quaternion.clone()];
+            if (previous) now.forEach((q, j) => expect(q.angleTo(previous![j])).toBeLessThan(.05));
+            previous = now;
+          }
+        }
+      }
+      for (const p of [POSES.standby, POSES.tuck, POSES.boost]) {
+        rig.apply(p); rig.root.updateMatrixWorld(true);
+        for (const side of ['L', 'R'] as const) {
+          expect(towers[`tower${side}`].rotation.x).toBeCloseTo(0);
+          for (const slot of ['P','S']) {
+            expect(box(`tower${side}`, slot).intersectsOBB(box(`knee${side}`, 'P'))).toBe(false);
+          }
+        }
+      }
     });
 
     it('preserves authored normals when merged into the game material without mutating cached geometry', async () => {
@@ -110,11 +161,16 @@ for (const variant of ['current', 'updated'] as const) {
     it('retains the animated pose when changing the rig during a race', async () => {
       const { dims } = readSunhawkAsset((await load()).scene, variant);
       const old = new MechRig(dims);
+      const oldTowers = attachSunhawkTowers(old);
       const animator = new MechAnimator(old);
       const mech = new Arena(1).put(FW0, 0, 0);
       mech.boosting = true;
       for (let i = 0; i < 12; i++) animator.update(1 / 60, mech, .5);
+      mech.finished = true;
+      for (let i = 0; i < 90; i++) animator.update(1 / 60, mech, .5);
+      expect(oldTowers.towerR.rotation.x).toBeLessThan(-.5);
       const replacement = new MechRig(dims);
+      const newTowers = attachSunhawkTowers(replacement);
       animator.replaceRig(replacement);
       for (const name of Object.keys(old.joints) as Array<keyof typeof old.joints>) {
         expect(replacement.joints[name].quaternion.toArray()).toEqual(old.joints[name].quaternion.toArray());
@@ -122,6 +178,9 @@ for (const variant of ['current', 'updated'] as const) {
       }
       expect(replacement.skirts.l.rotation.x).toBe(old.skirts.l.rotation.x);
       expect(replacement.skirts.r.rotation.x).toBe(old.skirts.r.rotation.x);
+      for (const key of ['towerL','towerR'] as const) {
+        expect(newTowers[key].quaternion.toArray()).toEqual(oldTowers[key].quaternion.toArray());
+      }
     });
   });
 }

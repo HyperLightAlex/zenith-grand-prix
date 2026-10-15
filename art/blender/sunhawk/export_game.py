@@ -75,11 +75,11 @@ try:
             assert ob.parent in joints.values(), ob.name
             joint=JOINTS[ob.parent.name.split('JNT / ')[1]]
             local=ob.parent.matrix_world.inverted()@ob.matrix_world
-            # Towers are fixed shoulder equipment, not part of the arm swing.
-            # Otherwise a racing tuck drives their tips down through the knees.
+            # Separate shoulder-local armor hinges: the runtime folds these
+            # back for raised arms without sending them into the knees in a tuck.
             if 'Pylon bracket' in ob.name or 'Tower ' in ob.name:
-                joint='chest'
-                local=joints['chest'].matrix_world.inverted()@ob.matrix_world
+                assert joint in ('shL','shR'), ob.name
+                joint='towerL' if joint=='shL' else 'towerR'
             # The source's hip plates were static presentation pieces. Give them
             # the same independently driven hinges used by the game's other mechs.
             if 'Floating hip shield' in ob.name or 'Hip brow' in ob.name:

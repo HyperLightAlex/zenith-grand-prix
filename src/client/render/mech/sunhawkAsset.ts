@@ -9,12 +9,12 @@ import { JOINTS, type FrameDims, type JointName } from './rig';
 import type { Slot } from './kit';
 import type { SunhawkAssetVariant } from './sunhawkSelection';
 
-export type AssetJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack';
+export type AssetJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack' | 'towerL' | 'towerR';
 export interface SunhawkPart { joint: AssetJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry; detail: boolean }
 export interface SunhawkAsset { dims: FrameDims; parts: SunhawkPart[] }
 const assets = new Map<string, SunhawkAsset>();
 const dimensions: Array<keyof FrameDims> = ['hipY','hipX','hipDrop','thigh','shin','ankleY','spineY','chestY','shoulderX','shoulderY','headY','headZ','upperArm','foreArm','height'];
-const jointNames: readonly string[] = [...JOINTS, 'skirtL', 'skirtR', 'skirtBack'];
+const jointNames: readonly string[] = [...JOINTS, 'skirtL', 'skirtR', 'skirtBack', 'towerL', 'towerR'];
 
 /** Validate the export contract before any race or garage uses the asset. */
 export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVariant): SunhawkAsset {

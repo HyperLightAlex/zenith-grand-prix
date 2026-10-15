@@ -1,4 +1,28 @@
-import type { Pose } from './rig';
+import * as THREE from 'three';
+import type { MechRig, Pose } from './rig';
+
+/** Shoulder-mounted towers hinge rearward as an arm rises. Full arm parenting
+ * would invert them into the torso at victory and pitch them into the knees
+ * during a tuck; a locked chest attachment blocks the raised upper arm.
+ */
+export function attachSunhawkTowers(rig: MechRig): { towerL: THREE.Group; towerR: THREE.Group } {
+  const towers = { towerL: new THREE.Group(), towerR: new THREE.Group() };
+  for (const side of [1, -1]) {
+    const tower = side === 1 ? towers.towerL : towers.towerR;
+    tower.name = side === 1 ? 'towerL' : 'towerR';
+    tower.position.copy((side === 1 ? rig.joints.shL : rig.joints.shR).position);
+    rig.joints.chest.add(tower);
+  }
+  rig.poseArmor = (p) => {
+    for (const side of [1, -1]) {
+      const arm = side === 1 ? p.shL : p.shR;
+      const tower = side === 1 ? towers.towerL : towers.towerR;
+      const raised = smooth(.6, 2.35, -arm[0]);
+      tower.rotation.set(-1.15 * raised, 0, -side * .18 * raised);
+    }
+  };
+  return towers;
+}
 
 /** Retarget the shared clips to Sunhawk's shorter thighs and fuller armor.
  * Called on a private copy: the reference model and shared clips stay intact.

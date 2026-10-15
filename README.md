@@ -320,7 +320,7 @@ open the production file, select **SUNHAWK • Art comparison**, and run
 `export_game.py` from Blender's Text Editor or Python console. It writes four
 GLBs under `src/client/render/mech/assets/` and `game-export-manifest.json`.
 It preserves the source scene, evaluates bevels and authored normals, removes
-preview outlines/markings, fixes the towers to the torso, and adds hip-armor hinges.
+preview outlines/markings, and exports separate shoulder-tower and hip-armor hinges.
 The game merges parts per moving joint and assigns its own shaders, decals,
 glows, thruster flames, weapon and skate-effect anchors.
 
@@ -328,7 +328,9 @@ The updated model has arm/hip/knee clearance adjustments, restrained bevels,
 cooler armor shadows, reduced glow, a tailored tuck/guard, and road-relative skate
 targets while banking. Both designs have corrected hand chirality: inner thumbs,
 forward white back plates, and fingers curling into rear-facing palms. The current
-reference's other geometry, materials and poses are preserved.
+reference's other geometry, materials and arm/leg poses are preserved. Both models'
+towers now hinge back as their arms rise, clearing the victory pose while retaining
+their upright racing placement. Tower decals and every LOD share these hinges.
 
 Seven conforming UV overlays use the shared 1024px `sunhawk-details.png` atlas for
 sparse service seams and stencils on the chest, forearms, thighs and shins. These

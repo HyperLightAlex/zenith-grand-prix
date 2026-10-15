@@ -1,6 +1,6 @@
 {
   "automated_checks": {
-    "tests": 863,
+    "tests": 865,
     "files": 21,
     "typecheck": "passed",
     "production_build": "passed",
@@ -14,7 +14,8 @@
       "wrR/F",
       "wrR/P"
     ],
-    "archived_blend": "sunhawk-comparison.blend remains unchanged"
+    "archived_blend": "sunhawk-comparison.blend remains unchanged",
+    "note": "Geometry group counts describe the hand cleanup at a86cefb. The later shoulder fix splits existing tower geometry into two articulated groups without editing either source model."
   },
   "completed_race": {
     "track": "meridian",
@@ -79,6 +80,34 @@
       "previews/production/jet-rear.png",
       "previews/production/jet-side.png",
       "previews/production/jet-race.png"
+    ]
+  },
+  "shoulder_victory_regression_fix": {
+    "date": "2026-10-15",
+    "cause": "Chest-fixed towers obstructed the raised upper arm in victory.",
+    "fix": "Export shoulder-local tower pivots for both variants and all LODs. Arm elevation drives smooth rearward/outward hinge motion; racing placement stays upright. Decals move with the towers.",
+    "source_blends_unchanged": true,
+    "visual_checks": [
+      "Both variants in victory",
+      "Updated front, three-quarter and side victory",
+      "Updated boost and guard",
+      "Updated far LOD in victory"
+    ],
+    "automated_checks": [
+      "101 samples each from standby, boost and guard to victory, and mirrored victory, for both variants: tower white-shell oriented bounds clear arm armor",
+      "Racing tower orientation and knee clearance",
+      "Pose continuity and source-pose immutability",
+      "Animator model replacement retains the raised tower pose"
+    ],
+    "tests": 865,
+    "typecheck": "passed",
+    "production_build": "passed",
+    "single_file_build": "passed",
+    "production_console_warnings": 0,
+    "production_console_errors": 0,
+    "screenshots": [
+      "previews/production/victory-shoulder.png",
+      "previews/production/victory-comparison.png"
     ]
   }
 }
