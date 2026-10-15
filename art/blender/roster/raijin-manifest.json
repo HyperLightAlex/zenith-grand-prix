@@ -4,21 +4,21 @@
   "levels": [
     {
       "level": 0,
-      "triangles": 27866,
-      "bytes": 538984,
-      "parts": 90
+      "triangles": 32726,
+      "bytes": 621204,
+      "parts": 94
     },
     {
       "level": 1,
-      "triangles": 14206,
-      "bytes": 326188,
-      "parts": 90
+      "triangles": 16708,
+      "bytes": 374196,
+      "parts": 94
     },
     {
       "level": 2,
-      "triangles": 6920,
-      "bytes": 198272,
-      "parts": 90
+      "triangles": 8170,
+      "bytes": 224536,
+      "parts": 94
     }
   ]
 }

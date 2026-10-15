@@ -17,7 +17,9 @@ thrusters and animation anchors are retained.
 URL overrides: ?roster=updated or ?roster=current. Selection persists locally.
 
 ART DIRECTION
-Original heads, equipment, faction palettes and motifs are retained. Long
+Reference equipment, faction palettes and motifs are retained. Stinger's
+head has a joined angular beak/cheek assembly beneath its original crest
+and mono-eye design. Long
 armor shells have shaped chamfered sections, broader readable surfaces,
 small edge radii and weighted normals. Light frames remain slender;
 defenders retain their broader stance. Added bearing covers, rear armor,
@@ -27,6 +29,17 @@ Hands have inward thumbs, mirrored finger lengths, rearward curls and
 forward dorsal armor. Held weapons follow the corrected palms. Maul retains
 fang knuckles, Paladin silver gadlings, and other defenders faction guards.
 Razor, Anubis and Rampart fins spread outward through boost/victory.
+
+ATTACHMENT CORRECTIONS
+All fourteen units have continuous internal shafts and overlapping joint
+seats at the waist, neck and limb seams. These close the daylight gaps while
+preserving the existing narrow silhouettes and articulated armor.
+Calf jets are rebuilt against the actual shin surface with embedded mounts.
+Their bells angle slightly down from the rear of the leg; exported outlet
+positions and rotations drive the runtime flame anchors at every LOD.
+Side chest vents on Daystar, Rampart, Maul and Sobek are seated within the
+chest plate. Maul's hip spikes now meet the supported side armor.
+previews/attachments contains close-ups and four-angle inspection captures.
 
 SOURCE AND EXPORTS
 Each MODEL-production.blend is independently editable with separate rigid

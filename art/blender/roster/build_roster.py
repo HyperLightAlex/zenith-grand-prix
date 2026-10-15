@@ -66,6 +66,7 @@ PARENTS={'spine':'hips','chest':'spine','head':'chest','wingL':'chest','wingR':'
 for key,parent in PARENTS.items():
     joints[key].parent=joints[parent];joints[key].location=cv(data['joints'][key]['position'])
 meshes=[]
+thrusters=[]
 def mesh(name,joint,slot,vs,faces,bevel=.018,detail=False):
     if role==2 and name.startswith(('Hand /','Finger ','Thumb /')):
         # Defender fists must read as short, broad striking tools, not scaled-up
@@ -104,10 +105,92 @@ def disc(name,joint,slot,at,r,depth,axis='x',sides=16):
     for d in (-depth/2,depth/2):
         for i in range(sides):
             a=2*math.pi*i/sides
-            p=(d,math.cos(a)*r,math.sin(a)*r) if axis=='x' else (math.cos(a)*r,math.sin(a)*r,d)
+            p=(d,math.cos(a)*r,math.sin(a)*r) if axis=='x' else ((math.cos(a)*r,d,math.sin(a)*r) if axis=='y' else (math.cos(a)*r,math.sin(a)*r,d))
             vs.append(tuple(at[j]+p[j] for j in range(3)))
     faces=[tuple(range(sides-1,-1,-1)),tuple(range(sides,2*sides))]+[(i,(i+1)%sides,(i+1)%sides+sides,i+sides) for i in range(sides)]
     return mesh(name,joint,slot,vs,faces,.01)
+
+def bearing(name,joint,at,r):
+    # Rounded, dark mechanical couplings overlap the shafts on both sides of
+    # each pivot. Their silhouette remains closed when the adjacent part turns.
+    vs=[];sides=12;rings=8
+    for j in range(rings+1):
+        a=math.pi*j/rings
+        for i in range(sides):
+            b=2*math.pi*i/sides
+            vs.append((at[0]+r*math.sin(a)*math.cos(b),at[1]+r*math.cos(a),at[2]+r*math.sin(a)*math.sin(b)))
+    faces=[(j*sides+i,j*sides+(i+1)%sides,(j+1)*sides+(i+1)%sides,(j+1)*sides+i) for j in range(rings) for i in range(sides)]
+    return mesh(name,joint,'F',vs,faces,0)
+
+def calf_jet(joint,spec):
+    y=spec['at'][1];r=spec['r'];length=spec['len'];angle=-.12
+    # Cast through the actual refined shin at the mounting point, rather than
+    # retaining an offset from the old model. Rear blade fins sit above this.
+    zs=[]
+    for ob in meshes:
+        if ob['joint']!=joint or ob['slot'] not in ('P','K','F'): continue
+        me=ob.data;me.calc_loop_triangles()
+        for tri in me.loop_triangles:
+            a,b,c=[(me.vertices[i].co.x,me.vertices[i].co.z,-me.vertices[i].co.y) for i in tri.vertices]
+            den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1])
+            if abs(den)<1e-8: continue
+            u=((b[1]-c[1])*(-c[0])+(c[0]-b[0])*(y-c[1]))/den
+            v=((c[1]-a[1])*(-c[0])+(a[0]-c[0])*(y-c[1]))/den
+            if min(u,v,1-u-v)>=-1e-6:zs.append(u*a[2]+v*b[2]+(1-u-v)*c[2])
+    if not zs: raise RuntimeError('No calf surface at '+joint)
+    back=min(zs);base=(0,y,back-.10)
+    block('Calf jet / embedded mounting shoe',joint,'F',(0,y,back-.015),(r*1.65,r*2.5,.23),.025)
+    axis=Vector((0,math.sin(angle),-math.cos(angle)))
+    up=Vector((0,math.cos(angle),math.sin(angle)))
+    def radial(rad,q,a):return tuple(Vector(base)+axis*q+Vector((1,0,0))*math.cos(a)*rad+up*math.sin(a)*rad)
+    profile=[(.58*r,-.025),(.69*r,length*.3),(.9*r,length*.78),(r,length),(.84*r,length),(.74*r,length*.78),(.52*r,length*.3),(.43*r,-.025)]
+    n=12;vs=[radial(rad,q,2*math.pi*i/n) for rad,q in profile for i in range(n)]
+    faces=[(j*n+i,j*n+(i+1)%n,((j+1)%len(profile))*n+(i+1)%n,((j+1)%len(profile))*n+i) for j in range(len(profile)) for i in range(n)]
+    mesh('Calf jet / recessed bell',joint,'D',vs,faces,.006)
+    lip=[radial(rad,q,2*math.pi*i/n) for rad,q in [(r*.99,length-.04),(r,length),(r*.84,length),(r*.84,length-.04)] for i in range(n)]
+    mesh('Calf jet / outlet rim',joint,'F',lip,[(j*n+i,j*n+(i+1)%n,((j+1)%4)*n+(i+1)%n,((j+1)%4)*n+i) for j in range(4) for i in range(n)],.004)
+    throat=[radial(r*.4,length*.24,2*math.pi*i/n) for i in range(n)]
+    mesh('Calf jet / luminous throat',joint,'G',throat,[tuple(range(n))],0)
+    outlet=tuple(Vector(base)+axis*(length+.012))
+    thrusters.append({'joint':joint,'surface':[0,y,back],'base':base,'outlet':outlet,'rotation':[angle,0,0],'radius':r,'length':length})
+    marker=bpy.data.objects.new('FX / '+joint+' outlet',None);collection.objects.link(marker)
+    marker.parent=joints[joint];marker.location=cv(outlet);marker.empty_display_size=r
+
+leg_nozzles={}
+vent_offsets={}
+# Place side vents fully over the chest polygon. Bounding boxes alone would
+# incorrectly count the empty space below its sloping sides as armor.
+chest_candidates=[]
+for part in data['parts']:
+    if part['joint']=='chest' and part['slot']=='P':
+        p=part['positions'];w=max(p[0::3])-min(p[0::3]);h=max(p[1::3])-min(p[1::3]);dep=max(p[2::3])-min(p[2::3])
+        if w>dims['shoulderX'] and h>.8 and dep>.5:chest_candidates.append((w*h,part))
+chest_surface=max(chest_candidates,key=lambda item:item[0])[1]['positions']
+def chest_front(x,y):
+    zs=[]
+    for n in range(0,len(chest_surface),9):
+        a,b,c=[chest_surface[n+i:n+i+3] for i in (0,3,6)]
+        den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1])
+        if abs(den)<1e-8:continue
+        u=((b[1]-c[1])*(x-c[0])+(c[0]-b[0])*(y-c[1]))/den
+        v=((c[1]-a[1])*(x-c[0])+(a[0]-c[0])*(y-c[1]))/den
+        if min(u,v,1-u-v)>=-1e-6:zs.append(u*a[2]+v*b[2]+(1-u-v)*c[2])
+    return max(zs) if zs else None
+for part in data['parts']:
+    spec=part.get('vent')
+    if part['joint']!='chest' or not spec or abs(spec['at'][0])<.4:continue
+    key=tuple(spec['at'])
+    if key in vent_offsets:continue
+    sign=1 if key[0]>0 else -1;hw=spec['w']/2+.035;hh=spec['h']/2+.035
+    choices=[]
+    for ix in range(25):
+        for iy in range(25):
+            dx=-sign*ix*.025;dy=iy*.025;x=key[0]+dx;y=key[1]+dy
+            front=[chest_front(x+sx*hw,y+sy*hh) for sx in (-1,1) for sy in (-1,1)]
+            if all(z is not None for z in front):choices.append((dx*dx+dy*dy,dx,dy,min(front)+.05-key[2]))
+    if not choices:raise RuntimeError('Unable to seat chest vent')
+    _,dx,dy,dz=min(choices)
+    vent_offsets[key]=(dx,dy,dz)
 
 def is_shell(joint,slot,lo,hi):
     # Sobek's lathed column bracers carry the flutes and flared capitals.
@@ -121,9 +204,22 @@ def is_shell(joint,slot,lo,hi):
         (joint.startswith('knee') and cy<-.55 and h>dims['shin']*.58))
 for i,part in enumerate(data['parts']):
     joint=part['joint'];slot=part['slot'];pos=part['positions']
+    if joint.startswith('knee') and part.get('nozzle'):
+        leg_nozzles[joint]=part['nozzle'];continue
+    # Keep Stinger's reference crest/horns; replace the detached rounded nose
+    # and box-shaped skull with one seated, angular facial assembly below.
+    if MODEL=='stinger' and joint=='head' and max(pos[1::3])<.95:continue
     # Replace the old hand geometry; retain rifle/staff components and cuffs.
     if joint.startswith('wr') and (role!=1 or part.get('hand')): continue
     vs=[list(pos[n:n+3]) for n in range(0,len(pos),3)]
+    if joint=='chest' and part.get('vent') and tuple(part['vent']['at']) in vent_offsets:
+        spec=part['vent'];origin=Vector(spec['at']);delta=Vector(vent_offsets[tuple(spec['at'])])
+        # These ports now sit on the front plate, so their old side-facing yaw
+        # would bury half the grille. Preserve the slat tilt within the housing.
+        turn=Matrix.Rotation(-spec['rot'][1],3,'Y')
+        vs=[list(turn@(Vector(v)-origin)+origin+delta) for v in vs]
+    if MODEL=='maul' and joint=='hips' and slot=='T' and min(abs(v[0]) for v in vs)>1.7:
+        for v in vs:v[0]-=math.copysign(.32,v[0]);v[1]-=.10
     # The old grips were offset for forward-facing palms. Mirror the weapon,
     # then seat it against the new palm; centered wrist cuffs stay centered.
     held_weapon=joint=='wrR' and (min(v[2] for v in vs)+max(v[2] for v in vs))/2>.15
@@ -167,6 +263,43 @@ for i,part in enumerate(data['parts']):
     bb=[max(v[a] for v in vs)-min(v[a] for v in vs) for a in range(3)]
     edge=min(.024,min(bb)*.14) if slot in ('P','S','T','F','K') else .008
     mesh(f'{MODEL} / {joint} / {slot} / {i:03}',joint,slot,vs,[(n,n+1,n+2) for n in range(0,len(vs),3)],edge)
+
+# Continuous internal frame, mostly concealed by the existing armor. Shafts
+# reach the pivot centres and spherical seats cover the articulating seams.
+waist=(.28,.34,.43)[role]
+disc('Frame / continuous waist shaft','spine','F',(0,(dims['chestY']-dims['spineY'])/2,0),waist,dims['chestY']+dims['spineY']+.38,'y')
+bearing('Frame / pelvic swivel','spine',(0,0,0),waist*1.08)
+bearing('Frame / chest swivel','chest',(0,0,0),waist*1.22)
+disc('Frame / chest socket','chest','K',(0,.13,0),waist*1.27,.20,'y')
+if MODEL=='maul':
+    disc('Frame / hip armor mounting axle','hips','F',(0,-.12,.02),.13,3.3,'x')
+bearing('Frame / neck seat','head',(0,-.10,0),(.21,.24,.29)[role])
+for side in ('L','R'):
+    for joint,length,r in [('sh'+side,dims['upperArm'],(.14,.17,.23)[role]),('el'+side,dims['foreArm'],(.14,.17,.23)[role]),('hip'+side,dims['thigh'],(.19,.23,.30)[role]),('knee'+side,dims['shin'],(.17,.21,.27)[role])]:
+        disc('Frame / '+joint+' internal shaft',joint,'F',(0,-length/2,0),r,length+.12,'y')
+    for joint,r in [('el'+side,(.22,.27,.34)[role]),('wr'+side,(.17,.20,.28)[role]),('hip'+side,(.29,.33,.40)[role]),('knee'+side,(.24,.29,.36)[role]),('ankle'+side,(.20,.24,.30)[role])]:
+        bearing('Frame / '+joint+' pivot seat',joint,(0,0,0),r)
+
+if MODEL=='stinger':
+    # A single predatory brow, recessed mono-eye and ridged hooked beak.
+    # Coordinates are already in head-joint space (including the old offset).
+    block('Stinger / neck spindle','head','F',(0,.05,.06),(.34,.45,.34),.025)
+    block('Stinger / helmet crown','head','P',(0,.46,.10),(.68,.58,.68),.035)
+    plate('Stinger / brow shield','head','P',[(-.37,.70),(-.28,.79),(.28,.79),(.37,.70),(.31,.60),(-.31,.60)],.43,.18,.012)
+    block('Stinger / visor recess','head','D',(0,.588,.55),(.59,.115,.09),.008)
+    block('Stinger / sensor rail','head','C',(0,.59,.60),(.48,.035,.025),.002)
+    block('Stinger / mono eye','head','G',(-.12,.59,.62),(.14,.067,.02),.002)
+    # Six cross-sections keep the beak attached across its entire root.
+    rings=[(-.30,.14,.14,.34),(-.14,.32,.12,.51),(.34,.28,.13,.50),(.64,.20,.14,.45),(.88,.09,.10,.30),(.91,.035,.08,.18)]
+    vs=[]
+    for z,w,b,t in rings:vs.extend([(-w,b,z),(w,b,z),(w,t-.035,z),(0,t,z),(-w,t-.035,z)])
+    faces=[tuple(range(4,-1,-1)),tuple(range(25,30))]+[(j*5+i,j*5+(i+1)%5,(j+1)*5+(i+1)%5,(j+1)*5+i) for j in range(5) for i in range(5)]
+    beak=mesh('Stinger / continuous cheek and beak','head','P',vs,faces,.009)
+    for face in beak.data.polygons:face.use_smooth=False
+    plate('Stinger / chin accent','head','S',[(-.10,.17),(.10,.17),(.055,.09),(-.055,.09)],.68,.035,.004)
+
+if set(leg_nozzles)!={'kneeL','kneeR'}:raise RuntimeError('Missing tagged calf nozzles')
+for joint,spec in leg_nozzles.items():calf_jet(joint,spec)
 
 # Anatomically consistent hands, four fingers, inner thumbs, front back plates.
 for side in (1,-1):
@@ -233,7 +366,7 @@ if ref.exists():
     img=bpy.data.images.load(str(ref),check_existing=True);img.pack()
     ob=bpy.data.objects.new('REFERENCE / original design',None);collection.objects.link(ob)
     ob.empty_display_type='IMAGE';ob.data=img;ob.empty_display_size=12;ob.location=(0,3,5);ob.hide_render=True
-scene['dims_json']=json.dumps(dims);scene['source_reference']=str(ref)
+scene['dims_json']=json.dumps(dims);scene['source_reference']=str(ref);scene['thrusters_json']=json.dumps(thrusters)
 scene.world=bpy.data.worlds.new(MODEL+' studio');scene.world.color=(.18,.18,.18)
 scene.render.engine='BLENDER_EEVEE_NEXT' if bpy.app.version<(4,2,0) else 'CYCLES'
 # A sensible saved front view and orthographic camera for editing/review.
@@ -273,6 +406,7 @@ for level,ratio in [(0,1),(1,.52),(2,.26)]:
     for ob,mod in mods:ob.modifiers.remove(mod)
     root=bpy.data.objects.new(MODEL,None);temp.collection.objects.link(root)
     root['roster_schema']=1;root['model']=MODEL;root['dims']=dims;root['level']=level
+    root['calf_thrusters_json']=json.dumps(thrusters)
     export_meshes=[]
     for (joint,slot),g in groups.items():
         me=bpy.data.meshes.new(joint+'/'+slot);me.from_pydata(g['vertices'],[],g['faces']);me.update()

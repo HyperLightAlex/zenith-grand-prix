@@ -19,12 +19,26 @@ try {
   setRosterModel('current');
   await mkdir('art/blender/roster/source',{recursive:true});
   const tags = new WeakMap();
+  let activeNozzle;
+  let activeVent;
+  const nozzle = Kit.prototype.nozzle;
+  Kit.prototype.nozzle = function(r, len, o = {}, sides = 10) {
+    activeNozzle = {r,len,at:o.at ?? [0,0,0],rot:o.rot ?? [0,0,0],sides};
+    try { return nozzle.call(this,r,len,o,sides); }
+    finally { activeNozzle = undefined; }
+  };
+  const vent = Kit.prototype.vent;
+  Kit.prototype.vent = function(w,h,slats,o={}) {
+    activeVent={w,h,at:o.at ?? [0,0,0],rot:o.rot ?? [0,0,0]};
+    try { return vent.call(this,w,h,slats,o); }
+    finally { activeVent=undefined; }
+  };
   const push = Kit.prototype.push;
   Kit.prototype.push = function(g, slot, o, ...rest) {
     const hand = /at (fist|clawHand)\b/.test(new Error().stack);
     const result = push.call(this,g,slot,o,...rest);
     const list = slot === 'G' ? this.glow : this.armor;
-    tags.set(list.at(-1), {hand});
+    tags.set(list.at(-1), {hand,nozzle:activeNozzle,vent:activeVent});
     return result;
   };
   Kit.prototype.build = function() {
@@ -50,7 +64,7 @@ try {
       const matrix=parent.matrixWorld.clone().invert().multiply(o.matrixWorld);
       for(const p of o.userData.parts) {
         const g=p.g.clone().applyMatrix4(matrix);
-        parts.push({joint:byObj.get(parent),slot:p.slot,hand:p.hand,positions:Array.from(g.getAttribute('position').array)});
+        parts.push({joint:byObj.get(parent),slot:p.slot,hand:p.hand,nozzle:p.nozzle,vent:p.vent,positions:Array.from(g.getAttribute('position').array)});
         g.dispose();p.g.dispose();
       }
     });

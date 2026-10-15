@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Kit } from './kit';
-import { rosterAsset, type RosterJoint } from './rosterAsset';
+import { rosterAsset, type RosterJoint, type CalfThruster } from './rosterAsset';
 import type { Livery } from '../palette';
 import type { MechRig, Pose } from './rig';
 import { getSunhawkPanels } from './sunhawkSelection';
@@ -38,8 +38,19 @@ export function fitRosterPose(p: Pose, heavy: boolean, id = ''): void {
   }
 }
 
+/** Both the physical bell and its flame use the same Blender-authored outlet. */
+export function attachRosterCalfJets(rig: MechRig, thrusters: readonly CalfThruster[]): void {
+  for(const f of rig.flames.filter(f=>f.bank==='leg')) {
+    const mount=thrusters.find(t=>rig.joints[t.joint]===f.mesh.parent);
+    if(!mount) throw new Error('Calf flame has no matching nozzle');
+    f.mesh.position.fromArray(mount.outlet);
+    f.mesh.rotation.set(...mount.rotation);
+  }
+}
+
 /** Retain the original effect/weapon/number anchors; only replace rigid armor. */
 export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, heavy: boolean): void {
+  attachRosterCalfJets(rig,rosterAsset(id).calfThrusters);
   const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
   const gains=ROSTER_GAINS[id];
   for(const [name,joint] of Object.entries(joints)) {

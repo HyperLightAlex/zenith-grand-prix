@@ -1,5 +1,25 @@
 ROSTER PASS — VALIDATION RECORD
 
+ATTACHMENT CORRECTION PASS
+- All 42 GLBs rebuilt with seated calf jets and matching effect anchors.
+- All 14 editable Blender sources updated with continuous internal supports.
+- Stinger face rebuilt; loose side chest vents and Maul hip details seated.
+- 72 asset tests pass, including ray intersections against actual shin and
+  nozzle geometry at each LOD, effect alignment through four poses, and
+  cross-sections through previously open waist/limb attachment seams.
+- Full suite: 937 tests passed across 22 files.
+- Production and single-file builds passed.
+- All units reviewed from front, three-quarter, side and back, plus boost,
+  guard and victory. Refreshed comparison and pose images are in previews.
+- Close-up rear burner and side flame checks saved in previews/attachments.
+- Final production Mirage-versus-Vanta check covered battle and speed laps,
+  including live original/updated toggles without a race reset. No production
+  console warnings or errors. At 1280x720/high/scale 1/uncapped, a 105.8-second
+  sample averaged 73.6 fps with a recent p95 of 15.2 ms (local measurement).
+- The historical race measurements below are from the first roster pass.
+
+INITIAL ROSTER PASS
+
 Final code and GLBs:
 - npm test: 909 tests passed across 22 files.
 - npm run build: passed.
