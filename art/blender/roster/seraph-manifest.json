@@ -1,24 +1,24 @@
 {
   "model": "seraph",
-  "design": "Slender knight, layered pearl armor and separated feather fins",
+  "design": "Art-sheet winged duellist: pearl cuirass, five-feather fans and paired rapier bracers",
   "levels": [
     {
       "level": 0,
-      "triangles": 32211,
-      "bytes": 607216,
-      "parts": 98
+      "triangles": 36836,
+      "bytes": 884012,
+      "parts": 105
     },
     {
       "level": 1,
-      "triangles": 16540,
-      "bytes": 368724,
-      "parts": 98
+      "triangles": 19252,
+      "bytes": 588916,
+      "parts": 105
     },
     {
       "level": 2,
-      "triangles": 8174,
-      "bytes": 222672,
-      "parts": 98
+      "triangles": 9838,
+      "bytes": 340960,
+      "parts": 105
     }
   ]
 }

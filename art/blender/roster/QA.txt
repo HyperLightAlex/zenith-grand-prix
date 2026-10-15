@@ -1,5 +1,24 @@
 ROSTER PASS — VALIDATION RECORD
 
+AURORA ART-SHEET POLISH
+- Seraph, Longbow and Paladin refined against the three supplied updated
+  sheets. Three editable Blender sources and nine GLBs regenerated; existing
+  code-built originals and previous-pass screenshots retained for comparison.
+- Four-angle standing views plus boost, guard and victory reviewed. New
+  skirt panels use the existing articulation; shields remain on the arms.
+- Longbow retains one rifle and the left snare launcher. A new asset test
+  prevents long paired forearm blades; bore alignment is checked at all LODs.
+- All 75 asset checks pass, including continuous joints, hands, authored
+  normals, seated jets, LOD reduction and pose continuity. Final exports
+  reported no mesh warnings. Full suite: 940 tests across 22 files passed.
+- Production and single-file builds passed. Gallery expanded with all three
+  Aurora art sheets, previous-pass captures, turnarounds and motion images.
+- Production Aurora-versus-Mirage battle and speed laps rendered without
+  console warnings/errors. Representative race capture saved in sheet-polish.
+- Final chest insignia conform to the actual breastplate facets, with extra
+  vertices across the center ridge to avoid partially buried relief. The
+  final assets were rechecked with all 75 asset tests and both builds.
+
 UPDATED ART-SHEET POLISH — SOLSTICE, VANTA, MIRAGE
 - Eight units refined from the supplied updated art sheets: Daystar, Rampart,
   Razor, Stinger, Maul, Anubis, Horus and Sobek. Eight editable Blender sources

@@ -1,24 +1,24 @@
 {
   "model": "longbow",
-  "design": "Lance-bearing knight with stronger greaves and closed weapon grip",
+  "design": "Art-sheet knight archer: long surcoat, sculpted armor and one ranged rifle; no paired blades",
   "levels": [
     {
       "level": 0,
-      "triangles": 38341,
-      "bytes": 742020,
-      "parts": 110
+      "triangles": 42434,
+      "bytes": 953752,
+      "parts": 111
     },
     {
       "level": 1,
-      "triangles": 19697,
-      "bytes": 435704,
-      "parts": 110
+      "triangles": 22230,
+      "bytes": 597940,
+      "parts": 111
     },
     {
       "level": 2,
-      "triangles": 9716,
-      "bytes": 260620,
-      "parts": 110
+      "triangles": 11416,
+      "bytes": 349840,
+      "parts": 111
     }
   ]
 }

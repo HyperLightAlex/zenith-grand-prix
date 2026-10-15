@@ -1,24 +1,24 @@
 {
   "model": "paladin",
-  "design": "Shield knight with articulated knuckles and reinforced elbow covers",
+  "design": "Art-sheet crowned defender: broad pearl breastplate, shield shoulders and heavy greaves",
   "levels": [
     {
       "level": 0,
-      "triangles": 45267,
-      "bytes": 839812,
-      "parts": 114
+      "triangles": 48018,
+      "bytes": 1020992,
+      "parts": 115
     },
     {
       "level": 1,
-      "triangles": 23247,
-      "bytes": 496528,
-      "parts": 114
+      "triangles": 24987,
+      "bytes": 641352,
+      "parts": 115
     },
     {
       "level": 2,
-      "triangles": 11456,
-      "bytes": 292148,
-      "parts": 114
+      "triangles": 12658,
+      "bytes": 370772,
+      "parts": 115
     }
   ]
 }

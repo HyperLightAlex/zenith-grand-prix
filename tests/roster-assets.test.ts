@@ -195,7 +195,7 @@ it('keeps the sheet-derived eye lights and Daystar fin pair bilaterally symmetri
   };
   const mirrored=(left:THREE.Vector3[],right:THREE.Vector3[],tolerance=1e-5)=>
     left.every(p=>right.some(q=>Math.hypot(p.x+q.x,p.y-q.y,p.z-q.z)<tolerance));
-  for(const id of ['razor','stinger','maul','anubis']) {
+  for(const id of ['razor','stinger','maul','anubis','seraph']) {
     const eye=positions(await load(id),'head','G');
     expect(eye.length).toBeGreaterThanOrEqual(8);
     expect(mirrored(eye,eye),`${id} eye lights`).toBe(true);
@@ -212,7 +212,7 @@ it('keeps the sheet-derived eye lights and Daystar fin pair bilaterally symmetri
 
 it('keeps the new carbine barrels aligned with the existing gameplay muzzle anchors',async()=>{
   const mat=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
-  for(const [id,y] of [['daystar',-2.32],['stinger',-2.86]] as const) {
+  for(const [id,y] of [['daystar',-2.32],['stinger',-2.86],['longbow',-2.86]] as const) {
     for(let lod=0;lod<3;lod++) {
       const a=await load(id,lod);
       const gun=a.parts.filter(p=>p.joint==='wrR'&&p.slot==='D').map(p=>new THREE.Mesh(p.geometry,mat));
@@ -225,6 +225,22 @@ it('keeps the new carbine barrels aligned with the existing gameplay muzzle anch
     }
   }
   mat.dispose();
+});
+
+it('keeps Longbow a midfielder without the concept sheet’s paired forearm blades',async()=>{
+  for(let lod=0;lod<3;lod++) {
+    const asset=await load('longbow',lod);
+    for(const part of asset.parts.filter(p=>p.joint==='elL'||p.joint==='elR')) {
+      part.geometry.computeBoundingBox();
+      expect(part.geometry.boundingBox!.min.y).toBeGreaterThan(-asset.dims.foreArm-.30);
+    }
+    // The only long handheld component is the right rifle. Left-hand
+    // geometry ends at the fingertips rather than extending into a blade.
+    for(const part of asset.parts.filter(p=>p.joint==='wrL')) {
+      part.geometry.computeBoundingBox();
+      expect(part.geometry.boundingBox!.min.y).toBeGreaterThan(-1);
+    }
+  }
 });
 
 it('keeps tall and swept rear fins on their own side through boost and victory',async()=>{

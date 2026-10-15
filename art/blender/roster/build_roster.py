@@ -30,7 +30,7 @@ PROFILES={
  'raijin':(1.05,1.06,1.04,'Thunder-drum defender with heavy knuckles and mechanical joint rings')
 }
 arm_gain,thigh_gain,shin_gain,design_note=PROFILES[MODEL]
-SHEET_MODELS={'daystar','rampart','razor','stinger','maul','anubis','horus','sobek'}
+SHEET_MODELS={'daystar','rampart','razor','stinger','maul','anubis','horus','sobek','seraph','longbow','paladin'}
 sheet_polish=MODEL in SHEET_MODELS
 old_scene=bpy.context.scene
 name='ROSTER / '+MODEL.title()
@@ -205,6 +205,7 @@ def is_shell(joint,slot,lo,hi):
         (joint.startswith('hip') and joint!='hips' and h>dims['thigh']*.62) or
         (joint.startswith('knee') and cy<-.55 and h>dims['shin']*.58))
 exec(compile((BASE/'sheet_polish.py').read_text(),'sheet_polish.py','exec'))
+exec(compile((BASE/'aurora_polish.py').read_text(),'aurora_polish.py','exec'))
 for i,part in enumerate(data['parts']):
     joint=part['joint'];slot=part['slot'];pos=part['positions']
     if joint.startswith('knee') and part.get('nozzle'):

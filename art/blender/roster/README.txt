@@ -34,8 +34,8 @@ through boost/victory.
 UPDATED ART-SHEET POLISH
 Daystar, Rampart, Razor, Stinger, Maul, Anubis, Horus and Sobek now use the
 eight supplied updated sheets, saved as art/model-sheets/refs/ref-ID-updated.png.
-Sunhawk remains the approved finish reference. Aurora and Tempest are unchanged
-by this additional pass. Original code-built models remain available with N.
+Sunhawk remains the approved finish reference. Original code-built models
+remain available with N. Tempest awaits its updated concept-sheet pass.
 sheet_polish.py contains the additional geometry and is loaded by build_roster.py.
 
 The eight units have more deliberate knee/shin shapes and seated small details.
@@ -51,6 +51,22 @@ physical, symmetric assembly rather than changing between views.
 
 The gallery includes the supplied sheets, four-angle views and previous-pass
 captures for these eight. previews/sheet-polish stores these additional views.
+
+AURORA ART-SHEET PASS
+Seraph, Longbow and Paladin also use supplied updated sheets. Their additional
+authoring is in aurora_polish.py: sculpted pearl breastplates, articulated
+abdominal lames and split tabards, pointed knee armor, contoured greaves,
+vambraces and raised pearl sabatons. The original halos and faction identity
+remain, with the same joint lengths and wheel contacts.
+
+Seraph has a pointed pearl face, tall central crest and five swept feather
+plates on each wing, with mirrored inlays on both faces. Its paired rapier
+bracers remain the forward loadout. Longbow has one right-hand ranged rifle
+with an open muzzle and retains the left snare launcher. The extra arm blades
+in the generated concept are intentionally omitted. Paladin retains its
+great helm, tower shields and defender equipment with heavier gauntlet faces.
+The three source blends include their new reference sheets. The gallery
+provides the same art/previous-pass/turnaround/motion views for Aurora.
 
 ATTACHMENT CORRECTIONS
 All fourteen units have continuous internal shafts and overlapping joint
