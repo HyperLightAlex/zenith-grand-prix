@@ -346,6 +346,13 @@ export class Kit {
   /** Each slot's shadow paint, for the anime look's cel shading. */
   private shades: Record<Slot, THREE.Color>;
 
+  /** Builders can supply their original anchors while imported armor replaces
+   * their procedural geometry. Release those unused temporary components. */
+  discard(): void {
+    for (const g of [...this.armor, ...this.glow]) g.dispose();
+    this.armor=[];this.armorSlots=[];this.armorPanels=[];this.glow=[];
+  }
+
   constructor(readonly livery: Livery, private readonly outlineWidth = .06, private readonly glowGain = 1.7, private readonly indexed = false) {
     const sh = livery.shades;
     this.shades = {

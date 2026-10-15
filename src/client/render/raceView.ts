@@ -165,8 +165,8 @@ export class RaceView {
   onTell: (kind: TellKind, mech: number, atFocus: boolean) => void = () => {};
   private mechs: MechVisual[] = [];
   reviewDetailLevels(): string {
-    return this.mechs.filter((v) => v.rig.root.userData.sunhawkModel === 'updated')
-      .map((v) => String(v.rig.detailLevel)).join(',');
+    return this.mechs.filter((v) => v.rig.detailLevels.length > 1)
+      .map((v) => `${v.rig.root.userData.modelId ?? 'sunhawk'}:${v.rig.detailLevel}`).join(',');
   }
   private ring = makeLockRing();
   private time = 0;
@@ -255,11 +255,12 @@ export class RaceView {
     this.fx.resize(this.renderer.canvas.clientHeight || window.innerHeight, this.fxFov);
   }
 
-  /** Replace only Sunhawk visuals; race state, camera and animator phase stay put. */
-  refreshSunhawks(): void {
+  /** Swap presentation assets while preserving the race, camera and animation. */
+  refreshMechModels(scope: 'sunhawk' | 'roster' | 'all'): void {
     for (const m of this.session.race.mechs) {
       const v = this.mechs[m.id];
-      if (m.role !== ROLE.FW || v.livery.id !== 'solstice') continue;
+      const sunhawk=m.role===ROLE.FW && v.livery.id==='solstice';
+      if ((scope==='sunhawk' && !sunhawk) || (scope==='roster' && sunhawk)) continue;
       const old = v.rig;
       const rig = buildFrame(m.role,v.livery,String(m.role+1));
       rig.root.matrixAutoUpdate = false;

@@ -8,6 +8,8 @@ import { NullAudio, type AudioEngine } from './audio/audio';
 import { Game } from './game/game';
 import { useOldSwift } from './render/mech/frames';
 import { preloadSunhawks } from './render/mech/sunhawkAsset';
+import { preloadRoster } from './render/mech/rosterAsset';
+import { setRosterModel } from './render/mech/rosterSelection';
 import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech/sunhawkSelection';
 
 // Dev shortcuts, all optional:
@@ -25,21 +27,25 @@ const q = new URLSearchParams(location.search);
 async function boot(): Promise<void> {
   let remembered: string | null = null;
   let rememberedPanels = false;
+  let rememberedRoster: string | null = null;
   try {
     remembered = localStorage.getItem('zgp.sunhawk.model');
     rememberedPanels = localStorage.getItem('zgp.sunhawk.panels') === '1';
+    rememberedRoster = localStorage.getItem('zgp.roster.model');
   } catch { /* storage is optional */ }
   const model = q.get('sunhawk') ?? remembered;
   if (isSunhawkModel(model)) setSunhawkModel(model);
+  const roster = q.get('roster') ?? rememberedRoster;
+  if (roster === 'updated' || roster === 'current') setRosterModel(roster);
   setSunhawkPanels(q.has('sunhawkPanels') ? q.get('sunhawkPanels') === '1' : rememberedPanels);
   const loading = document.createElement('div');
   loading.className = 'model-loading';
-  loading.textContent = 'Loading Sunhawk models…';
+  loading.textContent = 'Loading mech models…';
   document.getElementById('app')!.append(loading);
-  try { await preloadSunhawks(); }
+  try { await Promise.all([preloadSunhawks(),preloadRoster()]); }
   catch (error) {
-    console.error('Sunhawk model loading failed',error);
-    loading.textContent = 'The Sunhawk models could not load. ';
+    console.error('Mech model loading failed',error);
+    loading.textContent = 'The mech models could not load. ';
     const retry = document.createElement('button');
     retry.textContent = 'Retry'; retry.onclick = () => location.reload();
     loading.append(retry);

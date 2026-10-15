@@ -242,12 +242,13 @@ export interface FrameCtx {
   flame(parent: THREE.Object3D, at: [number, number, number], rot: [number, number, number], width: number, length: number, bank: Flame['bank']): void;
 }
 
-export function frameCtx(rig: MechRig, livery: Livery): FrameCtx {
+export function frameCtx(rig: MechRig, livery: Livery, geometry = true): FrameCtx {
   const mat = flameMaterial(livery.glow);
   return {
     rig,
     livery,
     put(joint, k) {
+      if (!geometry) { k.discard(); return; }
       // Arms and legs wear the limb segments' panel lines.
       const built = k.build(/^(el|wr|hip[LR]|knee|ankle)/.test(joint.name));
       joint.add(built.group);

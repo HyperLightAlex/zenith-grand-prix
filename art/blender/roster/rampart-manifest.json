@@ -1,0 +1,24 @@
+{
+  "model": "rampart",
+  "design": "Broad gauntlets, recessed joint discs and a crisp fanged chest",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 20402,
+      "bytes": 409820,
+      "parts": 94
+    },
+    {
+      "level": 1,
+      "triangles": 10400,
+      "bytes": 255460,
+      "parts": 94
+    },
+    {
+      "level": 2,
+      "triangles": 5074,
+      "bytes": 162856,
+      "parts": 94
+    }
+  ]
+}

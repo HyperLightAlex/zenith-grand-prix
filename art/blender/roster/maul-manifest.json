@@ -1,0 +1,24 @@
+{
+  "model": "maul",
+  "design": "Heavy knuckle armor, protected wrists and clean layered spikes",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 20388,
+      "bytes": 401452,
+      "parts": 95
+    },
+    {
+      "level": 1,
+      "triangles": 10378,
+      "bytes": 253764,
+      "parts": 95
+    },
+    {
+      "level": 2,
+      "triangles": 5058,
+      "bytes": 163020,
+      "parts": 95
+    }
+  ]
+}

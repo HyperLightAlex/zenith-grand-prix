@@ -1,0 +1,43 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { JOINTS, type FrameDims, type JointName } from './rig';
+import type { Slot } from './kit';
+export type RosterJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack';
+export interface RosterPart { joint: RosterJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry }
+export interface RosterAsset { dims: FrameDims; parts: RosterPart[] }
+export const ROSTER_IDS = ['daystar','rampart','razor','stinger','maul','anubis','horus','sobek','seraph','longbow','paladin','kamaitachi','fujin','raijin'] as const;
+const urls = import.meta.glob('./assets/roster/*.glb', {eager:true,query:'?url',import:'default'}) as Record<string,string>;
+const assets = new Map<string,RosterAsset>();
+const DIM_KEYS: (keyof FrameDims)[] = ['hipY','hipX','hipDrop','thigh','shin','ankleY','spineY','chestY','shoulderX','shoulderY','headY','headZ','upperArm','foreArm','height'];
+export function readRosterAsset(scene: THREE.Group, id: string): RosterAsset {
+  let dims: FrameDims | undefined;
+  const parts: RosterPart[]=[];
+  scene.updateMatrixWorld(true);
+  scene.traverse(o=>{
+    if(o.userData.roster_schema===1 && o.userData.model===id) dims={...o.userData.dims};
+    if(!(o instanceof THREE.Mesh)) return;
+    const {joint,slot}=o.userData;
+    if(![...JOINTS,'skirtL','skirtR','skirtBack'].includes(joint) || !['P','S','T','F','K','D','C','G'].includes(slot)) throw new Error(`Invalid ${id} part ${o.name}`);
+    if(!o.geometry.hasAttribute('normal')) throw new Error(`Missing ${id} normals`);
+    parts.push({joint,slot,geometry:o.geometry.clone().applyMatrix4(o.matrixWorld)});
+  });
+  const required=JOINTS.filter(j=>j!=='wingL' && j!=='wingR');
+  if(!dims || DIM_KEYS.some(k=>!Number.isFinite(dims![k]) || dims![k]<=0) || required.some(j=>!parts.some(p=>p.joint===j))) throw new Error(`Incomplete ${id} export`);
+  return {dims,parts};
+}
+export function rosterAsset(id: string, level=0): RosterAsset {
+  const asset=assets.get(`${id}:${level}`);
+  if(!asset) throw new Error(`Roster asset ${id}:${level} was not preloaded`);
+  return asset;
+}
+let loading: Promise<void> | undefined;
+export function preloadRoster(): Promise<void> {
+  return loading ??= Promise.all(ROSTER_IDS.flatMap(id=>[0,1,2].map(async level=>{
+    const path=`./assets/roster/${id}${level?`-lod${level}`:''}.glb`;
+    const url=urls[path];
+    if(!url) throw new Error(`Missing roster asset ${id}:${level}`);
+    const gltf=await new GLTFLoader().loadAsync(url);
+    assets.set(`${id}:${level}`,readRosterAsset(gltf.scene,id));
+  }))).then(()=>{});
+}
+export const hasRosterAsset = (id: string): boolean => assets.has(`${id}:0`);

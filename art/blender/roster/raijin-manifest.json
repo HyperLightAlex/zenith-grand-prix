@@ -1,0 +1,24 @@
+{
+  "model": "raijin",
+  "design": "Thunder-drum defender with heavy knuckles and mechanical joint rings",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 27866,
+      "bytes": 538984,
+      "parts": 90
+    },
+    {
+      "level": 1,
+      "triangles": 14206,
+      "bytes": 326188,
+      "parts": 90
+    },
+    {
+      "level": 2,
+      "triangles": 6920,
+      "bytes": 198272,
+      "parts": 90
+    }
+  ]
+}

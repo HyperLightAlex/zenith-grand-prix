@@ -1,0 +1,44 @@
+ROSTER PASS — VALIDATION RECORD
+
+Final code and GLBs:
+- npm test: 909 tests passed across 22 files.
+- npm run build: passed.
+- npm run build:single: passed; 46 embedded GLBs (42 roster, 4 Sunhawk).
+- git diff --check: passed.
+- 14 units, each with editable Blender source and three runtime LODs.
+
+Visual review:
+- Every unit reviewed against its original, plus boost, guard and victory.
+- Corrected hand orientation, inward thumbs, finger symmetry and weapon grip.
+- Razor, Anubis and Rampart rear fins checked through the fitted poses.
+- Sobek column bracers and Paladin curved shields retained.
+- Daystar rear circular jet / oblique fire checked, including LOD2.
+- N comparison switched live in a race without resetting race progress.
+- Clean/panel armor and anime/plain rendering checked in the garage.
+- Plain garage spacing corrected so its extra comparison row fits.
+- Gallery filters, enlarged comparisons and motion images verified.
+
+Production race:
+Aurora versus Tempest, Canyon, seeded demo, high quality, 1280x720,
+render scale 1, uncapped. Completed at 44–23 with no console warnings/errors.
+15,539 sampled frames over 209.9 seconds; mean 74 fps, recent p95 15.3 ms,
+583 mean draw calls and 304,312 mean triangles across all passes.
+Raw measurements: race-canyon-stats.json. These are local measurements,
+not a minimum-performance guarantee for other machines.
+
+The full race preceded the final defender-hand proportion and midfielder
+grip adjustments. Final assets subsequently passed all tests, fresh pose
+captures and a production Vanta-versus-Mirage battle-lap spot check with
+no console warnings/errors (previews/live-vanta-mirage.png).
+
+Blender source validation:
+Joint hierarchy added to all 14 source files with rest-transform drift
+below 0.000001. A saved Paladin source was independently loaded through
+the connected Blender session: 327 objects, 21 joint empties, 20 parented
+joints and one packed reference image. Temporary validation data removed.
+The standalone background Blender process crashed at startup on this host;
+the connected Blender session successfully performed the file-open check.
+
+Previews are studio comparisons and representative motion/race captures.
+This pass does not establish exhaustive mesh-intersection testing for every
+possible combat blend. Further art direction can be based on play feedback.

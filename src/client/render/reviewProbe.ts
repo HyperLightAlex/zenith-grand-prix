@@ -47,6 +47,6 @@ export class ReviewProbe {
       geometries: renderer.info.memory.geometries, maxGeometries: this.maxGeometries,
       resolution: `${renderer.domElement.width}×${renderer.domElement.height}`, quality, scale, cap, lods: this.lods };
     this.output.dataset.stats = JSON.stringify(stats);
-    this.output.textContent = `${stats.context} · ${stats.frames} frames / ${stats.seconds}s\n${stats.meanFps} mean fps · ${stats.recentP95ms}ms recent p95\n${stats.meanDrawCalls} calls · ${stats.meanTrianglesAllPasses.toLocaleString()} tris (all passes)\n${stats.resolution} · ${quality} · scale ${scale.toFixed(2)} · cap ${cap || 'off'}\nSunhawk LOD ${this.lods || '—'} · ${stats.geometries} geometries`;
+    this.output.textContent = `${stats.context} · ${stats.frames} frames / ${stats.seconds}s\n${stats.meanFps} mean fps · ${stats.recentP95ms}ms recent p95\n${stats.meanDrawCalls} calls · ${stats.meanTrianglesAllPasses.toLocaleString()} tris (all passes)\n${stats.resolution} · ${quality} · scale ${scale.toFixed(2)} · cap ${cap || 'off'}\nMech LOD ${this.lods || '—'} · ${stats.geometries} geometries`;
   }
 }

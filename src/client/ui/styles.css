@@ -571,6 +571,12 @@ html, body {
 .item.sel::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0.5em; background: var(--signal); }
 .item.go.sel { background: var(--signal); }
 
+/* Leave room for model comparison controls in the plain garage as well. */
+.menu:not(.anime)[data-screen='garage'] .col { top: 2.3em; bottom: 4.5em; gap: 0.65em; }
+.menu:not(.anime)[data-screen='garage'] h1 { font-size: 3.3em; }
+.menu:not(.anime)[data-screen='garage'] .list { gap: 0.22em; margin-top: 0.3em; }
+.menu:not(.anime)[data-screen='garage'] .item { font-size: 1.5em; padding-top: 0.3em; padding-bottom: 0.32em; }
+
 .frame-info { display: grid; gap: 0.5em; margin-top: 0.3em; }
 .frame-info .stat { display: grid; grid-template-columns: 6.5em 1fr; align-items: center; gap: 0.8em; font-size: 1.15em; font-weight: 500; }
 .frame-info .stat .bar { height: 0.55em; }

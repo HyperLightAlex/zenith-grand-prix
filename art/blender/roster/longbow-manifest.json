@@ -1,0 +1,24 @@
+{
+  "model": "longbow",
+  "design": "Lance-bearing knight with stronger greaves and closed weapon grip",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 33481,
+      "bytes": 659608,
+      "parts": 102
+    },
+    {
+      "level": 1,
+      "triangles": 17195,
+      "bytes": 385684,
+      "parts": 102
+    },
+    {
+      "level": 2,
+      "triangles": 8466,
+      "bytes": 232132,
+      "parts": 102
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "model": "anubis",
+  "design": "Tapered obelisk armor, gold-edged joints and layered jackal cheek plates",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 18146,
+      "bytes": 356208,
+      "parts": 82
+    },
+    {
+      "level": 1,
+      "triangles": 9268,
+      "bytes": 227656,
+      "parts": 82
+    },
+    {
+      "level": 2,
+      "triangles": 4518,
+      "bytes": 144640,
+      "parts": 82
+    }
+  ]
+}

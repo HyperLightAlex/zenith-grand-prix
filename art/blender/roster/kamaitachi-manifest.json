@@ -1,0 +1,24 @@
+{
+  "model": "kamaitachi",
+  "design": "Fast samurai, tapered bracers and articulated blade-bearing arms",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 24976,
+      "bytes": 485412,
+      "parts": 99
+    },
+    {
+      "level": 1,
+      "triangles": 12804,
+      "bytes": 301848,
+      "parts": 99
+    },
+    {
+      "level": 2,
+      "triangles": 6268,
+      "bytes": 187156,
+      "parts": 99
+    }
+  ]
+}

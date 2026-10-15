@@ -7,6 +7,7 @@ import { h, setClass, setText } from './dom';
 import { emblemUrl, pilotUrl } from './factionArt';
 import { COVER, LOGO } from './keyArt';
 import { getSunhawkModel, getSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
+import { rosterLabel } from '../render/mech/rosterSelection';
 
 export type Screen = 'title' | 'garage' | 'controls' | 'pause' | 'results' | null;
 type Device = 'pad' | 'keys';
@@ -55,6 +56,7 @@ export interface MenuCallbacks {
   /** Whether the 80s anime look is on. */
   lookOn(): boolean;
   onCycleSunhawk(dir: number): void;
+  onToggleRoster(): void;
   onToggleSunhawkPanels(): void;
   onQuit(): void;
   onGarage(): void;
@@ -90,6 +92,7 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Tuning panel', 'Back', 'T'],
       ['Full screen', '', 'F'],
       ['Compare Sunhawk designs', '', 'B'],
+      ['Compare other mech designs', '', 'N'],
     ],
   ],
   [
@@ -420,15 +423,19 @@ export class Menus {
   }
 
   private sunhawkItems(list: HTMLElement): void {
+    const roster=h('div.item',h('span','Other mech designs'),h('span.choice.roster-model-label',rosterLabel()));
+    roster.title='Compare the rest of the roster. N also switches during a race.';
+    this.addItem(list,roster,()=>this.cb.onToggleRoster(),()=>this.cb.onToggleRoster());
     const model = h('span.choice.sunhawk-model-label',SUNHAWK_LABELS[getSunhawkModel()]);
     const row = h('div.item',h('span','Sunhawk design'),model);
     row.title = 'Compare Solstice’s forward models. B also switches during a race.';
     this.addItem(list,row,undefined,(dir) => this.cb.onCycleSunhawk(dir));
     const finish = h('span.choice.sunhawk-finish-label',getSunhawkPanels() ? 'Panel lines' : 'Clean');
-    this.addItem(list,h('div.item',h('span','Sunhawk finish'),finish),() => this.cb.onToggleSunhawkPanels(),() => this.cb.onToggleSunhawkPanels());
+    this.addItem(list,h('div.item',h('span','Armor finish'),finish),() => this.cb.onToggleSunhawkPanels(),() => this.cb.onToggleSunhawkPanels());
   }
 
   refreshSunhawk(): void {
+    this.root.querySelectorAll('.roster-model-label').forEach((el)=>{el.textContent=rosterLabel();});
     this.root.querySelectorAll('.sunhawk-model-label').forEach((el) => { el.textContent=SUNHAWK_LABELS[getSunhawkModel()]; });
     this.root.querySelectorAll('.sunhawk-finish-label').forEach((el) => { el.textContent=getSunhawkPanels() ? 'Panel lines' : 'Clean'; });
   }

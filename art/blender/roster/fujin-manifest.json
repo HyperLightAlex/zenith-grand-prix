@@ -1,0 +1,24 @@
+{
+  "model": "fujin",
+  "design": "Wind-ring samurai, layered shin shells and reinforced staff grip",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 27884,
+      "bytes": 538164,
+      "parts": 92
+    },
+    {
+      "level": 1,
+      "triangles": 14254,
+      "bytes": 320024,
+      "parts": 92
+    },
+    {
+      "level": 2,
+      "triangles": 6950,
+      "bytes": 195772,
+      "parts": 92
+    }
+  ]
+}

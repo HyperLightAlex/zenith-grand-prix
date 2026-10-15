@@ -1,0 +1,24 @@
+{
+  "model": "stinger",
+  "design": "Compact rifle platform, stronger forearm housings and visor brow",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 18173,
+      "bytes": 375564,
+      "parts": 88
+    },
+    {
+      "level": 1,
+      "triangles": 9263,
+      "bytes": 230396,
+      "parts": 88
+    },
+    {
+      "level": 2,
+      "triangles": 4529,
+      "bytes": 148304,
+      "parts": 88
+    }
+  ]
+}

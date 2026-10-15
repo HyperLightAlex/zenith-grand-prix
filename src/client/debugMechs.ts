@@ -17,6 +17,7 @@ import { POSES } from './render/mech/poses';
 import { getSunhawkModel, setSunhawkModel } from './render/mech/sunhawkSelection';
 import { setMechDetail } from './render/mech/detail';
 import { DRAWN_FLAMES } from './render/mech/parts';
+import { getRosterModel, setRosterModel } from './render/mech/rosterSelection';
 
 export function runMechDebug(): void {
   const q = new URLSearchParams(location.search);
@@ -106,11 +107,15 @@ export function runMechDebug(): void {
   if (compare) {
     useOldSwift(false);
     const selected = getSunhawkModel();
+    const rosterCompare=q.has('rosterCompare');
+    const selectedRoster=getRosterModel();
     rigs = (['current', 'updated'] as const).map((variant, i) => {
       setSunhawkModel(variant);
-      return place(buildFrame(ROLE.FW, LIVERIES[0], '1'), (i - .5) * 7, 0, 0, poseName, poseName === 'boost' ? .7 : .15);
+      setRosterModel(variant);
+      return place(buildFrame(rosterCompare?role:ROLE.FW, LIVERIES[rosterCompare?team:0], String(role+1)), (i - .5) * 7, 0, 0, poseName, poseName === 'boost' ? .7 : .15);
     });
     setSunhawkModel(selected);
+    setRosterModel(selectedRoster);
     const labels = document.createElement('div');
     labels.style.cssText = 'position:fixed;inset:24px 0 auto;display:flex;justify-content:space-around;color:#172238;font:700 24px "Barlow Condensed",sans-serif;pointer-events:none';
     for (const label of ['Current reference', 'Updated design']) {

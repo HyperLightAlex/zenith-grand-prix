@@ -16,6 +16,9 @@ import { buildSwift } from './swift';
 import { buildImportedSunhawk } from './importedSunhawk';
 import { sunhawkAsset } from './sunhawkAsset';
 import { getSunhawkModel } from './sunhawkSelection';
+import { getRosterModel } from './rosterSelection';
+import { hasRosterAsset } from './rosterAsset';
+import { buildImportedRoster } from './importedRoster';
 import { buildVector } from './vector';
 import { buildLongbow } from './aurora/longbow';
 import { buildPaladin } from './aurora/paladin';
@@ -68,7 +71,11 @@ export function buildFrame(role: Role, livery: Livery, number: string): MechRig 
   const rig = new MechRig(DIMS[role]);
   const own = oldSwift && role === ROLE.FW && livery.id === 'solstice' ? buildSwift : DESIGNS[livery.id]?.[role];
   const build = own ?? DESIGNS.solstice[role]!;
-  build(frameCtx(rig, livery), number);
+  const id=livery.models[role].toLowerCase();
+  const updated=getRosterModel()==='updated' && hasRosterAsset(id);
+  build(frameCtx(rig, livery, !updated), number);
+  if(updated) buildImportedRoster(rig,livery,id,role===ROLE.DF);
+  else { rig.root.userData.rosterModel='current'; rig.root.userData.modelId=id; }
   return rig;
 }
 

@@ -1,0 +1,24 @@
+{
+  "model": "sobek",
+  "design": "Crocodile jaw planes, column bracers and heavy articulated hands",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 32271,
+      "bytes": 629936,
+      "parts": 103
+    },
+    {
+      "level": 1,
+      "triangles": 16424,
+      "bytes": 374656,
+      "parts": 103
+    },
+    {
+      "level": 2,
+      "triangles": 7999,
+      "bytes": 227756,
+      "parts": 103
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "model": "paladin",
+  "design": "Shield knight with articulated knuckles and reinforced elbow covers",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 40407,
+      "bytes": 758448,
+      "parts": 106
+    },
+    {
+      "level": 1,
+      "triangles": 20745,
+      "bytes": 446556,
+      "parts": 106
+    },
+    {
+      "level": 2,
+      "triangles": 10206,
+      "bytes": 263656,
+      "parts": 106
+    }
+  ]
+}

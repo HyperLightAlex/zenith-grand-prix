@@ -1,0 +1,24 @@
+{
+  "model": "seraph",
+  "design": "Slender knight, layered pearl armor and separated feather fins",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 27351,
+      "bytes": 527976,
+      "parts": 90
+    },
+    {
+      "level": 1,
+      "triangles": 14038,
+      "bytes": 318724,
+      "parts": 90
+    },
+    {
+      "level": 2,
+      "triangles": 6924,
+      "bytes": 194176,
+      "parts": 90
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "model": "razor",
+  "design": "Lean blade carrier, split armor and faceted shin shells",
+  "levels": [
+    {
+      "level": 0,
+      "triangles": 17504,
+      "bytes": 347324,
+      "parts": 87
+    },
+    {
+      "level": 1,
+      "triangles": 8943,
+      "bytes": 223204,
+      "parts": 87
+    },
+    {
+      "level": 2,
+      "triangles": 4369,
+      "bytes": 144096,
+      "parts": 87
+    }
+  ]
+}

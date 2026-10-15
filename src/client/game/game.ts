@@ -37,6 +37,7 @@ import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
 import { useOldSwift } from '../render/mech/frames';
 import { cycleSunhawkModel, getSunhawkModel, getSunhawkPanels, setSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
+import { getRosterModel, toggleRosterModel, rosterLabel } from '../render/mech/rosterSelection';
 import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
@@ -156,9 +157,10 @@ export class Game {
       onToggleLook: () => this.toggleLook(),
       lookOn: () => look.on,
       onCycleSunhawk: (dir) => this.cycleSunhawk(dir),
+      onToggleRoster: () => this.cycleRoster(),
       onToggleSunhawkPanels: () => {
         setSunhawkPanels(!getSunhawkPanels());
-        this.refreshSunhawk();
+        this.refreshSunhawk('all');
       },
       onQuit: () => this.showTitle(),
       onGarage: () => {
@@ -380,13 +382,20 @@ export class Game {
     this.hud.showNotice(`Sunhawk: ${SUNHAWK_LABELS[getSunhawkModel()]}`,false,1.8);
   }
 
-  private refreshSunhawk(): void {
+  private cycleRoster(): void {
+    toggleRosterModel();
+    this.refreshSunhawk('roster');
+    this.hud.showNotice(`Mechs: ${rosterLabel()}`,false,1.8);
+  }
+
+  private refreshSunhawk(scope: 'sunhawk' | 'roster' | 'all' = 'sunhawk'): void {
     useOldSwift(false);
-    this.view.refreshSunhawks();
+    this.view.refreshMechModels(scope);
     celify(this.renderer.scene);
     this.menus.refreshSunhawk();
     try {
       localStorage.setItem('zgp.sunhawk.model',getSunhawkModel());
+      localStorage.setItem('zgp.roster.model',getRosterModel());
       localStorage.setItem('zgp.sunhawk.panels',getSunhawkPanels() ? '1' : '0');
     } catch { /* storage is optional */ }
   }
@@ -791,6 +800,10 @@ export class Game {
     if (menu.includes('model')) {
       this.cycleSunhawk();
       menu = menu.filter((m) => m !== 'model');
+    }
+    if (menu.includes('rosterModel')) {
+      this.cycleRoster();
+      menu=menu.filter(m=>m!=='rosterModel');
     }
     // G switches the look, anywhere.
     if (menu.includes('look')) {
