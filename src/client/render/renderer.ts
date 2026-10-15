@@ -3,6 +3,7 @@
 // tone-mapped output.
 import * as THREE from 'three';
 import { ReviewProbe } from './reviewProbe';
+import { fitCameraToViewport } from './viewport';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass } from 'three/addons/postprocessing/Pass.js';
@@ -183,6 +184,7 @@ export class Renderer {
   private frameTimes: number[] = [];
   private lastScaleChange = 0;
   private scale = 1;
+  private viewport = { width: 0, height: 0, ratio: 0 };
 
   constructor(readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -230,6 +232,7 @@ export class Renderer {
     this.composer.addPass(new OutputPass());
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    new ResizeObserver(() => this.resize()).observe(canvas);
   }
 
   /** Fog colour and thickness for a circuit's setting, and the look's ink and grade for it. */
@@ -345,12 +348,13 @@ export class Renderer {
     const h = this.canvas.clientHeight || window.innerHeight;
     const maxRatio = this.quality === 'high' ? 2 : this.quality === 'medium' ? 1.5 : 1;
     const ratio = Math.min(window.devicePixelRatio || 1, maxRatio) * this.scale;
+    if (w === this.viewport.width && h === this.viewport.height && ratio === this.viewport.ratio) return;
+    this.viewport = { width: w, height: h, ratio };
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
     this.composer.setPixelRatio(ratio);
     this.composer.setSize(w, h);
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    fitCameraToViewport(this.camera, w, h);
     this.speedPass.uniforms.uAspect.value = w / h;
     this.travelMask.setSize(Math.max(1, Math.round((w * ratio) / 4)), Math.max(1, Math.round((h * ratio) / 4)));
     const pw = Math.round(w * ratio);

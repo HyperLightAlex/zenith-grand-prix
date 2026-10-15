@@ -8,6 +8,7 @@ import { preloadSunhawkDetails } from './sunhawkDetails';
 import { JOINTS, type FrameDims, type JointName } from './rig';
 import type { Slot } from './kit';
 import type { SunhawkAssetVariant } from './sunhawkSelection';
+import { prepareAssetGeometry } from './assetGeometry';
 
 export type AssetJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack' | 'towerL' | 'towerR';
 export interface SunhawkPart { joint: AssetJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry; detail: boolean }
@@ -32,8 +33,8 @@ export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVarian
     if (!jointNames.includes(joint) || !['P','S','T','F','K','D','C','G'].includes(slot)) throw new Error(`Invalid Sunhawk part ${o.name}`);
     if (!o.geometry.hasAttribute('normal')) throw new Error(`Missing authored normals on ${o.name}`);
     // The export contains joint-local meshes; transport transforms are baked once.
-    const geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
     const detail = o.userData.detail === true;
+    const geometry = prepareAssetGeometry(o.geometry, o.matrixWorld, detail);
     if (detail && !geometry.hasAttribute('uv')) throw new Error(`Missing detail UVs on ${o.name}`);
     parts.push({ joint, slot, geometry, detail });
   });

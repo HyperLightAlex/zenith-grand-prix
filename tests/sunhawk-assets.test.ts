@@ -290,3 +290,36 @@ describe('updated Sunhawk production preparation', () => {
     expect(detailLevelForPixels(40,0)).toBe(2);
   });
 });
+
+describe('indexed imported kit assembly', () => {
+  it('retains the same triangle attributes when mixing imports and procedural pieces, without expanding the import', async () => {
+    const bytes = await readFile(new URL('../src/client/render/mech/assets/sunhawk-updated.glb', import.meta.url));
+    const { scene } = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+    const source = readSunhawkAsset(scene, 'updated').parts.find(p => p.joint === 'chest' && p.slot === 'P')!.geometry;
+    const snapshot = source.clone();
+    const assemble = (indexed: boolean) => new Kit(LIVERIES[0], .018, 1.15, indexed)
+      .geometry('P', source, -1).geometry('G', source)
+      .box('T', .1, .2, .3).cyl('G', .1, .2, .3, 8).build();
+    const fast = assemble(true), reference = assemble(false);
+    expect(fast.armor!.geometry.index).not.toBeNull();
+    expect(fast.armor!.geometry.attributes.position.count).toBeLessThan(reference.armor!.geometry.attributes.position.count);
+    for (const part of ['armor', 'glow'] as const) {
+      const actual = fast[part]!.geometry.toNonIndexed();
+      const expected = reference[part]!.geometry;
+      expect(Object.keys(actual.attributes).sort()).toEqual(Object.keys(expected.attributes).sort());
+      for (const key of Object.keys(expected.attributes)) {
+        const a = actual.attributes[key].array, b = expected.attributes[key].array;
+        expect(a.length).toBe(b.length);
+        let error = 0;
+        for (let i = 0; i < a.length; i++) error = Math.max(error, Math.abs(a[i] - b[i]));
+        expect(error, `${part}: ${key}`).toBeLessThan(1e-6);
+      }
+      actual.dispose();
+    }
+    expect(source.index!.array).toEqual(snapshot.index!.array);
+    expect(source.attributes.normal.array).toEqual(snapshot.attributes.normal.array);
+    expect(source.attributes.position.array).toEqual(snapshot.attributes.position.array);
+    for (const result of [fast, reference]) result.group.traverse(o => (o as THREE.Mesh).geometry?.dispose());
+    snapshot.dispose();
+  });
+});

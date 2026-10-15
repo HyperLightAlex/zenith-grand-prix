@@ -9,12 +9,33 @@ live comparison at localhost:4173. The dev server can serve the gallery at
 http://127.0.0.1:5173/art/blender/roster/review.html .
 
 IN GAME
-N / Other mech designs: updated Blender assets versus original code-built models.
-B / Sunhawk design: existing independent Sunhawk comparison.
-Armor finish: clean surfaces or procedural panel lines on all imported models.
+Normal garage/pause menus use the approved updated models with clean armor.
+The temporary design and finish selectors are removed. Comparisons remain in
+this gallery and explicit URL tools, independent of old saved preferences:
+?roster=current|updated, &sunhawk=current|updated|game, &sunhawkPanels=0|1.
+With ?artReview=1 only, N toggles the roster and B cycles Sunhawk in place.
 G: anime/plain rendering. Existing decals, glow, damage flash, weapons,
-thrusters and animation anchors are retained.
-URL overrides: ?roster=updated or ?roster=current. Selection persists locally.
+thrusters and animation anchors are retained. Art choices no longer persist.
+
+PERFORMANCE / RELEASE CHECK (2026-10-15)
+At 1280x720, high quality, scale 1, uncapped, a controlled Helios demo
+(seed 9, skip 95, Tempest vs Aurora) measured 74.8 fps updated versus
+74.9 fps original over approximately 100 seconds each. The updated models
+still draw more triangles (234k vs 193k across all render passes in this run).
+This does not rule out a slowdown at higher resolutions or in other races.
+
+Garage scene construction previously took 1425 ms for the initial Sunhawk
+preview. Building only the selected pilot and retaining cached mesh indices
+reduced that to 112 ms; subsequent Daystar and Raijin previews measured
+100 and 118 ms. These are CPU setup times, excluding first-frame GPU work.
+No model geometry or authored normal seams were simplified by this fix.
+
+The host was under heavy background CPU and memory pressure during review
+(about 5.5% CPU idle and active swapping), which can also cause intermittent
+stutters. Rendering regression checks cover indexed mesh equivalence,
+preview disposal, all six race pilots, and camera proportions through
+garage framing, resizing and returning to play. Browser checks verified
+frame/team changes, race startup, clean pause/garage menus and viewer resize.
 
 ART DIRECTION
 Reference equipment, faction palettes and motifs are retained. Stinger's

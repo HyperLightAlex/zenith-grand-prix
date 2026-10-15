@@ -36,8 +36,8 @@ import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
 import { useOldSwift } from '../render/mech/frames';
-import { cycleSunhawkModel, getSunhawkModel, getSunhawkPanels, setSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
-import { getRosterModel, toggleRosterModel, rosterLabel } from '../render/mech/rosterSelection';
+import { cycleSunhawkModel, getSunhawkModel, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
+import { toggleRosterModel, rosterLabel } from '../render/mech/rosterSelection';
 import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
@@ -156,12 +156,6 @@ export class Game {
       onTuning: () => this.panel.show(),
       onToggleLook: () => this.toggleLook(),
       lookOn: () => look.on,
-      onCycleSunhawk: (dir) => this.cycleSunhawk(dir),
-      onToggleRoster: () => this.cycleRoster(),
-      onToggleSunhawkPanels: () => {
-        setSunhawkPanels(!getSunhawkPanels());
-        this.refreshSunhawk('all');
-      },
       onQuit: () => this.showTitle(),
       onGarage: () => {
         this.menus.show('garage');
@@ -264,7 +258,7 @@ export class Game {
     const { seats, localId } = this.seats(choice);
     if (!keepTrack) this.useTrack(choice?.track ?? this.trackId);
     this.session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
-    this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.factions);
+    this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.factions, keepTrack);
     // Out of the hangar, if the garage had it up: the circuit is back.
     this.hangar.hide();
     this.trackVis.group.visible = true;
@@ -334,6 +328,7 @@ export class Game {
   }
 
   private showGarage(choice: GarageChoice): void {
+    const started = this.renderer.reviewProbe ? performance.now() : 0;
     // The garage shows only your mech in your team's hangar, so a change of
     // circuit, rival or match changes nothing on screen: it is remembered,
     // and the circuit is built when the match starts. Only a new team or
@@ -359,6 +354,7 @@ export class Game {
     this.world.group.visible = false;
     this.view.solo = true;
     this.view.cam.orbitFrame = this.hangarFrame;
+    this.renderer.reviewProbe?.recordPreview(performance.now() - started);
   }
 
   /**
@@ -392,12 +388,6 @@ export class Game {
     useOldSwift(false);
     this.view.refreshMechModels(scope);
     celify(this.renderer.scene);
-    this.menus.refreshSunhawk();
-    try {
-      localStorage.setItem('zgp.sunhawk.model',getSunhawkModel());
-      localStorage.setItem('zgp.roster.model',getRosterModel());
-      localStorage.setItem('zgp.sunhawk.panels',getSunhawkPanels() ? '1' : '0');
-    } catch { /* storage is optional */ }
   }
 
   /** Volumes and the layer mix from the tuning panel's Sound tab. */

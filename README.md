@@ -290,19 +290,17 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 
 ## Sunhawk model comparison
 
-The two Blender models are in the game on `alexander/sunhawk-blender-comparison`.
 The updated Sunhawk is the approved visual standard for future frame work:
 broad readable armor, controlled cel shadows, restrained surface detail and
 distinct mechanical joints. Its production blend is the reference asset.
-Select Solstice's forward in the garage. **Sunhawk design** cycles between the
-updated art design (default), **Current reference**, and the previous code-built
-game model. Keyboard **B** does the same in the garage, during a race, or while
-paused, without resetting the race or animation. The choice is remembered locally.
-**Sunhawk finish** switches the imported models between clean armor and the existing
-projected panel lines; **G** compares the anime and plain rendering styles.
+Normal play uses the approved updated models and clean armor. Design and finish
+selectors have been removed from the garage and pause menus.
 
-Use `&sunhawk=current|updated|game` to override the remembered choice and
-`&sunhawkPanels=0|1` to override the finish. For a controlled side-by-side view,
+Comparisons remain available with explicit URL flags: `?sunhawk=current|updated|game`,
+`&roster=current|updated`, and `&sunhawkPanels=0|1`. These do not persist into future
+sessions. With `?artReview=1`, **B** cycles Sunhawk and **N** toggles the rest of the
+roster without resetting the race or animation. **G** still compares anime/plain
+rendering. For a controlled side-by-side view,
 open `?debug=mechs&compare=1&pose=standby&bg=e4e6ec`; `pose` also accepts
 `boost`, `carveRight`, `guard`, `slashHit`, and the other names in `poses.ts`.
 This studio viewer uses the base materials; use the garage/race for the full anime

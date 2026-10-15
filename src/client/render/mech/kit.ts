@@ -377,12 +377,16 @@ export class Kit {
   }
 
   private push(g: THREE.BufferGeometry, slot: Slot | 'G', o?: Xf, preserveNormals = false, panel?: number): this {
-    let geo = g.index ? g.toNonIndexed() : g;
+    // Exported meshes already have indexed vertices and authored normal seams.
+    // Expanding them to triangles and hashing them back together costs hundreds
+    // of milliseconds per mech without changing the rendered surface.
+    let geo = g.index && !(this.indexed && preserveNormals) ? g.toNonIndexed() : g;
     geo = xf(geo, o);
     geo.deleteAttribute('uv');
     if (!preserveNormals) geo.deleteAttribute('normal');
     // Keep imported and procedural additions compatible when sharing a joint.
     if (!geo.hasAttribute('normal')) geo.computeVertexNormals();
+    if (this.indexed && !geo.index) geo = mergeVertices(geo, 1e-5);
     if (slot === 'G') {
       this.glow.push(geo);
     } else {
@@ -592,12 +596,7 @@ export class Kit {
     const table = limb ? PANEL_LIMB : PANEL_BODY;
     this.armor.forEach((g, i) => g.setAttribute('aPanel', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(this.armorPanels[i] ?? table[this.armorSlots[i]]), 1)));
     if (this.armor.length) {
-      let geo = mergeGeometries(this.armor)!;
-      if (this.indexed) {
-        const merged = geo;
-        geo = mergeVertices(merged, 1e-5); // Preserve normal, paint and material seams.
-        merged.dispose();
-      }
+      const geo = mergeGeometries(this.armor)!;
       if (!geo.hasAttribute('normal')) geo.computeVertexNormals();
       armor = new THREE.Mesh(geo, armorMat());
       armor.castShadow = true;
@@ -613,19 +612,11 @@ export class Kit {
       group.add(line);
     }
     if (this.glow.length) {
-      let geo = mergeGeometries(this.glow)!;
-      if (this.indexed) {
-        const merged = geo;
-        geo = mergeVertices(merged, 1e-5);
-        merged.dispose();
-      }
+      const geo = mergeGeometries(this.glow)!;
       glow = new THREE.Mesh(geo, glowMaterial(this.livery.glow, this.glowGain));
       group.add(glow);
     }
-    this.armor = [];
-    this.armorSlots = [];
-    this.armorPanels = [];
-    this.glow = [];
+    this.discard();
     return { group, armor, glow };
   }
 }

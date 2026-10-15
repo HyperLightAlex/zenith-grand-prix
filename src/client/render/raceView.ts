@@ -164,6 +164,8 @@ export class RaceView {
   /** A heavy blow has started winding up (`atFocus`: aimed at the mech the camera follows). */
   onTell: (kind: TellKind, mech: number, atFocus: boolean) => void = () => {};
   private mechs: MechVisual[] = [];
+  /** Garage views allocate only the selected pilot; race views allocate all six. */
+  private readonly mechIds: number[];
   reviewDetailLevels(): string {
     return this.mechs.filter((v) => v.rig.detailLevels.length > 1)
       .map((v) => `${v.rig.root.userData.modelId ?? 'sunhawk'}:${v.rig.detailLevel}`).join(',');
@@ -187,17 +189,21 @@ export class RaceView {
     private feel: Feel,
     /** Which faction each race team is (an index into LIVERIES). */
     factions: [number, number] = [0, 1],
+    private readonly previewOnly = false,
   ) {
     const race = session.race;
     this.liveries = factions.map((f) => LIVERIES[f] ?? LIVERIES[0]);
     this.dust = DUST[session.track.def.theme ?? 'meridian'] ?? DUST.meridian;
     this.focusId = session.localId >= 0 ? session.localId : 0;
+    this.mechIds = previewOnly ? [this.focusId] : race.mechs.map((m) => m.id);
+    this.solo = previewOnly;
     this.cam = new CameraRig(renderer.camera, session.track, feel);
     // A new session is a cut: the last one's speed effects end with it (the
     // garage would otherwise open smeared by the title screen's race).
     const u = renderer.speedPass.uniforms;
     u.uSpeed.value = u.uBoost.value = u.uTravel.value = 0;
-    for (const m of race.mechs) {
+    for (const id of this.mechIds) {
+      const m = race.mechs[id];
       const livery = this.liveries[m.team];
       const rig = buildFrame(m.role, livery, String(m.role + 1));
       rig.root.matrixAutoUpdate = false;
@@ -212,7 +218,7 @@ export class RaceView {
       const trails = [new Trail(livery.glow), new Trail(livery.glow)];
       const shadow = makeShadow();
       this.group.add(rig.root, shadow, snare, trails[0].mesh, trails[1].mesh);
-      this.mechs.push({
+      this.mechs[m.id] = {
         rig,
         anim: new MechAnimator(rig),
         livery,
@@ -242,8 +248,8 @@ export class RaceView {
         cut: 0,
         poseAcc: 0,
         poseIdx: -1,
-      });
-      this.plates.push({ id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false, ex: 0, ey: 0 });
+      };
+      this.plates[m.id] = { id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false, ex: 0, ey: 0 };
     }
     this.group.add(this.ring, this.fx.group);
     renderer.scene.add(this.group);
@@ -257,7 +263,8 @@ export class RaceView {
 
   /** Swap presentation assets while preserving the race, camera and animation. */
   refreshMechModels(scope: 'sunhawk' | 'roster' | 'all'): void {
-    for (const m of this.session.race.mechs) {
+    for (const id of this.mechIds) {
+      const m = this.session.race.mechs[id];
       const v = this.mechs[m.id];
       const sunhawk=m.role===ROLE.FW && v.livery.id==='solstice';
       if ((scope==='sunhawk' && !sunhawk) || (scope==='roster' && sunhawk)) continue;
@@ -300,7 +307,8 @@ export class RaceView {
     });
     // Materials this view made for itself. The armour and glow materials of
     // the mech kit are shared between views and stay, as does the shadow texture.
-    for (const v of this.mechs) {
+    for (const id of this.mechIds) {
+      const v = this.mechs[id];
       for (const mesh of [v.shield, v.bubble, v.snare, v.shadow, v.trails[0].mesh, v.trails[1].mesh]) (mesh.material as THREE.Material).dispose();
     }
     (this.ring.material as THREE.Material).dispose();
@@ -331,7 +339,8 @@ export class RaceView {
 
     // ---- place and animate every mech
     const armed = weaponsFree(race);
-    for (const m of race.mechs) {
+    for (const id of this.mechIds) {
+      const m = race.mechs[id];
       const v = this.mechs[m.id];
       v.s = this.session.prevS[m.id] + (m.s - this.session.prevS[m.id]) * alpha;
       v.d = this.session.prevD[m.id] + (m.d - this.session.prevD[m.id]) * alpha;
@@ -550,7 +559,8 @@ export class RaceView {
 
     // ---- wind-up tells: a ring closing on any mech winding up a heavy blow
     if (this.feel.tells > 0) {
-      for (const m of race.mechs) {
+      for (const id of this.mechIds) {
+        const m = race.mechs[id];
         // Rivals only: a team-mate's wind-up is nothing you need to read.
         if (m.team === focus.team) continue;
         const t = tellOf(m, race.tick);
@@ -620,7 +630,8 @@ export class RaceView {
     this.fx.update(dt, this.renderer.camera);
 
     // A mech right on top of the lens would fill the frame: drop it for a moment.
-    for (const m of race.mechs) {
+    for (const id of this.mechIds) {
+      const m = race.mechs[id];
       const v = this.mechs[m.id];
       v.rig.root.visible = m.id === this.focusId || (!this.solo && v.pos.distanceToSquared(this.renderer.camera.position) > 7.5 * 7.5);
       updateMechDetail(v.rig, this.renderer.camera, this.renderer.renderer.domElement.clientHeight);
@@ -656,7 +667,8 @@ export class RaceView {
     const cam = this.renderer.camera;
     const w = this.renderer.canvas.clientWidth || window.innerWidth;
     const h = this.renderer.canvas.clientHeight || window.innerHeight;
-    for (const m of race.mechs) {
+    for (const id of this.mechIds) {
+      const m = race.mechs[id];
       const v = this.mechs[m.id];
       const plate = this.plates[m.id];
       ndc.copy(v.pos);
@@ -807,6 +819,7 @@ export class RaceView {
 
   /** React to something the simulation reported. */
   handleEvent(e: SimEvent): void {
+    if (this.previewOnly) return;
     const { race, track } = this.session;
     const local = this.focusId;
     switch (e.type) {

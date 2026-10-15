@@ -571,7 +571,7 @@ html, body {
 .item.sel::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0.5em; background: var(--signal); }
 .item.go.sel { background: var(--signal); }
 
-/* Leave room for model comparison controls in the plain garage as well. */
+/* Keep the plain garage usable at short window heights. */
 .menu:not(.anime)[data-screen='garage'] .col { top: 2.3em; bottom: 4.5em; gap: 0.65em; }
 .menu:not(.anime)[data-screen='garage'] h1 { font-size: 3.3em; }
 .menu:not(.anime)[data-screen='garage'] .list { gap: 0.22em; margin-top: 0.3em; }

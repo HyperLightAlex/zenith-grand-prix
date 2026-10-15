@@ -25,19 +25,13 @@ import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech
 const q = new URLSearchParams(location.search);
 
 async function boot(): Promise<void> {
-  let remembered: string | null = null;
-  let rememberedPanels = false;
-  let rememberedRoster: string | null = null;
-  try {
-    remembered = localStorage.getItem('zgp.sunhawk.model');
-    rememberedPanels = localStorage.getItem('zgp.sunhawk.panels') === '1';
-    rememberedRoster = localStorage.getItem('zgp.roster.model');
-  } catch { /* storage is optional */ }
-  const model = q.get('sunhawk') ?? remembered;
+  // Approved defaults are independent of old art-review preferences.
+  // Comparisons remain opt-in URL tools, not player settings.
+  const model = q.get('sunhawk');
   if (isSunhawkModel(model)) setSunhawkModel(model);
-  const roster = q.get('roster') ?? rememberedRoster;
+  const roster = q.get('roster');
   if (roster === 'updated' || roster === 'current') setRosterModel(roster);
-  setSunhawkPanels(q.has('sunhawkPanels') ? q.get('sunhawkPanels') === '1' : rememberedPanels);
+  setSunhawkPanels(q.get('sunhawkPanels') === '1');
   const loading = document.createElement('div');
   loading.className = 'model-loading';
   loading.textContent = 'Loading mech models…';

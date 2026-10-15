@@ -58,6 +58,7 @@ export class Input {
   private gestured = false;
 
   constructor() {
+    const artReview = new URLSearchParams(location.search).get('artReview') === '1';
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (e.repeat) return;
@@ -75,8 +76,8 @@ export class Input {
       if (e.code === 'Escape' || e.code === 'KeyP') m.push('pause');
       if (e.code === 'KeyT' || e.code === 'Backquote') m.push('tune');
       if (e.code === 'KeyG') m.push('look');
-      if (e.code === 'KeyB') m.push('model');
-      if (e.code === 'KeyN') m.push('rosterModel');
+      if (artReview && e.code === 'KeyB') m.push('model');
+      if (artReview && e.code === 'KeyN') m.push('rosterModel');
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());

@@ -274,7 +274,12 @@ export class CameraRig {
     }
     const shift = this.mode === 'orbit' ? this.shiftX : 0;
     const view = cam.view;
-    if (shift !== 0 && (!view || !view.enabled || view.offsetX !== -shift)) cam.setViewOffset(1, 1, -shift, 0, 1, 1);
+    // setViewOffset also sets aspect. Keep the viewport's ratio while shifting
+    // by a fraction of its width, including after a docked browser is resized.
+    const aspect = cam.aspect;
+    if (shift !== 0 && (!view || !view.enabled || view.fullWidth !== aspect || view.offsetX !== -shift * aspect)) {
+      cam.setViewOffset(aspect, 1, -shift * aspect, 0, aspect, 1);
+    }
     else if (shift === 0 && view?.enabled) cam.clearViewOffset();
   }
 }

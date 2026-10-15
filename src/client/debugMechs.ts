@@ -18,6 +18,7 @@ import { getSunhawkModel, setSunhawkModel } from './render/mech/sunhawkSelection
 import { setMechDetail } from './render/mech/detail';
 import { DRAWN_FLAMES } from './render/mech/parts';
 import { getRosterModel, setRosterModel } from './render/mech/rosterSelection';
+import { fitCameraToViewport } from './render/viewport';
 
 export function runMechDebug(): void {
   const q = new URLSearchParams(location.search);
@@ -27,7 +28,6 @@ export function runMechDebug(): void {
   document.body.appendChild(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Number(q.get('dpr') ?? 1));
-  renderer.setSize(innerWidth, innerHeight, false);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -145,7 +145,21 @@ export function runMechDebug(): void {
   const cz = Number(q.get('cz') ?? (poseList.length || turn || compare ? 0 : -3));
   cam.position.set(cx + Math.sin(yaw) * dist, camH, cz + Math.cos(yaw) * dist);
   cam.lookAt(cx, Number(q.get('ly') ?? 4.4), cz);
-  renderer.render(scene, cam);
+  let lastWidth = 0, lastHeight = 0;
+  const resize = () => {
+    const width = canvas.clientWidth, height = canvas.clientHeight;
+    if (!width || !height || (width === lastWidth && height === lastHeight)) return;
+    lastWidth = width; lastHeight = height;
+    renderer.setSize(width, height, false);
+    // The automatic comparison framing keeps both models in view on narrow
+    // panels. Explicit model-sheet framing keeps its requested vertical span.
+    const span = compare && !q.has('ortho') ? Math.max(12, 17 * height / width) : ortho;
+    fitCameraToViewport(cam, width, height, span);
+    renderer.render(scene, cam);
+  };
+  resize();
+  window.addEventListener('resize', resize);
+  new ResizeObserver(resize).observe(canvas);
   // Keep texture loading and the three-frame jet loop visible in this focused
   // effects check. Ordinary model-sheet views remain a single render.
   if (jetPower !== null) renderer.setAnimationLoop((now) => {

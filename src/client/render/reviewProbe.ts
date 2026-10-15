@@ -13,6 +13,9 @@ export class ReviewProbe {
   private maxGeometries = 0;
   private context = 'loading';
   private lods = '';
+  private previewMs = 0;
+
+  recordPreview(ms: number): void { this.previewMs = +ms.toFixed(1); }
 
   constructor() {
     this.output.id = 'render-review';
@@ -45,8 +48,8 @@ export class ReviewProbe {
       meanDrawCalls: Math.round(this.totalCalls/Math.max(1,this.frames)),
       meanTrianglesAllPasses: Math.round(this.totalTriangles/Math.max(1,this.frames)),
       geometries: renderer.info.memory.geometries, maxGeometries: this.maxGeometries,
-      resolution: `${renderer.domElement.width}×${renderer.domElement.height}`, quality, scale, cap, lods: this.lods };
+      resolution: `${renderer.domElement.width}×${renderer.domElement.height}`, quality, scale, cap, lods: this.lods, previewMs: this.previewMs };
     this.output.dataset.stats = JSON.stringify(stats);
-    this.output.textContent = `${stats.context} · ${stats.frames} frames / ${stats.seconds}s\n${stats.meanFps} mean fps · ${stats.recentP95ms}ms recent p95\n${stats.meanDrawCalls} calls · ${stats.meanTrianglesAllPasses.toLocaleString()} tris (all passes)\n${stats.resolution} · ${quality} · scale ${scale.toFixed(2)} · cap ${cap || 'off'}\nMech LOD ${this.lods || '—'} · ${stats.geometries} geometries`;
+    this.output.textContent = `${stats.context} · ${stats.frames} frames / ${stats.seconds}s\n${stats.meanFps} mean fps · ${stats.recentP95ms}ms recent p95\n${stats.meanDrawCalls} calls · ${stats.meanTrianglesAllPasses.toLocaleString()} tris (all passes)\n${stats.resolution} · ${quality} · scale ${scale.toFixed(2)} · cap ${cap || 'off'}\nMech LOD ${this.lods || '—'} · ${stats.geometries} geometries\nGarage build ${this.previewMs}ms`;
   }
 }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { JOINTS, type FrameDims, type JointName } from './rig';
 import type { Slot } from './kit';
+import { prepareAssetGeometry } from './assetGeometry';
 export type RosterJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack';
 export interface RosterPart { joint: RosterJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry }
 export interface CalfThruster {
@@ -32,7 +33,7 @@ export function readRosterAsset(scene: THREE.Group, id: string): RosterAsset {
     const {joint,slot}=o.userData;
     if(![...JOINTS,'skirtL','skirtR','skirtBack'].includes(joint) || !['P','S','T','F','K','D','C','G'].includes(slot)) throw new Error(`Invalid ${id} part ${o.name}`);
     if(!o.geometry.hasAttribute('normal')) throw new Error(`Missing ${id} normals`);
-    parts.push({joint,slot,geometry:o.geometry.clone().applyMatrix4(o.matrixWorld)});
+    parts.push({joint,slot,geometry:prepareAssetGeometry(o.geometry,o.matrixWorld)});
   });
   const required=JOINTS.filter(j=>j!=='wingL' && j!=='wingR');
   if(!dims || DIM_KEYS.some(k=>!Number.isFinite(dims![k]) || dims![k]<=0) || required.some(j=>!parts.some(p=>p.joint===j))) throw new Error(`Incomplete ${id} export`);
@@ -54,6 +55,11 @@ export function preloadRoster(): Promise<void> {
     if(!url) throw new Error(`Missing roster asset ${id}:${level}`);
     const gltf=await new GLTFLoader().loadAsync(url);
     assets.set(`${id}:${level}`,readRosterAsset(gltf.scene,id));
+    gltf.scene.traverse(o => {
+      if (!(o instanceof THREE.Mesh)) return;
+      o.geometry.dispose();
+      for (const material of Array.isArray(o.material) ? o.material : [o.material]) material.dispose();
+    });
   }))).then(()=>{});
 }
 export const hasRosterAsset = (id: string): boolean => assets.has(`${id}:0`);
