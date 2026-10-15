@@ -1,23 +1,23 @@
 {
   "model": "daystar",
-  "design": "Racing fairings, layered knee armor and reinforced skate decks",
+  "design": "Art-sheet racing armor, paired swept fins, layered knees and seated carbine",
   "levels": [
     {
       "level": 0,
-      "triangles": 22700,
-      "bytes": 451888,
+      "triangles": 24156,
+      "bytes": 513444,
       "parts": 97
     },
     {
       "level": 1,
-      "triangles": 11610,
-      "bytes": 278840,
+      "triangles": 12520,
+      "bytes": 325328,
       "parts": 97
     },
     {
       "level": 2,
-      "triangles": 5695,
-      "bytes": 176208,
+      "triangles": 6349,
+      "bytes": 203208,
       "parts": 97
     }
   ]

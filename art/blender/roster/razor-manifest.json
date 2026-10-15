@@ -1,23 +1,23 @@
 {
   "model": "razor",
-  "design": "Lean blade carrier, split armor and faceted shin shells",
+  "design": "Art-sheet tapered blade carrier with faceted shin armor and twin eye sensors",
   "levels": [
     {
       "level": 0,
-      "triangles": 22364,
-      "bytes": 426388,
+      "triangles": 22916,
+      "bytes": 460124,
       "parts": 95
     },
     {
       "level": 1,
-      "triangles": 11447,
-      "bytes": 273012,
+      "triangles": 11863,
+      "bytes": 300992,
       "parts": 95
     },
     {
       "level": 2,
-      "triangles": 5621,
-      "bytes": 172364,
+      "triangles": 5981,
+      "bytes": 189104,
       "parts": 95
     }
   ]

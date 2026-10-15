@@ -1,23 +1,23 @@
 {
   "model": "sobek",
-  "design": "Crocodile jaw planes, column bracers and heavy articulated hands",
+  "design": "Art-sheet crocodile with broad bracers, shoulder medallions and layered boots",
   "levels": [
     {
       "level": 0,
-      "triangles": 37131,
-      "bytes": 711300,
+      "triangles": 37351,
+      "bytes": 736096,
       "parts": 111
     },
     {
       "level": 1,
-      "triangles": 18926,
-      "bytes": 424632,
+      "triangles": 19380,
+      "bytes": 449648,
       "parts": 111
     },
     {
       "level": 2,
-      "triangles": 9249,
-      "bytes": 256260,
+      "triangles": 9855,
+      "bytes": 275424,
       "parts": 111
     }
   ]

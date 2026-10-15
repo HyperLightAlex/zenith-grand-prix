@@ -1,5 +1,27 @@
 ROSTER PASS — VALIDATION RECORD
 
+UPDATED ART-SHEET POLISH — SOLSTICE, VANTA, MIRAGE
+- Eight units refined from the supplied updated art sheets: Daystar, Rampart,
+  Razor, Stinger, Maul, Anubis, Horus and Sobek. Eight editable Blender sources
+  and 24 GLBs regenerated. Sunhawk, Aurora and Tempest assets unchanged.
+- Original-model comparison remains available. Previous updated-pass captures
+  are retained in previews/sheet-polish alongside final four-angle captures.
+- Reviewed front, three-quarter, side, rear, boost, guard and victory views.
+  Daystar/Stinger/Maul rear fins now fan outward instead of crossing in boost.
+  Refined Stinger and Anubis faces also reviewed in close-up.
+- New right-hand Daystar/Stinger rifles have grips seated in the corrected
+  hands; actual dark bores intersect the existing firing anchors at all LODs.
+- Tiny glow geometry is preserved through LOD generation to avoid degenerate
+  emissive meshes. Final Blender exports reported no mesh warnings.
+- Full suite: 939 tests passed across 22 files. After the final Anubis eye
+  refinement, all 74 asset tests passed again. Production and single-file
+  builds passed after the final asset regeneration.
+- Gallery includes supplied art, previous pass, final comparison, four angles
+  and motion poses for the eight polished units.
+- Production Solstice-versus-Vanta battle/speed-lap check completed without
+  console warnings/errors. N switched both ways without resetting the race.
+  Daystar rear burner and side flame views remained correctly anchored.
+
 ATTACHMENT CORRECTION PASS
 - All 42 GLBs rebuilt with seated calf jets and matching effect anchors.
 - All 14 editable Blender sources updated with continuous internal supports.

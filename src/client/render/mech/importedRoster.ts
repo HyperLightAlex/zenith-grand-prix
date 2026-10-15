@@ -21,8 +21,9 @@ export function fitRosterPose(p: Pose, heavy: boolean, id = ''): void {
   if(p.chest[0]>0)p.chest[0]*=.90;
   const pitch=p.hips[2]+p.spine[0]+p.chest[0];
   p.head[0]+=before-pitch;
-  if (id==='razor' || id==='anubis' || id==='rampart') {
-    // Tall fins otherwise cross through each other above the helmet.
+  if (['razor','anubis','rampart','daystar','stinger','maul'].includes(id)) {
+    // Rear fins open outward; the old canard yaw folded the physical fins
+    // across each other behind the helmet, including the shorter swept pair.
     p.wingL[2]=-Math.abs(p.wingL[2])*.65;
     p.wingR[2]=Math.abs(p.wingR[2])*.65;
     p.wingL[1]=-Math.abs(p.wingL[1])*.35;

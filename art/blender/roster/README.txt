@@ -18,17 +18,39 @@ URL overrides: ?roster=updated or ?roster=current. Selection persists locally.
 
 ART DIRECTION
 Reference equipment, faction palettes and motifs are retained. Stinger's
-head has a joined angular beak/cheek assembly beneath its original crest
-and mono-eye design. Long
+head has a compact angular mask, recessed paired eyes and joined cheeks
+beneath its original crest. Long
 armor shells have shaped chamfered sections, broader readable surfaces,
 small edge radii and weighted normals. Light frames remain slender;
 defenders retain their broader stance. Added bearing covers, rear armor,
 layered midfielder knees and defender wrist guards improve the transitions.
-Sobek retains its fluted column bracers; Paladin retains curved tower shields.
+Sobek has broad planar bracers; Paladin retains curved tower shields.
 Hands have inward thumbs, mirrored finger lengths, rearward curls and
 forward dorsal armor. Held weapons follow the corrected palms. Maul retains
 fang knuckles, Paladin silver gadlings, and other defenders faction guards.
-Razor, Anubis and Rampart fins spread outward through boost/victory.
+Daystar, Rampart, Razor, Stinger, Maul and Anubis fins spread outward
+through boost/victory.
+
+UPDATED ART-SHEET POLISH
+Daystar, Rampart, Razor, Stinger, Maul, Anubis, Horus and Sobek now use the
+eight supplied updated sheets, saved as art/model-sheets/refs/ref-ID-updated.png.
+Sunhawk remains the approved finish reference. Aurora and Tempest are unchanged
+by this additional pass. Original code-built models remain available with N.
+sheet_polish.py contains the additional geometry and is loaded by build_roster.py.
+
+The eight units have more deliberate knee/shin shapes and seated small details.
+Daystar has one mirrored swept fin pair and a retained central stabilizer.
+Daystar and Stinger use consistent right-hand carbines with palm grips and
+barrels aligned to the existing firing anchors. Stinger's mask and Anubis's
+jackal face have paired symmetric eyes. Anubis gains curved gold-edged blades,
+copper calf fins and twin toe claws. Rampart gains broader greaves and fitted
+blue shin panels; Razor sharper knee shields; Maul more substantial gauntlet
+hardware. Horus retains his staff and feather silhouette; Sobek's new bracers
+follow the updated sheet. Conflicting generated-art views resolve to one
+physical, symmetric assembly rather than changing between views.
+
+The gallery includes the supplied sheets, four-angle views and previous-pass
+captures for these eight. previews/sheet-polish stores these additional views.
 
 ATTACHMENT CORRECTIONS
 All fourteen units have continuous internal shafts and overlapping joint
@@ -73,7 +95,8 @@ VALIDATION
 tests/roster-assets.test.ts loads all 42 real GLBs and checks complete joint
 contracts, finite geometry, normalized normals, LOD reduction, mirrored
 fingers, hand orientation, skate targets and continuous pose fitting.
-It also checks tall rear fins stay on their own side of the helmet.
+It also checks tall rear fins stay on their own side of the helmet, mirrored
+face lights and Daystar fins, and the new carbine bores at the firing anchors.
 previews contains final standing comparisons and boost/guard/victory checks.
 These are a first integrated roster polish pass, not new concept sheets.
 The original builders are unchanged; physics and race balance are unchanged.

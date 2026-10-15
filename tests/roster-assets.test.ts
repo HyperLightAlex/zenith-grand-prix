@@ -188,8 +188,47 @@ it('rejects missing joints and incomplete dimension metadata',async()=>{
   expect(()=>readRosterAsset(scene,'daystar')).toThrow('Incomplete');
 });
 
-it('keeps the tall rear fins on their own side through boost and victory',async()=>{
-  for(const id of ['razor','anubis','rampart']) {
+it('keeps the sheet-derived eye lights and Daystar fin pair bilaterally symmetric',async()=>{
+  const positions=(a:RosterAsset,joint:string,slot:string)=>{
+    const p=a.parts.find(p=>p.joint===joint&&p.slot===slot)!.geometry.getAttribute('position');
+    return Array.from({length:p.count},(_,i)=>new THREE.Vector3(p.getX(i),p.getY(i),p.getZ(i)));
+  };
+  const mirrored=(left:THREE.Vector3[],right:THREE.Vector3[],tolerance=1e-5)=>
+    left.every(p=>right.some(q=>Math.hypot(p.x+q.x,p.y-q.y,p.z-q.z)<tolerance));
+  for(const id of ['razor','stinger','maul','anubis']) {
+    const eye=positions(await load(id),'head','G');
+    expect(eye.length).toBeGreaterThanOrEqual(8);
+    expect(mirrored(eye,eye),`${id} eye lights`).toBe(true);
+  }
+  const daystar=await load('daystar');
+  for(const slot of ['S','T','G']) {
+    const left=positions(daystar,'wingL',slot),right=positions(daystar,'wingR',slot);
+    // Blender clamps the 12 mm edge bevel slightly differently on the two
+    // swept tips. Allow 2 mm, well below the bevel and the 9 m model scale.
+    expect(mirrored(left,right,.002),`Daystar ${slot} fins`).toBe(true);
+    expect(mirrored(right,left,.002),`Daystar ${slot} fins`).toBe(true);
+  }
+});
+
+it('keeps the new carbine barrels aligned with the existing gameplay muzzle anchors',async()=>{
+  const mat=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
+  for(const [id,y] of [['daystar',-2.32],['stinger',-2.86]] as const) {
+    for(let lod=0;lod<3;lod++) {
+      const a=await load(id,lod);
+      const gun=a.parts.filter(p=>p.joint==='wrR'&&p.slot==='D').map(p=>new THREE.Mesh(p.geometry,mat));
+      // Existing builders author z=.46, then importedRoster seats it at
+      // -.46+.18. Raycast the exported bore, not an authoring metadata label.
+      const ray=new THREE.Raycaster(new THREE.Vector3(0,y-.1,-.28),new THREE.Vector3(0,1,0));
+      const hit=ray.intersectObjects(gun,false)[0];
+      expect(hit,`${id} LOD${lod} bore`).toBeDefined();
+      expect(Math.abs(hit.point.y-y)).toBeLessThan(.025);
+    }
+  }
+  mat.dispose();
+});
+
+it('keeps tall and swept rear fins on their own side through boost and victory',async()=>{
+  for(const id of ['razor','anubis','rampart','daystar','stinger','maul']) {
     const asset=await load(id);
     const source=JSON.parse(await readFile(new URL(`../art/blender/roster/source/${id}.json`,import.meta.url),'utf8'));
     const rig=new MechRig(asset.dims);

@@ -30,6 +30,8 @@ PROFILES={
  'raijin':(1.05,1.06,1.04,'Thunder-drum defender with heavy knuckles and mechanical joint rings')
 }
 arm_gain,thigh_gain,shin_gain,design_note=PROFILES[MODEL]
+SHEET_MODELS={'daystar','rampart','razor','stinger','maul','anubis','horus','sobek'}
+sheet_polish=MODEL in SHEET_MODELS
 old_scene=bpy.context.scene
 name='ROSTER / '+MODEL.title()
 existing=bpy.data.scenes.get(name)
@@ -202,10 +204,12 @@ def is_shell(joint,slot,lo,hi):
         (joint.startswith('el') and cy<-.35 and h>dims['foreArm']*.65) or
         (joint.startswith('hip') and joint!='hips' and h>dims['thigh']*.62) or
         (joint.startswith('knee') and cy<-.55 and h>dims['shin']*.58))
+exec(compile((BASE/'sheet_polish.py').read_text(),'sheet_polish.py','exec'))
 for i,part in enumerate(data['parts']):
     joint=part['joint'];slot=part['slot'];pos=part['positions']
     if joint.startswith('knee') and part.get('nozzle'):
         leg_nozzles[joint]=part['nozzle'];continue
+    if sheet_polish and sheet_skip(part):continue
     # Keep Stinger's reference crest/horns; replace the detached rounded nose
     # and box-shaped skull with one seated, angular facial assembly below.
     if MODEL=='stinger' and joint=='head' and max(pos[1::3])<.95:continue
@@ -218,6 +222,10 @@ for i,part in enumerate(data['parts']):
         # would bury half the grille. Preserve the slat tilt within the housing.
         turn=Matrix.Rotation(-spec['rot'][1],3,'Y')
         vs=[list(turn@(Vector(v)-origin)+origin+delta) for v in vs]
+        # A continuous dark housing projects beyond the armor; the previous
+        # grille was partially buried in the large chest's bevelled front.
+        if sheet_polish:
+            for v in vs:v[2]+=.09
     if MODEL=='maul' and joint=='hips' and slot=='T' and min(abs(v[0]) for v in vs)>1.7:
         for v in vs:v[0]-=math.copysign(.32,v[0]);v[1]-=.10
     # The old grips were offset for forward-facing palms. Mirror the weapon,
@@ -239,6 +247,8 @@ for i,part in enumerate(data['parts']):
         rings=[]
         widths=(.78,.96,1,.92,.72)
         if family=='mirage':widths=(.92,1,.88,.77,.69) # obelisk lineage
+        if sheet_polish:
+            hw,widths=sheet_shell(joint,hw,widths)
         for t,w in zip((0,.12,.63,.90,1),widths):
             y=lo[1]+h*t
             # Follow the reference's front/back contour at this height, so
@@ -280,7 +290,7 @@ for side in ('L','R'):
     for joint,r in [('el'+side,(.22,.27,.34)[role]),('wr'+side,(.17,.20,.28)[role]),('hip'+side,(.29,.33,.40)[role]),('knee'+side,(.24,.29,.36)[role]),('ankle'+side,(.20,.24,.30)[role])]:
         bearing('Frame / '+joint+' pivot seat',joint,(0,0,0),r)
 
-if MODEL=='stinger':
+if MODEL=='stinger' and not sheet_polish:
     # A single predatory brow, recessed mono-eye and ridged hooked beak.
     # Coordinates are already in head-joint space (including the old offset).
     block('Stinger / neck spindle','head','F',(0,.05,.06),(.34,.45,.34),.025)
@@ -298,6 +308,7 @@ if MODEL=='stinger':
     for face in beak.data.polygons:face.use_smooth=False
     plate('Stinger / chin accent','head','S',[(-.10,.17),(.10,.17),(.055,.09),(-.055,.09)],.68,.035,.004)
 
+if sheet_polish:sheet_details()
 if set(leg_nozzles)!={'kneeL','kneeR'}:raise RuntimeError('Missing tagged calf nozzles')
 for joint,spec in leg_nozzles.items():calf_jet(joint,spec)
 
@@ -347,7 +358,7 @@ for side in (1,-1):
         # Back-side reinforcement leaves the decorated front planes unobscured.
         plate('Thigh / rear split armor',hip,'P',[(-w,-.38),(w,-.38),(w*.9,-h+.42),(0,-h+.24),(-w*.9,-h+.42)],-z,.09,.025)
         block('Thigh / rear service recess',hip,'D',(0,-h*.55,-z-.055),(.10,h*.24,.022),.006)
-    if MODEL in ('daystar','stinger','longbow','fujin','horus'):
+    if MODEL in ('daystar','stinger','longbow','fujin','horus') and not sheet_polish:
         # A shaped front knee cover replaces the exposed ball's toy-like read.
         w=.30
         plate('Knee / layered cap',knee,'P',[(-w,.20),(w,.20),(w+.04,-.12),(.17,-.36),(-.17,-.36),(-w-.04,-.12)],.39,.12,.025)
@@ -362,9 +373,10 @@ for side in (1,-1):
 
 # Studio references are embedded into the source blend for future hand editing.
 ref=BASE.parent.parent/'model-sheets'/'refs'/f'ref-{MODEL}-current.png'
+if sheet_polish:ref=ref.with_name(f'ref-{MODEL}-updated.png')
 if ref.exists():
     img=bpy.data.images.load(str(ref),check_existing=True);img.pack()
-    ob=bpy.data.objects.new('REFERENCE / original design',None);collection.objects.link(ob)
+    ob=bpy.data.objects.new('REFERENCE / '+('updated art sheet' if sheet_polish else 'original design'),None);collection.objects.link(ob)
     ob.empty_display_type='IMAGE';ob.data=img;ob.empty_display_size=12;ob.location=(0,3,5);ob.hide_render=True
 scene['dims_json']=json.dumps(dims);scene['source_reference']=str(ref);scene['thrusters_json']=json.dumps(thrusters)
 scene.world=bpy.data.worlds.new(MODEL+' studio');scene.world.color=(.18,.18,.18)
@@ -386,7 +398,7 @@ for level,ratio in [(0,1),(1,.52),(2,.26)]:
     groups=defaultdict(lambda:{'vertices':[],'normals':[],'faces':[],'lookup':{}})
     mods=[]
     for ob in meshes:
-        if level:
+        if level and not (sheet_polish and ob['slot']=='G'):
             dec=ob.modifiers.new('Export-only LOD','DECIMATE');dec.ratio=ratio;dec.use_collapse_triangulate=True;mods.append((ob,dec))
     bpy.context.view_layer.update();deps=bpy.context.evaluated_depsgraph_get()
     for ob in meshes:

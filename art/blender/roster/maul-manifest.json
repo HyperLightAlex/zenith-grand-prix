@@ -1,23 +1,23 @@
 {
   "model": "maul",
-  "design": "Heavy knuckle armor, protected wrists and clean layered spikes",
+  "design": "Art-sheet heavy brawler with layered gauntlets, jaw guard and broad boots",
   "levels": [
     {
       "level": 0,
-      "triangles": 25436,
-      "bytes": 486680,
+      "triangles": 26906,
+      "bytes": 530824,
       "parts": 102
     },
     {
       "level": 1,
-      "triangles": 12976,
-      "bytes": 304840,
+      "triangles": 13888,
+      "bytes": 335924,
       "parts": 102
     },
     {
       "level": 2,
-      "triangles": 6356,
-      "bytes": 191728,
+      "triangles": 6980,
+      "bytes": 210384,
       "parts": 102
     }
   ]

@@ -1,23 +1,23 @@
 {
   "model": "anubis",
-  "design": "Tapered obelisk armor, gold-edged joints and layered jackal cheek plates",
+  "design": "Art-sheet jackal mask, gold-edged khopesh blades and sculpted greaves",
   "levels": [
     {
       "level": 0,
-      "triangles": 23006,
-      "bytes": 435860,
+      "triangles": 24762,
+      "bytes": 510568,
       "parts": 89
     },
     {
       "level": 1,
-      "triangles": 11770,
-      "bytes": 276968,
+      "triangles": 12866,
+      "bytes": 336276,
       "parts": 89
     },
     {
       "level": 2,
-      "triangles": 5768,
-      "bytes": 172396,
+      "triangles": 6532,
+      "bytes": 206008,
       "parts": 89
     }
   ]

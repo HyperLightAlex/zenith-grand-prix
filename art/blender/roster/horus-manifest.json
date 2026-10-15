@@ -1,23 +1,23 @@
 {
   "model": "horus",
-  "design": "Falcon mask, feather armor and a clear staff grip",
+  "design": "Art-sheet falcon armor, gold knee shields and seated staff-blaster grip",
   "levels": [
     {
       "level": 0,
-      "triangles": 30836,
-      "bytes": 601888,
+      "triangles": 31720,
+      "bytes": 638044,
       "parts": 98
     },
     {
       "level": 1,
-      "triangles": 15726,
-      "bytes": 357248,
+      "triangles": 16496,
+      "bytes": 386272,
       "parts": 98
     },
     {
       "level": 2,
-      "triangles": 7678,
-      "bytes": 216824,
+      "triangles": 8412,
+      "bytes": 237616,
       "parts": 98
     }
   ]

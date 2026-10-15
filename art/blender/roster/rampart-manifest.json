@@ -1,24 +1,24 @@
 {
   "model": "rampart",
-  "design": "Broad gauntlets, recessed joint discs and a crisp fanged chest",
+  "design": "Art-sheet heavy greaves, angular knee shields and reinforced gauntlets",
   "levels": [
     {
       "level": 0,
-      "triangles": 25262,
-      "bytes": 492108,
-      "parts": 101
+      "triangles": 25962,
+      "bytes": 533356,
+      "parts": 103
     },
     {
       "level": 1,
-      "triangles": 12902,
-      "bytes": 304736,
-      "parts": 101
+      "triangles": 13464,
+      "bytes": 338512,
+      "parts": 103
     },
     {
       "level": 2,
-      "triangles": 6324,
-      "bytes": 190632,
-      "parts": 101
+      "triangles": 6824,
+      "bytes": 212216,
+      "parts": 103
     }
   ]
 }
