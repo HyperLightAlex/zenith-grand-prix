@@ -188,7 +188,7 @@ export function findNonFinite(race: RaceState): string | null {
     if (!Number.isFinite(p.id + p.owner + p.team + p.attack + p.s + p.d + p.h + p.vs + p.vd + p.life + p.power)) return `projectile ${p.id} (tick ${race.tick})`;
   }
   for (const t of race.teams) {
-    if (!Number.isFinite(t.tactic + t.mark + t.captainAt + t.captainPhase)) return `team state (tick ${race.tick})`;
+    if (!Number.isFinite(t.tactic + t.mark + t.captainAt + t.captainPhase + t.caller)) return `team state (tick ${race.tick})`;
   }
   return null;
 }

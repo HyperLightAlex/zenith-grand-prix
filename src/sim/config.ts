@@ -69,6 +69,18 @@ export type Phase = (typeof PHASE)[keyof typeof PHASE];
 export const TACTIC = { FREE: 0, BLITZ: 1, RUN: 2, SHIELD: 3, MARK: 4 } as const;
 export type Tactic = (typeof TACTIC)[keyof typeof TACTIC];
 export const TACTIC_NAMES = ['FREE', 'BLITZ', 'RUN', 'SHIELD', 'MARK'] as const;
+/**
+ * TeamState.caller values below zero. A value of zero or more is the one
+ * mech whose calls count (an online team's shot caller).
+ */
+export const CALLER = {
+  /** Any person on the team calls; the computer captain calls if nobody human is on it. */
+  ANY: -1,
+  /** Nobody calls: a team of three people has no computer pilot to order. */
+  NONE: -2,
+  /** The computer captain calls, though the team has human seats (its people have all dropped out). */
+  CAPTAIN: -3,
+} as const;
 
 /** Held-button bitmask sent by a controller each tick. */
 export const BTN = {

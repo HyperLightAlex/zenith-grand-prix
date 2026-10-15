@@ -1,22 +1,28 @@
 {
   "name": "zenith-gp",
   "private": true,
-  "version": "0.2.0",
-  "description": "Zenith GP — a 3v3 mech racing/combat browser game (working title)",
+  "version": "0.5.0",
+  "description": "Zenith GP \u2014 a 3v3 mech racing/combat browser game (working title)",
   "type": "module",
   "engines": {
     "node": ">=20.19"
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && vite build",
+    "server": "tsx watch server/index.ts",
+    "build": "npm run typecheck && vite build && vite build -c vite.server.config.ts",
     "build:single": "npm run typecheck && vite build --mode single",
+    "start": "node dist-server/index.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.sim.json",
     "test": "vitest run",
-    "sim": "tsx tools/headless-race.ts"
+    "sim": "tsx tools/headless-race.ts",
+    "bots": "tsx tools/bots.ts"
   },
   "dependencies": {
+    "@colyseus/core": "^0.18.18",
+    "@colyseus/sdk": "^0.18.5",
+    "@colyseus/ws-transport": "^0.18.4",
     "@fontsource/barlow-condensed": "^5.3.0",
     "three": "^0.186.1"
   },

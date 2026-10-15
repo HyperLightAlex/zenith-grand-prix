@@ -10,12 +10,20 @@ is about getting your forward home first and stopping theirs.
 title lives in `index.html` and `src/client/ui/menus.ts` if you want to change
 it.
 
-This is version 0.4: three circuits, solo play with computer pilots in the
-other five seats, single races or a match of several rounds. New in 0.4:
-carving, more boost, contested gates, support points for the midfielder and
-defender, guard on the left trigger with a guard swing, and fights that are
-easier to read. The simulation is
-already written to run on a server, which is a later milestone. See
+This is version 0.5: three circuits and three ways to play.
+
+- **Grand Prix**, offline: a **cup** of three races, each against a different
+  faction, for gold, silver or bronze; or a **season**, a best of 3 against
+  each of the other four factions, for the Zenith Cup. The other factions
+  race each other in the background, so the table is real.
+- **Free Play**: any circuit, rival and format against computer pilots.
+- **Online**: private rooms for up to six people, joined by code or invite
+  link, with computer pilots in the empty seats. Friends can form a squad of
+  up to three that stays together from room to room.
+
+The garage is now a **hangar** (your faction and frame, shared by every mode)
+and a setup screen for each mode. How online works and how to host it is in
+[docs/ONLINE.md](docs/ONLINE.md); the rest of the design is in
 [docs/DESIGN.md](docs/DESIGN.md).
 
 **On the `art-80s` branch** the game is drawn as an 80s mecha anime: cel
@@ -27,17 +35,32 @@ See [docs/ART.md](docs/ART.md).
 ## Play
 
 **No install:** open `play/index.html` in a browser. It is the whole game in
-one file.
+one file: Grand Prix and Free Play. Online needs the server.
 
-**From source** (needs Node 20.19 or newer):
+**With online play** (needs Node 20.19 or newer):
 
 ```sh
 npm install
-npm run dev        # http://localhost:5173
+npm run build      # the game into dist/, the server into dist-server/
+npm start          # http://localhost:8090: the game and its rooms on one port
+```
+
+Share `http://<your-LAN-address>:8090` with friends on the same network, or
+put the server behind your domain like any Node web app (WebSockets must
+pass through). `PORT`, `HOST`, `ALLOWED_ORIGINS` and `FORWARDED_HOPS` are
+read from the environment; [docs/ONLINE.md](docs/ONLINE.md) has the details.
+
+**Developing:**
+
+```sh
+npm run dev        # the game, with hot reload, on http://localhost:5173
+npm run server     # the room server on 8090 (the dev page finds it)
 ```
 
 Plug in a gamepad before or after the page loads and press any button. The
 keyboard works too, and the on-screen hints follow whichever you touched last.
+Menus work with either, or the mouse: A (Enter) confirms, B (Esc) goes back,
+X and Y are each screen's own actions, and the bottom bar names them.
 
 ## Controls
 
@@ -228,7 +251,7 @@ The same action on the same rival scores once every 6 seconds. Each one pops
 up as it lands, a support pilot gets a prompt when its forward needs it, and
 the results show where every support point came from.
 
-Pick the format in the garage:
+Pick the format in Free Play's match setup, or the host picks it for a room:
 
 - **Single race.**
 - **Series**, best of 3 or 5. Most points takes the round; level on points,
@@ -265,9 +288,12 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server with hot reload |
-| `npm run build` | Type-check, then build to `dist/` |
+| `npm run server` | The room server for development, on port 8090 |
+| `npm run build` | Type-check, then build the game to `dist/` and the server to `dist-server/` |
+| `npm start` | Serve the built game and run the rooms on one port |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Simulation test suite (822 tests) |
+| `npm test` | Test suite: simulation, Grand Prix, lobby and online races (1,000 tests) |
+| `npm run bots -- 6 4` | Four rooms of six bot players on a running server: a check and a load test |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |
@@ -275,7 +301,8 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npx tsx tools/circuit-plot.ts canyon` | Plan, height and features of a circuit, as numbers and an SVG |
 
 The browser-driving helpers in `tools/` (`shot.mjs`, `playtest.mjs`,
-`audio-check.mjs`) need Playwright, which is not a dependency of the project:
+`audio-check.mjs`, and `online-check.mjs`, which takes two browsers through
+an online room and race) need Playwright, which is not a dependency of the project:
 `npm i -D playwright && npx playwright install chromium` if you want them.
 
 Dev shortcuts on the page URL: `?auto=FW` (or `MF`, `DF`) jumps straight into
@@ -287,6 +314,9 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 `&track=canyon` (or `helios`, `meridian`) picks the circuit, `&look=plain`
 (or `anime`) picks the look for that visit, `&tune=1` opens the tuning panel,
 `&mute=1` turns sound off, and `?debug=mechs` opens a model viewer.
+Online: `?room=K7Q2X` and `?squad=K7Q2X` are invite links, `&server=URL` uses
+another game server, and `&player=2` gives the tab its own identity, so two
+tabs of one browser can be two players.
 
 ## Sunhawk model comparison
 
@@ -366,15 +396,29 @@ src/sim/        The race itself: track, physics, combat, AI, scoring. No DOM,
   circuit.ts    Builder for 3D circuits from pieces (turns, climbs, loops...)
   tracks/       The circuits: meridian.ts, canyon.ts, helios.ts
   match.ts      Series and points-race scoring across rounds
+  snapshot.ts   Copying a race and putting it back, and its checksum
+src/gp/         Grand Prix: cups and seasons, standings, the background races
+src/net/        Online, shared by the game and the server (no DOM):
+  protocol.ts   Messages, codes, inputs on the wire
+  lobby.ts      A room's lobby rules: seats, captains, shot callers, squads
+  roomCore.ts   The authoritative room: lobby, match, the race at 60 Hz
+  squadCore.ts  Squads
+  prediction.ts A client's confirmed and predicted races
+server/         The server: static files and the Colyseus rooms, on one port
 src/client/     Everything you see and hear.
-  game/         Game shell, the Session layer, the tuning store
+  game/         Game shell and modes, the Session layer (LocalSession,
+                NetSession), the tuning store
+  gp/           Grand Prix saves and the background-race worker
+  net/          The connection to the server, identity (callsign, device key)
   render/       Three.js: circuit, gates, world, mechs, effects, camera
   input/        Gamepad and keyboard
-  ui/           HUD, menus and the tuning panel (DOM + CSS)
+  ui/           HUD, the tuning panel and the menus (DOM + CSS); each menu
+                screen is in ui/screens/
   audio/        Synthesised sound and music (Web Audio, no files)
-tests/          Simulation and imported-model contract tests (vitest)
-tools/          Headless race runner, track plotter, screenshot and audio checks
-docs/           Design document, and ART.md for the anime look
+tests/          Simulation, Grand Prix, lobby, online and model tests (vitest)
+tools/          Headless race runner, bots, track plotter, screenshot, online
+                and audio checks
+docs/           Design document, ONLINE.md, and ART.md for the anime look
 play/           Prebuilt single-file game
 ```
 

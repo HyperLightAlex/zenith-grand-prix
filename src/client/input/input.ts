@@ -3,7 +3,14 @@
 import { BTN, emptyInput, type MechInput } from '../../sim/index';
 
 /** One menu press. Presses are queued, so none are lost on a slow frame. */
-export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune' | 'look' | 'model' | 'rosterModel';
+export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune' | 'look' | 'model' | 'rosterModel' | 'x' | 'y' | 'lb' | 'rb';
+
+/** Whether the keyboard is typing into a text field (a callsign, a code): its keys are not controls then. */
+export function typing(): boolean {
+  if (typeof document === 'undefined') return false;
+  const el = document.activeElement as HTMLElement | null;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+}
 
 const KEY_BUTTONS: Record<string, number> = {
   Space: BTN.A,
@@ -60,6 +67,17 @@ export class Input {
   constructor() {
     const artReview = new URLSearchParams(location.search).get('artReview') === '1';
     window.addEventListener('keydown', (e) => {
+      if (typing()) {
+        // Typing a callsign or a code: only Enter, Esc and the arrows (up
+        // and down) still work the menu.
+        this.touch('keys');
+        if (e.repeat) return;
+        if (e.code === 'Enter' || e.code === 'NumpadEnter') this.menu.push('confirm');
+        else if (e.code === 'Escape') this.menu.push('back');
+        else if (e.code === 'ArrowUp') this.menu.push('up');
+        else if (e.code === 'ArrowDown') this.menu.push('down');
+        return;
+      }
       if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (e.repeat) return;
       if (e.code === 'KeyF') this.toggleFullscreen();
@@ -76,6 +94,10 @@ export class Input {
       if (e.code === 'Escape' || e.code === 'KeyP') m.push('pause');
       if (e.code === 'KeyT' || e.code === 'Backquote') m.push('tune');
       if (e.code === 'KeyG') m.push('look');
+      if (e.code === 'KeyX') m.push('x');
+      if (e.code === 'KeyY') m.push('y');
+      if (e.code === 'KeyQ') m.push('lb');
+      if (e.code === 'KeyE') m.push('rb');
       if (artReview && e.code === 'KeyB') m.push('model');
       if (artReview && e.code === 'KeyN') m.push('rosterModel');
     });
@@ -212,6 +234,10 @@ export class Input {
       if (edge(PAD.A)) m.push('confirm');
       if (edge(PAD.B)) m.push('back');
       if (edge(PAD.START)) m.push('pause');
+      if (edge(PAD.X)) m.push('x');
+      if (edge(PAD.Y)) m.push('y');
+      if (edge(PAD.LB)) m.push('lb');
+      if (edge(PAD.RB)) m.push('rb');
       if (edge(PAD.BACK)) m.push('tune');
       this.prevStickX = sx;
       this.prevStickY = sy;

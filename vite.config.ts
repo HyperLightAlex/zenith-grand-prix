@@ -1,5 +1,35 @@
 /// <reference types="vitest/config" />
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
+
+/**
+ * The build's name: the package version and the commit, plus the time for an
+ * uncommitted tree. A room only takes players on the build that made it, and
+ * the server reads dist/build.json to know which build it serves.
+ */
+function buildName(): string {
+  const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+  let commit = 'local';
+  try {
+    commit = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    const dirty = execSync('git status --porcelain --untracked-files=no', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    if (dirty) commit += '-' + Date.now().toString(36);
+  } catch {
+    commit += '-' + Date.now().toString(36);
+  }
+  return `${pkg.version}+${commit}`;
+}
+
+/** Writes build.json beside the game for the server. */
+function buildInfo(build: string): Plugin {
+  return {
+    name: 'build-info',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'build.json', source: JSON.stringify({ build }) + '\n' });
+    },
+  };
+}
 
 /**
  * Folds the built script and stylesheet into index.html, so the whole game
@@ -33,11 +63,13 @@ function inlineEverything(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const single = mode === 'single';
+  const build = command === 'build' ? buildName() : 'dev';
   return {
     base: './',
-    plugins: single ? [inlineEverything()] : [],
+    define: { __BUILD__: JSON.stringify(build) },
+    plugins: single ? [inlineEverything()] : [buildInfo(build)],
     build: {
       target: 'es2022',
       outDir: single ? 'play' : 'dist',

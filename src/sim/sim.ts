@@ -58,6 +58,7 @@ import {
   STAGGER_DRAG,
   STAGGER_THROTTLE,
   STEER_RATE,
+  CALLER,
   TACTIC,
   TICK_RATE,
   TOW_FAR,
@@ -141,8 +142,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
     projectiles: [],
     nextProjId: 1,
     teams: [
-      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1 },
-      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1 },
+      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1, caller: CALLER.ANY },
+      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1, caller: CALLER.ANY },
     ],
     firstFinishTick: -1,
     endTick: -1,
@@ -911,6 +912,12 @@ export function setTactic(race: RaceState, team: number, tactic: Tactic, by: num
   race.events.push({ type: 'tactic', team, tactic, by, mark: ts.mark });
 }
 
+/** Whether this person's tactic calls count for their team (see TeamState.caller). */
+export function mayCall(race: RaceState, m: MechState): boolean {
+  const caller = race.teams[m.team].caller;
+  return caller === CALLER.ANY || caller === m.id;
+}
+
 function handleCommand(race: RaceState, m: MechState, cmd: number): void {
   if (cmd <= 0 || cmd > 4) return;
   const ts = race.teams[m.team];
@@ -1092,7 +1099,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     const m = ms[tick & 1 ? ms.length - 1 - k : k];
     const ctl = controls[m.id];
     // A knocked-out pilot can still call plays from the pit wall.
-    if (m.human && race.phase === PHASE.RACING && ctl.cmd !== m.prevCmd && ctl.cmd > 0) handleCommand(race, m, ctl.cmd);
+    if (m.human && race.phase === PHASE.RACING && ctl.cmd !== m.prevCmd && ctl.cmd > 0 && mayCall(race, m)) handleCommand(race, m, ctl.cmd);
     if (inPlay(m) && race.phase === PHASE.RACING) {
       const pressed = ctl.buttons & ~m.prevButtons;
       if (m.act !== ACT.STAGGER) handleLock(race, track, m, pressed);

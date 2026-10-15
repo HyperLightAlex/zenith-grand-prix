@@ -18,6 +18,7 @@ import {
   MODE,
   PHASE,
   ROLE,
+  CALLER,
   TACTIC,
   type Tactic,
 } from './config';
@@ -823,10 +824,16 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
   return out;
 }
 
-/** Picks tactics for a team with nobody human on it. */
+/**
+ * Picks tactics for a team with nobody human on it, or for one whose room
+ * has handed the calls to the computer captain (see TeamState.caller).
+ */
 export function aiCaptain(race: RaceState, track: Track, team: number): void {
-  for (const m of race.mechs) if (m.team === team && m.human) return;
   const ts = race.teams[team];
+  if (ts.caller !== CALLER.CAPTAIN) {
+    if (ts.caller !== CALLER.ANY) return;
+    for (const m of race.mechs) if (m.team === team && m.human) return;
+  }
   if (race.lapPhase !== ts.captainPhase) {
     ts.captainPhase = race.lapPhase;
     ts.captainAt = 0;

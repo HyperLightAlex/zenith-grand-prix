@@ -538,7 +538,10 @@ Breaker Slam 20 (18).
 ### Team plays
 
 Called on the D-pad by any human pilot; computer teammates obey. Calling the
-current play again returns to Free.
+current play again returns to Free. Online, a team of two people and one
+computer pilot has a **shot caller**: only that person's calls count (see
+[ONLINE.md](ONLINE.md)). A team of three people has nobody to order, and a
+team whose people have all dropped out gets the computer captain.
 
 | Play | Computer teammates will |
 |---|---|
@@ -581,8 +584,8 @@ The teams swap sides of the grid from one round to the next.
    └────────────────┬─────────────────┘
                     │ RaceState + events
    ┌────────────────▼─────────────────┐
-   │  Session (src/client/game)       │  LocalSession today;
-   │  owns the race, feeds it time    │  a NetSession later
+   │  Session (src/client/game)       │  LocalSession offline;
+   │  owns the race, feeds it time    │  NetSession online
    └────────────────┬─────────────────┘
         ┌───────────┼───────────────┬──────────────┐
    RaceView      Hud / Menus     AudioEngine     Input
@@ -767,16 +770,13 @@ film, animation on twos, drawn effects, impact frames, painted stills, title
 cards and an eyecatch, all behind one switch (G). What it would take to
 finish it is in [ART.md](ART.md).
 
-**M2: two browsers in one race.**
-- A Node server (Colyseus room) runs `stepRace` as the authority. Clients
-  send inputs stamped with a tick.
-- Clients predict their own mech and interpolate the others. Floating-point
-  maths is not bit-identical between a browser and Node, so this is
-  snapshots and correction, not lockstep.
-- A filtered view of the race state for clients, sequence numbers on events.
-- Invite link: create a room, share the URL, pick seats.
-
-**M3: parties and matchmaking.** Queue as a squad of up to three.
+**M2 and M3, done: modes and online (0.5).** The garage split into a shared
+hangar and a setup for each mode; Grand Prix (cups for medals, a season for
+the Zenith Cup, the other factions' races run in the background); online
+private rooms on a Colyseus server that runs `stepRace` as the authority,
+with prediction on the clients, reconnecting, and squads of up to three
+that move between rooms together. Matchmaking is still to come. How online
+works, and how to host it, is in [ONLINE.md](ONLINE.md).
 
 **M4: touch controls.**
 
@@ -802,8 +802,10 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
   reaction-time rule as before (they do not see the ring).
 - The tuning panel's sliders cannot be worked from the pad while a race is
   running, only from the pause menu.
-- A team with a human seat never gets a computer captain, even if that
-  person has dropped out.
+- Online, a knockout's painted still is shortened and there is no slow
+  motion: the race does not wait for anyone. A late hit can look a moment
+  late on the other person's screen (the server decides every hit).
+- Online rooms play the standard rules; there are no rule presets yet.
 - No options screen yet (volume, quality, remapping).
 - Mech-to-mech contact is a simple circle push; only a Ram does damage.
 - The minimap marks a dark gate with an outline but does not show how long

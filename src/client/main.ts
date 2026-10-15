@@ -22,6 +22,11 @@ import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech
 //   &track=canyon   circuit: meridian, canyon or helios
 //   &sunhawk=current|updated|game   model comparison; B cycles without restarting
 //   &sunhawkPanels=1              projected panel lines on the imported armor
+// Online:
+//   ?room=K7Q2X     an invite link: straight into that room
+//   ?squad=K7Q2X    an invite to a squad
+//   &server=URL     a game server other than the page's own (dev: :8090)
+//   &player=2       a separate identity in this browser, for testing two players
 const q = new URLSearchParams(location.search);
 
 async function boot(): Promise<void> {
@@ -86,6 +91,8 @@ async function boot(): Promise<void> {
     match: q.has('match') ? Number(q.get('match')) : undefined,
     tune: q.has('tune'),
     track: q.get('track') ?? undefined,
+    room: q.get('room') ?? undefined,
+    squad: q.get('squad') ?? undefined,
     audio,
   });
   (window as unknown as { game: Game }).game = game;

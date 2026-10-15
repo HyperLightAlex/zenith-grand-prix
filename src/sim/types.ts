@@ -272,6 +272,13 @@ export interface TeamState {
   /** Next tick the AI captain reconsiders (teams without a human). */
   captainAt: number;
   captainPhase: number;
+  /**
+   * Who may call this team's tactics (see CALLER). CALLER.ANY, the default,
+   * is the offline rule: any person on the team calls, and the computer
+   * captain calls for a team with nobody human on it. Online the room sets
+   * it: one seat (a mech id), nobody, or the computer captain.
+   */
+  caller: number;
 }
 
 export type SimEvent =

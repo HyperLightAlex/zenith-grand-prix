@@ -29,16 +29,24 @@ await page.waitForFunction(() => window.game !== undefined, null, { timeout: 300
 await page.waitForTimeout(1500);
 log('title:', (await state()).state);
 await shot('1-title');
+// Title -> Play -> Free Play -> Hangar -> Match setup -> Start.
+await page.keyboard.press('Enter');
+await page.waitForTimeout(1200);
+await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
 await page.waitForTimeout(1500);
 await shot('2-garage');
-// Frame (Swift) -> Team -> Rival pilots -> Match -> Start.
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('Enter');
+await page.waitForTimeout(1200);
+// Circuit, Rival team, Rival pilots, Match, Start: the format stays a best of 3.
 for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
 await page.waitForFunction(() => window.game.debugState().state === 'race', null, { timeout: 15000 }).catch(() => {});
 let s = await state();
 log('race started:', s.state, 'tick', s.tick, 'match', JSON.stringify(s.match));
-check(s.state === 'race' && s.match && s.match.mode === 'series', 'a best-of-3 series started from the garage');
+check(s.state === 'race' && s.match && s.match.mode === 'series', 'a best-of-3 series started from Free Play');
 
 // ---- formation lap
 const t0 = Date.now();
@@ -49,7 +57,8 @@ log('speed of play:', (300 / 60 / ((Date.now() - t0) / 1000)).toFixed(2), 'x rea
 await untilTick(420);
 let m = await mine();
 log('3 s after GO:', JSON.stringify(m));
-check(m.drive <= 10, 'Drive starts empty (only a launch bonus at most)');
+// A launch bonus (10) and three seconds of the lap-1 trickle at most.
+check(m.drive <= 16, `Drive starts empty: only a launch bonus and the lap-1 trickle (drive ${m.drive})`);
 await shot('3-lap1');
 // The ability is locked on lap 1 and must not cost anything.
 await page.evaluate(() => { const g = window.game; g.session.race.mechs[g.session.localId].cells = 1; });
@@ -105,7 +114,10 @@ check((await state()).state === 'paused', 'paused');
 await page.keyboard.press('KeyT');
 await page.waitForTimeout(900);
 check(await page.evaluate(() => window.game.panel.open), 'tuning panel opens over the pause menu');
-// Move one rule and one camera value from the keyboard.
+// Move one rule from the keyboard: over to the Pace tab (the Look tab is
+// first), down to its first row, the lap-1 limiter.
+await page.keyboard.press('ArrowRight');
+await page.waitForTimeout(600);
 await page.keyboard.press('ArrowDown');
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('ArrowRight');
@@ -150,7 +162,9 @@ check(s.match.winner >= 0, `the series was decided (${s.match.wins.join('-')})`)
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('Enter');
 await page.waitForTimeout(1500);
-log('after "Back to garage":', (await state()).state);
+s = await state();
+log('after "Change setup":', s.state, s.screen);
+check(s.screen === 'setup', 'the results lead back to the match setup');
 await shot('8-garage-again');
 const audio = await page.evaluate(() => (window.game.audio.debugInfo ? window.game.audio.debugInfo() : null));
 log('audio:', JSON.stringify(audio));

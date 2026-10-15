@@ -1,13 +1,37 @@
-// Menus: title, garage (pick your frame), controls, pause and results.
-// Driven by the same MenuInput from pad or keyboard; items also take clicks.
-import { ABILITIES, ATTACKS, AWARD_NAMES, CLASSES, ROLE_NAMES, TRACKS, roundsToWin, type MatchConfig, type MatchState, type RaceState, type Role } from '../../sim/index';
-import type { MenuInput } from '../input/input';
-import { LIVERIES, factionName } from '../render/palette';
-import { h, setClass, setText } from './dom';
-import { emblemUrl, pilotUrl } from './factionArt';
-import { COVER, LOGO } from './keyArt';
+// Menus: a stack of screens, worked by the same MenuInput from pad or
+// keyboard, and by mouse (hover moves the highlight, a click confirms).
+//
+// Every screen has Back (B, or Esc) to the one before; a screen's own
+// actions are on X and Y, and LB and RB move between its panels. The bottom
+// of each screen names its actions with the glyphs of the device last used.
+// Coming back to a screen puts the highlight where it was left.
+//
+// The screens themselves are in ./screens/: each is a render function plus
+// what it does with X, Y, LB, RB and Back. This file is only the machinery.
 
-export type Screen = 'title' | 'garage' | 'controls' | 'pause' | 'results' | null;
+import type { MatchConfig, Role } from '../../sim/index';
+import type { MenuInput } from '../input/input';
+import { h, setClass } from './dom';
+
+export type ScreenId =
+  | 'title'
+  | 'modes'
+  | 'hangar'
+  | 'setup'
+  | 'gp'
+  | 'briefing'
+  | 'standings'
+  | 'award'
+  | 'online'
+  | 'room'
+  | 'entry'
+  | 'dialog'
+  | 'controls'
+  | 'pause'
+  | 'results';
+
+/** The old single-screen names, still used by tools that drive the game: 'garage' is the hangar. */
+export type Screen = ScreenId | 'garage' | null;
 type Device = 'pad' | 'keys';
 
 export interface GarageChoice {
@@ -24,7 +48,7 @@ export interface GarageChoice {
   track: string;
 }
 
-/** What the garage says about each circuit. */
+/** What the setup screens say about each circuit. */
 export const TRACK_BLURBS: Record<string, string> = {
   meridian: 'The original. An elevated loop over the sea at golden hour: sweepers, a hairpin and long straights.',
   canyon: 'Built for fighting. The Narrows, a corkscrew, a bowl you can take flat out, a fork whose routes cross, and a sky bridge with no barriers.',
@@ -40,586 +64,313 @@ export const MATCH_OPTIONS: Array<{ label: string; blurb: string; cfg: MatchConf
   { label: 'Points race to 80', blurb: 'Points carry over. First team to 80 at the end of a round wins.', cfg: { mode: 'points', bestOf: 3, target: 80 } },
 ];
 
-export interface MenuCallbacks {
-  onStart(choice: GarageChoice): void;
-  onPreview(choice: GarageChoice): void;
-  onResume(): void;
-  /** Run the current round again from the grid. */
-  onRestart(): void;
-  /** From the results: the next round, or a fresh match if this one is over. */
-  onNext(): void;
-  onTuning(): void;
-  /** Switch the 80s anime look on or off; returns whether it is now on. */
-  onToggleLook(): boolean;
-  /** Whether the 80s anime look is on. */
-  lookOn(): boolean;
-  onQuit(): void;
-  onGarage(): void;
-  onSound(name: 'ui_move' | 'ui_select' | 'ui_back'): void;
+export const RIVALS = ['Rookie', 'Pro', 'Ace'];
+
+/** A prompt on the bottom bar: the button, what it does, and what a click on it presses. */
+export interface Prompt {
+  pad: string;
+  keys: string;
+  label: string;
+  press?: MenuInput;
 }
 
-const RIVALS = ['Rookie', 'Pro', 'Ace'];
-const KIT_TEXT: Record<number, [string, string]> = {
-  0: ['Three quick blade strikes. Light, fast, hard to interrupt you out of.', 'An armoured lunge that closes a 30 m gap. Costs Drive.'],
-  1: ['Three-round bursts out to 60 m. Works at racing speed, without a lock.', 'Boots an attacker away to make room for the carbine.'],
-  2: ['Two heavy blows. The second one breaks a guard.', 'A close-range blast. Works at racing speed.'],
-};
+export interface ItemOpts {
+  /** A stable name, so the highlight stays on this item when the screen is drawn again. */
+  key?: string;
+  /** Shown but fixed by the mode: pressing it says why. */
+  locked?: string | null;
+}
 
 interface Item {
   el: HTMLElement;
+  key: string;
   activate?: () => void;
   change?: (dir: number) => void;
+  locked?: string | null;
 }
 
-const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
-  [
-    'Racing',
-    [
-      ['Steer', 'Left stick', 'A D'],
-      ['Accelerate', 'RT', 'W'],
-      ['Brake', 'LT', 'S'],
-      ['Carve (hold through a corner, let go to burst)', 'LT + left stick', 'S + A or D'],
-      ['Boost (uses Drive)', 'A', 'Space'],
-      ['Ability (uses a Cell)', 'B', 'R'],
-      ['Look around', 'Right stick', ''],
-      ['Look back', 'R3', 'V'],
-      ['Pause', 'Start', 'Esc'],
-      ['Tuning panel', 'Back', 'T'],
-      ['Full screen', '', 'F'],
-    ],
-  ],
-  [
-    'Fighting',
-    [
-      ['Lock on / let go', 'LB', 'Q'],
-      ['Move around the target', 'Left stick', 'W A S D'],
-      ['Attack', 'X', 'J'],
-      ['Special', 'Y', 'K'],
-      ['Guard (tap late to parry)', 'LT (or RB)', 'L'],
-      ['Dash', 'A', 'Space'],
-      ['Guard swing: arc round your target', 'Guard + stick ◀▶ + A', 'L + A/D + Space'],
-      ['Ability (a different one)', 'B', 'R'],
-      ['Switch target', 'Right stick', 'Z C'],
-    ],
-  ],
-  [
-    'Team',
-    [
-      ['Escort a teammate', 'L3', 'E'],
-      ['Blitz: everyone attacks', 'D-pad up', '1'],
-      ['Run: avoid fights, race', 'D-pad right', '2'],
-      ['Shield: protect our forward', 'D-pad down', '3'],
-      ['Mark: all on my target', 'D-pad left', '4'],
-    ],
-  ],
-];
+export interface ScreenDef<D = unknown> {
+  render(m: Menus, data: D): void;
+  /** X, Y, LB, RB (and anything else not handled by the list). Return true when handled. */
+  press?(m: Menus, key: MenuInput, data: D): boolean;
+  /** B. Default: back to the screen before. */
+  back?(m: Menus, data: D): void;
+  /** The list goes left and right instead of up and down. */
+  horizontal?: boolean;
+  /** The item highlighted when the screen first opens (by key). */
+  initialFocus?: string;
+  /** No highlight on first arrival (the first press of a direction picks the first item). */
+}
+
+interface Entry {
+  id: ScreenId;
+  data: unknown;
+  sel: number;
+  key: string;
+}
+
+export interface MenuHost {
+  sound(name: 'ui_move' | 'ui_select' | 'ui_back'): void;
+  lookOn(): boolean;
+  /** The screen on top changed (or the menus closed): the scene behind follows. */
+  screenChanged(id: ScreenId | null): void;
+}
 
 export class Menus {
   readonly root = h('div.ui.menu');
-  screen: Screen = null;
-  choice: GarageChoice = { role: 0, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian' };
-  /** Which faction each race team is, for the race the results report on. */
-  factions: [number, number] = [0, 1];
-  /** The match the results screen reports on. */
-  match: MatchState | null = null;
+  private readonly defs = new Map<ScreenId, ScreenDef<never>>();
+  private stack: Entry[] = [];
   private items: Item[] = [];
   private sel = 0;
-  private device: Device = 'keys';
-  private returnTo: Screen = 'title';
-  private lastRace: RaceState | null = null;
-  private lastLocal = 0;
+  device: Device = 'keys';
+  private toastEl = h('div.toast');
+  private toastTimer = 0;
 
-  constructor(parent: HTMLElement, private cb: MenuCallbacks) {
+  constructor(
+    parent: HTMLElement,
+    private host: MenuHost,
+  ) {
     this.root.hidden = true;
-    // The team emblems, for the anime look's results.
-
     parent.append(this.root);
+  }
+
+  register<D>(id: ScreenId, def: ScreenDef<D>): void {
+    this.defs.set(id, def as ScreenDef<never>);
+  }
+
+  /** The screen on top, or null when no menu is up. */
+  get screen(): ScreenId | null {
+    return this.stack.length ? this.stack[this.stack.length - 1].id : null;
+  }
+
+  get data(): unknown {
+    return this.stack.length ? this.stack[this.stack.length - 1].data : undefined;
+  }
+
+  /** Whether a screen is anywhere in the stack. */
+  has(id: ScreenId): boolean {
+    return this.stack.some((e) => e.id === id);
   }
 
   setDevice(d: Device): void {
     if (this.device === d) return;
     this.device = d;
-    if (this.screen) this.render();
+    if (this.screen) this.refresh();
   }
 
-  show(screen: Screen, race?: RaceState, localId?: number): void {
-    if (screen === 'controls') this.returnTo = this.screen ?? 'title';
-    if (race) {
-      this.lastRace = race;
-      this.lastLocal = localId ?? 0;
+  private saveSel(): void {
+    const top = this.stack[this.stack.length - 1];
+    if (top) {
+      top.sel = this.sel;
+      top.key = this.items[this.sel]?.key ?? '';
     }
-    this.screen = screen;
-    this.sel = 0;
-    this.root.hidden = screen === null;
-    this.syncLook();
-    if (screen) this.render();
   }
 
-  private key(pad: string, keys: string): HTMLElement {
+  /** A screen on top of the current one. */
+  push<D>(id: ScreenId, data?: D): void {
+    this.saveSel();
+    this.stack.push({ id, data, sel: 0, key: '' });
+    this.open();
+  }
+
+  /** Back to the screen before (or close the menus if there is none). */
+  pop(): void {
+    this.stack.pop();
+    this.open();
+  }
+
+  /** Back down to a screen in the stack (it stays); false if it is not there. */
+  popTo(id: ScreenId): boolean {
+    const i = this.stack.map((e) => e.id).lastIndexOf(id);
+    if (i < 0) return false;
+    this.stack.length = i + 1;
+    this.open();
+    return true;
+  }
+
+  /** Swap the screen on top for another. */
+  replace<D>(id: ScreenId, data?: D): void {
+    this.stack.pop();
+    this.stack.push({ id, data, sel: 0, key: '' });
+    this.open();
+  }
+
+  /** A fresh stack: this screen and the ones given beneath it (for Back to go through). */
+  reset<D>(id: ScreenId | null, data?: D, under: Array<ScreenId | { id: ScreenId; data: unknown }> = []): void {
+    this.stack = under.map((u) => (typeof u === 'string' ? { id: u, data: undefined, sel: 0, key: '' } : { id: u.id, data: u.data, sel: 0, key: '' }));
+    if (id) this.stack.push({ id, data, sel: 0, key: '' });
+    this.open();
+  }
+
+  /** The old one-screen call: a fresh stack with this screen alone (null closes the menus). */
+  show(screen: Screen): void {
+    this.reset(screen === 'garage' ? 'hangar' : screen);
+  }
+
+  private open(): void {
+    const top = this.stack[this.stack.length - 1];
+    this.root.hidden = !top;
+    this.sel = top?.sel ?? 0;
+    this.host.screenChanged(top?.id ?? null);
+    if (top) this.render(top);
+    else this.root.replaceChildren();
+  }
+
+  /** Draw the screen on top again (its data changed), keeping the highlight. */
+  refresh(): void {
+    const top = this.stack[this.stack.length - 1];
+    if (!top) return;
+    this.saveSel();
+    this.render(top);
+  }
+
+  private render(top: Entry): void {
+    const def = this.defs.get(top.id);
+    const R = this.root;
+    R.replaceChildren();
+    R.onclick = null;
+    // The styles lay each screen out by name.
+    R.dataset.screen = top.id === 'hangar' ? 'garage' : top.id;
+    setClass(R, 'anime', this.host.lookOn());
+    this.items = [];
+    def?.render(this, top.data as never);
+    R.append(this.toastEl);
+    // Keep the highlight on the same item when it is still there.
+    const byKey = top.key ? this.items.findIndex((it) => it.key === top.key) : def?.initialFocus ? this.items.findIndex((it) => it.key === def.initialFocus) : -1;
+    const i = byKey >= 0 ? byKey : Math.min(top.sel, this.items.length - 1);
+    if (this.items.length) this.select(Math.max(0, i), false);
+  }
+
+  // ---- building blocks ---------------------------------------------------------
+
+  /** A button glyph for the current device. */
+  key(pad: string, keys: string): HTMLElement {
     return h('span.key', this.device === 'pad' ? pad : keys);
   }
 
-  private footer(...hints: Array<[string, string, string]>): HTMLElement {
-    return h('div.footer-hints', ...hints.map(([pad, keys, label]) => h('span', this.key(pad, keys), label)));
+  /** The prompts bar. Each prompt is also a button. */
+  footer(...prompts: Prompt[]): HTMLElement {
+    const bar = h('div.footer-hints');
+    for (const p of prompts) {
+      const el = h('span.prompt', this.key(p.pad, p.keys), p.label);
+      if (p.press) {
+        el.classList.add('clickable');
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.handle([p.press!]);
+        });
+      }
+      bar.append(el);
+    }
+    return bar;
   }
 
-  private addItem(list: HTMLElement, el: HTMLElement, activate?: () => void, change?: (dir: number) => void): void {
+  addItem(list: HTMLElement, el: HTMLElement, activate?: () => void, change?: (dir: number) => void, opts: ItemOpts = {}): HTMLElement {
     const index = this.items.length;
-    this.items.push({ el, activate, change });
+    if (opts.locked) el.classList.add('locked');
+    this.items.push({ el, key: opts.key ?? `#${index}`, activate, change, locked: opts.locked });
     el.addEventListener('pointerenter', () => this.select(index, false));
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
       this.select(index, false);
-      if (change) {
-        change(1);
-        this.cb.onSound('ui_move');
-      } else if (activate) {
-        this.cb.onSound('ui_select');
-        activate();
-      }
+      this.press(index, 1);
     });
     list.append(el);
+    return el;
   }
 
-  private select(i: number, sound = true): void {
+  /** An item that is a label and a value, changed with left and right. */
+  choice(list: HTMLElement, label: string, value: string, change: (dir: number) => void, opts: ItemOpts = {}): HTMLElement {
+    return this.addItem(list, h('div.item', h('span', label), h('span.choice', value)), undefined, change, opts);
+  }
+
+  /** An item that does something. */
+  button(list: HTMLElement, label: string | HTMLElement, activate: () => void, opts: ItemOpts & { go?: boolean; note?: string } = {}): HTMLElement {
+    const el = h('div.item' + (opts.go ? '.go' : ''), typeof label === 'string' ? h('span', label) : label, opts.note ? h('small', opts.note) : null);
+    return this.addItem(list, el, activate, undefined, opts);
+  }
+
+  private press(index: number, dir: number): void {
+    const it = this.items[index];
+    if (!it) return;
+    if (it.locked) {
+      this.host.sound('ui_back');
+      this.toast(it.locked);
+      return;
+    }
+    if (it.change) {
+      it.change(dir);
+      this.host.sound('ui_move');
+    } else if (it.activate) {
+      this.host.sound('ui_select');
+      it.activate();
+    }
+  }
+
+  select(i: number, sound = true): void {
     if (!this.items.length) return;
     this.sel = (i + this.items.length) % this.items.length;
     this.items.forEach((it, k) => setClass(it.el, 'sel', k === this.sel));
-    if (sound) this.cb.onSound('ui_move');
-  }
-
-  private render(): void {
-    const R = this.root;
-    R.replaceChildren();
-    // The styles lay each screen out by name (the anime look's hangar and broadcast screens).
-    R.dataset.screen = this.screen ?? '';
-    this.items = [];
-    switch (this.screen) {
-      case 'title':
-        this.renderTitle();
-        break;
-      case 'garage':
-        this.renderGarage();
-        break;
-      case 'controls':
-        this.renderControls();
-        break;
-      case 'pause':
-        this.renderPause();
-        break;
-      case 'results':
-        this.renderResults();
-        break;
-      default:
-        break;
+    const top = this.stack[this.stack.length - 1];
+    if (top) {
+      top.sel = this.sel;
+      top.key = this.items[this.sel]?.key ?? '';
     }
-    if (this.items.length) this.select(Math.min(this.sel, this.items.length - 1), false);
+    this.items[this.sel]?.el.scrollIntoView?.({ block: 'nearest' });
+    if (sound) this.host.sound('ui_move');
   }
 
-  private renderTitle(): void {
-    const col = h('div.col');
-    col.append(
-      h('div.logo', h('div.a', 'ZENITH'), h('div.b', 'GRAND PRIX'), h('div.rule'), art(LOGO.url, 'img.logo-art', 'Zenith Grand Prix')),
-      h('div.tagline', 'Three mechs a side. Three laps. First across the line takes fifteen points, and nobody said you had to let them get there.'),
-      h('div.press', this.key('A', 'Enter'), 'Start'),
-    );
-    // Browsers only allow sound after a click or key press; a pad button does not count.
-    if (this.device === 'pad') col.append(h('div.sound-hint', 'On a gamepad? Click the page once so the browser lets the sound through.'));
-    // In the anime look the show's cover is up behind it (the race runs on underneath).
-    this.root.append(art(COVER, 'img.cover', ''), h('div.shade.title'), col, h('div.small-print', 'Working title. Version 0.2, solo play against computer pilots.'));
-    this.root.onclick = () => {
-      if (this.screen === 'title') this.confirm();
-    };
+  /** The highlighted item's key. */
+  get selectedKey(): string {
+    return this.items[this.sel]?.key ?? '';
   }
 
-  private frameInfo = h('div.frame-info');
-  private statEls: HTMLElement[] = [];
-  private frameLabel = h('span.choice', '');
-  private trackLabel = h('span.choice', '');
-  private teamLabel = h('span.choice', '');
-  private rivalTeamLabel = h('span.choice', '');
-  private rivalLabel = h('span.choice', '');
-  private matchLabel = h('span.choice', '');
-  private matchBlurb = h('div.match-blurb', '');
-  private blurb = h('p', '');
-  private kit = h('div.kit');
-  // The anime look's hangar computer: its header, and the bay the mech stands in.
-  private hangarTeam = h('span', '');
-  private hangarEmblem = h('i');
-  private hangarName = h('b', '');
-  private hangarRole = h('span', '');
-  private hangarPilot = h('i');
-  private hangarPilotName = h('span', '');
-  private bayLabel = h('span.bay-label', '');
-
-  private renderGarage(): void {
-    this.root.onclick = null;
-    const col = h('div.col');
-    const list = h('div.list');
-    this.frameLabel = h('span.choice', '');
-    this.trackLabel = h('span.choice', '');
-    this.teamLabel = h('span.choice', '');
-    this.rivalTeamLabel = h('span.choice', '');
-    this.rivalLabel = h('span.choice', '');
-    this.matchLabel = h('span.choice', '');
-    this.matchBlurb = h('div.match-blurb', '');
-    this.addItem(list, h('div.item', h('span', 'Circuit'), this.trackLabel), undefined, (dir) => {
-      const i = Math.max(0, TRACKS.findIndex((t) => t.id === this.choice.track));
-      this.choice.track = TRACKS[(i + dir + TRACKS.length) % TRACKS.length].id;
-      this.refreshGarage(true);
-    });
-    this.addItem(list, h('div.item', h('span', 'Frame'), this.frameLabel), undefined, (dir) => {
-      this.choice.role = ((this.choice.role + dir + 3) % 3) as Role;
-      this.refreshGarage(true);
-    });
-    const n = LIVERIES.length;
-    this.addItem(list, h('div.item', h('span', 'Team'), this.teamLabel), undefined, (dir) => {
-      this.choice.team = (this.choice.team + dir + n) % n;
-      if (this.choice.rival === this.choice.team) this.choice.rival = -1;
-      this.refreshGarage(true);
-    });
-    this.addItem(list, h('div.item', h('span', 'Rival team'), this.rivalTeamLabel), undefined, (dir) => {
-      // Random, then every faction but yours.
-      const options = [-1, ...LIVERIES.map((_, f) => f).filter((f) => f !== this.choice.team)];
-      const i = Math.max(0, options.indexOf(this.choice.rival));
-      this.choice.rival = options[(i + dir + options.length) % options.length];
-      this.refreshGarage(false);
-    });
-    this.addItem(list, h('div.item', h('span', 'Rival pilots'), this.rivalLabel), undefined, (dir) => {
-      this.choice.rivals = (this.choice.rivals + dir + 3) % 3;
-      this.refreshGarage(false);
-    });
-    this.addItem(list, h('div.item', h('span', 'Match'), this.matchLabel), undefined, (dir) => {
-      const n = MATCH_OPTIONS.length;
-      this.choice.match = (this.choice.match + dir + n) % n;
-      this.refreshGarage(false);
-    });
-    this.addItem(list, h('div.item.go', h('span', 'Start')), () => this.cb.onStart({ ...this.choice }));
-    this.addItem(list, h('div.item', h('span', 'Controls')), () => this.show('controls'));
-
-    this.blurb = h('p', '');
-    this.statEls = [];
-    this.frameInfo = h('div.frame-info');
-    for (const name of ['Top speed', 'Armour', 'Handling', 'Hitting power']) {
-      const fill = h('i');
-      this.statEls.push(fill);
-      this.frameInfo.append(h('div.stat', h('span', name), h('div.bar', fill)));
-    }
-    this.kit = h('div.kit');
-    this.hangarTeam = h('span', '');
-    this.hangarEmblem = h('i');
-    this.hangarName = h('b', '');
-    this.hangarRole = h('span', '');
-    this.hangarPilot = h('i');
-    this.hangarPilotName = h('span', '');
-    this.bayLabel = h('span.bay-label', '');
-    // The mech's card: the team's emblem, the model and its class, and on the right the pilot who flies it.
-    const head = h(
-      'div.hh',
-      h('div.hh-bar', this.hangarTeam, h('span', 'Frame setup')),
-      h('div.hh-name', this.hangarEmblem, this.hangarName, this.hangarRole, h('div.hh-pilot', this.hangarPilot, this.hangarPilotName)),
-    );
-    col.append(head, h('h1', 'Garage'), this.blurb, list, this.matchBlurb, this.frameInfo);
-    this.root.append(h('div.shade'), h('div.bay', this.bayLabel), col, this.kit, this.footer(['D-pad', '↑ ↓', 'Choose'], ['◀ ▶', '← →', 'Change'], ['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Back']));
-    this.refreshGarage(true);
+  /** Highlight the item with this key, if it is on screen. */
+  focus(key: string): void {
+    const i = this.items.findIndex((it) => it.key === key);
+    if (i >= 0) this.select(i, false);
   }
 
-  private refreshGarage(preview: boolean): void {
-    const c = CLASSES[this.choice.role];
-    const livery = LIVERIES[this.choice.team] ?? LIVERIES[0];
-    const model = livery.models[c.role];
-    setText(this.frameLabel, `${model} (${c.frame})`);
-    setText(this.teamLabel, factionName(livery));
-    setText(this.rivalTeamLabel, this.choice.rival >= 0 ? factionName(LIVERIES[this.choice.rival]) : 'Random');
-    setText(this.rivalLabel, RIVALS[this.choice.rivals]);
-    const opt = MATCH_OPTIONS[this.choice.match] ?? MATCH_OPTIONS[0];
-    setText(this.matchLabel, opt.label);
-    const circuit = TRACKS.find((t) => t.id === this.choice.track) ?? TRACKS[0];
-    setText(this.trackLabel, circuit.name);
-    setText(this.matchBlurb, `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`);
-    setText(this.blurb, c.blurb);
-    // The hangar is your team's: its screens glow in the team's colour.
-    setText(this.hangarTeam, `${livery.name.replace('Team ', '')} hangar`);
-    this.hangarEmblem.style.backgroundImage = `url(${emblemUrl(this.choice.team)})`;
-    setText(this.hangarName, model);
-    setText(this.hangarRole, `${c.frame} class, ${ROLE_NAMES[c.role].toLowerCase()}`);
-    this.hangarPilot.style.backgroundImage = `url(${pilotUrl(this.choice.team, c.role)})`;
-    setText(this.hangarPilotName, livery.pilots[c.role]);
-    // Fitted now, and again once the screen is laid out and its type loaded.
-    this.fitHangarName();
-    requestAnimationFrame(() => this.fitHangarName());
-    setText(this.bayLabel, `Bay ${c.role + 1}: ${model}`);
-    this.root.style.setProperty('--phos', '#' + livery.glow.toString(16).padStart(6, '0'));
-    const power = [0.6, 0.55, 1][c.role];
-    const stats = [(c.topSpeed - 130) / 30, c.maxHp / 2200, (c.grip - 60) / 40, power];
-    stats.forEach((v, i) => this.statEls[i].style.setProperty('--v', Math.max(0.08, Math.min(1, v)).toFixed(2)));
-    const [p, s] = KIT_TEXT[c.role];
-    const free = ABILITIES[c.abilityFree];
-    const locked = ABILITIES[c.abilityLocked];
-    this.kit.replaceChildren(
-      h('h2', `${model}: weapons`),
-      h('div', this.key('X', 'J'), h('b', ATTACKS[c.primary].name + '. '), p),
-      h('div', this.key('Y', 'K'), h('b', ATTACKS[c.secondary].name + '. '), s),
-      h('h2.cells', 'Abilities, one Cell each'),
-      h('div.cellkit', this.key('B', 'R'), h('b', free.name + ' '), h('i', '(free steering). '), free.blurb),
-      h('div.cellkit', this.key('B', 'R'), h('b', locked.name + ' '), h('i', '(locked on). '), locked.blurb),
-      h('div.note', 'Cells come from the gold gates. They are lit on every lap, so a spent Cell can be earned back.'),
-    );
-    if (preview) this.cb.onPreview({ ...this.choice });
+  /** A short message at the bottom of the screen. */
+  toast(text: string, seconds = 2.6): void {
+    this.toastEl.textContent = text;
+    this.toastEl.classList.add('on');
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => this.toastEl.classList.remove('on'), seconds * 1000);
   }
 
-  /**
-   * The model's name at its full size if it fits beside the emblem and the
-   * pilot, else stepped down until it does (the longest names, Kamaitachi
-   * among them, would otherwise crowd the pilot).
-   */
-  private fitHangarName(): void {
-    const el = this.hangarName;
-    el.style.fontSize = '';
-    if (!el.isConnected || el.clientWidth === 0) return;
-    let size = 3.3;
-    while (el.scrollWidth > el.clientWidth + 1 && size > 2.2) {
-      size -= 0.1;
-      el.style.fontSize = `${size.toFixed(2)}em`;
-    }
-  }
-
-  private renderControls(): void {
-    this.root.onclick = null;
-    const box = h('div.controls', h('h1', 'Controls'), h('p', 'Free steering while you race. Lock on and the track carries you, so the stick moves you around your target instead.'));
-    const grid = h('div.grid');
-    const left = h('div');
-    const right = h('div');
-    const keycaps = (text: string) => h('span.keys', ...(text ? text.split(' ').map((part) => (/^(stick|up|down|left|right)$/i.test(part) ? h('span.word', part) : h('span.key', part))) : ['']));
-    CONTROLS.forEach(([title, rows], i) => {
-      const into = i === 0 ? left : right;
-      into.append(h('h2', title));
-      if (i < 2) into.append(h('div.rowc.head', h('span', ''), h('span', 'Gamepad'), h('span', 'Keyboard')));
-      for (const [label, pad, keys] of rows) {
-        into.append(h('div.rowc', h('span', label), keycaps(pad), keycaps(keys)));
-      }
-    });
-    grid.append(left, right);
-    box.append(grid);
-    this.root.append(h('div.shade.full'), box, this.footer(['B', 'Esc', 'Back']));
-  }
-
-  /** The anime look's art (the cover, the painted logo, the hangar and broadcast screens) shows by the root's class. */
-  private syncLook(): void {
-    setClass(this.root, 'anime', this.cb.lookOn());
-  }
-
-  /** The look was switched from outside the menu (G): bring its label up to date. */
+  /** The anime look shows by the root's class. */
   refreshLook(): void {
-    this.syncLook();
-    this.root.querySelectorAll('.look-label').forEach((el) => (el.textContent = `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`));
-  }
-
-  private renderPause(): void {
-    this.root.onclick = null;
-    const col = h('div.col');
-    const list = h('div.list');
-    this.addItem(list, h('div.item', h('span', 'Resume')), () => this.cb.onResume());
-    this.addItem(list, h('div.item', h('span', 'Restart this race')), () => this.cb.onRestart());
-    this.addItem(list, h('div.item', h('span', 'Tuning')), () => this.cb.onTuning());
-    const lookLabel = h('span.look-label', `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`);
-    this.addItem(list, h('div.item', lookLabel), () => {
-      lookLabel.textContent = `Look: ${this.cb.onToggleLook() ? '80s anime' : 'plain'}`;
-    });
-    this.addItem(list, h('div.item', h('span', 'Controls')), () => this.show('controls'));
-    this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
-    this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());
-    // In the anime look the show has cut to its eyecatch card, as for a break.
-    const card = h('div.ec-pause', h('div.ec-kick', 'Paused'), art(LOGO.url, 'img', 'Zenith Grand Prix'));
-    col.append(card, h('h1', 'Paused'), list);
-    this.root.append(h('div.shade'), col, this.footer(['A', 'Enter', 'Confirm'], ['B', 'Esc', 'Resume']));
-  }
-
-  private renderResults(): void {
-    this.root.onclick = null;
-    const race = this.lastRace;
-    if (!race) return;
-    const me = race.mechs[this.lastLocal];
-    const match = this.match;
-    const round = match && match.rounds.length ? match.rounds[match.rounds.length - 1] : null;
-    const pts = round ? round.points : [0, 0];
-    if (!round) for (const m of race.mechs) pts[m.team] += m.points;
-    const mine = pts[me.team];
-    const theirs = pts[1 - me.team];
-    // The two factions racing, by race team.
-    const sides = this.factions.map((f) => LIVERIES[f] ?? LIVERIES[0]);
-    const names = sides.map(factionName);
-    this.root.style.setProperty('--team0', sides[0].css);
-    this.root.style.setProperty('--team1', sides[1].css);
-    this.root.style.setProperty('--emblem0', `url(${emblemUrl(this.factions[0])})`);
-    this.root.style.setProperty('--emblem1', `url(${emblemUrl(this.factions[1])})`);
-    const myTeam = names[me.team];
-    const box = h('div.results');
-    // The anime look shows the team's emblem before its name.
-    const emblem = (team: number) => {
-      const el = h('i.emb');
-      el.style.backgroundImage = `url(${emblemUrl(this.factions[team])})`;
-      return el;
-    };
-    const single = !match || (match.cfg.mode === 'series' && match.cfg.bestOf === 1);
-    const over = !match || match.winner >= 0;
-    const roundWinner = round ? round.winner : mine >= theirs ? me.team : 1 - me.team;
-
-    // Headline: the match if it has just been decided, otherwise the round.
-    if (match && !single && over) {
-      const won = match.winner === me.team;
-      const tally = match.cfg.mode === 'series' ? `${match.wins[me.team]}–${match.wins[1 - me.team]}` : `${match.totals[me.team]}–${match.totals[1 - me.team]}`;
-      box.append(h('div.headline', emblem(me.team), `${myTeam} ${won ? 'win' : 'lose'} the match `, h('span.pts', tally)));
-    } else if (single) {
-      box.append(h('div.headline', emblem(me.team), `${myTeam} ${roundWinner === me.team ? 'win' : 'lose'} `, h('span.pts', `${mine}–${theirs}`)));
-    } else {
-      // The winner's score first, to match the name in front of it.
-      box.append(h('div.headline', emblem(roundWinner), `${names[roundWinner]} take round ${round ? round.round : 1} `, h('span.pts', `${pts[roundWinner]}–${pts[1 - roundWinner]}`)));
-    }
-
-    const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
-    const fromSupport = me.support > 0 ? `, ${me.support} of them from support` : '';
-    const own = me.retired
-      ? `You were knocked out${me.points > 0 ? `, but still scored ${me.points}${fromSupport}` : ' and scored nothing'}.`
-      : `You finished ${ord[me.place - 1]} for ${me.points} point${me.points === 1 ? '' : 's'}${fromSupport}.`;
-    const lines = [own];
-    if (round) {
-      const parts = [`Placing ${round.place[me.team]}–${round.place[1 - me.team]}`];
-      if (round.ko[0] + round.ko[1] > 0) parts.push(`knockouts ${round.ko[me.team]}–${round.ko[1 - me.team]}`);
-      if (round.support[0] + round.support[1] > 0) parts.push(`support ${round.support[me.team]}–${round.support[1 - me.team]}`);
-      if (parts.length > 1) lines.push(parts.join(', ') + '.');
-      if (round.tied) lines.push(`Level on points, so the round goes to ${names[round.winner]}, who came home first.`);
-    }
-    box.append(h('div.subline', lines.join(' ')));
-
-    // How the match stands.
-    if (match && !single) {
-      const strip = h('div.matchstrip');
-      if (match.cfg.mode === 'series') {
-        const need = roundsToWin(match.cfg);
-        for (const team of [me.team, 1 - me.team]) {
-          const pips = h('span.pips');
-          for (let i = 0; i < need; i++) pips.append(h('i' + (i < match.wins[team] ? '.on' : '')));
-          strip.append(h('span.side' + (team ? '.t1' : ''), h('b', names[team]), pips));
-        }
-        strip.append(h('span.note', over ? `Best of ${match.cfg.bestOf}, decided in ${match.rounds.length}` : `Best of ${match.cfg.bestOf}. Round ${match.rounds.length + 1} next`));
-      } else {
-        for (const team of [me.team, 1 - me.team]) {
-          const fill = h('i');
-          fill.style.transform = `scaleX(${Math.min(1, match.totals[team] / match.cfg.target).toFixed(3)})`;
-          strip.append(h('span.side' + (team ? '.t1' : ''), h('b', names[team]), h('span.total', String(match.totals[team])), h('div.bar', fill)));
-        }
-        strip.append(h('span.note', over ? `First to ${match.cfg.target}, after ${match.rounds.length} round${match.rounds.length === 1 ? '' : 's'}` : `First to ${match.cfg.target}. Round ${match.rounds.length + 1} next`));
-      }
-      box.append(strip);
-    }
-
-    const table = h<'table'>('table');
-    const head = h<'tr'>('tr');
-    for (const [label, num] of [['', false], ['', false], ['', false], ['Pilot', false], ['Frame', false], ['Time', true], ['Damage dealt', true], ['Knockouts', true], ['Support', true], ['Points', true]] as const) {
-      const th = h<'th'>('th' + (num ? '.num' : ''), label);
-      // The third column is the pilots' faces (the anime look only).
-      if (head.children.length === 2) th.className = 'face';
-      head.append(th);
-    }
-    table.append(head);
-    const winner = race.mechs.find((m) => m.place === 1);
-    const fmt = (t: number) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
-    for (const m of [...race.mechs].sort((a, b) => a.place - b.place)) {
-      const tr = h<'tr'>('tr' + (m.team ? '.t1' : '') + (m.id === me.id ? '.me' : '') + (m.retired ? '.out' : ''));
-      let time = 'Retired';
-      if (!m.retired) {
-        if (m.finishTime > 1e6) time = 'Flagged';
-        else if (winner && m !== winner && winner.finishTime < 1e6) time = `+${(m.finishTime - winner.finishTime).toFixed(2)}`;
-        else time = fmt(m.finishTime - 4);
-      }
-      const face = h('i');
-      face.style.backgroundImage = `url(${pilotUrl(this.factions[m.team], m.role)})`;
-      tr.append(
-        h<'td'>('td.flag'),
-        h<'td'>('td', String(m.place)),
-        h<'td'>('td.face', face),
-        h<'td'>('td', m.name + (m.id === me.id ? ' (you)' : '')),
-        h<'td'>('td', `${sides[m.team].models[m.role]}, ${ROLE_NAMES[m.role].toLowerCase()}`),
-        h<'td'>('td.num', time),
-        h<'td'>('td.num', String(Math.round(m.dmgDealt))),
-        h<'td'>('td.num', String(m.kos)),
-        h<'td'>('td.num', m.support > 0 ? String(m.support) : '–'),
-        h<'td'>('td.num.pts', h('span', String(m.points))),
-      );
-      table.append(tr);
-    }
-    box.append(table);
-
-    // Where the support points came from, pilot by pilot: your team first.
-    const supporters = race.mechs.filter((m) => m.support > 0).sort((a, b) => (a.team === me.team ? 0 : 1) - (b.team === me.team ? 0 : 1) || b.support - a.support);
-    if (supporters.length > 0) {
-      const sup = h('div.supportlist');
-      for (const m of supporters) {
-        const chips = h('span.chips');
-        AWARD_NAMES.forEach((name, kind) => {
-          if (m.awardPts[kind] > 0) chips.append(h('span.chip', `${name} `, h('b', String(m.awardPts[kind]))));
-        });
-        const capped = m.support >= race.rules.supportCap ? h('span.cap', 'max') : '';
-        sup.append(h('div.row' + (m.team ? '.t1' : '') + (m.id === me.id ? '.me' : ''), h('span.who', m.name, h('small', ROLE_NAMES[m.role])), chips, h('span.total', `+${m.support}`), capped));
-      }
-      box.append(h('div.suphead', 'Support points'), sup);
-    }
-    const list = h('div.list');
-    this.addItem(list, h('div.item.go', h('span', over ? (single ? 'Race again' : 'New match') : 'Next round')), () => this.cb.onNext());
-    this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
-    this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());
-    box.append(list);
-    this.root.append(h('div.shade.full'), box);
-  }
-
-  private confirm(): void {
-    if (this.screen === 'title') {
-      this.cb.onSound('ui_select');
-      this.cb.onGarage();
-      return;
-    }
-    const it = this.items[this.sel];
-    if (!it) return;
-    if (it.activate) {
-      this.cb.onSound('ui_select');
-      it.activate();
-    } else if (it.change) {
-      it.change(1);
-      this.cb.onSound('ui_move');
-    }
-  }
-
-  private back(): void {
-    this.cb.onSound('ui_back');
-    if (this.screen === 'controls') this.show(this.returnTo);
-    else if (this.screen === 'garage') this.cb.onQuit();
-    else if (this.screen === 'pause') this.cb.onResume();
+    setClass(this.root, 'anime', this.host.lookOn());
+    this.root.querySelectorAll('.look-label').forEach((el) => (el.textContent = `Look: ${this.host.lookOn() ? '80s anime' : 'plain'}`));
   }
 
   /** Feed navigation presses, in the order they happened. */
   handle(presses: MenuInput[]): void {
-    // The look can change from the tuning panel too; this runs every frame a menu is up.
-    this.syncLook();
-    for (const m of presses) {
-      if (!this.screen) return;
-      const horizontal = this.screen === 'results';
-      if (m === 'confirm') this.confirm();
-      else if (m === 'back' || (m === 'pause' && this.screen === 'pause')) this.back();
-      else if (m === (horizontal ? 'left' : 'up')) this.select(this.sel - 1);
-      else if (m === (horizontal ? 'right' : 'down')) this.select(this.sel + 1);
-      else if (!horizontal && (m === 'left' || m === 'right')) {
+    setClass(this.root, 'anime', this.host.lookOn());
+    for (const p of presses) {
+      const top = this.stack[this.stack.length - 1];
+      if (!top) return;
+      const def = this.defs.get(top.id);
+      const horizontal = !!def?.horizontal;
+      if (p === 'confirm') this.press(this.sel, 1);
+      else if (p === 'back') {
+        this.host.sound('ui_back');
+        if (def?.back) def.back(this, top.data as never);
+        else this.pop();
+      } else if (p === (horizontal ? 'left' : 'up')) this.select(this.sel - 1);
+      else if (p === (horizontal ? 'right' : 'down')) this.select(this.sel + 1);
+      else if (!horizontal && (p === 'left' || p === 'right')) {
         const it = this.items[this.sel];
-        if (it?.change) {
-          it.change(m === 'left' ? -1 : 1);
-          this.cb.onSound('ui_move');
-        }
-      }
+        if (it?.change) this.press(this.sel, p === 'left' ? -1 : 1);
+        else def?.press?.(this, p, top.data as never);
+      } else def?.press?.(this, p, top.data as never);
     }
   }
 }
 
 /** A painted image, as an element. */
-function art(url: string, spec: string, alt: string): HTMLImageElement {
+export function art(url: string, spec: string, alt: string): HTMLImageElement {
   const img = h<'img'>(spec);
   img.src = url;
   img.alt = alt;
