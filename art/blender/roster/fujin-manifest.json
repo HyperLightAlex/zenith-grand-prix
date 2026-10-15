@@ -1,24 +1,24 @@
 {
   "model": "fujin",
-  "design": "Wind-ring samurai, layered shin shells and reinforced staff grip",
+  "design": "Art-sheet wind samurai: sculpted wind ribbon, shoulder turbines, one storm rifle and retained snare",
   "levels": [
     {
       "level": 0,
-      "triangles": 32744,
-      "bytes": 618144,
-      "parts": 96
+      "triangles": 33182,
+      "bytes": 871004,
+      "parts": 97
     },
     {
       "level": 1,
-      "triangles": 16756,
-      "bytes": 367492,
-      "parts": 96
+      "triangles": 17614,
+      "bytes": 590728,
+      "parts": 97
     },
     {
       "level": 2,
-      "triangles": 8200,
-      "bytes": 221700,
-      "parts": 96
+      "triangles": 8708,
+      "bytes": 326852,
+      "parts": 97
     }
   ]
 }

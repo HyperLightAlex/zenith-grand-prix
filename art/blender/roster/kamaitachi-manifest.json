@@ -1,24 +1,24 @@
 {
   "model": "kamaitachi",
-  "design": "Fast samurai, tapered bracers and articulated blade-bearing arms",
+  "design": "Art-sheet crescent samurai: swept gold blades, fitted lightning armor and mirrored skirt lames",
   "levels": [
     {
       "level": 0,
-      "triangles": 29836,
-      "bytes": 564388,
-      "parts": 103
+      "triangles": 31534,
+      "bytes": 851516,
+      "parts": 101
     },
     {
       "level": 1,
-      "triangles": 15306,
-      "bytes": 349300,
-      "parts": 103
+      "triangles": 16742,
+      "bytes": 600044,
+      "parts": 101
     },
     {
       "level": 2,
-      "triangles": 7518,
-      "bytes": 213124,
-      "parts": 103
+      "triangles": 8256,
+      "bytes": 327524,
+      "parts": 101
     }
   ]
 }

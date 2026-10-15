@@ -1,7 +1,7 @@
 """October art-sheet pass, executed inside build_roster.py.
 
 The supplied sheets resolve into one consistent model each. No changes
-to joint lengths, wheel contacts, animation targets or the Tempest units.
+to joint lengths, wheel contacts or animation targets.
 Armor and trim are solid overlapping parts; mirrored details are authored
 with positive transforms. Source components remain reproducible inputs.
 """
@@ -12,6 +12,7 @@ def bounds(vs):
 
 def sheet_skip(p):
     if family=='aurora':return aurora_skip(p)
+    if family=='tempest':return tempest_skip(p)
     j=p['joint'];s=p['slot'];v=p['positions']
     lo=[min(v[a::3]) for a in range(3)];hi=[max(v[a::3]) for a in range(3)]
     h=hi[1]-lo[1]
@@ -34,6 +35,7 @@ def sheet_skip(p):
 
 def sheet_shell(j,hw,widths):
     if family=='aurora':return hw,(.72,.93,1,.90,.67)
+    if family=='tempest':return hw,(.68,.83,1,.90,.63)
     if j.startswith('knee'):
         target={'daystar':.46,'rampart':.62,'razor':.35,'stinger':.47,
                 'maul':.61,'anubis':.44,'horus':.40,'sobek':.59}[MODEL]
@@ -131,6 +133,7 @@ def rifle():
 def sheet_details():
     global design_note
     if family=='aurora':return aurora_details()
+    if family=='tempest':return tempest_details()
     notes={
       'daystar':'Art-sheet racing armor, paired swept fins, layered knees and seated carbine',
       'rampart':'Art-sheet heavy greaves, angular knee shields and reinforced gauntlets',

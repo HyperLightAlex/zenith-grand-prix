@@ -195,7 +195,7 @@ it('keeps the sheet-derived eye lights and Daystar fin pair bilaterally symmetri
   };
   const mirrored=(left:THREE.Vector3[],right:THREE.Vector3[],tolerance=1e-5)=>
     left.every(p=>right.some(q=>Math.hypot(p.x+q.x,p.y-q.y,p.z-q.z)<tolerance));
-  for(const id of ['razor','stinger','maul','anubis','seraph']) {
+  for(const id of ['razor','stinger','maul','anubis','seraph','kamaitachi','fujin','raijin']) {
     const eye=positions(await load(id),'head','G');
     expect(eye.length).toBeGreaterThanOrEqual(8);
     expect(mirrored(eye,eye),`${id} eye lights`).toBe(true);
@@ -212,7 +212,7 @@ it('keeps the sheet-derived eye lights and Daystar fin pair bilaterally symmetri
 
 it('keeps the new carbine barrels aligned with the existing gameplay muzzle anchors',async()=>{
   const mat=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
-  for(const [id,y] of [['daystar',-2.32],['stinger',-2.86],['longbow',-2.86]] as const) {
+  for(const [id,y] of [['daystar',-2.32],['stinger',-2.86],['longbow',-2.86],['fujin',-2.86]] as const) {
     for(let lod=0;lod<3;lod++) {
       const a=await load(id,lod);
       const gun=a.parts.filter(p=>p.joint==='wrR'&&p.slot==='D').map(p=>new THREE.Mesh(p.geometry,mat));
@@ -222,6 +222,40 @@ it('keeps the new carbine barrels aligned with the existing gameplay muzzle anch
       const hit=ray.intersectObjects(gun,false)[0];
       expect(hit,`${id} LOD${lod} bore`).toBeDefined();
       expect(Math.abs(hit.point.y-y)).toBeLessThan(.025);
+    }
+  }
+  mat.dispose();
+});
+
+it('centres Tempest chest lightning and seats it on the dark armor at every LOD',async()=>{
+  const mat=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
+  for(const id of ['kamaitachi','fujin','raijin'])for(let lod=0;lod<3;lod++) {
+    const a=await load(id,lod);
+    const glow=a.parts.find(p=>p.joint==='chest'&&p.slot==='G')!.geometry.getAttribute('position');
+    const bolt=Array.from({length:glow.count},(_,i)=>new THREE.Vector3(glow.getX(i),glow.getY(i),glow.getZ(i)))
+      .filter(v=>v.z>.3);
+    expect(bolt.length).toBeGreaterThan(12);
+    expect(Math.abs(Math.min(...bolt.map(v=>v.x))+Math.max(...bolt.map(v=>v.x)))).toBeLessThan(.001);
+    const armor=a.parts.filter(p=>p.joint==='chest'&&p.slot==='S').map(p=>new THREE.Mesh(p.geometry,mat));
+    for(const v of bolt) {
+      const hit=new THREE.Raycaster(new THREE.Vector3(v.x,v.y,v.z+1),new THREE.Vector3(0,0,-1)).intersectObjects(armor,false)[0];
+      expect(hit,`${id} LOD${lod} lightning misses shield`).toBeDefined();
+      const gap=v.z-hit.point.z;
+      expect(gap,`${id} LOD${lod} buried lightning`).toBeGreaterThan(-.012);
+      expect(gap,`${id} LOD${lod} floating lightning`).toBeLessThan(.055);
+    }
+  }
+  mat.dispose();
+});
+
+it('keeps Raijin’s halo supports clear of the two main jet throats',async()=>{
+  const mat=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
+  for(let lod=0;lod<3;lod++) {
+    const a=await load('raijin',lod);
+    const trim=a.parts.filter(p=>p.joint==='chest'&&p.slot==='T').map(p=>new THREE.Mesh(p.geometry,mat));
+    for(const s of [-1,1]) {
+      const ray=new THREE.Raycaster(new THREE.Vector3(s*.72,.4,-2.36),new THREE.Vector3(0,Math.sin(.25),Math.cos(.25)),0,.8);
+      expect(ray.intersectObjects(trim,false),`LOD${lod} blocked main nozzle`).toHaveLength(0);
     }
   }
   mat.dispose();

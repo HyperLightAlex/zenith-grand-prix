@@ -62,7 +62,35 @@ export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, he
       if(child instanceof THREE.Mesh && child.geometry.type==='PlaneGeometry') {
         child.position.x*=gain;
         if(Math.abs(child.rotation.y)<.2)child.scale.x*=gain;
+        if(['kamaitachi','fujin','raijin'].includes(id)) {
+          // The new shoulder shields/turbines occupy the old side marking
+          // locations. Seat these small marks on the upper-arm armor instead.
+          if(name==='shL'||name==='shR') {
+            child.position.set(0,-1.0,id==='raijin'?.50:id==='fujin'?.40:.37);
+            child.rotation.set(0,0,0);
+            if(id==='fujin')child.scale.setScalar(.22);
+          }
+          if(id==='fujin' && name==='hipL') {
+            child.position.set(0,-1.14,.455);
+            child.rotation.set(0,0,0);
+          }
+          if(id==='raijin' && name==='chest' && child.position.y>.7) {
+            child.position.set(0,1.24,child.userData.ownMaterial?-1.849:-1.845);
+            child.scale.setScalar(child.userData.ownMaterial?.62:.72);
+          }
+        }
       }
+    }
+  }
+  if(id==='fujin') {
+    // Reuse the authored race-number material, keeping the actual team
+    // number. The supplied sheet puts it on a centred rear panel as well.
+    const source=rig.joints.shL.children.find(c=>c instanceof THREE.Mesh&&c.geometry.type==='PlaneGeometry');
+    if(source instanceof THREE.Mesh) {
+      const rear=source.clone();rear.position.set(0,1.15,-1.365);
+      rear.rotation.set(0,Math.PI,0);rear.scale.setScalar(.45);
+      rear.userData.ownMaterial=false; // The original shoulder number owns the shared material.
+      rig.joints.chest.add(rear);
     }
   }
   for(const j of [rig.joints.wrL,rig.joints.wrR]) {

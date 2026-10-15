@@ -1,24 +1,24 @@
 {
   "model": "raijin",
-  "design": "Thunder-drum defender with heavy knuckles and mechanical joint rings",
+  "design": "Art-sheet thunder defender: dark gold-edged cuirass, coiled gauntlets and retained drum halo",
   "levels": [
     {
       "level": 0,
-      "triangles": 32726,
-      "bytes": 621204,
-      "parts": 94
+      "triangles": 33962,
+      "bytes": 870820,
+      "parts": 92
     },
     {
       "level": 1,
-      "triangles": 16708,
-      "bytes": 374196,
-      "parts": 94
+      "triangles": 18290,
+      "bytes": 592940,
+      "parts": 92
     },
     {
       "level": 2,
-      "triangles": 8170,
-      "bytes": 224536,
-      "parts": 94
+      "triangles": 9350,
+      "bytes": 331568,
+      "parts": 92
     }
   ]
 }

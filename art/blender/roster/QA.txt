@@ -1,5 +1,31 @@
 ROSTER PASS — VALIDATION RECORD
 
+TEMPEST ART-SHEET POLISH
+- Kamaitachi, Fujin and Raijin refined from the three supplied sheets. Three
+  editable Blender sources and nine GLBs regenerated; original builders and
+  previous-pass images retained. Updated sheets are embedded in the blends.
+- Reviewed original/updated comparisons, four standing angles and boost,
+  guard and victory poses. Helmet heights adjusted to clear the new collars.
+  Shoulder covers remain on arm pivots. Existing articulated skirts retained.
+- Chest bolts are centred and projected onto their actual shield surfaces.
+  Paired eyes remain mirrored. Fujin's one rifle bore stays aligned with its
+  firing anchor at every LOD, and the left snare stays in place.
+- Main nozzle designs and calf bells retained. Calf mounting/effect alignment
+  passes raycast and motion tests for all LODs. Fujin's angle capture shows
+  end-on burners and side flames. Raijin's original diagonal halo struts were
+  crossing its main jet throats; side brackets now leave the jets clear.
+- Fujin has a centred rear race-number panel. Raijin's partially buried number
+  and roundel now sit completely on a flat panel, verified in rear close-up.
+- Final npm test: 942 tests across 22 files passed, including 77 asset checks.
+  Final production and single-file builds passed. LOD0 counts: Kamaitachi
+  31,534; Fujin 33,182; Raijin 33,962. All lower-detail exports meet budgets.
+- Final production Tempest-versus-Aurora battle and speed laps checked with
+  no browser warnings/errors. The 73.5-second local sample averaged 74.7 fps
+  at 1280x720/high/scale 1/uncapped; recent p95 was 14.9 ms. Representative
+  race and jet-angle captures are in previews/sheet-polish.
+- Gallery now provides supplied sheets, previous-pass comparisons, updated
+  turnarounds and motion images for all fourteen non-Sunhawk roster units.
+
 AURORA ART-SHEET POLISH
 - Seraph, Longbow and Paladin refined against the three supplied updated
   sheets. Three editable Blender sources and nine GLBs regenerated; existing

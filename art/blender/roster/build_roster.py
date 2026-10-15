@@ -30,9 +30,9 @@ PROFILES={
  'raijin':(1.05,1.06,1.04,'Thunder-drum defender with heavy knuckles and mechanical joint rings')
 }
 arm_gain,thigh_gain,shin_gain,design_note=PROFILES[MODEL]
-SHEET_MODELS={'daystar','rampart','razor','stinger','maul','anubis','horus','sobek','seraph','longbow','paladin'}
+SHEET_MODELS={'daystar','rampart','razor','stinger','maul','anubis','horus','sobek','seraph','longbow','paladin','kamaitachi','fujin','raijin'}
 sheet_polish=MODEL in SHEET_MODELS
-old_scene=bpy.context.scene
+old_scene_name=bpy.context.scene.name
 name='ROSTER / '+MODEL.title()
 existing=bpy.data.scenes.get(name)
 if existing:
@@ -206,6 +206,7 @@ def is_shell(joint,slot,lo,hi):
         (joint.startswith('knee') and cy<-.55 and h>dims['shin']*.58))
 exec(compile((BASE/'sheet_polish.py').read_text(),'sheet_polish.py','exec'))
 exec(compile((BASE/'aurora_polish.py').read_text(),'aurora_polish.py','exec'))
+exec(compile((BASE/'tempest_polish.py').read_text(),'tempest_polish.py','exec'))
 for i,part in enumerate(data['parts']):
     joint=part['joint'];slot=part['slot'];pos=part['positions']
     if joint.startswith('knee') and part.get('nozzle'):
@@ -394,7 +395,7 @@ bpy.data.libraries.write(str(BASE/f'{MODEL}-production.blend'),{scene},fake_user
 
 # Consolidate by joint/paint slot, preserving authored normals and shared vertices.
 reports=[]
-for level,ratio in [(0,1),(1,.52),(2,.26)]:
+for level,ratio in [(0,1),(1,.52),(2,.24 if family=='tempest' else .26)]:
     temp=bpy.data.scenes.new('ROSTER EXPORT');bpy.context.window.scene=scene
     groups=defaultdict(lambda:{'vertices':[],'normals':[],'faces':[],'lookup':{}})
     mods=[]
@@ -435,5 +436,5 @@ for level,ratio in [(0,1),(1,.52),(2,.26)]:
     bpy.data.scenes.remove(temp)
     for me in export_meshes:bpy.data.meshes.remove(me)
 (BASE/f'{MODEL}-manifest.json').write_text(json.dumps({'model':MODEL,'design':design_note,'levels':reports},indent=2)+'\n')
-bpy.context.window.scene=old_scene
+bpy.context.window.scene=bpy.data.scenes.get(old_scene_name) or scene
 result={'model':MODEL,'source_parts':len(meshes),'levels':reports,'blend':str(BASE/f'{MODEL}-production.blend')}

@@ -35,7 +35,7 @@ UPDATED ART-SHEET POLISH
 Daystar, Rampart, Razor, Stinger, Maul, Anubis, Horus and Sobek now use the
 eight supplied updated sheets, saved as art/model-sheets/refs/ref-ID-updated.png.
 Sunhawk remains the approved finish reference. Original code-built models
-remain available with N. Tempest awaits its updated concept-sheet pass.
+remain available with N. Aurora and Tempest also incorporate their updated sheets.
 sheet_polish.py contains the additional geometry and is loaded by build_roster.py.
 
 The eight units have more deliberate knee/shin shapes and seated small details.
@@ -67,6 +67,25 @@ in the generated concept are intentionally omitted. Paladin retains its
 great helm, tower shields and defender equipment with heavier gauntlet faces.
 The three source blends include their new reference sheets. The gallery
 provides the same art/previous-pass/turnaround/motion views for Aurora.
+
+TEMPEST ART-SHEET PASS
+Kamaitachi, Fujin and Raijin use the three supplied sheets, saved alongside
+the other updated references. tempest_polish.py authors sculpted emerald
+armor, dark gold-edged chest shields, centred lightning, wrapped abdominal
+lames, articulated jagged skirts, pointed skates and gold knee armor.
+Kamaitachi gains paired swept crescents, gold-edged forearm blades and calf
+turbines. Fujin gains a sculpted wind arch, rear streamers, round shoulder
+turbines, a centred rear number and one storm rifle aligned to the original
+firing anchor; his left snare remains. Raijin retains the thunder-drum halo,
+lightning rods and scatter cannon with a horned menpo and coiled gauntlets.
+
+AI-sheet offsets are resolved into mirrored armor and centre-aligned lights.
+Thin lightning meshes are projected onto their actual armor planes. All three
+retain the existing main nozzle geometry, rebuilt mounted calf bells and
+shared physical/effect outlet metadata. Original models remain unchanged.
+The same comparison, previous-pass, art-sheet, turnaround and pose views are
+available in the review gallery. Export retries also restore the Blender
+scene safely when rebuilding the currently active generated model.
 
 ATTACHMENT CORRECTIONS
 All fourteen units have continuous internal shafts and overlapping joint
