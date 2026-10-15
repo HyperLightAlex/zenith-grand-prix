@@ -36,16 +36,41 @@ reports=[]
 staging=[]
 staging_meshes=[]
 staging_materials=[]
+lod_mods=[]
+bevel_settings=[]
 try:
-    for prefix,variant in [('A / ','current'),('B / ','updated')]:
+    variants=[('A / ','current',0),('B / ','updated',0)]
+    if source.get('sunhawk_production'):
+        variants += [('B / ','updated',1),('B / ','updated',2)]
+    for prefix,variant,level in variants:
+        for ob,mod in lod_mods: ob.modifiers.remove(mod)
+        lod_mods.clear()
+        for mod,segments in bevel_settings: mod.segments=segments
+        bevel_settings.clear()
+        if level:
+            for ob in source.objects:
+                if ob.type!='MESH' or not ob.name.startswith(prefix) or ob.get('surface_detail'): continue
+                for mod in ob.modifiers:
+                    if mod.type=='BEVEL':
+                        bevel_settings.append((mod,mod.segments)); mod.segments=1
+                # Decimate evaluated bevels, keeping every articulated part and
+                # material boundary. The editable source never gets applied.
+                mod=ob.modifiers.new('Temporary game LOD','DECIMATE')
+                mod.ratio=.68 if level==1 else .36
+                mod.use_collapse_triangulate=True
+                lod_mods.append((ob,mod))
+        bpy.context.view_layer.update()
+        deps=bpy.context.evaluated_depsgraph_get()
         u=variant=='updated'
         root=next(o for o in source.objects if o.name==prefix+'SUNHAWK')
         root_inv=root.matrix_world.inverted()
         joints={JOINTS[o.name.split('JNT / ')[1]]:o for o in source.objects if o.name.startswith(prefix+'JNT / ')}
-        groups=defaultdict(lambda:{'pos':[],'normal':[]})
+        groups=defaultdict(lambda:{'pos':[],'normal':[],'uv':[]})
         source_count=0
         for ob in source.objects:
             if ob.type!='MESH' or not ob.name.startswith(prefix) or any(key in ob.name for key in SKIP): continue
+            detail=bool(ob.get('surface_detail'))
+            if detail and level: continue
             source_count+=1
             assert ob.parent in joints.values(), ob.name
             joint=JOINTS[ob.parent.name.split('JNT / ')[1]]
@@ -74,52 +99,61 @@ try:
                 for tri in me.loop_triangles:
                     material=me.materials[tri.material_index]
                     role=material.name.split('Sunhawk / ')[1].split('.')[0]
-                    slot=SLOTS[role]
-                    bucket=groups[(joint,slot)]
+                    slot='D' if detail else SLOTS[role]
+                    bucket=groups[(joint,slot,detail)]
                     for vi,li in zip(tri.vertices,tri.loops):
                         p=local@me.vertices[vi].co
                         n=(normal_matrix@me.corner_normals[li].vector).normalized()
                         if not all(math.isfinite(v) for v in (*p,*n)): raise ValueError(ob.name+' nonfinite export')
                         bucket['pos'].append(tuple(p)); bucket['normal'].append(tuple(n))
+                        if detail: bucket['uv'].append(tuple(me.uv_layers.active.data[li].uv))
             finally: evaluated.to_mesh_clear()
         scene=bpy.data.scenes.new('GAME EXPORT / '+variant); staging.append(scene)
         bpy.context.window.scene=scene
         asset=bpy.data.objects.new('Sunhawk_'+variant,None); scene.collection.objects.link(asset)
         asset['sunhawk_schema']=1; asset['variant']=variant
+        asset['detail_level']=level
         asset['dims']={'hipY':5.35,'hipX':.73,'hipDrop':.23,'thigh':1.96,'shin':2.33,'ankleY':.83,
             'spineY':.45,'chestY':.75,'shoulderX':1.44 if u else 1.36,'shoulderY':.88,
             'headY':1.47,'headZ':0.,'upperArm':1.31,'foreArm':1.47,'height':9.35}
         mats={}
-        for slot in sorted({slot for joint,slot in groups}):
+        for slot in sorted({slot for joint,slot,detail in groups}):
             m=bpy.data.materials.new('Sunhawk_export_'+variant+'_'+slot); mats[slot]=m
             staging_materials.append(m)
             m.diffuse_color={'P':(.9,.92,.96,1),'S':(.02,.16,.8,1),'T':(1,.45,.02,1),
                 'F':(.04,.055,.09,1),'K':(.02,.03,.05,1),'D':(.01,.015,.025,1),'G':(.06,.8,1,1)}[slot]
             m.use_nodes=True
             m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value=m.diffuse_color
-        for (joint,slot),data in sorted(groups.items()):
+        for (joint,slot,detail),data in sorted(groups.items()):
             me=bpy.data.meshes.new('Sunhawk_export_'+variant+'_'+joint+'_'+slot)
             staging_meshes.append(me)
             vs=data['pos']; me.from_pydata(vs,[],[(i,i+1,i+2) for i in range(0,len(vs),3)])
             me.update()
             for face in me.polygons: face.use_smooth=True
             me.normals_split_custom_set(data['normal'])
+            if detail:
+                uv=me.uv_layers.new(name='SunhawkDetailAtlas')
+                for loop in me.loops: uv.data[loop.index].uv=data['uv'][loop.vertex_index]
             ob=bpy.data.objects.new(joint+'_'+slot,me); scene.collection.objects.link(ob)
             ob.parent=asset; ob['joint']=joint; ob['slot']=slot
+            if detail: ob['detail']=True
             # Joint-local geometry intentionally stays at the origin in this
             # transport scene; the game attaches it to the matching live pivot.
             me.materials.append(mats[slot])
-        bpy.ops.export_scene.gltf(filepath=str(OUT/('sunhawk-'+variant+'.glb')),export_format='GLB',
-            use_active_scene=True,export_yup=True,export_normals=True,export_texcoords=False,
+        filename='sunhawk-'+variant+('-lod'+str(level) if level else '')+'.glb'
+        bpy.ops.export_scene.gltf(filepath=str(OUT/filename),export_format='GLB',
+            use_active_scene=True,export_yup=True,export_normals=True,export_texcoords=True,
             export_extras=True,export_animations=False,export_skins=False,export_cameras=False,
             export_lights=False,export_apply=False,export_materials='EXPORT')
-        reports.append({'variant':variant,'source_meshes':source_count,'joint_material_meshes':len(groups),
+        reports.append({'variant':variant,'detail_level':level,'file':filename,'source_meshes':source_count,'joint_material_meshes':len(groups),
             'triangles':sum(len(g['pos'])//3 for g in groups.values()),
-            'bytes':(OUT/('sunhawk-'+variant+'.glb')).stat().st_size,
-            'joints':sorted({j for j,slot in groups})})
+            'bytes':(OUT/filename).stat().st_size,
+            'joints':sorted({j for j,slot,detail in groups})})
         bpy.context.window.scene=source
 finally:
     bpy.context.window.scene=source
+    for ob,mod in lod_mods: ob.modifiers.remove(mod)
+    for mod,segments in bevel_settings: mod.segments=segments
     for m,view,render in visibility: m.show_viewport=view; m.show_render=render
     for ob,rot in saved_rotations.items(): ob.rotation_euler=rot
     source.frame_set(source_frame)
@@ -130,5 +164,6 @@ finally:
     for me in staging_meshes: bpy.data.meshes.remove(me)
     for mat in staging_materials: bpy.data.materials.remove(mat)
     bpy.context.view_layer.update()
-(PROJECT/'art/blender/sunhawk/game-export-manifest.json').write_text(json.dumps(reports,indent=2)+'\n')
+manifest=PROJECT/'art/blender/sunhawk/game-export-manifest.json'
+manifest.write_text(json.dumps(reports,indent=2)+'\n')
 result={'exports':reports,'source_scene_preserved':source.name}

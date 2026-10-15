@@ -2,14 +2,17 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import currentUrl from './assets/sunhawk-current.glb?url';
 import updatedUrl from './assets/sunhawk-updated.glb?url';
+import mediumUrl from './assets/sunhawk-updated-lod1.glb?url';
+import farUrl from './assets/sunhawk-updated-lod2.glb?url';
+import { preloadSunhawkDetails } from './sunhawkDetails';
 import { JOINTS, type FrameDims, type JointName } from './rig';
 import type { Slot } from './kit';
 import type { SunhawkAssetVariant } from './sunhawkSelection';
 
 export type AssetJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack';
-export interface SunhawkPart { joint: AssetJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry }
+export interface SunhawkPart { joint: AssetJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry; detail: boolean }
 export interface SunhawkAsset { dims: FrameDims; parts: SunhawkPart[] }
-const assets = new Map<SunhawkAssetVariant, SunhawkAsset>();
+const assets = new Map<string, SunhawkAsset>();
 const dimensions: Array<keyof FrameDims> = ['hipY','hipX','hipDrop','thigh','shin','ankleY','spineY','chestY','shoulderX','shoulderY','headY','headZ','upperArm','foreArm','height'];
 const jointNames: readonly string[] = [...JOINTS, 'skirtL', 'skirtR', 'skirtBack'];
 
@@ -30,7 +33,9 @@ export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVarian
     if (!o.geometry.hasAttribute('normal')) throw new Error(`Missing authored normals on ${o.name}`);
     // The export contains joint-local meshes; transport transforms are baked once.
     const geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    parts.push({ joint, slot, geometry });
+    const detail = o.userData.detail === true;
+    if (detail && !geometry.hasAttribute('uv')) throw new Error(`Missing detail UVs on ${o.name}`);
+    parts.push({ joint, slot, geometry, detail });
   });
   if (!dims || jointNames.some((j) => !parts.some((p) => p.joint === j))) throw new Error(`Incomplete ${variant} Sunhawk export`);
   return { dims, parts };
@@ -38,18 +43,19 @@ export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVarian
 
 let loading: Promise<void> | undefined;
 export function preloadSunhawks(): Promise<void> {
-  return loading ??= Promise.all((['current','updated'] as const).map(async (variant) => {
-    const gltf = await new GLTFLoader().loadAsync(variant === 'current' ? currentUrl : updatedUrl);
-    assets.set(variant, readSunhawkAsset(gltf.scene, variant));
+  const exports: Array<[SunhawkAssetVariant, number, string]> = [['current',0,currentUrl],['updated',0,updatedUrl],['updated',1,mediumUrl],['updated',2,farUrl]];
+  return loading ??= Promise.all([preloadSunhawkDetails(), ...exports.map(async ([variant, level, url]) => {
+    const gltf = await new GLTFLoader().loadAsync(url);
+    assets.set(`${variant}:${level}`, readSunhawkAsset(gltf.scene, variant));
     gltf.scene.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
       o.geometry.dispose();
       for (const material of Array.isArray(o.material) ? o.material : [o.material]) material.dispose();
     });
-  })).then(() => {});
+  })]).then(() => {});
 }
-export function sunhawkAsset(variant: SunhawkAssetVariant): SunhawkAsset {
-  const asset = assets.get(variant);
+export function sunhawkAsset(variant: SunhawkAssetVariant, level = 0): SunhawkAsset {
+  const asset = assets.get(`${variant}:${level}`);
   if (!asset) throw new Error('Sunhawk assets must load before constructing a frame');
   return asset;
 }

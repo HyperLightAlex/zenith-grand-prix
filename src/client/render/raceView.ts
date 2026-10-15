@@ -1,6 +1,7 @@
 // Draws one race: places the mechs from simulation state every frame, runs
 // their animation and effects, and turns simulation events into spectacle.
 import * as THREE from 'three';
+import { updateMechDetail } from './mech/detail';
 import {
   ABILITY,
   ACT,
@@ -163,6 +164,10 @@ export class RaceView {
   /** A heavy blow has started winding up (`atFocus`: aimed at the mech the camera follows). */
   onTell: (kind: TellKind, mech: number, atFocus: boolean) => void = () => {};
   private mechs: MechVisual[] = [];
+  reviewDetailLevels(): string {
+    return this.mechs.filter((v) => v.rig.root.userData.sunhawkModel === 'updated')
+      .map((v) => String(v.rig.detailLevel)).join(',');
+  }
   private ring = makeLockRing();
   private time = 0;
   private flashUniform = 0;
@@ -617,6 +622,7 @@ export class RaceView {
     for (const m of race.mechs) {
       const v = this.mechs[m.id];
       v.rig.root.visible = m.id === this.focusId || (!this.solo && v.pos.distanceToSquared(this.renderer.camera.position) > 7.5 * 7.5);
+      updateMechDetail(v.rig, this.renderer.camera, this.renderer.renderer.domElement.clientHeight);
       if (this.solo && m.id !== this.focusId) v.shadow.visible = v.snare.visible = v.trails[0].mesh.visible = v.trails[1].mesh.visible = false;
     }
 

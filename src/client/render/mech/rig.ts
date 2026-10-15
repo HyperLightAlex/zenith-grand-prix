@@ -147,6 +147,8 @@ const ky = new THREE.Vector3();
 const kz = new THREE.Vector3();
 const basis = new THREE.Matrix4();
 const X_AXIS = new THREE.Vector3(1, 0, 0);
+const qBodyInv = new THREE.Quaternion();
+const footTarget = new THREE.Vector3();
 
 export class MechRig {
   /** Origin on the road under the hips, facing +z. */
@@ -161,6 +163,13 @@ export class MechRig {
   readonly handR = new THREE.Object3D();
   /** Meshes that carry the team glow colour, for flashing. */
   readonly glowMeshes: THREE.Mesh[] = [];
+  /** Rigid geometry groups sharing this rig's joints, from near to far. */
+  readonly detailLevels: THREE.Object3D[][] = [];
+  detailLevel = 0;
+  /** Optional frame-specific retargeting; never mutate a shared pose. */
+  fitPose?: (pose: Pose) => void;
+  keepFeetOnRoad = false;
+  private fittedPose = makePose();
   /**
    * Skirt armour hinged on the hips: the front plates lift with their thigh
    * as it swings forward, the rear plate as either leg swings back. Frames
@@ -206,6 +215,11 @@ export class MechRig {
 
   /** Put the skeleton into a pose. */
   apply(p: Pose): void {
+    if (this.fitPose) {
+      copyPose(this.fittedPose, p);
+      this.fitPose(this.fittedPose);
+      p = this.fittedPose;
+    }
     const J = this.joints;
     const d = this.dims;
     J.hips.position.set(0, d.hipY + p.hips[0], p.hips[1]);
@@ -223,6 +237,7 @@ export class MechRig {
     J.wingR.rotation.set(p.wingR[0], p.wingR[1], p.wingR[2]);
     qh.setFromEuler(J.hips.rotation);
     qInv.copy(qh).invert();
+    qBodyInv.copy(this.body.quaternion).invert();
     this.solveLeg(1, p.footL);
     this.solveLeg(-1, p.footR);
     // Skirts ride up with the legs instead of passing through them.
@@ -239,7 +254,9 @@ export class MechRig {
     const ankle = side === 1 ? J.ankleL : J.ankleR;
     // Vector from the hip joint to the ankle target, in hips-local space.
     v.set(side * d.hipX, -d.hipDrop, 0).applyQuaternion(qh).add(J.hips.position);
-    v.set(foot[0] - v.x, d.ankleY + foot[1] - v.y, foot[2] - v.z).applyQuaternion(qInv);
+    footTarget.set(foot[0], d.ankleY + foot[1], foot[2]);
+    if (this.keepFeetOnRoad) footTarget.applyQuaternion(qBodyInv);
+    v.subVectors(footTarget, v).applyQuaternion(qInv);
     const a = d.thigh;
     const b = d.shin;
     let len = v.length();
@@ -270,6 +287,7 @@ export class MechRig {
     // Keep the skate at the asked pitch and yaw whatever the leg is doing.
     eul.set(foot[3], foot[4], 0, 'YXZ');
     qFoot.setFromEuler(eul);
+    if (this.keepFeetOnRoad) qFoot.premultiply(qBodyInv);
     qTmp.copy(qh).multiply(qThigh).multiply(qKnee).invert().multiply(qFoot);
     ankle.quaternion.copy(qTmp);
   }

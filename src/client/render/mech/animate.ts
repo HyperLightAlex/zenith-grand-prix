@@ -196,8 +196,6 @@ export class MechAnimator {
       P.head[0] += Math.sin(this.time * 0.23 + 1) * 0.04;
     }
 
-    this.rig.apply(P);
-
     // ---- whole-body lean: bank into turns, pitch with acceleration
     const accel = dt > 0 ? (m.speed - this.prevSpeed) / dt : 0;
     this.prevSpeed = m.speed;
@@ -206,6 +204,7 @@ export class MechAnimator {
     this.lean = toward(this.lean, wantLean * (1 - this.koW), 8, dt);
     this.pitch = toward(this.pitch, Math.max(-0.12, Math.min(0.1, accel * 0.0022)) * (1 - this.battleW), 5, dt);
     this.rig.body.rotation.set(-this.pitch, 0, this.lean);
+    this.rig.apply(P);
 
     // ---- thrusters
     let want = 0;

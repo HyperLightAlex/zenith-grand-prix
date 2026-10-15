@@ -112,10 +112,11 @@ function burnerMaterial(color: number): THREE.ShaderMaterial {
       uTint: { value: new THREE.Color(color) },
       uRow: { value: 0 },
       uPower: { value: 0 },
+      uSize: { value: 1 },
       uPhase: { value: Math.random() * 6.28 },
     },
     vertexShader: /* glsl */ `
-      uniform float uDrawn, uPower;
+      uniform float uDrawn, uPower, uSize;
       varying vec2 vUv;
       varying float vFace;
       void main() {
@@ -129,7 +130,7 @@ function burnerMaterial(color: number): THREE.ShaderMaterial {
         vFace = smoothstep(0.25, 0.8, dot(ax, toCam));
         vec3 camRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
         vec3 camUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-        float size = wid * (3.0 + 2.6 * min(uPower, 1.5));
+        float size = wid * (3.0 + 2.6 * min(uPower, 1.5)) * uSize;
         // A little way down the exhaust and toward the camera: a nozzle's
         // mouth sits inside its housing, which would hide it.
         vec3 c = mouth + ax * min(length(axis) * 0.15, 1.2) + toCam * wid * 1.5;

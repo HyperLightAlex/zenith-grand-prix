@@ -14,6 +14,7 @@ import { LIVERIES, COLORS, SUN_DIR } from './render/palette';
 import { makePose, type MechRig } from './render/mech/rig';
 import { POSES } from './render/mech/poses';
 import { getSunhawkModel, setSunhawkModel } from './render/mech/sunhawkSelection';
+import { setMechDetail } from './render/mech/detail';
 
 export function runMechDebug(): void {
   const q = new URLSearchParams(location.search);
@@ -81,7 +82,9 @@ export function runMechDebug(): void {
   const place = (rig: MechRig, x: number, z: number, yaw: number, pose: string, flame: number) => {
     rig.root.position.set(x, 0, z);
     rig.root.rotation.y = yaw;
+    rig.body.rotation.z = Number(q.get('bank') ?? 0);
     rig.apply(lib[pose] ?? makePose());
+    setMechDetail(rig, Number(q.get('lod') ?? 0));
     for (const f of rig.flames) f.mesh.scale.z = f.length * flame;
     scene.add(rig.root);
     return rig;
@@ -99,7 +102,7 @@ export function runMechDebug(): void {
     setSunhawkModel(selected);
     const labels = document.createElement('div');
     labels.style.cssText = 'position:fixed;inset:24px 0 auto;display:flex;justify-content:space-around;color:#172238;font:700 24px "Barlow Condensed",sans-serif;pointer-events:none';
-    for (const label of ['Current design', 'Updated design']) {
+    for (const label of ['Current reference', 'Updated design']) {
       const el = document.createElement('span');
       el.textContent = label;
       labels.append(el);

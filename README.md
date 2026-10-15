@@ -292,7 +292,7 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 
 The two Blender models are in the game on `alexander/sunhawk-blender-comparison`.
 Select Solstice's forward in the garage. **Sunhawk design** cycles between the
-updated art design (default), the current art design, and the previous code-built
+updated art design (default), **Current reference**, and the previous code-built
 game model. Keyboard **B** does the same in the garage, during a race, or while
 paused, without resetting the race or animation. The choice is remembered locally.
 **Sunhawk finish** switches the imported models between clean armor and the existing
@@ -303,23 +303,50 @@ Use `&sunhawk=current|updated|game` to override the remembered choice and
 open `?debug=mechs&compare=1&pose=standby&bg=e4e6ec`; `pose` also accepts
 `boost`, `carveRight`, `guard`, `slashHit`, and the other names in `poses.ts`.
 This studio viewer uses the base materials; use the garage/race for the full anime
-postprocessing and animated effects.
+postprocessing and animated effects. Add `&bank=0.45` to inspect grounded skates
+under body lean, or `&lod=0|1|2` to inspect the updated model's near/medium/far mesh.
 
-The editable source is `art/blender/sunhawk/sunhawk-comparison.blend`; both
-painted references and the modeling scripts live alongside it. To re-export,
-open that file, select the **SUNHAWK • Art comparison** scene, and run
-`export_game.py` from Blender's Text Editor or Python console. It writes the two
+The production source is **`art/blender/sunhawk/sunhawk-production.blend`**.
+The original `sunhawk-comparison.blend` remains an unchanged art-study checkpoint;
+both painted references and modeling scripts live alongside it. To re-export,
+open the production file, select **SUNHAWK • Art comparison**, and run
+`export_game.py` from Blender's Text Editor or Python console. It writes four
 GLBs under `src/client/render/mech/assets/` and `game-export-manifest.json`.
 It preserves the source scene, evaluates bevels and authored normals, removes
 preview outlines/markings, fixes the towers to the torso, and adds hip-armor hinges.
 The game merges parts per moving joint and assigns its own shaders, decals,
 glows, thruster flames, weapon and skate-effect anchors.
 
-The exports contain about 24k/26k triangles. They are ready for gameplay review;
-final pose-specific overlap fixes, silhouette refinement, UV-based texture painting
-and LODs remain later polish. Texturing currently uses the game's projected masks
-and separate decals, so a dedicated UV atlas is not required for this comparison.
-`npm run build:single` embeds both models in the offline `play/index.html`.
+The updated model has arm/hip/knee clearance adjustments, restrained bevels,
+cooler armor shadows, reduced glow, a tailored tuck/guard, and road-relative skate
+targets while banking. Both designs have corrected hand chirality: inner thumbs,
+forward white back plates, and fingers curling into rear-facing palms. The current
+reference's other geometry, materials and poses are preserved.
+
+Seven conforming UV overlays use the shared 1024px `sunhawk-details.png` atlas for
+sparse service seams and stencils on the chest, forearms, thighs and shins. These
+details use the game's toon/anime lighting; the optional projected panel mask and
+existing emblems, race numbers, damage flashes and effects still work.
+
+| Updated Sunhawk | Triangles | When used |
+| --- | ---: | --- |
+| Near | 25,948 | Garage and close racing; UV details visible |
+| Medium | 13,918 | Below 180px projected height |
+| Far | 7,328 | Below 65px projected height |
+
+The return thresholds are 220px and 85px to prevent flicker. All three levels share
+the same moving pivots, effects and animation state. Indexed geometry preserves
+normal/paint seams; the current reference remains at 23,876 triangles.
+`?perf=1` adds a local review overlay with race frame timing, render calls/triangles
+across all passes, resolution, quality and active Sunhawk detail levels. It sends
+no telemetry. Timing reflects the current machine, browser load and quality settings.
+
+To reproduce preparation from the archived study: run `polish_updated.py`, then
+`fix_hands.py`; generate the atlas with `paint_details.py` (Python + Pillow), run
+`uv_details.py` in Blender, then `export_game.py`. Export decimation is temporary;
+the production blend retains the full editable meshes. Rebuild a detail overlay
+after changing the armor face it follows. `npm run build:single` embeds all model
+levels and the atlas in `play/index.html`.
 
 ## Layout
 

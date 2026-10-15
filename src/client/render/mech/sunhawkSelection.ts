@@ -3,7 +3,7 @@ export const SUNHAWK_MODELS = ['updated', 'current', 'game'] as const;
 export type SunhawkModel = (typeof SUNHAWK_MODELS)[number];
 export type SunhawkAssetVariant = Exclude<SunhawkModel, 'game'>;
 export const SUNHAWK_LABELS: Record<SunhawkModel, string> = {
-  updated: 'Updated design', current: 'Current design', game: 'Previous game model',
+  updated: 'Updated design', current: 'Current reference', game: 'Previous game model',
 };
 let model: SunhawkModel = 'updated';
 let panels = false;

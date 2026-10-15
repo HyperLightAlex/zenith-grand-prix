@@ -2,6 +2,7 @@
 // (the stretch of the world going by, streaks, vignette, impact flash), then
 // tone-mapped output.
 import * as THREE from 'three';
+import { ReviewProbe } from './reviewProbe';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass } from 'three/addons/postprocessing/Pass.js';
@@ -146,6 +147,7 @@ class DepthTap extends Pass {
 export type Quality = 'low' | 'medium' | 'high';
 
 export class Renderer {
+  readonly reviewProbe = new URLSearchParams(location.search).has('perf') ? new ReviewProbe() : undefined;
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(66, 16 / 9, 0.5, 40000);
@@ -184,6 +186,7 @@ export class Renderer {
 
   constructor(readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    if (this.reviewProbe) this.renderer.info.autoReset = false;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.02;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -398,10 +401,12 @@ export class Renderer {
 
   /** Draw the frame (after beginFrame, with the time it returned). */
   render(dt: number, now: number): void {
+    if (this.reviewProbe) this.renderer.info.reset();
     this.applyLook(dt);
     this.speedPass.uniforms.uTime.value = now;
     if (this.speedPass.uniforms.uTravel.value > 0.001) this.drawTravellers();
     this.composer.render(dt);
+    this.reviewProbe?.record(this.renderer, this.quality, this.scale, this.frameCap);
   }
 
   /** The mask of what travels with the camera: the mechs alone, flat white. */

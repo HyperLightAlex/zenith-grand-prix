@@ -346,7 +346,7 @@ export class Kit {
   /** Each slot's shadow paint, for the anime look's cel shading. */
   private shades: Record<Slot, THREE.Color>;
 
-  constructor(readonly livery: Livery, private readonly outlineWidth = .06) {
+  constructor(readonly livery: Livery, private readonly outlineWidth = .06, private readonly glowGain = 1.7, private readonly indexed = false) {
     const sh = livery.shades;
     this.shades = {
       P: new THREE.Color(sh.primary),
@@ -585,7 +585,12 @@ export class Kit {
     const table = limb ? PANEL_LIMB : PANEL_BODY;
     this.armor.forEach((g, i) => g.setAttribute('aPanel', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(this.armorPanels[i] ?? table[this.armorSlots[i]]), 1)));
     if (this.armor.length) {
-      const geo = mergeGeometries(this.armor)!;
+      let geo = mergeGeometries(this.armor)!;
+      if (this.indexed) {
+        const merged = geo;
+        geo = mergeVertices(merged, 1e-5); // Preserve normal, paint and material seams.
+        merged.dispose();
+      }
       if (!geo.hasAttribute('normal')) geo.computeVertexNormals();
       armor = new THREE.Mesh(geo, armorMat());
       armor.castShadow = true;
@@ -594,14 +599,20 @@ export class Kit {
       // Outline hull: same shape with normals averaged across hard edges.
       const hull = new THREE.BufferGeometry();
       hull.setAttribute('position', geo.attributes.position.clone());
+      if (geo.index) hull.setIndex(geo.index.clone());
       const welded = mergeVertices(hull, 1e-3);
       welded.computeVertexNormals();
       const line = new THREE.Mesh(welded, outlineMat(this.outlineWidth));
       group.add(line);
     }
     if (this.glow.length) {
-      const geo = mergeGeometries(this.glow)!;
-      glow = new THREE.Mesh(geo, glowMaterial(this.livery.glow));
+      let geo = mergeGeometries(this.glow)!;
+      if (this.indexed) {
+        const merged = geo;
+        geo = mergeVertices(merged, 1e-5);
+        merged.dispose();
+      }
+      glow = new THREE.Mesh(geo, glowMaterial(this.livery.glow, this.glowGain));
       group.add(glow);
     }
     this.armor = [];

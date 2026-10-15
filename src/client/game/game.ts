@@ -925,7 +925,10 @@ export class Game {
     sc.critical = f.hp > 0 && f.hp < 0.25 * f.maxHp && !f.retired && this.state === 'race';
     this.audio.update(dt, sc);
 
-    if (drawDt > 0) this.renderer.render(drawDt, this.time);
+    if (drawDt > 0) {
+      this.renderer.reviewProbe?.setContext(`${this.state} · tick ${cur.tick} · lap ${f.lap}`, this.view.reviewDetailLevels());
+      this.renderer.render(drawDt, this.time);
+    }
   }
 
   /** A low rumble that follows the road: speed, charge strips, the wall, boost and Overdrive. */

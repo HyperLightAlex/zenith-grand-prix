@@ -1,0 +1,60 @@
+{
+  "automated_checks": {
+    "tests": 863,
+    "files": 21,
+    "typecheck": "passed",
+    "production_build": "passed",
+    "single_file_build": "passed"
+  },
+  "reference_preservation": {
+    "unchanged_geometry_groups": 78,
+    "changed_groups": [
+      "wrL/F",
+      "wrL/P",
+      "wrR/F",
+      "wrR/P"
+    ],
+    "archived_blend": "sunhawk-comparison.blend remains unchanged"
+  },
+  "completed_race": {
+    "track": "meridian",
+    "seed": 7,
+    "rival": "Aurora",
+    "started_at_countdown": true,
+    "finished_at_results": true,
+    "sunhawk_retired_in_combat": true,
+    "console_warnings": 0,
+    "console_errors": 0,
+    "frames": 16772,
+    "wall_seconds_sampled": 224.4,
+    "mean_fps": 74.7,
+    "recent_p95_frame_ms": 14.8,
+    "render_resolution": "1280x720",
+    "quality": "high",
+    "resolution_scale": 1,
+    "frame_cap": 0,
+    "mean_draw_calls_all_passes": 595,
+    "mean_triangles_all_passes": 245152,
+    "note": "Local in-app browser. Other user tabs remained open. Follow-up rear flare size reduction checked in Canyon; this is a local measurement, not a hardware-independent benchmark."
+  },
+  "visual_checks": [
+    "Corrected hands on both models",
+    "Updated guard and boost clearance",
+    "Banked carve with medium LOD",
+    "Far LOD silhouette inspected enlarged",
+    "Canyon lighting and smaller rear flares",
+    "B cycles updated/current/game without changing paused race tick",
+    "Anime/plain and clean/panel-line switches",
+    "Helios battle lap with projected panel lines, damage and combat effects",
+    "Two further complete B-toggle cycles at paused tick 4318; geometry count returned to 579 in the same warmed rendering state"
+  ],
+  "comparison_swap_check": {
+    "paused_tick_before": 4318,
+    "paused_tick_after": 4318,
+    "geometry_count_before": 579,
+    "geometry_count_after": 579,
+    "cycles": 2,
+    "warnings": 0,
+    "errors": 0
+  }
+}
