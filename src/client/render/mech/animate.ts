@@ -42,7 +42,13 @@ export class MechAnimator {
   /** The garage: stand at rest in the bay instead of the grid's crouch. */
   display = false;
 
-  constructor(readonly rig: MechRig) {}
+  constructor(public rig: MechRig) {}
+
+  /** Swap presentation geometry while keeping stride, action blend and held pose. */
+  replaceRig(rig: MechRig): void {
+    this.rig = rig;
+    rig.apply(this.pose);
+  }
 
   /** `alpha` is the fraction of a tick since the state was current. */
   update(dt: number, m: MechState, alpha: number): void {

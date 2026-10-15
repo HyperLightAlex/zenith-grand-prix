@@ -61,6 +61,7 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 | Tuning panel | Back | T |
 | Full screen | | F |
 | Switch the look (80s anime / plain) | Pause → Look | G |
+| Compare Sunhawk designs | Garage / Pause → Sunhawk design | B |
 
 While you are free you steer like any racer. Lock on and the track carries
 you: the stick now moves you around your target (toward it, away from it,
@@ -280,10 +281,45 @@ The browser-driving helpers in `tools/` (`shot.mjs`, `playtest.mjs`,
 Dev shortcuts on the page URL: `?auto=FW` (or `MF`, `DF`) jumps straight into
 a race, `&demo=1` lets the computer fly your mech, `&skip=95` starts that many
 seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
-`&rivals=0..2` sets rival skill, `&match=0..4` picks the match format,
+`&rivals=0..2` sets rival skill, `&rival=2` picks the rival team,
+`&oldswift=1` flies Solstice's first Swift design in place of the Sunhawk,
+`&match=0..4` picks the match format,
 `&track=canyon` (or `helios`, `meridian`) picks the circuit, `&look=plain`
 (or `anime`) picks the look for that visit, `&tune=1` opens the tuning panel,
 `&mute=1` turns sound off, and `?debug=mechs` opens a model viewer.
+
+## Sunhawk model comparison
+
+The two Blender models are in the game on `alexander/sunhawk-blender-comparison`.
+Select Solstice's forward in the garage. **Sunhawk design** cycles between the
+updated art design (default), the current art design, and the previous code-built
+game model. Keyboard **B** does the same in the garage, during a race, or while
+paused, without resetting the race or animation. The choice is remembered locally.
+**Sunhawk finish** switches the imported models between clean armor and the existing
+projected panel lines; **G** compares the anime and plain rendering styles.
+
+Use `&sunhawk=current|updated|game` to override the remembered choice and
+`&sunhawkPanels=0|1` to override the finish. For a controlled side-by-side view,
+open `?debug=mechs&compare=1&pose=standby&bg=e4e6ec`; `pose` also accepts
+`boost`, `carveRight`, `guard`, `slashHit`, and the other names in `poses.ts`.
+This studio viewer uses the base materials; use the garage/race for the full anime
+postprocessing and animated effects.
+
+The editable source is `art/blender/sunhawk/sunhawk-comparison.blend`; both
+painted references and the modeling scripts live alongside it. To re-export,
+open that file, select the **SUNHAWK • Art comparison** scene, and run
+`export_game.py` from Blender's Text Editor or Python console. It writes the two
+GLBs under `src/client/render/mech/assets/` and `game-export-manifest.json`.
+It preserves the source scene, evaluates bevels and authored normals, removes
+preview outlines/markings, fixes the towers to the torso, and adds hip-armor hinges.
+The game merges parts per moving joint and assigns its own shaders, decals,
+glows, thruster flames, weapon and skate-effect anchors.
+
+The exports contain about 24k/26k triangles. They are ready for gameplay review;
+final pose-specific overlap fixes, silhouette refinement, UV-based texture painting
+and LODs remain later polish. Texturing currently uses the game's projected masks
+and separate decals, so a dedicated UV atlas is not required for this comparison.
+`npm run build:single` embeds both models in the offline `play/index.html`.
 
 ## Layout
 
@@ -302,7 +338,7 @@ src/client/     Everything you see and hear.
   input/        Gamepad and keyboard
   ui/           HUD, menus and the tuning panel (DOM + CSS)
   audio/        Synthesised sound and music (Web Audio, no files)
-tests/          Simulation tests (vitest)
+tests/          Simulation and imported-model contract tests (vitest)
 tools/          Headless race runner, track plotter, screenshot and audio checks
 docs/           Design document, and ART.md for the anime look
 play/           Prebuilt single-file game

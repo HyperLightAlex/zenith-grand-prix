@@ -30,8 +30,22 @@ Every design keeps the frame's skeleton, size, weapon types and hit areas,
 so the animations and the balance carry over; what changes is the armour,
 the head, the shoulders, the backpack and the weapons' styling.
 
-- **Solstice**: clean aerospace, bird motifs, gold crests. Today's three
-  designs.
+- **Solstice**: clean aerospace, bird motifs, gold crests.
+  - Sunhawk: the robot on the title screen's cover, built to its model sheet
+    (`art/model-sheets`, S1). A heroic racer: a broad, faceted breastplate
+    edged in gold with a lit diamond core and three blue slashes either side,
+    two tall white towers on the shoulders banded in blue and capped in gold,
+    a long, flat bird's head with one lit eye slit and two gold blades swept
+    back, white plates over a dark undersuit on every limb with the shins
+    flaring below the knee, a long gold blade down each forearm, big calf
+    thrusters, and two fins, blue over gold, swept back from the shoulders.
+    Two Blender versions, built independently from the current and updated
+    painted sheets, now share the game's animation/material pipeline. The
+    updated version is the default; **B** or **Sunhawk design** in the garage
+    and pause menu compares both with the previous code-built model.
+    The first Swift (thin and insect-like, `render/mech/swift.ts`) is also
+    available through `&oldswift=1` for development.
+  - Daystar and Rampart: the first designs, from before the model sheets.
 - **Vanta**: predatory and hunched. Mono-eye visors on a rail, spiked
   shoulders, blade fins, layered angular plates.
   - Razor: a lean, long-armed stalker, its mono-eye head sunk between raised
@@ -102,7 +116,7 @@ down, splay out or stand on the chest so they don't.
 
 | | Designs | Emblem | Pilots | Hangar lettering |
 |---|---|---|---|---|
-| Solstice | in the game | painted | painted | painted |
+| Solstice | two Blender Sunhawks in game for comparison (`art/blender/sunhawk/`); previous code model retained | painted | painted | painted |
 | Vanta | in the game, first pass (`render/mech/vanta/`) | painted | painted | painted |
 | Mirage | in the game (`render/mech/mirage/`) | painted | painted | painted |
 | Aurora | in the game (`render/mech/aurora/`) | painted | painted | painted |

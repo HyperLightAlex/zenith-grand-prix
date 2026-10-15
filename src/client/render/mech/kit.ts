@@ -114,7 +114,8 @@ function chamferBox(w: number, h: number, d: number, c: number): THREE.BufferGeo
   return new ConvexGeometry(pts);
 }
 
-let outlineMaterial: THREE.ShaderMaterial | null = null;
+const outlineMaterials = new Map<number, THREE.ShaderMaterial>();
+let hullOutlinesOn = true;
 
 /**
  * Show or hide the mechs' hull outlines. The anime look's ink pass draws
@@ -122,14 +123,16 @@ let outlineMaterial: THREE.ShaderMaterial | null = null;
  * is inking.
  */
 export function setHullOutlines(on: boolean): void {
-  outlineMat().visible = on;
+  hullOutlinesOn = on;
+  for (const material of outlineMaterials.values()) material.visible = on;
 }
 
 /** Inverted-hull ink line: back faces pushed out along smoothed normals. */
-function outlineMat(): THREE.ShaderMaterial {
-  if (outlineMaterial) return outlineMaterial;
-  outlineMaterial = new THREE.ShaderMaterial({
-    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uColor: { value: new THREE.Color(COLORS.outline) }, uWidth: { value: 0.06 } }]),
+function outlineMat(width: number): THREE.ShaderMaterial {
+  const cached = outlineMaterials.get(width);
+  if (cached) return cached;
+  const material = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uColor: { value: new THREE.Color(COLORS.outline) }, uWidth: { value: width } }]),
     vertexShader: /* glsl */ `
       uniform float uWidth;
       #include <common>
@@ -151,7 +154,9 @@ function outlineMat(): THREE.ShaderMaterial {
     side: THREE.BackSide,
     fog: true,
   });
-  return outlineMaterial;
+  material.visible = hullOutlinesOn;
+  outlineMaterials.set(width, material);
+  return material;
 }
 
 /**
@@ -335,12 +340,13 @@ export interface Built {
 export class Kit {
   private armor: THREE.BufferGeometry[] = [];
   private armorSlots: Slot[] = [];
+  private armorPanels: Array<number | undefined> = [];
   private glow: THREE.BufferGeometry[] = [];
   private colors: Record<Slot, THREE.Color>;
   /** Each slot's shadow paint, for the anime look's cel shading. */
   private shades: Record<Slot, THREE.Color>;
 
-  constructor(readonly livery: Livery) {
+  constructor(readonly livery: Livery, private readonly outlineWidth = .06) {
     const sh = livery.shades;
     this.shades = {
       P: new THREE.Color(sh.primary),
@@ -363,11 +369,13 @@ export class Kit {
     };
   }
 
-  private push(g: THREE.BufferGeometry, slot: Slot | 'G', o?: Xf): this {
+  private push(g: THREE.BufferGeometry, slot: Slot | 'G', o?: Xf, preserveNormals = false, panel?: number): this {
     let geo = g.index ? g.toNonIndexed() : g;
     geo = xf(geo, o);
     geo.deleteAttribute('uv');
-    geo.deleteAttribute('normal');
+    if (!preserveNormals) geo.deleteAttribute('normal');
+    // Keep imported and procedural additions compatible when sharing a joint.
+    if (!geo.hasAttribute('normal')) geo.computeVertexNormals();
     if (slot === 'G') {
       this.glow.push(geo);
     } else {
@@ -390,8 +398,16 @@ export class Kit {
       geo.setAttribute('aMat', new THREE.BufferAttribute(mat, 1));
       this.armor.push(geo);
       this.armorSlots.push(slot);
+      this.armorPanels.push(panel);
     }
     return this;
+  }
+
+  /** Imported rigid-part geometry: retain the artist's normals and own a copy. */
+  geometry(slot: Slot | 'G', source: THREE.BufferGeometry, panel?: number): this {
+    const g = source.clone();
+    if (!g.hasAttribute('normal')) g.computeVertexNormals();
+    return this.push(g, slot, undefined, true, panel);
   }
 
   /** Box centred on the origin, edges chamfered; `taper` and `lean` turn it into a wedge or trapezoid. */
@@ -567,10 +583,10 @@ export class Kit {
     let armor: THREE.Mesh | null = null;
     let glow: THREE.Mesh | null = null;
     const table = limb ? PANEL_LIMB : PANEL_BODY;
-    this.armor.forEach((g, i) => g.setAttribute('aPanel', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(table[this.armorSlots[i]]), 1)));
+    this.armor.forEach((g, i) => g.setAttribute('aPanel', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(this.armorPanels[i] ?? table[this.armorSlots[i]]), 1)));
     if (this.armor.length) {
       const geo = mergeGeometries(this.armor)!;
-      geo.computeVertexNormals();
+      if (!geo.hasAttribute('normal')) geo.computeVertexNormals();
       armor = new THREE.Mesh(geo, armorMat());
       armor.castShadow = true;
       armor.receiveShadow = true;
@@ -580,7 +596,7 @@ export class Kit {
       hull.setAttribute('position', geo.attributes.position.clone());
       const welded = mergeVertices(hull, 1e-3);
       welded.computeVertexNormals();
-      const line = new THREE.Mesh(welded, outlineMat());
+      const line = new THREE.Mesh(welded, outlineMat(this.outlineWidth));
       group.add(line);
     }
     if (this.glow.length) {
@@ -590,6 +606,7 @@ export class Kit {
     }
     this.armor = [];
     this.armorSlots = [];
+    this.armorPanels = [];
     this.glow = [];
     return { group, armor, glow };
   }

@@ -11,6 +11,7 @@ import {
   DT,
   MODE,
   PHASE,
+  ROLE,
   TICK_RATE,
   roadAt,
   weaponsFree,
@@ -247,6 +248,37 @@ export class RaceView {
   resize(): void {
     this.fxFov = this.renderer.camera.fov;
     this.fx.resize(this.renderer.canvas.clientHeight || window.innerHeight, this.fxFov);
+  }
+
+  /** Replace only Sunhawk visuals; race state, camera and animator phase stay put. */
+  refreshSunhawks(): void {
+    for (const m of this.session.race.mechs) {
+      const v = this.mechs[m.id];
+      if (m.role !== ROLE.FW || v.livery.id !== 'solstice') continue;
+      const old = v.rig;
+      const rig = buildFrame(m.role,v.livery,String(m.role+1));
+      rig.root.matrixAutoUpdate = false;
+      rig.root.matrix.copy(old.root.matrix);
+      rig.root.visible = old.root.visible;
+      rig.body.rotation.copy(old.body.rotation);
+      rig.flames.forEach((f,i) => { if (old.flames[i]) f.mesh.scale.z = old.flames[i].mesh.scale.z; });
+      rig.root.add(v.shield,v.bubble);
+      markCharacter(rig.root,m.id);
+      markTraveller(rig.root);
+      v.rig = rig;
+      v.anim.replaceRig(rig);
+      rig.root.updateMatrixWorld(true);
+      this.group.add(rig.root);
+      this.group.remove(old.root);
+      old.root.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        mesh.geometry?.dispose();
+        if (mesh.userData.ownMaterial) {
+          const mat = mesh.material as THREE.MeshBasicMaterial;
+          mat.map?.dispose(); mat.dispose();
+        }
+      });
+    }
   }
 
   dispose(): void {

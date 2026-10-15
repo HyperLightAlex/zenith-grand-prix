@@ -1,0 +1,62 @@
+[
+  {
+    "variant": "current",
+    "source_meshes": 235,
+    "joint_material_meshes": 82,
+    "triangles": 23876,
+    "bytes": 1863264,
+    "joints": [
+      "ankleL",
+      "ankleR",
+      "chest",
+      "elL",
+      "elR",
+      "head",
+      "hipL",
+      "hipR",
+      "hips",
+      "kneeL",
+      "kneeR",
+      "shL",
+      "shR",
+      "skirtBack",
+      "skirtL",
+      "skirtR",
+      "spine",
+      "wingL",
+      "wingR",
+      "wrL",
+      "wrR"
+    ]
+  },
+  {
+    "variant": "updated",
+    "source_meshes": 234,
+    "joint_material_meshes": 82,
+    "triangles": 25680,
+    "bytes": 1995432,
+    "joints": [
+      "ankleL",
+      "ankleR",
+      "chest",
+      "elL",
+      "elR",
+      "head",
+      "hipL",
+      "hipR",
+      "hips",
+      "kneeL",
+      "kneeR",
+      "shL",
+      "shR",
+      "skirtBack",
+      "skirtL",
+      "skirtR",
+      "spine",
+      "wingL",
+      "wingR",
+      "wrL",
+      "wrR"
+    ]
+  }
+]

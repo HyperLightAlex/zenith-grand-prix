@@ -1,9 +1,9 @@
 // The three frame types and each faction's design of them. Solstice's: the
-// Swift (forward) gaunt and biomechanical, the Vector (midfielder) a
-// motorsport machine, the Bulwark (defender) a spiky super robot; Vanta's
-// (vanta/): the Razor, the Stinger and the Maul. Original designs, built part
-// by part with the kit; each design's builder is in its own file. Model
-// space: +z forward, +y up, +x to the mech's left.
+// Sunhawk (forward) has two Blender imports and a code-built comparison, the
+// Vector (midfielder) a motorsport machine, the Bulwark (defender) a spiky
+// super robot; Vanta's (vanta/): the Razor, the Stinger and the Maul.
+// Original designs, built part by part with the kit; each design's builder is
+// in its own file. Model space: +z forward, +y up, +x to the mech's left.
 import type * as THREE from 'three';
 import { ROLE, type Role } from '../../../sim/config';
 import type { Livery } from '../palette';
@@ -11,7 +11,11 @@ import { buildBulwark } from './bulwark';
 import { glowMaterial } from './kit';
 import { frameCtx } from './parts';
 import { MechRig, type FrameDims } from './rig';
+import { buildSunhawk } from './solstice/sunhawk';
 import { buildSwift } from './swift';
+import { buildImportedSunhawk } from './importedSunhawk';
+import { sunhawkAsset } from './sunhawkAsset';
+import { getSunhawkModel } from './sunhawkSelection';
 import { buildVector } from './vector';
 import { buildLongbow } from './aurora/longbow';
 import { buildPaladin } from './aurora/paladin';
@@ -41,16 +45,29 @@ type Builder = (c: ReturnType<typeof frameCtx>, number: string) => void;
  * A faction without its own designs yet flies Solstice's.
  */
 const DESIGNS: Record<string, Partial<Record<Role, Builder>>> = {
-  solstice: { [ROLE.FW]: buildSwift, [ROLE.MF]: buildVector, [ROLE.DF]: buildBulwark },
+  solstice: { [ROLE.FW]: buildSunhawk, [ROLE.MF]: buildVector, [ROLE.DF]: buildBulwark },
   vanta: { [ROLE.FW]: buildRazor, [ROLE.MF]: buildStinger, [ROLE.DF]: buildMaul },
   mirage: { [ROLE.FW]: buildAnubis, [ROLE.MF]: buildHorus, [ROLE.DF]: buildSobek },
   aurora: { [ROLE.FW]: buildSeraph, [ROLE.MF]: buildLongbow, [ROLE.DF]: buildPaladin },
   tempest: { [ROLE.FW]: buildKamaitachi, [ROLE.MF]: buildFujin, [ROLE.DF]: buildRaijin },
 };
 
+/** Dev (?oldswift=1): Solstice's forward is its first design, the gaunt Swift, to compare with the Sunhawk. */
+let oldSwift = false;
+export function useOldSwift(on: boolean): void {
+  oldSwift = on;
+}
+
 export function buildFrame(role: Role, livery: Livery, number: string): MechRig {
+  const model = getSunhawkModel();
+  if (!oldSwift && role === ROLE.FW && livery.id === 'solstice' && model !== 'game') {
+    const rig = new MechRig(sunhawkAsset(model).dims);
+    buildImportedSunhawk(frameCtx(rig,livery),number,model);
+    return rig;
+  }
   const rig = new MechRig(DIMS[role]);
-  const build = DESIGNS[livery.id]?.[role] ?? DESIGNS.solstice[role]!;
+  const own = oldSwift && role === ROLE.FW && livery.id === 'solstice' ? buildSwift : DESIGNS[livery.id]?.[role];
+  const build = own ?? DESIGNS.solstice[role]!;
   build(frameCtx(rig, livery), number);
   return rig;
 }

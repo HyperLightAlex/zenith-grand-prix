@@ -1,0 +1,41 @@
+{
+  "models": [
+    {
+      "version": "current",
+      "mesh_objects": 250,
+      "vertices": 9412,
+      "base_triangles": 17818,
+      "dimensions_m": [
+        4.287,
+        4.169,
+        9.345
+      ],
+      "rigid_joint_pivots": 18
+    },
+    {
+      "version": "updated",
+      "mesh_objects": 249,
+      "vertices": 9516,
+      "base_triangles": 18030,
+      "dimensions_m": [
+        4.312,
+        3.987,
+        9.345
+      ],
+      "rigid_joint_pivots": 18
+    }
+  ],
+  "renders": [
+    "/Users/alexanderkelley/Projects/igpx/art/blender/sunhawk/previews/sunhawk-front.png",
+    "/Users/alexanderkelley/Projects/igpx/art/blender/sunhawk/previews/sunhawk-three-quarter.png",
+    "/Users/alexanderkelley/Projects/igpx/art/blender/sunhawk/previews/sunhawk-side.png",
+    "/Users/alexanderkelley/Projects/igpx/art/blender/sunhawk/previews/sunhawk-rear.png"
+  ],
+  "render_size": [
+    1800,
+    1400
+  ],
+  "reference_images_packed": true,
+  "source": "Independent modeling from two painted sheets; no game meshes imported.",
+  "status": "First art-model comparison. Runtime materials, UVs/LODs and animation clearance are not finalized."
+}

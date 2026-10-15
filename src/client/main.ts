@@ -6,18 +6,47 @@ import './ui/styles.css';
 import { ROLE, type Role } from '../sim/index';
 import { NullAudio, type AudioEngine } from './audio/audio';
 import { Game } from './game/game';
+import { useOldSwift } from './render/mech/frames';
+import { preloadSunhawks } from './render/mech/sunhawkAsset';
+import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech/sunhawkSelection';
 
 // Dev shortcuts, all optional:
 //   ?auto=FW|MF|DF  jump straight into a race     &demo=1   computer flies your mech
 //   &skip=95        start that many seconds in    &seed=7   repeatable race
 //   &team=1         fly for Vanta                 &rivals=0..2 (their skill)
-//   &rival=2        race against Mirage
+//   &rival=2        race against Mirage          &oldswift=1 Solstice's first Swift design
 //   &mute=1         no sound                      ?debug=mechs  model viewer
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   &track=canyon   circuit: meridian, canyon or helios
+//   &sunhawk=current|updated|game   model comparison; B cycles without restarting
+//   &sunhawkPanels=1              projected panel lines on the imported armor
 const q = new URLSearchParams(location.search);
 
 async function boot(): Promise<void> {
+  let remembered: string | null = null;
+  let rememberedPanels = false;
+  try {
+    remembered = localStorage.getItem('zgp.sunhawk.model');
+    rememberedPanels = localStorage.getItem('zgp.sunhawk.panels') === '1';
+  } catch { /* storage is optional */ }
+  const model = q.get('sunhawk') ?? remembered;
+  if (isSunhawkModel(model)) setSunhawkModel(model);
+  setSunhawkPanels(q.has('sunhawkPanels') ? q.get('sunhawkPanels') === '1' : rememberedPanels);
+  const loading = document.createElement('div');
+  loading.className = 'model-loading';
+  loading.textContent = 'Loading Sunhawk models…';
+  document.getElementById('app')!.append(loading);
+  try { await preloadSunhawks(); }
+  catch (error) {
+    console.error('Sunhawk model loading failed',error);
+    loading.textContent = 'The Sunhawk models could not load. ';
+    const retry = document.createElement('button');
+    retry.textContent = 'Retry'; retry.onclick = () => location.reload();
+    loading.append(retry);
+    return;
+  }
+  loading.remove();
+  if (q.has('oldswift')) useOldSwift(true);
   if (q.get('debug') === 'mechs') {
     const { runMechDebug } = await import('./debugMechs');
     runMechDebug();

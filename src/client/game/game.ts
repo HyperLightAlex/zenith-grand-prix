@@ -35,6 +35,8 @@ import { CEL, celify, drawClock, look, readLook, setCelTheme, tickDrawings } fro
 import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
+import { useOldSwift } from '../render/mech/frames';
+import { cycleSunhawkModel, getSunhawkModel, getSunhawkPanels, setSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
 import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
@@ -153,6 +155,11 @@ export class Game {
       onTuning: () => this.panel.show(),
       onToggleLook: () => this.toggleLook(),
       lookOn: () => look.on,
+      onCycleSunhawk: (dir) => this.cycleSunhawk(dir),
+      onToggleSunhawkPanels: () => {
+        setSunhawkPanels(!getSunhawkPanels());
+        this.refreshSunhawk();
+      },
       onQuit: () => this.showTitle(),
       onGarage: () => {
         this.menus.show('garage');
@@ -365,6 +372,23 @@ export class Game {
     this.hud.showNotice(on ? 'Look: 80s anime' : 'Look: plain', false, 1.2);
     this.menus.refreshLook();
     return on;
+  }
+
+  private cycleSunhawk(dir = 1): void {
+    cycleSunhawkModel(dir);
+    this.refreshSunhawk();
+    this.hud.showNotice(`Sunhawk: ${SUNHAWK_LABELS[getSunhawkModel()]}`,false,1.8);
+  }
+
+  private refreshSunhawk(): void {
+    useOldSwift(false);
+    this.view.refreshSunhawks();
+    celify(this.renderer.scene);
+    this.menus.refreshSunhawk();
+    try {
+      localStorage.setItem('zgp.sunhawk.model',getSunhawkModel());
+      localStorage.setItem('zgp.sunhawk.panels',getSunhawkPanels() ? '1' : '0');
+    } catch { /* storage is optional */ }
   }
 
   /** Volumes and the layer mix from the tuning panel's Sound tab. */
@@ -764,6 +788,10 @@ export class Game {
     this.input.battle = this.state === 'race' && !!mine && mine.mode === MODE.BATTLE && !mine.retired;
     this.input.poll();
     let menu = this.input.consumeMenu();
+    if (menu.includes('model')) {
+      this.cycleSunhawk();
+      menu = menu.filter((m) => m !== 'model');
+    }
     // G switches the look, anywhere.
     if (menu.includes('look')) {
       this.toggleLook();

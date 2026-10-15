@@ -2,13 +2,18 @@
 //   default            every frame in both liveries, in one pose (&pose=stand)
 //   &poses=a,b,c       one frame (&role=0..2, &team=0..1) in several poses
 //   &turn=1            one frame (&role, &team) turned to front, three-quarter, side and back
+//   &compare=1         the two Blender Sunhawks, in the same pose and lighting
 //   &yaw &dist &h &cx &cz &ly   camera
+//   &ortho=10.67       an orthographic camera showing that many metres top to bottom (for model sheets)
+//   &bg=e4e6ec         a flat background of that colour, no floor (to compare against a model sheet)
+//   &sun=-0.5,0.6,0.6  where the light comes from
 import * as THREE from 'three';
 import { ROLE } from '../sim/config';
-import { buildFrame } from './render/mech/frames';
+import { buildFrame, useOldSwift } from './render/mech/frames';
 import { LIVERIES, COLORS, SUN_DIR } from './render/palette';
 import { makePose, type MechRig } from './render/mech/rig';
 import { POSES } from './render/mech/poses';
+import { getSunhawkModel, setSunhawkModel } from './render/mech/sunhawkSelection';
 
 export function runMechDebug(): void {
   const q = new URLSearchParams(location.search);
@@ -40,7 +45,9 @@ export function runMechDebug(): void {
     scene.background = t;
   }
   const sun = new THREE.DirectionalLight(COLORS.sunLight, 2.3);
-  sun.position.copy(SUN_DIR).multiplyScalar(40);
+  // &sun=-0.5,0.6,0.6: where the light comes from (a model sheet is lit from the upper left, in front).
+  const sunAt = q.get('sun')?.split(',').map(Number);
+  sun.position.copy(sunAt?.length === 3 ? new THREE.Vector3(sunAt[0], sunAt[1], sunAt[2]).normalize() : SUN_DIR).multiplyScalar(40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -22;
@@ -59,6 +66,13 @@ export function runMechDebug(): void {
   grid.position.y = 0.01;
   scene.add(grid);
 
+  const bg = q.get('bg');
+  if (bg) {
+    scene.background = new THREE.Color(`#${bg}`);
+    ground.visible = false;
+    grid.visible = false;
+  }
+
   const lib = POSES as Record<string, ReturnType<typeof makePose>>;
   const role = Number(q.get('role') ?? 0) as 0 | 1 | 2;
   const team = Number(q.get('team') ?? 0);
@@ -73,8 +87,25 @@ export function runMechDebug(): void {
     return rig;
   };
   const turn = q.has('turn');
+  const compare = q.has('compare');
   let rigs: MechRig[];
-  if (turn) {
+  if (compare) {
+    useOldSwift(false);
+    const selected = getSunhawkModel();
+    rigs = (['current', 'updated'] as const).map((variant, i) => {
+      setSunhawkModel(variant);
+      return place(buildFrame(ROLE.FW, LIVERIES[0], '1'), (i - .5) * 7, 0, 0, poseName, poseName === 'boost' ? .7 : .15);
+    });
+    setSunhawkModel(selected);
+    const labels = document.createElement('div');
+    labels.style.cssText = 'position:fixed;inset:24px 0 auto;display:flex;justify-content:space-around;color:#172238;font:700 24px "Barlow Condensed",sans-serif;pointer-events:none';
+    for (const label of ['Current design', 'Updated design']) {
+      const el = document.createElement('span');
+      el.textContent = label;
+      labels.append(el);
+    }
+    document.body.append(labels);
+  } else if (turn) {
     const yaws = [0, -0.7, -Math.PI / 2, Math.PI];
     rigs = yaws.map((yaw, i) => place(buildFrame(role, LIVERIES[team], String(role + 1)), (i - 1.5) * 7.5, 0, yaw, poseName, 0.25));
   } else if (poseList.length) {
@@ -82,12 +113,17 @@ export function runMechDebug(): void {
   } else {
     rigs = [ROLE.FW, ROLE.MF, ROLE.DF].flatMap((r, i) => LIVERIES.map((liv, t) => place(buildFrame(r, liv, String(i + 1)), (i - 1) * 8, -11 * t, 0, poseName, 0.3)));
   }
-  const yaw = Number(q.get('yaw') ?? (turn ? 0 : 30)) * (Math.PI / 180);
+  const yaw = Number(q.get('yaw') ?? (turn || compare ? 0 : 30)) * (Math.PI / 180);
   const dist = Number(q.get('dist') ?? (turn ? 80 : 26));
   const camH = Number(q.get('h') ?? (turn ? 5 : 7));
-  const cam = new THREE.PerspectiveCamera(Number(q.get('fov') ?? (turn ? 14 : 40)), innerWidth / innerHeight, 0.1, 500);
+  const ortho = Number(q.get('ortho') ?? (compare ? Math.max(12, 17 * innerHeight / innerWidth) : 0));
+  const aspect = innerWidth / innerHeight;
+  const cam =
+    ortho > 0
+      ? new THREE.OrthographicCamera((-ortho * aspect) / 2, (ortho * aspect) / 2, ortho / 2, -ortho / 2, 1, 500)
+      : new THREE.PerspectiveCamera(Number(q.get('fov') ?? (turn ? 14 : 40)), aspect, 0.1, 500);
   const cx = Number(q.get('cx') ?? 0);
-  const cz = Number(q.get('cz') ?? (poseList.length || turn ? 0 : -3));
+  const cz = Number(q.get('cz') ?? (poseList.length || turn || compare ? 0 : -3));
   cam.position.set(cx + Math.sin(yaw) * dist, camH, cz + Math.cos(yaw) * dist);
   cam.lookAt(cx, Number(q.get('ly') ?? 4.4), cz);
   renderer.render(scene, cam);

@@ -6,6 +6,7 @@ import { LIVERIES, factionName } from '../render/palette';
 import { h, setClass, setText } from './dom';
 import { emblemUrl, pilotUrl } from './factionArt';
 import { COVER, LOGO } from './keyArt';
+import { getSunhawkModel, getSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
 
 export type Screen = 'title' | 'garage' | 'controls' | 'pause' | 'results' | null;
 type Device = 'pad' | 'keys';
@@ -53,6 +54,8 @@ export interface MenuCallbacks {
   onToggleLook(): boolean;
   /** Whether the 80s anime look is on. */
   lookOn(): boolean;
+  onCycleSunhawk(dir: number): void;
+  onToggleSunhawkPanels(): void;
   onQuit(): void;
   onGarage(): void;
   onSound(name: 'ui_move' | 'ui_select' | 'ui_back'): void;
@@ -86,6 +89,7 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Pause', 'Start', 'Esc'],
       ['Tuning panel', 'Back', 'T'],
       ['Full screen', '', 'F'],
+      ['Compare Sunhawk designs', '', 'B'],
     ],
   ],
   [
@@ -271,6 +275,7 @@ export class Menus {
       this.choice.role = ((this.choice.role + dir + 3) % 3) as Role;
       this.refreshGarage(true);
     });
+    this.sunhawkItems(list);
     const n = LIVERIES.length;
     this.addItem(list, h('div.item', h('span', 'Team'), this.teamLabel), undefined, (dir) => {
       this.choice.team = (this.choice.team + dir + n) % n;
@@ -414,6 +419,20 @@ export class Menus {
     this.root.querySelectorAll('.look-label').forEach((el) => (el.textContent = `Look: ${this.cb.lookOn() ? '80s anime' : 'plain'}`));
   }
 
+  private sunhawkItems(list: HTMLElement): void {
+    const model = h('span.choice.sunhawk-model-label',SUNHAWK_LABELS[getSunhawkModel()]);
+    const row = h('div.item',h('span','Sunhawk design'),model);
+    row.title = 'Compare Solstice’s forward models. B also switches during a race.';
+    this.addItem(list,row,undefined,(dir) => this.cb.onCycleSunhawk(dir));
+    const finish = h('span.choice.sunhawk-finish-label',getSunhawkPanels() ? 'Panel lines' : 'Clean');
+    this.addItem(list,h('div.item',h('span','Sunhawk finish'),finish),() => this.cb.onToggleSunhawkPanels(),() => this.cb.onToggleSunhawkPanels());
+  }
+
+  refreshSunhawk(): void {
+    this.root.querySelectorAll('.sunhawk-model-label').forEach((el) => { el.textContent=SUNHAWK_LABELS[getSunhawkModel()]; });
+    this.root.querySelectorAll('.sunhawk-finish-label').forEach((el) => { el.textContent=getSunhawkPanels() ? 'Panel lines' : 'Clean'; });
+  }
+
   private renderPause(): void {
     this.root.onclick = null;
     const col = h('div.col');
@@ -425,6 +444,7 @@ export class Menus {
     this.addItem(list, h('div.item', lookLabel), () => {
       lookLabel.textContent = `Look: ${this.cb.onToggleLook() ? '80s anime' : 'plain'}`;
     });
+    this.sunhawkItems(list);
     this.addItem(list, h('div.item', h('span', 'Controls')), () => this.show('controls'));
     this.addItem(list, h('div.item', h('span', 'Back to garage')), () => this.cb.onGarage());
     this.addItem(list, h('div.item', h('span', 'Quit to title')), () => this.cb.onQuit());
