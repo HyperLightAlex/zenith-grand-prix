@@ -1,3 +1,4 @@
+import { geometryMarks } from './mech/ink';
 // The 80s anime look: one switch and its settings, the drawing clock, and the
 // cel shading every lit material is given.
 //
@@ -13,6 +14,7 @@ import type { Theme } from './themes';
 export interface LookState {
   /** The 80s anime look is on. Everything below only applies while it is. */
   on: boolean;
+  mechLines: 'traced' | 'geometry';
   /** Film layer strength (grain, halation, softness, fringe), 0..2. */
   film: number;
   /** Ink line strength, 0..2. */
@@ -25,8 +27,11 @@ export interface LookState {
   still: boolean;
 }
 
+// Read the review override once; a runtime switch may change it afterward.
+const lineModeParam = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('mechLines');
+
 /** The look in force this frame. The game copies it from the tuning values every frame. */
-export const look: LookState = { on: true, film: 1, ink: 1, boil: 1, steps: 12, impact: true, still: true };
+export const look: LookState = { on: true, mechLines: lineModeParam === 'traced' ? 'traced' : 'geometry', film: 1, ink: 1, boil: 1, steps: 12, impact: true, still: true };
 
 export function readLook(f: Feel): void {
   look.on = f.look >= 0.5;
@@ -247,6 +252,7 @@ export function celify(root: THREE.Object3D): void {
  */
 export function markCharacter(root: THREE.Object3D, id = -1): void {
   const value = id >= 0 ? markOf(id) : 0.5;
+  if(id>=0)geometryMarks[id%6]=root.userData.geometryInk ? 1 : 0;
   root.traverse((o) => {
     const mats = (o as THREE.Mesh).material;
     if (!mats) return;
@@ -262,6 +268,7 @@ export function markCharacter(root: THREE.Object3D, id = -1): void {
     }
     for (const m of Array.isArray(mats) ? mats : [mats]) {
       m.userData.celChar = true;
+      if(m.userData.mechInkMark)m.userData.mechInkMark.value=value;
       if (m.transparent && m.blending === THREE.NormalBlending && !m.premultipliedAlpha) {
         m.blending = THREE.CustomBlending;
         m.blendEquation = THREE.AddEquation;

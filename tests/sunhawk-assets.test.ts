@@ -191,6 +191,34 @@ describe('updated Sunhawk production preparation', () => {
     return readSunhawkAsset((await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '')).scene, 'updated');
   };
 
+  it('exports authored joint lines and smoothed outline data, excluding UV overlays',async()=>{
+    const counts:number[]=[];
+    for(let level=0;level<3;level++) {
+      const asset=await load(level);
+      expect(asset.ink).toBe(true);
+      for(const p of asset.parts.filter(p=>!p.detail)) {
+        const normal=p.geometry.getAttribute('_outline_normal'),width=p.geometry.getAttribute('_ink_width');
+        expect(normal.count).toBe(p.geometry.attributes.position.count);
+        expect(width.count).toBe(normal.count);
+        for(let i=0;i<normal.count;i++) {
+          expect(Math.hypot(normal.getX(i),normal.getY(i),normal.getZ(i))).toBeCloseTo(1,3);
+          expect(width.getX(i)).toBeGreaterThanOrEqual(0);
+          expect(width.getX(i)).toBeLessThanOrEqual(1);
+        }
+      }
+      for(const line of asset.lines) {
+        expect(asset.parts.some(p=>p.joint===line.joint&&!p.detail)).toBe(true);
+        expect(line.positions.length).toBe(line.kinds.length*6);
+        expect(Array.from(line.positions).every(Number.isFinite)).toBe(true);
+      }
+      counts.push(asset.lines.reduce((n,l)=>n+l.kinds.length,0));
+    }
+    expect(counts[0]).toBeGreaterThan(100);
+    expect(counts[1]).toBeGreaterThan(0);
+    expect(counts[1]).toBeLessThan(counts[0]);
+    expect(counts[2]).toBe(0);
+  });
+
   it('reduces vertex storage without changing triangles, normal seams or the cached asset', async () => {
     const asset = await load();
     const part = asset.parts.find((p) => p.joint === 'chest' && p.slot === 'P')!;

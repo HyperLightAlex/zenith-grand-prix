@@ -1,3 +1,4 @@
+import { configureMechInk, resizeMechInk, geometryMarks } from './mech/ink';
 // WebGL renderer plus the post-processing chain: bloom, then a "speed" pass
 // (the stretch of the world going by, streaks, vignette, impact flash), then
 // tone-mapped output.
@@ -290,6 +291,10 @@ export class Renderer {
     return look.on && look.ink > 0 && this.quality !== 'low';
   }
 
+  /** Review switch: changes ink without rebuilding a rig or restarting a race. */
+  set mechLineMode(mode: 'traced' | 'geometry') { look.mechLines=mode; }
+  get mechLineMode(): 'traced' | 'geometry' { return look.mechLines; }
+
   /** End any cut in progress (a new race, or a restart). */
   clearMoments(): void {
     this.impactT = this.stillT = this.stillWait = 0;
@@ -304,6 +309,9 @@ export class Renderer {
     // The plain look has no moments of its own: switching mid-cut ends the cut.
     if (!on) this.impactT = this.stillT = this.stillWait = 0;
     this.inkPass.enabled = this.inking;
+    ink.uMechLines.value=look.mechLines==='geometry' ? 0 : 1;
+    ink.uGeometryMarks.value=geometryMarks;
+    configureMechInk(this.inking && look.mechLines==='geometry',ink.uInkColor.value,look.ink);
     this.filmPass.enabled = on || this.impactT > 0 || this.stillT > 0;
     // The mechs' clean lines: sharp through the film, smoothed at the end (where the ink pass marked them).
     this.mechSmooth.enabled = this.inking;
@@ -376,6 +384,7 @@ export class Renderer {
     this.travelMask.setSize(Math.max(1, Math.round((w * ratio) / 4)), Math.max(1, Math.round((h * ratio) / 4)));
     const pw = Math.round(w * ratio);
     const ph = Math.round(h * ratio);
+    resizeMechInk(pw,ph);
     (this.inkPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
     (this.filmPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
     (this.crtPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);

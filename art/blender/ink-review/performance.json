@@ -1,0 +1,398 @@
+[
+  {
+    "tag": "a",
+    "size": "desk",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "resolution": [
+      1280,
+      720
+    ],
+    "mechs": 6,
+    "track": "helios",
+    "probe": {
+      "context": "race · tick 6523 · lap 1",
+      "frames": 823,
+      "seconds": 4,
+      "meanFps": 204.1,
+      "recentP95ms": 6.5,
+      "meanDrawCalls": 618,
+      "meanTrianglesAllPasses": 280499,
+      "geometries": 914,
+      "maxGeometries": 914,
+      "resolution": "1280×720",
+      "quality": "high",
+      "scale": 1,
+      "cap": 0,
+      "lods": "kamaitachi:0,seraph:2,fujin:2,longbow:2,raijin:2,paladin:2",
+      "previewMs": 0
+    },
+    "lods": [
+      [
+        true,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ]
+    ],
+    "samples": 900,
+    "meanMs": 4.585222220420837,
+    "p95Ms": 5.599999904632568,
+    "meanCalls": 613.8322222222222,
+    "meanTriangles": 266877.53555555554,
+    "errors": []
+  },
+  {
+    "tag": "b",
+    "size": "desk",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "resolution": [
+      1280,
+      720
+    ],
+    "mechs": 6,
+    "track": "helios",
+    "probe": {
+      "context": "race · tick 6523 · lap 1",
+      "frames": 823,
+      "seconds": 4,
+      "meanFps": 205.2,
+      "recentP95ms": 6.8,
+      "meanDrawCalls": 630,
+      "meanTrianglesAllPasses": 448424,
+      "geometries": 941,
+      "maxGeometries": 941,
+      "resolution": "1280×720",
+      "quality": "high",
+      "scale": 1,
+      "cap": 0,
+      "lods": "kamaitachi:0,seraph:2,fujin:2,longbow:2,raijin:2,paladin:2",
+      "previewMs": 0
+    },
+    "lods": [
+      [
+        true,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ]
+    ],
+    "samples": 900,
+    "meanMs": 4.712777777777778,
+    "p95Ms": 6.200000286102295,
+    "meanCalls": 624.4622222222222,
+    "meanTriangles": 399497.34222222224,
+    "errors": []
+  },
+  {
+    "tag": "b-traced",
+    "size": "desk",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "resolution": [
+      1280,
+      720
+    ],
+    "mechs": 6,
+    "track": "helios",
+    "probe": {
+      "context": "race · tick 6562 · lap 1",
+      "frames": 862,
+      "seconds": 4,
+      "meanFps": 213.8,
+      "recentP95ms": 6.5,
+      "meanDrawCalls": 612,
+      "meanTrianglesAllPasses": 278152,
+      "geometries": 941,
+      "maxGeometries": 941,
+      "resolution": "1280×720",
+      "quality": "high",
+      "scale": 1,
+      "cap": 0,
+      "lods": "kamaitachi:0,seraph:2,fujin:2,longbow:2,raijin:2,paladin:2",
+      "previewMs": 0
+    },
+    "lods": [
+      [
+        true,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ]
+    ],
+    "samples": 900,
+    "meanMs": 4.578111111323039,
+    "p95Ms": 5.800000190734863,
+    "meanCalls": 614.1455555555556,
+    "meanTriangles": 266970.5111111111,
+    "errors": []
+  },
+  {
+    "tag": "a",
+    "size": "nova",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "resolution": [
+      1280,
+      960
+    ],
+    "mechs": 6,
+    "track": "helios",
+    "probe": {
+      "context": "race · tick 6553 · lap 1",
+      "frames": 853,
+      "seconds": 5.1,
+      "meanFps": 167.7,
+      "recentP95ms": 7.4,
+      "meanDrawCalls": 600,
+      "meanTrianglesAllPasses": 268261,
+      "geometries": 956,
+      "maxGeometries": 956,
+      "resolution": "1280×960",
+      "quality": "high",
+      "scale": 1,
+      "cap": 0,
+      "lods": "kamaitachi:0,seraph:2,fujin:2,longbow:2,raijin:2,paladin:2",
+      "previewMs": 0
+    },
+    "lods": [
+      [
+        true,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ]
+    ],
+    "samples": 900,
+    "meanMs": 5.937222223281861,
+    "p95Ms": 6.5,
+    "meanCalls": 601.1522222222222,
+    "meanTriangles": 262334.97777777776,
+    "errors": []
+  },
+  {
+    "tag": "b",
+    "size": "nova",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "resolution": [
+      1280,
+      960
+    ],
+    "mechs": 6,
+    "track": "helios",
+    "probe": {
+      "context": "race · tick 6551 · lap 1",
+      "frames": 851,
+      "seconds": 5.1,
+      "meanFps": 166.3,
+      "recentP95ms": 8.7,
+      "meanDrawCalls": 612,
+      "meanTrianglesAllPasses": 413521,
+      "geometries": 981,
+      "maxGeometries": 981,
+      "resolution": "1280×960",
+      "quality": "high",
+      "scale": 1,
+      "cap": 0,
+      "lods": "kamaitachi:0,seraph:2,fujin:2,longbow:2,raijin:2,paladin:2",
+      "previewMs": 0
+    },
+    "lods": [
+      [
+        true,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ]
+    ],
+    "samples": 900,
+    "meanMs": 5.948777777883741,
+    "p95Ms": 7.400000095367432,
+    "meanCalls": 611.4333333333333,
+    "meanTriangles": 389459.40222222224,
+    "errors": []
+  },
+  {
+    "tag": "b-traced",
+    "size": "nova",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "resolution": [
+      1280,
+      960
+    ],
+    "mechs": 6,
+    "track": "helios",
+    "probe": {
+      "context": "race · tick 6553 · lap 1",
+      "frames": 853,
+      "seconds": 5.1,
+      "meanFps": 167.1,
+      "recentP95ms": 8.9,
+      "meanDrawCalls": 601,
+      "meanTrianglesAllPasses": 268360,
+      "geometries": 981,
+      "maxGeometries": 981,
+      "resolution": "1280×960",
+      "quality": "high",
+      "scale": 1,
+      "cap": 0,
+      "lods": "kamaitachi:0,seraph:2,fujin:2,longbow:2,raijin:2,paladin:2",
+      "previewMs": 0
+    },
+    "lods": [
+      [
+        true,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ],
+      [
+        false,
+        false,
+        true
+      ]
+    ],
+    "samples": 900,
+    "meanMs": 5.9530000013775295,
+    "p95Ms": 6.800000190734863,
+    "meanCalls": 601.4655555555555,
+    "meanTriangles": 262427.9533333333,
+    "errors": []
+  }
+]

@@ -134,10 +134,11 @@ The script explicitly selects the preserved original designs.
 
 To regenerate a model in the connected Blender Python environment:
   from pathlib import Path
-  MODEL = 'daystar'
-  exec(compile(Path('/Users/alexanderkelley/Projects/igpx/art/blender/roster/build_roster.py').read_text(), 'build_roster.py', 'exec'))
-Adjust ROOT in build_roster.py if the repository moves. The script only
-replaces its own generated scene for MODEL; it does not edit Sunhawk.
+  script = Path('/absolute/path/to/igpx/art/blender/roster/build_roster.py')
+  ns = {'__file__': str(script), 'PROJECT_ROOT': str(script.parents[3]), 'MODEL': 'daystar'}
+  exec(compile(script.read_text(), str(script), 'exec'), ns)
+The root is resolved from the script unless PROJECT_ROOT is supplied. The
+script replaces only its generated MODEL scene; it does not edit Sunhawk.
 Regeneration replaces manual edits to that model's generated file: save a
 separate artist copy before hand editing, or transfer the edits to the script.
 
@@ -159,3 +160,37 @@ The original builders are unchanged; physics and race balance are unchanged.
 
 Commands: npm test; npm run build; npm run build:single.
 Gallery regeneration: node tools/roster/review.mjs .
+
+GEOMETRY INK (STEP 2)
+Updated models default to model-authored anime ink. ?mechLines=traced keeps
+Step 1 tracing for review; ?mechLines=geometry selects the authored version.
+Plain and low-quality hulls, current models and existing effects are retained.
+
+../ink_geometry.py computes edges on each source part BEFORE bevel/decimate,
+then seats the endpoints on the evaluated bevel surface for that LOD. The
+42-degree threshold and minimum 0.14-unit length are in ../ink-overrides.json.
+Rules are matched against source part names; model rules override general
+rules. `width` controls shell weight, `skip` suppresses inner strokes. Source
+`ink_width` and `ink_exclude` properties cover generic named vents/nozzles.
+Per-part `add` entries are [endpointA,endpointB,kind]; `remove` entries are
+[endpointA,endpointB], with endpoints rounded to five decimals. Coordinates
+are joint-local Blender coordinates. Kinds: 0 crease, 1 paint, 2 plate rim.
+Keep intentional exceptions here so the next scripted rebuild retains them.
+
+Production blend meshes carry outline normals and width attributes. The
+export regenerates them after evaluated geometry/LOD conversion, includes
+those values in its vertex merge key, and converts the custom normal from
+Blender XYZ to glTF XZ-Y explicitly. Triangle positions and shaded normals
+are unchanged. The 45 updated GLBs were checked against clean-ink: zero
+position/normal changes in their expanded triangle streams.
+
+Loose edge meshes named JOINT/LINES have joint and ink_lines extras plus
+_LINE_KIND (POINT float; matching endpoints). Blender's exporter needs
+use_mesh_edges=True and export_attributes=True. Root ink_schema=1 identifies
+the contract. LOD0 includes all selected edges; LOD1 drops short/weak edges;
+LOD2 contains no LINES. Manifests include line_segments and actual file bytes.
+Loaders validate finite positions, known joints, categories, unit outline
+normals and width ranges; runtime batches the rigid joints into two draws.
+
+Review: docs/mech-lines-report.md; tools/ink-compare.mjs; tools/ink-perf.mjs.
+These checks supplement the existing rig/attachment/asset contract tests.

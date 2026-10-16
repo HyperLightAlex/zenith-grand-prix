@@ -1,3 +1,4 @@
+import { MechInkBuilder } from './ink';
 import * as THREE from 'three';
 import { Kit } from './kit';
 import { rosterAsset, type RosterJoint, type CalfThruster } from './rosterAsset';
@@ -101,6 +102,7 @@ export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, he
   }
   // Cooler, restrained shadow paint; each faction keeps its actual palette.
   const paint={...livery,shades:{...livery.shades,frame:0x182236}};
+  const ink=rosterAsset(id).ink ? new MechInkBuilder(rig,joints) : null;
   for(let level=0;level<3;level++) {
     const kits=new Map<RosterJoint,Kit>();
     const groups: THREE.Object3D[]=[];
@@ -114,6 +116,7 @@ export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, he
       joints[joint].add(built.group);groups.push(built.group);
       if(built.glow)rig.glowMeshes.push(built.glow);
     }
+    ink?.addLevel(rosterAsset(id,level).parts,rosterAsset(id,level).lines,groups);
     rig.detailLevels.push(groups);
   }
   setMechDetail(rig,0);

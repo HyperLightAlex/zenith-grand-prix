@@ -51,6 +51,35 @@ for(const id of ROSTER_IDS) describe(`${id} production asset`,()=>{
     expect((await load(id,2)).dims).toEqual((await load(id)).dims);
   });
 
+  it('carries authored ink at near/mid LODs and valid outline data at every LOD',async()=>{
+    const counts:number[]=[];
+    for(let level=0;level<3;level++) {
+      const asset=await load(id,level);
+      expect(asset.ink).toBe(true);
+      for(const part of asset.parts) {
+        const normal=part.geometry.getAttribute('_outline_normal'),width=part.geometry.getAttribute('_ink_width');
+        expect(normal.count).toBe(part.geometry.attributes.position.count);
+        expect(width.count).toBe(normal.count);
+        for(let i=0;i<normal.count;i++) {
+          expect(Math.hypot(normal.getX(i),normal.getY(i),normal.getZ(i))).toBeCloseTo(1,3);
+          expect(width.getX(i)).toBeGreaterThanOrEqual(0);
+          expect(width.getX(i)).toBeLessThanOrEqual(1);
+        }
+      }
+      for(const line of asset.lines) {
+        expect(asset.parts.some(p=>p.joint===line.joint)).toBe(true);
+        expect(line.positions.length).toBe(line.kinds.length*6);
+        expect(Array.from(line.positions).every(Number.isFinite)).toBe(true);
+        expect(Array.from(line.kinds).every(k=>[0,1,2].includes(k))).toBe(true);
+      }
+      counts.push(asset.lines.reduce((n,l)=>n+l.kinds.length,0));
+    }
+    expect(counts[0]).toBeGreaterThan(100);
+    expect(counts[1]).toBeGreaterThan(0);
+    expect(counts[1]).toBeLessThan(counts[0]);
+    expect(counts[2]).toBe(0);
+  });
+
   it('seats calf jets on the actual shin and keeps effects on the bell outlets through motion',async()=>{
     const asset=await load(id);
     const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});

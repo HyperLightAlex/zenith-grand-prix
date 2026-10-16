@@ -5,20 +5,26 @@
     {
       "level": 0,
       "triangles": 25962,
-      "bytes": 533356,
-      "parts": 103
+      "bytes": 910392,
+      "parts": 103,
+      "line_segments": 2634,
+      "ink_schema": 1
     },
     {
       "level": 1,
       "triangles": 13464,
-      "bytes": 338512,
-      "parts": 103
+      "bytes": 524336,
+      "parts": 103,
+      "line_segments": 309,
+      "ink_schema": 1
     },
     {
       "level": 2,
       "triangles": 6824,
-      "bytes": 212216,
-      "parts": 103
+      "bytes": 313704,
+      "parts": 103,
+      "line_segments": 0,
+      "ink_schema": 1
     }
   ]
 }

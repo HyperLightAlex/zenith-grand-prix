@@ -363,16 +363,48 @@ alone: backgrounds are inked and filmed as before.
 - **Sharp through the film.** The ink pass also draws where the mechs are
   (`InkPass.mask`); the film's weave, fringe and softness leave those pixels
   alone. Grain, grade, halation and vignette still cover them.
-- **Smoothed.** Lines drawn on a finished picture get none of its
-  multisampling; FXAA on the mechs' pixels alone (`MechSmooth`, after the
-  output pass) takes the steps out of them.
+- **Smoothed.** Geometry lines share the frame's MSAA. FXAA on the mechs'
+  pixels alone (`MechSmooth`, after the output pass) finishes their edges
+  and smooths the traced fallback.
 - **Their share of the picture.** A mech's line widths scale with the frame
   down to 55% of a 1080-line frame (backgrounds: 75%), so on a phone or a
   handheld they do not swallow the detail they outline.
 
-The next step is lines from the models themselves (an outline shell and
-authored inner lines) in place of the traced mech lines; the mask, the film
-exemption and the smoothing are kept for it.
+Updated mechs now use **geometry ink** by default. `?mechLines=traced`
+selects the Step 1 tracing for A/B review; `?mechLines=geometry` selects the
+new drawing. The renderer's `mechLineMode` setting can switch a running
+scene without rebuilding it. Review-only current/procedural models retain
+tracing, including in a mixed race.
+
+The silhouette is a back-face shell expanded in clip space, using baked
+smoothed normals and a per-vertex width. Width is 0.7 times the former
+traced contour width, in drawing-buffer pixels, with the same distance
+thinning. Raised details have zero shell width; fins, blades, horns and
+fingers have reduced width. Fog and the circuit's ink colour apply to both
+the shell and the authored lines.
+
+Inner lines come from clean pre-bevel design edges in Blender, rather than
+colour or lighting differences. `LineSegments2` draws opaque, depth-tested
+quads at 0.72 times the traced inner width. Paint boundaries thin out from
+22–60 units; creases and rims retain 40% weight at 60 units. LOD0 has the
+full set, LOD1 keeps longer boundaries/rims and stronger creases, and LOD2
+has only the shell. Lines follow the same rigid joint matrices as armour.
+Both are batched per mech: one shell draw and one line draw per visible LOD,
+with the existing LOD selection and hysteresis. The traveller mask uses the
+same joint shader, so the speed blur keeps these lines sharp too.
+
+Both shaders write the pilot's alpha mark (`0.1 + 0.065 * (id % 6)`).
+The existing mask, film exemption, MSAA4 and final mech FXAA remain active.
+Glows, flames, nozzle geometry, decals, race numbers, UV overlays, shields
+and bubbles do not receive authored lines. Transparent markings preserve
+the underlying mark as before. Plain and low-quality rendering keep the
+original world-space hull; the new materials are disabled there.
+
+`art/blender/ink_geometry.py` and `ink-overrides.json` reproduce the line
+selection, width rules and custom `_OUTLINE_NORMAL` / `_INK_WIDTH` exports.
+Read the roster README and Sunhawk export notes before regenerating assets.
+The [Step 2 review report](mech-lines-report.md) includes A/B crops, motion
+captures, background diffs, performance and asset sizes.
 
 ## How it is built
 
@@ -382,11 +414,9 @@ should only change on a new drawing (a pose, an effect's shape, the boil of
 the lines, the speed lines) keys off that clock.
 
 ```
-RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Film ─► Output (ACES, sRGB) ─► MechSmooth ─► CRT
-   │           │                                              ▲                                ▲
-   │           ├ depth texture + the colour buffer's alpha (1 = background, under 0.75 = a mech's mark)
-   │           └ mech mask ───────────────────────────────────┴────────────────────────────────┘
-   └ cel-shaded materials write the character mark
+RenderPass (MSAA4) → DepthTap → Ink → Bloom → Speed → Film → Output → MechSmooth → CRT
+     armour / hull / lines       │                 ▲                  ▲
+        write alpha marks       └── mech mask ────┴──────────────────┘
 ```
 
 - `src/client/render/look.ts`: the switch and its settings, the drawing
@@ -397,8 +427,8 @@ RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Fi
   typical angle, so the two looks agree on how bright a circuit is. The key
   light is lifted toward overhead for the shading: a low sun would otherwise
   leave half of every mech in shadow from every angle. Mechs are marked as
-  characters (`markCharacter`) and write alpha 0.5, which is how the ink
-  pass tells a cel from a background.
+  characters (`markCharacter`) and write their pilot-specific alpha mark,
+  which is how the ink pass tells a cel from a background.
 - `src/client/render/lookPasses.ts`: the ink pass and the film pass, and
   each circuit's ink colour and grade. The ink pass finds outlines from the
   depth's second difference (large on the near side of a step, small across
@@ -406,6 +436,8 @@ RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Fi
   never inked) and paint edges from the ratio of brightness across a pixel
   (paint changes it a lot, a shadow much less). Line widths are set for a
   1080-line frame and scale with the resolution.
+- `src/client/render/mech/ink.ts`: the batched rigid-joint shell and authored
+  line shaders, export validation, pixel sizing and per-mech materials.
 - `src/client/render/renderer.ts`: the pass chain, the banded bloom, the
   drawn speed lines, and the moments (impact frames and stills, rate-limited
   and only while racing).
@@ -425,6 +457,16 @@ branches in the materials. In a software renderer the
 whole frame costs about 17% more than the plain look; on a GPU the passes
 are a small part of the frame. The renderer's resolution scaling still
 works as before, and on the low quality setting the ink pass is skipped.
+
+Geometry ink adds up to two draws per visible mech per scene render (one
+at LOD2), including the traveller-mask render when active. The measured
+six-mech Helios run added about 1.7% draw calls and 48–50% submitted triangles
+across all passes. Mean controlled frame work changed from 4.59 to 4.71 ms
+at 1280×720 and 5.94 to 5.95 ms at the Nova viewport on an M1 Pro. These
+headless Chrome measurements include GPU completion and are not display FPS
+or timings from physical handheld hardware. See the report for P95 and
+reproduction details. The 45 updated GLBs grew by about 61%; compression or
+packing their new attributes is a worthwhile follow-up.
 
 ## Checking it
 

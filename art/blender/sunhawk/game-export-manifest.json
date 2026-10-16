@@ -7,6 +7,8 @@
     "joint_material_meshes": 90,
     "triangles": 23876,
     "bytes": 1864040,
+    "line_segments": 0,
+    "ink_schema": 0,
     "joints": [
       "ankleL",
       "ankleR",
@@ -40,7 +42,9 @@
     "source_meshes": 241,
     "joint_material_meshes": 97,
     "triangles": 25948,
-    "bytes": 2028516,
+    "bytes": 3358940,
+    "line_segments": 1388,
+    "ink_schema": 1,
     "joints": [
       "ankleL",
       "ankleR",
@@ -74,7 +78,9 @@
     "source_meshes": 234,
     "joint_material_meshes": 90,
     "triangles": 13918,
-    "bytes": 1110180,
+    "bytes": 1839068,
+    "line_segments": 468,
+    "ink_schema": 1,
     "joints": [
       "ankleL",
       "ankleR",
@@ -108,7 +114,9 @@
     "source_meshes": 234,
     "joint_material_meshes": 90,
     "triangles": 7328,
-    "bytes": 613236,
+    "bytes": 992256,
+    "line_segments": 0,
+    "ink_schema": 1,
     "joints": [
       "ankleL",
       "ankleR",

@@ -70,6 +70,8 @@ const InkShader = {
     uNear: { value: 0.5 },
     uFar: { value: 40000 },
     uInk: { value: 1 },
+    uMechLines: { value: 1 },
+    uGeometryMarks: { value: new Float32Array(6) },
     uBoil: { value: 1 },
     uSeed: { value: 0 },
     uInkColor: { value: new THREE.Color(0x150f22) },
@@ -84,6 +86,7 @@ const InkShader = {
     uniform vec2 uRes;
     uniform vec2 uFade;
     uniform float uNear, uFar, uInk, uBoil, uSeed;
+    uniform float uMechLines, uGeometryMarks[6];
     uniform vec3 uInkColor;
     varying vec2 vUv;
     ${COMMON}
@@ -172,7 +175,8 @@ const InkShader = {
       // background line on a mech's edge: the mech's own contour is there.)
       float breaks = smoothstep(0.04, 0.16, hash(floor(uv * uRes / (5.0 * scale)) + uSeed * 1.7));
       float bgFade = 1.0 - smoothstep(uFade.x, uFade.y, zc);
-      float charLine = max(contour, inner) * me;
+      float authored = uGeometryMarks[int(clamp(floor((markHere-0.1)/0.065+0.5),0.0,5.0))];
+      float charLine = max(contour, inner) * me * mix(1.0,uMechLines,authored);
       float bgLine = outline * (1.0 - me) * step(0.75, markHere) * breaks * bgFade * 0.7;
       // Coloured lines: inside a light area (a lit sky, the sunny side of a
       // cloud, a glow, a sunlit panel) the cel's line was traced in a deeper

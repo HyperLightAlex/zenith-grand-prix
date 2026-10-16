@@ -2,7 +2,7 @@
 // builds, side by side. Each scene is played until it settles, then the game
 // loop is stopped and the last frame drawn again with nothing moving, so two
 // builds can be compared pixel for pixel (the race and the hangar's orbit
-// are seeded, so the scenes match closely, not exactly).
+// are seeded and their animation/effect phases are aligned).
 //
 //   URL_A=http://localhost:8091/ URL_B=http://localhost:8090/ node tools/ink-compare.mjs out
 //   SIZES=desk,nova  SCENES=hangar,race  LOOK=plain  ...
@@ -11,7 +11,7 @@
 // (A over B, plus a 2x crop of the player's mech side by side). Needs two
 // servers (npm start on two ports, one per build) and Playwright.
 import { createRequire } from 'node:module';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 let chromium;
@@ -24,7 +24,7 @@ const sizes = (process.env.SIZES ?? 'desk').split(',');
 const scenes = (process.env.SCENES ?? 'hangar,race').split(',');
 const SZ = { desk: { width: 1280, height: 720, scale: 1 }, nova: { width: 640, height: 480, scale: 2 }, phone: { width: 844, height: 390, scale: 3 } };
 
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--in-process-gpu'] });
+const browser = await chromium.launch({ ...(process.env.PW_CHANNEL ? {channel:process.env.PW_CHANNEL} : {}), args: process.env.PW_SOFTWARE==='0' ? ['--ignore-gpu-blocklist'] : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--in-process-gpu'] });
 const crops = {};
 for (const [tag, base] of Object.entries(builds)) {
   for (const sz of sizes) {
@@ -32,27 +32,56 @@ for (const [tag, base] of Object.entries(builds)) {
       const s = SZ[sz];
       const page = await browser.newPage({ viewport: { width: s.width, height: s.height }, deviceScaleFactor: s.scale });
       page.on('pageerror', (e) => console.log(`${tag} ${sz} ${scene} pageerror: ${e.message}`));
-      await page.goto(`${base}?mute=1&seed=5${process.env.LOOK ? `&look=${process.env.LOOK}` : ''}`);
-      await page.waitForFunction(() => window.game !== undefined, null, { timeout: 180000 });
-      // Play on for `t` seconds of game time (software rendering is slow; this waits however long that takes).
-      const run = async (t) => {
-        const t0 = await page.evaluate(() => window.game.time);
-        await page.waitForFunction(([t0, t]) => window.game.time - t0 > t, [t0, t], { timeout: 600000 });
-      };
+      // Fixed simulation/drawing clocks and seeded film weave make background
+      // equality measurable. No real-time callbacks run between captures.
+      await page.addInitScript(() => {
+        let seed=12345;
+        window.__resetInkSeed=(value)=>{seed=value;};
+        Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+        window.requestAnimationFrame=()=>0;
+      });
+      const url=new URL(base);url.searchParams.set('mute','1');url.searchParams.set('seed','5');
+      if(process.env.LOOK)url.searchParams.set('look',process.env.LOOK);
+      await page.goto(url.href);
+      await page.waitForFunction(() => window.game !== undefined, null, { timeout: 180000, polling:100 });
+      await page.waitForTimeout(600);
+      const run=async(t)=>page.evaluate(t=>{
+        const g=window.game,r=g.renderer,render=r.render.bind(r);
+        r.scale=1;r.resize();r.adapt=()=>{};
+        g.last=0;
+        // Rig construction consumes UUID randomness differently when it has ink
+        // meshes. Align the deliberately random idle/flame phases as well.
+        g.view.mechs.forEach((v,id)=>{
+          v.anim.time=id;
+          v.rig.root.traverse(o=>{
+            const materials=Array.isArray(o.material)?o.material:[o.material];
+            for(const m of materials)if(m?.uniforms?.uPhase)m.uniforms.uPhase.value=id%3;
+          });
+        });
+        const frames=Math.round(t*60);
+        // Draw only the last few warm-up frames, identical on both builds.
+        r.render=()=>{};
+        for(let i=0;i<frames;i++) {
+          if(i===frames-3)r.render=render;
+          window.__resetInkSeed(5000+i);
+          g.frame(g.last+1000/60);
+        }
+        r.render=render;
+      },t);
       if (scene === 'hangar') {
         await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); g.openFreePlay(); });
         await run(2.5);
         await page.evaluate(() => { document.querySelector('.menu').style.visibility = 'hidden'; });
       } else {
         await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); g.startFree(); });
-        await page.waitForFunction(() => window.game.debugState().state === 'race', null, { timeout: 120000 });
+        await run(.1);
         await page.evaluate(() => window.game.session.fastForward(95));
         await run(1.5);
         await page.evaluate(() => { document.querySelector('.hud').style.visibility = 'hidden'; });
       }
       // Stop the loop on this frame and draw it again with nothing moving.
       await page.evaluate(() => { window.requestAnimationFrame = () => 0; });
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(100);
       // Where the player's mech is on screen, for the crop.
       crops[`${sz}-${scene}`] ??= await page.evaluate(() => {
         const g = window.game;
@@ -60,8 +89,15 @@ for (const [tag, base] of Object.entries(builds)) {
         return p && p.visible ? { x: p.cx, y: p.cy, h: Math.abs(p.cy - p.y) } : null;
       });
       await page.evaluate(() => window.game.renderer.composer.render(0));
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(100);
       await page.screenshot({ path: `${out}/${tag}-${sz}-${scene}.png`, timeout: 300000 });
+      writeFileSync(`${out}/state-${tag}-${sz}-${scene}.json`,JSON.stringify(await page.evaluate(()=>{const g=window.game,r=g.renderer;return {time:g.time,worldTime:g.worldTime,cam:r.camera.matrixWorld.elements,ink:Object.fromEntries(Object.entries(r.inkPass.uniforms).filter(([k])=>k.startsWith('u')).map(([k,v])=>[k,v.value])),film:Object.fromEntries(Object.entries(r.filmPass.uniforms).filter(([k])=>k.startsWith('u')).map(([k,v])=>[k,v.value]))};}),null,2));
+      const mask=await page.evaluate(()=>{
+        const r=window.game.renderer,t=r.inkPass.mask,a=new Uint8Array(t.width*t.height*4);
+        r.renderer.readRenderTargetPixels(t,0,0,t.width,t.height,a);
+        return {width:t.width,height:t.height,data:Array.from(a.filter((_,i)=>i%4===0))};
+      });
+      writeFileSync(`${out}/mask-${tag}-${sz}-${scene}.json`,JSON.stringify(mask));
       console.log(`${tag} ${sz} ${scene}`);
       await page.close();
     }
@@ -94,7 +130,7 @@ try {
     const s = SZ[k.split('-')[0]].scale;
     return [k, c ? { x: c.x * s, y: c.y * s, h: c.h * s } : null];
   }));
-  execFileSync('python3', ['-c', py, out, JSON.stringify(scaled)], { stdio: 'inherit' });
+  execFileSync(process.env.PYTHON ?? 'python3', ['-c', py, out, JSON.stringify(scaled)], { stdio: 'inherit' });
 } catch {
   console.log('(no Python/Pillow: compare the a- and b- images by hand)');
 }

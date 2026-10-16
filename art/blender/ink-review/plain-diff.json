@@ -1,0 +1,32 @@
+{
+  "desk-race": {
+    "changed": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0
+  },
+  "nova-hangar": {
+    "changed": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0
+  },
+  "desk-hangar": {
+    "changed": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0
+  },
+  "phone-hangar": {
+    "changed": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0
+  },
+  "phone-race": {
+    "changed": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0
+  },
+  "nova-race": {
+    "changed": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0
+  }
+}

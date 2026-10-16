@@ -11,7 +11,12 @@ from pathlib import Path
 from collections import defaultdict
 from mathutils import Matrix, Vector
 
-PROJECT=Path(bpy.data.filepath).resolve().parents[3]
+PROJECT=Path(globals().get('PROJECT_ROOT') or Path(bpy.data.filepath).resolve().parents[3])
+import sys
+sys.path.insert(0,str(PROJECT/'art/blender'))
+import ink_geometry, importlib
+importlib.reload(ink_geometry)
+from ink_geometry import smooth_normals, outline_weight, set_outline_attributes, design_edges, export_lines
 if not (PROJECT/'src/client/render/mech').is_dir():
     raise RuntimeError('Open art/blender/sunhawk/sunhawk-comparison.blend in the project first')
 OUT=PROJECT/'src/client/render/mech/assets'
@@ -65,7 +70,8 @@ try:
         root=next(o for o in source.objects if o.name==prefix+'SUNHAWK')
         root_inv=root.matrix_world.inverted()
         joints={JOINTS[o.name.split('JNT / ')[1]]:o for o in source.objects if o.name.startswith(prefix+'JNT / ')}
-        groups=defaultdict(lambda:{'pos':[],'normal':[],'uv':[]})
+        groups=defaultdict(lambda:{'pos':[],'normal':[],'uv':[],'outline':[],'width':[]})
+        lines=defaultdict(list)
         source_count=0
         for ob in source.objects:
             if ob.type!='MESH' or not ob.name.startswith(prefix) or any(key in ob.name for key in SKIP): continue
@@ -95,6 +101,9 @@ try:
             evaluated=ob.evaluated_get(deps)
             me=evaluated.to_mesh(preserve_all_data_layers=True,depsgraph=deps)
             me.calc_loop_triangles()
+            smooth=smooth_normals(me);weight=outline_weight('sunhawk',ob)
+            if u and not detail and all(SLOTS.get(m.name.split('Sunhawk / ')[-1].split('.')[0])!='G' for m in me.materials):
+                lines[joint].extend(design_edges('sunhawk',ob,local,me,level))
             try:
                 for tri in me.loop_triangles:
                     material=me.materials[tri.material_index]
@@ -106,6 +115,7 @@ try:
                         n=(normal_matrix@me.corner_normals[li].vector).normalized()
                         if not all(math.isfinite(v) for v in (*p,*n)): raise ValueError(ob.name+' nonfinite export')
                         bucket['pos'].append(tuple(p)); bucket['normal'].append(tuple(n))
+                        bucket['outline'].append(tuple((normal_matrix@smooth[vi]).normalized()));bucket['width'].append(0 if slot=='G' else weight)
                         if detail: bucket['uv'].append(tuple(me.uv_layers.active.data[li].uv))
             finally: evaluated.to_mesh_clear()
         scene=bpy.data.scenes.new('GAME EXPORT / '+variant); staging.append(scene)
@@ -113,6 +123,7 @@ try:
         asset=bpy.data.objects.new('Sunhawk_'+variant,None); scene.collection.objects.link(asset)
         asset['sunhawk_schema']=1; asset['variant']=variant
         asset['detail_level']=level
+        if u:asset['ink_schema']=1
         asset['dims']={'hipY':5.35,'hipX':.73,'hipDrop':.23,'thigh':1.96,'shin':2.33,'ankleY':.83,
             'spineY':.45,'chestY':.75,'shoulderX':1.44 if u else 1.36,'shoulderY':.88,
             'headY':1.47,'headZ':0.,'upperArm':1.31,'foreArm':1.47,'height':9.35}
@@ -131,6 +142,7 @@ try:
             me.update()
             for face in me.polygons: face.use_smooth=True
             me.normals_split_custom_set(data['normal'])
+            if u and not detail:set_outline_attributes(me,data['outline'],data['width'])
             if detail:
                 uv=me.uv_layers.new(name='SunhawkDetailAtlas')
                 for loop in me.loops: uv.data[loop.index].uv=data['uv'][loop.vertex_index]
@@ -140,14 +152,15 @@ try:
             # Joint-local geometry intentionally stays at the origin in this
             # transport scene; the game attaches it to the matching live pivot.
             me.materials.append(mats[slot])
+        line_meshes,line_count=export_lines(scene,asset,lines,mats['D']);staging_meshes.extend(line_meshes)
         filename='sunhawk-'+variant+('-lod'+str(level) if level else '')+'.glb'
         bpy.ops.export_scene.gltf(filepath=str(OUT/filename),export_format='GLB',
             use_active_scene=True,export_yup=True,export_normals=True,export_texcoords=True,
             export_extras=True,export_animations=False,export_skins=False,export_cameras=False,
-            export_lights=False,export_apply=False,export_materials='EXPORT')
+            export_lights=False,export_apply=False,export_materials='EXPORT',export_attributes=True,use_mesh_edges=True)
         reports.append({'variant':variant,'detail_level':level,'file':filename,'source_meshes':source_count,'joint_material_meshes':len(groups),
             'triangles':sum(len(g['pos'])//3 for g in groups.values()),
-            'bytes':(OUT/filename).stat().st_size,
+            'bytes':(OUT/filename).stat().st_size,'line_segments':line_count,'ink_schema':1 if u else 0,
             'joints':sorted({j for j,slot,detail in groups})})
         bpy.context.window.scene=source
 finally:
@@ -164,6 +177,12 @@ finally:
     for me in staging_meshes: bpy.data.meshes.remove(me)
     for mat in staging_materials: bpy.data.materials.remove(mat)
     bpy.context.view_layer.update()
+# Keep editable source attributes as well as evaluated export attributes.
+for ob in source.objects:
+    if ob.type=='MESH' and ob.name.startswith('B / ') and not ob.get('surface_detail'):
+        set_outline_attributes(ob.data,smooth_normals(ob.data),[outline_weight('sunhawk',ob)]*len(ob.data.vertices))
+if source.get('sunhawk_production'):
+    bpy.data.libraries.write(str(PROJECT/'art/blender/sunhawk/sunhawk-production.blend'),{source},fake_user=True,compress=True)
 manifest=PROJECT/'art/blender/sunhawk/game-export-manifest.json'
 manifest.write_text(json.dumps(reports,indent=2)+'\n')
 result={'exports':reports,'source_scene_preserved':source.name}
