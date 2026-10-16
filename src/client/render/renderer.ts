@@ -11,7 +11,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { drawClock, look } from './look';
-import { CrtPass, FilmPass, InkPass, LOOK_PALETTES } from './lookPasses';
+import { CrtPass, FilmPass, InkPass, LOOK_PALETTES, MechSmooth } from './lookPasses';
 import { COLORS } from './palette';
 
 const SpeedShader = {
@@ -160,6 +160,8 @@ export class Renderer {
   private inkPass: InkPass;
   private filmPass: FilmPass;
   private crtPass: CrtPass;
+  /** The mechs' ink lines smoothed on the finished picture (the rest of it as it was). */
+  private mechSmooth: MechSmooth;
   /** Moments the film cuts in: time left on an impact frame, and on a painted still (and how long that still runs). */
   private impactT = 0;
   private impactDur = 0.1;
@@ -231,6 +233,8 @@ export class Renderer {
     this.filmPass = new FilmPass();
     this.composer.addPass(this.filmPass);
     this.composer.addPass(new OutputPass());
+    this.mechSmooth = new MechSmooth(this.inkPass.mask.texture);
+    this.composer.addPass(this.mechSmooth);
     // Last, on the finished picture: the CRT screen, when it is on.
     this.crtPass = new CrtPass();
     this.composer.addPass(this.crtPass);
@@ -301,6 +305,10 @@ export class Renderer {
     if (!on) this.impactT = this.stillT = this.stillWait = 0;
     this.inkPass.enabled = this.inking;
     this.filmPass.enabled = on || this.impactT > 0 || this.stillT > 0;
+    // The mechs' clean lines: sharp through the film, smoothed at the end (where the ink pass marked them).
+    this.mechSmooth.enabled = this.inking;
+    film.tMech.value = this.inkPass.mask.texture;
+    film.uMechSharp.value = this.inking ? 1 : 0;
     if (this.inkPass.enabled) {
       ink.uInk.value = look.ink;
       ink.uBoil.value = look.boil;
