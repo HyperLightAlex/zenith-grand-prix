@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Input } from '../src/client/input/input';
+import type { TouchControls } from '../src/client/input/touch';
+import { BTN } from '../src/sim/index';
 
 let events: EventTarget;
 let pad: Gamepad;
@@ -52,5 +54,43 @@ describe('controller steering', () => {
     input.poll();
     expect(input.device).toBe('keys');
     expect(input.state.mx).toBe(1);
+  });
+});
+
+describe('touch controls', () => {
+  function fakeTouch(read: ReturnType<TouchControls['read']>): TouchControls {
+    return { read: () => read, onTouch: () => {}, onMenu: () => {} } as unknown as TouchControls;
+  }
+  function tap(kind: string): void {
+    events.dispatchEvent(Object.assign(new Event('pointerdown'), { pointerType: kind }));
+  }
+
+  it('takes over from the keys at a finger on the screen, and gives way to the mouse', () => {
+    const input = new Input();
+    input.attachTouch(fakeTouch({ mx: 0.5, my: 0, throttle: 1, brake: 0, buttons: BTN.A, cmd: 0 }));
+    key('keydown', 'KeyD');
+    input.poll();
+    expect(input.device).toBe('keys');
+    expect(input.state.mx).toBe(1);
+    tap('touch');
+    input.poll();
+    expect(input.device).toBe('touch');
+    expect(input.state.mx).toBe(0.5);
+    expect(input.state.throttle).toBe(1);
+    expect(input.state.buttons).toBe(BTN.A);
+    tap('mouse');
+    expect(input.device).toBe('keys');
+  });
+
+  it('gives way to the pad as soon as the pad is used', () => {
+    const input = new Input();
+    input.attachTouch(fakeTouch({ mx: -1, my: 0, throttle: 1, brake: 0, buttons: 0, cmd: 0 }));
+    tap('touch');
+    input.poll();
+    expect(input.state.mx).toBe(-1);
+    (pad.axes as number[])[0] = 0.24;
+    input.poll();
+    expect(input.device).toBe('pad');
+    expect(input.state.mx).toBeCloseTo(0.1);
   });
 });

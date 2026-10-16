@@ -24,6 +24,7 @@ import {
   recordRound,
   trackById,
   TRACKS,
+  weaponsFree,
   type MatchConfig,
   type MatchState,
   type RaceState,
@@ -52,7 +53,9 @@ import {
 } from '../../gp/grandPrix';
 import { normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
 import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
-import { Input } from '../input/input';
+import { Input, type Device } from '../input/input';
+import { TouchControls } from '../input/touch';
+import { holdLandscape, isFullscreen, setFullscreen } from '../fullscreen';
 import { Hangar } from '../render/hangar';
 import { RaceView } from '../render/raceView';
 import { Renderer } from '../render/renderer';
@@ -70,7 +73,7 @@ import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
 import { emblemUrl } from '../ui/factionArt';
-import { Hud } from '../ui/hud';
+import { Hud, abilityShown } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice, type ScreenId } from '../ui/menus';
 import { confirmDialog, messageDialog, registerCommon, type DialogData, type EntryData } from '../ui/screens/common';
 import { registerGarage, type HangarData } from '../ui/screens/garage';
@@ -78,7 +81,7 @@ import { registerGrandPrix } from '../ui/screens/grandPrix';
 import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { registerRace } from '../ui/screens/race';
 import { registerVideo } from '../ui/screens/video';
-import { applyFrame, saveVideo, video, type VideoSettings } from '../video';
+import { applyFrame, frame, onFrame, saveVideo, video, type VideoSettings } from '../video';
 import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
@@ -95,6 +98,17 @@ export type GameMode = 'free' | 'gp' | 'online';
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
 /** The garage's mech sits this far right of centre (of the screen's width), clear of the menu. */
 const GARAGE_SHIFT = 0.07;
+
+/**
+ * Where the hangar's mech sits for the layout in use, as [right of centre,
+ * above centre] in fractions of the screen: clear of the menu's panels.
+ */
+function garageShift(): [number, number] {
+  if (frame.portrait) return [0, 0.24];
+  if (frame.layout === 'single') return [0.26, 0];
+  if (frame.layout === 'cols') return [0.03, 0];
+  return [GARAGE_SHIFT, 0];
+}
 /** Screens shown over the hangar, with your mech in its bay. */
 const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'room']);
 
@@ -228,6 +242,16 @@ export class Game {
   private attracting = false;
   private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
 
+  /** The on-screen controls (a race played by touch). */
+  private touchPad: TouchControls;
+  /** "Turn your phone sideways": a race on a phone held upright. */
+  private rotateEl: HTMLElement;
+  /** The race was paused because the phone was turned upright: it goes on when it is turned back. */
+  private rotatePaused = false;
+  private heldLandscape = false;
+  /** A finger is the main pointer here (a phone or tablet), whatever was used last. */
+  private coarse = typeof matchMedia === 'function' ? matchMedia('(pointer: coarse)') : null;
+
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement, private opts: GameOptions = {}) {
     this.audio = opts.audio ?? new NullAudio();
     this.renderer = new Renderer(canvas);
@@ -266,10 +290,27 @@ export class Game {
     };
     this.input.rumbleScale = this.tuning.feel.rumble;
     this.applySound();
-    this.input.onDeviceChange = (d) => {
-      this.hud.setDevice(d);
-      this.menus.setDevice(d);
-    };
+    this.touchPad = new TouchControls(document.body);
+    this.touchPad.frameRect = () => frame;
+    this.input.attachTouch(this.touchPad);
+    this.rotateEl = document.createElement('div');
+    this.rotateEl.className = 'rotate-hint';
+    this.rotateEl.hidden = true;
+    this.rotateEl.innerHTML = '<div class="phone"></div><b>Turn your phone sideways</b><span>The race is played in landscape.</span>';
+    document.body.append(this.rotateEl);
+    this.input.onDeviceChange = (d) => this.deviceChanged(d);
+    this.deviceChanged(this.input.device, true);
+    let layout = '';
+    onFrame((f) => {
+      this.touchPad.layout();
+      // A new layout (not just a new size): draw the menu again so the highlight is in view.
+      const now = `${f.layout}|${f.compact}|${f.portrait}`;
+      if (now !== layout && this.menus.screen) this.menus.refresh();
+      layout = now;
+    });
+    document.addEventListener('fullscreenchange', () => {
+      if (this.menus.screen === 'video') this.menus.refresh();
+    });
     this.input.onFirstGesture = () => this.audio.unlock();
     window.addEventListener('resize', () => this.view?.resize());
     document.addEventListener('visibilitychange', () => {
@@ -446,6 +487,22 @@ export class Game {
     this.audio.setMusic('menu');
   }
 
+  /**
+   * A different device in hand: the HUD's hints, the menus' prompts, the
+   * on-screen controls. Picking up the screen changes the layout, so that
+   * waits for the finger to lift: a tap must land on what it was aimed at.
+   */
+  private deviceChanged(d: Device, now = false): void {
+    const apply = () => {
+      if (this.input.device !== d) return;
+      document.documentElement.classList.toggle('touch', d === 'touch');
+      this.hud.setDevice(d);
+      this.menus.setDevice(d);
+    };
+    if (d !== 'touch' || now) apply();
+    else window.addEventListener('pointerup', () => setTimeout(apply, 0), { once: true, capture: true });
+  }
+
   /** The scene behind the menus follows the screen on top: the attract race, or your mech in the hangar. */
   private screenChanged(id: ScreenId | null): void {
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
@@ -500,7 +557,7 @@ export class Game {
     this.setSession(setup, 1, false, true);
     this.garageShown = { team: l.team, role: l.role };
     this.view.cam.mode = 'orbit';
-    this.view.cam.shiftX = GARAGE_SHIFT;
+    [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift();
     this.view.cam.reset();
     const m = this.session.race.mechs[this.session.localId];
     const livery = LIVERIES[l.team] ?? LIVERIES[0];
@@ -1582,7 +1639,62 @@ export class Game {
     }
     this.view.cam.mode = 'orbit';
     this.view.cam.shiftX = 0;
+    this.view.cam.shiftY = 0;
     this.view.cam.clock = 0;
+  }
+
+  /**
+   * Each frame: the on-screen controls (shown in a race played by touch,
+   * matched to what you are doing), a race on a phone held upright (it asks
+   * to be turned, and offline it waits), the right stick scrolling a menu's
+   * text, and the hangar's mech kept clear of the menu's panels.
+   */
+  private touchFrame(dt: number): void {
+    const race = this.session.race;
+    const local = this.session.localId;
+    const me = local >= 0 ? race.mechs[local] : undefined;
+    const touch = this.input.device === 'touch';
+    // A phone held upright during a race: ask for it sideways, and hold the race (online: your computer pilot flies).
+    const handheld = touch || !!this.coarse?.matches;
+    const upright = frame.portrait && handheld;
+    if (upright && this.state === 'race') {
+      this.pause();
+      this.rotatePaused = true;
+    }
+    if (!upright && this.rotatePaused) {
+      this.rotatePaused = false;
+      if (this.state === 'paused' && this.menus.screen === 'pause') this.resume();
+    }
+    if (this.state !== 'paused') this.rotatePaused = false;
+    this.rotateEl.hidden = !(upright && this.rotatePaused);
+    // The controls.
+    const racing = this.state === 'race' && !!me && !upright;
+    this.touchPad.show(touch && racing);
+    if (touch && racing && me) {
+      const battle = me.mode === MODE.BATTLE && me.target >= 0 && !me.retired;
+      const out = me.retired || me.finished || !me.human;
+      const ab = abilityShown(race, me);
+      this.touchPad.setState(out ? 'out' : battle ? 'battle' : 'race', { name: ab.name, icon: ab.icon, ready: ab.ready }, weaponsFree(race) && !out);
+      this.touchPad.countdown = race.phase === PHASE.COUNTDOWN;
+    }
+    // In full screen on a phone, the race holds the screen sideways.
+    const hold = touch && this.state === 'race' && isFullscreen();
+    if (hold !== this.heldLandscape) {
+      this.heldLandscape = hold;
+      holdLandscape(hold);
+    }
+    // The right stick reads a menu's text.
+    if (this.menus.screen && Math.abs(this.input.camY) > 0.05) this.menus.scrollBy(this.input.camY * dt * 900);
+    // The hangar's mech, clear of the panels for the layout in use.
+    if (this.state === 'garage' && this.view.cam.mode === 'orbit') {
+      [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift();
+      this.view.cam.orbitFov = frame.portrait ? 72 : 50;
+    } else this.view.cam.orbitFov = 50;
+  }
+
+  /** Full screen from a tap on the title (a phone: the browser's bars take a lot of a small screen). */
+  enterFullscreenFromTap(): void {
+    if (this.input.device === 'touch' && !isFullscreen()) void setFullscreen(true);
   }
 
   /** Point the camera at the next mech worth watching. */
@@ -1731,6 +1843,8 @@ export class Game {
         for (const e of this.session.events) this.view.handleEvent(e);
         break;
     }
+
+    this.touchFrame(dt);
 
     const cur = this.session.race;
     // Whether this frame is drawn (the anime look's 30 fps option skips every

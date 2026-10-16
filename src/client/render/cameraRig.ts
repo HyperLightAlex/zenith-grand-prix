@@ -52,6 +52,10 @@ export class CameraRig {
    * shift, so the view does not turn.
    */
   shiftX = 0;
+  /** In orbit, how far above centre, as a fraction of the screen's height (a phone held upright: the menu is below). */
+  shiftY = 0;
+  /** In orbit, the lens (degrees, vertical): wider on a phone held upright, so the mech fits above the menu. */
+  orbitFov = 50;
   /**
    * In orbit, circle a fixed frame (the garage's hangar: the mech at its
    * origin facing +Z) instead of following the road, which may bend.
@@ -221,7 +225,7 @@ export class CameraRig {
         trackPoint(track, sub.s - Math.cos(ang) * 17, sub.d - Math.sin(ang) * 15, rise, pos);
         trackPoint(track, sub.s, sub.d, 4.4, look);
       }
-      fov = 50;
+      fov = this.orbitFov;
     }
 
     // ---- punch-in: dart toward what the camera is looking at
@@ -273,13 +277,14 @@ export class CameraRig {
       cam.updateProjectionMatrix();
     }
     const shift = this.mode === 'orbit' ? this.shiftX : 0;
+    const lift = this.mode === 'orbit' ? this.shiftY : 0;
     const view = cam.view;
     // setViewOffset also sets aspect. Keep the viewport's ratio while shifting
     // by a fraction of its width, including after a docked browser is resized.
     const aspect = cam.aspect;
-    if (shift !== 0 && (!view || !view.enabled || view.fullWidth !== aspect || view.offsetX !== -shift * aspect)) {
-      cam.setViewOffset(aspect, 1, -shift * aspect, 0, aspect, 1);
+    if ((shift !== 0 || lift !== 0) && (!view || !view.enabled || view.fullWidth !== aspect || view.offsetX !== -shift * aspect || view.offsetY !== lift)) {
+      cam.setViewOffset(aspect, 1, -shift * aspect, lift, aspect, 1);
     }
-    else if (shift === 0 && view?.enabled) cam.clearViewOffset();
+    else if (shift === 0 && lift === 0 && view?.enabled) cam.clearViewOffset();
   }
 }

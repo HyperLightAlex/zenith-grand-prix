@@ -46,15 +46,20 @@ html, body {
 }
 
 /* The 4:3 picture (a video setting): the scene, the HUD and the menus boxed
-   in the middle of the window, scaled to the box. */
-html.aspect-43 { --fw: min(100vw, calc(100vh * 4 / 3)); --fh: min(100vh, calc(100vw * 3 / 4)); }
+   in the middle of the window, scaled to the box. The box (--fx, --fy, --fw,
+   --fh) and the type size (--ui-em) are worked out in video.ts, which also
+   sets the layout classes everything below keys off:
+     narrow    the frame is 4:3 or narrower
+     compact   not room for the roomy layouts (a phone, a handheld)
+     portrait  taller than wide (menus only: a race asks to be turned)
+     touch     the screen is what was used last (on-screen controls) */
 html.aspect-43 body { background: #000; }
 html.aspect-43 #stage,
 html.aspect-43 .ui,
 html.aspect-43 .crt-layer {
   inset: auto;
-  left: calc((100vw - var(--fw)) / 2);
-  top: calc((100vh - var(--fh)) / 2);
+  left: var(--fx);
+  top: var(--fy);
   width: var(--fw);
   height: var(--fh);
 }
@@ -77,15 +82,15 @@ html.crt-on .crt-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* Everything scales with the short side of the screen... */
-  font-size: clamp(11px, 1.75vmin, 24px);
+  /* Everything scales with the short side of the frame (never under 11 px). */
+  font-size: var(--ui-em, clamp(11px, 1.75vmin, 24px));
+  /* Nothing scrolls the frame itself: only the panes inside it. */
+  overflow: clip;
   font-style: italic;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.01em;
 }
-/* ...or of the 4:3 box. */
-html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px); }
 .ui[hidden] { display: none; }
 
 /* ---- shared pieces ------------------------------------------------------ */
@@ -96,6 +101,7 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
   padding: 0.35em 1.1em;
 }
 
+.key[hidden] { display: none; }
 .key {
   display: inline-block;
   min-width: 1.7em;
@@ -168,6 +174,8 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
   clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%);
   transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
   font-size: 1.05em;
+  /* --i: the row's place, less one (set by the HUD). */
+  transform: translateY(calc(var(--i, 0) * 2.1em));
 }
 .tower .row .pos { font-weight: 800; text-align: center; }
 .tower .row .flag { height: 1.25em; background: var(--team0); transform: skewX(-18deg); }
@@ -213,41 +221,7 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 .mapbox { position: absolute; right: 2em; top: 1.4em; width: 13em; text-align: right; }
 .mapbox canvas { width: 13em; height: 13em; display: block; filter: drop-shadow(0 0.15em 0.2em rgba(15, 21, 36, 0.5)); }
 
-/* ---- HUD: bottom centre, gauges ----------------------------------------- */
-
-.gauges { position: absolute; left: 50%; bottom: 3.9em; transform: translateX(-50%); width: 30em; display: grid; gap: 0.42em; }
-.gauges .line { display: grid; grid-template-columns: 4.6em 1fr 3.2em; align-items: center; gap: 0.7em; }
-.gauges .label { text-align: right; font-weight: 500; font-size: 1.05em; text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.6); }
-.gauges .val { font-size: 1.05em; font-variant-numeric: tabular-nums; text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.6); }
-.gauges .armour .bar { height: 0.95em; }
-.gauges .armour .bar > i.fill { background: var(--paper); }
-.gauges .armour.low .bar > i.fill { background: var(--danger); animation: blink 0.45s steps(2) infinite; }
-.gauges .guard .bar { height: 0.42em; }
-.gauges .guard .bar > i { background: var(--hazard); }
-.gauges .drive .bar { height: 0.7em; }
-.gauges .drive .bar > i { background: var(--charge); }
-.gauges .drive.gain .bar { box-shadow: 0 0 0.9em var(--charge); }
-.gauges .drive .bar::after {
-  /* Quarter marks. */
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), rgba(15, 21, 36, 0.8) calc(25% - 1px), rgba(15, 21, 36, 0.8) 25%);
-}
-@keyframes blink { 50% { opacity: 0.35; } }
-
-/* Cells: three pips, and the ability they pay for. */
-.gauges .cells .cellrow { display: flex; align-items: center; gap: 0.9em; }
-.gauges .cells .pips { display: flex; gap: 0.3em; width: 10.5em; }
-.gauges .cells .pip { position: relative; flex: 1; height: 0.8em; background: rgba(15, 21, 36, 0.72); transform: skewX(-18deg); overflow: hidden; }
-.gauges .cells .pip > i { position: absolute; inset: 0; transform-origin: left center; background: var(--cell); }
-.gauges .cells.gain .pips { animation: cell-gain 0.5s ease-out; }
-.gauges .ability { display: inline-flex; align-items: center; font-size: 1.05em; font-weight: 500; opacity: 0.5; text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.6); white-space: nowrap; }
-.gauges .ability.ready { opacity: 1; font-weight: 700; color: var(--cell); }
-.gauges .ability.ready .key { background: var(--cell); }
-@keyframes cell-gain { 0% { filter: brightness(2.4); transform: scale(1.12); } 100% { filter: none; transform: none; } }
-
-.chips { position: absolute; left: 50%; bottom: 10.6em; transform: translateX(-50%); display: flex; gap: 0.5em; font-size: 1.05em; white-space: nowrap; }
+.chips { position: absolute; left: 50%; bottom: 4.9em; transform: translateX(-50%); display: flex; gap: 0.5em; font-size: 1.05em; white-space: nowrap; }
 .chip { padding: 0.22em 0.9em; background: var(--ink-soft); clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%); }
 .chip.charge { background: var(--charge); color: var(--ink); }
 .chip.draft { background: var(--paper); color: var(--ink); }
@@ -263,27 +237,67 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 @keyframes momentum { from { filter: brightness(1); } to { filter: brightness(1.35); } }
 .chip[hidden] { display: none; }
 
-.hints { position: absolute; left: 50%; bottom: 1.2em; transform: translateX(-50%); display: flex; gap: 1.3em; font-weight: 500; font-size: 1.02em; white-space: nowrap; text-shadow: 0 0.08em 0.1em rgba(15, 21, 36, 0.8); }
+.hints { position: absolute; left: calc(21.5 * var(--ui-em, 1em)); right: calc(29.5 * var(--ui-em, 1em)); bottom: 1.2em; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.45em 1.3em; font-weight: 500; font-size: 1.02em; white-space: nowrap; text-shadow: 0 0.08em 0.1em rgba(15, 21, 36, 0.8); }
 .hints span { display: inline-flex; align-items: center; }
+.hints:empty, .hud .key:empty { display: none; }
 
-/* ---- HUD: bottom right, speed ------------------------------------------- */
-
-.speed { position: absolute; right: 2.2em; bottom: 1.6em; text-align: right; text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.55); }
-.speed .mph { font-size: 7em; font-weight: 800; line-height: 0.82; font-variant-numeric: tabular-nums; }
-.speed .unit { font-size: 1.5em; font-weight: 500; margin-left: 0.25em; }
-.speed .limiter { margin-top: 0.4em; font-size: 1.15em; font-weight: 500; display: inline-block; padding: 0.22em 0.9em; background: var(--ink-soft); clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%); text-shadow: none; }
-.speed .limiter.off { background: var(--charge); color: var(--ink); }
-.speed .limiter.pack { background: var(--paper); color: var(--ink); }
-.speed.boost .mph { color: var(--charge); }
-
-/* Carve meter, over the speed: three skewed segments filling cyan, gold, magenta. */
-.carve { position: absolute; right: 2.2em; bottom: 10.6em; display: flex; align-items: center; gap: 0.7em; opacity: 0; transform: translateX(0.6em); transition: opacity 0.18s, transform 0.18s; --tier: #d8ecff; }
-.carve.on { opacity: 1; transform: none; }
+/* Carve meter, over the dash: three skewed segments filling cyan, gold, magenta. */
+.carve { position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: 0.7em; opacity: 0; transform: translate(0.6em, -50%); transition: opacity 0.18s, transform 0.18s; --tier: #d8ecff; }
+.carve.on { opacity: 1; transform: translate(0, -50%); }
 .carve .label { font-weight: 700; font-size: 1.15em; color: var(--tier); text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.6); min-width: 5.5em; text-align: right; }
 .carve .segs { display: flex; gap: 0.3em; width: 11em; }
 .carve .seg { position: relative; flex: 1; height: 0.75em; background: rgba(15, 21, 36, 0.72); transform: skewX(-18deg); overflow: hidden; }
 .carve .seg > i { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); }
 .carve.burst .segs { filter: drop-shadow(0 0 0.5em var(--tier)); animation: carve-burst 0.35s ease-out; }
+
+/* ---- HUD: bottom right, the dash (dash.ts) ----------------------------------
+   The speed in a dial, Drive wrapped round it and out along the bottom,
+   armour and guard over the tail, Cells over those rising into the dial. The
+   drawing is in the dash's em, so it scales with the type like everything. */
+
+.dash { position: absolute; right: calc(1.6 * var(--ui-em, 1em) + var(--sr, 0px)); bottom: calc(1 * var(--ui-em, 1em) + var(--sb, 0px)); width: 22.2em; height: 9.2em; font-size: 1.15em; pointer-events: none; }
+.dash-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.dash .dial { fill: rgba(15, 21, 36, 0.8); stroke: rgba(243, 245, 250, 0.3); stroke-width: 0.08; }
+.dash .ring-track { fill: none; stroke: rgba(15, 21, 36, 0.74); stroke-width: 1.22; }
+.dash .ring-fill { fill: none; stroke: var(--charge); stroke-width: 0.95; stroke-dasharray: 100 101; }
+.dash.gain .ring-fill { stroke: #8ef8ff; filter: drop-shadow(0 0 0.35px #35f0ff) drop-shadow(0 0 0.35px #35f0ff); }
+.dash.boost .ring-fill { stroke: #c9fcff; }
+.dash.empty .ring-fill { opacity: 0.55; }
+.dash .bar-track { fill: rgba(15, 21, 36, 0.74); }
+.dash .hp-fill, .dash .hp-ghost { transform-box: fill-box; transform-origin: 100% 50%; }
+.dash .hp-fill { fill: var(--paper); }
+.dash .hp-ghost { fill: #ffffff; opacity: 0.55; transition: transform 0.5s ease-out 0.25s; }
+.dash.low .hp-fill { fill: var(--danger); animation: blink 0.45s steps(2) infinite; }
+.dash .cell-track { fill: rgba(243, 245, 250, 0.07); }
+.dash .cell-fill { fill: url(#dash-cell-grad); }
+.dash.cell-gain .cell-fill { animation: cell-flash 0.5s ease-out; }
+@keyframes cell-flash { from { filter: brightness(2.2); } }
+
+/* The HTML over the drawing: anchors at the drawing's points (dash.ts). */
+.dash-at { position: absolute; width: 0; height: 0; }
+.dash-at > * { position: absolute; white-space: nowrap; }
+.dash-at.c > * { left: 0; top: 0; transform: translate(-50%, -50%); }
+.dash-at.r > *:not(.carve) { right: 0; top: 0; transform: translateY(-50%); }
+.dash-at.a > * { left: 0; bottom: 0; }
+.dash-speed { display: flex; flex-direction: column; align-items: center; text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.55); }
+.dash-speed .mph { font-size: 2.85em; font-weight: 800; line-height: 0.86; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.dash-speed .unit { font-size: 0.82em; font-weight: 500; margin-top: 0.12em; opacity: 0.85; }
+.dash.boost .dash-speed .mph { color: var(--charge); }
+.dash-hp { font-size: 0.82em; font-weight: 700; font-variant-numeric: tabular-nums; text-shadow: 0 0.08em 0.1em rgba(15, 21, 36, 0.8); }
+.dash.low .dash-hp { color: var(--danger); }
+.dash-ability { display: inline-flex; align-items: center; padding-bottom: 0.18em; font-size: 0.86em; font-weight: 500; opacity: 0.6; text-shadow: 0 0.08em 0.1em rgba(15, 21, 36, 0.8); }
+.dash-ability .key { font-size: 0.82em; }
+.dash-ability.ready { opacity: 1; font-weight: 700; color: var(--cell); }
+.dash-ability.ready .key { background: var(--cell); }
+.dash .limiter { padding: 0.2em 0.85em; font-size: 0.86em; font-weight: 500; background: var(--ink-soft); clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%); }
+.dash .limiter.off { background: var(--charge); color: var(--ink); }
+.dash .limiter.pack { background: var(--paper); color: var(--ink); }
+
+/* The anime look: inked outlines round every shape, like the show's titles. */
+.hud.anime .dash .dial { fill: rgba(9, 14, 34, 0.84); stroke: #0d1630; stroke-width: 0.2; }
+.hud.anime .dash .ring-track { stroke: #0d1630; stroke-width: 1.3; }
+.hud.anime .dash .bar-track { stroke: #0d1630; stroke-width: 0.16; paint-order: stroke; }
+.hud.anime .dash-ability .ico { width: 1.25em; height: 1.25em; }
 
 /* The charge meter: a heavy held to charge, just under the mech, gold when full. */
 .chargebar { position: absolute; left: 50%; top: 67%; display: flex; flex-direction: column; align-items: center; gap: 0.3em; opacity: 0; transform: translate(-50%, 0.4em); transition: opacity 0.12s, transform 0.12s; pointer-events: none; --charge: #d8ecff; }
@@ -295,6 +309,20 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 .chargebar.full .bar { filter: drop-shadow(0 0 0.5em var(--charge)); animation: carve-burst 0.35s ease-out; }
 .hud.anime .chargebar .bar { border: 0.12em solid #151a26; }
 @keyframes carve-burst { from { transform: scale(1.12); } to { transform: none; } }
+
+/* The guard meter: under the mech, in the charge meter's place, while it matters (hud.ts). */
+.guardbar { position: absolute; left: 50%; top: 67%; display: flex; flex-direction: column; align-items: center; gap: 0.3em; opacity: 0; transform: translate(-50%, 0.4em); transition: opacity 0.15s, transform 0.15s; pointer-events: none; --g: var(--hazard); }
+.guardbar.on { opacity: 1; transform: translate(-50%, 0); }
+.guardbar .label { display: inline-flex; align-items: center; font-weight: 800; font-size: 1.05em; color: var(--g); text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.7); letter-spacing: 0.04em; }
+.guardbar .bar { position: relative; width: 12em; height: 0.7em; background: rgba(15, 21, 36, 0.72); transform: skewX(-18deg); overflow: hidden; box-shadow: 0 0 0 0.1em rgba(15, 21, 36, 0.6); }
+.guardbar .bar > i { position: absolute; inset: 0; background: var(--g); transform-origin: left center; }
+.guardbar.up .bar { box-shadow: 0 0 0 0.12em var(--g), 0 0 0.6em var(--g); }
+.guardbar.low { --g: #ff8a3a; }
+.guardbar.low .bar > i { animation: blink 0.45s steps(2) infinite; }
+.guardbar.broken { --g: var(--danger); }
+.guardbar.broken .bar { animation: carve-burst 0.35s ease-out; }
+.guardbar.parry { --g: #ffffff; }
+.hud.anime .guardbar .bar { border: 0.12em solid #151a26; }
 
 /* ---- HUD: bottom left, tactics ------------------------------------------ */
 
@@ -338,7 +366,7 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 .plate .warn.now { background: #fff; color: var(--ink); transform: scale(1.18); }
 
 /* Support points as they land: above the gauges, newest on top. */
-.awards { position: absolute; left: 50%; bottom: 14.2em; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.25em; pointer-events: none; }
+.awards { position: absolute; left: 50%; bottom: 7.4em; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.25em; pointer-events: none; }
 .award { display: flex; align-items: baseline; gap: 0.4em; padding: 0.1em 0.8em; background: var(--ink-soft); clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%); font-size: 1em; font-weight: 500; animation: award-in 2.4s ease-out forwards; }
 .award b { color: var(--ally); font-weight: 800; }
 .award small { opacity: 0.75; }
@@ -511,7 +539,6 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 .hud.anime .tactics .t .ico { width: 1.05em; height: 1.05em; }
 /* The plays' icons make the pills wider: the diamond opens out so they clear the hub. */
 .hud.anime .tactics { width: 18.5em; }
-.hud.anime .gauges .ability .ico { width: 1.25em; height: 1.25em; }
 .hud.anime .plate .tag .ico { width: 1em; height: 1em; margin-right: 0.25em; vertical-align: -0.15em; }
 .hud.anime .plate .warn .ico, .hud.anime .edgewarn .ico { width: 1em; height: 1em; margin-right: 0.25em; vertical-align: -0.15em; }
 .hud.anime .tower .row .who small .ico { width: 1.05em; height: 1.05em; margin: 0 0 0 0.1em; vertical-align: -0.2em; }
@@ -539,7 +566,7 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 
 /* The big numbers in the countdown's lettering: airbrushed chrome, white
    through sky blue to hot orange, a dark navy outline. */
-.hud.anime .hud-place .num, .hud.anime .hud-place .ord, .hud.anime .speed .mph, .hud.anime .score .pts {
+.hud.anime .hud-place .num, .hud.anime .hud-place .ord, .hud.anime .dash-speed .mph, .hud.anime .score .pts {
   padding: 0 0.12em 0 0.04em;
   background: linear-gradient(180deg, #ffffff 6%, #c4e8ff 34%, #3b8cff 50%, #ff8a1f 58%, #ffc25a 94%);
   -webkit-background-clip: text;
@@ -549,11 +576,14 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
   text-shadow: none;
   filter: drop-shadow(0.04em 0.05em 0 #0d1630);
 }
-.hud.anime .speed.boost .mph { background-image: linear-gradient(180deg, #ffffff 8%, #b6fbff 36%, #23d6f5 52%, #0e8fc4 62%, #7deaff 96%); }
+.hud.anime .dash.boost .dash-speed .mph { background-image: linear-gradient(180deg, #ffffff 8%, #b6fbff 36%, #23d6f5 52%, #0e8fc4 62%, #7deaff 96%); }
 
 /* ---- menus -------------------------------------------------------------- */
 
 .menu { pointer-events: auto; }
+/* A screen's panes and the hangar's side panels: laid out as drawn on a big
+   screen (they are only boxes on a small one, see the end of this file). */
+.menu .panes, .menu .hangar-side { display: contents; }
 .menu .shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(15, 21, 36, 0.86) 0%, rgba(15, 21, 36, 0.55) 46%, rgba(15, 21, 36, 0) 78%); }
 .menu .shade.full { background: rgba(15, 21, 36, 0.8); }
 .menu .col { position: absolute; left: 5.5em; top: 0; bottom: 0; width: 34em; display: flex; flex-direction: column; justify-content: center; gap: 1.1em; }
@@ -594,9 +624,10 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
   transition: transform 0.12s ease-out;
 }
 .item small { font-size: 0.62em; font-weight: 500; opacity: 0.8; }
-.item .choice { font-size: 0.8em; font-weight: 500; }
-.item .choice::before { content: '‹ '; opacity: 0.6; }
-.item .choice::after { content: ' ›'; opacity: 0.6; }
+.item .choice { font-size: 0.8em; font-weight: 500; white-space: nowrap; }
+.item .choice .arr { font-style: normal; opacity: 0.6; cursor: pointer; }
+.item .choice .arr.l { margin-right: 0.3em; }
+.item .choice .arr.r { margin-left: 0.3em; }
 .item.sel { background: var(--paper); color: var(--ink); transform: translateX(0.8em); }
 .item.sel::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0.5em; background: var(--signal); }
 .item.go.sel { background: var(--signal); }
@@ -642,7 +673,7 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 .controls .rowc .keys { display: flex; flex-wrap: wrap; align-items: center; row-gap: 0.2em; white-space: nowrap; }
 .controls .rowc .keys .word { margin-right: 0.3em; }
 
-.results { position: absolute; left: 5.5em; right: 5.5em; top: 50%; transform: translateY(-50%); }
+.results { position: absolute; left: 5.5em; right: 5.5em; top: 50%; transform: translateY(-50%); max-height: calc(100% - 3em); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .results .headline { font-size: 5em; font-weight: 800; line-height: 0.9; }
 .results .headline .pts { color: var(--signal); }
 .results .subline { font-size: 1.5em; font-weight: 500; margin-top: 0.35em; }
@@ -882,15 +913,14 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
   .menu.anime .col, .menu.anime .kit, .menu.anime .controls, .menu.anime .bay, .menu.anime .ec-pause, .menu.anime .item.sel > span:first-child::after { animation: none; }
 }
 
-/* Narrow or short screens: drop the secondary panels. */
-html.narrow .tower { display: none; }
-html.narrow .comms { bottom: 12.4em; width: 18em; }
-html.narrow .mapbox, html.narrow .mapbox canvas { width: 9em; height: 9em; }
-html.narrow .gauges { width: 22em; }
-html.narrow .menu .col { left: 2em; width: calc(100% - 4em); }
-html.narrow .controls, html.narrow .results { left: 2em; right: 2em; }
-html.narrow .menu .kit, html.narrow .menu .crew { display: none; }
-html.narrow .controls .grid { grid-template-columns: 1fr; }
+/* A narrow frame with room to spare (a 4:3 tablet, a 4:3 picture on a
+   monitor): the big layouts, a little tighter. Small screens and upright
+   ones have their own layouts at the end of this file. */
+html.narrow:not(.compact):not(.portrait) .comms { bottom: 12.4em; width: 18em; }
+html.narrow:not(.compact):not(.portrait) .mapbox, html.narrow:not(.compact):not(.portrait) .mapbox canvas { width: 9em; height: 9em; }
+html.narrow:not(.compact):not(.portrait) .hints { font-size: 0.92em; column-gap: 1em; }
+html.narrow:not(.compact):not(.portrait) .controls, html.narrow:not(.compact):not(.portrait) .results { left: 2em; right: 2em; }
+html.narrow:not(.compact):not(.portrait) .controls .grid { grid-template-columns: 1fr; }
 
 /* ---- tuning panel -------------------------------------------------------- */
 
@@ -979,7 +1009,7 @@ html.narrow .controls .grid { grid-template-columns: 1fr; }
 /* Where you came from and why: above the heading of every pre-race screen. */
 .menu .context { font-size: 1.1em; font-weight: 600; letter-spacing: 0.04em; color: var(--signal); }
 .item.locked { opacity: 0.55; }
-.item.locked .choice::before, .item.locked .choice::after { content: ''; }
+.item.locked .choice .arr { visibility: hidden; }
 .item.locked.sel { opacity: 0.8; }
 .item small { display: block; margin-top: 0.15em; }
 .list .item { flex-wrap: wrap; }
@@ -1064,9 +1094,9 @@ html.narrow .controls .grid { grid-template-columns: 1fr; }
 .menu .side-head span { margin-left: auto; font-size: 0.7em; font-weight: 500; opacity: 0.75; }
 .menu .side-head .emb { width: 1.5em; height: 1.5em; margin: 0; }
 .menu .side-head { padding: 0.1em 0.4em; }
-.menu .side-head .arrow { font-style: normal; font-weight: 500; opacity: 0.6; margin: 0 0.25em; display: none; }
+.menu .side-head .arr { font-style: normal; font-weight: 500; opacity: 0.6; margin: 0 0.25em; display: none; }
 .menu .side-head.pick { cursor: pointer; }
-.menu .side-head.pick .arrow { display: inline; }
+.menu .side-head.pick .arr { display: inline; }
 .menu .side-head.sel { background: var(--paper); color: var(--ink); }
 .menu .seats { display: grid; gap: 0.3em; }
 .menu .seat {
@@ -1096,10 +1126,522 @@ html.narrow .controls .grid { grid-template-columns: 1fr; }
 .menu .matchcard b { font-weight: 800; }
 .menu .room-hint { font-size: 1.05em; opacity: 0.75; margin-top: -0.3em; }
 
-html.narrow .menu .panel.standings, html.narrow .menu .panel.squad { position: static; transform: none; width: auto; margin: 1em 3em; }
-html.narrow .menu .room { left: 1em; right: 1em; }
-html.narrow .menu .room .bottom { grid-template-columns: 1fr; }
+html.narrow:not(.compact):not(.portrait) .menu .room { left: 1.5em; right: 1.5em; }
 
 .tune .tune-note { margin: 0.3em 0 0.5em; padding: 0.4em 0.7em; background: rgba(255, 201, 58, 0.15); color: var(--hazard); font-size: 0.95em; font-weight: 600; }
 .tune .tune-note[hidden] { display: none; }
 .menu.anime[data-screen='garage'] .context { color: var(--phos); text-shadow: var(--glow); }
+
+/* ==== Small screens, upright screens, touch ==================================
+   The roomy layouts above are drawn for a frame about 57 lines of type tall.
+   video.ts decides the rest (see the classes at the top of this file):
+
+     html.lay-cols    the menus' panes side by side, each scrolling
+                      (a phone sideways, a 4:3 tablet or picture)
+     html.lay-single  the panes in one column that scrolls
+                      (a handheld's 4:3 screen, a 4:3 picture on a phone,
+                      a phone upright)
+     html.compact     smaller headings, items and HUD: about 35 to 45 lines
+     html.touch       bigger targets, the bottom bar as buttons, the
+                      on-screen controls in a race
+
+   The highlight scrolls its pane (Menus.reveal); so do a finger, the mouse
+   wheel and the right stick. --sl --sr --st --sb are the screen's unsafe
+   edges inside the frame (a notch). */
+
+/* ---- the menus: panes ---------------------------------------------------- */
+
+html.lay-cols .menu, html.lay-single .menu { --foot: 3.4em; --gut: 1.5em; }
+html.touch.lay-cols .menu, html.touch.lay-single .menu { --foot: 4.6em; }
+
+html.lay-cols .menu .panes,
+html.lay-single .menu .panes {
+  position: absolute;
+  left: calc(var(--gut) + var(--sl, 0px));
+  right: calc(var(--gut) + var(--sr, 0px));
+  top: calc(0.9em + var(--st, 0px));
+  bottom: calc(var(--foot) + var(--sb, 0px));
+  touch-action: pan-y;
+}
+/* Every pane leaves its place on the big screen. */
+html.lay-cols .menu .panes > :is(.col, .hangar-side, .panel, .controls, .results, .room),
+html.lay-single .menu .panes > :is(.col, .hangar-side, .panel, .controls, .results, .room) {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  transform: none;
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+html.lay-cols .menu .panes > .col, html.lay-single .menu .panes > .col { justify-content: flex-start; }
+html.lay-cols .menu .panes > .hangar-side, html.lay-single .menu .panes > .hangar-side { display: flex; flex-direction: column; gap: 0.9em; }
+html.lay-cols .menu .hangar-side > :is(.kit, .crew), html.lay-single .menu .hangar-side > :is(.kit, .crew) { position: static; width: auto; }
+/* In a pane the highlight does not step sideways (it would run past the pane's edge). */
+html.lay-cols .item.sel, html.lay-single .item.sel { transform: none; }
+
+/* Side by side: each pane scrolls on its own. */
+html.lay-cols .menu .panes {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 34em);
+  grid-template-rows: minmax(0, 1fr);
+  justify-content: space-between;
+  align-items: center;
+  column-gap: 1.8em;
+}
+html.lay-cols .menu .panes > :is(.col, .hangar-side, .panel, .controls, .results, .room) {
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+/* One column: the whole lot scrolls, centred while it fits (the spacers give way when it does not). */
+html.lay-single .menu .panes {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+html.lay-single .menu .panes::before, html.lay-single .menu .panes::after { content: ''; flex: 1 1 0; }
+html.lay-single .menu .panes > * { flex: none; }
+/* On a sideways screen the one column keeps to the left, clear of the hangar's mech. */
+html.lay-single:not(.portrait) .menu .panes { right: auto; width: min(36em, 100% - 2 * var(--gut)); }
+html.lay-single:not(.portrait) .menu:is([data-screen='room'], [data-screen='results'], [data-screen='controls']) .panes { right: calc(var(--gut) + var(--sr, 0px)); width: auto; }
+
+/* The bottom bar, in a strip of its own under the panes. */
+html.lay-cols .menu .footer-hints,
+html.lay-single .menu .footer-hints {
+  left: calc(var(--gut) + var(--sl, 0px));
+  right: calc(var(--gut) + var(--sr, 0px));
+  bottom: calc(0.85em + var(--sb, 0px));
+  gap: 1.2em;
+  overflow: hidden;
+  white-space: nowrap;
+}
+html.lay-cols .menu .toast, html.lay-single .menu .toast { bottom: calc(var(--foot) + 0.6em + var(--sb, 0px)); max-width: calc(100% - 3em); }
+
+/* Dialogs: centred over the panes, scrolling if they must. */
+html.lay-cols .menu :is(.dialog, .entry),
+html.lay-single .menu :is(.dialog, .entry) {
+  top: calc((100% - var(--foot)) / 2);
+  width: min(40em, 100% - 2.4em);
+  max-height: calc(100% - var(--foot) - 1.4em);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+/* Screen by screen, side by side. */
+html.lay-cols .menu[data-screen='garage'] .panes { grid-template-columns: minmax(0, 30em) minmax(0, 24em); align-items: end; }
+html.lay-cols .menu:is([data-screen='room'], [data-screen='results'], [data-screen='controls']) .panes { grid-template-columns: minmax(0, 1fr); }
+html.lay-cols .menu:is([data-screen='briefing'], [data-screen='standings'], [data-screen='award'], [data-screen='online']) .panes { grid-template-columns: minmax(0, 30em) minmax(0, 34em); }
+/* The hangar sits low, its panels on the floor either side of the mech. */
+html.lay-single .menu[data-screen='garage'] .panes::after { display: none; }
+
+/* The big screen's pieces that do not fit a small one. */
+html.lay-cols .menu.anime .logo .logo-art, html.lay-single .menu.anime .logo .logo-art { margin-left: 0; }
+html.lay-cols .menu .small-print, html.lay-single .menu .small-print { left: calc(var(--gut) + var(--sl, 0px)); bottom: calc(0.6em + var(--sb, 0px)); }
+html.lay-cols .menu .bay, html.lay-single .menu .bay { display: none; }
+
+/* The room: one pane, its teams side by side while there is room. */
+html.lay-cols .menu .panes > .room, html.lay-single .menu .panes > .room { display: flex; flex-direction: column; gap: 0.7em; align-self: stretch; }
+html.lay-cols .menu .room .bottom, html.lay-single .menu .room .bottom { margin-top: 0; }
+html.lay-single .menu .room .bottom { grid-template-columns: 1fr; gap: 0.8em; }
+html.portrait .menu .room .sides { grid-template-columns: 1fr; gap: 1em; }
+
+/* The results: the table scrolls, the buttons stay at the bottom. */
+html.lay-cols .menu .panes > .results, html.lay-single .menu .panes > .results { align-self: stretch; }
+.menu .results .list {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 0.8em;
+  padding: 0.6em 0 0.2em;
+  background: linear-gradient(rgba(15, 21, 36, 0), rgba(15, 21, 36, 0.94) 35%);
+}
+html.lay-single .menu .panes:has(> .results)::before, html.lay-single .menu .panes:has(> .results)::after { display: none; }
+
+/* The controls: the anime screen opens from the middle of its own box. */
+html.lay-cols .menu.anime .panes > .controls, html.lay-single .menu.anime .panes > .controls { animation-name: crt-on; }
+html.lay-cols .menu .panes > .controls, html.lay-single .menu .panes > .controls { align-self: stretch; }
+
+/* Upright: everything stacks, low on the screen; the shade rises from the bottom. */
+html.portrait .menu .panes { gap: 1.1em; }
+html.portrait .menu .panes::after { display: none; }
+html.portrait .menu .shade { background: linear-gradient(0deg, rgba(15, 21, 36, 0.92) 0%, rgba(15, 21, 36, 0.72) 50%, rgba(15, 21, 36, 0.2) 100%); }
+html.portrait .menu.anime[data-screen='garage'] .shade { background: linear-gradient(0deg, rgba(3, 9, 18, 0.7) 0%, rgba(3, 9, 18, 0) 60%); }
+html.portrait .menu .shade.full { background: rgba(15, 21, 36, 0.86); }
+html.portrait .menu.anime .shade.title { background: linear-gradient(0deg, rgba(10, 18, 52, 0.75) 0%, rgba(10, 18, 52, 0.25) 55%, rgba(10, 18, 52, 0) 100%); }
+html.portrait .menu.anime .cover { object-position: 18% 50%; }
+html.portrait .menu .controls .grid { grid-template-columns: 1fr; }
+html.portrait .menu .results th:nth-child(5), html.portrait .menu .results td:nth-child(5),
+html.portrait .menu .results th:nth-child(6), html.portrait .menu .results td:nth-child(6),
+html.portrait .menu .results th:nth-child(7), html.portrait .menu .results td:nth-child(7),
+html.portrait .menu .results th:nth-child(9), html.portrait .menu .results td:nth-child(9) { display: none; }
+
+/* ---- the menus: type and spacing for a small screen ---------------------- */
+
+html.compact .menu h1 { font-size: 2.6em; }
+html.compact .menu p { font-size: 1.1em; }
+html.compact .menu .context { font-size: 1em; }
+html.compact .menu .col { gap: 0.75em; }
+html.compact .list { gap: 0.28em; margin-top: 0.35em; }
+html.compact .item { font-size: 1.38em; padding: 0.36em 1.2em 0.42em 1.05em; }
+html.compact .menu .col.modes .item { font-size: 1.55em; }
+html.compact .menu .col.modes .item small { font-size: 0.56em; }
+html.compact .match-blurb { font-size: 1em; }
+html.compact .menu .footer-hints { font-size: 1em; }
+html.compact .menu .toast { font-size: 1.05em; }
+
+/* Title. */
+html.compact .logo .a { font-size: 5.6em; }
+html.compact .logo .b { font-size: 1.9em; }
+html.compact .logo .rule { width: 13em; margin-top: 0.6em; }
+html.compact .menu.anime .logo .logo-art { width: 21em; margin-left: 0; }
+html.compact .tagline { font-size: 1.2em; max-width: 24em; }
+html.compact .press { font-size: 1.35em; margin-top: 0.5em; }
+html.compact .sound-hint { font-size: 0.95em; }
+html.compact .menu .small-print { font-size: 0.85em; }
+
+/* The hangar computer. */
+html.compact .menu.anime[data-screen='garage'] .col { padding: 0.75em 1.15em 0.95em; gap: 0.5em; }
+html.compact .menu.anime .hh-bar { font-size: 0.9em; }
+html.compact .menu.anime .hh-name { margin-top: 0.4em; }
+html.compact .menu.anime .hh-name > i { width: 2.4em; height: 2.4em; }
+html.compact .menu.anime .hh-name > b { font-size: 2.5em; }
+html.compact .menu.anime .hh-name > span { font-size: 1.05em; }
+html.compact .menu.anime .hh-pilot i { width: 3.9em; height: 3.9em; }
+html.compact .menu.anime .hh-pilot span { font-size: 1em; }
+html.compact .menu.anime[data-screen='garage'] p { font-size: 1em; }
+html.compact .menu[data-screen='garage'] .item { font-size: 1.25em; padding-top: 0.28em; padding-bottom: 0.32em; }
+html.compact .menu[data-screen='garage'] .frame-info .stat { font-size: 0.95em; }
+html.compact .menu .kit, html.compact .menu.anime[data-screen='garage'] .kit { font-size: 0.98em; padding: 0.75em 1.1em 0.85em; }
+html.compact .menu .crew, html.compact .menu.anime[data-screen='garage'] .crew { font-size: 0.98em; padding: 0.65em 1.1em 0.75em; }
+
+/* Panels, tables and cards. */
+html.compact .menu .panel { padding: 0.75em 1.05em 0.85em; }
+html.compact .gptable { font-size: 1em; }
+html.compact .versus { font-size: 1.5em; }
+html.compact .fixtures { font-size: 1em; }
+html.compact .medal { width: 4em; height: 4em; }
+html.compact .menu .bay-card { padding: 0.4em 0.7em; }
+html.compact .menu .bay-card b { font-size: 1.2em; }
+html.compact .menu .face { width: 2.7em; height: 2.7em; }
+html.compact .menu .bay-card { grid-template-columns: 2.9em 1fr; }
+
+/* Pause. */
+html.compact .menu.anime .ec-pause { margin: 0 0 0.6em 0.4em; padding: 0.7em 1.5em 0.85em 1.15em; }
+html.compact .menu.anime .ec-pause .ec-kick { font-size: 0.95em; }
+html.compact .menu.anime .ec-pause img { width: 13em; }
+
+/* Controls. */
+html.compact .menu .controls h1 { font-size: 2.3em; }
+html.compact .menu.anime .controls { padding: 1em 1.4em 1.2em; }
+html.compact .menu .controls h2 { font-size: 1.25em; margin-top: 0.6em; }
+html.compact .menu .controls .grid { gap: 0.15em 2em; margin-top: 0.4em; }
+html.compact .menu .controls .rowc { font-size: 0.98em; grid-template-columns: minmax(0, 1fr) 7.5em 7.5em; }
+html.compact .menu .controls .grid.touch .rowc { grid-template-columns: minmax(0, 1fr) 11em 7em; }
+html.lay-single .menu .controls .grid { grid-template-columns: 1fr; }
+.controls .grid.touch .rowc { grid-template-columns: 1fr 13em 8em; }
+.controls .rowc .keys .word { white-space: normal; }
+
+/* Results. */
+html.compact .menu .results .headline { font-size: 2.7em; }
+html.compact .menu .results .subline { font-size: 1.1em; }
+html.compact .matchstrip { font-size: 1em; gap: 1.2em; flex-wrap: wrap; margin-top: 0.6em; }
+html.compact .menu .results table { font-size: 1em; margin-top: 0.7em; }
+html.compact .menu .results td.pts { font-size: 1.05em; }
+html.compact .menu .results .supportlist { font-size: 0.92em; }
+html.compact .menu .results .supportlist .who { min-width: 8em; }
+html.compact .menu .results .item { font-size: 1.25em; }
+html.compact:not(.portrait) .menu .results th:nth-child(5), html.compact:not(.portrait) .menu .results td:nth-child(5),
+html.compact:not(.portrait) .menu .results th:nth-child(7), html.compact:not(.portrait) .menu .results td:nth-child(7) { display: none; }
+
+/* The room. */
+html.compact .menu .roombar { font-size: 1em; gap: 1.2em; flex-wrap: wrap; padding: 0.4em 0.8em; }
+html.compact .menu .roombar b { font-size: 1.3em; }
+html.compact .menu .sides { gap: 1.2em; }
+html.compact .menu .side-head { font-size: 1.15em; }
+html.compact .menu .seat { font-size: 0.95em; grid-template-columns: 1.8em 2.4em minmax(0, 1fr) auto; gap: 0.5em; padding: 0.3em 0.6em; }
+html.compact .menu .seat .face { width: 2.4em; height: 2.4em; }
+html.compact .menu .seat .who b { font-size: 1.15em; }
+html.compact .menu .room .settings-panel .item, html.compact .menu .room .actions-panel .item { font-size: 1.15em; }
+html.compact .menu .room-hint { font-size: 0.92em; margin-top: 0; }
+html.compact .menu .matchcard { font-size: 1em; flex-wrap: wrap; gap: 0.8em; }
+
+/* Dialogs. */
+html.compact .menu .dialog h2, html.compact .menu .entry h2 { font-size: 1.7em; }
+html.compact .menu .dialog .list .item, html.compact .menu .entry .list .item { font-size: 1.25em; }
+html.compact .menu .entry .field { font-size: 1.7em; }
+html.compact .menu .keygrid .k { font-size: 1.1em; padding: 0.28em 0; }
+html.compact .menu .invite .code { font-size: 3em; }
+
+/* ---- the menus by touch ---------------------------------------------------- */
+
+/* Rows a thumb can hit, and arrows on a choice you can tap. */
+html.touch .item { padding-top: 0.62em; padding-bottom: 0.68em; }
+html.touch .menu[data-screen='garage'] .item { padding-top: 0.5em; padding-bottom: 0.55em; }
+html.touch .item .choice .arr { display: inline-block; padding: 0.3em 0.55em; margin: -0.3em 0; opacity: 0.9; }
+html.touch .item .choice .arr.l { margin-right: 0; }
+html.touch .item .choice .arr.r { margin-left: 0; }
+html.touch .menu .side-head .arr { padding: 0.2em 0.45em; }
+html.touch .item.sel { transform: none; }
+html.touch .menu .seat { padding-top: 0.45em; padding-bottom: 0.45em; }
+/* The bottom bar's prompts are buttons. */
+html.touch .menu .footer-hints { gap: 0.7em; }
+html.touch .menu .footer-hints .prompt.clickable {
+  padding: 0.6em 1.4em 0.66em;
+  background: var(--ink-soft);
+  clip-path: polygon(0.55em 0, 100% 0, calc(100% - 0.55em) 100%, 0 100%);
+  font-size: 1.15em;
+  font-weight: 700;
+}
+html.touch .menu .footer-hints .prompt.clickable:active { background: var(--paper); color: var(--ink); }
+html.touch .menu.anime .footer-hints .prompt.clickable { background: rgba(3, 9, 18, 0.82); }
+
+/* ---- the race HUD on a small screen ------------------------------------------
+   Same pieces, same places, about two thirds the size: place and standings
+   top left, the score top centre, the map top right, the dash in the bottom
+   right corner (between the thumbs when the corner is the touch buttons').
+   Offsets that would scale with a piece's own type size are
+   given in frame type (--ui-em) instead. */
+
+
+html.compact .hud .hud-place { left: calc(1em + var(--sl, 0px)); top: calc(0.7em + var(--st, 0px)); gap: 0.55em; }
+html.compact .hud .hud-place .num { font-size: 3.7em; }
+html.compact .hud .hud-place .ord { font-size: 1.3em; }
+html.compact .hud .hud-place .of { font-size: 1em; }
+html.compact .hud .hud-lap { gap: 0.2em; padding-bottom: 0.1em; }
+html.compact .hud .hud-lap .lapnum { font-size: 1.35em; }
+html.compact .hud .hud-lap .phase { font-size: 0.88em; padding: 0.18em 0.75em; }
+
+html.compact .hud .tower { left: calc(1em + var(--sl, 0px)); top: calc(5em + var(--st, 0px)); width: 13.4em; height: 9em; }
+html.compact .hud .tower .row {
+  height: 1.5em;
+  font-size: 0.86em;
+  gap: 0.35em;
+  padding: 0 0.55em 0 0.35em;
+  grid-template-columns: 1.2em 0.36em minmax(0, 1fr) 1.8em 2.9em;
+  transform: translateY(calc(var(--i, 0) * 1.68em));
+}
+html.compact .hud.anime .tower .row { grid-template-columns: 1.2em 1.1em minmax(0, 1fr) 1.8em 2.9em; }
+html.compact .hud.anime .tower .row .flag { height: 1.25em; }
+html.compact .hud .tower .row .hp { height: 0.3em; }
+
+html.compact .hud .score { top: calc(0.7em + var(--st, 0px)); font-size: 0.8em; }
+html.compact .hud .score .side { padding: 0.22em 0.85em; gap: 0.45em; }
+html.compact .hud .score .side .pts { font-size: 2em; }
+html.compact .hud .score .mid { padding: 0 0.55em; }
+html.compact .hud.anime .score .emblem { width: 1.9em; height: 1.9em; }
+html.compact.narrow .hud .score .side .name { display: none; }
+html.compact .hud .matchline { top: calc(3.05 * var(--ui-em) + var(--st, 0px)); font-size: 0.78em; max-width: calc(100% - 34 * var(--ui-em)); overflow: hidden; text-overflow: ellipsis; }
+
+html.compact .hud .mapbox { right: calc(1em + var(--sr, 0px) + var(--tc-tr, 0px)); top: calc(0.5em + var(--st, 0px)); width: 7.6em; }
+html.compact .hud .mapbox canvas { width: 7.6em; height: 7.6em; }
+
+
+html.compact .hud .hints { left: calc(15 * var(--ui-em) + var(--sl, 0px)); right: calc(20.5 * var(--ui-em) + var(--sr, 0px)); bottom: calc(0.45 * var(--ui-em) + var(--sb, 0px)); font-size: 0.8em; gap: 0.35em 0.9em; }
+html.compact .hud .chips { bottom: calc(2.5 * var(--ui-em) + var(--sb, 0px)); font-size: 0.8em; gap: 0.35em; }
+html.compact .hud .awards { bottom: calc(4.6 * var(--ui-em) + var(--sb, 0px)); font-size: 0.85em; }
+html.compact .hud .dash { font-size: 0.86em; right: calc(0.8 * var(--ui-em) + var(--sr, 0px)); bottom: calc(0.5 * var(--ui-em) + var(--sb, 0px)); }
+
+html.compact .hud .chargebar, html.compact .hud .guardbar { font-size: 0.85em; }
+
+html.compact .hud .tactics { left: calc(1 * var(--ui-em) + var(--sl, 0px)); bottom: calc(0.6 * var(--ui-em) + var(--sb, 0px)); width: 14em; height: 7em; font-size: 0.8em; }
+html.compact .hud.anime .tactics { width: 16.8em; }
+
+html.compact .hud .comms { left: calc(1 * var(--ui-em) + var(--sl, 0px)); bottom: calc(7 * var(--ui-em) + var(--sb, 0px)); width: 18em; font-size: 0.82em; }
+html.compact .hud .comms .msg:nth-last-child(n + 3) { display: none; }
+html.compact .hud.anime .comms .msg .pilot { width: 2.6em; height: 2.6em; }
+
+html.compact .hud .target { right: calc(1 * var(--ui-em) + var(--sr, 0px)); top: calc(8.8 * var(--ui-em) + var(--st, 0px)); width: 12.5em; padding: 0.45em 0.8em 0.55em; font-size: 0.85em; gap: 0.3em; }
+html.compact .hud .target .name { font-size: 1.3em; }
+html.compact .hud.anime .target { grid-template-columns: 3.8em 1fr; width: 16em; column-gap: 0.6em; }
+html.compact .hud.anime .target .pilot { width: 3.8em; height: 3.8em; }
+
+html.compact .hud .banner { top: 24%; }
+html.compact .hud .banner .strip { padding: 0.35em 3em 0.42em; }
+html.compact .hud .banner .strip::before, html.compact .hud .banner .strip::after { width: 2em; }
+html.compact .hud .banner .big { font-size: 2.6em; }
+html.compact .hud .banner .small { font-size: 1.05em; }
+html.compact .hud .banner.anime .strip { padding: 0.6em 6% 0.75em 12%; }
+html.compact .hud .banner.anime .big { font-size: 3.1em; }
+html.compact .hud .banner.anime .kick { font-size: 0.95em; }
+html.compact .hud .banner.anime .small { font-size: 1.1em; }
+html.compact .hud .count { top: 26%; font-size: 9em; }
+html.compact .hud .notice { top: 62%; font-size: 1.15em; }
+html.compact .hud .retired { top: calc(4.8 * var(--ui-em) + var(--st, 0px)); }
+html.compact .hud .retired .big { font-size: 2em; }
+html.compact .hud .retired .small { font-size: 1em; }
+html.compact .hud .plate { font-size: 0.82em; }
+html.compact .hud .edgewarn { font-size: 1em; }
+html.compact .hud .reticle { font-size: 0.8em; }
+
+/* ---- the race HUD with the touch controls up ------------------------------
+   The bottom corners are the thumbs': no key hints, no plays diamond (the
+   Team button has them), the dash between the thumbs, the radio higher, and
+   everything at the bottom centred in what the buttons leave. */
+
+html.touch .hud .hints, html.touch .hud .tactics { display: none; }
+html.touch .hud { --mid: calc((100% - var(--tc-br-w, 0px)) / 2); }
+html.touch .hud .dash { right: auto; left: var(--mid); transform: translateX(-50%); }
+/* Your own gauges stack between the thumbs: the dash, the guard or charge
+   meter right over it (just under your mech with the chase camera), then the
+   support points as they land. The status chips go up under the score. */
+html.touch .hud .chips { left: 50%; bottom: auto; top: calc(7.3 * var(--ui-em) + var(--st, 0px)); }
+html.touch.compact .hud .chips { top: calc(4.65 * var(--ui-em) + var(--st, 0px)); }
+html.touch .hud :is(.guardbar, .chargebar) { left: var(--mid); top: auto; bottom: calc(12.2 * var(--ui-em) + var(--sb, 0px)); }
+html.touch.compact .hud :is(.guardbar, .chargebar) { bottom: calc(8.9 * var(--ui-em) + var(--sb, 0px)); }
+html.touch .hud .awards { left: var(--mid); bottom: calc(15.4 * var(--ui-em) + var(--sb, 0px)); }
+html.touch.compact .hud .awards { bottom: calc(11.7 * var(--ui-em) + var(--sb, 0px)); }
+html.touch .hud .comms { bottom: calc(38% + var(--sb, 0px)); }
+html.touch .hud .mapbox { right: calc(2em + var(--tc-tr, 0px)); }
+html.touch.compact .hud .mapbox { right: calc(1em + var(--sr, 0px) + var(--tc-tr, 0px)); }
+
+/* ---- the touch controls ------------------------------------------------------
+   Over the whole window, outside the frame: a stick where the left thumb
+   lands (resting bottom left until then), the buttons in an arc under the
+   right thumb. --u is a button's size (touch.ts). */
+
+.touchpad {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  color: var(--paper);
+  font-family: 'Barlow Condensed', 'DIN Condensed', 'Arial Narrow', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  --u: 52px;
+}
+.touchpad[hidden] { display: none; }
+.touchpad .tzone { position: absolute; left: 0; top: 16%; bottom: 0; width: 46%; pointer-events: auto; touch-action: none; }
+.touchpad .tbase {
+  position: absolute;
+  left: calc(env(safe-area-inset-left, 0px) + 1.8 * var(--u));
+  top: calc(100% - env(safe-area-inset-bottom, 0px) - 1.8 * var(--u));
+  width: calc(2.3 * var(--u));
+  height: calc(2.3 * var(--u));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(243, 245, 250, 0.3);
+  background: radial-gradient(circle, rgba(15, 21, 36, 0.12) 40%, rgba(15, 21, 36, 0.36));
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.touchpad .tbase.on { opacity: 1; border-color: rgba(243, 245, 250, 0.55); transition: none; }
+.touchpad .tknob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(1.05 * var(--u));
+  height: calc(1.05 * var(--u));
+  margin: calc(-0.525 * var(--u)) 0 0 calc(-0.525 * var(--u));
+  border-radius: 50%;
+  background: rgba(243, 245, 250, 0.85);
+  box-shadow: 0 0 0 2px rgba(15, 21, 36, 0.45), 0 0.15em 0.6em rgba(15, 21, 36, 0.4);
+}
+
+.touchpad .tbtn {
+  position: absolute;
+  /* right and bottom (set in touch.ts) are the button's centre. */
+  transform: translate(50%, 50%);
+  width: calc(0.98 * var(--u));
+  height: calc(0.98 * var(--u));
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12em;
+  padding: 0 0.15em;
+  background: rgba(15, 21, 36, 0.6);
+  border: 2px solid rgba(243, 245, 250, 0.55);
+  box-shadow: 0 0.1em 0.5em rgba(15, 21, 36, 0.35);
+  font-size: calc(0.22 * var(--u));
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: auto;
+  touch-action: none;
+  transition: transform 0.06s, background-color 0.06s;
+}
+.touchpad .tbtn.big { width: calc(1.45 * var(--u)); height: calc(1.45 * var(--u)); font-size: calc(0.27 * var(--u)); background: rgba(255, 122, 26, 0.85); color: var(--ink); border-color: rgba(255, 255, 255, 0.7); }
+.touchpad .tbtn.small { width: calc(0.74 * var(--u)); height: calc(0.74 * var(--u)); font-size: calc(0.18 * var(--u)); gap: 0.05em; }
+.touchpad .tbtn.held { background: var(--paper); color: var(--ink); transform: translate(50%, 50%) scale(0.92); }
+.touchpad .tbtn.dim { opacity: 0.4; }
+.touchpad .tbtn.dim.held { opacity: 0.7; }
+.touchpad .tico { display: block; width: 1.5em; height: 1.5em; background: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
+.touchpad .tbtn.noico .tico { display: none; }
+.touchpad .tbtn.small .tico { width: 1.3em; height: 1.3em; }
+
+.touchpad .tpause {
+  top: calc(env(safe-area-inset-top, 0px) + 0.3 * var(--u));
+  right: calc(env(safe-area-inset-right, 0px) + 0.3 * var(--u));
+  width: calc(0.8 * var(--u));
+  height: calc(0.8 * var(--u));
+  transform: none;
+}
+.touchpad .tpause:active { background: var(--paper); }
+.touchpad .tbars { width: 0.3em; height: 0.9em; border-left: 0.22em solid currentColor; border-right: 0.22em solid currentColor; box-sizing: content-box; font-size: calc(0.36 * var(--u)); }
+
+/* The team plays: a row over the buttons, open while you choose. */
+.touchpad .tplays { position: absolute; display: flex; gap: calc(0.18 * var(--u)); pointer-events: auto; }
+.touchpad .tplays[hidden] { display: none; }
+.touchpad .tplay {
+  position: static;
+  transform: none;
+  width: auto;
+  height: calc(0.82 * var(--u));
+  border-radius: calc(0.41 * var(--u));
+  flex-direction: row;
+  gap: 0.3em;
+  padding: 0 calc(0.32 * var(--u));
+  font-size: calc(0.27 * var(--u));
+  background: rgba(15, 21, 36, 0.82);
+}
+.touchpad .tplay .tico { width: 1.15em; height: 1.15em; }
+.touchpad .tplay:active { background: var(--signal); color: var(--ink); }
+
+/* ---- a race on a phone held upright ------------------------------------------ */
+
+.rotate-hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 18px;
+  background: rgba(11, 16, 32, 0.95);
+  border-bottom: 3px solid var(--signal);
+  color: var(--paper);
+  font-family: 'Barlow Condensed', 'DIN Condensed', 'Arial Narrow', sans-serif;
+  font-style: italic;
+  text-align: center;
+  pointer-events: none;
+}
+.rotate-hint[hidden] { display: none; }
+.rotate-hint .phone { width: 26px; height: 44px; margin-bottom: 4px; border: 3px solid var(--paper); border-radius: 6px; animation: turn-phone 2s ease-in-out infinite; }
+.rotate-hint b { font-size: 22px; font-weight: 800; }
+.rotate-hint span { font-size: 15px; font-weight: 500; opacity: 0.85; }
+@keyframes turn-phone { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+html.portrait .menu[data-screen='pause'] .panes { top: calc(7.5em + var(--st, 0px)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-hint .phone { animation: none; transform: rotate(-90deg); }
+}

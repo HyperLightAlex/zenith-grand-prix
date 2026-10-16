@@ -177,7 +177,7 @@ export function registerGarage(m: Menus, g: Game): void {
           );
         }
       }
-      m.root.append(h('div.shade'), card.bay, col, crew, card.kit, m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));
+      m.root.append(h('div.shade'), card.bay, m.panes(col, h('div.hangar-side', crew, card.kit)), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));
     },
   });
 
@@ -216,7 +216,7 @@ export function registerGarage(m: Menus, g: Game): void {
       const livery = LIVERIES[g.loadout.team];
       const you = h('div.context', `Free Play · ${factionName(livery)}, ${livery.models[g.loadout.role]}`);
       col.append(you, h('h1', 'Match setup'), list, h('div.match-blurb', `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`));
-      m.root.append(h('div.shade'), col, m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
+      m.root.append(h('div.shade'), m.panes(col), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
     },
     press(m, key) {
       if (key === 'y') {
