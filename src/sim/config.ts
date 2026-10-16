@@ -69,6 +69,18 @@ export type Phase = (typeof PHASE)[keyof typeof PHASE];
 export const TACTIC = { FREE: 0, BLITZ: 1, RUN: 2, SHIELD: 3, MARK: 4 } as const;
 export type Tactic = (typeof TACTIC)[keyof typeof TACTIC];
 export const TACTIC_NAMES = ['FREE', 'BLITZ', 'RUN', 'SHIELD', 'MARK'] as const;
+/**
+ * TeamState.caller values below zero. A value of zero or more is the one
+ * mech whose calls count (an online team's shot caller).
+ */
+export const CALLER = {
+  /** Any person on the team calls; the computer captain calls if nobody human is on it. */
+  ANY: -1,
+  /** Nobody calls: a team of three people has no computer pilot to order. */
+  NONE: -2,
+  /** The computer captain calls, though the team has human seats (its people have all dropped out). */
+  CAPTAIN: -3,
+} as const;
 
 /** Held-button bitmask sent by a controller each tick. */
 export const BTN = {
@@ -327,11 +339,11 @@ export interface AbilityDef {
   blurb: string;
 }
 export const ABILITIES: AbilityDef[] = [
-  { key: 'overdrive', name: 'Overdrive', blurb: 'A few seconds far past top speed. Ignores armour damage.' },
+  { key: 'overdrive', name: 'Overdrive', blurb: 'On the speed lap: a few seconds far past top speed. Ignores armour damage.' },
   { key: 'breakaway', name: 'Break Away', blurb: 'Works even mid-hit: shake every lock and burst clear.' },
   { key: 'snare', name: 'Snare', blurb: 'A bolt that drags a rival\'s top speed down and kills its boost.' },
   { key: 'pulse', name: 'Disruptor', blurb: 'A pulse that interrupts everyone close by and drains their Drive.' },
-  { key: 'ram', name: 'Ram', blurb: 'An unstoppable charge. Whatever it hits is thrown aside.' },
+  { key: 'ram', name: 'Ram', blurb: 'An unstoppable charge at your target. It, and whatever else the charge hits, is thrown aside.' },
   { key: 'aegis', name: 'Aegis', blurb: 'A shield over you and teammates nearby.' },
 ];
 /** Ticks between ability uses, so one press cannot burn two Cells. */
@@ -343,6 +355,8 @@ export const RAM_MIN_CLOSING = 3;
 export const RAM_ARC = 1.9;
 export const RAM_SHOVE = 30;
 export const RAM_MASS = 3;
+/** A Ram cast locked on drives at its target this fast (units/s) over the fight's own movement, until it lands. */
+export const RAM_CHARGE = 60;
 
 export interface ClassDef {
   role: Role;
@@ -534,7 +548,8 @@ export const CLASSES: ClassDef[] = [
     battleAccel: 56, strafe: 22, approach: 26,
     guardMax: 130, guardRegen: 20, dash: 58, dashCost: 18, dashIframes: 8,
     primary: ATK.DF_HAMMER1, secondary: ATK.DF_SCATTER, aiRange: 0,
-    abilityFree: ABILITY.RAM, abilityLocked: ABILITY.AEGIS,
+    // Free steering, the shield over the team; locked on, the charge at the target.
+    abilityFree: ABILITY.AEGIS, abilityLocked: ABILITY.RAM,
   },
 ];
 

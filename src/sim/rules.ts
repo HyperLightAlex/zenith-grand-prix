@@ -100,6 +100,11 @@ export interface Rules {
   // --- abilities (each costs one cell)
   overdriveMult: number;
   overdriveSecs: number;
+  /**
+   * The lap phase Overdrive opens on (3: the speed lap). Before it a forward
+   * fights or breaks away, rather than outrunning the battle lap.
+   */
+  overdriveLap: number;
   /** Seconds nobody can lock on to a forward after it breaks away. */
   breakawaySecs: number;
   snareMult: number;
@@ -177,6 +182,7 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
 
   overdriveMult: 1.3,
   overdriveSecs: 4,
+  overdriveLap: 3,
   breakawaySecs: 1.5,
   snareMult: 0.74,
   snareSecs: 3.5,
@@ -253,6 +259,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
 
   overdriveMult: [1, 3],
   overdriveSecs: [0, 60],
+  overdriveLap: [1, 3],
   breakawaySecs: [0, 60],
   snareMult: [0.1, 1],
   snareSecs: [0, 60],

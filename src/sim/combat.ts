@@ -51,7 +51,7 @@ import { rngNext, wrapAngle } from './math';
 import { deltaS, hwAt, medianAt, type Track } from './track';
 import type { MechInput, MechState, RaceState } from './types';
 
-function deny(race: RaceState, m: MechState, reason: 'weapons' | 'drive' | 'target' | 'cells'): void {
+function deny(race: RaceState, m: MechState, reason: 'weapons' | 'drive' | 'target' | 'cells' | 'lap'): void {
   if (race.tick - m.deniedTick < 30) return;
   m.deniedTick = race.tick;
   race.events.push({ type: 'denied', mech: m.id, reason });
@@ -214,23 +214,33 @@ export function endArc(m: MechState): void {
 }
 
 /** Which ability the button would fire right now, or -1 if the mech is in no state to use one. */
-export function abilityFor(m: MechState): Ability | -1 {
+export function abilityFor(m: MechState, race?: RaceState): Ability | -1 {
   const c = classOf(m);
   const locked = m.mode === MODE.BATTLE && m.target >= 0;
   if (m.act === ACT.STAGGER) {
     // Only a Break Away can be thrown while reeling from a hit.
     return c.abilityLocked === ABILITY.BREAKAWAY ? ABILITY.BREAKAWAY : -1;
   }
-  return locked ? c.abilityLocked : c.abilityFree;
+  if (!locked) return c.abilityFree;
+  // A Ram charges whoever you are locked on to: escorting a team-mate, the
+  // defender's button is its Aegis instead.
+  if (c.abilityLocked === ABILITY.RAM && race && race.mechs[m.target]?.team === m.team) return c.abilityFree;
+  return c.abilityLocked;
 }
 
 /** Spend a Cell on the frame's ability: one move free steering, another locked on. */
 export function tryAbility(race: RaceState, track: Track, m: MechState): boolean {
   if (m.cdAbility > 0) return false;
-  const ab = abilityFor(m);
+  const ab = abilityFor(m, race);
   if (ab === -1) return false;
   if (!weaponsFree(race)) {
     deny(race, m, 'weapons');
+    return false;
+  }
+  // Overdrive waits for the speed lap: on the battle lap a forward fights,
+  // or breaks away, rather than outrunning the fight.
+  if (ab === ABILITY.OVERDRIVE && race.lapPhase < race.rules.overdriveLap) {
+    deny(race, m, 'lap');
     return false;
   }
   if (m.cells < 1) {

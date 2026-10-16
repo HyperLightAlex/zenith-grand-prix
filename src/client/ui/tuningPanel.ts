@@ -77,6 +77,9 @@ export class TuningPanel {
   private text = h<'textarea'>('textarea');
   private textBox = h('div.tune-text');
   private status = h('div.status', '');
+  private noteEl = h('div.tune-note', '');
+  /** A line under the title (online: the room's rules stand). */
+  note = '';
 
   constructor(parent: HTMLElement, private tuning: Tuning, private cb: TuningPanelCallbacks) {
     const R = this.root;
@@ -115,7 +118,7 @@ export class TuningPanel {
     this.textBox.append(this.text);
     this.textBox.hidden = true;
 
-    R.append(head, tabRow, this.body, this.textBox, this.status, h('div.tune-foot', 'Changes apply straight away and are remembered on this device. Rules marked for the grid (starting Drive and Cells) apply from the next race.'));
+    R.append(head, this.noteEl, tabRow, this.body, this.textBox, this.status, h('div.tune-foot', 'Changes apply straight away and are remembered on this device. Rules marked for the grid (starting Drive and Cells) apply from the next race.'));
     parent.append(R);
     this.setTab(0);
   }
@@ -128,6 +131,8 @@ export class TuningPanel {
   show(): void {
     this.open = true;
     this.root.hidden = false;
+    setText(this.noteEl, this.note);
+    this.noteEl.hidden = !this.note;
     this.refresh();
   }
 

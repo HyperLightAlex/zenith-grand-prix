@@ -45,17 +45,47 @@ html, body {
   display: block;
 }
 
+/* The 4:3 picture (a video setting): the scene, the HUD and the menus boxed
+   in the middle of the window, scaled to the box. */
+html.aspect-43 { --fw: min(100vw, calc(100vh * 4 / 3)); --fh: min(100vh, calc(100vw * 3 / 4)); }
+html.aspect-43 body { background: #000; }
+html.aspect-43 #stage,
+html.aspect-43 .ui,
+html.aspect-43 .crt-layer {
+  inset: auto;
+  left: calc((100vw - var(--fw)) / 2);
+  top: calc((100vh - var(--fh)) / 2);
+  width: var(--fw);
+  height: var(--fh);
+}
+
+/* The CRT screen (a video setting): scanlines, the phosphor mask and the
+   tube's vignette and corners over everything; the picture's own part is a
+   shader pass (CrtPass). */
+.crt-layer { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+html.crt-on .crt-layer {
+  display: block;
+  border-radius: 2.2vmin;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%),
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.26) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(to right, rgba(255, 60, 60, 0.04) 0 1px, rgba(60, 255, 60, 0.04) 1px 2px, rgba(70, 70, 255, 0.04) 2px 3px);
+  box-shadow: 0 0 0 100vmax #000, inset 0 0 5vmin rgba(0, 0, 0, 0.5);
+}
+
 .ui {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* Everything scales with the short side of the screen. */
+  /* Everything scales with the short side of the screen... */
   font-size: clamp(11px, 1.75vmin, 24px);
   font-style: italic;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.01em;
 }
+/* ...or of the 4:3 box. */
+html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px); }
 .ui[hidden] { display: none; }
 
 /* ---- shared pieces ------------------------------------------------------ */
@@ -583,6 +613,16 @@ html, body {
 .frame-info .stat .bar > i { transform: scaleX(var(--v, 1)); transition: transform 0.25s ease-out; }
 .menu .kit { position: absolute; right: 3em; bottom: 4.6em; width: 30em; padding: 0.9em 1.3em 1em; background: var(--ink-soft); border-right: 0.35em solid var(--signal); font-size: 1.12em; font-weight: 500; line-height: 1.28; }
 .menu .kit h2 { margin: 0 0 0.35em; font-size: 1.15em; font-weight: 800; color: var(--signal); }
+.menu .crew { position: absolute; right: 3em; top: 2em; width: 30em; padding: 0.7em 1.3em 0.8em; background: var(--ink-soft); border-right: 0.35em solid var(--signal); font-size: 1.12em; }
+.menu .crew h2 { margin: 0 0 0.4em; font-size: 1.05em; font-weight: 800; color: var(--signal); }
+.menu .crew-row { display: grid; grid-template-columns: 2.4em 1fr auto; align-items: baseline; gap: 0.6em; padding: 0.15em 0; font-weight: 500; }
+.menu .crew-row .who small { margin-left: 0.5em; font-size: 0.85em; opacity: 0.7; }
+.menu .crew-row.clash > span:last-child { color: var(--hazard); opacity: 1; }
+.menu .crew-row .role { font-weight: 800; opacity: 0.7; }
+.menu .crew-row b { font-weight: 800; }
+.menu .crew-row > span:last-child { font-size: 0.85em; opacity: 0.75; }
+.menu .crew-row.you b { color: var(--signal); }
+.menu .crew-row.open b { font-weight: 500; opacity: 0.7; }
 .menu .kit h2.cells { margin-top: 0.7em; color: var(--cell); }
 .menu .kit b { font-weight: 800; }
 .menu .kit > div + div { margin-top: 0.35em; }
@@ -662,6 +702,7 @@ html, body {
    the middle, rounded like a tube, switched on as you arrive. */
 .menu.anime[data-screen='garage'] .col,
 .menu.anime[data-screen='garage'] .kit,
+.menu.anime[data-screen='garage'] .crew,
 .menu.anime .controls {
   background:
     repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px),
@@ -781,6 +822,9 @@ html, body {
 .menu.anime[data-screen='garage'] .kit h2,
 .menu.anime[data-screen='garage'] .kit h2.cells { padding-bottom: 0.3em; border-bottom: 1px solid var(--phos-dim); color: inherit; font-size: 1.05em; font-weight: 600; font-style: normal; letter-spacing: 0.08em; opacity: 0.8; }
 .menu.anime[data-screen='garage'] .kit b { font-weight: 700; }
+.menu.anime[data-screen='garage'] .crew { right: 3em; top: 2em; width: 25em; padding: 0.8em 1.3em 0.9em; animation-delay: 0.05s; }
+.menu.anime[data-screen='garage'] .crew h2 { padding-bottom: 0.3em; border-bottom: 1px solid var(--phos-dim); color: inherit; font-size: 1.05em; font-weight: 600; font-style: normal; letter-spacing: 0.08em; opacity: 0.8; }
+.menu.anime[data-screen='garage'] .crew-row.you b { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; }
 .menu.anime[data-screen='garage'] .kit i, .menu.anime[data-screen='garage'] .kit .note { opacity: 0.7; }
 .menu.anime[data-screen='garage'] .kit .key, .menu.anime .controls .key { color: var(--phos); background: none; box-shadow: inset 0 0 0 0.09em var(--phos); text-shadow: var(--glow); }
 .menu.anime[data-screen='garage'] .kit .cellkit .key { color: var(--cell); box-shadow: inset 0 0 0 0.09em var(--cell); }
@@ -839,16 +883,14 @@ html, body {
 }
 
 /* Narrow or short screens: drop the secondary panels. */
-@media (max-aspect-ratio: 4/3) {
-  .tower { display: none; }
-  .comms { bottom: 12.4em; width: 18em; }
-  .mapbox, .mapbox canvas { width: 9em; height: 9em; }
-  .gauges { width: 22em; }
-  .menu .col { left: 2em; width: calc(100% - 4em); }
-  .controls, .results { left: 2em; right: 2em; }
-  .menu .kit { display: none; }
-  .controls .grid { grid-template-columns: 1fr; }
-}
+html.narrow .tower { display: none; }
+html.narrow .comms { bottom: 12.4em; width: 18em; }
+html.narrow .mapbox, html.narrow .mapbox canvas { width: 9em; height: 9em; }
+html.narrow .gauges { width: 22em; }
+html.narrow .menu .col { left: 2em; width: calc(100% - 4em); }
+html.narrow .controls, html.narrow .results { left: 2em; right: 2em; }
+html.narrow .menu .kit, html.narrow .menu .crew { display: none; }
+html.narrow .controls .grid { grid-template-columns: 1fr; }
 
 /* ---- tuning panel -------------------------------------------------------- */
 
@@ -917,3 +959,147 @@ html, body {
 .eyecatch .ec-kick { font-size: 1.3em; font-weight: 600; letter-spacing: 0.4em; text-transform: uppercase; color: #e8323a; }
 .eyecatch .ec-logo { display: block; width: 32em; margin: 0.7em 0 0 -0.4em; }
 .eyecatch .ec-sub { margin-top: 0.7em; font-size: 1.45em; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }
+
+/* ---- menus: modes, Grand Prix, online --------------------------------------
+   Same language as the rest: dark slanted panels over the scene, one italic
+   condensed family, team colours as flags. */
+
+.footer-hints .prompt { display: inline-flex; align-items: center; }
+.footer-hints .prompt.clickable { cursor: pointer; }
+.footer-hints .prompt.clickable:hover { color: var(--signal); }
+
+.menu .toast {
+  position: absolute; left: 50%; bottom: 5.2em; transform: translate(-50%, 0.6em);
+  max-width: 40em; padding: 0.5em 1.4em 0.55em; background: var(--paper); color: var(--ink);
+  clip-path: polygon(0.6em 0, 100% 0, calc(100% - 0.6em) 100%, 0 100%);
+  font-size: 1.2em; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity 0.15s, transform 0.15s; z-index: 5;
+}
+.menu .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* Where you came from and why: above the heading of every pre-race screen. */
+.menu .context { font-size: 1.1em; font-weight: 600; letter-spacing: 0.04em; color: var(--signal); }
+.item.locked { opacity: 0.55; }
+.item.locked .choice::before, .item.locked .choice::after { content: ''; }
+.item.locked.sel { opacity: 0.8; }
+.item small { display: block; margin-top: 0.15em; }
+.list .item { flex-wrap: wrap; }
+.list .item > small { flex-basis: 100%; }
+.list.row { flex-direction: row; flex-wrap: wrap; }
+.list.row .item { font-size: 1.35em; }
+
+.menu .col.modes .item { font-size: 2.1em; }
+.menu .col.modes .item small { font-size: 0.5em; }
+
+/* Panels on the right: standings, the squad, the room's settings. */
+.menu .panel { background: var(--ink-soft); padding: 0.9em 1.3em 1em; border-right: 0.35em solid var(--signal); }
+.menu .panel h2 { margin: 0 0 0.5em; font-size: 1.15em; font-weight: 800; color: var(--signal); }
+.menu .panel.standings, .menu .panel.squad { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 34em; }
+.menu .p, .menu p.status { opacity: 0.9; }
+.menu p.status { color: var(--hazard); }
+
+/* The Grand Prix table. */
+.gptable { width: 100%; border-collapse: separate; border-spacing: 0 0.18em; font-size: 1.15em; }
+.gptable th { text-align: left; font-weight: 500; opacity: 0.7; padding: 0 0.6em 0.1em; font-size: 0.8em; }
+.gptable td { padding: 0.28em 0.6em 0.32em; background: rgba(255, 255, 255, 0.06); font-variant-numeric: tabular-nums; }
+.gptable .num { text-align: right; }
+.gptable td.pos { width: 1.6em; font-weight: 800; }
+.gptable td.team { font-weight: 700; white-space: nowrap; }
+.gptable tr.me td { background: var(--paper); color: var(--ink); }
+.menu .emb { display: inline-block; width: 1.1em; height: 1.1em; margin-right: 0.35em; vertical-align: -0.2em; background: center / contain no-repeat; }
+.versus { display: flex; align-items: center; gap: 0.5em; font-size: 2em; font-weight: 800; }
+.versus .emb { width: 1.4em; height: 1.4em; margin: 0; }
+.versus b { color: var(--signal); font-size: 0.7em; }
+.fixtures { display: grid; gap: 0.25em; font-size: 1.2em; }
+.fixture { display: grid; grid-template-columns: 1.4em 1fr auto 1fr 1.4em; align-items: center; gap: 0.5em; padding: 0.3em 0.6em; background: var(--ink-soft); }
+.fixture > span:nth-of-type(2) { text-align: right; }
+.fixture b { min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; color: var(--signal); }
+.fixture.me { outline: 0.12em solid var(--signal); }
+.fixture .emb { margin: 0; }
+.medal { width: 6em; height: 6em; border-radius: 50%; margin-bottom: 0.4em; box-shadow: inset 0 0 0 0.35em rgba(0, 0, 0, 0.25), 0 0.4em 1.2em rgba(0, 0, 0, 0.4); }
+.medal.gold { background: radial-gradient(circle at 35% 30%, #fff6c8, #f2c133 45%, #a3740d); }
+.medal.silver { background: radial-gradient(circle at 35% 30%, #ffffff, #c4ccd8 45%, #77808f); }
+.medal.bronze { background: radial-gradient(circle at 35% 30%, #ffe0c4, #c9824a 45%, #7c4a22); }
+.medal.cup { border-radius: 0.6em 0.6em 2em 2em; background: linear-gradient(180deg, #fff6c8, #f2c133 55%, #a3740d); }
+.medal.none { display: none; }
+
+/* Dialogs and text entry. */
+.menu .dialog, .menu .entry { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(40em, 90vw); padding: 1.4em 1.8em 1.6em; background: var(--ink); border-left: 0.4em solid var(--signal); }
+.menu .dialog h2, .menu .entry h2 { margin: 0 0 0.4em; font-size: 2.2em; font-weight: 800; }
+.menu .dialog p, .menu .entry p { margin-bottom: 0.6em; }
+.menu .dialog .list .item, .menu .entry .list .item { font-size: 1.45em; }
+.menu .entry .field {
+  width: 100%; margin: 0.3em 0 0.2em; padding: 0.3em 0.5em; border: 0; outline: 0.12em solid var(--mute);
+  background: rgba(255, 255, 255, 0.08); color: var(--paper); font: inherit; font-size: 2.2em; font-style: normal; letter-spacing: 0.08em; user-select: text; -webkit-user-select: text;
+}
+.menu .entry .field:focus { outline-color: var(--signal); }
+.menu .entry .error { min-height: 1.3em; color: var(--danger); font-size: 1.15em; font-weight: 600; }
+.menu .keygrid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 0.22em; margin: 0.5em 0; }
+.menu .keygrid .k { padding: 0.35em 0; text-align: center; background: rgba(255, 255, 255, 0.08); font-size: 1.3em; font-style: normal; cursor: pointer; }
+.menu .keygrid .k.sel { background: var(--signal); color: var(--ink); }
+.menu .invite .code { font-size: 4.5em; font-weight: 800; letter-spacing: 0.18em; color: var(--signal); font-style: normal; }
+.menu .invite .link { margin-bottom: 0.8em; font-size: 1em; font-weight: 500; opacity: 0.75; word-break: break-all; user-select: text; -webkit-user-select: text; font-style: normal; }
+
+/* The Online hub: your squad in the hangar's bays. */
+.menu .bays { display: grid; gap: 0.35em; }
+.menu .bay-card { display: grid; grid-template-columns: 3.4em 1fr; grid-template-rows: auto auto auto; column-gap: 0.8em; align-items: center; padding: 0.5em 0.8em; background: rgba(255, 255, 255, 0.06); }
+.menu .bay-card .tag { grid-column: 1 / 3; font-size: 0.85em; font-weight: 600; opacity: 0.6; }
+.menu .bay-card .face { grid-row: 2 / 4; }
+.menu .bay-card b { font-size: 1.4em; }
+.menu .bay-card small { font-size: 1em; font-weight: 500; opacity: 0.8; }
+.menu .bay-card em { grid-column: 2; font-size: 0.95em; color: var(--signal); font-style: italic; }
+.menu .bay-card.me { outline: 0.12em solid var(--signal); }
+.menu .bay-card.empty { opacity: 0.55; }
+.menu .bay-card.empty .face { filter: grayscale(1) brightness(0.45); }
+.menu .bay-card em.clash { color: var(--hazard); }
+.menu .face { display: inline-block; width: 3.2em; height: 3.2em; border-radius: 0.3em; background: rgba(255, 255, 255, 0.1) center / cover no-repeat; }
+
+/* The room. */
+.menu .room { position: absolute; left: 3em; right: 3em; top: 2em; bottom: 4.6em; display: flex; flex-direction: column; gap: 0.8em; }
+.menu .roombar { display: flex; align-items: baseline; gap: 2em; padding: 0.5em 1em; background: var(--ink-soft); font-size: 1.3em; font-weight: 500; }
+.menu .roombar b { font-size: 1.5em; font-weight: 800; letter-spacing: 0.06em; }
+.menu .roombar span:last-child { margin-left: auto; opacity: 0.8; }
+.menu .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 2em; }
+.menu .side-head { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.4em; font-size: 1.5em; }
+.menu .side-head b { font-weight: 800; }
+.menu .side-head span { margin-left: auto; font-size: 0.7em; font-weight: 500; opacity: 0.75; }
+.menu .side-head .emb { width: 1.5em; height: 1.5em; margin: 0; }
+.menu .side-head { padding: 0.1em 0.4em; }
+.menu .side-head .arrow { font-style: normal; font-weight: 500; opacity: 0.6; margin: 0 0.25em; display: none; }
+.menu .side-head.pick { cursor: pointer; }
+.menu .side-head.pick .arrow { display: inline; }
+.menu .side-head.sel { background: var(--paper); color: var(--ink); }
+.menu .seats { display: grid; gap: 0.3em; }
+.menu .seat {
+  display: grid; grid-template-columns: 2.2em 3.2em 1fr auto; align-items: center; gap: 0.7em; padding: 0.4em 0.9em;
+  background: var(--ink-soft); border-left: 0.35em solid var(--team0); font-size: 1.15em; cursor: pointer;
+}
+.menu .side.t1 .seat { border-left-color: var(--team1); }
+.menu .seat .role { font-weight: 800; opacity: 0.7; }
+.menu .seat .who b { font-size: 1.25em; margin-right: 0.4em; }
+.menu .seat .who small { display: block; font-size: 0.85em; font-weight: 500; opacity: 0.7; }
+.menu .seat.cpu .who b { font-weight: 500; opacity: 0.75; }
+.menu .seat .state { font-weight: 600; opacity: 0.75; }
+.menu .seat .state.ready { color: var(--ally); opacity: 1; }
+.menu .seat.mine { outline: 0.14em solid var(--signal); }
+.menu .seat.clash .state { color: var(--hazard); opacity: 1; }
+.menu .seat.sel { background: var(--paper); color: var(--ink); }
+.menu .seat.sel .state.ready { color: #0c8f6b; }
+.menu .badges { display: inline-flex; gap: 0.3em; vertical-align: 0.1em; }
+.menu .badge { padding: 0.05em 0.5em 0.1em; border-radius: 1em; outline: 0.08em solid currentColor; font-size: 0.75em; font-weight: 600; font-style: normal; }
+.menu .badge.caller { color: var(--hazard); }
+.menu .seat.sel .badge.caller { color: #8a6a00; }
+.menu .badge.you { color: var(--signal); }
+.menu .room .bottom { display: grid; grid-template-columns: 1.1fr 1fr; gap: 2em; margin-top: auto; }
+.menu .room .settings-panel .item, .menu .room .actions-panel .item { font-size: 1.3em; padding-top: 0.32em; padding-bottom: 0.36em; }
+.menu .room .list { margin-top: 0; gap: 0.25em; }
+.menu .matchcard { display: flex; gap: 1.5em; align-items: baseline; padding: 0.6em 1em; background: var(--paper); color: var(--ink); font-size: 1.25em; }
+.menu .matchcard b { font-weight: 800; }
+.menu .room-hint { font-size: 1.05em; opacity: 0.75; margin-top: -0.3em; }
+
+html.narrow .menu .panel.standings, html.narrow .menu .panel.squad { position: static; transform: none; width: auto; margin: 1em 3em; }
+html.narrow .menu .room { left: 1em; right: 1em; }
+html.narrow .menu .room .bottom { grid-template-columns: 1fr; }
+
+.tune .tune-note { margin: 0.3em 0 0.5em; padding: 0.4em 0.7em; background: rgba(255, 201, 58, 0.15); color: var(--hazard); font-size: 0.95em; font-weight: 600; }
+.tune .tune-note[hidden] { display: none; }
+.menu.anime[data-screen='garage'] .context { color: var(--phos); text-shadow: var(--glow); }

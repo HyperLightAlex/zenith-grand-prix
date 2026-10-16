@@ -29,16 +29,24 @@ await page.waitForFunction(() => window.game !== undefined, null, { timeout: 300
 await page.waitForTimeout(1500);
 log('title:', (await state()).state);
 await shot('1-title');
+// Title -> Play -> Free Play -> Hangar -> Match setup -> Start.
+await page.keyboard.press('Enter');
+await page.waitForTimeout(1200);
+await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
 await page.waitForTimeout(1500);
 await shot('2-garage');
-// Frame (Swift) -> Team -> Rival pilots -> Match -> Start.
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('Enter');
+await page.waitForTimeout(1200);
+// Circuit, Rival team, Rival pilots, Match, Start: the format stays a best of 3.
 for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
 await page.waitForFunction(() => window.game.debugState().state === 'race', null, { timeout: 15000 }).catch(() => {});
 let s = await state();
 log('race started:', s.state, 'tick', s.tick, 'match', JSON.stringify(s.match));
-check(s.state === 'race' && s.match && s.match.mode === 'series', 'a best-of-3 series started from the garage');
+check(s.state === 'race' && s.match && s.match.mode === 'series', 'a best-of-3 series started from Free Play');
 
 // ---- formation lap
 const t0 = Date.now();
@@ -49,7 +57,8 @@ log('speed of play:', (300 / 60 / ((Date.now() - t0) / 1000)).toFixed(2), 'x rea
 await untilTick(420);
 let m = await mine();
 log('3 s after GO:', JSON.stringify(m));
-check(m.drive <= 10, 'Drive starts empty (only a launch bonus at most)');
+// A launch bonus (10) and three seconds of the lap-1 trickle at most.
+check(m.drive <= 16, `Drive starts empty: only a launch bonus and the lap-1 trickle (drive ${m.drive})`);
 await shot('3-lap1');
 // The ability is locked on lap 1 and must not cost anything.
 await page.evaluate(() => { const g = window.game; g.session.race.mechs[g.session.localId].cells = 1; });
@@ -77,9 +86,12 @@ for (let i = 0; i < 20; i++) { const x = await mine(); if (x.mode === 0 && x.act
 await page.keyboard.press('KeyR');
 await ticks(8);
 m = await mine();
-check(m.overdriveT > 0 && m.cells === 2, `Overdrive fired from free steering (timer ${m.overdriveT}, cells ${m.cells})`);
+// Overdrive waits for the speed lap (rules.overdriveLap): refused, Cell kept.
+check(m.overdriveT === 0 && m.cells === 3, `Overdrive refused on the battle lap, Cell kept (timer ${m.overdriveT}, cells ${m.cells})`);
+const tag = await page.evaluate(() => [...document.querySelectorAll('.ui *')].map((e) => e.childElementCount === 0 ? e.textContent : '').find((t) => t && t.startsWith('Overdrive')) ?? '');
+check(tag === 'Overdrive (speed lap)', `the HUD says when it opens (${tag})`);
 await ticks(30);
-await shot('4-overdrive');
+await shot('4-overdrive-waits');
 // Lock on and break away.
 await page.keyboard.press('KeyQ');
 await ticks(20);
@@ -91,7 +103,7 @@ if (m.mode === 1) {
   await page.keyboard.press('KeyR');
   await ticks(6);
   m = await mine();
-  check(m.mode === 0 && m.cloakT > 0 && m.cells === 1, `Break Away fired from a lock (mode ${m.mode}, cloak ${m.cloakT}, cells ${m.cells})`);
+  check(m.mode === 0 && m.cloakT > 0 && m.cells === 2, `Break Away fired from a lock on the battle lap (mode ${m.mode}, cloak ${m.cloakT}, cells ${m.cells})`);
 } else {
   log('  (nobody in lock range; Break Away not exercised)');
 }
@@ -99,30 +111,32 @@ if (m.mode === 1) {
 // ---- pause, tuning panel, resume without a phantom press
 await ticks(60);
 const before = await mine();
+// (Software rendering draws a frame every second or so: wait for each step, not a set time.)
+const settle = (fn, ms = 20000) => page.waitForFunction(fn, null, { timeout: ms }).then(() => true, () => false);
 await page.keyboard.press('Escape');
-await page.waitForTimeout(900);
+await settle(() => window.game.debugState().state === 'paused');
 check((await state()).state === 'paused', 'paused');
 await page.keyboard.press('KeyT');
-await page.waitForTimeout(900);
-check(await page.evaluate(() => window.game.panel.open), 'tuning panel opens over the pause menu');
-// Move one rule and one camera value from the keyboard.
+check(await settle(() => window.game.panel.open), 'tuning panel opens over the pause menu');
+// Move one rule from the keyboard: over to the Pace tab (the Look tab is
+// first), down to its first row, the lap-1 limiter.
+await page.keyboard.press('ArrowRight');
 await page.keyboard.press('ArrowDown');
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('ArrowRight');
-await page.waitForTimeout(900);
+await settle(() => window.game.tuning.changedCount() > 0 && window.game.input.menu.length === 0);
 const lim = await page.evaluate(() => ({ live: window.game.session.race.rules.limiter1, stored: window.game.tuning.rules.limiter1, changed: window.game.tuning.changedCount() }));
 check(lim.live === 112 && lim.stored === 112 && lim.changed === 1, `a slider reaches the running race (limiter ${lim.live}, ${lim.changed} changed)`);
 await shot('6-tuning');
 await page.keyboard.press('Enter'); // back to the default
-await page.waitForTimeout(600);
-check(await page.evaluate(() => window.game.session.race.rules.limiter1 === 110 && window.game.tuning.changedCount() === 0), 'confirm puts the value back to its default');
+check(await settle(() => window.game.session.race.rules.limiter1 === 110 && window.game.tuning.changedCount() === 0), 'confirm puts the value back to its default');
 await page.keyboard.press('Escape');
-await page.waitForTimeout(700);
+await settle(() => !window.game.panel.open && window.game.input.menu.length === 0);
+await page.waitForTimeout(1500);
 check(!(await page.evaluate(() => window.game.panel.open)) && (await state()).state === 'paused', 'Esc closes the panel and leaves the game paused');
 // Resume with Space held (the "confirm" key, which is also boost and dash).
 await page.keyboard.down('Space');
-await page.waitForTimeout(900);
-check((await state()).state === 'race', 'resumed');
+check(await settle(() => window.game.debugState().state === 'race'), 'resumed');
 await ticks(8);
 m = await mine();
 check(m.cells === before.cells, 'resuming did not burn a Cell');
@@ -150,7 +164,9 @@ check(s.match.winner >= 0, `the series was decided (${s.match.wins.join('-')})`)
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('Enter');
 await page.waitForTimeout(1500);
-log('after "Back to garage":', (await state()).state);
+s = await state();
+log('after "Change setup":', s.state, s.screen);
+check(s.screen === 'setup', 'the results lead back to the match setup');
 await shot('8-garage-again');
 const audio = await page.evaluate(() => (window.game.audio.debugInfo ? window.game.audio.debugInfo() : null));
 log('audio:', JSON.stringify(audio));

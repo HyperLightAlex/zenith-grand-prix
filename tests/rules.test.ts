@@ -86,6 +86,7 @@ describe('the default rules', () => {
       gateShare: 0.5,
       overdriveMult: 1.3,
       overdriveSecs: 4,
+      overdriveLap: 3,
       breakawaySecs: 1.5,
       snareMult: 0.74,
       snareSecs: 3.5,

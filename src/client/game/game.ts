@@ -1,15 +1,22 @@
 // The game shell: owns the renderer, the current session and view, the HUD,
-// menus, input and audio, and moves between title, garage, race and results.
+// menus, input and audio, and moves between the title, the menus, the race
+// and the results, for each of the three modes:
+//
+//   Free Play   today's garage, reorganised: hangar, then match setup.
+//   Grand Prix  cups and the season (src/gp/), with the other factions'
+//               races run in the background.
+//   Online      private rooms on the game server, with squads.
+import { DEV_TOOLS } from '../devTools';
 import * as THREE from 'three';
 import {
   ABILITY,
   ATK,
   ATTACKS,
   BTN,
-  CLASSES,
   MODE,
   PHASE,
   ROLE,
+  ROLE_NAMES,
   TICK_RATE,
   buildTrack,
   createMatch,
@@ -17,12 +24,33 @@ import {
   recordRound,
   trackById,
   TRACKS,
+  type MatchConfig,
   type MatchState,
   type RaceState,
   type Role,
   type SeatConfig,
   type SimEvent,
 } from '../../sim/index';
+import {
+  CUPS,
+  GP_SKILL,
+  GP_TEAMMATE_SKILL,
+  advance,
+  eventName,
+  finalPlace,
+  isOver,
+  matchFormat,
+  medalFor,
+  newCup,
+  newSeason,
+  playedRounds,
+  recordYours,
+  yourRoundNumber,
+  type GpEvent,
+  type GpKind,
+  type Medal,
+} from '../../gp/grandPrix';
+import { normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
 import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
 import { Input } from '../input/input';
 import { Hangar } from '../render/hangar';
@@ -36,24 +64,39 @@ import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
 import { useOldSwift } from '../render/mech/frames';
-import { cycleSunhawkModel, getSunhawkModel, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
+import { cycleSunhawkModel, getSunhawkModel, setSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
 import { toggleRosterModel, rosterLabel } from '../render/mech/rosterSelection';
 import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
 import { emblemUrl } from '../ui/factionArt';
 import { Hud } from '../ui/hud';
-import { MATCH_OPTIONS, Menus, type GarageChoice } from '../ui/menus';
+import { MATCH_OPTIONS, Menus, type GarageChoice, type ScreenId } from '../ui/menus';
+import { confirmDialog, messageDialog, registerCommon, type DialogData, type EntryData } from '../ui/screens/common';
+import { registerGarage, type HangarData } from '../ui/screens/garage';
+import { registerGrandPrix } from '../ui/screens/grandPrix';
+import { inviteDialog, registerOnline } from '../ui/screens/online';
+import { registerRace } from '../ui/screens/race';
+import { registerVideo } from '../ui/screens/video';
+import { applyFrame, saveVideo, video, type VideoSettings } from '../video';
 import { TuningPanel } from '../ui/tuningPanel';
+import { GpRunner } from '../gp/gpRunner';
+import * as gpStore from '../gp/gpStore';
+import { callsign as savedCallsign, setCallsign } from '../net/identity';
+import { Online, failure } from '../net/online';
 import { inKnockout } from './moments';
+import { NetSession } from './netSession';
 import { LocalSession } from './session';
 import { TUNE_GROUPS, Tuning } from './tuning';
 
 type State = 'title' | 'garage' | 'race' | 'paused' | 'results';
+export type GameMode = 'free' | 'gp' | 'online';
 
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
 /** The garage's mech sits this far right of centre (of the screen's width), clear of the menu. */
 const GARAGE_SHIFT = 0.07;
+/** Screens shown over the hangar, with your mech in its bay. */
+const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'room']);
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -73,6 +116,9 @@ export interface GameOptions {
   tune?: boolean;
   /** Circuit id to race on (see TRACKS). */
   track?: string;
+  /** An invite link: the room or squad code to go straight to. */
+  room?: string;
+  squad?: string;
   audio?: AudioEngine;
 }
 
@@ -92,6 +138,36 @@ const GATE_STEPS = [0, 2, 3, 5, 7];
 /** The carve chime climbs with the tier: root, a fourth, then the octave. */
 const CARVE_TIER_PITCH = [1, 2 ** (5 / 12), 2];
 
+/** What the round being raced is: who, where, and against whom. */
+interface RoundSetup {
+  /** Which faction each race team is. You are team 0 offline. */
+  factions: [number, number];
+  role: Role;
+  /** The rival team's computer pilots. */
+  rivalSkill: number;
+  /** Your teammates. */
+  teamSkill: number;
+  track: string;
+  cfg: MatchConfig;
+}
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? { ...fallback, ...(JSON.parse(raw) as T) } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(key: string, v: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(v));
+  } catch {
+    /* storage blocked: this visit only */
+  }
+}
+
 export class Game {
   readonly renderer: Renderer;
   readonly input = new Input();
@@ -99,21 +175,37 @@ export class Game {
   readonly menus: Menus;
   readonly tuning = new Tuning();
   readonly panel: TuningPanel;
+  readonly online = new Online();
+  readonly gpRunner = new GpRunner();
   audio: AudioEngine;
   private trackVis!: TrackVisual;
   private world!: World;
-  /** The garage's set, built once; stood round your mech while the garage is up. */
+  /** The garage's set, built once; stood round your mech while a hangar screen is up. */
   private readonly hangar = new Hangar();
   private readonly hangarFrame = new THREE.Matrix4();
   /** Id of the circuit whose scenery is built. */
   private trackId = '';
-  private session!: LocalSession;
+  session!: LocalSession | NetSession;
   private view!: RaceView;
   private state: State = 'title';
-  private choice: GarageChoice = { role: ROLE.FW, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian' };
+  /** The mode being played (null on the title and between modes). */
+  mode: GameMode | null = null;
+  /** Your faction and frame, remembered, and the default in every mode. */
+  loadout: { team: number; role: Role } = readJson('zgp.loadout', { team: 0, role: ROLE.FW as Role });
+  /** Free Play's setup, remembered. */
+  free: GarageChoice = readJson('zgp.free', { role: ROLE.FW as Role, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian' });
+  private gpEvents: Record<GpKind, GpEvent | null> = { cup: gpStore.loadEvent('cup'), season: gpStore.loadEvent('season') };
+  /** The Grand Prix event being played. */
+  gpKind: GpKind = 'cup';
+  private setup: RoundSetup | null = null;
   /** The match being played: one or more rounds between the same two teams. */
-  private match: MatchState | null = null;
+  match: MatchState | null = null;
   private roundScored = false;
+  /** What the results screen reports on. */
+  resultsRace: RaceState | null = null;
+  resultsLocal = 0;
+  /** Online: what the hub and room say while something is under way. */
+  onlineStatus = '';
   private rumbleT = 0;
   private time = 0;
   private last = performance.now();
@@ -131,6 +223,9 @@ export class Game {
   private worldTime = 0;
   private ownLock = -1;
   private ownLockAt = 0;
+  private garageShown: { team: number; role: Role } | null = null;
+  /** The race behind the title is on screen. */
+  private attracting = false;
   private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement, private opts: GameOptions = {}) {
@@ -138,37 +233,34 @@ export class Game {
     this.renderer = new Renderer(canvas);
     this.renderer.scene.add(this.hangar.root);
     this.hangar.preload(LIVERIES.map((_, f) => emblemUrl(f)));
-    if (opts.track && trackById(opts.track)) this.choice.track = opts.track;
+    if (opts.track && trackById(opts.track)) this.free.track = opts.track;
     // The circuit and its surroundings are built when it is chosen and
     // shared by every race on it.
-    this.useTrack(this.choice.track);
+    this.useTrack(this.free.track);
     this.hud = new Hud(uiRoot);
     this.eyecatch = new Eyecatch(uiRoot);
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
     this.hud.onCritical = () => this.audio.play('critical');
     this.menus = new Menus(uiRoot, {
-      onStart: (c) => this.startMatch(c),
-      onPreview: (c) => this.showGarage(c),
-      onResume: () => this.resume(),
-      // Once a round has been banked, "restart" can only mean moving on.
-      onRestart: () => (this.roundScored ? this.next() : this.startRound()),
-      onNext: () => this.next(),
-      onTuning: () => this.panel.show(),
-      onToggleLook: () => this.toggleLook(),
+      sound: (n) => this.audio.play(n),
       lookOn: () => look.on,
-      onQuit: () => this.showTitle(),
-      onGarage: () => {
-        this.menus.show('garage');
-      },
-      onSound: (n) => this.audio.play(n),
+      screenChanged: (id) => this.screenChanged(id),
     });
+    registerCommon(this.menus, this);
+    registerGarage(this.menus, this);
+    registerGrandPrix(this.menus, this);
+    registerOnline(this.menus, this);
+    registerRace(this.menus, this);
+    registerVideo(this.menus, this);
+    this.renderer.crt = video.crt;
     this.panel = new TuningPanel(uiRoot, this.tuning, {
       onClose: () => {},
       onSound: (n) => this.audio.play(n),
     });
-    // A rule changed on the panel reaches the race in progress as well as the next one.
+    // A rule changed on the panel reaches the race in progress as well as the
+    // next one; online the room's rules stand.
     this.tuning.onChange = (kind) => {
-      if (kind !== 'feel' && this.session) Object.assign(this.session.race.rules, this.tuning.rules);
+      if (kind !== 'feel' && this.session instanceof LocalSession) Object.assign(this.session.race.rules, this.tuning.rules);
       this.input.rumbleScale = this.tuning.feel.rumble;
       if (kind !== 'rule') this.applySound();
     };
@@ -183,17 +275,22 @@ export class Game {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.state === 'race') this.pause();
     });
-    if (opts.team !== undefined) this.choice.team = opts.team;
-    if (opts.rival !== undefined) this.choice.rival = opts.rival;
-    if (opts.rivals !== undefined) this.choice.rivals = opts.rivals;
-    if (opts.match !== undefined && MATCH_OPTIONS[opts.match]) this.choice.match = opts.match;
-    else if (opts.auto !== undefined) this.choice.match = 0;
-    if (opts.auto !== undefined) this.choice.role = opts.auto;
-    this.menus.choice = { ...this.choice };
+    this.gpRunner.onResult = () => {
+      const s = this.menus.screen;
+      if (s === 'briefing' || s === 'standings' || s === 'gp') this.menus.refresh();
+    };
+    this.wireOnline();
+    if (opts.team !== undefined && LIVERIES[opts.team]) this.loadout.team = opts.team;
+    if (opts.rival !== undefined) this.free.rival = opts.rival;
+    if (opts.rivals !== undefined) this.free.rivals = opts.rivals;
+    if (opts.match !== undefined && MATCH_OPTIONS[opts.match]) this.free.match = opts.match;
+    else if (opts.auto !== undefined) this.free.match = 0;
+    if (opts.auto !== undefined) this.loadout.role = opts.auto;
     if (opts.auto !== undefined) {
-      this.startMatch(this.choice);
+      this.startFree();
     } else {
       this.showTitle();
+      void this.bootOnline();
     }
     if (opts.tune) this.panel.show();
     // ?look=plain or ?look=anime picks the look for this visit without remembering it.
@@ -202,72 +299,87 @@ export class Game {
     requestAnimationFrame((t) => this.frame(t));
   }
 
+  // ---- shared by the screens ------------------------------------------------------
+
+  sound(n: 'ui_move' | 'ui_select' | 'ui_back'): void {
+    this.audio.play(n);
+  }
+
+  lookOn(): boolean {
+    return look.on;
+  }
+
+  openTuning(): void {
+    this.panel.note = this.tuningNote();
+    this.panel.show();
+  }
+
+  /** Online the room's rules stand: the panel says so. */
+  private tuningNote(): string {
+    return this.mode === 'online' ? "Online the room plays the standard rules. Rule changes here apply to your offline races; camera, look and sound apply now." : '';
+  }
+
+  get factions(): [number, number] {
+    return this.raceFactions;
+  }
+  private raceFactions: [number, number] = [0, 1];
+
+  get callsign(): string {
+    return savedCallsign();
+  }
+
+  setLoadout(l: { team: number; role: Role }): void {
+    this.loadout = { team: l.team, role: l.role };
+    writeJson('zgp.loadout', this.loadout);
+  }
+
+  saveFree(): void {
+    writeJson('zgp.free', this.free);
+  }
+
+  /** Show this faction and frame in the hangar behind the menus. */
+  preview(l: { team: number; role: Role }): void {
+    if (this.state === 'race' || this.state === 'paused' || this.state === 'results') return;
+    this.showGarage(l);
+  }
+
   // ---- sessions -----------------------------------------------------------
 
   /**
-   * The grid. You are always race team 0, flying for your faction; race team
-   * 1 is the rival faction. Each seat is named for its faction's pilot.
+   * The grid offline. You are always race team 0, flying for your faction;
+   * race team 1 is the rival faction. Each seat is named for its faction's pilot.
    */
-  private seats(choice: GarageChoice | null): { seats: SeatConfig[]; localId: number } {
+  private seats(setup: RoundSetup | null): { seats: SeatConfig[]; localId: number } {
     const seats: SeatConfig[] = [];
     let localId = -1;
     for (const role of [ROLE.FW, ROLE.MF, ROLE.DF]) {
       for (let team = 0; team < 2; team++) {
-        const human = choice !== null && team === 0 && choice.role === role;
+        const human = setup !== null && team === 0 && setup.role === role;
         if (human) localId = seats.length;
-        const rival = choice !== null && team === 1;
-        const name = (LIVERIES[this.factions[team]] ?? LIVERIES[team]).pilots[role];
-        seats.push({ team, role, human, name, skill: rival ? RIVAL_SKILL[choice.rivals] : 0.6 });
+        const name = (LIVERIES[this.raceFactions[team]] ?? LIVERIES[team]).pilots[role];
+        seats.push({ team, role, human, name, skill: setup === null ? 0.6 : team === 1 ? setup.rivalSkill : setup.teamSkill });
       }
     }
     return { seats, localId };
   }
 
-  /** Which faction each race team is, for the race on now. */
-  private factions: [number, number] = [0, 1];
-  /** The match's rival faction (a random rival is drawn once, at the start of the match). */
-  private rivalFaction = 1;
-
-  /** The rival faction for a choice: as picked, or this match's draw when the garage says Random. */
-  private rivalFor(choice: GarageChoice): number {
-    if (choice.rival >= 0 && choice.rival !== choice.team && choice.rival < LIVERIES.length) return choice.rival;
-    if (this.rivalFaction !== choice.team) return this.rivalFaction;
-    return (choice.team + 1) % LIVERIES.length;
-  }
-
-  /** Draw a rival faction other than yours. */
-  private drawRival(choice: GarageChoice): void {
-    const others = LIVERIES.map((_, f) => f).filter((f) => f !== choice.team);
-    this.rivalFaction = choice.rival >= 0 && choice.rival !== choice.team ? choice.rival : others[(Math.random() * others.length) | 0];
-  }
-
-  /**
-   * Start a session: the factions, the seats, the circuit (unless `keepTrack`:
-   * the garage, which hides the circuit, keeps whichever is built), the race
-   * and its view.
-   */
-  private setSession(choice: GarageChoice | null, seed: number, gridFlip = false, keepTrack = false): void {
+  /** Put a session on screen: its view, effects, the scenery back. */
+  private attach(session: LocalSession | NetSession, previewOnly: boolean): void {
     this.view?.dispose();
-    // The factions: yours and the rival's; between races on the title screen, any two.
-    if (choice) this.factions = [choice.team, this.rivalFor(choice)];
-    else {
-      const a = (Math.random() * LIVERIES.length) | 0;
-      this.factions = [a, (a + 1 + ((Math.random() * (LIVERIES.length - 1)) | 0)) % LIVERIES.length];
-    }
-    this.menus.factions = this.factions;
-    const { seats, localId } = this.seats(choice);
-    if (!keepTrack) this.useTrack(choice?.track ?? this.trackId);
-    this.session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
-    this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.factions, keepTrack);
+    this.attracting = false;
+    this.session = session;
+    this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.raceFactions, previewOnly);
     // Out of the hangar, if the garage had it up: the circuit is back.
     this.hangar.hide();
+    this.garageShown = null;
     this.trackVis.group.visible = true;
     this.world.group.visible = true;
     // The mechs (and anything else the view made) take the cel shading too.
     celify(this.renderer.scene);
     this.view.onImpact = (strength) => {
       this.input.rumble(strength, 90 + strength * 160);
-      // Hit-stop: a beat's pause on every blow you land or take, longer for the big ones.
+      // Hit-stop: a beat's pause on every blow you land or take, longer for
+      // the big ones (online it only holds the picture; the race runs on).
       if (strength >= 0.8) this.session.freeze(0.075);
       else if (strength >= 0.35) this.session.freeze(0.035);
     };
@@ -285,6 +397,22 @@ export class Game {
     this.ownLock = -1;
     this.ownLockAt = 0;
     this.session.timeScale = 1;
+  }
+
+  /**
+   * Start an offline session: the seats, the circuit (unless `keepTrack`: the
+   * garage, which hides the circuit, keeps whichever is built), the race and its view.
+   */
+  private setSession(setup: RoundSetup | null, seed: number, gridFlip = false, keepTrack = false): void {
+    if (!setup) {
+      // Between races on the title screen: any two factions.
+      const a = (Math.random() * LIVERIES.length) | 0;
+      this.raceFactions = [a, (a + 1 + ((Math.random() * (LIVERIES.length - 1)) | 0)) % LIVERIES.length];
+    } else this.raceFactions = [setup.factions[0], setup.factions[1]];
+    const { seats, localId } = this.seats(setup);
+    if (!keepTrack) this.useTrack(setup?.track ?? this.trackId);
+    const session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip }, localId);
+    this.attach(session, keepTrack);
   }
 
   /** Build the circuit and its scenery, replacing the last one's. */
@@ -310,45 +438,75 @@ export class Game {
     scene.add(this.trackVis.group, this.world.group);
   }
 
-  private showTitle(): void {
-    this.state = 'title';
+  showTitle(): void {
+    this.mode = null;
+    if (this.online.room) void this.online.leaveRoom();
     this.hud.hide();
-    this.menus.show('title');
+    this.menus.reset('title');
     this.audio.setMusic('menu');
-    this.startAttract();
+  }
+
+  /** The scene behind the menus follows the screen on top: the attract race, or your mech in the hangar. */
+  private screenChanged(id: ScreenId | null): void {
+    if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
+      if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'video' || id === 'dialog') return;
+    }
+    if (id === null) return;
+    if (id === 'title' || id === 'modes') {
+      if (!this.attracting) this.startAttract();
+      return;
+    }
+    if (HANGAR_SCREENS.has(id)) this.showGarage(this.previewLoadout(id));
+  }
+
+  /** Whose mech the hangar shows for a screen. */
+  private previewLoadout(id: ScreenId): { team: number; role: Role } {
+    if (id === 'room' || this.menus.has('room')) {
+      const v = this.online.lobby;
+      const me = v?.players.find((p) => p.pid === this.online.pid);
+      if (v && me && me.side >= 0) return { team: v.sides[me.side].faction, role: me.role };
+    }
+    if (id === 'briefing' || id === 'standings' || id === 'award' || this.menus.has('briefing')) {
+      const ev = this.gpEvents[this.gpKind];
+      if (ev) return { team: ev.faction, role: this.loadout.role };
+    }
+    if ((id === 'online' || this.menus.has('online')) && this.online.squadView && this.online.squadSize > 1) {
+      return { team: this.online.squadView.faction, role: this.loadout.role };
+    }
+    return this.loadout;
   }
 
   /** A race between computer pilots running behind the title screen. */
   private startAttract(): void {
+    this.state = 'title';
     this.setSession(null, (Math.random() * 1e9) | 0);
-    this.session.fastForward(88 + Math.random() * 24);
+    this.attracting = true;
+    (this.session as LocalSession).fastForward(88 + Math.random() * 24);
     this.view.focusId = (Math.random() * 6) | 0;
     this.view.cam.mode = 'play';
     this.attractTimer = 0;
   }
 
-  private showGarage(choice: GarageChoice): void {
+  /** Your mech, alone, in your team's hangar. */
+  showGarage(l: { team: number; role: Role }): void {
     const started = this.renderer.reviewProbe ? performance.now() : 0;
-    // The garage shows only your mech in your team's hangar, so a change of
-    // circuit, rival or match changes nothing on screen: it is remembered,
-    // and the circuit is built when the match starts. Only a new team or
-    // frame rebuilds the scene.
-    const same = this.state === 'garage' && choice.team === this.choice.team && choice.role === this.choice.role;
-    this.choice = choice;
-    if (same) return;
+    // A change of circuit, rival or match changes nothing on screen: only a
+    // new team or frame rebuilds the scene.
+    if (this.state === 'garage' && this.garageShown && this.garageShown.team === l.team && this.garageShown.role === l.role) return;
     this.state = 'garage';
     this.hud.hide();
     // The grid, stationary, with your mech in front of the camera, on whichever circuit is built.
-    this.setSession(choice, 1, false, true);
+    const setup: RoundSetup = { factions: [l.team, (l.team + 1) % LIVERIES.length], role: l.role, rivalSkill: 0.55, teamSkill: 0.6, track: this.trackId, cfg: MATCH_OPTIONS[0].cfg };
+    this.setSession(setup, 1, false, true);
+    this.garageShown = { team: l.team, role: l.role };
     this.view.cam.mode = 'orbit';
     this.view.cam.shiftX = GARAGE_SHIFT;
     this.view.cam.reset();
-    // Your mech alone, in your team's hangar: the circuit and the others are hidden.
     const m = this.session.race.mechs[this.session.localId];
-    const livery = LIVERIES[choice.team] ?? LIVERIES[0];
+    const livery = LIVERIES[l.team] ?? LIVERIES[0];
     trackMatrix(this.session.track, m.s, m.d, 0, m.facing, this.hangarFrame);
-    this.hangar.setTeam({ id: livery.id, name: factionName(livery).toUpperCase(), css: livery.css, glow: livery.glow, emblem: emblemUrl(choice.team) });
-    this.hangar.setBay(choice.role + 1);
+    this.hangar.setTeam({ id: livery.id, name: factionName(livery).toUpperCase(), css: livery.css, glow: livery.glow, emblem: emblemUrl(l.team) });
+    this.hangar.setBay(l.role + 1);
     this.hangar.show(this.hangarFrame);
     this.trackVis.group.visible = false;
     this.world.group.visible = false;
@@ -361,7 +519,7 @@ export class Game {
    * Switch the 80s anime look on or off (remembered like any tuning value,
    * and it replaces a ?look= on the URL). Returns whether it is now on.
    */
-  private toggleLook(): boolean {
+  toggleLook(): boolean {
     const on = !look.on;
     this.lookParam = null;
     const item = TUNE_GROUPS.flatMap((g) => g.items).find((i) => i.key === 'look');
@@ -372,16 +530,43 @@ export class Game {
     return on;
   }
 
+  // ---- video settings -------------------------------------------------------
+
+  /** Change video settings: applied at once and kept on this device. */
+  setVideo(change: Partial<VideoSettings>): void {
+    const panels = change.panels !== undefined && change.panels !== video.panels;
+    Object.assign(video, change);
+    saveVideo();
+    this.renderer.crt = video.crt;
+    applyFrame();
+    if (panels) {
+      setSunhawkPanels(video.panels);
+      this.refreshSunhawk('all');
+    }
+    this.menus.refresh();
+  }
+
+  /** The mechs' and effects' drawings a second in the anime look (the look's own tuning value). */
+  get drawingsPerSecond(): number {
+    return Math.round(this.tuning.feel.lookSteps);
+  }
+
+  setDrawings(n: number): void {
+    const item = TUNE_GROUPS.flatMap((g) => g.items).find((i) => i.key === 'lookSteps');
+    if (item) this.tuning.set(item, n);
+    this.menus.refresh();
+  }
+
   private cycleSunhawk(dir = 1): void {
     cycleSunhawkModel(dir);
     this.refreshSunhawk();
-    this.hud.showNotice(`Sunhawk: ${SUNHAWK_LABELS[getSunhawkModel()]}`,false,1.8);
+    this.hud.showNotice(`Sunhawk: ${SUNHAWK_LABELS[getSunhawkModel()]}`, false, 1.8);
   }
 
   private cycleRoster(): void {
     toggleRosterModel();
     this.refreshSunhawk('roster');
-    this.hud.showNotice(`Mechs: ${rosterLabel()}`,false,1.8);
+    this.hud.showNotice(`Mechs: ${rosterLabel()}`, false, 1.8);
   }
 
   private refreshSunhawk(scope: 'sunhawk' | 'roster' | 'all' = 'sunhawk'): void {
@@ -405,45 +590,98 @@ export class Game {
     });
   }
 
-  /** From the results (or a restart after the flag): the next round, or a fresh match if this one is decided. */
-  private next(): void {
-    if (this.match && this.match.winner < 0) this.startRound();
-    else this.startMatch(this.choice);
+  // ---- Free Play -----------------------------------------------------------------
+
+  private freeHangar(): HangarData {
+    return { context: 'Free Play', confirm: 'Match setup', onConfirm: () => this.menus.push('setup') };
   }
 
-  /** A new match in the format picked in the garage, starting with round one. */
-  private startMatch(choice: GarageChoice): void {
-    this.choice = choice;
-    this.match = createMatch((MATCH_OPTIONS[choice.match] ?? MATCH_OPTIONS[0]).cfg);
-    this.drawRival(choice);
+  openFreePlay(): void {
+    this.mode = 'free';
+    this.menus.push<HangarData>('hangar', this.freeHangar());
+  }
+
+  /** A Free Play match in the format picked in setup, starting with round one. */
+  startFree(): void {
+    this.mode = 'free';
+    const c = this.free;
+    const others = LIVERIES.map((_, f) => f).filter((f) => f !== this.loadout.team);
+    const rival = c.rival >= 0 && c.rival !== this.loadout.team && c.rival < LIVERIES.length ? c.rival : others[(Math.random() * others.length) | 0];
+    const cfg = (MATCH_OPTIONS[c.match] ?? MATCH_OPTIONS[0]).cfg;
+    this.setup = { factions: [this.loadout.team, rival], role: this.loadout.role, rivalSkill: RIVAL_SKILL[c.rivals] ?? 0.55, teamSkill: 0.6, track: c.track, cfg };
+    this.match = createMatch(cfg);
     this.startRound();
+  }
+
+  /** From the pause menu or the results: back to the mode's setup screen. */
+  toSetup(): void {
+    this.hud.hide();
+    this.eyecatch.hide();
+    if (this.state === 'race' || this.state === 'paused' || this.state === 'results') this.state = 'garage';
+    if (this.mode === 'gp') {
+      const ev = this.gpEvents[this.gpKind];
+      if (ev && ev.rounds[ev.current]?.you && !ev.rounds[ev.current].you!.result) this.menus.reset('briefing', { kind: this.gpKind }, ['title', 'modes', 'gp']);
+      else this.menus.reset('gp', undefined, ['title', 'modes']);
+    } else {
+      this.mode = 'free';
+      this.menus.reset('setup', undefined, ['title', 'modes', { id: 'hangar', data: this.freeHangar() }]);
+    }
+    this.audio.setMusic('menu');
+  }
+
+  /** From the results (or a restart after the flag): the next round, or what follows the match. */
+  next(): void {
+    if (this.mode === 'online') return void this.online.sendRoom('continue');
+    if (this.match && this.match.winner < 0) return this.startRound();
+    if (this.mode === 'gp') return this.gpMatchDone();
+    this.startFree();
+  }
+
+  restart(): void {
+    if (this.mode === 'online') return;
+    // Once a round has been banked, "restart" can only mean moving on.
+    if (this.roundScored) this.next();
+    else this.startRound();
   }
 
   /** What the HUD shows under the score: the format, the round, and how the match stands. */
   private matchLabel(): string {
     const m = this.match;
-    if (!m || (m.cfg.mode === 'series' && m.cfg.bestOf === 1)) return '';
-    const a = factionName(LIVERIES[this.factions[0]]);
-    const b = factionName(LIVERIES[this.factions[1]]);
+    const a = factionName(LIVERIES[this.raceFactions[0]]);
+    const b = factionName(LIVERIES[this.raceFactions[1]]);
+    let gp = '';
+    if (this.mode === 'gp') {
+      const ev = this.gpEvents[this.gpKind];
+      if (ev) gp = `${eventName(ev)}, round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`;
+    }
+    if (!m || (m.cfg.mode === 'series' && m.cfg.bestOf === 1)) return gp;
     const round = `Round ${m.rounds.length + 1}`;
-    if (m.cfg.mode === 'series') return `Best of ${m.cfg.bestOf} · ${round} · ${a} ${m.wins[0]}–${m.wins[1]} ${b}`;
-    return `First to ${m.cfg.target} · ${round} · ${a} ${m.totals[0]}–${m.totals[1]} ${b}`;
+    const pre = gp ? `${gp} · ` : '';
+    if (m.cfg.mode === 'series') return `${pre}Best of ${m.cfg.bestOf} · ${round} · ${a} ${m.wins[0]}–${m.wins[1]} ${b}`;
+    return `${pre}First to ${m.cfg.target} · ${round} · ${a} ${m.totals[0]}–${m.totals[1]} ${b}`;
   }
 
-  /** Start (or restart) the next unscored round of the match. */
+  /** Start (or restart) the next unscored round of an offline match. */
   private startRound(): void {
-    const choice = this.choice;
-    if (!this.match) this.match = createMatch(MATCH_OPTIONS[choice.match]?.cfg);
+    const setup = this.setup;
+    if (!setup) return;
+    if (!this.match) this.match = createMatch(setup.cfg);
     this.roundScored = false;
     this.state = 'race';
     this.menus.show(null);
     this.input.swallowHeld();
     // The teams swap sides of the grid from one round to the next.
     const round = this.match.rounds.length;
-    this.setSession(choice, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
-    if (this.opts.demo) this.session.race.mechs[this.session.localId].human = false;
-    if (this.opts.skip) this.session.fastForward(this.opts.skip);
-    this.hud.begin(this.session.race, this.session.track, this.session.localId, this.factions);
+    this.setSession(setup, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
+    const local = this.session as LocalSession;
+    if (this.opts.demo) local.race.mechs[local.localId].human = false;
+    if (this.opts.skip) local.fastForward(this.opts.skip);
+    this.beginRace();
+  }
+
+  /** The HUD, camera and music for a race just put on screen. */
+  private beginRace(): void {
+    this.hud.begin(this.session.race, this.session.track, this.session.localId, this.raceFactions);
     this.hud.setMatch(this.matchLabel());
     this.hud.setDevice(this.input.device);
     this.view.cam.reset();
@@ -454,15 +692,614 @@ export class Game {
   private pause(): void {
     if (this.state !== 'race') return;
     this.state = 'paused';
-    this.menus.show('pause');
+    if (this.session instanceof NetSession) this.session.autopilot = true;
+    this.menus.reset('pause');
     this.audio.play('ui_select');
   }
 
-  private resume(): void {
+  resume(): void {
+    if (this.state !== 'paused') return;
     this.state = 'race';
+    if (this.session instanceof NetSession) this.session.autopilot = false;
     this.menus.show(null);
     // The button that chose "Resume" must not also fire a boost, a dash or an ability.
     this.input.swallowHeld();
+  }
+
+  // ---- Grand Prix ----------------------------------------------------------------
+
+  gpEvent(kind: GpKind): GpEvent | null {
+    return this.gpEvents[kind];
+  }
+
+  gpDifficulty(): number {
+    return gpStore.difficulty();
+  }
+
+  setGpDifficulty(d: number): void {
+    gpStore.setDifficulty(d);
+    this.menus.refresh();
+  }
+
+  gpMedals(): { cup: Record<number, Medal | undefined>; season: Record<number, number> } {
+    return { cup: gpStore.medals()[CUPS[0].id] ?? {}, season: gpStore.cupsWon() };
+  }
+
+  /** From the hub: carry on with the event, or pick a faction and start one. */
+  openGp(kind: GpKind): void {
+    this.mode = 'gp';
+    this.gpKind = kind;
+    const ev = this.gpEvents[kind];
+    if (ev) {
+      this.gpRunner.run(ev);
+      if (isOver(ev)) {
+        const place = finalPlace(ev);
+        this.menus.push('award', { kind, place, medal: kind === 'cup' ? medalFor(place) : null });
+      } else if (ev.rounds[ev.current].you?.result) this.menus.push('standings', { kind });
+      else this.menus.push('briefing', { kind });
+      return;
+    }
+    const name = kind === 'cup' ? CUPS[0].name : 'Zenith Cup season';
+    this.menus.push<HangarData>('hangar', {
+      context: `Grand Prix · ${name} · pick the faction you will race for`,
+      confirm: kind === 'cup' ? 'Start the cup' : 'Start the season',
+      onConfirm: () => {
+        this.newGp(kind);
+        this.menus.replace('briefing', { kind });
+      },
+    });
+  }
+
+  newGp(kind: GpKind): void {
+    const seed = (Math.random() * 1e9) | 0;
+    const ev = kind === 'cup' ? newCup(CUPS[0].id, this.loadout.team, this.gpDifficulty(), seed) : newSeason(this.loadout.team, this.gpDifficulty(), seed);
+    gpStore.saveEvent(ev);
+    this.gpEvents[kind] = ev;
+    this.gpKind = kind;
+    this.gpRunner.run(ev);
+  }
+
+  abandonGp(kind: GpKind): void {
+    gpStore.clearEvent(kind);
+    this.gpEvents[kind] = null;
+    if (this.gpKind === kind) this.gpRunner.run(null);
+  }
+
+  openGpHangar(kind: GpKind): void {
+    const ev = this.gpEvents[kind];
+    if (!ev) return;
+    this.menus.push<HangarData>('hangar', {
+      context: `${eventName(ev)} · round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`,
+      confirm: 'Done',
+      onConfirm: () => this.menus.pop(),
+      team: ev.faction,
+      factionLock: `Your faction is fixed for the whole ${kind === 'cup' ? 'cup' : 'season'}`,
+      onChange: (_t, r) => this.setLoadout({ team: this.loadout.team, role: r }),
+    });
+  }
+
+  startGpRound(kind: GpKind): void {
+    const ev = this.gpEvents[kind];
+    const r = ev?.rounds[ev.current];
+    if (!ev || !r?.you) return;
+    this.mode = 'gp';
+    this.gpKind = kind;
+    const cfg = matchFormat(ev);
+    this.setup = { factions: [ev.faction, r.you.b], role: this.loadout.role, rivalSkill: GP_SKILL[ev.difficulty] ?? 0.55, teamSkill: GP_TEAMMATE_SKILL, track: r.circuit, cfg };
+    this.match = createMatch(cfg);
+    this.gpRunner.run(ev);
+    this.startRound();
+  }
+
+  /** Your match of this round is decided: bank it and show the standings. */
+  private gpMatchDone(): void {
+    const ev = this.gpEvents[this.gpKind];
+    const m = this.match;
+    if (!ev || !m) return;
+    recordYours(ev, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 });
+    gpStore.saveEvent(ev);
+    this.match = null;
+    this.state = 'garage';
+    this.hud.hide();
+    this.audio.setMusic('menu');
+    this.menus.reset('standings', { kind: this.gpKind }, ['title', 'modes', 'gp']);
+  }
+
+  /** On from the standings (or a matchday off): the next briefing, or the award. */
+  gpAdvance(kind: GpKind): void {
+    const ev = this.gpEvents[kind];
+    if (!ev || !advance(ev)) return;
+    gpStore.saveEvent(ev);
+    if (isOver(ev)) {
+      const place = finalPlace(ev);
+      const medal = kind === 'cup' ? medalFor(place) : null;
+      if (kind === 'cup') gpStore.awardMedal(ev.cup, ev.difficulty, medal);
+      else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
+      this.menus.replace('award', { kind, place, medal });
+      this.audio.play(place === 1 ? 'win' : 'lose');
+    } else {
+      this.menus.replace('briefing', { kind });
+    }
+  }
+
+  /** The award seen: the event is put away, its medals and cups kept. */
+  finishGp(kind: GpKind): void {
+    gpStore.clearEvent(kind);
+    this.gpEvents[kind] = null;
+    if (!this.menus.popTo('gp')) this.menus.reset('gp', undefined, ['title', 'modes']);
+  }
+
+  // ---- Online ----------------------------------------------------------------------
+
+  private loadoutMsg(): Loadout {
+    return { faction: this.loadout.team, role: this.loadout.role };
+  }
+
+  /** The squad coming into a room with you, when you lead one of two or three. */
+  private squadTicket(): SquadTicket | undefined {
+    const v = this.online.squadView;
+    return v && v.members.length > 1 && this.online.leading ? { id: v.code, size: v.members.length } : undefined;
+  }
+
+  openOnline(): void {
+    if (!this.online.available) return void this.menus.push('online');
+    if (!this.callsign)
+      return this.askCallsign(() => {
+        this.menus.replace('online');
+        void this.ensureSquad();
+      }, 'Pick a callsign: the name your friends see on the grid.');
+    this.menus.push('online');
+    void this.ensureSquad();
+  }
+
+  /** You always have a squad online, even a squad of one: it is how friends join you. */
+  private ensureSquad(): Promise<void> {
+    if (this.online.squad || !this.online.available) return Promise.resolve();
+    // One at a time: a squad leave and the hub can both ask for one.
+    this.squadMaking ??= (async () => {
+      this.onlineStatus = 'Connecting…';
+      this.menus.refresh();
+      try {
+        await this.online.createSquad(this.loadoutMsg());
+        this.onlineStatus = '';
+      } catch (e) {
+        this.onlineStatus = failure(e);
+      }
+      this.squadMaking = null;
+      if (this.menus.screen === 'online') this.menus.refresh();
+    })();
+    return this.squadMaking;
+  }
+  private squadMaking: Promise<void> | null = null;
+
+  leaveOnline(): void {
+    const others = this.online.squadSize > 1;
+    const go = () => {
+      void this.online.leaveRoom();
+      void this.online.leaveSquad();
+      this.mode = null;
+      if (!this.menus.popTo('modes')) this.menus.reset('modes', undefined, ['title']);
+    };
+    if (others) confirmDialog(this.menus, 'Leave Online?', 'You leave your squad too.', 'Leave', go);
+    else go();
+  }
+
+  askCallsign(then?: () => void, hint = 'The name your friends see on the grid and the results. 3 to 16 characters.'): void {
+    this.menus.push<EntryData>('entry', {
+      title: 'Callsign',
+      hint,
+      kind: 'callsign',
+      value: this.callsign,
+      submit: (v) => {
+        const problem = setCallsign(v);
+        if (problem) return problem;
+        if (then) then();
+        else this.menus.pop();
+        return null;
+      },
+    });
+  }
+
+  async createRoom(): Promise<void> {
+    this.onlineStatus = 'Making a room…';
+    this.menus.refresh();
+    try {
+      await this.online.createRoom(this.loadoutMsg(), this.squadTicket());
+      this.onlineStatus = '';
+      if (this.squadTicket() && this.online.room) this.online.sendSquad('go', { code: this.online.room.roomId });
+      this.menus.push('room');
+    } catch (e) {
+      this.onlineStatus = '';
+      this.menus.refresh();
+      this.menus.toast(failure(e), 4);
+    }
+  }
+
+  askRoomCode(): void {
+    this.menus.push<EntryData>('entry', {
+      title: 'Join room',
+      hint: 'The 5-character code your friend sees on their room screen, or their invite link.',
+      kind: 'code',
+      submit: async (v) => {
+        const code = normalizeCode(v);
+        if (!code) return 'Codes are 5 characters, like K7Q2X';
+        try {
+          await this.online.joinRoom(code, this.loadoutMsg(), this.squadTicket());
+        } catch (e) {
+          return failure(e);
+        }
+        if (this.squadTicket()) this.online.sendSquad('go', { code });
+        this.menus.replace('room');
+        return null;
+      },
+    });
+  }
+
+  async inviteToSquad(): Promise<void> {
+    await this.ensureSquad();
+    const code = this.online.squadView?.code ?? this.online.squad?.roomId;
+    if (code) inviteDialog(this.menus, this, 'squad', code);
+    else this.menus.toast(this.onlineStatus || "Can't reach the game server.");
+  }
+
+  askSquadCode(): void {
+    this.menus.push<EntryData>('entry', {
+      title: 'Join a squad',
+      hint: "Your friend's squad code, from Invite to squad on their Online screen.",
+      kind: 'code',
+      submit: async (v) => {
+        const code = normalizeCode(v);
+        if (!code) return 'Codes are 5 characters, like K7Q2X';
+        try {
+          await this.online.joinSquad(code, this.loadoutMsg());
+        } catch (e) {
+          return failure(e);
+        }
+        this.menus.pop();
+        return null;
+      },
+    });
+  }
+
+  async leaveSquad(): Promise<void> {
+    await this.online.leaveSquad();
+    await this.ensureSquad();
+  }
+
+  openOnlineHangar(): void {
+    // Read the squad as it is at each update: the leader may change the
+    // faction, people may join, leave or pick other frames.
+    const o = this.online;
+    const grouped = () => !!o.squadView && o.squadView.members.length > 1;
+    const following = () => grouped() && !o.leading;
+    this.menus.push<HangarData>('hangar', {
+      context: () => (grouped() ? `Online · your squad · ${factionName(LIVERIES[o.squadView!.faction])}` : 'Online'),
+      confirm: 'Done',
+      onConfirm: () => this.menus.pop(),
+      // Your own pick, always: anyone may look at any frame.
+      live: () => ({ team: following() ? o.squadView!.faction : this.loadout.team, role: this.loadout.role }),
+      factionLock: () => (following() ? "Your squad's leader picks its faction" : null),
+      onChange: (t, r) => {
+        this.setLoadout({ team: following() ? this.loadout.team : t, role: r });
+        o.sendSquad('loadout', { faction: this.loadout.team, role: r });
+      },
+      crew: {
+        title: () => (grouped() ? 'Your squad' : 'Your squad: just you so far'),
+        at: (r) => {
+          const sv = o.squadView;
+          const people = sv ? sv.members.filter((x) => (x.pid === o.squadPid ? this.loadout.role : x.role) === r).map((x) => ({ name: x.callsign, you: x.pid === o.squadPid, locked: false })) : [];
+          if (!sv && r === this.loadout.role) people.push({ name: this.callsign || 'You', you: true, locked: false });
+          return { people };
+        },
+      },
+    });
+  }
+
+  openRoomHangar(): void {
+    const v = this.online.lobby;
+    const me = v?.players.find((p) => p.pid === this.online.pid);
+    if (!v || !me || me.side < 0) return;
+    if (v.phase !== 'lobby' && v.phase !== 'countdown') return this.menus.toast('Seats change between matches');
+    // Everything is read from the room as it is at each update: the captain
+    // may change the faction, teammates pick and lock in, the captain may leave.
+    const o = this.online;
+    const seat = () => {
+      const now = o.lobby;
+      const cur = now?.players.find((p) => p.pid === o.pid);
+      return now && cur && cur.side >= 0 ? { now, cur, side: now.sides[cur.side] } : null;
+    };
+    // Your team's captain picks its faction, and so can the host.
+    const captain = () => {
+      const s = seat();
+      return !!s && (s.side.captain === o.pid || s.now.host === o.pid);
+    };
+    this.menus.push<HangarData>('hangar', {
+      context: () => {
+        const s = seat();
+        return s ? `Room ${s.now.code} · ${factionName(LIVERIES[s.side.faction])}` : `Room ${v.code}`;
+      },
+      confirm: 'Done',
+      onConfirm: () => this.menus.pop(),
+      // Your own pick, always: anyone may look at any frame; Ready locks it in.
+      live: () => {
+        const s = seat();
+        return s ? { team: s.side.faction, role: s.cur.role } : null;
+      },
+      factionLock: () => (captain() ? null : "Your team's captain or the host picks its faction"),
+      factionTaken: (f) => {
+        const s = seat();
+        return s && f === s.now.sides[1 - s.cur.side].faction ? 'The other team flies that faction' : null;
+      },
+      crew: {
+        title: () => 'Your team',
+        at: (r) => {
+          const s = seat();
+          if (!s) return { people: [] };
+          const people = s.now.players.filter((p) => p.side === s.cur.side && p.role === r).map((p) => ({ name: p.callsign, you: p.pid === o.pid, locked: p.ready }));
+          return { people, cpu: people.length ? undefined : LIVERIES[s.side.faction].pilots[r] };
+        },
+        frameLock: () => (seat()?.cur.ready ? "You're locked in: press Not ready to change your frame" : null),
+      },
+      onChange: (t, r) => {
+        const s = seat();
+        if (!s) return;
+        const lead = captain();
+        if (lead && t !== s.side.faction) o.sendRoom('faction', { faction: t, side: s.cur.side });
+        if (r !== s.cur.role) o.sendRoom('pick', { role: r });
+        this.setLoadout({ team: lead ? t : this.loadout.team, role: r });
+      },
+    });
+  }
+
+  confirmLeaveRoom(): void {
+    const v = this.online.lobby;
+    const inMatch = !!v && v.phase !== 'lobby' && v.phase !== 'countdown';
+    confirmDialog(this.menus, 'Leave the room?', inMatch ? 'Your seat goes to a computer pilot for the rest of this match.' : 'You can come back with its code while it is open.', 'Leave', () => this.leaveRoom());
+  }
+
+  leaveMatch(): void {
+    this.leaveRoom();
+  }
+
+  leaveRoom(): void {
+    void this.online.leaveRoom();
+    this.backToHub(null);
+  }
+
+  /** Out of the room (left, removed, or it closed): the Online hub. */
+  private backToHub(text: string | null): void {
+    this.mode = null;
+    this.hud.hide();
+    this.eyecatch.hide();
+    if (this.state === 'race' || this.state === 'paused' || this.state === 'results') this.state = 'garage';
+    this.menus.reset('online', undefined, ['title', 'modes']);
+    this.audio.setMusic('menu');
+    void this.ensureSquad();
+    if (text) messageDialog(this.menus, 'Out of the room', text);
+  }
+
+  /** The dialog for a request made to you (shot calling), and the one you last answered. */
+  private request: { key: string; dialog: DialogData } | null = null;
+  private answered: string | null = null;
+
+  /**
+   * Requests made to you, kept in step with the room: one dialog per
+   * request however often it is asked, gone by itself once the request is
+   * settled or withdrawn, and not shown again while your answer is on its way.
+   */
+  private syncRequests(): void {
+    const o = this.online;
+    const v = o.lobby;
+    const me = v?.players.find((p) => p.pid === o.pid);
+    let want: { key: string; from: string } | null = null;
+    if (this.menus.has('room') && v && me && me.side >= 0 && (v.phase === 'lobby' || v.phase === 'countdown')) {
+      const asker = v.sides[me.side].caller === me.pid ? v.callerAsks[me.side] : null;
+      if (asker && asker !== me.pid) want = { key: `caller:${asker}`, from: asker };
+    }
+    if (want?.key !== this.answered) this.answered = null;
+    if (this.request && this.request.key !== want?.key) {
+      this.menus.remove(this.request.dialog);
+      this.request = null;
+    }
+    if (!want || this.request || want.key === this.answered) return;
+    const { key, from } = want;
+    const who = v?.players.find((p) => p.pid === from)?.callsign ?? 'Your teammate';
+    const answer = (accept: boolean) => () => {
+      if (this.request) this.menus.remove(this.request.dialog);
+      this.request = null;
+      this.answered = key;
+      o.sendRoom('caller', { action: accept ? 'accept' : 'decline' });
+    };
+    const dialog: DialogData = { title: 'Shot calling', text: `${who} asks to give your computer pilot its orders.`, options: [{ label: 'Hand it over', go: true, run: answer(true) }, { label: 'Keep it', run: answer(false) }], cancel: answer(false) };
+    this.request = { key, dialog };
+    this.menus.push<DialogData>('dialog', dialog);
+  }
+
+  /** The match is over (or was ended): out of the race and back to the room's screen. */
+  private roomAgain(toast: string | null): void {
+    const wasRacing = this.state === 'race' || this.state === 'paused' || this.state === 'results';
+    this.mode = null;
+    if (wasRacing) {
+      this.state = 'garage';
+      this.hud.hide();
+      this.eyecatch.hide();
+      this.audio.setMusic('menu');
+    }
+    this.toRoom();
+    if (toast) this.menus.toast(toast);
+  }
+
+  /** Into the room's screen (a fresh stack beneath it: title, play, online). */
+  private toRoom(): void {
+    this.menus.reset('room', undefined, ['title', 'modes', 'online']);
+  }
+
+  /** Invite links, and the room or squad this tab was in before a reload. */
+  private async bootOnline(): Promise<void> {
+    if (!this.online.available) return;
+    const room = this.opts.room ? normalizeCode(this.opts.room) : null;
+    const squad = this.opts.squad ? normalizeCode(this.opts.squad) : null;
+    // The code goes from the address bar, so a reload does not join again.
+    if (room || squad) {
+      const u = new URL(location.href);
+      u.searchParams.delete('room');
+      u.searchParams.delete('squad');
+      history.replaceState(null, '', u.toString());
+    }
+    const go = async () => {
+      if (room) {
+        this.onlineStatus = 'Joining…';
+        this.toRoom();
+        try {
+          await this.online.joinRoom(room, this.loadoutMsg());
+          this.onlineStatus = '';
+          this.menus.refresh();
+        } catch (e) {
+          this.onlineStatus = '';
+          this.menus.reset('online', undefined, ['title', 'modes']);
+          messageDialog(this.menus, "Couldn't join", failure(e));
+        }
+        void this.ensureSquad();
+      } else if (squad) {
+        this.menus.reset('online', undefined, ['title', 'modes']);
+        try {
+          await this.online.joinSquad(squad, this.loadoutMsg());
+        } catch (e) {
+          messageDialog(this.menus, "Couldn't join the squad", failure(e));
+          void this.ensureSquad();
+        }
+        this.menus.refresh();
+      }
+    };
+    if (room || squad) {
+      if (!this.callsign) {
+        this.menus.reset('title');
+        this.menus.push('modes');
+        this.askCallsign(() => void go(), room ? 'Pick a callsign to join your friend: the name they see on the grid.' : 'Pick a callsign to join the squad.');
+      } else await go();
+      return;
+    }
+    // A reload: back where this tab was.
+    try {
+      const back = await this.online.resume(this.loadoutMsg());
+      if (back) this.toRoom();
+      else if (this.online.squad) this.menus.reset('online', undefined, ['title', 'modes']);
+    } catch {
+      /* nothing to resume */
+    }
+  }
+
+  private wireOnline(): void {
+    const o = this.online;
+    o.on('lobby', (v) => {
+      // Still in a race the room has finished with (its lobbyAgain was missed
+      // while the connection was down): back to the room with everyone else.
+      const racing = this.state === 'race' || this.state === 'paused' || this.state === 'results';
+      if (this.mode === 'online' && racing && (v.phase === 'lobby' || v.phase === 'countdown')) return this.roomAgain(null);
+      const s = this.menus.screen;
+      if (s === 'room') {
+        this.menus.refresh();
+        const l = this.previewLoadout('room');
+        this.preview(l);
+      } else if (s === 'results' && this.mode === 'online') this.menus.refresh();
+      else if (s === 'hangar' && this.menus.has('room')) this.menus.refresh();
+      this.syncRequests();
+    });
+    o.on('matchStart', (msg) => this.startNetRound(msg));
+    o.on('tick', (msg) => {
+      if (this.session instanceof NetSession) this.session.onTicks(msg);
+    });
+    o.on('key', (msg) => {
+      if (this.session instanceof NetSession) this.session.onKey(msg);
+    });
+    o.on('roundEnd', (msg) => {
+      this.match = msg.match;
+      const me = this.session instanceof NetSession && this.session.localId >= 0 ? this.session.race.mechs[this.session.localId] : null;
+      if (me && this.state === 'race') this.audio.play(msg.round.winner === me.team ? 'win' : 'lose');
+      if (this.menus.screen === 'results') this.menus.refresh();
+    });
+    o.on('lobbyAgain', (msg) => {
+      if (this.mode !== 'online' && !this.menus.has('room')) return;
+      this.roomAgain(msg.reason === 'ended' ? 'The host ended the match' : null);
+    });
+    o.on('callerAsk', () => this.syncRequests());
+    o.on('notice', ({ text }) => {
+      if (this.state === 'race') this.hud.showNotice(text, false, 2.2);
+      else this.menus.toast(text);
+    });
+    o.on('error', ({ code, text }) => {
+      if (code === 'kicked' || code === 'replaced') return;
+      if (this.state === 'race') this.hud.showNotice(text, true, 3);
+      else this.menus.toast(text, 4);
+    });
+    o.on('roomLeft', ({ text }) => {
+      if (this.menus.has('room') || this.mode === 'online') this.backToHub(text);
+    });
+    o.on('drop', () => {
+      if (this.state === 'race' || this.state === 'paused') this.hud.showNotice('Connection lost: reconnecting…', true, 4);
+      else this.menus.toast('Connection lost: reconnecting…', 4);
+    });
+    o.on('reconnect', () => {
+      if (this.state === 'race' || this.state === 'paused') this.hud.showNotice('Reconnected', false, 1.6);
+      else this.menus.toast('Reconnected');
+    });
+    o.on('squad', (v) => {
+      this.syncRequests();
+      // A squad is one team: members fly the leader's faction. The hub, or
+      // the hangar opened from it, shows the squad as it is now (a room
+      // above them shows the room's teams instead).
+      if (!this.menus.has('online') || this.menus.has('room')) return;
+      if (this.menus.screen === 'online' || this.menus.screen === 'hangar') this.menus.refresh();
+      this.preview(this.previewLoadout(this.menus.screen ?? 'online'));
+    });
+    o.on('follow', ({ code, size }) => {
+      const sq = o.squadView;
+      if (!sq) return;
+      // Your leader has gone into a room: follow them in.
+      void (async () => {
+        try {
+          await o.joinRoom(code, this.loadoutMsg(), { id: sq.code, size, follow: true });
+          if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
+            this.state = 'garage';
+            this.hud.hide();
+          }
+          this.toRoom();
+          this.menus.toast('Following your leader');
+        } catch (e) {
+          this.menus.toast(`Couldn't follow your leader: ${failure(e)}`, 4);
+        }
+      })();
+    });
+    o.on('squadLeft', ({ text }) => {
+      if (text && this.menus.has('online')) this.menus.toast(text, 4);
+      // Removed from a squad (or it closed): a squad of your own again, wherever you are online.
+      if (this.menus.has('online')) void this.ensureSquad();
+      if (this.menus.screen === 'online') this.menus.refresh();
+    });
+  }
+
+  /** The room's race begins (or a reconnect rejoins one under way). */
+  private startNetRound(msg: MatchStartMsg): void {
+    if (msg.seat < 0) return;
+    this.mode = 'online';
+    this.raceFactions = [msg.factions[0], msg.factions[1]];
+    this.useTrack(msg.track);
+    const session = new NetSession(
+      msg,
+      // Nothing goes out while the connection is down: the room starts a new
+      // epoch when it comes back, and the race picks up from its keyframe.
+      (out) => {
+        if (!this.online.dropped) this.online.sendRoom('input', out);
+      },
+      () => this.online.sendRoom('resync'),
+    );
+    this.attach(session, false);
+    this.match = msg.match;
+    this.roundScored = false;
+    this.state = 'race';
+    this.menus.show(null);
+    this.input.swallowHeld();
+    this.beginRace();
   }
 
   // ---- events -------------------------------------------------------------
@@ -519,7 +1356,10 @@ export class Game {
         const h = this.heard(e.mech);
         const v = Math.max(e.mech === local || e.by === local ? 0.7 : 0, h.volume) * quiet;
         if (v > 0.03) A.play('fall', { volume: v, pan: h.pan });
-        if (inRace && e.by === local) this.slowmo = 0.6;
+        if (inRace && e.by === local) {
+          if (this.mode === 'online') this.view.cam.punch(0.8);
+          else this.slowmo = 0.6;
+        }
         break;
       }
       case 'recover': {
@@ -587,15 +1427,18 @@ export class Game {
         // look the moment is cut first: an impact frame, then the frame held
         // as a painted still while the clock stops, then the slow motion.
         if (inRace && inKnockout(race, e.mech, e.by, local, this.ownLock)) {
-          this.slowmo = 0.9;
+          // Online the race does not stop: a shorter still, which only holds
+          // the picture, and no slow motion.
+          const online = this.mode === 'online';
+          if (!online) this.slowmo = 0.9;
           if (look.on && look.still) {
-            const hold = 0.7;
+            const hold = online ? 0.3 : 0.7;
             this.renderer.impactFrame(0.11, true);
             this.renderer.paintedStill(hold);
             this.view.fx.skipExplosionsTo(2);
             this.session.freeze(hold + 0.11);
-            this.slowmo += hold + 0.11;
-          }
+            if (!online) this.slowmo += hold + 0.11;
+          } else if (online) this.view.cam.punch(1);
         }
         // Lost the mech we were riding with: move the camera to a teammate.
         if (e.mech === this.view.focusId) {
@@ -688,7 +1531,7 @@ export class Game {
         break;
       }
       case 'raceEnd':
-        if (inRace) this.finishRound();
+        if (inRace || this.state === 'paused') this.finishRound();
         else if (this.state === 'title') this.attractTimer = -3;
         break;
       default:
@@ -716,7 +1559,7 @@ export class Game {
     const round = m?.rounds[m.rounds.length - 1];
     const winner = m && m.winner >= 0 ? m.winner : round ? round.winner : me ? me.team : 0;
     const what = m && m.winner >= 0 && m.rounds.length > 1 ? 'the match' : 'the round';
-    this.eyecatch.show(m ? `Round ${m.rounds.length}` : 'The flag', `${LIVERIES[this.factions[winner]].name} take ${what}`, hold);
+    this.eyecatch.show(m ? `Round ${Math.max(1, m.rounds.length)}` : 'The flag', `${LIVERIES[this.raceFactions[winner]].name} take ${what}`, hold);
     this.renderer.paintedStill(hold);
     // The race has finished; hold it so nothing moves under the painting.
     this.session.freeze(hold);
@@ -725,13 +1568,14 @@ export class Game {
     return true;
   }
 
-  /** The flag has fallen: bank the round and bring the results up in a moment. */
+  /** The flag has fallen: bank the round (offline) and bring the results up in a moment. */
   private finishRound(): void {
     if (this.resultsAt > 0) return;
     const race = this.session.race;
     this.resultsAt = this.time + 2.8;
     // Bank the round. A round restarted from the pause menu never gets here.
-    if (this.match && !this.roundScored) {
+    // Online the room scores it and says so (roundEnd).
+    if (this.mode !== 'online' && this.match && !this.roundScored) {
       this.roundScored = true;
       const round = recordRound(this.match, race);
       this.audio.play(round.winner === race.mechs[this.session.localId].team ? 'win' : 'lose');
@@ -764,11 +1608,13 @@ export class Game {
     const dt = Math.min(0.1, Math.max(0.0005, (now - this.last) / 1000));
     this.last = now;
     this.time += dt;
+    const online = this.session instanceof NetSession;
     // The look: its settings for this frame, and the drawing clock. (A held
-    // frame is a held cel: the drawings stop with it, and with the pause.)
+    // frame is a held cel: the drawings stop with it, and with the pause
+    // offline; online the race behind the pause menu goes on.)
     readLook(this.tuning.feel);
     if (this.lookParam !== null) look.on = this.lookParam >= 0.5;
-    const paused = this.state === 'paused';
+    const paused = this.state === 'paused' && !online;
     tickDrawings(this.renderer.stillShowing || paused ? 0 : dt * (this.state === 'race' ? this.session.timeScale : 1));
     this.eyecatch.update(paused ? 0 : dt);
     this.renderer.paused = paused;
@@ -793,8 +1639,11 @@ export class Game {
     }
     if (menu.includes('rosterModel')) {
       this.cycleRoster();
-      menu=menu.filter(m=>m!=='rosterModel');
+      menu = menu.filter((m) => m !== 'rosterModel');
     }
+    // The look switch (G) and the tuning panel (T, the pad's Back) are tools
+    // for working on the game: without DEV_TOOLS their keys do nothing.
+    if (!DEV_TOOLS) menu = menu.filter((m) => m !== 'look' && m !== 'tune');
     // G switches the look, anywhere.
     if (menu.includes('look')) {
       this.toggleLook();
@@ -804,6 +1653,7 @@ export class Game {
     // worked with the mouse only, so the pad and keys keep flying the mech.
     if (menu.includes('tune')) {
       if (this.state === 'race' || !this.panel.open) {
+        this.panel.note = this.tuningNote();
         this.panel.toggle();
         this.audio.play('ui_select');
         menu = menu.filter((m) => m !== 'tune');
@@ -841,11 +1691,13 @@ export class Game {
           break;
         }
         const me = race.mechs[local];
-        // Slow motion around a knockout you were part of.
-        if (this.slowmo > 0) {
+        // Slow motion around a knockout you were part of (offline only: online
+        // the race does not wait for anyone).
+        if (this.slowmo > 0 && !online) {
           this.slowmo -= dt;
           this.session.timeScale = this.slowmo > 0.25 ? 0.3 : 0.3 + (1 - this.slowmo / 0.25) * 0.7;
         } else {
+          this.slowmo = 0;
           this.session.timeScale = 1;
         }
         const flying = me.human && !me.retired && !me.finished;
@@ -859,22 +1711,19 @@ export class Game {
         if (flying) this.roadRumble(dt);
         // The race can also end while nobody is watching (a dev skip past the flag).
         if (race.phase === PHASE.FINISHED && this.resultsAt < 0) this.finishRound();
-        if (this.resultsAt > 0 && this.time >= this.resultsAt && this.eyecatchFor(race)) {
-          // The anime look cuts to an eyecatch first; the results come up after it.
-        } else if (this.resultsAt > 0 && this.time >= this.resultsAt) {
-          this.resultsAt = -1;
-          this.eyecatch.hide();
-          this.state = 'results';
-          this.hud.hide();
-          this.menus.match = this.match;
-          this.menus.show('results', race, local);
-          this.audio.setMusic('menu');
-        }
+        this.resultsWhenDue(race, local, online);
         break;
       }
       case 'paused':
         this.menus.handle(menu);
-        simDt = 0;
+        if (online) {
+          // Online the race carries on behind the menu, your computer pilot
+          // flying, and the results come up over it when they are due.
+          this.session.update(dt, null);
+          for (const e of this.session.events) this.onEvent(e);
+          if (race.phase === PHASE.FINISHED && this.resultsAt < 0) this.finishRound();
+          if (this.state === 'paused') this.resultsWhenDue(race, local, online);
+        } else simDt = 0;
         break;
       case 'results':
         this.menus.handle(menu);
@@ -892,7 +1741,7 @@ export class Game {
     // A painted still holds everything, the camera and the sparks included.
     const viewDt = this.renderer.stillShowing ? 0 : simDt * (this.state === 'race' ? this.session.timeScale : 1);
     this.view.update(viewDt, flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
-    if (this.state === 'race' && drawDt > 0) this.hud.update(drawDt, cur, this.view.plates, this.view.focusId);
+    if ((this.state === 'race' || (this.state === 'paused' && online)) && drawDt > 0) this.hud.update(drawDt, cur, this.view.plates, this.view.focusId);
     // The scenery's own motion (water, lights) holds for a painted still too.
     if (!this.renderer.stillShowing) this.worldTime += dt;
     this.trackVis.update(this.worldTime);
@@ -912,7 +1761,7 @@ export class Game {
     // Continuous sound follows whoever the camera is on.
     const f = cur.mechs[this.view.focusId];
     const sc = this.scene;
-    sc.racing = (this.state === 'race' || this.state === 'results') && cur.phase !== PHASE.COUNTDOWN && !f.retired;
+    sc.racing = (this.state === 'race' || this.state === 'results' || (this.state === 'paused' && online)) && cur.phase !== PHASE.COUNTDOWN && !f.retired;
     sc.speed = f.speed;
     // (Home, the computer drives it on: the engine is its throttle, not the pad's.)
     sc.throttle = this.state === 'race' && f.id === local && !f.finished ? Math.max(this.input.state.throttle, f.mode === MODE.BATTLE ? 0.6 : 0) : 0.8;
@@ -932,6 +1781,22 @@ export class Game {
       this.renderer.reviewProbe?.setContext(`${this.state} · tick ${cur.tick} · lap ${f.lap}`, this.view.reviewDetailLevels());
       this.renderer.render(drawDt, this.time);
     }
+  }
+
+  /** The results, once the flag has fallen and the moment after it has passed. */
+  private resultsWhenDue(race: RaceState, local: number, online: boolean): void {
+    if (this.resultsAt < 0 || this.time < this.resultsAt) return;
+    // The anime look cuts to an eyecatch first; the results come up after it.
+    if (this.state === 'race' && this.eyecatchFor(race)) return;
+    this.resultsAt = -1;
+    this.eyecatch.hide();
+    if (this.session instanceof NetSession) this.session.autopilot = false;
+    this.state = 'results';
+    this.hud.hide();
+    this.resultsRace = online ? (this.session as NetSession).confirmed : race;
+    this.resultsLocal = local;
+    this.menus.reset('results');
+    this.audio.setMusic('menu');
   }
 
   /** A low rumble that follows the road: speed, charge strips, the wall, boost and Overdrive. */
@@ -961,13 +1826,18 @@ export class Game {
   /** For automated checks. */
   debugState(): object {
     const r = this.session.race;
+    const net = this.session instanceof NetSession ? this.session.predictor : null;
     return {
       state: this.state,
+      mode: this.mode,
+      screen: this.menus.screen,
       match: this.match ? { mode: this.match.cfg.mode, rounds: this.match.rounds.length, wins: this.match.wins, totals: this.match.totals, winner: this.match.winner } : null,
       tick: r.tick,
       phase: r.phase,
       lapPhase: r.lapPhase,
       focus: this.view.focusId,
+      online: { room: this.online.room?.roomId ?? null, squad: this.online.squad?.roomId ?? null, pid: this.online.pid, phase: this.online.lobby?.phase ?? null, rtt: Math.round(this.online.rtt) },
+      net: net ? { confirmed: net.confirmed.tick, predicted: net.predicted.tick, ahead: net.ahead, rebuilds: net.rebuilds, gaps: net.gaps } : null,
       mechs: r.mechs.map((m) => ({ name: m.name, s: Math.round(m.s), speed: Math.round(m.speed), hp: Math.round(m.hp), drive: Math.round(m.drive), cells: m.cells, place: m.place, mode: m.mode, retired: m.retired, finished: m.finished })),
     };
   }

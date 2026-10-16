@@ -272,6 +272,13 @@ export interface TeamState {
   /** Next tick the AI captain reconsiders (teams without a human). */
   captainAt: number;
   captainPhase: number;
+  /**
+   * Who may call this team's tactics (see CALLER). CALLER.ANY, the default,
+   * is the offline rule: any person on the team calls, and the computer
+   * captain calls for a team with nobody human on it. Online the room sets
+   * it: one seat (a mech id), nobody, or the computer captain.
+   */
+  caller: number;
 }
 
 export type SimEvent =
@@ -316,7 +323,7 @@ export type SimEvent =
   | { type: 'dash'; mech: number }
   | { type: 'arc'; mech: number; dir: number }
   | { type: 'boost'; mech: number }
-  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' }
+  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' | 'lap' }
   | { type: 'gate'; mech: number; gate: number; cells: number }
   /** A teammate's gate paid this mech its share (see rules.gateShare). */
   | { type: 'gateShare'; mech: number; from: number; gate: number; cells: number }

@@ -138,7 +138,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
       feel('lookFilm', 'Film', 0, 2, 0.05, 'x', 'Grain, halation, softness and colour fringe.'),
       feel('lookInk', 'Ink lines', 0, 2, 0.05, 'x'),
       feel('lookBoil', 'Line boil', 0, 2, 0.05, 'x', 'How much the lines and the grain shift from one drawing to the next.'),
-      feel('lookSteps', 'Drawings a second', 0, 24, 1, 'int', 'Mech poses and effects. 12 is animation on twos; 8 on threes; 0 animates smoothly. The race and the camera always run at full speed.'),
+      feel('lookSteps', 'Drawings a second', 0, 30, 1, 'int', 'Mech poses and effects. 12 is animation on twos; 8 on threes; 30 is the smoother choice in Video settings; 0 animates smoothly. The race and the camera always run at full speed.'),
       feel('lookImpact', 'Impact frames', 0, 1, 1, 'onoff', 'A flash of flat ink on a big hit you are part of. At most one every 1.2 seconds.'),
       feel('lookStill', 'Knockout still', 0, 1, 1, 'onoff', 'A painted freeze-frame when you take part in a knockout.'),
       feel('lookThirty', '30 frames a second', 0, 1, 1, 'onoff', 'Draw the anime look at 30 frames a second, as the series was shown. The race, the controls and the HUD still run at full speed.'),
@@ -209,6 +209,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
     items: [
       rule('overdriveMult', 'Overdrive speed', 1.05, 1.6, 0.01, 'bonus'),
       rule('overdriveSecs', 'Overdrive length', 1, 8, 0.25, 'sec'),
+      rule('overdriveLap', 'Overdrive from lap', 2, 3, 1, 'int', '2: the battle lap; 3: only the speed lap. Break Away is there from the battle lap either way.'),
       rule('breakawaySecs', 'Break Away: cannot be locked', 0, 4, 0.25, 'sec'),
       rule('snareMult', 'Snare: speed left', 0.4, 1, 0.01, 'pct'),
       rule('snareSecs', 'Snare length', 1, 8, 0.25, 'sec'),

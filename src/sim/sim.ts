@@ -50,6 +50,7 @@ import {
   PHASE,
   POINTS,
   RAM_ARC,
+  RAM_CHARGE,
   RAM_MASS,
   RAM_MIN_CLOSING,
   RAM_SHOVE,
@@ -58,6 +59,7 @@ import {
   STAGGER_DRAG,
   STAGGER_THROTTLE,
   STEER_RATE,
+  CALLER,
   TACTIC,
   TICK_RATE,
   TOW_FAR,
@@ -141,8 +143,8 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
     projectiles: [],
     nextProjId: 1,
     teams: [
-      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1 },
-      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1 },
+      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1, caller: CALLER.ANY },
+      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1, caller: CALLER.ANY },
     ],
     firstFinishTick: -1,
     endTick: -1,
@@ -525,7 +527,10 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
       my /= mag;
     }
     const minDist = c.radius + classOf(t).radius + 0.6;
-    if (dist < minDist && my > 0) my = 0;
+    // A Ram, locked on, drives straight at the target until its front lands
+    // (the stick still steers around it); then it is the usual fight.
+    const charge = m.ramT > 0 && (m.ramHits & (1 << t.id)) === 0 ? RAM_CHARGE : 0;
+    if (dist < minDist && my > 0 && charge === 0) my = 0;
     let scale = 1;
     let advance = 0;
     if (m.act === ACT.ATTACK) {
@@ -541,8 +546,8 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     // A lunge goes the way the attack faces, not after the target.
     const fs = Math.cos(m.facing);
     const fd = Math.sin(m.facing);
-    const rs = (us * my * c.approach - ud * mx * c.strafe) * scale + fs * advance;
-    const rd = (ud * my * c.approach + us * mx * c.strafe) * scale + fd * advance;
+    const rs = (us * my * c.approach - ud * mx * c.strafe) * scale + fs * advance + us * charge;
+    const rd = (ud * my * c.approach + us * mx * c.strafe) * scale + fd * advance + ud * charge;
 
     // The track carries you at your target's pace, easing toward the
     // limiter so a long fight does not grind to a halt.
@@ -550,7 +555,7 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     // Carried at the target's pace, leaning toward race pace, so a fight
     // moves down the road as fast as the race does.
     const carry = lerp(t.vs, ref, BATTLE_CARRY_PACE);
-    const cap = battleCap(race, m, c, ds > 2) + advance * 0.6;
+    const cap = battleCap(race, m, c, ds > 2) + (advance + charge) * 0.6;
     // Whatever a dash (or a shove) left over the cap, or under the slowest a
     // fight is carried, is made up at once.
     const low = Math.min(floor, cap);
@@ -558,7 +563,7 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     else if (m.vs < low) m.vs = Math.min(low, m.vs + DASH_BLEED * DT);
     const wantVs = clamp(carry + rs, Math.min(floor, cap), cap);
     const wantVd = rd;
-    const acc = c.battleAccel * move * (advance > 0 ? 2.2 : 1) * DT;
+    const acc = c.battleAccel * move * (advance > 0 || charge > 0 ? 2.2 : 1) * DT;
     let dvs = wantVs - m.vs;
     let dvd = wantVd - m.vd;
     const dm = Math.hypot(dvs, dvd);
@@ -911,6 +916,12 @@ export function setTactic(race: RaceState, team: number, tactic: Tactic, by: num
   race.events.push({ type: 'tactic', team, tactic, by, mark: ts.mark });
 }
 
+/** Whether this person's tactic calls count for their team (see TeamState.caller). */
+export function mayCall(race: RaceState, m: MechState): boolean {
+  const caller = race.teams[m.team].caller;
+  return caller === CALLER.ANY || caller === m.id;
+}
+
 function handleCommand(race: RaceState, m: MechState, cmd: number): void {
   if (cmd <= 0 || cmd > 4) return;
   const ts = race.teams[m.team];
@@ -1092,7 +1103,7 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     const m = ms[tick & 1 ? ms.length - 1 - k : k];
     const ctl = controls[m.id];
     // A knocked-out pilot can still call plays from the pit wall.
-    if (m.human && race.phase === PHASE.RACING && ctl.cmd !== m.prevCmd && ctl.cmd > 0) handleCommand(race, m, ctl.cmd);
+    if (m.human && race.phase === PHASE.RACING && ctl.cmd !== m.prevCmd && ctl.cmd > 0 && mayCall(race, m)) handleCommand(race, m, ctl.cmd);
     if (inPlay(m) && race.phase === PHASE.RACING) {
       const pressed = ctl.buttons & ~m.prevButtons;
       if (m.act !== ACT.STAGGER) handleLock(race, track, m, pressed);

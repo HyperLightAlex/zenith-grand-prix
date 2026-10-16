@@ -11,6 +11,7 @@ import { preloadSunhawks } from './render/mech/sunhawkAsset';
 import { preloadRoster } from './render/mech/rosterAsset';
 import { setRosterModel } from './render/mech/rosterSelection';
 import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech/sunhawkSelection';
+import { installFrame, video } from './video';
 
 // Dev shortcuts, all optional:
 //   ?auto=FW|MF|DF  jump straight into a race     &demo=1   computer flies your mech
@@ -21,7 +22,13 @@ import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   &track=canyon   circuit: meridian, canyon or helios
 //   &sunhawk=current|updated|game   model comparison; B cycles without restarting
-//   &sunhawkPanels=1              projected panel lines on the imported armor
+//   &sunhawkPanels=0|1            panel lines on the imported armor off or on, whatever the
+//                                 video setting says (on by default)
+// Online:
+//   ?room=K7Q2X     an invite link: straight into that room
+//   ?squad=K7Q2X    an invite to a squad
+//   &server=URL     a game server other than the page's own (dev: :8090)
+//   &player=2       a separate identity in this browser, for testing two players
 const q = new URLSearchParams(location.search);
 
 async function boot(): Promise<void> {
@@ -31,7 +38,11 @@ async function boot(): Promise<void> {
   if (isSunhawkModel(model)) setSunhawkModel(model);
   const roster = q.get('roster');
   if (roster === 'updated' || roster === 'current') setRosterModel(roster);
-  setSunhawkPanels(q.get('sunhawkPanels') === '1');
+  // The picture's frame (4:3 or full, the CRT layer) before anything shows.
+  installFrame();
+  // The panel lines on the mechs' armor: the video setting (on by default),
+  // unless the address sets them for a comparison.
+  setSunhawkPanels(q.has('sunhawkPanels') ? q.get('sunhawkPanels') !== '0' : video.panels);
   const loading = document.createElement('div');
   loading.className = 'model-loading';
   loading.textContent = 'Loading mech models…';
@@ -86,6 +97,8 @@ async function boot(): Promise<void> {
     match: q.has('match') ? Number(q.get('match')) : undefined,
     tune: q.has('tune'),
     track: q.get('track') ?? undefined,
+    room: q.get('room') ?? undefined,
+    squad: q.get('squad') ?? undefined,
     audio,
   });
   (window as unknown as { game: Game }).game = game;

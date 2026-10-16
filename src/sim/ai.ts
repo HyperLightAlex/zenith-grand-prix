@@ -3,7 +3,7 @@
 // outside the rules. (The one shortcut: an AI names its lock target directly
 // instead of cycling with the shoulder buttons.)
 
-import { weaponsFree } from './combat';
+import { abilityFor, weaponsFree } from './combat';
 import {
   ABILITY,
   ACT,
@@ -18,6 +18,7 @@ import {
   MODE,
   PHASE,
   ROLE,
+  CALLER,
   TACTIC,
   type Tactic,
 } from './config';
@@ -460,6 +461,39 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   }
 }
 
+/**
+ * Aegis: over yourself when you are hurt and being hit, or over the team's
+ * forward when they are (on the speed lap, whenever they are being hit).
+ */
+function wantAegis(race: RaceState, track: Track, m: MechState): boolean {
+  if (m.shieldT > 0) return false;
+  const lap3 = race.lapPhase >= 3;
+  const hot = (o: MechState) => race.tick - o.lastHitTick < 50;
+  if (hpFraction(m) < (lap3 ? 0.4 : 0.3) && hot(m)) return true;
+  for (const f of race.mechs) {
+    if (f.team !== m.team || f === m || !inPlay(f) || f.shieldT > 0 || f.role !== ROLE.FW) continue;
+    if (distance(track, f, m) > race.rules.aegisRange * 0.9 || !hot(f)) continue;
+    const fhp = hpFraction(f);
+    if (lap3 || fhp < 0.35 || (fhp < 0.55 && m.cells >= 2)) return true;
+  }
+  return false;
+}
+
+/**
+ * Ram, locked on: charge the target when it is close enough to reach, not
+ * shielded or dodging, and worth a Cell (the rival forward always; on the
+ * speed lap anyone near the front; otherwise someone already hurt).
+ */
+function wantRam(race: RaceState, track: Track, m: MechState): boolean {
+  if (m.ramT > 0 || m.target < 0) return false;
+  const t = race.mechs[m.target];
+  if (!inPlay(t) || t.shieldT > 0 || t.iframes > 0 || t.ramT > 0) return false;
+  if (distance(track, t, m) > 40) return false;
+  const lap3 = race.lapPhase >= 3;
+  if (t.role === ROLE.FW) return lap3 || m.cells >= 2;
+  return lap3 ? t.place <= 3 : m.cells >= 2 && hpFraction(t) < 0.5;
+}
+
 /** Should this pilot spend a Cell on its free-steering ability right now? */
 function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: boolean): boolean {
   const c = classOf(m);
@@ -497,30 +531,23 @@ function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: b
       }
       return false;
     }
-    case ABILITY.RAM: {
-      if (m.ramT > 0) return false;
-      for (const e of race.mechs) {
-        if (e.team === m.team || !inPlay(e) || e.shieldT > 0) continue;
-        const ds = deltaS(track, e.s, m.s);
-        if (ds < -6 || ds > 42 || Math.abs(e.d - m.d) > 18) continue;
-        // The rival forward is always worth it; on the speed lap so is anyone near the front.
-        if (e.role === ROLE.FW ? lap3 || m.cells >= 2 : lap3 && e.place <= 3) return true;
-      }
-      return false;
-    }
+    case ABILITY.RAM:
+      return wantRam(race, track, m);
+    case ABILITY.AEGIS:
+      return wantAegis(race, track, m);
     default:
       void rules;
       return false;
   }
 }
 
-/** Should this pilot spend a Cell on its locked-on ability (or, for a forward, break away)? */
+/** Should this pilot spend a Cell on the ability its button gives in a lock (or, for a forward, break away)? */
 function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean {
-  const c = classOf(m);
   const rules = race.rules;
   const lap3 = race.lapPhase >= 3;
   const hp = hpFraction(m);
-  switch (c.abilityLocked) {
+  // What the button gives here (escorting a team-mate, a defender's is the Aegis).
+  switch (abilityFor(m, race)) {
     case ABILITY.BREAKAWAY: {
       const staggered = m.act === ACT.STAGGER;
       let hunters = 0;
@@ -551,18 +578,10 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
       if (lap3) return near >= 2 || pressing;
       return m.cells >= 2 && near >= 2 && swinging;
     }
-    case ABILITY.AEGIS: {
-      if (m.shieldT > 0) return false;
-      const hot = (o: MechState) => race.tick - o.lastHitTick < 50;
-      if (hp < (lap3 ? 0.4 : 0.3) && hot(m)) return true;
-      for (const f of race.mechs) {
-        if (f.team !== m.team || f === m || !inPlay(f) || f.shieldT > 0 || f.role !== ROLE.FW) continue;
-        if (distance(track, f, m) > rules.aegisRange * 0.9 || !hot(f)) continue;
-        const fhp = hpFraction(f);
-        if (lap3 || fhp < 0.35 || (fhp < 0.55 && m.cells >= 2)) return true;
-      }
-      return false;
-    }
+    case ABILITY.AEGIS:
+      return wantAegis(race, track, m);
+    case ABILITY.RAM:
+      return wantRam(race, track, m);
     default:
       return false;
   }
@@ -823,10 +842,16 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
   return out;
 }
 
-/** Picks tactics for a team with nobody human on it. */
+/**
+ * Picks tactics for a team with nobody human on it, or for one whose room
+ * has handed the calls to the computer captain (see TeamState.caller).
+ */
 export function aiCaptain(race: RaceState, track: Track, team: number): void {
-  for (const m of race.mechs) if (m.team === team && m.human) return;
   const ts = race.teams[team];
+  if (ts.caller !== CALLER.CAPTAIN) {
+    if (ts.caller !== CALLER.ANY) return;
+    for (const m of race.mechs) if (m.team === team && m.human) return;
+  }
   if (race.lapPhase !== ts.captainPhase) {
     ts.captainPhase = race.lapPhase;
     ts.captainAt = 0;
