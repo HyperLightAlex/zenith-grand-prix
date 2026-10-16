@@ -1,6 +1,10 @@
 /// <reference types="vitest/config" />
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { promisify } from 'node:util';
+import zlib from 'node:zlib';
 import { defineConfig, type Plugin } from 'vite';
 
 /**
@@ -27,6 +31,57 @@ function buildInfo(build: string): Plugin {
     name: 'build-info',
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'build.json', source: JSON.stringify({ build }) + '\n' });
+    },
+  };
+}
+
+/**
+ * Compressed copies of the built game, written once beside each file
+ * (name.br, name.gz) at the strongest settings, so the server sends them as
+ * they are instead of compressing on the fly. Brotli at its best takes a
+ * second or more per megabyte, which a live server must not spend; at build
+ * time, several files at once, it is a few seconds.
+ */
+function precompress(): Plugin {
+  const COMPRESSIBLE = /\.(js|mjs|css|html|json|svg|glb|txt|map|wasm)$/;
+  const br = promisify(zlib.brotliCompress);
+  const gz = promisify(zlib.gzip);
+  let outDir = 'dist';
+  return {
+    name: 'precompress',
+    apply: 'build',
+    configResolved(config) {
+      outDir = config.build.outDir;
+    },
+    async closeBundle() {
+      const files: string[] = [];
+      const walk = async (dir: string): Promise<void> => {
+        for (const e of await readdir(dir, { withFileTypes: true })) {
+          const p = join(dir, e.name);
+          if (e.isDirectory()) await walk(p);
+          else if (COMPRESSIBLE.test(e.name)) files.push(p);
+        }
+      };
+      await walk(outDir);
+      const started = Date.now();
+      let before = 0;
+      let after = 0;
+      await Promise.all(
+        files.map(async (file) => {
+          if ((await stat(file)).size < 1024) return;
+          const data = await readFile(file);
+          const [b, g] = await Promise.all([
+            br(data, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: data.length } }),
+            gz(data, { level: 9 }),
+          ]);
+          // Only where it is worth it.
+          if (b.length < data.length * 0.9) await writeFile(file + '.br', b);
+          if (g.length < data.length * 0.9) await writeFile(file + '.gz', g);
+          before += data.length;
+          after += Math.min(b.length, data.length);
+        }),
+      );
+      console.log(`precompressed ${files.length} files: ${(before / 1048576).toFixed(1)} MB to ${(after / 1048576).toFixed(1)} MB with brotli, in ${((Date.now() - started) / 1000).toFixed(1)} s`);
     },
   };
 }
@@ -69,7 +124,7 @@ export default defineConfig(({ mode, command }) => {
   return {
     base: './',
     define: { __BUILD__: JSON.stringify(build) },
-    plugins: single ? [inlineEverything()] : [buildInfo(build)],
+    plugins: single ? [inlineEverything()] : [buildInfo(build), precompress()],
     build: {
       target: 'es2022',
       outDir: single ? 'play' : 'dist',

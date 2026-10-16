@@ -40,7 +40,7 @@ Endpoints:
 
 | | |
 |---|---|
-| `GET /` and static files | The built game. Hashed assets are cached for a year; everything else is revalidated |
+| `GET /` and static files | The built game. Hashed assets are cached for a year; everything else is revalidated. The build writes a brotli and a gzip copy of each file (26 MB of game goes as 7), which are sent as they are: the server never compresses anything large itself |
 | `GET /health` (and `/healthz`) | `ok` |
 | `/matchmake/...` | Colyseus: create a room or squad, join one by code |
 | WebSocket `/<process>/<room>` | Colyseus: a room's connection |
