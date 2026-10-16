@@ -71,6 +71,8 @@ const InkShader = {
     uFar: { value: 40000 },
     uInk: { value: 1 },
     uMechLines: { value: 1 },
+    /** 1: ink the mechs as before the clean lines (look.mechLines 'original'), for comparison. */
+    uOriginal: { value: 0 },
     uGeometryMarks: { value: new Float32Array(6) },
     uBoil: { value: 1 },
     uSeed: { value: 0 },
@@ -86,7 +88,7 @@ const InkShader = {
     uniform vec2 uRes;
     uniform vec2 uFade;
     uniform float uNear, uFar, uInk, uBoil, uSeed;
-    uniform float uMechLines, uGeometryMarks[6];
+    uniform float uMechLines, uGeometryMarks[6], uOriginal;
     uniform vec3 uInkColor;
     varying vec2 vUv;
     ${COMMON}
@@ -94,7 +96,8 @@ const InkShader = {
     ${MECH}
     // The mark nearby, for the samples round this pixel (see MECH).
     float markHere;
-    float charAt(vec4 c) { return mechOf(c.a, markHere); }
+    // (The original look: a plain cut at 0.75.)
+    float charAt(vec4 c) { return uOriginal > 0.5 ? 1.0 - step(0.75, c.a) : mechOf(c.a, markHere); }
     void main() {
       vec2 px = 1.0 / uRes;
       // Lines are drawn for a 1080-line frame and scaled with it. A mech's
@@ -103,15 +106,21 @@ const InkShader = {
       float scale = clamp(uRes.y / 1080.0, 0.75, 3.0);
       float scaleMech = clamp(uRes.y / 1080.0, 0.55, 3.0);
       // Is this pixel a mech's, where it really is (a mech's lines do not boil).
+      bool original = uOriginal > 0.5;
       markHere = markNear(vUv, px);
       float me = mechOf(texture2D(tDiffuse, vUv).a, markHere);
       // Boil: each drawing traces a background's lines again, a fraction of a pixel off.
+      // (The original look boiled the mechs' too.)
       vec2 cell = floor(vUv * uRes / (9.0 * scale));
-      vec2 jit = (vec2(hash(cell + uSeed), hash(cell + uSeed + 17.3)) - 0.5) * px * 1.1 * scale * uBoil * (1.0 - me);
+      vec2 jit = (vec2(hash(cell + uSeed), hash(cell + uSeed + 17.3)) - 0.5) * px * 1.1 * scale * uBoil * (original ? 1.0 : 1.0 - me);
       vec2 uv = vUv + jit;
       vec4 src4 = texture2D(tDiffuse, vUv);
       vec3 src = src4.rgb;
       float zc = dist(uv);
+      if (original) {
+        me = charAt(texture2D(tDiffuse, uv));
+        scaleMech = scale;
+      }
 
       // ---- the outer line: the near edge of a shape against what is behind it.
       // A character's contour is heavy close up and thins with distance; a background's is light.
@@ -160,7 +169,8 @@ const InkShader = {
         // uninked.
         float rx = abs(log((max(luma(cr), 0.0) + 0.015) / (max(luma(cl), 0.0) + 0.015)));
         float ry = abs(log((max(luma(ct), 0.0) + 0.015) / (max(luma(cb), 0.0) + 0.015)));
-        float colour = smoothstep(0.85, 1.25, max(rx, ry)) * (1.0 - smoothstep(1.8, 2.6, hot)) * 0.8;
+        vec2 hotCut = original ? vec2(0.9, 1.3) : vec2(1.8, 2.6);
+        float colour = smoothstep(0.85, 1.25, max(rx, ry)) * (1.0 - smoothstep(hotCut.x, hotCut.y, hot)) * 0.8;
         // A mech further off is drawn simpler, as a cel did: the lines where
         // paints meet (the edges of its numbers and emblems among them) and
         // its creases fade, its outline and overlaps stay.
@@ -176,8 +186,8 @@ const InkShader = {
       float breaks = smoothstep(0.04, 0.16, hash(floor(uv * uRes / (5.0 * scale)) + uSeed * 1.7));
       float bgFade = 1.0 - smoothstep(uFade.x, uFade.y, zc);
       float authored = uGeometryMarks[int(clamp(floor((markHere-0.1)/0.065+0.5),0.0,5.0))];
-      float charLine = max(contour, inner) * me * mix(1.0,uMechLines,authored);
-      float bgLine = outline * (1.0 - me) * step(0.75, markHere) * breaks * bgFade * 0.7;
+      float charLine = max(contour, inner) * me * (original ? mix(1.0, breaks, 0.7) : mix(1.0,uMechLines,authored));
+      float bgLine = outline * (1.0 - me) * (original ? 1.0 : step(0.75, markHere)) * breaks * bgFade * 0.7;
       // Coloured lines: inside a light area (a lit sky, the sunny side of a
       // cloud, a glow, a sunlit panel) the cel's line was traced in a deeper
       // shade of that colour, not in ink. A character's outer contour stays ink.
@@ -191,6 +201,8 @@ const InkShader = {
       vec3 ink = uInkColor * shade;
       // A mech is inked in one ink, whatever the light on it.
       vec3 charInk = uInkColor;
+      // (The original look: lighter in shadow, traced in colour in a light area.)
+      if (original) charInk = mix(ink, trace, lit * (inner / max(max(contour, inner), 1e-3)) * 0.85);
       vec3 bgInk = mix(mix(src * 0.4, ink, 0.5), trace, lit);
       vec3 col = mix(src, charInk, clamp(charLine * uInk, 0.0, 1.0));
       col = mix(col, bgInk, clamp(bgLine * uInk, 0.0, 1.0));

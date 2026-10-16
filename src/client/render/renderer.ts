@@ -11,7 +11,7 @@ import { Pass } from 'three/addons/postprocessing/Pass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { drawClock, look } from './look';
+import { drawClock, look, type MechLineMode } from './look';
 import { CrtPass, FilmPass, InkPass, LOOK_PALETTES, MechSmooth } from './lookPasses';
 import { COLORS } from './palette';
 
@@ -292,8 +292,8 @@ export class Renderer {
   }
 
   /** Review switch: changes ink without rebuilding a rig or restarting a race. */
-  set mechLineMode(mode: 'traced' | 'geometry') { look.mechLines=mode; }
-  get mechLineMode(): 'traced' | 'geometry' { return look.mechLines; }
+  set mechLineMode(mode: MechLineMode) { look.mechLines=mode; }
+  get mechLineMode(): MechLineMode { return look.mechLines; }
 
   /** End any cut in progress (a new race, or a restart). */
   clearMoments(): void {
@@ -310,13 +310,16 @@ export class Renderer {
     if (!on) this.impactT = this.stillT = this.stillWait = 0;
     this.inkPass.enabled = this.inking;
     ink.uMechLines.value=look.mechLines==='geometry' ? 0 : 1;
+    // 'original': the mechs inked as before the clean lines, for comparison.
+    const original = look.mechLines === 'original';
+    ink.uOriginal.value = original ? 1 : 0;
     ink.uGeometryMarks.value=geometryMarks;
     configureMechInk(this.inking && look.mechLines==='geometry',ink.uInkColor.value,look.ink);
     this.filmPass.enabled = on || this.impactT > 0 || this.stillT > 0;
     // The mechs' clean lines: sharp through the film, smoothed at the end (where the ink pass marked them).
-    this.mechSmooth.enabled = this.inking;
+    this.mechSmooth.enabled = this.inking && !original;
     film.tMech.value = this.inkPass.mask.texture;
-    film.uMechSharp.value = this.inking ? 1 : 0;
+    film.uMechSharp.value = this.inking && !original ? 1 : 0;
     if (this.inkPass.enabled) {
       ink.uInk.value = look.ink;
       ink.uBoil.value = look.boil;

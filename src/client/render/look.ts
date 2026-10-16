@@ -11,10 +11,18 @@ import * as THREE from 'three';
 import type { Feel } from '../game/tuning';
 import type { Theme } from './themes';
 
+export type MechLineMode = 'original' | 'traced' | 'geometry';
+
 export interface LookState {
   /** The 80s anime look is on. Everything below only applies while it is. */
   on: boolean;
-  mechLines: 'traced' | 'geometry';
+  /**
+   * How the mechs are inked: 'geometry' (lines from the models: shells and
+   * authored strokes, the default), 'traced' (traced off the picture, kept
+   * clean: Step 1 alone) or 'original' (traced as before either step:
+   * boiling, breaking, lit, through the film). For side-by-side review.
+   */
+  mechLines: MechLineMode;
   /** Film layer strength (grain, halation, softness, fringe), 0..2. */
   film: number;
   /** Ink line strength, 0..2. */
@@ -31,7 +39,7 @@ export interface LookState {
 const lineModeParam = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('mechLines');
 
 /** The look in force this frame. The game copies it from the tuning values every frame. */
-export const look: LookState = { on: true, mechLines: lineModeParam === 'traced' ? 'traced' : 'geometry', film: 1, ink: 1, boil: 1, steps: 12, impact: true, still: true };
+export const look: LookState = { on: true, mechLines: lineModeParam === 'traced' || lineModeParam === 'original' ? lineModeParam : 'geometry', film: 1, ink: 1, boil: 1, steps: 12, impact: true, still: true };
 
 export function readLook(f: Feel): void {
   look.on = f.look >= 0.5;

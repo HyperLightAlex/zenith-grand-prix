@@ -370,11 +370,18 @@ alone: backgrounds are inked and filmed as before.
   down to 55% of a 1080-line frame (backgrounds: 75%), so on a phone or a
   handheld they do not swallow the detail they outline.
 
-Updated mechs now use **geometry ink** by default. `?mechLines=traced`
-selects the Step 1 tracing for A/B review; `?mechLines=geometry` selects the
-new drawing. The renderer's `mechLineMode` setting can switch a running
-scene without rebuilding it. Review-only current/procedural models retain
-tracing, including in a mixed race.
+Updated mechs now use **geometry ink** by default. For side-by-side review,
+one build can draw the mechs three ways:
+
+| URL | Mech lines |
+| --- | --- |
+| `?mechLines=original` | As before the clean lines: traced, boiling and breaking, lighter in shadow, through the film's blur and fringe, no smoothing (the same pixels as the ink pass before Step 1) |
+| `?mechLines=traced` | Step 1: traced, kept clean |
+| `?mechLines=geometry` (or nothing) | Steps 1 and 2: shells and authored strokes |
+
+Away from the mechs the picture is the same in all three. The renderer's `mechLineMode`
+setting can switch a running scene without rebuilding it. Review-only
+current/procedural models retain tracing, including in a mixed race.
 
 The silhouette is a back-face shell expanded in clip space, using baked
 smoothed normals and a per-vertex width. Width is 0.7 times the former
