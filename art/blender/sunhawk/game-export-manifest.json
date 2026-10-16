@@ -42,8 +42,8 @@
     "source_meshes": 241,
     "joint_material_meshes": 97,
     "triangles": 25948,
-    "bytes": 3358940,
-    "line_segments": 1388,
+    "bytes": 3351036,
+    "line_segments": 1180,
     "ink_schema": 1,
     "joints": [
       "ankleL",
@@ -78,8 +78,8 @@
     "source_meshes": 234,
     "joint_material_meshes": 90,
     "triangles": 13918,
-    "bytes": 1839068,
-    "line_segments": 468,
+    "bytes": 1838460,
+    "line_segments": 452,
     "ink_schema": 1,
     "joints": [
       "ankleL",

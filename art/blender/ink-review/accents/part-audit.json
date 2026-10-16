@@ -1,0 +1,508 @@
+{
+  "source_parts_checked": 4212,
+  "checked_per_model": {
+    "anubis": 238,
+    "daystar": 232,
+    "fujin": 277,
+    "horus": 319,
+    "kamaitachi": 265,
+    "longbow": 301,
+    "maul": 271,
+    "paladin": 345,
+    "raijin": 317,
+    "rampart": 261,
+    "razor": 223,
+    "seraph": 295,
+    "sobek": 383,
+    "stinger": 229,
+    "sunhawk": 256
+  },
+  "changed_source_parts": [
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.001",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.002",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.003",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.004",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass collar trim",
+      "width_before": 0.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass pointed trim",
+      "width_before": 0.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.005",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.006",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.007",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.008",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass fine gold trim.009",
+      "width_before": 0.35,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0.35
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass collar trim.001",
+      "width_before": 0.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cuirass pointed trim.001",
+      "width_before": 0.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Recessed gill lip",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cobalt gill",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Recessed gill lip.001",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cobalt gill.001",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Recessed gill lip.002",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cobalt gill.002",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Recessed gill lip.003",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cobalt gill.003",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Recessed gill lip.004",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cobalt gill.004",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Recessed gill lip.005",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    },
+    {
+      "model": "sunhawk",
+      "name": "B / Cobalt gill.005",
+      "width_before": 1.0,
+      "width_after": 0,
+      "before_strokes": 8,
+      "after_strokes": 0,
+      "before_rules": {
+        "angle": 42,
+        "min_length": 0.14
+      },
+      "after_rules": {
+        "angle": 42,
+        "min_length": 0.14,
+        "width": 0,
+        "skip": true
+      }
+    }
+  ],
+  "unchanged_source_parts": 4186,
+  "global_accent_size_thresholds": null,
+  "decision": "Only explicit Sunhawk chest accent rules. Other fourteen mechs retained after visual audit.",
+  "hands": {
+    "finger_width": 0.35,
+    "thumb_and_gadling_width": 0.25,
+    "all_hand_widths_identical_to_before": true
+  }
+}

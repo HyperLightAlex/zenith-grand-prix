@@ -169,8 +169,8 @@ Plain and low-quality hulls, current models and existing effects are retained.
 ../ink_geometry.py computes edges on each source part BEFORE bevel/decimate,
 then seats the endpoints on the evaluated bevel surface for that LOD. The
 42-degree threshold and minimum 0.14-unit length are in ../ink-overrides.json.
-Rules are matched against source part names; model rules override general
-rules. `width` controls shell weight, `skip` suppresses inner strokes. Source
+Rules match complete source-name words (including plurals); model rules
+override general rules. `fin` must not match `fine` or `finger`. `width` controls shell weight, `skip` suppresses inner strokes. Source
 `ink_width` and `ink_exclude` properties cover generic named vents/nozzles.
 Per-part `add` entries are [endpointA,endpointB,kind]; `remove` entries are
 [endpointA,endpointB], with endpoints rounded to five decimals. Coordinates
@@ -194,3 +194,11 @@ normals and width ranges; runtime batches the rigid joints into two draws.
 
 Review: docs/mech-lines-report.md; tools/ink-compare.mjs; tools/ink-perf.mjs.
 These checks supplement the existing rig/attachment/asset contract tests.
+
+ACCENT AUDIT (2026-10-16)
+The fourteen roster designs were inspected against no-ink views after the
+Sunhawk chest correction. No additional glaring accent loss justified a
+change. Their production blends, GLBs and manifests remain byte-identical.
+There is no global small/secondary/trim-part suppression rule. Fingers
+explicitly retain their prior effective 0.35 shell width, thumbs/gadlings
+0.25. See the focused accent section in docs/mech-lines-report.md.

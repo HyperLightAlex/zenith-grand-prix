@@ -39,8 +39,8 @@ nearest-neighbour enlargements from the deterministic production-build tool.
 ![Phone hangar comparison](../art/blender/ink-review/phone-hangar.png)
 
 All 15 mechs were inspected front/rear, including thin fins, shields, feathers,
-weapons, decals and numbers. No new hull blotches, protruding shells, doubled
-bevel rims or detached strokes were observed. Rear jets retain their circular
+weapons, decals and numbers. The initial review missed excess ink on Sunhawk's chest accents; the focused
+correction and its checks are recorded below. Rear jets retain their circular
 end-on appearance and painted side-view flames.
 
 ## Stability and compatibility
@@ -107,16 +107,16 @@ frame-rate guarantee or cover every worst-case pack/particle scene.
 
 ## Asset cost
 
-The 45 updated GLBs total **23,874,200 → 38,542,608 bytes** (+61.4%,
-+14,668,408 bytes). Existing production Brotli files total
-**6,645,006 → 10,373,986 bytes** (+3,728,980 transfer bytes); gzip totals
-9,378,193 → 15,356,793 bytes. The game currently preloads these assets.
+The 45 updated GLBs total **23,874,200 → 38,534,096 bytes** (+61.4%,
++14,659,896 bytes). Existing production Brotli files total
+**6,645,006 → 10,373,391 bytes** (+3,728,385 transfer bytes); gzip totals
+9,378,193 → 15,352,867 bytes. The game currently preloads these assets.
 Triangles in the source armour are unchanged; growth is normal/width and
 line data. Each row includes all three LODs.
 
 | Model | Before bytes | After bytes | Change |
 | --- | ---: | ---: | ---: |
-| Sunhawk | 3,751,932 | 6,190,264 | +65.0% |
+| Sunhawk | 3,751,932 | 6,181,752 | +64.8% |
 | Anubis | 1,052,852 | 1,697,260 | +61.2% |
 | Daystar | 1,041,980 | 1,663,876 | +59.7% |
 | Fujin | 1,788,584 | 2,881,004 | +61.1% |
@@ -168,3 +168,112 @@ and distant LOD transitions. Quantized/packed normals and widths, compressed
 line data, or selective model loading could reduce the additional download
 and memory cost. Per-part width/edge overrides remain available for artistic
 tuning. No merge into main or hosted-server update is included in this pass.
+
+
+## Focused accent correction — 2026-10-16
+
+The owner requested a Sunhawk correction and an audit of the other mechs,
+with changes elsewhere only for glaring problems. The other agent's
+`a67d176` original-render comparison is retained. This pass changes only
+Sunhawk's chest ink; all fourteen other designs and assets are retained.
+
+The six cobalt gills, their six recessed navy lips, and fourteen narrow gold
+cuirass piping pieces now have zero shell width and no authored strokes.
+Their actual geometry, materials and shading normals stay intact. The navy
+lip itself supplies the gill border without another expanded dark ring.
+The dotted gold trim disappeared in the checked front and oblique views
+when its own strokes were removed, so no chest-face clipping or runtime
+depth-bias change was necessary. Large plates and the chest silhouette keep
+their existing ink.
+
+Rule matching now uses whole words/plurals: `fin` no longer matches `fine`
+or `finger`. Fingers explicitly retain their reviewed effective width 0.35;
+thumbs and gadlings retain 0.25. No global small-accent or band-width
+threshold was introduced. The existing 42-degree / 0.14-unit edge-selection
+thresholds are unchanged; these are named, model-specific exceptions.
+
+### Before and after
+
+Each strip shows original rendering, geometry ink before, then corrected
+geometry ink. Crops are enlarged 2× without interpolation from frozen game
+frames. Desktop is 1280×720 CSS at DPR2; Nova is 640×480 CSS at DPR2
+(emulated on this Mac, not physical-device testing).
+
+![Sunhawk desktop chest](../art/blender/ink-review/accents/sunhawk-desk-front.png)
+
+![Sunhawk desktop oblique chest](../art/blender/ink-review/accents/sunhawk-desk-quarter.png)
+
+![Sunhawk Nova chest](../art/blender/ink-review/accents/sunhawk-nova-front.png)
+
+![Sunhawk Nova oblique chest](../art/blender/ink-review/accents/sunhawk-nova-quarter.png)
+
+The six cobalt bars remain visibly blue and the piping remains a continuous
+gold band in these samples. Shell-only, lines-only, no-ink, original and
+traced views were also inspected. The original/traced/no-ink images were
+captured with the same frozen camera, animation and random seed. Original,
+traced and no-ink frames are pixel-identical before/after at both sizes and
+angles. Every changed pixel in the geometry comparisons is confined to the
+chest region; backgrounds and the rest of Sunhawk are unchanged.
+[Pixel checks](../art/blender/ink-review/accents/pixel-checks.json).
+
+### Roster audit and scope
+
+All fifteen mechs were inspected front-on and obliquely, with geometry ink
+and with both geometry ink layers hidden. Mirage's chest/head gold,
+Aurora's silver borders and tabards, Tempest's gold hems/toes/chest borders,
+and Solstice/Vanta's accent panels remain readable. Some minor narrowing
+is inherent in the existing outlined style; none of the other designs
+showed colour suppression as clear as Sunhawk's gills/piping in these views.
+No aesthetic cleanup was applied to those models.
+
+Audit sheets pair geometry ink with no geometry ink:
+[Solstice](../art/blender/ink-review/accents/roster-solstice.png),
+[Vanta](../art/blender/ink-review/accents/roster-vanta.png),
+[Mirage](../art/blender/ink-review/accents/roster-mirage.png),
+[Aurora](../art/blender/ink-review/accents/roster-aurora.png),
+[Tempest](../art/blender/ink-review/accents/roster-tempest.png).
+
+The source-rule audit checked 4,212 parts. Exactly 26 Sunhawk chest pieces
+changed rules/widths; the other 4,186 parts keep identical settings and
+widths. All 42 other updated GLBs and `sunhawk-current.glb` are byte-identical
+to `a67d176`. In all three regenerated Sunhawk LODs, expanded triangle
+positions, shading normals, UVs and outline normals are exactly identical.
+Only chest F/S/T shell widths and chest strokes changed; non-chest strokes
+are identical. Source shapes and animation were not edited.
+
+Data: [part audit](../art/blender/ink-review/accents/part-audit.json),
+[asset audit](../art/blender/ink-review/accents/asset-audit.json),
+[stroke counts](../art/blender/ink-review/accents/stroke-counts.json).
+
+| Mech | LOD0 before → after | LOD1 before → after | LOD2 |
+| --- | ---: | ---: | ---: |
+| Sunhawk | 1,388 → 1,180 | 468 → 452 | 0 |
+| Daystar | 2,055 → 2,055 | 371 → 371 | 0 |
+| Rampart | 2,634 → 2,634 | 309 → 309 | 0 |
+| Razor | 1,785 → 1,785 | 217 → 217 | 0 |
+| Stinger | 1,966 → 1,966 | 300 → 300 | 0 |
+| Maul | 2,658 → 2,658 | 287 → 287 | 0 |
+| Anubis | 2,225 → 2,225 | 319 → 319 | 0 |
+| Horus | 3,944 → 3,944 | 399 → 399 | 0 |
+| Sobek | 4,422 → 4,422 | 540 → 540 | 0 |
+| Seraph | 2,300 → 2,300 | 763 → 763 | 0 |
+| Longbow | 2,656 → 2,656 | 650 → 650 | 0 |
+| Paladin | 3,584 → 3,584 | 728 → 728 | 0 |
+| Kamaitachi | 1,898 → 1,898 | 634 → 634 | 0 |
+| Fujin | 2,326 → 2,326 | 616 → 616 | 0 |
+| Raijin | 3,585 → 3,585 | 745 → 745 | 0 |
+
+Sunhawk loses 208 LOD0 strokes and 16 LOD1 strokes. Its three GLBs shrink
+from 6,190,264 to 6,181,752 bytes (8,512 bytes less). The current totals are
+38,534,096 raw / 10,373,391 Brotli / 15,352,867 gzip bytes for the 45 updated
+GLBs. The asset-cost section and JSON snapshot above now reflect this pass.
+The earlier performance benchmark remains historical; no new performance
+claim is made for this focused reduction in stroke count.
+
+Validation: all 1,033 tests in 33 files passed; `npx tsc --noEmit -p .` and
+`npm run build` passed. Deterministic browser captures reported no page
+errors. The production build also passed comparison-mode, plain/anime,
+six-mech race and LOD0/1/2 smoke checks without page errors. The current
+comparison GLB was restored from the unchanged baseline
+after export to avoid committing serialization-only noise. Main, the
+owner's model-sheet edits and hosted services remain untouched.

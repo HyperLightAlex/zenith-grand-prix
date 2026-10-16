@@ -36,3 +36,18 @@ old hull shader; the alpha mask, film exemption and MSAA4 chain are retained.
 Review with ?sunhawk=updated&mechLines=geometry or &mechLines=traced.
 The current design remains ?sunhawk=current. See docs/mech-lines-report.md
 for comparison crops, measured cost, file sizes and reproducible QA commands.
+
+CHEST ACCENTS (2026-10-16)
+The six Cobalt gill parts, six Recessed gill lip parts and fourteen Cuirass
+fine gold/collar/pointed trim pieces are explicitly unlined in the shared
+JSON's sunhawk rules (width 0 and skip true). Their geometry/materials are
+unchanged. No global size thresholds or runtime depth-bias changes apply.
+LOD0 strokes: 1388 -> 1180; LOD1: 468 -> 452; LOD2: 0. Hands and non-chest
+strokes are unchanged. Whole-word rule matching avoids fin/fine/finger
+collisions while preserving the reviewed finger width 0.35.
+
+Check sunhawk-current.glb against git after export. If Blender changes only
+serialization bytes, restore the unchanged baseline asset; this correction
+must not replace the original comparison. Review original/traced/geometry
+at desktop and Nova game sizes; isolate hull and authored lines to diagnose
+colour loss. See art/blender/ink-review/accents for evidence.

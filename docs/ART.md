@@ -409,6 +409,11 @@ original world-space hull; the new materials are disabled there.
 
 `art/blender/ink_geometry.py` and `ink-overrides.json` reproduce the line
 selection, width rules and custom `_OUTLINE_NORMAL` / `_INK_WIDTH` exports.
+Sunhawk's six cobalt chest gills, their recessed navy lips and narrow gold
+cuirass piping deliberately use colour/geometry alone: zero shell width and
+no authored strokes. These are named model exceptions, not a global
+small-accent threshold. Name rules match whole words/plurals; finger width
+is explicitly 0.35, preserving the previously reviewed appearance.
 Read the roster README and Sunhawk export notes before regenerating assets.
 The [Step 2 review report](mech-lines-report.md) includes A/B crops, motion
 captures, background diffs, performance and asset sizes.

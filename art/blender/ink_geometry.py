@@ -2,18 +2,23 @@
 Coordinates here are Blender joint-local. Custom glTF vectors are explicitly
 converted to Y-up (the glTF exporter does not transform custom attributes).
 """
-import bpy, bmesh, math, json
+import bpy, bmesh, math, json, re
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from pathlib import Path
 
 RULES=json.loads((Path(__file__).with_name('ink-overrides.json')).read_text())
 
+def named(name, key):
+    """Match complete part-name words, including plurals, never fin in fine/finger."""
+    return re.search(r'(?<![a-z])'+re.escape(key.lower())+r'(?:e?s)?(?![a-z])', name.lower()) is not None
+
+
 def settings(model, ob):
     out=dict(RULES['defaults'])
     out.update(RULES.get('models',{}).get(model,{}).get('defaults',{}))
     for rule in RULES['rules']+RULES.get('models',{}).get(model,{}).get('rules',[]):
-        if any(s.lower() in ob.name.lower() for s in rule['contains']):
+        if any(named(ob.name, s) for s in rule['contains']):
             out.update({k:v for k,v in rule.items() if k!='contains'})
     return out
 

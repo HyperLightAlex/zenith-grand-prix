@@ -1,0 +1,299 @@
+[
+  {
+    "asset": "sunhawk-updated-lod2.glb",
+    "bytes_before": 992256,
+    "bytes_after": 992256,
+    "byte_identical": false,
+    "triangle_attributes_identical": true,
+    "width_changed_parts": [
+      "chest_F.003",
+      "chest_S.003",
+      "chest_T.003"
+    ],
+    "non_chest_lines_identical": true
+  },
+  {
+    "asset": "sunhawk-updated-lod1.glb",
+    "bytes_before": 1839068,
+    "bytes_after": 1838460,
+    "byte_identical": false,
+    "triangle_attributes_identical": true,
+    "width_changed_parts": [
+      "chest_F.002",
+      "chest_S.002",
+      "chest_T.002"
+    ],
+    "non_chest_lines_identical": true
+  },
+  {
+    "asset": "sunhawk-current.glb",
+    "bytes_before": 1864040,
+    "bytes_after": 1864040,
+    "byte_identical": true
+  },
+  {
+    "asset": "sunhawk-updated.glb",
+    "bytes_before": 3358940,
+    "bytes_after": 3351036,
+    "byte_identical": false,
+    "triangle_attributes_identical": true,
+    "width_changed_parts": [
+      "chest_F.001",
+      "chest_S.001",
+      "chest_T.001"
+    ],
+    "non_chest_lines_identical": true
+  },
+  {
+    "asset": "longbow-lod2.glb",
+    "bytes_before": 522928,
+    "bytes_after": 522928,
+    "byte_identical": true
+  },
+  {
+    "asset": "anubis-lod1.glb",
+    "bytes_before": 522232,
+    "bytes_after": 522232,
+    "byte_identical": true
+  },
+  {
+    "asset": "stinger.glb",
+    "bytes_before": 886176,
+    "bytes_after": 886176,
+    "byte_identical": true
+  },
+  {
+    "asset": "daystar-lod2.glb",
+    "bytes_before": 300140,
+    "bytes_after": 300140,
+    "byte_identical": true
+  },
+  {
+    "asset": "longbow-lod1.glb",
+    "bytes_before": 933624,
+    "bytes_after": 933624,
+    "byte_identical": true
+  },
+  {
+    "asset": "anubis-lod2.glb",
+    "bytes_before": 305740,
+    "bytes_after": 305740,
+    "byte_identical": true
+  },
+  {
+    "asset": "maul.glb",
+    "bytes_before": 909248,
+    "bytes_after": 909248,
+    "byte_identical": true
+  },
+  {
+    "asset": "daystar-lod1.glb",
+    "bytes_before": 507908,
+    "bytes_after": 507908,
+    "byte_identical": true
+  },
+  {
+    "asset": "rampart-lod1.glb",
+    "bytes_before": 524336,
+    "bytes_after": 524336,
+    "byte_identical": true
+  },
+  {
+    "asset": "horus-lod2.glb",
+    "bytes_before": 349420,
+    "bytes_after": 349420,
+    "byte_identical": true
+  },
+  {
+    "asset": "paladin.glb",
+    "bytes_before": 1689672,
+    "bytes_after": 1689672,
+    "byte_identical": true
+  },
+  {
+    "asset": "rampart.glb",
+    "bytes_before": 910392,
+    "bytes_after": 910392,
+    "byte_identical": true
+  },
+  {
+    "asset": "rampart-lod2.glb",
+    "bytes_before": 313704,
+    "bytes_after": 313704,
+    "byte_identical": true
+  },
+  {
+    "asset": "horus-lod1.glb",
+    "bytes_before": 594144,
+    "bytes_after": 594144,
+    "byte_identical": true
+  },
+  {
+    "asset": "stinger-lod1.glb",
+    "bytes_before": 526740,
+    "bytes_after": 526740,
+    "byte_identical": true
+  },
+  {
+    "asset": "fujin.glb",
+    "bytes_before": 1439444,
+    "bytes_after": 1439444,
+    "byte_identical": true
+  },
+  {
+    "asset": "fujin-lod2.glb",
+    "bytes_before": 497880,
+    "bytes_after": 497880,
+    "byte_identical": true
+  },
+  {
+    "asset": "stinger-lod2.glb",
+    "bytes_before": 309436,
+    "bytes_after": 309436,
+    "byte_identical": true
+  },
+  {
+    "asset": "fujin-lod1.glb",
+    "bytes_before": 943680,
+    "bytes_after": 943680,
+    "byte_identical": true
+  },
+  {
+    "asset": "raijin.glb",
+    "bytes_before": 1483156,
+    "bytes_after": 1483156,
+    "byte_identical": true
+  },
+  {
+    "asset": "razor.glb",
+    "bytes_before": 773540,
+    "bytes_after": 773540,
+    "byte_identical": true
+  },
+  {
+    "asset": "maul-lod2.glb",
+    "bytes_before": 310184,
+    "bytes_after": 310184,
+    "byte_identical": true
+  },
+  {
+    "asset": "razor-lod2.glb",
+    "bytes_before": 279464,
+    "bytes_after": 279464,
+    "byte_identical": true
+  },
+  {
+    "asset": "kamaitachi-lod1.glb",
+    "bytes_before": 963328,
+    "bytes_after": 963328,
+    "byte_identical": true
+  },
+  {
+    "asset": "paladin-lod2.glb",
+    "bytes_before": 556328,
+    "bytes_after": 556328,
+    "byte_identical": true
+  },
+  {
+    "asset": "raijin-lod1.glb",
+    "bytes_before": 949328,
+    "bytes_after": 949328,
+    "byte_identical": true
+  },
+  {
+    "asset": "maul-lod1.glb",
+    "bytes_before": 518072,
+    "bytes_after": 518072,
+    "byte_identical": true
+  },
+  {
+    "asset": "razor-lod1.glb",
+    "bytes_before": 464640,
+    "bytes_after": 464640,
+    "byte_identical": true
+  },
+  {
+    "asset": "kamaitachi-lod2.glb",
+    "bytes_before": 502020,
+    "bytes_after": 502020,
+    "byte_identical": true
+  },
+  {
+    "asset": "paladin-lod1.glb",
+    "bytes_before": 1004772,
+    "bytes_after": 1004772,
+    "byte_identical": true
+  },
+  {
+    "asset": "raijin-lod2.glb",
+    "bytes_before": 505724,
+    "bytes_after": 505724,
+    "byte_identical": true
+  },
+  {
+    "asset": "sobek.glb",
+    "bytes_before": 1272884,
+    "bytes_after": 1272884,
+    "byte_identical": true
+  },
+  {
+    "asset": "kamaitachi.glb",
+    "bytes_before": 1409412,
+    "bytes_after": 1409412,
+    "byte_identical": true
+  },
+  {
+    "asset": "sobek-lod1.glb",
+    "bytes_before": 693992,
+    "bytes_after": 693992,
+    "byte_identical": true
+  },
+  {
+    "asset": "seraph.glb",
+    "bytes_before": 1451252,
+    "bytes_after": 1451252,
+    "byte_identical": true
+  },
+  {
+    "asset": "sobek-lod2.glb",
+    "bytes_before": 405676,
+    "bytes_after": 405676,
+    "byte_identical": true
+  },
+  {
+    "asset": "seraph-lod2.glb",
+    "bytes_before": 515676,
+    "bytes_after": 515676,
+    "byte_identical": true
+  },
+  {
+    "asset": "horus.glb",
+    "bytes_before": 1102692,
+    "bytes_after": 1102692,
+    "byte_identical": true
+  },
+  {
+    "asset": "seraph-lod1.glb",
+    "bytes_before": 937196,
+    "bytes_after": 937196,
+    "byte_identical": true
+  },
+  {
+    "asset": "longbow.glb",
+    "bytes_before": 1541048,
+    "bytes_after": 1541048,
+    "byte_identical": true
+  },
+  {
+    "asset": "daystar.glb",
+    "bytes_before": 855828,
+    "bytes_after": 855828,
+    "byte_identical": true
+  },
+  {
+    "asset": "anubis.glb",
+    "bytes_before": 869288,
+    "bytes_after": 869288,
+    "byte_identical": true
+  }
+]

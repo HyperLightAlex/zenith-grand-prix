@@ -3,11 +3,14 @@
   "rules": [
     {"contains": ["calf jet", "nozzle", "thruster", "exhaust", "burner", "luminous", "cyan", "light core"], "width": 0, "skip": true},
     {"contains": ["service", "inset", "vent", "grille", "axle", "bolt", "rivet", "hazard", "detail", "inlay", "lightning", "race number"], "width": 0},
-    {"contains": ["finger", "thumb", "gadling"], "width": 0.25, "skip": true},
+    {"contains": ["thumb", "gadling"], "width": 0.25, "skip": true},
+    {"contains": ["finger"], "width": 0.35, "skip": true},
     {"contains": ["blade", "feather", "fin", "antenna", "horn", "crest", "beak", "spike"], "width": 0.35},
     {"contains": ["bearing", "coupling", "support", "tendon", "shaft", "gasket"], "skip": true}
   ],
   "models": {
-    "sunhawk": {"rules": [{"contains": ["Drawn", "Solar ray", "Solar center", "Solar crest", "Tower hazard", "Hazard bar", "Race roundel", "Race number"], "width": 0, "skip": true}]}
+    "sunhawk": {"rules": [
+      {"contains": ["Cobalt gill", "Recessed gill lip", "Cuirass fine gold trim", "Cuirass collar trim", "Cuirass pointed trim"], "width": 0, "skip": true},
+      {"contains": ["Drawn", "Solar ray", "Solar center", "Solar crest", "Tower hazard", "Hazard bar", "Race roundel", "Race number"], "width": 0, "skip": true}]}
   }
 }
