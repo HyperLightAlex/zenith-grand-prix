@@ -125,7 +125,7 @@ check(await until(b, (s) => { const o = window.game.online; return o.lobby.playe
 const before = await mine(b);
 await b.locator('.menu .sides .side').nth(aSide).locator('.seat.cpu').first().click();
 check(await until(b, (r) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).role !== r; }, before.role), 'a click on another frame on your team picks it');
-await b.screenshot({ path: process.env.SHOT ?? 'online-check-room.png' }).catch(() => {});
+if (process.env.SHOT) await b.screenshot({ path: process.env.SHOT }).catch(() => {});
 const cpuNames = await b.evaluate(() => [...document.querySelectorAll('.menu .seat.cpu .who b')].map((x) => x.textContent));
 check(cpuNames.length > 0 && cpuNames.every((n) => n && n !== 'Computer'), `computer seats show the pilot who flies them (${cpuNames.join(', ')})`);
 // Factions: pick a team's name. Alpha (host and captain) changes their own team's...

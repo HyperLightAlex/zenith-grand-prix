@@ -1,6 +1,6 @@
 // Abilities, part two: the moves that act on other mechs. The midfielder's
-// Snare (free steering) and Disruptor pulse (locked on), the defender's Ram
-// (free steering) and Aegis (locked on). The button itself, its cost and its
+// Snare (free steering) and Disruptor pulse (locked on), the defender's Aegis
+// (free steering) and Ram (locked on). The button itself, its cost and its
 // cooldown are in abilities.test.ts.
 import { describe, expect, it } from 'vitest';
 import {
@@ -35,7 +35,7 @@ import {
   ticks,
 } from '../src/sim/index';
 import type { MechState, Rules } from '../src/sim/index';
-import { applyHit, retire } from '../src/sim/combat';
+import { applyHit, retire, tryAbility } from '../src/sim/combat';
 import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, dist, giveCells, wallLimit, wallOvershoot } from './helpers';
 
 const SNARE = ATTACKS[ATK.MF_SNARE];
@@ -50,6 +50,20 @@ const RAM = ATTACKS[ATK.DF_RAM];
 const QUIET: Partial<Rules> = { drivePassive: 0, driveDraft: 0, driveStrip: 0, driveStripLap1: 0 };
 
 const hitsOn = (a: Arena, victim: number) => a.events('hit').filter((e) => e.victim === victim);
+
+/**
+ * Cast a Ram as a player does: locked on to a rival (FW1 unless said), the
+ * button. Then, unless `keepLock`, let go of the lock, so the charge runs on
+ * down the road as these tests stage it: what a ramming defender does on
+ * contact is the same, locked on or not. Returns the tick of the press.
+ */
+function castRam(a: Arena, id = DF0, target = FW1, keepLock = false): number {
+  const m = a.mech(id);
+  setTarget(a.race, m, target);
+  const T = a.ability(id);
+  if (!keepLock) setTarget(a.race, m, -1);
+  return T;
+}
 const maxHp = (m: MechState) => CLASSES[m.role].maxHp;
 
 // =============================================================================
@@ -388,7 +402,7 @@ describe('Snare', () => {
     const a = new Arena(2);
     const mf = giveCells(a.put(MF0, -200, 0));
     const df = giveCells(a.put(DF1, -160, 0));
-    a.ability(DF1);
+    castRam(a, DF1, MF0);
     expect(df.ramT).toBeGreaterThan(0);
     a.step(1);
     fire(a);
@@ -833,7 +847,7 @@ describe('Ram', () => {
 
   /** Start the ram and step until it has hit `victim` (or the limit runs out). Returns ticks from the press, or -1. */
   function ramInto(a: Arena, victim: number, limit = 200): number {
-    const T = a.ability(DF0);
+    const T = castRam(a);
     const n = a.until(() => a.events('hit').some((e) => e.victim === victim) || a.events('evade').some((e) => e.mech === victim), limit);
     return n < 0 ? -1 : a.race.tick - T;
   }
@@ -841,7 +855,7 @@ describe('Ram', () => {
   it('starts an unstoppable charge: rules.ramSecs long, rules.ramMult quicker', () => {
     const { a, df } = charge();
     const c = CLASSES[df.role];
-    const T = a.ability(DF0);
+    const T = castRam(a);
     expect(a.events('ability')).toEqual([{ type: 'ability', mech: DF0, ability: ABILITY.RAM, tick: T }]);
     expect(df.ramT).toBe(ticks(a.race.rules.ramSecs));
     expect(df.ramT).toBe(210);
@@ -856,7 +870,7 @@ describe('Ram', () => {
     const a = new Arena(2);
     const df = giveCells(a.put(DF0, -200, 0));
     const c = CLASSES[df.role];
-    a.ability(DF0);
+    castRam(a);
     const fast = a.pace * a.race.rules.ramMult;
     let max = 0;
     a.step(209, () => {
@@ -903,7 +917,7 @@ describe('Ram', () => {
   it('hits each rival once per charge, however long they stay in contact', () => {
     // Pin the rival in front of the defender for the whole charge.
     const { a, df, foe } = charge();
-    a.ability(DF0);
+    castRam(a);
     a.step(215, () => {
       a.recenter([DF0, FW1]);
       foe.s = df.s + 6.5; // overlapping, every tick
@@ -918,7 +932,7 @@ describe('Ram', () => {
   it('a second rival is hit as well, once', () => {
     const { a, df, foe } = charge();
     const second = a.put(MF1, -200 + 34, 0);
-    a.ability(DF0);
+    castRam(a);
     a.step(205);
     expect(hitsOn(a, FW1).length).toBe(1);
     expect(hitsOn(a, MF1).length).toBe(1);
@@ -947,7 +961,7 @@ describe('Ram', () => {
 
   it('never hurts a team-mate: running into one is just a bump', () => {
     const { a, df, foe: mate } = charge(undefined, 12, MF0);
-    a.ability(DF0);
+    castRam(a);
     a.step(120);
     expect(a.events('hit').length).toBe(0);
     expect(mate.hp).toBe(maxHp(mate));
@@ -959,7 +973,7 @@ describe('Ram', () => {
   it('needs closing speed: leaning on a rival is not ramming it', () => {
     // A charge that is barely quicker than the rival ahead, and no tow.
     const { a, df, foe } = charge({ ramMult: 1.01, tow: 0, ramSecs: 30 }, 8.5);
-    a.ability(DF0);
+    castRam(a);
     let touched = 0;
     a.step(400, () => {
       a.recenter([DF0, FW1]);
@@ -992,7 +1006,7 @@ describe('Ram', () => {
       a.tap(FW1, BTN.LOCK);
       expect(foe.target).toBe(DF0);
       a.step(24);
-      const T = a.ability(DF0);
+      const T = castRam(a);
       const out = { a, df, foe, T, contact: -1 };
       for (let i = 0; i < 200; i++) {
         if (lead >= 0 && a.race.tick + 1 === contact - lead) a.hold(FW1, BTN.GUARD);
@@ -1027,7 +1041,7 @@ describe('Ram', () => {
 
   it('the rammer cannot be staggered or slowed by hits, though they still hurt', () => {
     const { a, df, foe } = charge(undefined, 40);
-    a.ability(DF0);
+    castRam(a);
     a.step(60);
     const v0 = df.speed;
     const hp0 = df.hp;
@@ -1059,7 +1073,7 @@ describe('Ram', () => {
     const mf = a.put(MF1, -190, 9); // a rival midfielder alongside
     a.tap(MF1, BTN.LOCK);
     a.step(12);
-    a.ability(DF0);
+    castRam(a);
     a.tap(MF1, BTN.Y);
     a.step(20);
     const kicks = hitsOn(a, DF0).filter((e) => e.attack === ATK.MF_KICK);
@@ -1133,7 +1147,11 @@ describe('Ram', () => {
       const back = giveCells(a.put(DF0, -200, 0));
       const front = a.put(DF1, -195, 0);
       if (ramming) {
-        a.ability(DF0);
+        // Cast without a tick of locked-on movement, so the push is measured clean.
+        setTarget(a.race, back, DF1);
+        expect(tryAbility(a.race, TRACK, back)).toBe(true);
+        setTarget(a.race, back, -1);
+        a.step(1);
         front.s = back.s + 5;
       } else {
         a.step(1);
@@ -1169,7 +1187,7 @@ describe('Ram', () => {
       foe.d = df.d;
       foe.vs = foe.speed = df.speed - 20;
     };
-    a.ability(DF0);
+    castRam(a);
     a.step(1);
     pin();
     foe.iframes = 30;
@@ -1204,7 +1222,7 @@ describe('Ram', () => {
   it('a rival that dodges through the whole charge is never hit, and never "evades" it either', () => {
     const { a, df, foe } = charge();
     foe.iframes = 400;
-    a.ability(DF0);
+    castRam(a);
     a.step(215, () => {
       a.recenter([DF0, FW1]);
       foe.s = df.s + 6.5;
@@ -1228,7 +1246,7 @@ describe('Ram', () => {
     const a = new Arena(2, 1, { ramMult: 1 });
     const df = giveCells(a.put(DF0, -200, 0));
     const foe = a.put(FW1, -260, 0);
-    a.ability(DF0);
+    castRam(a);
     a.step(1);
     const closing = 20;
     foe.s = df.s + 6.5 * Math.cos(bearing);
@@ -1271,7 +1289,7 @@ describe('Ram', () => {
 
   it('something that runs into the back of a ramming mech is not rammed, and the charge is not used up on it', () => {
     const { a, df, foe } = charge(undefined, 300);
-    a.ability(DF0);
+    castRam(a);
     a.step(1);
     // The rival comes up from behind, quicker than the charge, and runs into it.
     foe.s = df.s - 12;
@@ -1304,7 +1322,7 @@ describe('Ram', () => {
     // to face it, and the prow goes round with it.
     const { a, df, foe } = charge(undefined, -15);
     const other = a.put(MF1, -260, 0);
-    a.ability(DF0);
+    castRam(a);
     a.step(1);
     setTarget(a.race, df, FW1);
     a.step(40, () => {
@@ -1336,12 +1354,21 @@ describe('Ram', () => {
     expect(other.hp).toBe(maxHp(other));
   });
 
+  /** Both defenders cast a Ram on the same tick, each locked on the other, then let go of the locks. */
+  function bothRam(a: Arena): void {
+    setTarget(a.race, a.mech(DF0), DF1);
+    setTarget(a.race, a.mech(DF1), DF0);
+    a.hold(DF0, BTN.ABILITY).hold(DF1, BTN.ABILITY).step(1);
+    a.release(DF0, BTN.ABILITY).release(DF1, BTN.ABILITY);
+    setTarget(a.race, a.mech(DF0), -1);
+    setTarget(a.race, a.mech(DF1), -1);
+  }
+
   it('two charging defenders nose to tail: the one behind rams the one ahead, which cannot ram what is behind it', () => {
     const a = new Arena(2);
     const back = giveCells(a.put(DF0, -200, 0));
     const front = giveCells(a.put(DF1, -188, 0));
-    a.hold(DF0, BTN.ABILITY).hold(DF1, BTN.ABILITY).step(1);
-    a.release(DF0, BTN.ABILITY).release(DF1, BTN.ABILITY);
+    bothRam(a);
     expect(back.ramT).toBeGreaterThan(0);
     expect(front.ramT).toBeGreaterThan(0);
     // The one ahead lifts a little so that they meet.
@@ -1369,8 +1396,7 @@ describe('Ram', () => {
     a.step(pre);
     const left = giveCells(a.put(DF0, -200, -6));
     const right = giveCells(a.put(DF1, -200, 6));
-    a.hold(DF0, BTN.ABILITY).hold(DF1, BTN.ABILITY).step(1);
-    a.release(DF0, BTN.ABILITY).release(DF1, BTN.ABILITY);
+    bothRam(a);
     expect(left.ramT).toBeGreaterThan(0);
     expect(right.ramT).toBeGreaterThan(0);
     left.heading = 0.15;
@@ -1437,7 +1463,7 @@ describe('Ram', () => {
 
   it('once the charge is over, contact is just contact', () => {
     const { a, df, foe } = charge(undefined, 300);
-    a.ability(DF0);
+    castRam(a);
     a.until(() => df.ramT === 0, 300);
     foe.s = df.s + 12;
     foe.d = df.d;
@@ -1448,34 +1474,38 @@ describe('Ram', () => {
     expect(foe.hp).toBe(maxHp(foe));
   });
 
-  it('still counts if the defender has locked on since: it is the contact that matters', () => {
-    const { a, df, foe } = charge();
-    df.drive = 50;
-    a.ability(DF0);
-    a.step(1);
-    a.tap(DF0, BTN.LOCK);
+  it('cast locked on, the charge drives at the target until it lands, then the fight goes on as usual', () => {
+    const { a, df, foe } = charge(undefined, 25);
+    const T = castRam(a, DF0, FW1, true);
     expect(df.mode).toBe(MODE.BATTLE);
-    // (In a lock the charge is no quicker than any other fight, and closing
-    // on the target is done at a walk: it takes a dash to run into it, and
-    // from close by, now that a dash down the road is held to the battle cap
-    // plus a share of itself.)
-    a.inputs[DF0].my = 1;
-    a.step(20);
-    expect(a.events('hit').length).toBe(0);
-    expect(dist(df, foe)).toBeGreaterThan(9);
-    a.tap(DF0, BTN.A);
-    expect(a.events('dash').length).toBe(1);
-    const n = a.until(() => a.events('hit').length > 0, 30);
+    expect(df.ramT).toBeGreaterThan(0);
+    // No stick, no dash: the charge alone closes 25 units and lands.
+    const n = a.until(() => a.events('hit').length > 0, 60);
     expect(n).toBeGreaterThanOrEqual(0);
+    expect(a.race.tick - T).toBeLessThan(45);
     expect(a.events('hit')).toMatchObject([{ attacker: DF0, victim: FW1, attack: ATK.DF_RAM, damage: 80 }]);
     expect(foe.act).toBe(ACT.STAGGER);
     expect(df.mode).toBe(MODE.BATTLE);
+    // Landed, the drive at the target stops: one hit per charge, as ever.
+    a.step(40);
+    expect(df.ramHits).toBe(1 << FW1);
+    expect(a.events('hit').length).toBe(1);
+  });
+
+  it('a Ram that was cast and then let go of runs on: it is the contact that matters, locked on or not', () => {
+    const { a, df } = charge();
+    castRam(a);
+    expect(df.mode).toBe(MODE.SPEED);
+    expect(df.ramT).toBeGreaterThan(0);
+    const n = a.until(() => a.events('hit').length > 0, 60);
+    expect(n).toBeGreaterThanOrEqual(0);
+    expect(a.events('hit')).toMatchObject([{ attacker: DF0, victim: FW1, attack: ATK.DF_RAM, damage: 80 }]);
   });
 
   it('wrecks and finishers are not rammed', () => {
     const { a, df, foe } = charge();
     retire(a.race, foe, null);
-    a.ability(DF0);
+    castRam(a);
     a.step(100, () => {
       foe.s = df.s + 6;
       foe.d = df.d;
@@ -1488,19 +1518,28 @@ describe('Ram', () => {
   it('the length and the speed are rules', () => {
     const a = new Arena(2, 1, { ramSecs: 1, ramMult: 1.4 });
     const df = giveCells(a.put(DF0, -200, 0));
-    a.ability(DF0);
+    castRam(a);
     expect(df.ramT).toBe(60);
     expect(speedCap(a.race, df, CLASSES[df.role])).toBeCloseTo(a.pace * 1.4, 9);
   });
 
-  it('the same button in a lock is the Aegis, not a Ram', () => {
+  it('the same button free steering is the Aegis, not a Ram', () => {
     const { a, df } = charge(undefined, 25);
-    a.tap(DF0, BTN.LOCK);
-    a.step(1);
     a.ability(DF0);
     expect(a.events('ability')).toMatchObject([{ ability: ABILITY.AEGIS }]);
     expect(df.ramT).toBe(0);
     expect(df.shieldT).toBeGreaterThan(0);
+  });
+
+  it('escorting a team-mate, the button is the Aegis too: a Ram needs a rival to charge', () => {
+    const a = new Arena(2);
+    const df = giveCells(a.put(DF0, -200, 0));
+    a.put(FW0, -180, 6);
+    a.tap(DF0, BTN.ALLY);
+    expect(df.target).toBe(FW0);
+    a.ability(DF0);
+    expect(a.events('ability')).toMatchObject([{ ability: ABILITY.AEGIS }]);
+    expect(df.ramT).toBe(0);
   });
 });
 
@@ -1509,14 +1548,13 @@ describe('Ram', () => {
 // =============================================================================
 
 describe('Aegis', () => {
-  /** A defender locked on a rival ahead, a forward of its own team close by. */
+  /** A defender free steering with a rival ahead, a forward of its own team close by. */
   function wall(rules?: Partial<Rules>) {
     const a = new Arena(2, 1, rules);
     const df = giveCells(a.put(DF0, -200, 0));
     const foe = a.put(FW1, -170, 8);
     const fw = a.put(FW0, -190, -10);
-    a.tap(DF0, BTN.LOCK);
-    expect(df.target).toBe(FW1);
+    expect(df.target).toBe(-1);
     a.step(2);
     a.clearLog();
     return { a, df, foe, fw };
@@ -1543,9 +1581,9 @@ describe('Aegis', () => {
     expect(foe.shieldT).toBe(0);
     expect(nearFoe.shieldT).toBe(0);
     expect(df.cells).toBe(2);
-    // The lock is kept: this is a move for the middle of a fight.
-    expect(df.target).toBe(FW1);
-    expect(df.mode).toBe(MODE.BATTLE);
+    // Cast free steering: no lock is needed, and none is taken.
+    expect(df.target).toBe(-1);
+    expect(df.mode).toBe(MODE.SPEED);
   });
 
   it('the range is centre to centre: just inside is covered, just outside is not', () => {
@@ -1637,8 +1675,9 @@ describe('Aegis', () => {
 
   it('stacks with a guard: both reductions apply, and a broken guard under a shield is no stagger', () => {
     const { a, df, foe } = wall();
+    a.ability(DF0); // free steering, then into the fight under it
+    a.tap(DF0, BTN.LOCK);
     a.step(22); // facing the rival
-    a.ability(DF0);
     a.hold(DF0, BTN.GUARD).step(20);
     expect(df.guarding).toBe(true);
     const hp = df.hp;
@@ -1659,7 +1698,6 @@ describe('Aegis', () => {
     const fw = a.put(FW0, -190, 24.5); // against the right-hand wall
     const foe = a.put(MF1, -190, 16.5); // a rival alongside, on the inside
     a.put(FW1, -160, 0);
-    a.tap(DF0, BTN.LOCK);
     a.tap(MF1, BTN.LOCK);
     expect(foe.target).toBe(FW0);
     a.step(12);
@@ -1728,7 +1766,6 @@ describe('Aegis', () => {
     const a = new Arena(2);
     const df = giveCells(a.put(DF0, -200, 0));
     a.put(FW1, -170, 8);
-    a.tap(DF0, BTN.LOCK);
     a.step(1);
     a.ability(DF0);
     expect(df.shieldT).toBe(240);

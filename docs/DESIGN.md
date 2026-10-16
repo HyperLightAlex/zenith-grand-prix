@@ -351,9 +351,9 @@ weapons at the start of lap 2.
 
 | Frame | Free steering | Locked on |
 |---|---|---|
-| Swift | **Overdrive**: 4 s, top speed +30%, armour penalty ignored, burns off a Snare. Takes the place of boost while it runs | **Break Away**: also works while staggered. Ends the stagger, clears a Snare, 40 ticks of invulnerability, drops every enemy lock on you, no enemy can lock you for 1.5 s, and you are released at 10% over your cap |
+| Swift | **Overdrive**, from the speed lap (`overdriveLap` 3; refused before it, at no cost): 4 s, top speed +30%, armour penalty ignored, burns off a Snare. Takes the place of boost while it runs | **Break Away**: also works while staggered. Ends the stagger, clears a Snare, 40 ticks of invulnerability, drops every enemy lock on you, no enemy can lock you for 1.5 s, and you are released at 10% over your cap |
 | Vector | **Snare**: a fast bolt with aim assist out to 100 units. On a clean hit the target's speed cap is 74% for 3.5 s and it cannot boost | **Disruptor**: every enemy within 26 units takes a heavy hit that breaks through armoured wind-ups, and loses 30 Drive |
-| Bulwark | **Ram**: 3.5 s, +12% speed, cannot be staggered, slowed or snared, three times the mass. Each enemy its front runs into takes 80 damage once and is thrown sideways; a wall on the far side does the rest | **Aegis**: the defender and every teammate within 34 units take 35% damage and cannot be staggered for 4 s |
+| Bulwark | **Aegis**: the defender and every teammate within 34 units take 35% damage and cannot be staggered for 4 s. Also the button while escorting a team-mate | **Ram**: 3.5 s, +12% speed, cannot be staggered, slowed or snared, three times the mass. It drives straight at the target (60 u/s over the fight's own movement) until its front lands; each enemy its front runs into takes 80 damage once and is thrown sideways; a wall on the far side does the rest. Let go of the lock and the charge runs on down the road |
 
 Counters: a guard reduces a Ram or a Disruptor to a block (neither can be
 parried); an Aegis ignores a Snare and takes the sting out of a Ram; a dodge
@@ -533,7 +533,7 @@ Breaker Slam 20 (18).
 | Top speed (lap 3) | 160 u/s | 152.5 | 145 |
 | Grip | 100 | 90 | 80 |
 | Guard | 80 | 100 | 130 |
-| Abilities | Overdrive, Break Away | Snare, Disruptor | Ram, Aegis |
+| Abilities | Overdrive, Break Away | Snare, Disruptor | Aegis, Ram |
 
 ### Team plays
 
@@ -652,7 +652,7 @@ With equal-skill computer pilots in all six seats, 200 races currently give:
 | Ring-outs per race | 6.6, about 66 damage each (440 a race) |
 | Parries per race | 10 |
 | Entering lap 2 | 48 Drive per mech (they boost on lap 1 down to 45, a burn at a time); Cells: forwards 2.2, midfielders 1.9, defenders 1.7 |
-| Abilities used per race | Overdrive 4.2, Break Away 3.0, Snare 2.0, Ram 1.6, Disruptor 1.2, Aegis 0.8 |
+| Abilities used per race | Overdrive 5.3, Disruptor 3.3, Break Away 2.8, Snare 2.6, Ram 2.5, Aegis 2.3 (60 races, 0.5) |
 | Battle-lap pace | 370 mph against a 375 limiter (366 while locked on) |
 | Leader at the start of lap 3 goes on to win | 55% |
 | First finisher's team loses the round anyway | About 5% |

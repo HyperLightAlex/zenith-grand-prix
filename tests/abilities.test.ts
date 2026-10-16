@@ -83,8 +83,8 @@ const CASES: Case[] = [
   { ability: ABILITY.BREAKAWAY, id: FW0, locked: true, make: scene(FW0, true, 30, 8) },
   { ability: ABILITY.SNARE, id: MF0, locked: false, make: scene(MF0, false, 40, 0) },
   { ability: ABILITY.PULSE, id: MF0, locked: true, make: scene(MF0, true, 16, 8) },
-  { ability: ABILITY.RAM, id: DF0, locked: false, make: scene(DF0, false, 60, 14) },
-  { ability: ABILITY.AEGIS, id: DF0, locked: true, make: scene(DF0, true, 30, 8) },
+  { ability: ABILITY.AEGIS, id: DF0, locked: false, make: scene(DF0, false, 60, 14) },
+  { ability: ABILITY.RAM, id: DF0, locked: true, make: scene(DF0, true, 30, 8) },
 ];
 const nameOf = (ab: number) => ABILITIES[ab].name;
 
@@ -100,7 +100,7 @@ describe('the ability table', () => {
     expect(CLASSES.map((c) => [c.abilityFree, c.abilityLocked])).toEqual([
       [ABILITY.OVERDRIVE, ABILITY.BREAKAWAY],
       [ABILITY.SNARE, ABILITY.PULSE],
-      [ABILITY.RAM, ABILITY.AEGIS],
+      [ABILITY.AEGIS, ABILITY.RAM],
     ]);
     expect(CLASSES.map((c) => c.role)).toEqual([ROLE.FW, ROLE.MF, ROLE.DF]);
   });
@@ -146,6 +146,7 @@ describe('abilityFor: which move the button would fire', () => {
     for (const [id, mate, want] of [
       [FW0, MF0, ABILITY.BREAKAWAY],
       [MF0, DF0, ABILITY.PULSE],
+      // (The defender's locked move is a Ram at its target: escorting a team-mate, the button is its Aegis.)
       [DF0, FW0, ABILITY.AEGIS],
     ] as const) {
       const m = a.put(id, 0, 0);
@@ -153,7 +154,7 @@ describe('abilityFor: which move the button would fire', () => {
       expect(abilityFor(m)).toBe(CLASSES[m.role].abilityFree);
       a.tap(id, BTN.ALLY);
       expect(m.target).toBe(mate);
-      expect(abilityFor(m)).toBe(want);
+      expect(abilityFor(m, a.race)).toBe(want);
       a.tap(id, BTN.ALLY); // let go again
       a.put(id, -1000 - 300 * id, 0, 0);
       a.put(mate, -1200 - 300 * mate, 0, 0);
@@ -401,7 +402,7 @@ describe('using an ability', () => {
   });
 
   it('tryAbility itself is what refuses: called directly, the answers are the same', () => {
-    const { a, user } = CASES[4].make();
+    const { a, user } = CASES.find((c) => c.ability === ABILITY.RAM)!.make();
     user.cells = 0;
     expect(tryAbility(a.race, TRACK, user)).toBe(false);
     user.cells = 1;
@@ -436,7 +437,7 @@ describe('using an ability', () => {
     a.ability(FW0);
     a.ability(DF0);
     expect(fw.overdriveT).toBe(59); // 60 when pressed, a tick ago
-    expect(df.ramT).toBe(120);
+    expect(df.shieldT).toBe(30); // pressed on the tick just run
     a.step(ABILITY_COOLDOWN);
     a.put(FW1, 30, 8);
     a.put(MF1, -70, 8);
@@ -444,13 +445,60 @@ describe('using an ability', () => {
     setTarget(a.race, df, MF1);
     a.hold(FW0, BTN.ABILITY).hold(DF0, BTN.ABILITY).step(1);
     expect(fw.cloakT).toBe(180);
-    expect(df.shieldT).toBe(30);
+    expect(df.ramT).toBe(120);
   });
 });
 
 // =============================================================================
 // OVERDRIVE
 // =============================================================================
+
+describe('Overdrive waits for the speed lap (rules.overdriveLap)', () => {
+  // With the game's own rule (the arena opens it on lap 2 for the tests of how it works).
+  const DEFAULT = { overdriveLap: DEFAULT_RULES.overdriveLap };
+
+  it('is the speed lap by default', () => {
+    expect(DEFAULT_RULES.overdriveLap).toBe(3);
+  });
+
+  it('on the battle lap the button is refused: no Cell, no cooldown, and the reason is the lap', () => {
+    const a = new Arena(2, 1, DEFAULT);
+    const m = giveCells(a.put(FW0, -200, 0));
+    expect(abilityFor(m)).toBe(ABILITY.OVERDRIVE);
+    a.ability(FW0);
+    expect(m.overdriveT).toBe(0);
+    expect(m.cells).toBe(3);
+    expect(m.cdAbility).toBe(0);
+    expect(a.events('ability').length).toBe(0);
+    expect(a.events('denied')).toMatchObject([{ mech: FW0, reason: 'lap' }]);
+  });
+
+  it('...but Break Away is there on the battle lap, locked on', () => {
+    const a = new Arena(2, 1, DEFAULT);
+    const m = giveCells(a.put(FW0, -200, 0));
+    a.put(FW1, -175, 6);
+    setTarget(a.race, m, FW1);
+    a.ability(FW0);
+    expect(a.events('ability')).toMatchObject([{ mech: FW0, ability: ABILITY.BREAKAWAY }]);
+    expect(m.cells).toBe(2);
+  });
+
+  it('on the speed lap it lights as ever', () => {
+    const a = new Arena(3, 1, DEFAULT);
+    const m = giveCells(a.put(FW0, -200, 0));
+    a.ability(FW0);
+    expect(a.events('ability')).toMatchObject([{ mech: FW0, ability: ABILITY.OVERDRIVE }]);
+    expect(m.overdriveT).toBeGreaterThan(0);
+    expect(m.cells).toBe(2);
+  });
+
+  it('a rule of 2 opens it on the battle lap again', () => {
+    const a = new Arena(2, 1, { overdriveLap: 2 });
+    const m = giveCells(a.put(FW0, -200, 0));
+    a.ability(FW0);
+    expect(m.overdriveT).toBeGreaterThan(0);
+  });
+});
 
 describe('Overdrive', () => {
   /** A forward alone on the straight, Cells full, cruising at the cap of the lap. */

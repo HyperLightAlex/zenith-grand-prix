@@ -602,12 +602,14 @@ export class Hud {
       this.cellsLine.classList.add('gain');
     }
     this.lastCells = me.cells;
-    const ab = abilityFor(me);
+    const ab = abilityFor(me, race);
     const shown = ab === -1 ? c.abilityFree : ab;
     setText(this.abilityKey, k.ability);
-    setText(this.abilityName, ABILITIES[shown].name);
+    // Overdrive waits for the speed lap (rules.overdriveLap).
+    const waiting = shown === ABILITY.OVERDRIVE && race.lapPhase < race.rules.overdriveLap;
+    setText(this.abilityName, waiting ? `${ABILITIES[shown].name} (speed lap)` : ABILITIES[shown].name);
     setIcon(this.abilityIco, ABILITY_ICON[shown]);
-    setClass(this.abilityTag, 'ready', ab !== -1 && me.cells >= 1 && weaponsFree(race) && !me.retired && !me.finished);
+    setClass(this.abilityTag, 'ready', ab !== -1 && !waiting && me.cells >= 1 && weaponsFree(race) && !me.retired && !me.finished);
 
     // Chips.
     const battle = me.mode === MODE.BATTLE && me.target >= 0;
@@ -1088,7 +1090,7 @@ export class Hud {
         break;
       case 'denied':
         if (e.mech === this.localId) {
-          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 || race.rules.gateValueLater <= 0 ? 'No Cells. The gates only light on the formation lap' : 'No Cells. Thread a gold gate to earn one back', switch: 'No other target in reach' }[e.reason];
+          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 || race.rules.gateValueLater <= 0 ? 'No Cells. The gates only light on the formation lap' : 'No Cells. Thread a gold gate to earn one back', switch: 'No other target in reach', lap: 'Overdrive opens on the speed lap' }[e.reason];
           this.showNotice(why, e.reason === 'weapons');
         }
         break;

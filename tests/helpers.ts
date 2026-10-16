@@ -293,10 +293,13 @@ export class Arena {
    * test asks for it: on stage mechs sit in each other's slipstream, which
    * would quietly turn the first blow of most tests into a momentum strike.
    * The Drive trickle on the formation lap and the Drive for a close pass are
-   * off too, so a gauge only moves for the reason a test is about.
+   * off too, so a gauge only moves for the reason a test is about. Overdrive
+   * opens on the battle lap here, as it did before rules.overdriveLap, so a
+   * test of how it works can stage it on any lap; the lap rule has tests of
+   * its own (abilities.test.ts), with the default.
    */
   constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1, rules?: Partial<Rules>) {
-    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules: { momentumSecs: 0, lap1Trickle: 0, drivePass: 0, ...rules } });
+    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules: { momentumSecs: 0, lap1Trickle: 0, drivePass: 0, overdriveLap: 2, ...rules } });
     this.inputs = this.race.mechs.map(() => emptyInput());
     runCountdown(this.race, this.inputs);
     this.base = (lapPhase - 1) * TRACK.length;

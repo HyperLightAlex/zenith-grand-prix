@@ -323,7 +323,7 @@ export type SimEvent =
   | { type: 'dash'; mech: number }
   | { type: 'arc'; mech: number; dir: number }
   | { type: 'boost'; mech: number }
-  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' }
+  | { type: 'denied'; mech: number; reason: 'weapons' | 'drive' | 'target' | 'cells' | 'switch' | 'lap' }
   | { type: 'gate'; mech: number; gate: number; cells: number }
   /** A teammate's gate paid this mech its share (see rules.gateShare). */
   | { type: 'gateShare'; mech: number; from: number; gate: number; cells: number }

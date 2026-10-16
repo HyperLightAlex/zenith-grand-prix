@@ -190,12 +190,15 @@ leader's nose; a mech that is already full passes through without using it.
 
 | Frame | Free steering | Locked on |
 |---|---|---|
-| Swift (forward) | **Overdrive**: 4 s at +30% speed, ignoring armour damage | **Break Away**: works even mid-hit. Cancels the stagger, shakes off every lock and throws you clear |
+| Swift (forward) | **Overdrive**, on the speed lap only: 4 s at +30% speed, ignoring armour damage | **Break Away**: works even mid-hit. Cancels the stagger, shakes off every lock and throws you clear |
 | Vector (midfielder) | **Snare**: a bolt that cuts the target's top speed by a quarter for 3.5 s and stops it boosting | **Disruptor**: a pulse that interrupts every enemy close by and drains their Drive |
-| Bulwark (defender) | **Ram**: 3.5 s of unstoppable charge. Whatever its front hits takes heavy damage and is thrown aside | **Aegis**: 4 s shield over itself and teammates nearby. A third of the damage, no stagger |
+| Bulwark (defender) | **Aegis**: 4 s shield over itself and teammates nearby. A third of the damage, no stagger | **Ram**: 3.5 s of unstoppable charge, driving straight at your target until it lands. Whatever its front hits takes heavy damage and is thrown aside |
 
 They answer each other. Overdrive and Break Away both burn off a Snare, an
 Aegis shrugs off a Ram and a Snare, a guard blunts a Ram or a Disruptor.
+On the battle lap a forward has Break Away but not Overdrive, so it cannot
+simply outrun the fight: its support has to carry it to lap 3 (the rule is
+`overdriveLap`). Escorting a team-mate, the defender's button is its Aegis.
 
 ## Fighting
 

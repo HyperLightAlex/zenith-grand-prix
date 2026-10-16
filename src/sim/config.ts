@@ -339,11 +339,11 @@ export interface AbilityDef {
   blurb: string;
 }
 export const ABILITIES: AbilityDef[] = [
-  { key: 'overdrive', name: 'Overdrive', blurb: 'A few seconds far past top speed. Ignores armour damage.' },
+  { key: 'overdrive', name: 'Overdrive', blurb: 'On the speed lap: a few seconds far past top speed. Ignores armour damage.' },
   { key: 'breakaway', name: 'Break Away', blurb: 'Works even mid-hit: shake every lock and burst clear.' },
   { key: 'snare', name: 'Snare', blurb: 'A bolt that drags a rival\'s top speed down and kills its boost.' },
   { key: 'pulse', name: 'Disruptor', blurb: 'A pulse that interrupts everyone close by and drains their Drive.' },
-  { key: 'ram', name: 'Ram', blurb: 'An unstoppable charge. Whatever it hits is thrown aside.' },
+  { key: 'ram', name: 'Ram', blurb: 'An unstoppable charge at your target. It, and whatever else the charge hits, is thrown aside.' },
   { key: 'aegis', name: 'Aegis', blurb: 'A shield over you and teammates nearby.' },
 ];
 /** Ticks between ability uses, so one press cannot burn two Cells. */
@@ -355,6 +355,8 @@ export const RAM_MIN_CLOSING = 3;
 export const RAM_ARC = 1.9;
 export const RAM_SHOVE = 30;
 export const RAM_MASS = 3;
+/** A Ram cast locked on drives at its target this fast (units/s) over the fight's own movement, until it lands. */
+export const RAM_CHARGE = 60;
 
 export interface ClassDef {
   role: Role;
@@ -546,7 +548,8 @@ export const CLASSES: ClassDef[] = [
     battleAccel: 56, strafe: 22, approach: 26,
     guardMax: 130, guardRegen: 20, dash: 58, dashCost: 18, dashIframes: 8,
     primary: ATK.DF_HAMMER1, secondary: ATK.DF_SCATTER, aiRange: 0,
-    abilityFree: ABILITY.RAM, abilityLocked: ABILITY.AEGIS,
+    // Free steering, the shield over the team; locked on, the charge at the target.
+    abilityFree: ABILITY.AEGIS, abilityLocked: ABILITY.RAM,
   },
 ];
 

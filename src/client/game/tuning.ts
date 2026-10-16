@@ -209,6 +209,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
     items: [
       rule('overdriveMult', 'Overdrive speed', 1.05, 1.6, 0.01, 'bonus'),
       rule('overdriveSecs', 'Overdrive length', 1, 8, 0.25, 'sec'),
+      rule('overdriveLap', 'Overdrive from lap', 2, 3, 1, 'int', '2: the battle lap; 3: only the speed lap. Break Away is there from the battle lap either way.'),
       rule('breakawaySecs', 'Break Away: cannot be locked', 0, 4, 0.25, 'sec'),
       rule('snareMult', 'Snare: speed left', 0.4, 1, 0.01, 'pct'),
       rule('snareSecs', 'Snare length', 1, 8, 0.25, 'sec'),
