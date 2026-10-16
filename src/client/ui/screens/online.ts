@@ -13,9 +13,9 @@ import { BACK, SELECT, confirmDialog, type DialogData } from './common';
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 const SHORT = ['FW', 'MF', 'DF'];
 
-function face(f: number, role: Role, cpu = false): HTMLElement {
-  const el = h('i.face' + (cpu ? '.cpu' : ''));
-  if (!cpu) el.style.backgroundImage = `url(${pilotUrl(f, role)})`;
+function face(f: number, role: Role): HTMLElement {
+  const el = h('i.face');
+  el.style.backgroundImage = `url(${pilotUrl(f, role)})`;
   return el;
 }
 
@@ -162,8 +162,9 @@ export function registerOnline(m: Menus, g: Game): void {
           const row = h(
             'div.seat' + (mine ? '.mine' : '') + (who ? '' : '.cpu'),
             h('span.role', SHORT[role]),
-            face(s.faction, role, !who),
-            h('span.who', h('b', who ? who.callsign : 'Computer'), badges, h('small', who ? `${who.ping ? who.ping + ' ms' : ''}` : SKILL_NAMES[v.settings.skill])),
+            // An empty seat shows the computer pilot who will fly it: the team's pilot for that role.
+            face(s.faction, role),
+            h('span.who', h('b', who ? who.callsign : LIVERIES[s.faction].pilots[role]), badges, h('small', who ? `${who.ping ? who.ping + ' ms' : ''}` : `${SKILL_NAMES[v.settings.skill]} computer pilot`)),
             h('span.state' + (who?.ready ? '.ready' : ''), status),
           );
           m.addItem(seats, row, () => {

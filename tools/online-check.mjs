@@ -87,6 +87,8 @@ const before = await mine(b);
 await b.locator('.menu .sides .side').nth(aSide).locator('.seat.cpu').first().click();
 check(await until(b, (r) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).role !== r; }, before.role), 'a click on an empty seat on your own team changes your role');
 await b.screenshot({ path: process.env.SHOT ?? 'online-check-room.png' }).catch(() => {});
+const cpuNames = await b.evaluate(() => [...document.querySelectorAll('.menu .seat.cpu .who b')].map((x) => x.textContent));
+check(cpuNames.length > 0 && cpuNames.every((n) => n && n !== 'Computer'), `computer seats show the pilot who flies them (${cpuNames.join(', ')})`);
 // Factions: pick a team's name. Alpha (host and captain) changes their own team's...
 const head = (p, side) => p.locator('.menu .sides .side').nth(side).locator('.side-head');
 const f0 = (await mine(a)).factions[aSide];
@@ -134,6 +136,18 @@ await b.waitForFunction(() => window.game.debugState().state === 'race', null, {
 check(true, 'everyone ready: the countdown runs and the race starts for both');
 await a.waitForTimeout(8000);
 const sa = await state(a);
+// On a built game the pause menu has no debug tools (tuning, the look).
+if (!/[?&](dev|tune)\b/.test(base)) {
+  await a.keyboard.press('Escape');
+  await a.waitForFunction(() => window.game.menus.screen === 'pause', null, { timeout: 20000 }).catch(() => {});
+  const items = await a.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
+  const isDev = await a.evaluate(() => location.port === '5173');
+  check(isDev || !items.some((t) => /Tuning|Look:/.test(t)), `no tuning or look in the pause menu (${items.join(' / ')})`);
+  await a.keyboard.press('KeyT');
+  await a.waitForTimeout(800);
+  check(isDev || !(await a.evaluate(() => window.game.panel.open)), 'T does not open the tuning panel');
+  await a.keyboard.press('Escape');
+}
 check(sa.net && sa.net.gaps === 0 && sa.net.confirmed > 100, `the race runs (confirmed tick ${sa.net?.confirmed}, ${sa.net?.ahead} inputs predicted ahead)`);
 await a.waitForFunction(() => window.game.debugState().state === 'results', null, { timeout: 400000 });
 check(true, 'the results come up at the flag');

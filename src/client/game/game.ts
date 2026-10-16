@@ -6,6 +6,7 @@
 //   Grand Prix  cups and the season (src/gp/), with the other factions'
 //               races run in the background.
 //   Online      private rooms on the game server, with squads.
+import { DEV_TOOLS } from '../devTools';
 import * as THREE from 'three';
 import {
   ABILITY,
@@ -1607,6 +1608,9 @@ export class Game {
       this.cycleRoster();
       menu = menu.filter((m) => m !== 'rosterModel');
     }
+    // The look switch (G) and the tuning panel (T, the pad's Back) are tools
+    // for working on the game: without DEV_TOOLS their keys do nothing.
+    if (!DEV_TOOLS) menu = menu.filter((m) => m !== 'look' && m !== 'tune');
     // G switches the look, anywhere.
     if (menu.includes('look')) {
       this.toggleLook();

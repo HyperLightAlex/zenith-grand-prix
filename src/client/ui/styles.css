@@ -1008,7 +1008,6 @@ html, body {
 .menu .bay-card.me { outline: 0.12em solid var(--signal); }
 .menu .bay-card.empty { opacity: 0.55; }
 .menu .face { display: inline-block; width: 3.2em; height: 3.2em; border-radius: 0.3em; background: rgba(255, 255, 255, 0.1) center / cover no-repeat; }
-.menu .face.cpu { background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 0 0.3em, transparent 0.3em 0.6em); outline: 0.08em dashed rgba(255, 255, 255, 0.35); }
 
 /* The room. */
 .menu .room { position: absolute; left: 3em; right: 3em; top: 2em; bottom: 4.6em; display: flex; flex-direction: column; gap: 0.8em; }

@@ -1,5 +1,6 @@
 // The title, the mode select, the controls, dialogs and text entry.
 
+import { DEV_TOOLS } from '../../devTools';
 import type { Game } from '../../game/game';
 import { CALLSIGN_CHARS, CALLSIGN_MAX, CODE_CHARS, CODE_LENGTH } from '../../../net/protocol';
 import { h } from '../dom';
@@ -19,7 +20,7 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Look around', 'Right stick', ''],
       ['Look back', 'R3', 'V'],
       ['Pause', 'Start', 'Esc'],
-      ['Tuning panel', 'Back', 'T'],
+      ...(DEV_TOOLS ? [['Tuning panel', 'Back', 'T'] as [string, string, string], ['80s look on and off', '', 'G'] as [string, string, string]] : []),
       ['Full screen', '', 'F'],
     ],
   ],

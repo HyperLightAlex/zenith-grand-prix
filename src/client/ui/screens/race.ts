@@ -8,6 +8,7 @@ import { h } from '../dom';
 import { emblemUrl, pilotUrl } from '../factionArt';
 import { LOGO } from '../keyArt';
 import { art, type Menus } from '../menus';
+import { DEV_TOOLS } from '../../devTools';
 import { SELECT, confirmDialog } from './common';
 
 export function registerRace(m: Menus, g: Game): void {
@@ -18,11 +19,14 @@ export function registerRace(m: Menus, g: Game): void {
       const online = g.mode === 'online';
       m.button(list, 'Resume', () => g.resume(), { key: 'resume' });
       if (!online) m.button(list, 'Restart this race', () => g.restart(), { key: 'restart' });
-      m.button(list, online ? 'Tuning (camera and look)' : 'Tuning', () => g.openTuning(), { key: 'tuning' });
-      const lookLabel = h('span.look-label', `Look: ${g.lookOn() ? '80s anime' : 'plain'}`);
-      m.button(list, lookLabel, () => {
-        lookLabel.textContent = `Look: ${g.toggleLook() ? '80s anime' : 'plain'}`;
-      }, { key: 'look' });
+      // Tools for working on the game, not player settings (see devTools.ts).
+      if (DEV_TOOLS) {
+        m.button(list, online ? 'Tuning (camera and look)' : 'Tuning', () => g.openTuning(), { key: 'tuning' });
+        const lookLabel = h('span.look-label', `Look: ${g.lookOn() ? '80s anime' : 'plain'}`);
+        m.button(list, lookLabel, () => {
+          lookLabel.textContent = `Look: ${g.toggleLook() ? '80s anime' : 'plain'}`;
+        }, { key: 'look' });
+      }
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
       if (online) {
         m.button(list, 'Leave match', () => confirmDialog(m, 'Leave the match?', 'Your seat goes to a computer pilot for the rest of this match.', 'Leave', () => g.leaveMatch()), { key: 'leave' });
