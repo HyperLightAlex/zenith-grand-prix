@@ -80,32 +80,34 @@ export function registerOnline(m: Menus, g: Game): void {
       if (members.length > 1) m.button(list, 'Leave squad', () => void g.leaveSquad(), { key: 'leavesquad' });
       m.button(list, `Callsign: ${g.callsign || '(none)'}`, () => g.askCallsign(() => m.refresh()), { key: 'callsign' });
       col.append(list);
+      // Each of the squad, with the frame they picked. Two of a frame is
+      // shown, not refused: Ready sorts it out in a room.
       const bays = h('div.bays');
-      for (const role of ROLES) {
-        const mem = sq ? members.find((x) => x.role === role) : role === g.loadout.role ? { pid: '', callsign: g.callsign || 'You', role, connected: true } : undefined;
-        const me = !!mem && (!sq || mem.pid === o.squadPid);
-        const tag = h('span.tag', `${SHORT[role]} · ${ROLE_NAMES[role]}`);
-        let card: HTMLElement;
+      const people = sq ? members : [{ pid: '', callsign: g.callsign || 'You', role: g.loadout.role, connected: true }];
+      for (let i = 0; i < 3; i++) {
+        const mem = people[i];
+        const tag = h('span.tag', `Bay ${i + 1}`);
         if (!mem) {
-          card = h('div.bay-card.empty', tag, face(faction, role), h('b', 'Open'), h('small', members.length > 1 ? 'Pick to move here' : `${LIVERIES[faction].models[role]}: pick to fly it`));
-        } else {
-          const asked = !!sq && sq.swaps.some(([a, b]) => a === o.squadPid && b === mem.pid);
-          const tags = [sq && mem.pid === sq.leader && members.length > 1 ? 'Leader' : '', me ? 'You' : '', mem.connected ? '' : 'Reconnecting', asked ? 'Asked to swap' : ''].filter(Boolean).join(' · ');
-          card = h('div.bay-card' + (me ? '.me' : ''), tag, face(faction, role), h('b', mem.callsign), h('small', LIVERIES[faction].models[role]), tags ? h('em', tags) : '');
+          bays.append(h('div.bay-card.empty', tag, h('i.face'), h('b', 'Free'), h('small', 'Invite a friend to your squad')));
+          continue;
         }
-        m.addItem(bays, card, () => {
-          if (me) return m.toast('Your position');
-          if (!sq) {
-            // Not connected yet: it is only your own frame.
-            g.setLoadout({ team: g.loadout.team, role });
-            return m.refresh();
-          }
-          o.sendSquad('position', { role });
-          if (mem) m.toast(`Asked ${mem.callsign} to swap`);
-        }, undefined, { key: `pos-${role}` });
+        const me = !sq || mem.pid === o.squadPid;
+        const role = me ? g.loadout.role : mem.role;
+        const same = people.filter((x) => x !== mem && (x.pid === o.squadPid || !sq ? g.loadout.role : x.role) === role).map((x) => x.callsign);
+        const tags = [sq && mem.pid === sq.leader && members.length > 1 ? 'Leader' : '', me ? 'You' : '', mem.connected ? '' : 'Reconnecting'].filter(Boolean).join(' · ');
+        bays.append(
+          h(
+            'div.bay-card' + (me ? '.me' : '') + (same.length ? '.clash' : ''),
+            tag,
+            face(faction, role),
+            h('b', mem.callsign),
+            h('small', `${LIVERIES[faction].models[role]}, ${ROLE_NAMES[role].toLowerCase()}`),
+            same.length ? h('em.clash', `Same frame as ${same.join(' and ')}`) : tags ? h('em', tags) : '',
+          ),
+        );
       }
       const panel = h('div.panel.squad', h('h2', members.length > 1 ? `Your squad · ${factionName(LIVERIES[faction])}` : 'Your squad'), bays);
-      if (sq) panel.append(h('div.match-blurb', members.length > 1 ? `Squad code ${sq.code}. Pick an open position to move there, or a squadmate's to ask them to swap. ${lead ? 'You lead: you pick the faction and take everyone into rooms.' : 'Your leader picks the faction and takes everyone into rooms.'}` : `Squad code ${sq.code}. Invite friends to fly with you: a squad stays together on one team.`));
+      if (sq) panel.append(h('div.match-blurb', members.length > 1 ? `Squad code ${sq.code}. Pick your frame in the hangar (Y); in a room, Ready locks it in. ${lead ? 'You lead: you pick the faction and take everyone into rooms.' : 'Your leader picks the faction and takes everyone into rooms.'}` : `Squad code ${sq.code}. Invite friends to fly with you: a squad stays together on one team.`));
       m.root.append(h('div.shade'), col, panel, m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
     },
     press(m, key) {
@@ -156,44 +158,62 @@ export function registerOnline(m: Menus, g: Game): void {
           h('span', captain ? `Captain: ${captain.callsign}` : 'Computer pilots'),
         );
         m.addItem(colEl, head, () => step(1), (dir) => step(dir), { key: `faction-${side}`, locked: why });
+        // The team's three frames: who has locked each in, who has picked
+        // it, or the computer pilot who flies it. Pick a row to fly that
+        // frame (on the other team, it moves you there if it has room).
         const seats = h('div.seats');
         colEl.append(seats);
+        const team = v.players.filter((p) => p.side === side);
+        const full = side !== me?.side && team.length + s.held >= 3;
         for (const role of ROLES) {
-          const who = byPid.get(s.seats[role] ?? '');
-          const mine = !!who && who.pid === o.pid;
-          const status = who ? statusOf(v, who) : s.held[role] ? 'Held for a squad' : '';
+          const here = team.filter((p) => p.role === role);
+          const locked = here.find((p) => p.ready);
+          const mine = here.some((p) => p.pid === o.pid);
+          const clash = here.length > 1 && !locked;
+          const names = here.length ? here.map((p) => p.callsign).join(', ') : LIVERIES[s.faction].pilots[role];
           const badges = h('span.badges');
-          if (who && v.host === who.pid) badges.append(h('span.badge', 'Host'));
-          if (who && s.caller === who.pid) badges.append(h('span.badge.caller', 'Shot caller'));
+          for (const p of here) {
+            if (v.host === p.pid) badges.append(h('span.badge', 'Host'));
+            if (s.caller === p.pid) badges.append(h('span.badge.caller', 'Shot caller'));
+          }
           if (mine) badges.append(h('span.badge.you', 'You'));
+          let status: string;
+          if (inMatch) status = here.length ? statusOf(v, here[0]) : '';
+          else if (locked) status = here.length > 1 ? `Locked in by ${locked.callsign}` : 'Locked in';
+          else if (clash) status = 'Same frame';
+          else if (here.length) status = here[0].connected ? 'Picking' : 'Reconnecting';
+          else status = '';
+          const ping = here.length === 1 && here[0].ping ? `${here[0].ping} ms` : '';
           const row = h(
-            'div.seat' + (mine ? '.mine' : '') + (who ? '' : '.cpu'),
+            'div.seat' + (mine ? '.mine' : '') + (here.length ? '' : '.cpu') + (clash ? '.clash' : ''),
             h('span.role', SHORT[role]),
-            // An empty seat shows the computer pilot who will fly it: the team's pilot for that role.
             face(s.faction, role),
-            h('span.who', h('b', who ? who.callsign : LIVERIES[s.faction].pilots[role]), badges, h('small', who ? `${who.ping ? who.ping + ' ms' : ''}` : `${SKILL_NAMES[v.settings.skill]} computer pilot`)),
-            h('span.state' + (who?.ready ? '.ready' : ''), status),
+            h('span.who', h('b', names), badges, h('small', `${LIVERIES[s.faction].models[role]}${here.length ? (ping ? `, ${ping}` : '') : `, ${SKILL_NAMES[v.settings.skill]} computer pilot`}`)),
+            h('span.state' + (locked ? '.ready' : ''), status),
           );
+          const others = here.filter((p) => p.pid !== o.pid);
           m.addItem(seats, row, () => {
-            if (mine) return m.toast('Your seat');
-            const swap = () => {
-              if (inMatch) return m.toast('Seats change between matches');
-              o.sendRoom('seat', { side, role });
-              if (who) m.toast(`Asked ${who.callsign} to swap`);
+            if (inMatch) return m.toast('Frames change between matches');
+            const pick = () => {
+              if (me?.ready && (side !== me.side || role !== me.role)) return m.toast("You're locked in: press Not ready to change your frame");
+              if (side === me?.side) o.sendRoom('pick', { role });
+              else if (full) m.toast('That team is full');
+              else o.sendRoom('team', { side, role });
             };
             // The host can also remove someone from the room.
-            if (who && host) {
+            if (host && others.length) {
               m.push<DialogData>('dialog', {
-                title: who.callsign,
+                title: `${SHORT[role]} · ${LIVERIES[s.faction].models[role]}`,
                 options: [
-                  { label: 'Ask to swap seats', go: true, run: () => (m.pop(), swap()) },
-                  { label: `Remove ${who.callsign} from the room`, run: () => (m.pop(), confirmDialog(m, `Remove ${who.callsign}?`, 'They cannot come back to this room.', 'Remove', () => o.sendRoom('kick', { pid: who.pid }))) },
+                  ...(mine ? [] : [{ label: 'Fly this frame', go: true, run: () => (m.pop(), pick()) }]),
+                  ...others.map((p) => ({ label: `Remove ${p.callsign} from the room`, run: () => (m.pop(), confirmDialog(m, `Remove ${p.callsign}?`, 'They cannot come back to this room.', 'Remove', () => o.sendRoom('kick', { pid: p.pid }))) })),
                   { label: 'Cancel', run: () => m.pop() },
                 ],
               });
               return;
             }
-            swap();
+            if (mine) return m.toast(me?.ready ? 'Your frame, locked in' : 'Your pick: Ready locks it in');
+            pick();
           }, () => m.focus(`seat-${1 - side}-${role}`), { key: `seat-${side}-${role}` });
         }
       }
@@ -206,7 +226,14 @@ export function registerOnline(m: Menus, g: Game): void {
       m.choice(settings, 'Computer pilots', SKILL_NAMES[v.settings.skill], (dir) => o.sendRoom('settings', { skill: (v.settings.skill + dir + 3) % 3 }), { key: 'skill', locked: lockSet ?? (inMatch ? 'Not during a match' : null) });
       // Actions.
       if (!inMatch && me && me.side >= 0) {
-        m.button(list, me.ready ? 'Not ready' : 'Ready', () => o.sendRoom('ready', { ready: !me.ready }), { key: 'ready', go: !me.ready });
+        // Ready locks your frame in, unless a teammate already has.
+        const taken = !me.ready ? v.players.find((p) => p.side === me.side && p.role === me.role && p.ready && p.pid !== me.pid) : undefined;
+        m.button(list, me.ready ? 'Not ready' : 'Ready', () => o.sendRoom('ready', { ready: !me.ready }), {
+          key: 'ready',
+          go: !me.ready && !taken,
+          note: me.ready ? 'Your frame is locked in' : taken ? undefined : 'Locks in your frame',
+          locked: taken ? `${taken.callsign} has locked in the ${LIVERIES[v.sides[me.side].faction].models[me.role]}: pick another frame` : null,
+        });
         const everyone = v.players.filter((p) => p.side >= 0 && p.connected);
         if (host && everyone.length > 0 && everyone.every((p) => p.ready)) m.button(list, 'Start now', () => o.sendRoom('start'), { key: 'start', go: true });
         const mySide = v.sides[me.side];
@@ -231,9 +258,9 @@ export function registerOnline(m: Menus, g: Game): void {
         const score = mt ? (mt.cfg.mode === 'series' ? `${mt.wins[0]}–${mt.wins[1]}` : `${mt.totals[0]}–${mt.totals[1]}`) : '';
         extra.push(h('div.matchcard', h('b', `Match under way${mt ? `: round ${mt.rounds.length + (v.phase === 'race' ? 1 : 0)}` : ''}`), h('span', `${factionName(LIVERIES[v.sides[0].faction])} ${score} ${factionName(LIVERIES[v.sides[1].faction])}`), h('small', me?.nextRound ? 'You race from the next round.' : 'Back in a moment.')));
       }
-      if (!inMatch) extra.push(h('div.room-hint', `Pick an empty seat to move into it, on either team, or a player's seat to ask them to swap.${host ? " As host you set both teams' factions: pick a team's name." : me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
+      if (!inMatch) extra.push(h('div.room-hint', `Pick a frame on either team to fly it; Ready locks it in, and the first to lock a frame keeps it.${host ? " As host you set both teams' factions: pick a team's name." : me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
       const col = h('div.room', top, sides, ...extra, h('div.bottom', panel, h('div.panel.actions-panel', list)));
-      m.root.append(h('div.shade.full'), col, m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Seats', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
+      m.root.append(h('div.shade.full'), col, m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your frame', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
     },
     press(m, key) {
       const o = g.online;

@@ -13,7 +13,6 @@ export interface OnlineEvents {
   key: ServerMessages['key'];
   roundEnd: ServerMessages['roundEnd'];
   lobbyAgain: ServerMessages['lobbyAgain'];
-  swapAsk: ServerMessages['swapAsk'];
   callerAsk: ServerMessages['callerAsk'];
   notice: { text: string };
   error: { code: string; text: string };
@@ -125,7 +124,7 @@ export class Online {
       this.rtt = Math.max(0, performance.now() - m.t);
     });
     room.onMessage('error', (m: { code: string; text: string }) => this.emit('error', m));
-    for (const t of ['matchStart', 'tick', 'key', 'roundEnd', 'lobbyAgain', 'swapAsk', 'callerAsk', 'notice'] as const) {
+    for (const t of ['matchStart', 'tick', 'key', 'roundEnd', 'lobbyAgain', 'callerAsk', 'notice'] as const) {
       room.onMessage(t, (m: never) => this.emit(t, m));
     }
     room.onDrop(() => {

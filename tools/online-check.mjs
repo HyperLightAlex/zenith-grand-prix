@@ -59,28 +59,45 @@ check(true, 'Online opens and makes a squad of one');
     return el?.querySelector('.choice')?.textContent === want && window.game.garageShown?.team === window.game.online.squadView.faction;
   }, aAfter, { timeout: 20000 }).then(() => true, () => false);
   check(aAfter !== cBefore && followed, `a member's open hangar follows the leader's faction (${cBefore} -> ${aAfter})`);
-  // A third: three positions, one each, and the buttons that still apply.
+  // A third: the buttons that still apply to a full squad.
   const d = await player('Delta', `${base}?mute=1&squad=${squadCode}`);
-  await d.waitForFunction(() => window.game.online.squadView?.members.length === 3, null, { timeout: 60000 }).catch(() => {});
-  const roles = await d.evaluate(() => window.game.online.squadView.members.map((x) => x.role));
-  check(roles.length === 3 && new Set(roles).size === 3, `three in a squad, each in their own position (${roles.join(', ')})`);
+  const three = await d.waitForFunction(() => window.game.online.squadView?.members.length === 3, null, { timeout: 60000 }).then(() => true, () => false);
+  check(three, 'three in a squad');
   await a.keyboard.press('Escape');
   await a.waitForFunction(() => window.game.menus.screen === 'online', null, { timeout: 20000 });
   const hub = await a.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
   check(!hub.some((t) => /Invite to squad|Join a squad/.test(t)) && hub.some((t) => /Leave squad/.test(t)), `a full squad: no Invite or Join a squad, Leave squad there (${hub.filter((t) => t.length < 30).join(' / ')})`);
-  // Charlie's hangar lists the squad, and the Frame row asks for a squadmate's position.
-  const crew = await c.evaluate(() => [...document.querySelectorAll('.menu .crew-row b')].map((x) => x.textContent));
-  check(crew.length === 3 && ['Alpha', 'Charlie', 'Delta'].every((n) => crew.includes(n)), `the hangar shows who flies what (${crew.join(', ')})`);
-  const cRole = await c.evaluate(() => window.game.loadout.role);
-  await c.evaluate(() => window.game.menus.focus('frame'));
-  await c.keyboard.press('ArrowRight');
-  const target = await c.evaluate((r) => window.game.online.squadView.members.find((x) => x.role === (r + 1) % 3), cRole);
-  const asked = target.callsign === 'Alpha' ? a : d;
-  check(await until(asked, () => window.game.menus.screen === 'dialog'), `${target.callsign} is asked to swap positions`);
-  await asked.keyboard.press('Enter');
-  check(await until(c, (r) => window.game.loadout.role === (r + 1) % 3, cRole), 'accepted: Charlie flies their frame, and the hangar shows it');
-  const after = await c.evaluate(() => window.game.online.squadView.members.map((x) => x.role));
-  check(new Set(after).size === 3, 'still one position each');
+  // Everyone's hangar shows their own pick, and picks are free: Charlie takes Delta's frame, no questions asked.
+  await d.keyboard.press('KeyY');
+  await d.waitForFunction(() => window.game.menus.screen === 'hangar', null, { timeout: 20000 });
+  const ownFrame = (p) => p.evaluate(() => window.game.garageShown?.role === window.game.loadout.role && document.querySelector('.menu .hh-name b')?.textContent);
+  const cFrame = await until(c, () => window.game.garageShown?.role === window.game.loadout.role);
+  const dFrame = await until(d, () => window.game.garageShown?.role === window.game.loadout.role);
+  check(cFrame && dFrame, `each hangar shows its own pick (Charlie: ${await ownFrame(c)}, Delta: ${await ownFrame(d)})`);
+  const crew = await c.evaluate(() => [...document.querySelectorAll('.menu .crew-row b')].map((x) => x.textContent).join(', '));
+  check(['Alpha', 'Charlie', 'Delta'].every((n) => crew.includes(n)), `the hangar shows who picked what (${crew})`);
+  // Everyone on a different frame (from the hangar's Frame row): no marks.
+  // One press at a time, each waited for: rebuilding the hangar's mech stalls a software-rendered page.
+  const setFrame = async (p, want) => {
+    await p.evaluate(() => window.game.menus.focus('frame'));
+    for (let i = 0; i < 3; i++) {
+      const was = await p.evaluate(() => window.game.loadout.role);
+      if (was === want) break;
+      await p.keyboard.press('ArrowRight');
+      await until(p, (r) => window.game.loadout.role !== r && window.game.menus.selectedKey === 'frame', was);
+    }
+    return (await p.evaluate(() => window.game.loadout.role)) === want;
+  };
+  const aRoleSq = await a.evaluate(() => window.game.loadout.role);
+  await setFrame(c, (aRoleSq + 1) % 3);
+  await setFrame(d, (aRoleSq + 2) % 3);
+  check(await until(a, () => !document.querySelector('.menu .bay-card em.clash')), 'three frames, no marks');
+  // Charlie takes Delta's frame: allowed, shown in the hangar, marked on the squad panel, nobody asked.
+  const picked = await setFrame(c, (aRoleSq + 2) % 3);
+  check(picked && (await until(c, (r) => window.game.garageShown?.role === r, (aRoleSq + 2) % 3)), "Charlie picks Delta's frame and sees it in the hangar");
+  check(await until(a, () => !!document.querySelector('.menu .bay-card em.clash')), 'the squad panel marks the two on one frame');
+  await d.waitForTimeout(1000);
+  check((await d.evaluate(() => window.game.menus.screen)) === 'hangar', 'and nobody is asked anything');
   await d.evaluate(() => window.game.leaveSquad());
   await d.context().close();
   await c.evaluate(() => window.game.leaveSquad());
@@ -101,13 +118,13 @@ check(lobby.players.length === 2 && lobby.players[0].side !== lobby.players[1].s
 // The room screen by hand, with clicks and keys as a player would use it.
 const mine = (p) => p.evaluate(() => { const o = window.game.online; const me = o.lobby.players.find((x) => x.pid === o.pid); return { side: me.side, role: me.role, factions: o.lobby.sides.map((s) => s.faction) }; });
 const aSide = (await mine(a)).side;
-// Bravo clicks a computer pilot's seat on Alpha's team.
+// Bravo clicks a computer pilot's frame on Alpha's team.
 await b.locator('.menu .sides .side').nth(aSide).locator('.seat.cpu').first().click();
-check(await until(b, (s) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).side === s; }, aSide), 'a click on an empty seat on the other team moves you there');
-// ...then another one on the same team: a different role.
+check(await until(b, (s) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).side === s; }, aSide), "a click on a frame on the other team moves you there, flying it");
+// ...then another one on the same team: a different frame.
 const before = await mine(b);
 await b.locator('.menu .sides .side').nth(aSide).locator('.seat.cpu').first().click();
-check(await until(b, (r) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).role !== r; }, before.role), 'a click on an empty seat on your own team changes your role');
+check(await until(b, (r) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).role !== r; }, before.role), 'a click on another frame on your team picks it');
 await b.screenshot({ path: process.env.SHOT ?? 'online-check-room.png' }).catch(() => {});
 const cpuNames = await b.evaluate(() => [...document.querySelectorAll('.menu .seat.cpu .who b')].map((x) => x.textContent));
 check(cpuNames.length > 0 && cpuNames.every((n) => n && n !== 'Computer'), `computer seats show the pilot who flies them (${cpuNames.join(', ')})`);
@@ -131,6 +148,34 @@ const callerNow = () => a.evaluate((s) => window.game.online.lobby.sides[s].call
 const bPid = await b.evaluate(() => window.game.online.pid);
 const aPid = await a.evaluate(() => window.game.online.pid);
 if ((await callerNow()) === bPid) await b.evaluate(() => window.game.online.sendRoom('caller', { action: 'pass' }));
+// Lock-in: Alpha readies, locking their frame. Bravo may still pick it (to look),
+// but can't ready on it; another frame and Bravo can.
+await a.locator('.menu .item', { hasText: /^Ready/ }).click();
+check(await until(a, () => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).ready; }), "Ready locks Alpha's frame in");
+const aRole = (await a.evaluate(() => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).role; }));
+await b.evaluate((r) => window.game.online.sendRoom('pick', { role: r }), aRole);
+check(await until(b, (r) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).role === r; }, aRole), "Bravo can pick Alpha's frame to look at it");
+check(await until(b, () => [...document.querySelectorAll('.menu .item.locked')].some((x) => x.textContent.startsWith('Ready'))), "...but Bravo's Ready is locked: Alpha has it");
+await b.locator('.menu .item', { hasText: /^Ready/ }).click();
+await b.waitForTimeout(1000);
+check(!(await b.evaluate(() => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).ready; })), 'and pressing it changes nothing');
+await b.locator('.menu .sides .side').nth(aSide).locator('.seat.cpu').first().click();
+await b.waitForTimeout(800);
+await b.locator('.menu .item', { hasText: /^Ready/ }).click();
+check(await until(b, () => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).ready; }), 'another frame, and Bravo locks it in');
+// Alpha lets go (Not ready), so the countdown doesn't start yet.
+await a.locator('.menu .item', { hasText: /^Not ready/ }).click();
+await until(a, () => { const o = window.game.online; return !o.lobby.players.find((x) => x.pid === o.pid).ready; });
+// Each hangar shows its own pick.
+for (const p of [a, b]) await p.keyboard.press('KeyY');
+const hangarsOk = (await until(a, () => window.game.menus.screen === 'hangar' && window.game.garageShown?.role === window.game.online.lobby.players.find((x) => x.pid === window.game.online.pid).role)) && (await until(b, () => window.game.menus.screen === 'hangar' && window.game.garageShown?.role === window.game.online.lobby.players.find((x) => x.pid === window.game.online.pid).role));
+check(hangarsOk, 'in the room, each hangar shows its own frame');
+check(await b.evaluate(() => [...document.querySelectorAll('.menu .item.locked')].some((x) => x.textContent.startsWith('Frame'))), "a locked-in player's Frame row is locked");
+for (const p of [a, b]) await p.keyboard.press('Escape');
+await until(a, () => window.game.menus.screen === 'room');
+await until(b, () => window.game.menus.screen === 'room');
+await b.locator('.menu .item', { hasText: /^Not ready/ }).click();
+await until(b, () => { const o = window.game.online; return !o.lobby.players.find((x) => x.pid === o.pid).ready; });
 await until(a, ([s, p]) => window.game.online.lobby.sides[s].caller === p, [aSide, aPid]);
 const notices = [];
 await a.exposeFunction('noteNotice', (t) => notices.push(t)).catch(() => {});
@@ -146,9 +191,13 @@ const left = await a.evaluate(() => window.game.menus.stack.filter((e) => e.id =
 check(dialogs === 1 && left === 0 && notices.length === 0, `three asks make one question, gone once answered (${dialogs} shown, ${left} left, notices: ${notices.join('; ') || 'none'})`);
 await b.evaluate(() => window.game.online.sendRoom('caller', { action: 'pass' }));
 // Back to the other team with the keyboard: highlight a seat there, Enter.
+await until(b, () => { const o = window.game.online; return !o.lobby.players.find((x) => x.pid === o.pid).ready; });
 await b.evaluate((s) => window.game.menus.focus(`seat-${s}-0`), 1 - aSide);
+await until(b, (s) => window.game.menus.selectedKey === `seat-${s}-0`, 1 - aSide);
 await b.keyboard.press('Enter');
-check(await until(b, (s) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).side === s; }, 1 - aSide), 'Enter on a highlighted seat moves you there');
+const moved = await until(b, (s) => { const o = window.game.online; return o.lobby.players.find((x) => x.pid === o.pid).side === s; }, 1 - aSide);
+check(moved, 'Enter on a highlighted frame moves you there');
+if (!moved) console.log('   Bravo:', JSON.stringify(await b.evaluate(() => { const o = window.game.online; return { me: o.lobby.players.find((x) => x.pid === o.pid), screen: window.game.menus.screen, sel: window.game.menus.selectedKey, toast: document.querySelector('.toast')?.textContent }; })));
 
 await a.evaluate(() => window.game.online.sendRoom('settings', { match: 0 }));
 await a.waitForTimeout(500);

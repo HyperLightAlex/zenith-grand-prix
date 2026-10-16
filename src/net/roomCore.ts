@@ -27,7 +27,6 @@ import { PILOT_NAMES } from './factions';
 import {
   addMember,
   allReady,
-  answerSwap,
   callerAction,
   callerOf,
   clearReady,
@@ -36,10 +35,11 @@ import {
   kick,
   lobbyView,
   member,
-  moveSeat,
+  pickFrame,
   nextHost,
   removeMember,
-  seatHolder,
+  settleFrames,
+  switchTeam,
   setFaction,
   setReady,
   setSettings,
@@ -234,18 +234,13 @@ export class RoomCore {
         this.io.send(pid, 'pong', { t: Number(body.t) || 0 });
         return;
       }
-      case 'seat':
+      case 'pick':
         if (!inLobby) return;
-      {
-        const o = moveSeat(this.lobby, pid, Number(body.side), Number(body.role) as Role);
-        report(o);
-        const to = o.ok && o.note === 'asked' ? seatHolder(this.lobby, Number(body.side), Number(body.role) as Role) : undefined;
-        if (to) this.io.send(to.pid, 'swapAsk', { from: pid });
+        report(pickFrame(this.lobby, pid, Number(body.role) as Role));
         return;
-      }
-      case 'swapAnswer':
+      case 'team':
         if (!inLobby) return;
-        report(answerSwap(this.lobby, pid, String(body.from), !!body.accept));
+        report(switchTeam(this.lobby, pid, Number(body.side), body.role === undefined ? undefined : (Number(body.role) as Role)));
         return;
       case 'faction':
         if (!inLobby) return;
@@ -408,18 +403,22 @@ export class RoomCore {
   private startMatch(): void {
     this.match = createMatch((MATCH_FORMATS[this.lobby.settings.match] ?? MATCH_FORMATS[0]).cfg);
     this.factions = [this.lobby.factions[0], this.lobby.factions[1]];
+    // Frames as locked in (and anyone who had not locked in, around them).
+    settleFrames(this.lobby);
     clearReady(this.lobby);
     this.startRound();
   }
 
-  /** The grid for the next round, from where everyone sits now. */
+  /** The grid for the next round: everyone in their frame, computer pilots in the rest. */
   private buildSeats(): SeatConfig[] {
     const skill = SKILL_VALUES[this.lobby.settings.skill] ?? SKILL_VALUES[1];
     const seats: SeatConfig[] = [];
     this.seatPid = [];
+    // Late arrivals take frames nobody on their team has.
+    settleFrames(this.lobby);
     for (const role of ROLES) {
       for (let team = 0; team < 2; team++) {
-        const who = seatHolder(this.lobby, team, role);
+        const who = this.lobby.members.find((m) => m.side === team && m.role === role);
         seats.push({ team, role, human: !!who, name: who ? who.callsign : PILOT_NAMES[this.factions[team]][role], skill: who ? 0.6 : skill });
         this.seatPid.push(who ? who.pid : null);
       }

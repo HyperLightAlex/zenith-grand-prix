@@ -1,9 +1,9 @@
 // A squad: up to three people who stay together from room to room and always
 // take the same team. The leader picks the faction and takes everyone into
-// rooms; members follow without being asked. Each member has a position
-// (forward, midfield, defence), never shared: a newcomer gets theirs if it is
-// open, and a position someone has is swapped for by asking, as seats are in a
-// room. Like the room, it knows nothing of sockets (server/squadRoom.ts wraps it).
+// rooms; members follow without being asked. Everyone picks whatever frame
+// they like here (two of a frame is shown, not refused): in a room, Ready
+// locks frames in and sorts it out. Like the room, it knows nothing of
+// sockets (server/squadRoom.ts wraps it).
 
 import { ROLE, type Role } from '../sim/index';
 import { RECONNECT_SECONDS, SQUAD_SIZE, type Loadout, type SquadServerMessages, type SquadView } from './protocol';
@@ -30,8 +30,6 @@ const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 export class SquadCore {
   members: Person[] = [];
   leader: string | null = null;
-  /** Position swaps asked for: [from, to]. */
-  swaps: Array<[string, string]> = [];
   private arrivals = 0;
   private dirty = true;
   empty = false;
@@ -52,9 +50,7 @@ export class SquadCore {
       return { ok: true };
     }
     if (this.members.length >= SQUAD_SIZE) return { ok: false, text: 'That squad is full' };
-    // Your position if it is open, otherwise the first open one.
-    const want = ROLES.includes(loadout?.role) ? loadout.role : ROLE.FW;
-    const role = this.holder(want) ? ROLES.find((r) => !this.holder(r))! : want;
+    const role = ROLES.includes(loadout?.role) ? loadout.role : ROLE.FW;
     const faction = Number.isInteger(loadout?.faction) && loadout.faction >= 0 && loadout.faction < 5 ? loadout.faction : 0;
     this.members.push({ pid, callsign, loadout: { faction, role }, connected: true, joinedAt: ++this.arrivals, droppedAt: -1 });
     if (!this.leader) this.leader = pid;
@@ -67,7 +63,6 @@ export class SquadCore {
     const i = this.members.findIndex((m) => m.pid === pid);
     if (i < 0) return;
     this.members.splice(i, 1);
-    this.swaps = this.swaps.filter(([a, b]) => a !== pid && b !== pid);
     if (this.leader === pid) this.leader = this.longest();
     if (!this.members.length) this.empty = true;
     this.dirty = true;
@@ -92,25 +87,11 @@ export class SquadCore {
     const lead = this.leader === pid;
     switch (type) {
       case 'loadout': {
+        const r = Number(msg.role) as Role;
         const f = Number(msg.faction);
+        if (ROLES.includes(r)) me.loadout.role = r;
         // Only the leader's faction counts: the squad is one team.
-        if (Number.isInteger(f) && f >= 0 && f < 5 && f !== me.loadout.faction) {
-          me.loadout.faction = f;
-          this.dirty = true;
-        }
-        this.position(me, Number(msg.role) as Role);
-        return;
-      }
-      case 'position':
-        this.position(me, Number(msg.role) as Role);
-        return;
-      case 'swapAnswer': {
-        const from = String(msg.from);
-        const i = this.swaps.findIndex(([a, b]) => a === from && b === pid);
-        if (i < 0) return; // already settled or withdrawn
-        this.swaps.splice(i, 1);
-        const other = this.members.find((m) => m.pid === from);
-        if (msg.accept === true && other) [me.loadout.role, other.loadout.role] = [other.loadout.role, me.loadout.role];
+        if (Number.isInteger(f) && f >= 0 && f < 5) me.loadout.faction = f;
         this.dirty = true;
         return;
       }
@@ -137,24 +118,10 @@ export class SquadCore {
     }
   }
 
-  private holder(role: Role): Person | undefined {
-    return this.members.find((m) => m.loadout.role === role);
-  }
-
-  /** Move to an open position, or ask whoever has it to swap (once, however often asked). */
-  private position(me: Person, role: Role): void {
-    if (!ROLES.includes(role) || me.loadout.role === role) return;
-    const there = this.holder(role);
-    if (!there) {
-      me.loadout.role = role;
-      // Moving withdraws what you had asked for.
-      this.swaps = this.swaps.filter(([a]) => a !== me.pid);
-    } else {
-      if (this.swaps.some(([a, b]) => a === me.pid && b === there.pid)) return;
-      this.swaps = this.swaps.filter(([a]) => a !== me.pid);
-      this.swaps.push([me.pid, there.pid]);
-    }
-    this.dirty = true;
+  /** Two of the squad have picked the same frame (shown, not refused). */
+  clashes(): boolean {
+    const roles = this.members.map((m) => m.loadout.role);
+    return new Set(roles).size !== roles.length;
   }
 
   view(): SquadView {
@@ -164,7 +131,6 @@ export class SquadCore {
       leader: this.leader,
       faction: leader?.loadout.faction ?? 0,
       members: [...this.members].sort((a, b) => a.joinedAt - b.joinedAt).map((m) => ({ pid: m.pid, callsign: m.callsign, role: m.loadout.role, connected: m.connected })),
-      swaps: this.swaps.map(([a, b]) => [a, b] as [string, string]),
     };
   }
 

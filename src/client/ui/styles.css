@@ -616,6 +616,8 @@ html.aspect-43 .ui { font-size: clamp(11px, calc(1.75 * min(1vh, 0.75vw)), 24px)
 .menu .crew { position: absolute; right: 3em; top: 2em; width: 30em; padding: 0.7em 1.3em 0.8em; background: var(--ink-soft); border-right: 0.35em solid var(--signal); font-size: 1.12em; }
 .menu .crew h2 { margin: 0 0 0.4em; font-size: 1.05em; font-weight: 800; color: var(--signal); }
 .menu .crew-row { display: grid; grid-template-columns: 2.4em 1fr auto; align-items: baseline; gap: 0.6em; padding: 0.15em 0; font-weight: 500; }
+.menu .crew-row .who small { margin-left: 0.5em; font-size: 0.85em; opacity: 0.7; }
+.menu .crew-row.clash > span:last-child { color: var(--hazard); opacity: 1; }
 .menu .crew-row .role { font-weight: 800; opacity: 0.7; }
 .menu .crew-row b { font-weight: 800; }
 .menu .crew-row > span:last-child { font-size: 0.85em; opacity: 0.75; }
@@ -1048,6 +1050,7 @@ html.narrow .controls .grid { grid-template-columns: 1fr; }
 .menu .bay-card.me { outline: 0.12em solid var(--signal); }
 .menu .bay-card.empty { opacity: 0.55; }
 .menu .bay-card.empty .face { filter: grayscale(1) brightness(0.45); }
+.menu .bay-card em.clash { color: var(--hazard); }
 .menu .face { display: inline-block; width: 3.2em; height: 3.2em; border-radius: 0.3em; background: rgba(255, 255, 255, 0.1) center / cover no-repeat; }
 
 /* The room. */
@@ -1078,6 +1081,7 @@ html.narrow .controls .grid { grid-template-columns: 1fr; }
 .menu .seat .state { font-weight: 600; opacity: 0.75; }
 .menu .seat .state.ready { color: var(--ally); opacity: 1; }
 .menu .seat.mine { outline: 0.14em solid var(--signal); }
+.menu .seat.clash .state { color: var(--hazard); opacity: 1; }
 .menu .seat.sel { background: var(--paper); color: var(--ink); }
 .menu .seat.sel .state.ready { color: #0c8f6b; }
 .menu .badges { display: inline-flex; gap: 0.3em; vertical-align: 0.1em; }

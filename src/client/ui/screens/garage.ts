@@ -39,15 +39,14 @@ export interface HangarData {
   /** For each faction, why it cannot be chosen (the other team flies it), or null. */
   factionTaken?: (faction: number) => string | null;
   /**
-   * A squad or a room team: who has each position. Picking a frame someone
-   * has asks them to swap (`askFrame`) instead of changing yours; the panel
-   * shows everyone's.
+   * A squad or a room team: who has picked (or locked in) each frame, shown
+   * beside the hangar. Your own frame is free to change, unless `frameLock`
+   * says why not (in a room, while you are locked in).
    */
   crew?: {
     title: () => string;
-    /** Each position's holder (null: open, or a computer pilot's, named in `cpu`). */
-    at: (role: Role) => { name: string; you: boolean; note?: string } | { name: null; cpu?: string };
-    askFrame: (role: Role) => void;
+    at: (role: Role) => { people: Array<{ name: string; you: boolean; locked: boolean }>; cpu?: string };
+    frameLock?: () => string | null;
   };
   /** The faction and frame shown (defaults to your loadout). */
   team?: number;
@@ -152,17 +151,8 @@ export function registerGarage(m: Menus, g: Game): void {
         list,
         'Frame',
         frameLabel(role),
-        (dir) => {
-          const r = (((role + dir) % 3) + 3) % 3 as Role;
-          // A squadmate's or teammate's frame: ask them to swap.
-          const there = d.crew?.at(r);
-          if (there && there.name !== null && !there.you) {
-            d.crew!.askFrame(r);
-            return m.toast(`Asked ${there.name} to swap: they fly the ${LIVERIES[team].models[r]}`);
-          }
-          set(team, r);
-        },
-        { key: 'frame' },
+        (dir) => set(team, ((((role + dir) % 3) + 3) % 3) as Role),
+        { key: 'frame', locked: d.crew?.frameLock?.() ?? null },
       );
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
@@ -173,14 +163,16 @@ export function registerGarage(m: Menus, g: Game): void {
       if (d.crew) {
         crew = h('div.panel.crew', h('h2', d.crew.title()));
         for (const r of [0, 1, 2] as Role[]) {
-          const at = d.crew.at(r);
-          const who = at.name !== null ? at.name : at.cpu ?? 'Open';
+          const { people, cpu } = d.crew.at(r);
+          const locked = people.find((p) => p.locked);
+          const names = people.length ? people.map((p) => p.name).join(', ') : cpu ?? 'Nobody yet';
+          const status = locked ? (people.length > 1 ? `Locked in by ${locked.name}` : 'Locked in') : people.length > 1 ? 'Same frame: one of you picks another' : people.length ? 'Picked' : cpu ? 'Computer pilot' : '';
           crew.append(
             h(
-              'div.crew-row' + (at.name !== null && at.you ? '.you' : at.name === null ? '.open' : ''),
+              'div.crew-row' + (people.some((p) => p.you) ? '.you' : people.length ? '' : '.open') + (people.length > 1 && !locked ? '.clash' : ''),
               h('span.role', ['FW', 'MF', 'DF'][r]),
-              h('b', who),
-              h('span', at.name !== null && at.note ? at.note : at.name === null && at.cpu ? 'Computer pilot' : at.name === null ? 'Pick it as your frame to move here' : LIVERIES[team].models[r]),
+              h('span.who', h('b', names), h('small', LIVERIES[team].models[r])),
+              h('span', status),
             ),
           );
         }

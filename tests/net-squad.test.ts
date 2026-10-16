@@ -26,36 +26,19 @@ describe('squads', () => {
     expect(core.view().faction).toBe(2);
   });
 
-  it('gives everyone their own position, and swaps them only when asked and accepted', () => {
-    const { core, tick } = squad();
+  it('lets everyone pick any frame, and shows when two have the same', () => {
+    const { core } = squad();
     core.join('a', 'A', { faction: 0, role: ROLE.MF });
-    core.join('b', 'B', { faction: 0, role: ROLE.MF }); // taken: the first open one
-    core.join('c', 'C', { faction: 0, role: ROLE.DF });
+    core.join('b', 'B', { faction: 0, role: ROLE.MF });
     const roles = () => Object.fromEntries(core.view().members.map((m) => [m.pid, m.role]));
-    expect(roles()).toEqual({ a: ROLE.MF, b: ROLE.FW, c: ROLE.DF });
-    // All three taken: picking someone's position asks them, once however often.
-    core.message('a', 'position', { role: ROLE.DF });
-    core.message('a', 'position', { role: ROLE.DF });
-    core.message('a', 'loadout', { faction: 0, role: ROLE.DF });
-    tick(10);
-    expect(core.view().swaps).toEqual([['a', 'c']]);
-    expect(roles().a).toBe(ROLE.MF);
-    // A no, then an answer to an ask that is already settled: nothing changes.
-    core.message('c', 'swapAnswer', { from: 'a', accept: false });
-    core.message('c', 'swapAnswer', { from: 'a', accept: true });
-    expect(roles()).toEqual({ a: ROLE.MF, b: ROLE.FW, c: ROLE.DF });
-    // Asked again and accepted: they trade.
-    core.message('a', 'position', { role: ROLE.DF });
-    core.message('c', 'swapAnswer', { from: 'a', accept: true });
-    expect(roles()).toEqual({ a: ROLE.DF, b: ROLE.FW, c: ROLE.MF });
-    // The leader asks like anyone else.
-    core.message('a', 'position', { role: ROLE.FW });
-    expect(core.view().swaps).toEqual([['a', 'b']]);
-    // Someone leaving takes their asks with them, and frees their position.
-    core.leave('b');
-    expect(core.view().swaps).toEqual([]);
-    core.message('c', 'position', { role: ROLE.FW });
-    expect(roles()).toEqual({ a: ROLE.DF, c: ROLE.FW });
+    expect(roles()).toEqual({ a: ROLE.MF, b: ROLE.MF });
+    expect(core.clashes()).toBe(true);
+    core.message('b', 'loadout', { faction: 0, role: ROLE.DF });
+    expect(roles()).toEqual({ a: ROLE.MF, b: ROLE.DF });
+    expect(core.clashes()).toBe(false);
+    // The leader's faction is the squad's.
+    core.message('a', 'loadout', { faction: 3, role: ROLE.MF });
+    expect(core.view().faction).toBe(3);
   });
 
   it('sends members after their leader, and hands the lead on when the leader goes', () => {

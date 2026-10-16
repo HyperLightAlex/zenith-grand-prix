@@ -73,11 +73,13 @@ describe('an online room', () => {
     // Both people drove: the server applied their inputs, not the computer's.
     expect(net.core.race!.mechs[0].human).toBe(true);
     expect(net.core.race!.mechs[0].finished || net.core.race!.mechs[0].retired).toBe(true);
-    // After the final results, everyone is back in the lobby with their seats.
+    // After the final results, everyone is back in the lobby on their team, in their frame.
     net.run(11000);
     expect(net.core.phase).toBe('lobby');
     expect(a.lobby?.phase).toBe('lobby');
-    expect(a.lobby?.sides[0].seats[ROLE.FW]).toBe('a');
+    const back = a.lobby?.players.find((p) => p.pid === 'a');
+    expect(back?.side).toBe(0);
+    expect(back?.role).toBe(ROLE.FW);
   }, 60_000);
 
   it('hands a dropped seat to its computer pilot and back on reconnect', () => {
@@ -154,6 +156,29 @@ describe('an online room', () => {
     const before = net.core.race!.mechs[0].s;
     net.run(2000);
     expect(net.core.race!.mechs[0].s).toBeGreaterThan(before + 50);
+  }, 60_000);
+
+  it('starts only when everyone has locked in a frame of their own', () => {
+    const net = new TestNet({ laps: 1 });
+    const a = net.join('a', { loadout: { faction: 0, role: ROLE.MF } });
+    const b = net.join('b', { loadout: { faction: 1, role: ROLE.FW } });
+    const c = net.join('c', { loadout: { faction: 0, role: ROLE.MF } }); // a's team, a's frame
+    net.run(200);
+    a.send('ready', { ready: true });
+    b.send('ready', { ready: true });
+    net.run(200);
+    c.send('ready', { ready: true });
+    net.run(7000);
+    expect(net.core.phase).toBe('lobby'); // c could not lock in a's frame
+    expect(c.notices.join(' ')).toMatch(/a has locked in that frame/);
+    c.send('pick', { role: ROLE.DF });
+    c.send('ready', { ready: true });
+    net.run(7000);
+    expect(net.core.phase).toBe('race');
+    const race = net.core.race!;
+    const frame = (pid: string) => race.mechs[net.core.seatPid.indexOf(pid)].role;
+    expect(frame('a')).toBe(ROLE.MF);
+    expect(frame('c')).toBe(ROLE.DF);
   }, 60_000);
 
   it('lets someone in mid-match for the next round, and the host can end the match', () => {

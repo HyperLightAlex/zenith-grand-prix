@@ -170,8 +170,9 @@ export const TEAMMATE_SKILL = 0.6;
 export interface LobbyPlayer {
   pid: string;
   callsign: string;
-  /** 0 or 1, the team; -1 while waiting for a seat. */
+  /** 0 or 1, the team; -1 while waiting for a place. */
   side: number;
+  /** The frame they picked; locked in while they are ready. */
   role: Role;
   ready: boolean;
   connected: boolean;
@@ -190,10 +191,8 @@ export interface SideView {
   captain: string | null;
   /** Only on a side of two people and one computer pilot: whoever gives the computer pilot its orders. */
   caller: string | null;
-  /** Who sits in each seat, by role (FW, MF, DF); null for a computer pilot. */
-  seats: [string | null, string | null, string | null];
-  /** Seats held for squad members on their way in, by role. */
-  held: [boolean, boolean, boolean];
+  /** Places kept for squad members on their way in. */
+  held: number;
 }
 
 export interface LobbyView {
@@ -210,8 +209,6 @@ export interface LobbyView {
   match: MatchState | null;
   /** Shot calling asked for: the pid that asked, by side. */
   callerAsks: [string | null, string | null];
-  /** Swaps asked for: [from, to] pids. */
-  swaps: Array<[string, string]>;
   /** People who have pressed continue on the results. */
   continued: string[];
 }
@@ -220,8 +217,10 @@ export interface LobbyView {
 
 /** Client to room. */
 export interface ClientMessages {
-  seat: { side: number; role: Role };
-  swapAnswer: { from: string; accept: boolean };
+  /** Pick a frame on your team (any frame: Ready locks it in). */
+  pick: { role: Role };
+  /** Move to a team with a free place, picking a frame there. */
+  team: { side: number; role?: Role };
   /** A team's faction (`side`: whose; your own if left out). */
   faction: { faction: number; side?: number };
   caller: { action: 'pass' | 'ask' | 'accept' | 'decline' | 'cancel' };
@@ -300,7 +299,6 @@ export interface ServerMessages {
   roundEnd: RoundEndMsg;
   /** The match is over or was ended: back to the lobby. */
   lobbyAgain: { reason: 'over' | 'ended' };
-  swapAsk: { from: string };
   callerAsk: { from: string };
   notice: { text: string };
   error: ErrorMsg;
@@ -327,17 +325,12 @@ export interface SquadView {
   /** The squad is one team, so one faction: the leader's. */
   faction: number;
   members: SquadMember[];
-  /** Position swaps asked for: [from, to] pids. */
-  swaps: Array<[string, string]>;
 }
 
 /** Client to squad. */
 export interface SquadClientMessages {
-  /** Your faction (it counts for the leader) and the position you want: taken if open, asked for if a squadmate has it. */
+  /** Your faction (it counts for the leader) and the frame you picked. */
   loadout: Loadout;
-  /** Take an open position, or ask whoever has it to swap. */
-  position: { role: Role };
-  swapAnswer: { from: string; accept: boolean };
   kick: { pid: string };
   /** The leader is going into a room: everyone follows. */
   go: { code: string };

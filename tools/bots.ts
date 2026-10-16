@@ -68,7 +68,16 @@ async function bot(name: string, code: string | null, seed: number): Promise<{ c
         room.send('settings', { match: Number(process.env.MATCH ?? 0) });
       }
       const me = v.players.find((p) => p.callsign === name);
-      if (v.phase === 'lobby' && me && !me.ready && v.players.length >= perRoom) room.send('ready', { ready: true });
+      if (v.phase === 'lobby' && me && !me.ready && v.players.length >= perRoom) {
+        // Lock in a frame nobody on the team has locked in (or picked first), as a player would.
+        const team = v.players.filter((p) => p.side === me.side && p.pid !== me.pid);
+        const taken = (r: number) => team.some((p) => p.role === r && (p.ready || v.players.indexOf(p) < v.players.indexOf(me)));
+        if (taken(me.role)) {
+          const free = [0, 1, 2].find((r) => !taken(r));
+          if (free !== undefined) room.send('pick', { role: free });
+        }
+        room.send('ready', { ready: true });
+      }
     });
     room.onMessage('matchStart', (m: MatchStartMsg) => {
       predictor = new Predictor(m);
@@ -112,7 +121,7 @@ async function bot(name: string, code: string | null, seed: number): Promise<{ c
       void room.leave(true);
       resolve(stats);
     });
-    for (const t of ['welcome', 'pong', 'notice', 'error', 'swapAsk', 'callerAsk']) room.onMessage(t, () => {});
+    for (const t of ['welcome', 'pong', 'notice', 'error', 'callerAsk']) room.onMessage(t, () => {});
   });
   void lobby;
   return { code: room.roomId, done };

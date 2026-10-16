@@ -3,15 +3,17 @@ import { ROLE } from '../src/sim/index';
 import {
   addMember,
   allReady,
-  answerSwap,
   callerAction,
   callerOf,
   captainOf,
   createLobby,
-  freeRoles,
+  lockedBy,
+  pickFrame,
+  placesFree,
+  settleFrames,
+  switchTeam,
   kick,
   lobbyView,
-  moveSeat,
   removeMember,
   setFaction,
   setReady,
@@ -69,7 +71,7 @@ describe('codes and callsigns', () => {
 });
 
 describe('the lobby', () => {
-  it('seats people on the emptier side, in their frame when it is free', () => {
+  it('puts people on the emptier team, each with the frame they picked', () => {
     const l = createLobby('AAAAA', 'v', 2);
     expect(join(l, 'a', { loadout: { faction: 2, role: ROLE.MF } }).ok).toBe(true);
     expect(l.host).toBe('a');
@@ -79,9 +81,50 @@ describe('the lobby', () => {
     expect(b.ok && b.member.role).toBe(ROLE.MF);
     // The other team already flies Mirage: b keeps the default.
     expect(l.factions[1]).not.toBe(2);
+    // Two of a frame on one team is allowed while picking: Ready sorts it out.
     const c = join(l, 'c', { loadout: { faction: 4, role: ROLE.MF } });
     expect(c.ok && c.member.side).toBe(0);
-    expect(c.ok && c.member.role).not.toBe(ROLE.MF);
+    expect(c.ok && c.member.role).toBe(ROLE.MF);
+  });
+
+  it('locks a frame in with Ready: first to lock keeps it, Not ready lets go', () => {
+    const l = createLobby('AAAAA', 'v');
+    join(l, 'a', { loadout: { faction: 0, role: ROLE.FW } });
+    join(l, 'b');
+    join(l, 'c', { loadout: { faction: 0, role: ROLE.FW } }); // a's team, a's frame
+    expect(setReady(l, 'c', true).ok).toBe(true); // c locks the forward first
+    expect(lockedBy(l, 0, ROLE.FW)?.pid).toBe('c');
+    const refused = setReady(l, 'a', true);
+    expect(refused.ok).toBe(false);
+    expect(!refused.ok && refused.text).toMatch(/c has locked in that frame/);
+    // Locked in, c can't change frame until Not ready.
+    expect(pickFrame(l, 'c', ROLE.DF).ok).toBe(false);
+    // a looks at other frames freely, picks one nobody has locked, and readies.
+    expect(pickFrame(l, 'a', ROLE.DF).ok).toBe(true);
+    expect(pickFrame(l, 'a', ROLE.MF).ok).toBe(true);
+    expect(setReady(l, 'a', true).ok).toBe(true);
+    expect(setReady(l, 'b', true).ok).toBe(true);
+    expect(allReady(l)).toBe(true);
+    // Everyone ready means no team has two of a frame.
+    for (const side of [0, 1]) {
+      const roles = l.members.filter((m) => m.side === side).map((m) => m.role);
+      expect(new Set(roles).size).toBe(roles.length);
+    }
+    expect(setReady(l, 'c', false).ok).toBe(true);
+    expect(pickFrame(l, 'c', ROLE.DF).ok).toBe(true);
+  });
+
+  it('gives anyone whose pick is taken a free frame when the race is built', () => {
+    const l = createLobby('AAAAA', 'v');
+    join(l, 'a', { loadout: { faction: 0, role: ROLE.MF } });
+    join(l, 'b');
+    join(l, 'c', { loadout: { faction: 0, role: ROLE.MF } }); // a late arrival on a's frame
+    setReady(l, 'a', true);
+    const cpu = settleFrames(l);
+    expect(l.members.find((m) => m.pid === 'a')!.role).toBe(ROLE.MF);
+    expect(l.members.find((m) => m.pid === 'c')!.role).not.toBe(ROLE.MF);
+    expect(cpu[0]).toHaveLength(1);
+    expect(cpu[1]).toHaveLength(2);
   });
 
   it('turns away a seventh person', () => {
@@ -130,18 +173,20 @@ describe('the lobby', () => {
     expect(solo.factions[empty]).toBe(4);
   });
 
-  it('moves into an empty seat and asks for an occupied one', () => {
+  it('moves to the other team when it has a place, with the frame picked there', () => {
     const l = createLobby('AAAAA', 'v');
     join(l, 'a');
     join(l, 'b');
-    expect(moveSeat(l, 'a', 1, ROLE.DF).ok).toBe(true);
+    setReady(l, 'a', true);
+    expect(switchTeam(l, 'a', 1, ROLE.DF).ok).toBe(true);
     expect(l.members[0].side).toBe(1);
-    const bRole = l.members[1].role;
-    const ask = moveSeat(l, 'a', 1, bRole);
-    expect(ask.ok && ask.note).toBe('asked');
-    expect(answerSwap(l, 'b', 'a', true).ok).toBe(true);
-    expect(l.members[0].role).toBe(bRole);
-    expect(l.members[1].role).toBe(ROLE.DF);
+    expect(l.members[0].role).toBe(ROLE.DF);
+    expect(l.members[0].ready).toBe(false); // a move unlocks
+    for (const p of ['c', 'd', 'e']) join(l, p); // team 1 fills up: c, d and e
+    expect(placesFree(l, 0)).toBe(0);
+    const refused = switchTeam(l, 'a', 0);
+    expect(refused.ok).toBe(false);
+    expect(!refused.ok && refused.text).toBe('That team is full');
   });
 
   it('gives a team of two people and one computer pilot a shot caller, and only that team', () => {
@@ -164,38 +209,39 @@ describe('the lobby', () => {
     expect(lobbyView(l, 'lobby', -1, null, []).sides[0].caller).toBeNull();
   });
 
-  it('holds seats for a squad following its leader, and refuses a squad with no room', () => {
+  it('holds places for a squad following its leader, and refuses a squad with no room', () => {
     const l = createLobby('AAAAA', 'v');
     join(l, 'x');
     join(l, 'y');
-    moveSeat(l, 'y', 0, ROLE.DF);
+    switchTeam(l, 'y', 0);
     const lead = join(l, 'lead', { squad: { id: 'SQ', size: 3 } }, 0);
     expect(lead.ok).toBe(true);
     if (!lead.ok) return;
-    // Two seats held on the leader's side, out of reach of anyone else.
-    expect(freeRoles(l, lead.member.side)).toHaveLength(0);
-    expect(freeRoles(l, lead.member.side, 'SQ')).toHaveLength(2);
+    // Two places held on the leader's team, out of reach of anyone else.
+    expect(placesFree(l, lead.member.side)).toBe(0);
+    expect(placesFree(l, lead.member.side, 'SQ')).toBe(2);
+    expect(lobbyView(l, 'lobby', -1, null, []).sides[lead.member.side].held).toBe(2);
     expect(callerOf(l, lead.member.side)).toBeUndefined();
     const m1 = join(l, 'm1', { squad: { id: 'SQ', size: 3 } }, 1000);
     expect(m1.ok && m1.member.side).toBe(lead.member.side);
     const other = join(l, 'z', {}, 1000);
     expect(other.ok && other.member.side).not.toBe(lead.member.side);
-    // Holds lapse: after 20 s the last held seat is anyone's.
+    // Holds lapse: after 20 s the last held place is anyone's.
     const late = join(l, 'w', {}, 30000);
     expect(late.ok).toBe(true);
     const l2 = createLobby('BBBBB', 'v');
     for (const p of ['a', 'b', 'c', 'd']) join(l2, p);
     const squad = join(l2, 's', { squad: { id: 'S2', size: 3 } });
     expect(squad.ok).toBe(false);
-    expect(!squad.ok && squad.text).toMatch(/1 free seat; your squad has 3/);
+    expect(!squad.ok && squad.text).toMatch(/1 free place; your squad has 3/);
   });
 
-  it('takes a repeated ask once, and ignores answers to settled asks', () => {
+  it('takes a repeated shot-calling ask once, and ignores answers to settled asks', () => {
     const l = createLobby('AAAAA', 'v');
     join(l, 'a');
     join(l, 'b');
     const side = l.members.find((m) => m.pid === 'a')!.side;
-    moveSeat(l, 'b', side, ROLE.DF); // a and b on one team, with one computer pilot
+    switchTeam(l, 'b', side, ROLE.DF); // a and b on one team, with one computer pilot
     join(l, 'c'); // alone on the other
     const holder = callerOf(l, side)!.pid;
     const asker = holder === 'a' ? 'b' : 'a';
@@ -209,24 +255,14 @@ describe('the lobby', () => {
     const late = callerAction(l, holder, 'accept');
     expect(late.ok).toBe(true);
     expect(callerOf(l, side)!.pid).toBe(asker);
-    // Swaps likewise.
-    const cSide = l.members.find((m) => m.pid === 'c')!;
-    const s1 = moveSeat(l, 'c', side, l.members.find((m) => m.pid === 'a')!.role);
-    const s2 = moveSeat(l, 'c', side, l.members.find((m) => m.pid === 'a')!.role);
-    expect(s1.ok && s1.note).toBe('asked');
-    expect(s2.ok && s2.note).toBeUndefined();
-    expect(l.swaps).toHaveLength(1);
-    expect(answerSwap(l, 'a', 'c', false).ok).toBe(true);
-    expect(answerSwap(l, 'a', 'c', true).ok).toBe(true); // already answered: ignored
-    expect(cSide.side).not.toBe(side);
   });
 
-  it('seats a late follower with its squad, as a member and not a second leader', () => {
+  it('puts a late follower with its squad, as a member and not a second leader', () => {
     const l = createLobby('AAAAA', 'v');
     const lead = join(l, 'lead', { squad: { id: 'SQ', size: 3 } }, 0);
     if (!lead.ok) throw new Error('leader refused');
     expect(lead.member.side).toBe(0);
-    // The holds lapse before the members arrive, and strangers take seats on both sides.
+    // The holds lapse before the members arrive, and strangers take places on both teams.
     join(l, 'a', {}, 25000);
     join(l, 'b', {}, 25000);
     expect(l.members.filter((x) => x.side === 0)).toHaveLength(2);
@@ -235,7 +271,7 @@ describe('the lobby', () => {
     const late = join(l, 'm1', { squad: { id: 'SQ', size: 3, follow: true } }, 26000);
     if (!late.ok) throw new Error('follower refused');
     expect(late.member.side).toBe(0);
-    expect(l.holds).toHaveLength(0); // a second leader would have held seats...
+    expect(l.holds).toHaveLength(0); // a second leader would have held places...
     expect(l.callers[0]).toBe('lead'); // ...and taken the shot calling
   });
 

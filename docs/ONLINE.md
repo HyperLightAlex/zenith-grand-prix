@@ -1,7 +1,7 @@
 # Online play: how it works and how to host it
 
 Zenith GP's online mode is private rooms for up to six people, found by a
-5-character code or an invite link, with computer pilots in the empty seats.
+5-character code or an invite link, with computer pilots in the empty places.
 Friends can form a **squad** of up to three that moves from room to room
 together and always takes the same team. There is no matchmaking yet, and
 no accounts.
@@ -69,16 +69,20 @@ two players.
   makes you the leader of a squad of one.
 - **Callsign.** Asked for once, 3 to 16 characters, passed through a short
   word filter, and changeable on the hub.
-- **Room.** Two teams of three seats, with the host's settings (circuit,
-  format, computer pilots' skill), Ready, Invite, and Leave. Pick an empty
-  seat on either team to move into it, or someone's seat to ask them to
-  swap (one question per ask, however often it is asked). The host can
-  remove someone from their seat's menu. A team's faction is picked with
-  its name above its seats: by its captain (whoever sat there first), or
-  by the host, who can set both teams', including a team of computer
-  pilots. Y opens the hangar to change frame. When everyone connected is
-  ready, a 5-second countdown starts; any change cancels it. The host can
-  start early.
+- **Room.** Two teams of three places, with the host's settings (circuit,
+  format, computer pilots' skill), Ready, Invite, and Leave. Each team shows
+  its three frames: who has locked each in, who has picked it, or the
+  computer pilot who flies it. Pick a frame on either team to fly it (on the
+  other team, that moves you there if it has a free place). **Ready locks
+  your frame in**: it is refused while a teammate has that frame locked, so
+  the first to lock a frame keeps it, and Not ready unlocks it. Picking is
+  free, so anyone can look at any frame in the hangar (Y), with its stats
+  and kit; while you are locked in, the hangar's Frame row is locked too.
+  The host can remove someone from their frame's menu. A team's faction is
+  picked with its name above its frames: by its captain (whoever joined it
+  first), or by the host, who can set both teams', including a team of
+  computer pilots. When everyone connected is ready, a 5-second countdown
+  starts; any change cancels it. The host can start early.
 - **Shot caller.** On a team of two people and one computer pilot, one of the
   two gives the computer pilot its orders. It starts with the team's captain
   (or the squad leader) and can be passed on or asked for. Alone with two
@@ -95,20 +99,19 @@ two players.
   drops, the computer captain takes over.
 - **Between rounds.** The next round starts when everyone presses Continue,
   or after 15 seconds. After the match the final results stay up for 10
-  seconds, then everyone is back in the lobby with their seats. A rematch is
+  seconds, then everyone is back in the lobby on their teams. A rematch is
   just readying up again.
-- **Late arrivals** wait on the room screen and take a computer pilot's seat
-  at the next round.
+- **Late arrivals** wait on the room screen and take a computer pilot's
+  place, in a frame nobody on their team has, at the next round.
 - **Squads.** The leader picks the faction and takes everyone into rooms:
   when the leader makes or joins a room, the others follow by themselves. The
-  room holds seats on one team for them for 20 seconds; someone slower than
-  that still joins the squad's team if it has a seat free. Each member has
-  their own position (forward, midfield, defence): someone joining gets
-  theirs if it is open, or the next open one. Pick an open position on the
-  Online screen, or as your frame in the hangar, to move there; pick a
-  squadmate's to ask them to swap. The hangar shows who flies what. Invite
-  to squad shows while there is an open position, Join a squad only while
-  you are on your own.
+  room holds places on one team for them for 20 seconds; someone slower than
+  that still joins the squad's team if it has a place free. Everyone picks
+  whatever frame they like in the hangar; two of a frame is marked on the
+  Online screen, not refused, and Ready sorts it out in the room. (For
+  matchmaking, when there is some, the squad will have to be on different
+  frames to queue.) Invite to squad shows while there is an open place,
+  Join a squad only while you are on your own.
 
 ## How it works
 
@@ -149,8 +152,11 @@ two players.
   when people drop or come back. The change rides with the inputs, so every
   copy of the race makes it at the same tick.
 - **Squads** are their own small Colyseus room (`src/net/squadCore.ts`).
-- **The lobby rules** (seats, captains, factions, shot callers, squads, ready
-  marks) are plain functions in `src/net/lobby.ts`.
+- **The lobby rules** (teams and places, frame picks and lock-in, captains,
+  factions, shot callers, squads) are plain functions in `src/net/lobby.ts`.
+  When a match starts, `settleFrames` gives each person their locked-in
+  frame, and anyone who had not locked in (someone who dropped, a late
+  arrival) a frame nobody on their team has; computer pilots fly the rest.
 
 ## Limits
 
@@ -195,9 +201,11 @@ On this sandbox's 2-core Linux machine, with Node 22:
 - `npm run bots -- 6 4` puts four rooms of six bots on a running server
   (`npm start`, or `npm run server`), races them, and reports resyncs. It is
   also the load test.
-- `node tools/online-check.mjs` drives two real browsers through the hub, a
-  room, the invite link, a race, the results and back to the room. It needs
-  Playwright.
+- `node tools/online-check.mjs` drives real browsers through the hub, a
+  squad of three, a room, the invite link, frame picks and lock-in,
+  factions, shot calling, a race, the results and back to the room, with
+  clicks and keys as a player would. `node tools/video-check.mjs` does the
+  Video settings. Both need Playwright.
 
 All of that ran on one machine. **Not tested:** real networks with real
 latency and packet loss (the tests use set delays on a fake network),
