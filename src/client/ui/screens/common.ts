@@ -103,6 +103,7 @@ export function registerCommon(m: Menus, g: Game): void {
         note: g.online.available ? 'Private rooms with friends, by code or link' : 'Needs the game from its server: not this saved copy',
       });
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
+      m.button(list, 'Video', () => m.push('video'), { key: 'video', note: 'Panel lines, CRT screen, animation, screen shape' });
       col.append(h('h1', 'Play'), list);
       m.root.append(h('div.shade'), col, m.footer(SELECT, BACK));
     },

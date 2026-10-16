@@ -11,7 +11,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { drawClock, look } from './look';
-import { FilmPass, InkPass, LOOK_PALETTES } from './lookPasses';
+import { CrtPass, FilmPass, InkPass, LOOK_PALETTES } from './lookPasses';
 import { COLORS } from './palette';
 
 const SpeedShader = {
@@ -159,6 +159,7 @@ export class Renderer {
   private bloomBands = { value: 0 };
   private inkPass: InkPass;
   private filmPass: FilmPass;
+  private crtPass: CrtPass;
   /** Moments the film cuts in: time left on an impact frame, and on a painted still (and how long that still runs). */
   private impactT = 0;
   private impactDur = 0.1;
@@ -230,6 +231,9 @@ export class Renderer {
     this.filmPass = new FilmPass();
     this.composer.addPass(this.filmPass);
     this.composer.addPass(new OutputPass());
+    // Last, on the finished picture: the CRT screen, when it is on.
+    this.crtPass = new CrtPass();
+    this.composer.addPass(this.crtPass);
     this.resize();
     window.addEventListener('resize', () => this.resize());
     new ResizeObserver(() => this.resize()).observe(canvas);
@@ -332,6 +336,11 @@ export class Renderer {
     if (drawClock.fresh) this.speedPass.uniforms.uLineSeed.value = drawClock.drawing % 89;
   }
 
+  /** The CRT screen video setting. */
+  set crt(on: boolean) {
+    this.crtPass.enabled = on;
+  }
+
   /** Bloom strength, from the tuning panel. */
   setBloom(strength: number): void {
     this.bloom.strength = strength;
@@ -361,6 +370,7 @@ export class Renderer {
     const ph = Math.round(h * ratio);
     (this.inkPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
     (this.filmPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
+    (this.crtPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
   }
 
   /** Drop resolution a notch if frames run long, raise it again when there is headroom. */

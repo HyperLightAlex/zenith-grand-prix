@@ -28,6 +28,7 @@ export function registerRace(m: Menus, g: Game): void {
         }, { key: 'look' });
       }
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
+      m.button(list, 'Video', () => m.push('video'), { key: 'video' });
       if (online) {
         m.button(list, 'Leave match', () => confirmDialog(m, 'Leave the match?', 'Your seat goes to a computer pilot for the rest of this match.', 'Leave', () => g.leaveMatch()), { key: 'leave' });
         if (g.online.lobby?.host === g.online.pid) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the room.', 'End match', () => g.online.sendRoom('endMatch')), { key: 'end' });

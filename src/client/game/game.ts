@@ -64,7 +64,7 @@ import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
 import { DRAWN_FLAMES } from '../render/mech/parts';
 import { useOldSwift } from '../render/mech/frames';
-import { cycleSunhawkModel, getSunhawkModel, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
+import { cycleSunhawkModel, getSunhawkModel, setSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
 import { toggleRosterModel, rosterLabel } from '../render/mech/rosterSelection';
 import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
@@ -77,6 +77,8 @@ import { registerGarage, type HangarData } from '../ui/screens/garage';
 import { registerGrandPrix } from '../ui/screens/grandPrix';
 import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { registerRace } from '../ui/screens/race';
+import { registerVideo } from '../ui/screens/video';
+import { applyFrame, saveVideo, video, type VideoSettings } from '../video';
 import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
@@ -249,6 +251,8 @@ export class Game {
     registerGrandPrix(this.menus, this);
     registerOnline(this.menus, this);
     registerRace(this.menus, this);
+    registerVideo(this.menus, this);
+    this.renderer.crt = video.crt;
     this.panel = new TuningPanel(uiRoot, this.tuning, {
       onClose: () => {},
       onSound: (n) => this.audio.play(n),
@@ -445,7 +449,7 @@ export class Game {
   /** The scene behind the menus follows the screen on top: the attract race, or your mech in the hangar. */
   private screenChanged(id: ScreenId | null): void {
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
-      if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'dialog') return;
+      if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'video' || id === 'dialog') return;
     }
     if (id === null) return;
     if (id === 'title' || id === 'modes') {
@@ -524,6 +528,33 @@ export class Game {
     this.hud.showNotice(on ? 'Look: 80s anime' : 'Look: plain', false, 1.2);
     this.menus.refreshLook();
     return on;
+  }
+
+  // ---- video settings -------------------------------------------------------
+
+  /** Change video settings: applied at once and kept on this device. */
+  setVideo(change: Partial<VideoSettings>): void {
+    const panels = change.panels !== undefined && change.panels !== video.panels;
+    Object.assign(video, change);
+    saveVideo();
+    this.renderer.crt = video.crt;
+    applyFrame();
+    if (panels) {
+      setSunhawkPanels(video.panels);
+      this.refreshSunhawk('all');
+    }
+    this.menus.refresh();
+  }
+
+  /** The mechs' and effects' drawings a second in the anime look (the look's own tuning value). */
+  get drawingsPerSecond(): number {
+    return Math.round(this.tuning.feel.lookSteps);
+  }
+
+  setDrawings(n: number): void {
+    const item = TUNE_GROUPS.flatMap((g) => g.items).find((i) => i.key === 'lookSteps');
+    if (item) this.tuning.set(item, n);
+    this.menus.refresh();
   }
 
   private cycleSunhawk(dir = 1): void {

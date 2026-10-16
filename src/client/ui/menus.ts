@@ -27,6 +27,7 @@ export type ScreenId =
   | 'entry'
   | 'dialog'
   | 'controls'
+  | 'video'
   | 'pause'
   | 'results';
 
@@ -99,7 +100,8 @@ export interface ScreenDef<D = unknown> {
   horizontal?: boolean;
   /** The item highlighted when the screen first opens (by key). */
   initialFocus?: string;
-  /** No highlight on first arrival (the first press of a direction picks the first item). */
+  /** The highlight moved to the item with this key (to describe it, say). */
+  selected?(m: Menus, key: string, data: D): void;
 }
 
 interface Entry {
@@ -344,6 +346,7 @@ export class Menus {
     if (top) {
       top.sel = this.sel;
       top.key = this.items[this.sel]?.key ?? '';
+      this.defs.get(top.id)?.selected?.(this, top.key, top.data as never);
     }
     this.items[this.sel]?.el.scrollIntoView?.({ block: 'nearest' });
     if (sound) this.host.sound('ui_move');
@@ -377,9 +380,13 @@ export class Menus {
   /** Feed navigation presses, in the order they happened. */
   handle(presses: MenuInput[]): void {
     setClass(this.root, 'anime', this.host.lookOn());
+    let backed = false;
     for (const p of presses) {
       const top = this.stack[this.stack.length - 1];
       if (!top) return;
+      // Esc is both Back and Pause: once it has gone back a screen, it does not also resume.
+      if (p === 'pause' && backed) continue;
+      backed = p === 'back';
       const def = this.defs.get(top.id);
       const horizontal = !!def?.horizontal;
       if (p === 'confirm') this.activate(this.sel);

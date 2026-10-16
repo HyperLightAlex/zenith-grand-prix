@@ -325,3 +325,53 @@ export const LOOK_PALETTES: Record<string, LookPalette> = {
   // Noon above cloud: blue-black ink, cool shadows, clean light.
   helios: { ink: 0x0f1630, shadowGrade: [0.95, 0.97, 1.04], lightGrade: [1.03, 1.01, 0.96], lift: [0.003, 0.005, 0.009] },
 };
+
+/**
+ * The CRT screen (a video setting, either look): the picture as a tube TV
+ * showed it. It runs last, on the finished picture: the red and blue guns
+ * a little out of convergence, colour smeared along the line by the signal's
+ * narrow bandwidth, brights glowing into the darks beside them, and the
+ * picture driven a little hot. The scanlines, the phosphor mask and the
+ * tube's vignette are a layer over everything, the HUD and the menus
+ * included (see .crt-layer in styles.css). No curvature: it would pull the
+ * picture away from the HUD's markers.
+ */
+const CrtShader = {
+  uniforms: {
+    tDiffuse: { value: null as THREE.Texture | null },
+    uRes: { value: new THREE.Vector2(1280, 720) },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform vec2 uRes;
+    varying vec2 vUv;
+    void main() {
+      // Offsets in pixels of a 1080-line picture, whatever the resolution.
+      vec2 o = vec2(max(uRes.y / 1080.0, 0.5) / uRes.x, 0.0);
+      vec3 c;
+      c.r = texture2D(tDiffuse, vUv + o * 0.9).r;
+      c.g = texture2D(tDiffuse, vUv).g;
+      c.b = texture2D(tDiffuse, vUv - o * 0.9).b;
+      vec3 l = texture2D(tDiffuse, vUv - o * 2.5).rgb;
+      vec3 r = texture2D(tDiffuse, vUv + o * 2.5).rgb;
+      // The line smears: brights bleed into darks, never the other way.
+      c = mix(c, max(c, (l + r) * 0.5), 0.4);
+      c = mix(c, (l + c + r) / 3.0, 0.25);
+      float y = dot(c, vec3(0.299, 0.587, 0.114));
+      c = mix(vec3(y), c, 1.12) * 1.08;
+      gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+    }`,
+};
+
+export class CrtPass extends ShaderPass {
+  constructor() {
+    super(CrtShader);
+    this.enabled = false;
+  }
+}
