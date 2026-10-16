@@ -101,7 +101,7 @@ describe('the lobby', () => {
     expect(l.host).toBe('b');
   });
 
-  it('lets only a captain pick a faction, and never the other team\'s', () => {
+  it('lets a captain pick their team\'s faction, and the host either team\'s', () => {
     const l = createLobby('AAAAA', 'v', 0);
     join(l, 'a');
     join(l, 'b');
@@ -114,6 +114,20 @@ describe('the lobby', () => {
     expect(l.factions[0]).toBe(3);
     // A faction change clears the ready marks.
     expect(l.members.find((m) => m.pid === 'b')!.ready).toBe(false);
+    // b captains team 2 but is not the host: not team 1's faction.
+    expect(setFaction(l, 'b', 4, 0).ok).toBe(false);
+    expect(setFaction(l, 'b', 4).ok).toBe(true);
+    expect(l.factions[1]).toBe(4);
+    // The host can set the other team's, but still not to the same faction as theirs.
+    expect(setFaction(l, 'a', 3, 1).ok).toBe(false);
+    expect(setFaction(l, 'a', 1, 1).ok).toBe(true);
+    expect(l.factions[1]).toBe(1);
+    // A team of computer pilots: only the host can set it.
+    const solo = createLobby('BBBBB', 'v', 0);
+    join(solo, 'h');
+    const empty = 1 - solo.members[0].side;
+    expect(setFaction(solo, 'h', 4, empty).ok).toBe(true);
+    expect(solo.factions[empty]).toBe(4);
   });
 
   it('moves into an empty seat and asks for an occupied one', () => {
@@ -174,6 +188,37 @@ describe('the lobby', () => {
     const squad = join(l2, 's', { squad: { id: 'S2', size: 3 } });
     expect(squad.ok).toBe(false);
     expect(!squad.ok && squad.text).toMatch(/1 free seat; your squad has 3/);
+  });
+
+  it('takes a repeated ask once, and ignores answers to settled asks', () => {
+    const l = createLobby('AAAAA', 'v');
+    join(l, 'a');
+    join(l, 'b');
+    const side = l.members.find((m) => m.pid === 'a')!.side;
+    moveSeat(l, 'b', side, ROLE.DF); // a and b on one team, with one computer pilot
+    join(l, 'c'); // alone on the other
+    const holder = callerOf(l, side)!.pid;
+    const asker = holder === 'a' ? 'b' : 'a';
+    const first = callerAction(l, asker, 'ask');
+    expect(first.ok && first.note).toBe('asked');
+    const again = callerAction(l, asker, 'ask');
+    expect(again.ok && again.note).toBeUndefined(); // not sent to the shot caller a second time
+    expect(callerAction(l, holder, 'accept').ok).toBe(true);
+    expect(callerOf(l, side)!.pid).toBe(asker);
+    // A second Hand it over, from a dialog that was already answered: nothing happens, no error.
+    const late = callerAction(l, holder, 'accept');
+    expect(late.ok).toBe(true);
+    expect(callerOf(l, side)!.pid).toBe(asker);
+    // Swaps likewise.
+    const cSide = l.members.find((m) => m.pid === 'c')!;
+    const s1 = moveSeat(l, 'c', side, l.members.find((m) => m.pid === 'a')!.role);
+    const s2 = moveSeat(l, 'c', side, l.members.find((m) => m.pid === 'a')!.role);
+    expect(s1.ok && s1.note).toBe('asked');
+    expect(s2.ok && s2.note).toBeUndefined();
+    expect(l.swaps).toHaveLength(1);
+    expect(answerSwap(l, 'a', 'c', false).ok).toBe(true);
+    expect(answerSwap(l, 'a', 'c', true).ok).toBe(true); // already answered: ignored
+    expect(cSide.side).not.toBe(side);
   });
 
   it('seats a late follower with its squad, as a member and not a second leader', () => {

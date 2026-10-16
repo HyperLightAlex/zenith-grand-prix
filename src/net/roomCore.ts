@@ -236,19 +236,20 @@ export class RoomCore {
       }
       case 'seat':
         if (!inLobby) return;
-        report(moveSeat(this.lobby, pid, Number(body.side), Number(body.role) as Role));
-        if (this.lobby.swaps.some(([a, b]) => a === pid && b === seatHolder(this.lobby, Number(body.side), Number(body.role) as Role)?.pid)) {
-          const to = seatHolder(this.lobby, Number(body.side), Number(body.role) as Role);
-          if (to) this.io.send(to.pid, 'swapAsk', { from: pid });
-        }
+      {
+        const o = moveSeat(this.lobby, pid, Number(body.side), Number(body.role) as Role);
+        report(o);
+        const to = o.ok && o.note === 'asked' ? seatHolder(this.lobby, Number(body.side), Number(body.role) as Role) : undefined;
+        if (to) this.io.send(to.pid, 'swapAsk', { from: pid });
         return;
+      }
       case 'swapAnswer':
         if (!inLobby) return;
         report(answerSwap(this.lobby, pid, String(body.from), !!body.accept));
         return;
       case 'faction':
         if (!inLobby) return;
-        report(setFaction(this.lobby, pid, Number(body.faction)));
+        report(setFaction(this.lobby, pid, Number(body.faction), body.side === undefined ? undefined : Number(body.side)));
         return;
       case 'caller': {
         if (!inLobby) return;

@@ -222,7 +222,8 @@ export interface LobbyView {
 export interface ClientMessages {
   seat: { side: number; role: Role };
   swapAnswer: { from: string; accept: boolean };
-  faction: { faction: number };
+  /** A team's faction (`side`: whose; your own if left out). */
+  faction: { faction: number; side?: number };
   caller: { action: 'pass' | 'ask' | 'accept' | 'decline' | 'cancel' };
   settings: Partial<RoomSettings>;
   ready: { ready: boolean };

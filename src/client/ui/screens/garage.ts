@@ -15,15 +15,29 @@ const KIT_TEXT: Record<number, [string, string]> = {
   2: ['Two heavy blows. The second one breaks a guard.', 'A close-range blast. Works at racing speed.'],
 };
 
+/** A value, or a function giving it as it is now (for a room or squad that changes while the hangar is open). */
+type Live<T> = T | (() => T);
+const now = <T,>(v: Live<T>): T => (typeof v === 'function' ? (v as () => T)() : v);
+
 /** Why the hangar is open, and what its choices may be. */
 export interface HangarData {
   /** The context strip: where you came from ("Free Play", "Grand Prix · Round 2 of 4"...). */
-  context: string;
+  context: Live<string>;
   /** The confirm item: named for what happens next. */
   confirm: string;
   onConfirm(): void;
   /** Set when the mode has fixed the faction: the reason. */
-  factionLock?: string | null;
+  factionLock?: Live<string | null>;
+  /**
+   * What a room or squad says your faction and frame are now. The hangar shows
+   * it on every update, so a captain's or leader's change reaches it, except
+   * for a moment after a change of your own while the server catches up.
+   */
+  live?: () => { team: number; role: Role } | null;
+  /** When you last changed something here (performance.now()). */
+  changedAt?: number;
+  /** For each faction, why it cannot be chosen (the other team flies it), or null. */
+  factionTaken?: (faction: number) => string | null;
   /** For each frame, why it cannot be chosen (a teammate flies it), or null. */
   roleLock?: (role: Role) => string | null;
   /** The faction and frame shown (defaults to your loadout). */
@@ -88,11 +102,20 @@ export function registerGarage(m: Menus, g: Game): void {
     render(m, data) {
       // Opened with nothing said about why (an old tool's menus.show('garage')): a plain hangar.
       const d = data ?? { context: 'Hangar', confirm: 'Done', onConfirm: () => m.pop() };
+      const live = d.live?.() ?? null;
+      const yours = d.changedAt !== undefined && performance.now() - d.changedAt < 2000;
+      if (live && !yours) {
+        d.team = live.team;
+        d.role = live.role;
+      }
       const team = d.team ?? g.loadout.team;
       const role = d.role ?? g.loadout.role;
+      const factionLock = now(d.factionLock ?? null);
+      if (live) g.preview({ team, role });
       const set = (t: number, r: Role) => {
         d.team = t;
         d.role = r;
+        d.changedAt = performance.now();
         if (d.onChange) d.onChange(t, r);
         else g.setLoadout({ team: t, role: r });
         g.preview({ team: t, role: r });
@@ -102,7 +125,19 @@ export function registerGarage(m: Menus, g: Game): void {
       const col = h('div.col');
       const list = h('div.list');
       const n = LIVERIES.length;
-      m.choice(list, 'Team', factionName(LIVERIES[team]), (dir) => set((team + dir + n) % n, role), { key: 'team', locked: d.factionLock });
+      m.choice(
+        list,
+        'Team',
+        factionName(LIVERIES[team]),
+        (dir) => {
+          // Step over factions that are taken.
+          for (let k = 1; k < n; k++) {
+            const t = (((team + dir * k) % n) + n) % n;
+            if (!d.factionTaken?.(t)) return set(t, role);
+          }
+        },
+        { key: 'team', locked: factionLock },
+      );
       const frameLabel = (r: Role) => `${LIVERIES[team].models[r]} (${CLASSES[r].frame})`;
       m.choice(
         list,
@@ -120,7 +155,7 @@ export function registerGarage(m: Menus, g: Game): void {
       );
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
-      const strip = h('div.context', d.context);
+      const strip = h('div.context', now(d.context));
       const taken = ([0, 1, 2] as Role[]).map((r) => d.roleLock?.(r)).filter((x): x is string => !!x);
       col.append(strip, card.head, h('h1', 'Hangar'), card.blurb, list, taken.length ? h('div.match-blurb', taken.join(' ')) : '', card.info);
       m.root.append(h('div.shade'), card.bay, col, card.kit, m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));

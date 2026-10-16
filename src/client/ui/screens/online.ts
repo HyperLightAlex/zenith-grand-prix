@@ -127,20 +127,30 @@ export function registerOnline(m: Menus, g: Game): void {
       const top = h('div.roombar', h('b', `Room ${v.code}`), h('span', phaseText(v, me)), h('span', `Host: ${byPid.get(v.host ?? '')?.callsign ?? '–'}`));
       const sides = h('div.sides');
       const list = h('div.list.actions');
-      // Seats come first in the highlight order, team by team.
-      const seatLists: HTMLElement[] = [];
+      // Team by team in the highlight order: the team's name (its faction:
+      // its captain or the host changes it), then its seats.
       for (let side = 0; side < 2; side++) {
         const s = v.sides[side];
         const colEl = h('div.side' + (side ? '.t1' : ''));
-        const captain = byPid.get(s.captain ?? '');
-        colEl.append(h('div.side-head', emblem(s.faction), h('b', factionName(LIVERIES[s.faction])), h('span', captain ? `Captain: ${captain.callsign}` : 'No captain yet')));
-        const seats = h('div.seats');
-        seatLists.push(seats);
-        colEl.append(seats);
         sides.append(colEl);
-      }
-      for (let side = 0; side < 2; side++) {
-        const s = v.sides[side];
+        const captain = byPid.get(s.captain ?? '');
+        const mayPick = host || s.captain === o.pid;
+        const why = inMatch ? 'Factions change between matches' : mayPick ? null : captain ? `${captain.callsign}, this team's captain, or the host picks its faction` : "The host picks this team's faction";
+        const step = (dir: number) => {
+          const n = LIVERIES.length;
+          let f = (s.faction + dir + n) % n;
+          if (f === v.sides[1 - side].faction) f = (f + dir + n) % n;
+          o.sendRoom('faction', { faction: f, side });
+        };
+        const head = h(
+          'div.side-head' + (why ? '' : '.pick'),
+          emblem(s.faction),
+          h('b', h('i.arrow', '‹'), factionName(LIVERIES[s.faction]), h('i.arrow', '›')),
+          h('span', captain ? `Captain: ${captain.callsign}` : 'Computer pilots'),
+        );
+        m.addItem(colEl, head, () => step(1), (dir) => step(dir), { key: `faction-${side}`, locked: why });
+        const seats = h('div.seats');
+        colEl.append(seats);
         for (const role of ROLES) {
           const who = byPid.get(s.seats[role] ?? '');
           const mine = !!who && who.pid === o.pid;
@@ -156,7 +166,7 @@ export function registerOnline(m: Menus, g: Game): void {
             h('span.who', h('b', who ? who.callsign : 'Computer'), badges, h('small', who ? `${who.ping ? who.ping + ' ms' : ''}` : SKILL_NAMES[v.settings.skill])),
             h('span.state' + (who?.ready ? '.ready' : ''), status),
           );
-          m.addItem(seatLists[side], row, () => {
+          m.addItem(seats, row, () => {
             if (mine) return m.toast('Your seat');
             const swap = () => {
               if (inMatch) return m.toast('Seats change between matches');
@@ -176,7 +186,7 @@ export function registerOnline(m: Menus, g: Game): void {
               return;
             }
             swap();
-          }, (dir) => m.focus(`seat-${1 - side}-${role}`), { key: `seat-${side}-${role}` });
+          }, () => m.focus(`seat-${1 - side}-${role}`), { key: `seat-${side}-${role}` });
         }
       }
       // The settings: the host changes them, everyone sees them.
@@ -213,6 +223,7 @@ export function registerOnline(m: Menus, g: Game): void {
         const score = mt ? (mt.cfg.mode === 'series' ? `${mt.wins[0]}–${mt.wins[1]}` : `${mt.totals[0]}–${mt.totals[1]}`) : '';
         extra.push(h('div.matchcard', h('b', `Match under way${mt ? `: round ${mt.rounds.length + (v.phase === 'race' ? 1 : 0)}` : ''}`), h('span', `${factionName(LIVERIES[v.sides[0].faction])} ${score} ${factionName(LIVERIES[v.sides[1].faction])}`), h('small', me?.nextRound ? 'You race from the next round.' : 'Back in a moment.')));
       }
+      if (!inMatch) extra.push(h('div.room-hint', `Pick an empty seat to move into it, on either team, or a player's seat to ask them to swap.${host ? " As host you set both teams' factions: pick a team's name." : me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
       const col = h('div.room', top, sides, ...extra, h('div.bottom', panel, h('div.panel.actions-panel', list)));
       m.root.append(h('div.shade.full'), col, m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Seats', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
     },

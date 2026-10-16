@@ -259,7 +259,9 @@ export function moveSeat(lobby: Lobby, pid: string, side: number, role: Role): O
   if (m.side === side && m.role === role) return yes();
   const there = seatHolder(lobby, side, role);
   if (there) {
-    if (!lobby.swaps.some(([a, b]) => a === pid && b === there.pid)) lobby.swaps.push([pid, there.pid]);
+    // Asking again while the first ask is waiting changes nothing.
+    if (lobby.swaps.some(([a, b]) => a === pid && b === there.pid)) return yes();
+    lobby.swaps.push([pid, there.pid]);
     return yes('asked');
   }
   if (heldFor(lobby, side, role) && heldFor(lobby, side, role)!.squad !== m.squad) return no('That seat is held for a squad');
@@ -278,7 +280,7 @@ export function moveSeat(lobby: Lobby, pid: string, side: number, role: Role): O
 /** Answer a swap request: the two trade seats. */
 export function answerSwap(lobby: Lobby, pid: string, from: string, accept: boolean): Outcome {
   const i = lobby.swaps.findIndex(([a, b]) => a === from && b === pid);
-  if (i < 0) return no('Nothing to answer');
+  if (i < 0) return yes(); // already settled or withdrawn
   lobby.swaps.splice(i, 1);
   if (!accept) return yes('declined');
   const a = member(lobby, from);
@@ -298,14 +300,21 @@ export function answerSwap(lobby: Lobby, pid: string, from: string, accept: bool
 }
 
 /** A captain picks their team's faction. */
-export function setFaction(lobby: Lobby, pid: string, faction: number): Outcome {
+/**
+ * A team's faction. Its captain picks it; in a private room the host can set
+ * either team's too (a team of computer pilots has nobody else to). `side`
+ * defaults to your own team.
+ */
+export function setFaction(lobby: Lobby, pid: string, faction: number, side?: number): Outcome {
   const m = member(lobby, pid);
-  if (!m || m.side < 0) return no('You have no seat');
-  if (captainOf(lobby, m.side) !== m) return no("Only your team's captain picks its faction");
+  if (!m) return no('You are not in this room');
+  const s = side === 0 || side === 1 ? side : m.side;
+  if (s !== 0 && s !== 1) return no('You have no seat');
+  if (lobby.host !== pid && captainOf(lobby, s) !== m) return no(s === m.side ? "Only your team's captain or the host picks its faction" : "Only that team's captain or the host picks its faction");
   if (!validFaction(faction)) return no('No such faction');
-  if (faction === lobby.factions[1 - m.side]) return no('The other team flies that faction');
-  if (lobby.factions[m.side] === faction) return yes();
-  lobby.factions[m.side] = faction;
+  if (faction === lobby.factions[1 - s]) return no('The other team flies that faction');
+  if (lobby.factions[s] === faction) return yes();
+  lobby.factions[s] = faction;
   clearReady(lobby);
   return yes();
 }
@@ -365,7 +374,8 @@ export function callerAction(lobby: Lobby, pid: string, action: 'pass' | 'ask' |
       lobby.callerAsks[side] = null;
       return yes();
     case 'ask':
-      if (holder.pid === pid) return yes();
+      // Asking again while the first ask is waiting changes nothing.
+      if (holder.pid === pid || lobby.callerAsks[side] === pid) return yes();
       lobby.callerAsks[side] = pid;
       return yes('asked');
     case 'cancel':
@@ -373,10 +383,10 @@ export function callerAction(lobby: Lobby, pid: string, action: 'pass' | 'ask' |
       return yes();
     case 'accept':
     case 'decline': {
-      if (holder.pid !== pid) return no("You aren't the shot caller");
+      // An answer to an ask that is already settled (or withdrawn) is ignored.
       const asker = lobby.callerAsks[side];
+      if (holder.pid !== pid || !asker) return yes();
       lobby.callerAsks[side] = null;
-      if (!asker) return no('Nobody asked');
       if (action === 'accept') lobby.callers[side] = asker;
       return yes(action === 'accept' ? 'passed' : 'declined');
     }

@@ -70,12 +70,15 @@ two players.
 - **Callsign.** Asked for once, 3 to 16 characters, passed through a short
   word filter, and changeable on the hub.
 - **Room.** Two teams of three seats, with the host's settings (circuit,
-  format, computer pilots' skill), Ready, Invite, and Leave. Pick a seat to
-  move into it, or to ask whoever sits there to swap. The host can remove
-  someone from their seat's menu. Y opens the hangar to change frame, and
-  faction if you are your team's captain. When everyone connected is ready,
-  a 5-second countdown starts; any change cancels it. The host can start
-  early.
+  format, computer pilots' skill), Ready, Invite, and Leave. Pick an empty
+  seat on either team to move into it, or someone's seat to ask them to
+  swap (one question per ask, however often it is asked). The host can
+  remove someone from their seat's menu. A team's faction is picked with
+  its name above its seats: by its captain (whoever sat there first), or
+  by the host, who can set both teams', including a team of computer
+  pilots. Y opens the hangar to change frame. When everyone connected is
+  ready, a 5-second countdown starts; any change cancels it. The host can
+  start early.
 - **Shot caller.** On a team of two people and one computer pilot, one of the
   two gives the computer pilot its orders. It starts with the team's captain
   (or the squad leader) and can be passed on or asked for. Alone with two

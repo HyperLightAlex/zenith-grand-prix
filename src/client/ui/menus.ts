@@ -179,6 +179,16 @@ export class Menus {
     this.open();
   }
 
+  /** Take the screen opened with this data out of the stack, wherever it is (a request that was withdrawn). */
+  remove(data: unknown): boolean {
+    const i = this.stack.findIndex((e) => e.data === data);
+    if (i < 0) return false;
+    const top = i === this.stack.length - 1;
+    this.stack.splice(i, 1);
+    if (top) this.open();
+    return true;
+  }
+
   /** Back down to a screen in the stack (it stays); false if it is not there. */
   popTo(id: ScreenId): boolean {
     const i = this.stack.map((e) => e.id).lastIndexOf(id);
@@ -273,7 +283,7 @@ export class Menus {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       this.select(index, false);
-      this.press(index, 1);
+      this.activate(index);
     });
     list.append(el);
     return el;
@@ -290,7 +300,12 @@ export class Menus {
     return this.addItem(list, el, activate, undefined, opts);
   }
 
-  private press(index: number, dir: number): void {
+  /**
+   * Confirm (or a click) on an item: what it does, or for a plain choice, its
+   * next value. An item with both (a room's seat: pick it, or left and right
+   * to look across at the other team) is picked.
+   */
+  private activate(index: number): void {
     const it = this.items[index];
     if (!it) return;
     if (it.locked) {
@@ -298,13 +313,27 @@ export class Menus {
       this.toast(it.locked);
       return;
     }
-    if (it.change) {
-      it.change(dir);
-      this.host.sound('ui_move');
-    } else if (it.activate) {
+    if (it.activate) {
       this.host.sound('ui_select');
       it.activate();
+    } else if (it.change) {
+      it.change(1);
+      this.host.sound('ui_move');
     }
+  }
+
+  /** Left or right on an item that changes. */
+  private nudge(index: number, dir: number): void {
+    const it = this.items[index];
+    if (!it?.change) return;
+    // A locked choice says why; left and right on a seat only move the highlight, so they always work.
+    if (it.locked && !it.activate) {
+      this.host.sound('ui_back');
+      this.toast(it.locked);
+      return;
+    }
+    it.change(dir);
+    this.host.sound('ui_move');
   }
 
   select(i: number, sound = true): void {
@@ -353,7 +382,7 @@ export class Menus {
       if (!top) return;
       const def = this.defs.get(top.id);
       const horizontal = !!def?.horizontal;
-      if (p === 'confirm') this.press(this.sel, 1);
+      if (p === 'confirm') this.activate(this.sel);
       else if (p === 'back') {
         this.host.sound('ui_back');
         if (def?.back) def.back(this, top.data as never);
@@ -362,7 +391,7 @@ export class Menus {
       else if (p === (horizontal ? 'right' : 'down')) this.select(this.sel + 1);
       else if (!horizontal && (p === 'left' || p === 'right')) {
         const it = this.items[this.sel];
-        if (it?.change) this.press(this.sel, p === 'left' ? -1 : 1);
+        if (it?.change) this.nudge(this.sel, p === 'left' ? -1 : 1);
         else def?.press?.(this, p, top.data as never);
       } else def?.press?.(this, p, top.data as never);
     }

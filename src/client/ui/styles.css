@@ -1020,6 +1020,11 @@ html, body {
 .menu .side-head b { font-weight: 800; }
 .menu .side-head span { margin-left: auto; font-size: 0.7em; font-weight: 500; opacity: 0.75; }
 .menu .side-head .emb { width: 1.5em; height: 1.5em; margin: 0; }
+.menu .side-head { padding: 0.1em 0.4em; }
+.menu .side-head .arrow { font-style: normal; font-weight: 500; opacity: 0.6; margin: 0 0.25em; display: none; }
+.menu .side-head.pick { cursor: pointer; }
+.menu .side-head.pick .arrow { display: inline; }
+.menu .side-head.sel { background: var(--paper); color: var(--ink); }
 .menu .seats { display: grid; gap: 0.3em; }
 .menu .seat {
   display: grid; grid-template-columns: 2.2em 3.2em 1fr auto; align-items: center; gap: 0.7em; padding: 0.4em 0.9em;
@@ -1045,6 +1050,7 @@ html, body {
 .menu .room .list { margin-top: 0; gap: 0.25em; }
 .menu .matchcard { display: flex; gap: 1.5em; align-items: baseline; padding: 0.6em 1em; background: var(--paper); color: var(--ink); font-size: 1.25em; }
 .menu .matchcard b { font-weight: 800; }
+.menu .room-hint { font-size: 1.05em; opacity: 0.75; margin-top: -0.3em; }
 
 @media (max-aspect-ratio: 4/3) {
   .menu .panel.standings, .menu .panel.squad { position: static; transform: none; width: auto; margin: 1em 3em; }

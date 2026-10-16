@@ -934,21 +934,23 @@ export class Game {
   }
 
   openOnlineHangar(): void {
-    const sq = this.online.squadView;
-    const lead = this.online.leading;
-    const others = sq?.members.filter((x) => x.pid !== this.online.squadPid) ?? [];
+    // Read the squad as it is at each update: the leader may change the
+    // faction, people may join or leave, Sort frames may move you.
+    const o = this.online;
+    const grouped = () => !!o.squadView && o.squadView.members.length > 1;
+    const following = () => grouped() && !o.leading;
     this.menus.push<HangarData>('hangar', {
-      context: sq && sq.members.length > 1 ? `Online · your squad · ${factionName(LIVERIES[sq.faction])}` : 'Online',
+      context: () => (grouped() ? `Online · your squad · ${factionName(LIVERIES[o.squadView!.faction])}` : 'Online'),
       confirm: 'Done',
       onConfirm: () => this.menus.pop(),
-      team: sq && sq.members.length > 1 && !lead ? sq.faction : this.loadout.team,
-      factionLock: sq && sq.members.length > 1 && !lead ? "Your squad's leader picks its faction" : null,
+      live: () => ({ team: following() ? o.squadView!.faction : this.loadout.team, role: this.loadout.role }),
+      factionLock: () => (following() ? "Your squad's leader picks its faction" : null),
       onChange: (t, r) => {
-        this.setLoadout({ team: lead ? t : this.loadout.team, role: r });
-        this.online.sendSquad('loadout', { faction: this.loadout.team, role: r });
+        this.setLoadout({ team: following() ? this.loadout.team : t, role: r });
+        o.sendSquad('loadout', { faction: this.loadout.team, role: r });
       },
       roleLock: (r) => {
-        const mate = others.find((x) => x.role === r);
+        const mate = o.squadView?.members.find((x) => x.pid !== o.squadPid && x.role === r);
         return mate ? `${mate.callsign} flies that frame: Sort frames, or pick another` : null;
       },
     });
@@ -959,29 +961,49 @@ export class Game {
     const me = v?.players.find((p) => p.pid === this.online.pid);
     if (!v || !me || me.side < 0) return;
     if (v.phase !== 'lobby' && v.phase !== 'countdown') return this.menus.toast('Seats change between matches');
-    const side = v.sides[me.side];
-    const captain = side.captain === me.pid;
+    // Everything is read from the room as it is at each update: the captain
+    // may change the faction, a swap may move you, the captain may leave.
+    const o = this.online;
+    const seat = () => {
+      const now = o.lobby;
+      const cur = now?.players.find((p) => p.pid === o.pid);
+      return now && cur && cur.side >= 0 ? { now, cur, side: now.sides[cur.side] } : null;
+    };
+    // Your team's captain picks its faction, and so can the host.
+    const captain = () => {
+      const s = seat();
+      return !!s && (s.side.captain === o.pid || s.now.host === o.pid);
+    };
     this.menus.push<HangarData>('hangar', {
-      context: `Room ${v.code} · ${factionName(LIVERIES[side.faction])}`,
+      context: () => {
+        const s = seat();
+        return s ? `Room ${s.now.code} · ${factionName(LIVERIES[s.side.faction])}` : `Room ${v.code}`;
+      },
       confirm: 'Done',
       onConfirm: () => this.menus.pop(),
-      team: side.faction,
-      role: me.role,
-      factionLock: captain ? null : "Your team's captain picks its faction",
+      live: () => {
+        const s = seat();
+        return s ? { team: s.side.faction, role: s.cur.role } : null;
+      },
+      factionLock: () => (captain() ? null : "Your team's captain or the host picks its faction"),
+      factionTaken: (f) => {
+        const s = seat();
+        return s && f === s.now.sides[1 - s.cur.side].faction ? 'The other team flies that faction' : null;
+      },
       roleLock: (r) => {
-        const pid = side.seats[r];
-        if (!pid || pid === me.pid) return null;
-        const who = v.players.find((p) => p.pid === pid);
-        return `${who?.callsign ?? 'A teammate'} flies that frame`;
+        const s = seat();
+        const pid = s?.side.seats[r];
+        if (!s || !pid || pid === o.pid) return null;
+        const who = s.now.players.find((p) => p.pid === pid);
+        return `${who?.callsign ?? 'A teammate'} flies that frame: pick their seat in the room to ask for a swap`;
       },
       onChange: (t, r) => {
-        const cur = this.online.lobby?.players.find((p) => p.pid === this.online.pid);
-        if (t !== side.faction) {
-          if (t === v.sides[1 - me.side].faction) this.menus.toast('The other team flies that faction');
-          this.online.sendRoom('faction', { faction: t });
-        }
-        if (cur && r !== cur.role) this.online.sendRoom('seat', { side: me.side, role: r });
-        this.setLoadout({ team: captain ? t : this.loadout.team, role: r });
+        const s = seat();
+        if (!s) return;
+        const lead = captain();
+        if (lead && t !== s.side.faction) o.sendRoom('faction', { faction: t, side: s.cur.side });
+        if (r !== s.cur.role) o.sendRoom('seat', { side: s.cur.side, role: r });
+        this.setLoadout({ team: lead ? t : this.loadout.team, role: r });
       },
     });
   }
@@ -1011,6 +1033,49 @@ export class Game {
     this.audio.setMusic('menu');
     void this.ensureSquad();
     if (text) messageDialog(this.menus, 'Out of the room', text);
+  }
+
+  /** The dialog for a request made to you (a seat swap, or shot calling), and the one you last answered. */
+  private request: { key: string; dialog: DialogData } | null = null;
+  private answered: string | null = null;
+
+  /**
+   * Requests made to you, kept in step with the room: one dialog per
+   * request however often it is asked, gone by itself once the request is
+   * settled or withdrawn, and not shown again while your answer is on its way.
+   */
+  private syncRequests(): void {
+    const o = this.online;
+    const v = o.lobby;
+    const me = v?.players.find((p) => p.pid === o.pid);
+    let want: { key: string; from: string; swap: boolean } | null = null;
+    if (v && me && me.side >= 0 && this.menus.has('room') && (v.phase === 'lobby' || v.phase === 'countdown')) {
+      const swap = v.swaps.find(([, to]) => to === me.pid);
+      const asker = v.sides[me.side].caller === me.pid ? v.callerAsks[me.side] : null;
+      if (swap) want = { key: `swap:${swap[0]}`, from: swap[0], swap: true };
+      else if (asker && asker !== me.pid) want = { key: `caller:${asker}`, from: asker, swap: false };
+    }
+    if (want?.key !== this.answered) this.answered = null;
+    if (this.request && this.request.key !== want?.key) {
+      this.menus.remove(this.request.dialog);
+      this.request = null;
+    }
+    if (!want || this.request || want.key === this.answered) return;
+    const { key, from } = want;
+    const who = v!.players.find((p) => p.pid === from)?.callsign ?? (want.swap ? 'Someone' : 'Your teammate');
+    const answer = (send: () => void) => () => {
+      if (this.request) this.menus.remove(this.request.dialog);
+      this.request = null;
+      this.answered = key;
+      send();
+    };
+    const yes = answer(() => (want!.swap ? o.sendRoom('swapAnswer', { from, accept: true }) : o.sendRoom('caller', { action: 'accept' })));
+    const no = answer(() => (want!.swap ? o.sendRoom('swapAnswer', { from, accept: false }) : o.sendRoom('caller', { action: 'decline' })));
+    const dialog: DialogData = want.swap
+      ? { title: 'Swap seats?', text: `${who} asks to swap seats with you.`, options: [{ label: 'Swap', go: true, run: yes }, { label: 'No thanks', run: no }], cancel: no }
+      : { title: 'Shot calling', text: `${who} asks to give your computer pilot its orders.`, options: [{ label: 'Hand it over', go: true, run: yes }, { label: 'Keep it', run: no }], cancel: no };
+    this.request = { key, dialog };
+    this.menus.push<DialogData>('dialog', dialog);
   }
 
   /** The match is over (or was ended): out of the race and back to the room's screen. */
@@ -1101,6 +1166,7 @@ export class Game {
         this.preview(l);
       } else if (s === 'results' && this.mode === 'online') this.menus.refresh();
       else if (s === 'hangar' && this.menus.has('room')) this.menus.refresh();
+      this.syncRequests();
     });
     o.on('matchStart', (msg) => this.startNetRound(msg));
     o.on('tick', (msg) => {
@@ -1119,30 +1185,8 @@ export class Game {
       if (this.mode !== 'online' && !this.menus.has('room')) return;
       this.roomAgain(msg.reason === 'ended' ? 'The host ended the match' : null);
     });
-    o.on('swapAsk', ({ from }) => {
-      const who = o.lobby?.players.find((p) => p.pid === from)?.callsign ?? 'Someone';
-      this.menus.push<DialogData>('dialog', {
-        title: 'Swap seats?',
-        text: `${who} asks to swap seats with you.`,
-        options: [
-          { label: 'Swap', go: true, run: () => (this.menus.pop(), o.sendRoom('swapAnswer', { from, accept: true })) },
-          { label: 'No thanks', run: () => (this.menus.pop(), o.sendRoom('swapAnswer', { from, accept: false })) },
-        ],
-        cancel: () => (this.menus.pop(), o.sendRoom('swapAnswer', { from, accept: false })),
-      });
-    });
-    o.on('callerAsk', ({ from }) => {
-      const who = o.lobby?.players.find((p) => p.pid === from)?.callsign ?? 'Your teammate';
-      this.menus.push<DialogData>('dialog', {
-        title: 'Shot calling',
-        text: `${who} asks to give your computer pilot its orders.`,
-        options: [
-          { label: 'Hand it over', go: true, run: () => (this.menus.pop(), o.sendRoom('caller', { action: 'accept' })) },
-          { label: 'Keep it', run: () => (this.menus.pop(), o.sendRoom('caller', { action: 'decline' })) },
-        ],
-        cancel: () => (this.menus.pop(), o.sendRoom('caller', { action: 'decline' })),
-      });
-    });
+    o.on('swapAsk', () => this.syncRequests());
+    o.on('callerAsk', () => this.syncRequests());
     o.on('notice', ({ text }) => {
       if (this.state === 'race') this.hud.showNotice(text, false, 2.2);
       else this.menus.toast(text);
@@ -1167,12 +1211,12 @@ export class Game {
       // The leader's Sort frames may have moved you to another frame.
       const mine = v.members.find((x) => x.pid === o.squadPid);
       if (mine && mine.role !== this.loadout.role) this.setLoadout({ team: this.loadout.team, role: mine.role });
-      // A squad is one team: members fly the leader's faction.
-      if (v.members.length > 1 && !o.leading && v.faction !== this.loadout.team) this.preview({ team: v.faction, role: this.loadout.role });
-      if (this.menus.screen === 'online') {
-        this.menus.refresh();
-        this.preview(this.previewLoadout('online'));
-      }
+      // A squad is one team: members fly the leader's faction. The hub, or
+      // the hangar opened from it, shows the squad as it is now (a room
+      // above them shows the room's teams instead).
+      if (!this.menus.has('online') || this.menus.has('room')) return;
+      if (this.menus.screen === 'online' || this.menus.screen === 'hangar') this.menus.refresh();
+      this.preview(this.previewLoadout(this.menus.screen ?? 'online'));
     });
     o.on('follow', ({ code, size }) => {
       const sq = o.squadView;
