@@ -64,8 +64,8 @@ two players.
 
 ## What a player sees
 
-- **Online hub.** Your squad in the hangar's three bays, with Create room,
-  Join room, Invite to squad, Join a squad and your callsign. Entering Online
+- **Online hub.** Your squad's three positions, with Create room, Join
+  room, Invite to squad, Join a squad and your callsign. Entering Online
   makes you the leader of a squad of one.
 - **Callsign.** Asked for once, 3 to 16 characters, passed through a short
   word filter, and changeable on the hub.
@@ -102,8 +102,13 @@ two players.
 - **Squads.** The leader picks the faction and takes everyone into rooms:
   when the leader makes or joins a room, the others follow by themselves. The
   room holds seats on one team for them for 20 seconds; someone slower than
-  that still joins the squad's team if it has a seat free. Sort frames gives
-  everyone a different frame, keeping first choices where it can.
+  that still joins the squad's team if it has a seat free. Each member has
+  their own position (forward, midfield, defence): someone joining gets
+  theirs if it is open, or the next open one. Pick an open position on the
+  Online screen, or as your frame in the hangar, to move there; pick a
+  squadmate's to ask them to swap. The hangar shows who flies what. Invite
+  to squad shows while there is an open position, Join a squad only while
+  you are on your own.
 
 ## How it works
 

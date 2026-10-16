@@ -66,39 +66,46 @@ export function registerOnline(m: Menus, g: Game): void {
         return;
       }
       if (g.onlineStatus) col.append(h('p.status', g.onlineStatus));
-      // The squad: your bays.
+      // The squad: its three positions, each with whoever has it.
       const sq = o.squadView;
       const lead = o.leading;
-      const bays = h('div.bays');
       const members = sq?.members ?? [];
       const faction = sq ? sq.faction : g.loadout.team;
-      for (let i = 0; i < 3; i++) {
-        const mem = members[i];
-        if (!mem && i === 0 && !sq) {
-          bays.append(h('div.bay-card.me', h('span.tag', 'Bay 1'), face(faction, g.loadout.role), h('b', g.callsign || 'You'), h('small', `${LIVERIES[faction].models[g.loadout.role]}, ${ROLE_NAMES[g.loadout.role].toLowerCase()}`)));
-          continue;
-        }
-        if (!mem) {
-          bays.append(h('div.bay-card.empty', h('span.tag', `Bay ${i + 1}`), h('b', 'Free'), h('small', 'Invite a friend to your squad')));
-          continue;
-        }
-        const me = mem.pid === o.squadPid;
-        const tags = [mem.pid === sq?.leader ? 'Leader' : '', me ? 'You' : '', mem.connected ? '' : 'Reconnecting'].filter(Boolean).join(' · ');
-        bays.append(h('div.bay-card' + (me ? '.me' : ''), h('span.tag', `Bay ${i + 1}`), face(faction, mem.role), h('b', mem.callsign), h('small', `${LIVERIES[faction].models[mem.role]}, ${ROLE_NAMES[mem.role].toLowerCase()}`), tags ? h('em', tags) : ''));
-      }
-      const clash = members.length > 1 && new Set(members.map((x) => x.role)).size !== members.length;
       const follow = !lead ? "Your squad's leader takes the squad into rooms" : null;
       m.button(list, 'Create room', () => void g.createRoom(), { key: 'create', go: true, locked: follow });
       m.button(list, 'Join room', () => g.askRoomCode(), { key: 'join', locked: follow });
-      m.button(list, 'Invite to squad', () => void g.inviteToSquad(), { key: 'invite' });
-      m.button(list, 'Join a squad', () => g.askSquadCode(), { key: 'joinsquad' });
-      if (clash && lead) m.button(list, 'Sort frames', () => o.sendSquad('sortFrames'), { key: 'sort', note: 'Two of you fly the same frame' });
-      if (sq && members.length > 1) m.button(list, 'Leave squad', () => void g.leaveSquad(), { key: 'leavesquad' });
+      // Invite while there is an open position; join someone else's squad only while on your own.
+      if (members.length < 3) m.button(list, 'Invite to squad', () => void g.inviteToSquad(), { key: 'invite' });
+      if (members.length <= 1) m.button(list, 'Join a squad', () => g.askSquadCode(), { key: 'joinsquad' });
+      if (members.length > 1) m.button(list, 'Leave squad', () => void g.leaveSquad(), { key: 'leavesquad' });
       m.button(list, `Callsign: ${g.callsign || '(none)'}`, () => g.askCallsign(() => m.refresh()), { key: 'callsign' });
       col.append(list);
-      if (clash) col.append(h('div.match-blurb', lead ? 'Two of you fly the same frame: Sort frames gives everyone a different one, keeping first choices where it can.' : 'Two of you fly the same frame: change yours in the hangar, or your leader can sort them.'));
-      const panel = h('div.panel.squad', h('h2', sq && members.length > 1 ? `Your squad · ${factionName(LIVERIES[faction])}` : 'Your squad'), bays);
-      if (sq) panel.append(h('div.match-blurb', `Squad code ${sq.code}. ${lead ? 'You lead: you pick the faction and take everyone into rooms.' : 'Your leader picks the faction and takes everyone into rooms.'}`));
+      const bays = h('div.bays');
+      for (const role of ROLES) {
+        const mem = sq ? members.find((x) => x.role === role) : role === g.loadout.role ? { pid: '', callsign: g.callsign || 'You', role, connected: true } : undefined;
+        const me = !!mem && (!sq || mem.pid === o.squadPid);
+        const tag = h('span.tag', `${SHORT[role]} · ${ROLE_NAMES[role]}`);
+        let card: HTMLElement;
+        if (!mem) {
+          card = h('div.bay-card.empty', tag, face(faction, role), h('b', 'Open'), h('small', members.length > 1 ? 'Pick to move here' : `${LIVERIES[faction].models[role]}: pick to fly it`));
+        } else {
+          const asked = !!sq && sq.swaps.some(([a, b]) => a === o.squadPid && b === mem.pid);
+          const tags = [sq && mem.pid === sq.leader && members.length > 1 ? 'Leader' : '', me ? 'You' : '', mem.connected ? '' : 'Reconnecting', asked ? 'Asked to swap' : ''].filter(Boolean).join(' · ');
+          card = h('div.bay-card' + (me ? '.me' : ''), tag, face(faction, role), h('b', mem.callsign), h('small', LIVERIES[faction].models[role]), tags ? h('em', tags) : '');
+        }
+        m.addItem(bays, card, () => {
+          if (me) return m.toast('Your position');
+          if (!sq) {
+            // Not connected yet: it is only your own frame.
+            g.setLoadout({ team: g.loadout.team, role });
+            return m.refresh();
+          }
+          o.sendSquad('position', { role });
+          if (mem) m.toast(`Asked ${mem.callsign} to swap`);
+        }, undefined, { key: `pos-${role}` });
+      }
+      const panel = h('div.panel.squad', h('h2', members.length > 1 ? `Your squad · ${factionName(LIVERIES[faction])}` : 'Your squad'), bays);
+      if (sq) panel.append(h('div.match-blurb', members.length > 1 ? `Squad code ${sq.code}. Pick an open position to move there, or a squadmate's to ask them to swap. ${lead ? 'You lead: you pick the faction and take everyone into rooms.' : 'Your leader picks the faction and takes everyone into rooms.'}` : `Squad code ${sq.code}. Invite friends to fly with you: a squad stays together on one team.`));
       m.root.append(h('div.shade'), col, panel, m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
     },
     press(m, key) {

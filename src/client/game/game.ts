@@ -16,6 +16,7 @@ import {
   MODE,
   PHASE,
   ROLE,
+  ROLE_NAMES,
   TICK_RATE,
   buildTrack,
   createMatch,
@@ -936,7 +937,7 @@ export class Game {
 
   openOnlineHangar(): void {
     // Read the squad as it is at each update: the leader may change the
-    // faction, people may join or leave, Sort frames may move you.
+    // faction, people may join or leave, a swap may move you.
     const o = this.online;
     const grouped = () => !!o.squadView && o.squadView.members.length > 1;
     const following = () => grouped() && !o.leading;
@@ -950,9 +951,17 @@ export class Game {
         this.setLoadout({ team: following() ? this.loadout.team : t, role: r });
         o.sendSquad('loadout', { faction: this.loadout.team, role: r });
       },
-      roleLock: (r) => {
-        const mate = o.squadView?.members.find((x) => x.pid !== o.squadPid && x.role === r);
-        return mate ? `${mate.callsign} flies that frame: Sort frames, or pick another` : null;
+      crew: {
+        title: () => (grouped() ? 'Your squad' : 'Your squad: just you so far'),
+        at: (r) => {
+          const sv = o.squadView;
+          if (!sv) return r === this.loadout.role ? { name: this.callsign || 'You', you: true } : { name: null };
+          const holder = sv.members.find((x) => x.role === r);
+          if (!holder) return { name: null };
+          const asked = sv.swaps.some(([a, b]) => a === o.squadPid && b === holder.pid);
+          return { name: holder.callsign, you: holder.pid === o.squadPid, note: asked ? 'Asked to swap' : undefined };
+        },
+        askFrame: (r) => o.sendSquad('position', { role: r }),
       },
     });
   }
@@ -991,12 +1000,21 @@ export class Game {
         const s = seat();
         return s && f === s.now.sides[1 - s.cur.side].faction ? 'The other team flies that faction' : null;
       },
-      roleLock: (r) => {
-        const s = seat();
-        const pid = s?.side.seats[r];
-        if (!s || !pid || pid === o.pid) return null;
-        const who = s.now.players.find((p) => p.pid === pid);
-        return `${who?.callsign ?? 'A teammate'} flies that frame: pick their seat in the room to ask for a swap`;
+      crew: {
+        title: () => 'Your team',
+        at: (r) => {
+          const s = seat();
+          if (!s) return { name: null };
+          const pid = s.side.seats[r];
+          if (!pid) return { name: null, cpu: LIVERIES[s.side.faction].pilots[r] };
+          const who = s.now.players.find((p) => p.pid === pid);
+          const asked = s.now.swaps.some(([a, b]) => a === o.pid && b === pid);
+          return { name: who?.callsign ?? 'A teammate', you: pid === o.pid, note: asked ? 'Asked to swap' : undefined };
+        },
+        askFrame: (r) => {
+          const s = seat();
+          if (s) o.sendRoom('seat', { side: s.cur.side, role: r });
+        },
       },
       onChange: (t, r) => {
         const s = seat();
@@ -1049,12 +1067,19 @@ export class Game {
     const o = this.online;
     const v = o.lobby;
     const me = v?.players.find((p) => p.pid === o.pid);
-    let want: { key: string; from: string; swap: boolean } | null = null;
-    if (v && me && me.side >= 0 && this.menus.has('room') && (v.phase === 'lobby' || v.phase === 'countdown')) {
-      const swap = v.swaps.find(([, to]) => to === me.pid);
-      const asker = v.sides[me.side].caller === me.pid ? v.callerAsks[me.side] : null;
-      if (swap) want = { key: `swap:${swap[0]}`, from: swap[0], swap: true };
-      else if (asker && asker !== me.pid) want = { key: `caller:${asker}`, from: asker, swap: false };
+    let want: { key: string; from: string; kind: 'swap' | 'caller' | 'squad' } | null = null;
+    const sv = o.squadView;
+    if (this.menus.has('room')) {
+      if (v && me && me.side >= 0 && (v.phase === 'lobby' || v.phase === 'countdown')) {
+        const swap = v.swaps.find(([, to]) => to === me.pid);
+        const asker = v.sides[me.side].caller === me.pid ? v.callerAsks[me.side] : null;
+        if (swap) want = { key: `swap:${swap[0]}`, from: swap[0], kind: 'swap' };
+        else if (asker && asker !== me.pid) want = { key: `caller:${asker}`, from: asker, kind: 'caller' };
+      }
+    } else if (this.menus.has('online') && sv) {
+      // A squadmate asks for your position (outside a room, where seats rule).
+      const swap = sv.swaps.find(([, to]) => to === o.squadPid);
+      if (swap) want = { key: `squad:${swap[0]}`, from: swap[0], kind: 'squad' };
     }
     if (want?.key !== this.answered) this.answered = null;
     if (this.request && this.request.key !== want?.key) {
@@ -1062,19 +1087,31 @@ export class Game {
       this.request = null;
     }
     if (!want || this.request || want.key === this.answered) return;
-    const { key, from } = want;
-    const who = v!.players.find((p) => p.pid === from)?.callsign ?? (want.swap ? 'Someone' : 'Your teammate');
+    const { key, from, kind } = want;
+    const who = (kind === 'squad' ? sv?.members.find((p) => p.pid === from)?.callsign : v?.players.find((p) => p.pid === from)?.callsign) ?? 'Your teammate';
     const answer = (send: () => void) => () => {
       if (this.request) this.menus.remove(this.request.dialog);
       this.request = null;
       this.answered = key;
       send();
     };
-    const yes = answer(() => (want!.swap ? o.sendRoom('swapAnswer', { from, accept: true }) : o.sendRoom('caller', { action: 'accept' })));
-    const no = answer(() => (want!.swap ? o.sendRoom('swapAnswer', { from, accept: false }) : o.sendRoom('caller', { action: 'decline' })));
-    const dialog: DialogData = want.swap
-      ? { title: 'Swap seats?', text: `${who} asks to swap seats with you.`, options: [{ label: 'Swap', go: true, run: yes }, { label: 'No thanks', run: no }], cancel: no }
-      : { title: 'Shot calling', text: `${who} asks to give your computer pilot its orders.`, options: [{ label: 'Hand it over', go: true, run: yes }, { label: 'Keep it', run: no }], cancel: no };
+    const reply = (accept: boolean) =>
+      kind === 'swap' ? o.sendRoom('swapAnswer', { from, accept }) : kind === 'squad' ? o.sendSquad('swapAnswer', { from, accept }) : o.sendRoom('caller', { action: accept ? 'accept' : 'decline' });
+    const yes = answer(() => reply(true));
+    const no = answer(() => reply(false));
+    let dialog: DialogData;
+    if (kind === 'caller') dialog = { title: 'Shot calling', text: `${who} asks to give your computer pilot its orders.`, options: [{ label: 'Hand it over', go: true, run: yes }, { label: 'Keep it', run: no }], cancel: no };
+    else if (kind === 'swap') dialog = { title: 'Swap seats?', text: `${who} asks to swap seats with you.`, options: [{ label: 'Swap', go: true, run: yes }, { label: 'No thanks', run: no }], cancel: no };
+    else {
+      const theirs = sv?.members.find((p) => p.pid === from)?.role ?? this.loadout.role;
+      const f = sv?.faction ?? this.loadout.team;
+      dialog = {
+        title: 'Swap positions?',
+        text: `${who} asks to swap positions with you: you would fly the ${LIVERIES[f].models[theirs]} (${ROLE_NAMES[theirs].toLowerCase()}), they the ${LIVERIES[f].models[this.loadout.role]}.`,
+        options: [{ label: 'Swap', go: true, run: yes }, { label: 'No thanks', run: no }],
+        cancel: no,
+      };
+    }
     this.request = { key, dialog };
     this.menus.push<DialogData>('dialog', dialog);
   }
@@ -1209,9 +1246,10 @@ export class Game {
       else this.menus.toast('Reconnected');
     });
     o.on('squad', (v) => {
-      // The leader's Sort frames may have moved you to another frame.
+      // A swap (yours accepted, or one you accepted) may have moved you to another position.
       const mine = v.members.find((x) => x.pid === o.squadPid);
       if (mine && mine.role !== this.loadout.role) this.setLoadout({ team: this.loadout.team, role: mine.role });
+      this.syncRequests();
       // A squad is one team: members fly the leader's faction. The hub, or
       // the hangar opened from it, shows the squad as it is now (a room
       // above them shows the room's teams instead).

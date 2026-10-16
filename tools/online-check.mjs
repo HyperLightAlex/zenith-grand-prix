@@ -27,6 +27,7 @@ async function player(name, url) {
   return page;
 }
 const state = (p) => p.evaluate(() => window.game.debugState());
+const until = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 20000 }).then(() => true, () => false);
 const a = await player('Alpha', base + '?mute=1');
 await a.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); g.openOnline(); });
 await a.waitForFunction(() => window.game.online.squad, null, { timeout: 60000 });
@@ -58,11 +59,33 @@ check(true, 'Online opens and makes a squad of one');
     return el?.querySelector('.choice')?.textContent === want && window.game.garageShown?.team === window.game.online.squadView.faction;
   }, aAfter, { timeout: 20000 }).then(() => true, () => false);
   check(aAfter !== cBefore && followed, `a member's open hangar follows the leader's faction (${cBefore} -> ${aAfter})`);
+  // A third: three positions, one each, and the buttons that still apply.
+  const d = await player('Delta', `${base}?mute=1&squad=${squadCode}`);
+  await d.waitForFunction(() => window.game.online.squadView?.members.length === 3, null, { timeout: 60000 }).catch(() => {});
+  const roles = await d.evaluate(() => window.game.online.squadView.members.map((x) => x.role));
+  check(roles.length === 3 && new Set(roles).size === 3, `three in a squad, each in their own position (${roles.join(', ')})`);
+  await a.keyboard.press('Escape');
+  await a.waitForFunction(() => window.game.menus.screen === 'online', null, { timeout: 20000 });
+  const hub = await a.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
+  check(!hub.some((t) => /Invite to squad|Join a squad/.test(t)) && hub.some((t) => /Leave squad/.test(t)), `a full squad: no Invite or Join a squad, Leave squad there (${hub.filter((t) => t.length < 30).join(' / ')})`);
+  // Charlie's hangar lists the squad, and the Frame row asks for a squadmate's position.
+  const crew = await c.evaluate(() => [...document.querySelectorAll('.menu .crew-row b')].map((x) => x.textContent));
+  check(crew.length === 3 && ['Alpha', 'Charlie', 'Delta'].every((n) => crew.includes(n)), `the hangar shows who flies what (${crew.join(', ')})`);
+  const cRole = await c.evaluate(() => window.game.loadout.role);
+  await c.evaluate(() => window.game.menus.focus('frame'));
+  await c.keyboard.press('ArrowRight');
+  const target = await c.evaluate((r) => window.game.online.squadView.members.find((x) => x.role === (r + 1) % 3), cRole);
+  const asked = target.callsign === 'Alpha' ? a : d;
+  check(await until(asked, () => window.game.menus.screen === 'dialog'), `${target.callsign} is asked to swap positions`);
+  await asked.keyboard.press('Enter');
+  check(await until(c, (r) => window.game.loadout.role === (r + 1) % 3, cRole), 'accepted: Charlie flies their frame, and the hangar shows it');
+  const after = await c.evaluate(() => window.game.online.squadView.members.map((x) => x.role));
+  check(new Set(after).size === 3, 'still one position each');
+  await d.evaluate(() => window.game.leaveSquad());
+  await d.context().close();
   await c.evaluate(() => window.game.leaveSquad());
   await a.waitForFunction(() => window.game.online.squadView?.members.length === 1, null, { timeout: 20000 });
   await c.context().close();
-  await a.keyboard.press('Escape');
-  await a.waitForFunction(() => window.game.menus.screen === 'online', null, { timeout: 20000 });
 }
 
 await a.evaluate(() => window.game.createRoom());
@@ -77,7 +100,6 @@ check(lobby.players.length === 2 && lobby.players[0].side !== lobby.players[1].s
 
 // The room screen by hand, with clicks and keys as a player would use it.
 const mine = (p) => p.evaluate(() => { const o = window.game.online; const me = o.lobby.players.find((x) => x.pid === o.pid); return { side: me.side, role: me.role, factions: o.lobby.sides.map((s) => s.faction) }; });
-const until = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 20000 }).then(() => true, () => false);
 const aSide = (await mine(a)).side;
 // Bravo clicks a computer pilot's seat on Alpha's team.
 await b.locator('.menu .sides .side').nth(aSide).locator('.seat.cpu').first().click();

@@ -21,7 +21,7 @@ import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   &track=canyon   circuit: meridian, canyon or helios
 //   &sunhawk=current|updated|game   model comparison; B cycles without restarting
-//   &sunhawkPanels=1              projected panel lines on the imported armor
+//   &sunhawkPanels=0              no projected panel lines on the imported armor (on by default)
 // Online:
 //   ?room=K7Q2X     an invite link: straight into that room
 //   ?squad=K7Q2X    an invite to a squad
@@ -36,7 +36,8 @@ async function boot(): Promise<void> {
   if (isSunhawkModel(model)) setSunhawkModel(model);
   const roster = q.get('roster');
   if (roster === 'updated' || roster === 'current') setRosterModel(roster);
-  setSunhawkPanels(q.get('sunhawkPanels') === '1');
+  // The panel lines on the mechs' armor are on unless turned off for a comparison.
+  setSunhawkPanels(q.get('sunhawkPanels') !== '0');
   const loading = document.createElement('div');
   loading.className = 'model-loading';
   loading.textContent = 'Loading mech models…';

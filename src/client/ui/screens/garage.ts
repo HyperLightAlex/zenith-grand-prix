@@ -38,8 +38,17 @@ export interface HangarData {
   changedAt?: number;
   /** For each faction, why it cannot be chosen (the other team flies it), or null. */
   factionTaken?: (faction: number) => string | null;
-  /** For each frame, why it cannot be chosen (a teammate flies it), or null. */
-  roleLock?: (role: Role) => string | null;
+  /**
+   * A squad or a room team: who has each position. Picking a frame someone
+   * has asks them to swap (`askFrame`) instead of changing yours; the panel
+   * shows everyone's.
+   */
+  crew?: {
+    title: () => string;
+    /** Each position's holder (null: open, or a computer pilot's, named in `cpu`). */
+    at: (role: Role) => { name: string; you: boolean; note?: string } | { name: null; cpu?: string };
+    askFrame: (role: Role) => void;
+  };
   /** The faction and frame shown (defaults to your loadout). */
   team?: number;
   role?: Role;
@@ -144,21 +153,39 @@ export function registerGarage(m: Menus, g: Game): void {
         'Frame',
         frameLabel(role),
         (dir) => {
-          // Step over frames a teammate flies.
-          for (let k = 1; k <= 3; k++) {
-            const r = ((role + dir * k + 30) % 3) as Role;
-            if (!d.roleLock?.(r)) return set(team, r);
+          const r = (((role + dir) % 3) + 3) % 3 as Role;
+          // A squadmate's or teammate's frame: ask them to swap.
+          const there = d.crew?.at(r);
+          if (there && there.name !== null && !there.you) {
+            d.crew!.askFrame(r);
+            return m.toast(`Asked ${there.name} to swap: they fly the ${LIVERIES[team].models[r]}`);
           }
-          m.toast(d.roleLock?.(((role + dir + 3) % 3) as Role) ?? 'No other frame is free');
+          set(team, r);
         },
         { key: 'frame' },
       );
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
       const strip = h('div.context', now(d.context));
-      const taken = ([0, 1, 2] as Role[]).map((r) => d.roleLock?.(r)).filter((x): x is string => !!x);
-      col.append(strip, card.head, h('h1', 'Hangar'), card.blurb, list, taken.length ? h('div.match-blurb', taken.join(' ')) : '', card.info);
-      m.root.append(h('div.shade'), card.bay, col, card.kit, m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));
+      col.append(strip, card.head, h('h1', 'Hangar'), card.blurb, list, card.info);
+      // Who flies what: your squad, or your team in a room.
+      let crew: HTMLElement | string = '';
+      if (d.crew) {
+        crew = h('div.panel.crew', h('h2', d.crew.title()));
+        for (const r of [0, 1, 2] as Role[]) {
+          const at = d.crew.at(r);
+          const who = at.name !== null ? at.name : at.cpu ?? 'Open';
+          crew.append(
+            h(
+              'div.crew-row' + (at.name !== null && at.you ? '.you' : at.name === null ? '.open' : ''),
+              h('span.role', ['FW', 'MF', 'DF'][r]),
+              h('b', who),
+              h('span', at.name !== null && at.note ? at.note : at.name === null && at.cpu ? 'Computer pilot' : at.name === null ? 'Pick it as your frame to move here' : LIVERIES[team].models[r]),
+            ),
+          );
+        }
+      }
+      m.root.append(h('div.shade'), card.bay, col, crew, card.kit, m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));
     },
   });
 

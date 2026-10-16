@@ -323,14 +323,16 @@ tabs of one browser can be two players.
 The updated Sunhawk is the approved visual standard for future frame work:
 broad readable armor, controlled cel shadows, restrained surface detail and
 distinct mechanical joints. Its production blend is the reference asset.
-Normal play uses the approved updated models and clean armor. Design and finish
-selectors have been removed from the garage and pause menus.
+Normal play uses the approved updated models with their armor panel lines on.
+Design and finish selectors have been removed from the garage and pause menus.
 
 Comparisons remain available with explicit URL flags: `?sunhawk=current|updated|game`,
-`&roster=current|updated`, and `&sunhawkPanels=0|1`. These do not persist into future
-sessions. With `?artReview=1`, **B** cycles Sunhawk and **N** toggles the rest of the
-roster without resetting the race or animation. **G** still compares anime/plain
-rendering. For a controlled side-by-side view,
+`&roster=current|updated`, and `&sunhawkPanels=0` (clean armor, no panel lines).
+These do not persist into future sessions. With `?artReview=1`, **B** cycles Sunhawk
+and **N** toggles the rest of the roster without resetting the race or animation.
+**G** still compares anime/plain rendering while developing (`npm run dev`, or
+`?dev=1` on a built game), along with **T** for the tuning panel; players get
+neither. For a controlled side-by-side view,
 open `?debug=mechs&compare=1&pose=standby&bg=e4e6ec`; `pose` also accepts
 `boost`, `carveRight`, `guard`, `slashHit`, and the other names in `poses.ts`.
 This studio viewer uses the base materials; use the garage/race for the full anime

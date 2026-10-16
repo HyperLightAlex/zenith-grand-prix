@@ -583,6 +583,14 @@ html, body {
 .frame-info .stat .bar > i { transform: scaleX(var(--v, 1)); transition: transform 0.25s ease-out; }
 .menu .kit { position: absolute; right: 3em; bottom: 4.6em; width: 30em; padding: 0.9em 1.3em 1em; background: var(--ink-soft); border-right: 0.35em solid var(--signal); font-size: 1.12em; font-weight: 500; line-height: 1.28; }
 .menu .kit h2 { margin: 0 0 0.35em; font-size: 1.15em; font-weight: 800; color: var(--signal); }
+.menu .crew { position: absolute; right: 3em; top: 2em; width: 30em; padding: 0.7em 1.3em 0.8em; background: var(--ink-soft); border-right: 0.35em solid var(--signal); font-size: 1.12em; }
+.menu .crew h2 { margin: 0 0 0.4em; font-size: 1.05em; font-weight: 800; color: var(--signal); }
+.menu .crew-row { display: grid; grid-template-columns: 2.4em 1fr auto; align-items: baseline; gap: 0.6em; padding: 0.15em 0; font-weight: 500; }
+.menu .crew-row .role { font-weight: 800; opacity: 0.7; }
+.menu .crew-row b { font-weight: 800; }
+.menu .crew-row > span:last-child { font-size: 0.85em; opacity: 0.75; }
+.menu .crew-row.you b { color: var(--signal); }
+.menu .crew-row.open b { font-weight: 500; opacity: 0.7; }
 .menu .kit h2.cells { margin-top: 0.7em; color: var(--cell); }
 .menu .kit b { font-weight: 800; }
 .menu .kit > div + div { margin-top: 0.35em; }
@@ -662,6 +670,7 @@ html, body {
    the middle, rounded like a tube, switched on as you arrive. */
 .menu.anime[data-screen='garage'] .col,
 .menu.anime[data-screen='garage'] .kit,
+.menu.anime[data-screen='garage'] .crew,
 .menu.anime .controls {
   background:
     repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px),
@@ -781,6 +790,9 @@ html, body {
 .menu.anime[data-screen='garage'] .kit h2,
 .menu.anime[data-screen='garage'] .kit h2.cells { padding-bottom: 0.3em; border-bottom: 1px solid var(--phos-dim); color: inherit; font-size: 1.05em; font-weight: 600; font-style: normal; letter-spacing: 0.08em; opacity: 0.8; }
 .menu.anime[data-screen='garage'] .kit b { font-weight: 700; }
+.menu.anime[data-screen='garage'] .crew { right: 3em; top: 2em; width: 25em; padding: 0.8em 1.3em 0.9em; animation-delay: 0.05s; }
+.menu.anime[data-screen='garage'] .crew h2 { padding-bottom: 0.3em; border-bottom: 1px solid var(--phos-dim); color: inherit; font-size: 1.05em; font-weight: 600; font-style: normal; letter-spacing: 0.08em; opacity: 0.8; }
+.menu.anime[data-screen='garage'] .crew-row.you b { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; }
 .menu.anime[data-screen='garage'] .kit i, .menu.anime[data-screen='garage'] .kit .note { opacity: 0.7; }
 .menu.anime[data-screen='garage'] .kit .key, .menu.anime .controls .key { color: var(--phos); background: none; box-shadow: inset 0 0 0 0.09em var(--phos); text-shadow: var(--glow); }
 .menu.anime[data-screen='garage'] .kit .cellkit .key { color: var(--cell); box-shadow: inset 0 0 0 0.09em var(--cell); }
@@ -846,7 +858,7 @@ html, body {
   .gauges { width: 22em; }
   .menu .col { left: 2em; width: calc(100% - 4em); }
   .controls, .results { left: 2em; right: 2em; }
-  .menu .kit { display: none; }
+  .menu .kit, .menu .crew { display: none; }
   .controls .grid { grid-template-columns: 1fr; }
 }
 
@@ -1007,6 +1019,7 @@ html, body {
 .menu .bay-card em { grid-column: 2; font-size: 0.95em; color: var(--signal); font-style: italic; }
 .menu .bay-card.me { outline: 0.12em solid var(--signal); }
 .menu .bay-card.empty { opacity: 0.55; }
+.menu .bay-card.empty .face { filter: grayscale(1) brightness(0.45); }
 .menu .face { display: inline-block; width: 3.2em; height: 3.2em; border-radius: 0.3em; background: rgba(255, 255, 255, 0.1) center / cover no-repeat; }
 
 /* The room. */

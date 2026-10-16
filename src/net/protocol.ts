@@ -327,13 +327,18 @@ export interface SquadView {
   /** The squad is one team, so one faction: the leader's. */
   faction: number;
   members: SquadMember[];
+  /** Position swaps asked for: [from, to] pids. */
+  swaps: Array<[string, string]>;
 }
 
 /** Client to squad. */
 export interface SquadClientMessages {
+  /** Your faction (it counts for the leader) and the position you want: taken if open, asked for if a squadmate has it. */
   loadout: Loadout;
+  /** Take an open position, or ask whoever has it to swap. */
+  position: { role: Role };
+  swapAnswer: { from: string; accept: boolean };
   kick: { pid: string };
-  sortFrames: Record<string, never>;
   /** The leader is going into a room: everyone follows. */
   go: { code: string };
   ping: { t: number; rtt: number };
