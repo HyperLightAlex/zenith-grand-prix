@@ -778,7 +778,19 @@ with prediction on the clients, reconnecting, and squads of up to three
 that move between rooms together. Matchmaking is still to come. How online
 works, and how to host it, is in [ONLINE.md](ONLINE.md).
 
-**M4: touch controls.**
+**M4, done (branch `mobile-ui`): phones, tablets and handhelds.** The
+layout follows the picture's frame (the window, or the 4:3 box in it), not
+the window: big frames keep the layouts as drawn; small ones (a phone held
+sideways, a 640×480 handheld) get compact type and menus whose panes scroll
+with the highlight (side by side, or one column on a 4:3 frame); a phone
+held upright gets one column of menus, and a race there asks to be turned.
+Touch controls: a floating stick, the throttle held for you, and a button
+cluster that changes when you lock on; in a 4:3 picture on a wide phone they
+sit in the bars either side. The race HUD's gauges became one cluster round
+the speed in a corner (the Drive ring, armour and Cells, after Kingdom
+Hearts' HP gauge), guard moved to a meter under your mech while it matters,
+and the middle of the screen is clear. See `video.ts` (the frame and its
+layout), `input/touch.ts` and `ui/dash.ts`.
 
 **Later.** More circuits, parts and upgrades, a league, generated or modelled
 mechs replacing the built-in ones (drop-in as glTF), spectating, replays.

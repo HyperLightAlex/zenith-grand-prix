@@ -38,7 +38,7 @@ export function registerRace(m: Menus, g: Game): void {
       }
       const card = h('div.ec-pause', h('div.ec-kick', 'Paused'), art(LOGO.url, 'img', 'Zenith Grand Prix'));
       col.append(card, h('h1', 'Paused'), online ? h('p', 'The race carries on: your computer pilot is flying until you resume.') : '', list);
-      m.root.append(h('div.shade'), col, m.footer(SELECT, { pad: 'B', keys: 'Esc', label: 'Resume', press: 'back' }));
+      m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, { pad: 'B', keys: 'Esc', label: 'Resume', press: 'back' }));
     },
     press(_m, key) {
       if (key === 'pause') {
@@ -193,7 +193,7 @@ export function registerRace(m: Menus, g: Game): void {
         m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
       }
       box.append(list);
-      m.root.append(h('div.shade.full'), box);
+      m.root.append(h('div.shade.full'), m.panes(box));
     },
     back() {},
   });

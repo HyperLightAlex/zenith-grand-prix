@@ -62,29 +62,38 @@ keyboard works too, and the on-screen hints follow whichever you touched last.
 Menus work with either, or the mouse: A (Enter) confirms, B (Esc) goes back,
 X and Y are each screen's own actions, and the bottom bar names them.
 
+**Phones, tablets and handhelds.** Open the same address in the phone's
+browser. Touch the screen and touch controls take over (a pad or keyboard
+takes back over the moment it is used); starting from the title by touch goes
+full screen. The menus work held either way round and scroll where they do
+not fit; races are played sideways (held upright, a race asks to be turned,
+and offline it waits). A handheld with its own controls, such as a Retroid
+Pocket, works as a gamepad on its own screen. The layouts follow the picture,
+so 16:9 and 4:3 (Video, Screen shape) both fit any screen.
+
 ## Controls
 
-| | Gamepad | Keyboard |
-|---|---|---|
-| Steer | Left stick | A D |
-| Accelerate / brake | RT / LT | W / S |
-| Carve (hold through a corner, let go for a burst) | LT with the stick pushed over | S with A or D |
-| Boost (uses Drive) | A | Space |
-| Ability (uses a Cell) | B | R |
-| Lock on to an enemy / let go (the one it would take is marked) | LB | Q |
-| Escort a teammate / let go | Click the left stick | E |
-| Attack / special | X / Y | J / K |
-| Guard (while locked on; press just before a hit to parry) | LT (RB works too) | L |
-| Dash (while locked on) | A | Space |
-| Guard swing: arc round your target (while guarding) | Stick left or right + A | A or D + Space |
-| Switch target (while locked on) | Right stick left / right, hold to keep stepping | Z C |
-| Look around / look back | Right stick / R3 | V |
-| Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 |
-| Pause | Start | Esc |
-| Tuning panel | Back | T |
-| Full screen | | F |
-| Switch the look (80s anime / plain) | Pause → Look | G |
-| Compare Sunhawk designs | Garage / Pause → Sunhawk design | B |
+| | Gamepad | Keyboard | Touch |
+|---|---|---|---|
+| Steer | Left stick | A D | Left thumb anywhere on the left of the screen |
+| Accelerate / brake | RT / LT | W / S | Held for you / Carve |
+| Carve (hold through a corner, let go for a burst) | LT with the stick pushed over | S with A or D | Hold Carve and steer |
+| Boost (uses Drive) | A | Space | Boost |
+| Ability (uses a Cell) | B | R | The ability's own button |
+| Lock on to an enemy / let go (the one it would take is marked) | LB | Q | Lock on / Let go |
+| Escort a teammate / let go | Click the left stick | E | Escort |
+| Attack / special | X / Y | J / K | Attack / Special |
+| Guard (while locked on; press just before a hit to parry) | LT (RB works too) | L | Guard |
+| Dash (while locked on) | A | Space | Dash |
+| Guard swing: arc round your target (while guarding) | Stick left or right + A | A or D + Space | Hold Guard, steer, Dash |
+| Switch target (while locked on) | Right stick left / right, hold to keep stepping | Z C | Switch |
+| Look around / look back | Right stick / R3 | V | |
+| Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 | Team, then the play |
+| Pause | Start | Esc | Pause (top right) |
+| Tuning panel | Back | T | |
+| Full screen | Video → Full screen | F | Video → Full screen |
+| Switch the look (80s anime / plain) | Pause → Look | G | |
+| Compare Sunhawk designs | Garage / Pause → Sunhawk design | B | |
 
 While you are free you steer like any racer. Lock on and the track carries
 you: the stick now moves you around your target (toward it, away from it,

@@ -1,5 +1,12 @@
 // Menus: a stack of screens, worked by the same MenuInput from pad or
-// keyboard, and by mouse (hover moves the highlight, a click confirms).
+// keyboard, by mouse (hover moves the highlight, a click confirms), and by
+// touch (a tap picks; the ‹ › of a choice step it; the bottom bar's prompts
+// are buttons).
+//
+// What a screen shows goes in its panes (Menus.panes): on a big screen they
+// are laid out as drawn, on a phone or handheld they become columns that
+// scroll, and the highlight scrolls them to keep itself, and what is round
+// it, in view (see styles.css, html.compact and html.portrait).
 //
 // Every screen has Back (B, or Esc) to the one before; a screen's own
 // actions are on X and Y, and LB and RB move between its panels. The bottom
@@ -10,7 +17,7 @@
 // what it does with X, Y, LB, RB and Back. This file is only the machinery.
 
 import type { MatchConfig, Role } from '../../sim/index';
-import type { MenuInput } from '../input/input';
+import type { Device, MenuInput } from '../input/input';
 import { h, setClass } from './dom';
 
 export type ScreenId =
@@ -33,7 +40,6 @@ export type ScreenId =
 
 /** The old single-screen names, still used by tools that drive the game: 'garage' is the hangar. */
 export type Screen = ScreenId | 'garage' | null;
-type Device = 'pad' | 'keys';
 
 export interface GarageChoice {
   role: Role;
@@ -255,15 +261,31 @@ export class Menus {
 
   // ---- building blocks ---------------------------------------------------------
 
-  /** A button glyph for the current device. */
+  /** A button glyph for the current device (none on touch: the screen is the button). */
   key(pad: string, keys: string): HTMLElement {
-    return h('span.key', this.device === 'pad' ? pad : keys);
+    const el = h('span.key', this.device === 'pad' ? pad : keys);
+    if (this.device === 'touch' || (this.device === 'keys' && !keys)) el.hidden = true;
+    return el;
   }
 
-  /** The prompts bar. Each prompt is also a button. */
+  /**
+   * What a screen shows, as panes: laid out as drawn on a big screen; on a
+   * small one, columns that scroll with the highlight (or one column, upright).
+   */
+  panes(...children: Array<HTMLElement | string | null | undefined>): HTMLElement {
+    const el = h('div.panes', ...children);
+    el.dataset.scroll = '';
+    return el;
+  }
+
+  /**
+   * The prompts bar. Each prompt with a press is also a button; on touch only
+   * those show (Select is a tap on the item, Change a tap on its arrows).
+   */
   footer(...prompts: Prompt[]): HTMLElement {
     const bar = h('div.footer-hints');
     for (const p of prompts) {
+      if (this.device === 'touch' && (!p.press || p.press === 'confirm')) continue;
       const el = h('span.prompt', this.key(p.pad, p.keys), p.label);
       if (p.press) {
         el.classList.add('clickable');
@@ -281,19 +303,33 @@ export class Menus {
     const index = this.items.length;
     if (opts.locked) el.classList.add('locked');
     this.items.push({ el, key: opts.key ?? `#${index}`, activate, change, locked: opts.locked });
-    el.addEventListener('pointerenter', () => this.select(index, false));
+    // The mouse highlights what it is over; a finger only what it taps (a
+    // drag across the list is scrolling). Neither scrolls the list itself.
+    el.addEventListener('pointerenter', (e) => {
+      if (e.pointerType !== 'touch') this.select(index, false, false);
+    });
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.select(index, false);
+      this.select(index, false, false);
       this.activate(index);
     });
+    // The arrows of a choice step it back and forth.
+    if (change) {
+      el.querySelectorAll<HTMLElement>('.arr').forEach((arr) => {
+        arr.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.select(index, false, false);
+          this.nudge(index, arr.classList.contains('l') ? -1 : 1);
+        });
+      });
+    }
     list.append(el);
     return el;
   }
 
   /** An item that is a label and a value, changed with left and right. */
   choice(list: HTMLElement, label: string, value: string, change: (dir: number) => void, opts: ItemOpts = {}): HTMLElement {
-    return this.addItem(list, h('div.item', h('span', label), h('span.choice', value)), undefined, change, opts);
+    return this.addItem(list, h('div.item', h('span', label), h('span.choice', h('i.arr.l', '‹'), h('span.val', value), h('i.arr.r', '›'))), undefined, change, opts);
   }
 
   /** An item that does something. */
@@ -338,7 +374,7 @@ export class Menus {
     this.host.sound('ui_move');
   }
 
-  select(i: number, sound = true): void {
+  select(i: number, sound = true, scroll = true): void {
     if (!this.items.length) return;
     this.sel = (i + this.items.length) % this.items.length;
     this.items.forEach((it, k) => setClass(it.el, 'sel', k === this.sel));
@@ -348,8 +384,42 @@ export class Menus {
       top.key = this.items[this.sel]?.key ?? '';
       this.defs.get(top.id)?.selected?.(this, top.key, top.data as never);
     }
-    this.items[this.sel]?.el.scrollIntoView?.({ block: 'nearest' });
+    if (scroll) this.reveal(this.sel);
     if (sound) this.host.sound('ui_move');
+  }
+
+  /**
+   * Scroll whatever holds the item so it shows: the first item of a pane
+   * brings the pane back to its top (the heading over the list shows), the
+   * last takes it to its end (the notes under it), anything else just comes
+   * into view with a little of what is round it.
+   */
+  private reveal(index: number): void {
+    const el = this.items[index]?.el;
+    if (!el || !el.isConnected) return;
+    const pane = scroller(el, this.root);
+    if (!pane) return;
+    // Pinned in place (the results' buttons): already showing.
+    if (pinned(el, pane)) return;
+    const inPane = this.items.filter((it) => pane.contains(it.el) && !pinned(it.el, pane));
+    const p = pane.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const margin = Math.min(p.height * 0.18, r.height * 1.2);
+    const max = pane.scrollHeight - pane.clientHeight;
+    let to = pane.scrollTop;
+    if (inPane[0]?.el === el && r.bottom - p.top + pane.scrollTop <= pane.clientHeight) to = 0;
+    else if (inPane[inPane.length - 1]?.el === el && r.top - p.top + pane.scrollTop - max >= 0) to = max;
+    else if (r.top < p.top + margin) to = pane.scrollTop - (p.top + margin - r.top);
+    else if (r.bottom > p.bottom - margin) to = pane.scrollTop + (r.bottom - (p.bottom - margin));
+    to = Math.max(0, Math.min(max, to));
+    if (Math.abs(to - pane.scrollTop) > 0.5) pane.scrollTo({ top: to, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }
+
+  /** Scroll the screen's text by `dy` pixels (the right stick, or the D-pad on a screen with nothing to pick). */
+  scrollBy(dy: number): void {
+    const el = this.items[this.sel]?.el;
+    const pane = (el && scroller(el, this.root)) || firstScroller(this.root);
+    if (pane) pane.scrollTop += dy;
   }
 
   /** The highlighted item's key. */
@@ -389,6 +459,11 @@ export class Menus {
       backed = p === 'back';
       const def = this.defs.get(top.id);
       const horizontal = !!def?.horizontal;
+      // Nothing to pick (the controls): up and down read the page.
+      if (this.items.length === 0 && (p === 'up' || p === 'down')) {
+        this.scrollBy((p === 'up' ? -1 : 1) * Math.max(60, this.root.clientHeight * 0.3));
+        continue;
+      }
       if (p === 'confirm') this.activate(this.sel);
       else if (p === 'back') {
         this.host.sound('ui_back');
@@ -403,6 +478,36 @@ export class Menus {
       } else def?.press?.(this, p, top.data as never);
     }
   }
+}
+
+/** The nearest element between `el` and `root` that scrolls and has more than it shows. */
+function scroller(el: HTMLElement, root: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p && p !== root.parentElement; p = p.parentElement) {
+    const oy = getComputedStyle(p).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p;
+  }
+  return null;
+}
+
+/** The first pane on the screen with more than it shows. */
+function firstScroller(root: HTMLElement): HTMLElement | null {
+  for (const p of root.querySelectorAll<HTMLElement>('[data-scroll], [data-scroll] *')) {
+    const oy = getComputedStyle(p).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p;
+  }
+  return null;
+}
+
+/** Whether the element is held in place in its pane (position: sticky on it or between). */
+function pinned(el: HTMLElement, pane: HTMLElement): boolean {
+  for (let p: HTMLElement | null = el; p && p !== pane; p = p.parentElement) {
+    if (getComputedStyle(p).position === 'sticky') return true;
+  }
+  return false;
+}
+
+function reducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /** A painted image, as an element. */

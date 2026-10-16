@@ -42,7 +42,7 @@ check(true, 'Online opens and makes a squad of one');
   check(joined, 'the squad link joins the squad');
   await c.keyboard.press('KeyY');
   await c.waitForFunction(() => window.game.menus.screen === 'hangar', null, { timeout: 20000 });
-  const teamText = (p) => p.locator('.menu .item', { hasText: 'Team' }).first().locator('.choice').textContent();
+  const teamText = (p) => p.locator('.menu .item', { hasText: 'Team' }).first().locator('.choice .val').textContent();
   const cBefore = await teamText(c);
   await a.keyboard.press('KeyY');
   await a.waitForFunction(() => window.game.menus.screen === 'hangar', null, { timeout: 20000 });
@@ -50,13 +50,13 @@ check(true, 'Online opens and makes a squad of one');
   await a.keyboard.press('ArrowRight');
   await a.waitForFunction(([w]) => {
     const el = [...document.querySelectorAll('.menu .item')].find((x) => x.textContent.startsWith('Team'));
-    const t = el?.querySelector('.choice')?.textContent;
+    const t = el?.querySelector('.choice .val')?.textContent;
     return t && t !== w;
   }, [cBefore], { timeout: 20000 }).catch(() => {});
   const aAfter = await teamText(a);
   const followed = await c.waitForFunction((want) => {
     const el = [...document.querySelectorAll('.menu .item')].find((x) => x.textContent.startsWith('Team'));
-    return el?.querySelector('.choice')?.textContent === want && window.game.garageShown?.team === window.game.online.squadView.faction;
+    return el?.querySelector('.choice .val')?.textContent === want && window.game.garageShown?.team === window.game.online.squadView.faction;
   }, aAfter, { timeout: 20000 }).then(() => true, () => false);
   check(aAfter !== cBefore && followed, `a member's open hangar follows the leader's faction (${cBefore} -> ${aAfter})`);
   // A third: the buttons that still apply to a full squad.

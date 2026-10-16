@@ -1,6 +1,11 @@
 // Controller input. Gamepad first, keyboard as a full fallback. Produces the
 // MechInput the simulation wants, plus menu navigation and camera controls.
 import { BTN, emptyInput, type MechInput } from '../../sim/index';
+import { toggleFullscreen } from '../fullscreen';
+import type { TouchControls } from './touch';
+
+/** What was used last: the HUD and the menus show its buttons (touch: on-screen controls, no key glyphs). */
+export type Device = 'pad' | 'keys' | 'touch';
 
 /** One menu press. Presses are queued, so none are lost on a slow frame. */
 export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune' | 'look' | 'model' | 'rosterModel' | 'x' | 'y' | 'lb' | 'rb';
@@ -45,7 +50,9 @@ export class Input {
   /** Menu presses since the last consumeMenu(), in order. */
   private menu: MenuInput[] = [];
   /** Which device was touched last; the HUD shows matching button hints. */
-  device: 'pad' | 'keys' = 'keys';
+  device: Device = 'keys';
+  /** The on-screen controls, once the game has made them. */
+  private touchPad: TouchControls | null = null;
   padName = '';
   private keys = new Set<string>();
   /** Keys pressed since the last poll, so a tap shorter than a frame still counts. */
@@ -59,12 +66,18 @@ export class Input {
   private flickNext = 0;
   /** Buttons that were down when a menu closed: ignored until they are let go. */
   private swallow = 0;
-  onDeviceChange: (d: 'pad' | 'keys') => void = () => {};
+  onDeviceChange: (d: Device) => void = () => {};
   /** Called on the first key, click or button: browsers need a gesture before audio. */
   onFirstGesture: () => void = () => {};
   private gestured = false;
 
   constructor() {
+    // A phone or tablet starts out on its screen (a pad or keyboard takes over as soon as it is used).
+    try {
+      if (typeof matchMedia === 'function' && matchMedia('(hover: none) and (pointer: coarse)').matches) this.device = 'touch';
+    } catch {
+      /* no media queries here */
+    }
     const artReview = new URLSearchParams(location.search).get('artReview') === '1';
     window.addEventListener('keydown', (e) => {
       if (typing()) {
@@ -103,7 +116,13 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
-    window.addEventListener('pointerdown', () => this.gesture());
+    window.addEventListener('pointerdown', (e: Event) => {
+      this.gesture();
+      // A finger on the screen means touch controls; the mouse back means the keyboard.
+      const kind = (e as PointerEvent).pointerType;
+      if (kind === 'touch') this.touch('touch');
+      else if (kind === 'mouse' && this.device === 'touch') this.touch('keys');
+    }, { capture: true });
     window.addEventListener('gamepadconnected', (e) => {
       this.padName = e.gamepad.id;
       this.touch('pad');
@@ -112,12 +131,7 @@ export class Input {
 
   /** Full screen on and off. Some embedded views refuse it; that is fine. */
   private toggleFullscreen(): void {
-    try {
-      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-      else void document.documentElement.requestFullscreen().catch(() => {});
-    } catch {
-      /* not available here */
-    }
+    void toggleFullscreen();
   }
 
   private gesture(): void {
@@ -126,7 +140,19 @@ export class Input {
     this.onFirstGesture();
   }
 
-  private touch(d: 'pad' | 'keys'): void {
+  /** The on-screen controls: read in place of the pad and keys while the screen is what was used last. */
+  attachTouch(t: TouchControls): void {
+    this.touchPad = t;
+    t.onTouch = () => this.touch('touch');
+    t.onMenu = (p) => this.menu.push(p);
+  }
+
+  /** A press from outside the devices (a touch button, a tool). */
+  pushMenu(p: MenuInput): void {
+    this.menu.push(p);
+  }
+
+  private touch(d: Device): void {
     this.gesture();
     if (this.device !== d) {
       this.device = d;
@@ -242,6 +268,20 @@ export class Input {
       this.prevStickX = sx;
       this.prevStickY = sy;
       for (let i = 0; i < p.buttons.length; i++) this.prevPad[i] = b(i);
+    }
+
+    // ---- the screen
+    if (this.device === 'touch' && this.touchPad) {
+      const t = this.touchPad.read();
+      mx = t.mx;
+      my = t.my;
+      throttle = t.throttle;
+      brake = t.brake;
+      buttons = t.buttons;
+      cmd = t.cmd;
+      camX = 0;
+      camY = 0;
+      lookBack = false;
     }
 
     this.tapped = new Set();

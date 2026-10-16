@@ -10,8 +10,6 @@ import {
   CARVE_BURST,
   CARVE_TIERS,
   CLASSES,
-  CRITICAL_HP,
-  DRIVE_MAX,
   DT,
   LOCK_BREAK,
   MODE,
@@ -42,16 +40,19 @@ import type { Plate } from '../render/raceView';
 import { h, setClass, setText } from './dom';
 import { emblemUrl, pilotUrl } from './factionArt';
 import { COUNT, ICONS, type IconName } from './hudArt';
+import { Dash } from './dash';
+import type { Device } from '../input/input';
+import { frame } from '../video';
 
 const ORD = ['st', 'nd', 'rd', 'th', 'th', 'th'];
 const PHASE_NAMES = ['', 'Formation lap', 'Battle lap', 'Speed lap'];
 const TACTIC_LABEL = ['Free', 'Blitz', 'Run', 'Shield', 'Mark'];
 
-type Device = 'pad' | 'keys';
-
 const KEYS: Record<Device, Record<string, string>> = {
   pad: { accel: 'RT', brake: 'LT', carve: 'LT + stick', boost: 'A', dash: 'A', swing: 'LT + ◀▶ + A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'LT', swap: 'R stick ◀ ▶', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
   keys: { accel: 'W', brake: 'S', carve: 'S + A/D', boost: 'Space', dash: 'Space', swing: 'L + A/D + Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
+  // The on-screen buttons go by their names, and the HUD shows no keys for them (no hints bar, no plays diamond).
+  touch: { accel: '', brake: 'Carve', carve: 'Carve', boost: 'Boost', dash: 'Dash', swing: 'Guard + Dash', lock: '◎', ally: 'Escort', ability: '', x: 'Attack', y: 'Special', guard: 'Guard', swap: 'Switch', up: '', right: '', down: '', left: '', pause: '' },
 };
 
 /** Radio lines. {t} is replaced by a target's callsign. */
@@ -89,6 +90,20 @@ const ROLE_ICON: IconName[] = ['forward', 'midfielder', 'defender'];
 const TACTIC_ICON: Array<IconName | null> = [null, 'blitz', 'run', 'shield', 'mark'];
 const TELL_ICON: Record<TellKind, IconName> = { parry: 'parry', dodge: 'dodge', block: 'guard' };
 
+/**
+ * The ability the ability button would use now (the free-steering one, or
+ * the locked-on one), and whether it can: a Cell, weapons free, and for
+ * Overdrive the speed lap (rules.overdriveLap). The gauges and the touch
+ * button both show this.
+ */
+export function abilityShown(race: RaceState, me: MechState): { id: number; name: string; icon: IconName; ready: boolean; waiting: boolean } {
+  const ab = abilityFor(me, race);
+  const id = ab === -1 ? CLASSES[me.role].abilityFree : ab;
+  const waiting = id === ABILITY.OVERDRIVE && race.lapPhase < race.rules.overdriveLap;
+  const ready = ab !== -1 && !waiting && me.cells >= 1 && weaponsFree(race) && !me.retired && !me.finished;
+  return { id, name: ABILITIES[id].name, icon: ABILITY_ICON[id], ready, waiting };
+}
+
 /** A painted icon, in the colour of the text round it. */
 function icon(name: IconName | null = null): HTMLElement {
   const el = h('i.ico');
@@ -111,10 +126,6 @@ const liveryOf = (team: number) => LIVERIES[teamFactions[team]] ?? LIVERIES[0];
 /** A pilot's portrait, by faction and role. */
 function pilotOf(m: MechState): string {
   return pilotUrl(teamFactions[m.team] ?? 0, m.role);
-}
-
-function me0(race: RaceState, id: number): number {
-  return race.mechs[id]?.cells ?? 0;
 }
 
 function pick(list: string[], seed: number): string {
@@ -158,30 +169,14 @@ export class Hud {
   // top right
   private map = h<'canvas'>('canvas');
   private mapPath: Float32Array = new Float32Array(0);
-  // gauges
-  private armour = h('div.line.armour');
-  private armourFill = h('i.fill');
-  private armourGhost = h('i.ghost');
-  private armourVal = h('span.val', '');
-  private guardFill = h('i');
-  private drive = h('div.line.drive');
-  private driveFill = h('i');
-  private driveVal = h('span.val', '');
-  private cellsLine = h('div.line.cells');
-  private cellPips = h('div.pips');
-  private pipFills: HTMLElement[] = [];
-  private cellsVal = h('span.val', '');
-  private abilityTag = h('span.ability');
-  private abilityKey = h('span.key', 'B');
-  private abilityIco = icon();
-  private abilityName = h('span', '');
+  // the dash: speed, Drive, armour, guard, Cells and the ability (dash.ts)
+  private dash = new Dash();
   private chipAbilityIco = icon();
   private chipAbilityText = h('span', '');
   private chipAbility = h('span.chip.cell', this.chipAbilityIco, this.chipAbilityText);
   private chipSnaredText = h('span', 'Snared');
   private chipSnared = h('span.chip.snared', icon('snared'), this.chipSnaredText);
   private chipSling = h('span.chip.draft', icon('slingshot'), h('span', 'Slingshot'));
-  private lastCells = 0;
   private chipLocked = h('span.chip.locked', icon('weaponsLocked'), h('span', 'Weapons locked'));
   private chipModeIco = icon('lockedOn');
   private chipModeText = h('span', '');
@@ -210,12 +205,18 @@ export class Hud {
   private chargeFill = h('i');
   private chargeFade = 0;
   private chargeShown = 0;
+  /**
+   * The guard meter, under your mech where the charge meter goes: up while
+   * you guard and while it refills in a fight, lingering a moment after.
+   */
+  private guardBox = h('div.guardbar');
+  private guardLabel = h('span', 'Guard');
+  private guardFill = h('i');
+  private guardFade = 0;
+  /** Seconds the guard meter shows a break or a parry for. */
+  private guardFlash = 0;
   /** The tier the last carve reached, held through its burst. */
   private carveShown = 0;
-  // speed
-  private speedBox = h('div.speed');
-  private mph = h('span.mph', '0');
-  private limiter = h('div.limiter', 'Limiter 330');
   // tactics
   private tacticEls: HTMLElement[] = [];
   private tacticHub = h('div.hub', 'Team play');
@@ -281,16 +282,7 @@ export class Hud {
       this.matchLine,
       h('div.mapbox', this.map),
     );
-    this.armour.append(h('span.label', 'Armour'), h('div.bar', this.armourGhost, this.armourFill), this.armourVal);
-    this.drive.append(h('span.label', 'Drive'), h('div.bar', this.driveFill), this.driveVal);
-    this.abilityTag.append(this.abilityKey, this.abilityIco, this.abilityName);
-    this.cellsLine.append(h('span.label', 'Cells'), h('div.cellrow', this.cellPips, this.abilityTag), this.cellsVal);
-    R.append(
-      h('div.chips', this.chipLocked, this.chipMode, this.chipMomentum, this.chipAbility, this.chipSnared, this.chipCharge, this.chipDraft, this.chipSling, this.chipLink),
-      h('div.gauges', this.armour, h('div.line.guard', h('span.label', 'Guard'), h('div.bar', this.guardFill), h('span.val', '')), this.drive, this.cellsLine),
-      this.hints,
-    );
-    this.speedBox.append(h('div', this.mph, h('span.unit', 'mph')), this.limiter);
+    R.append(h('div.chips', this.chipLocked, this.chipMode, this.chipMomentum, this.chipAbility, this.chipSnared, this.chipCharge, this.chipDraft, this.chipSling, this.chipLink), this.hints);
     const segs = h('div.segs');
     for (let i = 0; i < CARVE_TIERS.length; i++) {
       const fill = h('i');
@@ -299,9 +291,11 @@ export class Hud {
       segs.append(h('div.seg', fill));
     }
     this.carve.append(this.carveLabel, segs);
-    R.append(this.carve, this.speedBox, this.awardFeed);
+    this.dash.hold(this.carve);
+    R.append(this.dash.root, this.awardFeed);
     this.chargeBox.append(this.chargeLabel, h('div.bar', this.chargeFill));
-    R.append(this.chargeBox);
+    this.guardBox.append(h('span.label', icon('guard'), this.guardLabel), h('div.bar', this.guardFill));
+    R.append(this.chargeBox, this.guardBox);
     const tact = h('div.tactics', this.tacticHub);
     for (const [cls, tac] of [['up', TACTIC.BLITZ], ['right', TACTIC.RUN], ['down', TACTIC.SHIELD], ['left', TACTIC.MARK]] as const) {
       const el = h('div.t.' + cls);
@@ -391,8 +385,6 @@ export class Hud {
       this.root.append(edge);
       this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnIco, warnText, warnKey: '', edge, edgeArrow, edgeIco, edgeLabel, edgeKey: '' });
     }
-    this.buildPips(race.rules.cellMax);
-    this.lastCells = me0(race, localId);
     this.comms.replaceChildren();
     this.pops.forEach((p) => p.el.remove());
     this.pops = [];
@@ -413,19 +405,6 @@ export class Hud {
 
   hide(): void {
     this.root.hidden = true;
-  }
-
-  /** One pip per whole Cell the rules allow (the tuning panel can change that mid-race). */
-  private buildPips(cellMax: number): void {
-    const n = Math.max(0, Math.min(6, Math.ceil(cellMax)));
-    if (n === this.pipFills.length) return;
-    this.cellPips.replaceChildren();
-    this.pipFills = [];
-    for (let i = 0; i < n; i++) {
-      const fill = h('i');
-      this.pipFills.push(fill);
-      this.cellPips.append(h('div.pip', fill));
-    }
   }
 
   /** One line under the score: which round of what, and how the match stands. */
@@ -562,7 +541,6 @@ export class Hud {
     this.frame++;
     setClass(this.root, 'anime', this.anime);
     const me = race.mechs[this.localId];
-    const c = CLASSES[me.role];
     const k = KEYS[this.device];
 
     // Place, lap, phase.
@@ -579,38 +557,9 @@ export class Hud {
     const secs = Math.max(0, race.tick * DT - 4);
     setText(this.clock, `${Math.floor(secs / 60)}:${(secs % 60).toFixed(1).padStart(4, '0')}`);
 
-    // Gauges.
-    const hpF = Math.max(0, me.hp / me.maxHp);
-    this.armourFill.style.transform = `scaleX(${hpF.toFixed(3)})`;
-    this.armourGhost.style.transform = `scaleX(${hpF.toFixed(3)})`;
-    setText(this.armourVal, String(Math.ceil(me.hp)));
-    setClass(this.armour, 'low', hpF < CRITICAL_HP && !me.retired);
-    this.guardFill.style.transform = `scaleX(${Math.max(0, me.guard / c.guardMax).toFixed(3)})`;
-    this.driveFill.style.transform = `scaleX(${(me.drive / DRIVE_MAX).toFixed(3)})`;
-    setText(this.driveVal, String(Math.floor(me.drive)));
-    setClass(this.drive, 'gain', me.onStrip || me.linked);
-
-    // Cells and the ability they pay for.
-    this.buildPips(race.rules.cellMax);
-    for (let i = 0; i < this.pipFills.length; i++) {
-      this.pipFills[i].style.transform = `scaleX(${Math.max(0, Math.min(1, me.cells - i)).toFixed(2)})`;
-    }
-    setText(this.cellsVal, String(Math.round(me.cells * 10) / 10));
-    if (me.cells > this.lastCells + 0.01) {
-      this.cellsLine.classList.remove('gain');
-      void this.cellsLine.offsetWidth;
-      this.cellsLine.classList.add('gain');
-    }
-    this.lastCells = me.cells;
-    const ab = abilityFor(me, race);
-    const shown = ab === -1 ? c.abilityFree : ab;
-    setText(this.abilityKey, k.ability);
-    // Overdrive waits for the speed lap (rules.overdriveLap).
-    const waiting = shown === ABILITY.OVERDRIVE && race.lapPhase < race.rules.overdriveLap;
-    setText(this.abilityName, waiting ? `${ABILITIES[shown].name} (speed lap)` : ABILITIES[shown].name);
-    setIcon(this.abilityIco, ABILITY_ICON[shown]);
-    setClass(this.abilityTag, 'ready', ab !== -1 && !waiting && me.cells >= 1 && weaponsFree(race) && !me.retired && !me.finished);
-
+    // The dash: speed, Drive, armour, guard, Cells and the ability they pay for.
+    const abl = abilityShown(race, me);
+    const shown = abl.id;
     // Chips.
     const battle = me.mode === MODE.BATTLE && me.target >= 0;
     this.chipLocked.hidden = !(race.phase === PHASE.RACING && race.lapPhase < 2);
@@ -657,6 +606,27 @@ export class Hud {
       setText(this.chargeLabel, this.chargeShown >= 1 ? `Charged +${Math.round(CHARGE_BONUS * 100)}%` : `Charge +${Math.round(CHARGE_BONUS * this.chargeShown * 100)}%`);
     }
 
+    // Guard meter: while guarding, while it refills in a fight, or showing a break or a parry.
+    {
+      const charging = this.chargeBox.classList.contains('on');
+      const gmax = CLASSES[me.role].guardMax;
+      const gF = Math.max(0, Math.min(1, me.guard / gmax));
+      const fighting = me.mode === MODE.BATTLE && me.target >= 0 && !me.retired && !me.finished;
+      this.guardFlash = Math.max(0, this.guardFlash - dt);
+      const want = !charging && !me.retired && (me.guarding || (fighting && gF < 0.995) || this.guardFlash > 0);
+      this.guardFade = want ? 0.7 : Math.max(0, this.guardFade - dt);
+      setClass(this.guardBox, 'on', want || (this.guardFade > 0 && !charging));
+      setClass(this.guardBox, 'low', gF < 0.35);
+      setClass(this.guardBox, 'up', me.guarding);
+      this.guardFill.style.transform = `scaleX(${gF.toFixed(3)})`;
+      this.placeUnderMech(plates[this.localId]);
+      if (this.guardFlash <= 0) {
+        setClass(this.guardBox, 'broken', false);
+        setClass(this.guardBox, 'parry', false);
+        setText(this.guardLabel, 'Guard');
+      }
+    }
+
     // Carve meter: up while carving, and through the burst after.
     const bursting = me.carveT > 0 && me.mode === MODE.SPEED;
     const carveOn = (me.carving || bursting) && !me.retired;
@@ -677,21 +647,13 @@ export class Hud {
     }
 
     // Speed and limiter.
-    setText(this.mph, String(Math.round(me.speed * MPH_PER_UNIT)));
-    setClass(this.speedBox, 'boost', me.boosting || bursting);
-    if (race.lapPhase >= 3) {
-      setText(this.limiter, 'Limiter off');
-      this.limiter.className = 'limiter off';
-    } else {
+    let limiter: { text: string; kind: '' | 'off' | 'pack' };
+    if (race.lapPhase >= 3) limiter = { text: 'Limiter off', kind: 'off' };
+    else {
       const bonus = packBonus(race, me);
-      if (bonus > 0.005) {
-        setText(this.limiter, `Limiter +${Math.round(bonus * 100)}% to catch the pack`);
-        this.limiter.className = 'limiter pack';
-      } else {
-        setText(this.limiter, `Limiter ${Math.round(limiterOf(race) * MPH_PER_UNIT)}`);
-        this.limiter.className = 'limiter';
-      }
+      limiter = bonus > 0.005 ? { text: frame.compact ? `Limiter +${Math.round(bonus * 100)}%` : `Limiter +${Math.round(bonus * 100)}% to catch the pack`, kind: 'pack' } : { text: `Limiter ${Math.round(limiterOf(race) * MPH_PER_UNIT)}`, kind: '' };
     }
+    this.dash.update(race, me, abl, k.ability, Math.round(me.speed * MPH_PER_UNIT), me.boosting || bursting, limiter);
 
     // Tactics.
     const tactic = race.teams[me.team].tactic;
@@ -699,17 +661,23 @@ export class Hud {
     setText(this.tacticHub, tactic === TACTIC.FREE ? 'Team play' : TACTIC_LABEL[tactic]);
 
     // Hints: only what matters right now.
-    const hintKey = `${this.device}|${me.retired ? 'r' : battle ? 'b' : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}|${shown}`;
+    // On a small or narrow screen, only the few that matter most (the Controls screen has the rest).
+    const compact = frame.compact || frame.narrow;
+    const hintKey = `${this.device}|${me.retired ? 'r' : battle ? 'b' : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}|${shown}|${compact ? 'c' : ''}`;
     if (hintKey !== this.hintKey) {
       this.hintKey = hintKey;
-      const items: Array<[string, string]> = [];
-      if (me.retired || me.finished) {
+      let items: Array<[string, string]> = [];
+      if (this.device === 'touch') {
+        // The buttons are labelled: nothing to hint.
+      } else if (me.retired || me.finished) {
         items.push([k.lock, 'Next camera'], [k.pause, 'Pause']);
       } else if (battle) {
         items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash'], [k.swing, 'Swing'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], [k.lock, 'Let go']);
+        if (compact) items = [items[0], items[2], items[3], items[7]];
       } else {
         items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.carve, 'Carve'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);
         if (race.lapPhase >= 2) items.push([k.x, 'Attack'], [k.ability, ABILITIES[shown].name]);
+        if (compact) items = race.lapPhase >= 2 ? [items[3], items[2], items[4], items[7]] : [items[3], items[2], items[4], items[5]];
       }
       this.hints.replaceChildren(...items.map(([key, label]) => h('span', h('span.key', key), label)));
     }
@@ -860,7 +828,8 @@ export class Hud {
         const row = this.rows[m.id];
         if (row.place !== m.place) {
           row.place = m.place;
-          row.el.style.transform = `translateY(${(m.place - 1) * 2.1}em)`;
+          // Each row slides to its place (the spacing is the layout's: see .tower .row).
+          row.el.style.setProperty('--i', String(m.place - 1));
           setText(row.pos, String(m.place));
         }
         row.hp.style.transform = `scaleX(${Math.max(0, m.hp / m.maxHp).toFixed(2)})`;
@@ -913,6 +882,40 @@ export class Hud {
         this.onCritical();
       }
     }
+  }
+
+  /**
+   * The guard and charge meters hang just under your mech's feet (the body's
+   * centre mirrored from the head), kept clear of the bottom of the screen.
+   * With touch controls they stack over the dash instead (styles.css).
+   */
+  private placeUnderMech(p: Plate | undefined): void {
+    const boxes = [this.guardBox, this.chargeBox];
+    if (this.device === 'touch' || !p || !p.visible || !(boxes[0].classList.contains('on') || boxes[1].classList.contains('on'))) {
+      if (this.device === 'touch') for (const b of boxes) b.style.left = b.style.top = '';
+      return;
+    }
+    const H = this.root.clientHeight || window.innerHeight;
+    const W = this.root.clientWidth || window.innerWidth;
+    const em = frame.em;
+    const feet = p.cy + (p.cy - p.y) * 0.92;
+    const top = Math.max(H * 0.42, Math.min(H - (frame.compact ? 6.6 : 9.4) * em, feet + 0.3 * em));
+    // Level with the dash in the corner, it stays to the dash's left.
+    const [dashW, dashH, half, tall] = frame.compact ? [19.9, 8.4, 5.3, 2.3] : [27.1, 11.6, 6.2, 2.7];
+    const beside = top + tall * em > H - dashH * em;
+    const left = Math.max(8 * em, Math.min(W - (beside ? dashW + half + 0.6 : 8) * em, p.cx));
+    for (const b of boxes) {
+      b.style.left = `${left.toFixed(0)}px`;
+      b.style.top = `${top.toFixed(0)}px`;
+    }
+  }
+
+  /** The guard meter shows a break or a parry for a moment. */
+  private flashGuard(kind: 'broken' | 'parry', text: string): void {
+    this.guardFlash = kind === 'broken' ? 1.1 : 0.45;
+    setClass(this.guardBox, 'broken', kind === 'broken');
+    setClass(this.guardBox, 'parry', kind === 'parry');
+    setText(this.guardLabel, text);
   }
 
   // ---- messages -----------------------------------------------------------
@@ -1167,10 +1170,16 @@ export class Hud {
         if (e.mech === this.localId) this.showNotice('Back on the road', false, 1.2);
         break;
       case 'parry':
-        if (e.mech === this.localId) this.showNotice('Parry');
+        if (e.mech === this.localId) {
+          this.showNotice('Parry');
+          this.flashGuard('parry', 'Parry');
+        }
         break;
       case 'guardBreak':
-        if (e.mech === this.localId) this.showNotice('Guard broken', true);
+        if (e.mech === this.localId) {
+          this.showNotice('Guard broken', true);
+          this.flashGuard('broken', 'Guard broken');
+        }
         else if (e.by === this.localId) this.showNotice('Guard break');
         break;
       case 'escape':

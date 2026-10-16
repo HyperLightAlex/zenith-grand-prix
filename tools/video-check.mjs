@@ -23,7 +23,9 @@ await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefi
 await page.locator('.menu .item', { hasText: 'Video' }).click();
 await page.waitForFunction(() => window.game.menus.screen === 'video');
 const items = await page.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
-check(items.length === 5, `the Video screen: ${items.join(' / ')}`);
+// Five settings and Done; Full screen only where the browser allows it.
+const full = items.some((t) => t.startsWith('Full screen'));
+check(items.length === (full ? 6 : 5) && items[items.length - 1] === 'Done', `the Video screen: ${items.join(' / ')}`);
 await page.waitForTimeout(2500);
 if (out) await page.screenshot({ path: `${out}/video-plain.png` });
 const click = (label) => page.locator('.menu .item', { hasText: label }).click();

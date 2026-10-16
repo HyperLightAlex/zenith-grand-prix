@@ -50,6 +50,31 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
   ],
 ];
 
+/** The same controls on the touch screen, by the rows' labels ('' for one with no touch control). */
+const TOUCH: Record<string, string> = {
+  Steer: 'Left thumb, anywhere on the left',
+  Accelerate: 'Held for you',
+  Brake: 'Carve (tap)',
+  'Carve (hold through a corner, let go to burst)': 'Hold Carve + steer',
+  'Boost (uses Drive)': 'Boost',
+  'Ability (uses a Cell)': 'Ability',
+  Pause: 'Pause, top right',
+  'Lock on / let go': 'Lock on / Let go',
+  'Move around the target': 'Left thumb',
+  Attack: 'Attack',
+  Special: 'Special',
+  'Guard (tap late to parry)': 'Guard',
+  Dash: 'Dash',
+  'Guard swing: arc round your target': 'Hold Guard, steer, Dash',
+  'Ability (a different one)': 'Ability',
+  'Switch target': 'Switch',
+  'Escort a teammate': 'Escort',
+  'Blitz: everyone attacks': 'Team, then Blitz',
+  'Run: avoid fights, race': 'Team, then Run',
+  'Shield: protect our forward': 'Team, then Shield',
+  'Mark: all on my target': 'Team, then Mark',
+};
+
 export const BACK = { pad: 'B', keys: 'Esc', label: 'Back', press: 'back' as const };
 export const SELECT = { pad: 'A', keys: 'Enter', label: 'Select', press: 'confirm' as const };
 export const CHANGE = { pad: '◀ ▶', keys: '← →', label: 'Change' };
@@ -80,12 +105,16 @@ export function registerCommon(m: Menus, g: Game): void {
       col.append(
         h('div.logo', h('div.a', 'ZENITH'), h('div.b', 'GRAND PRIX'), h('div.rule'), art(LOGO.url, 'img.logo-art', 'Zenith Grand Prix')),
         h('div.tagline', 'Three mechs a side. Three laps. First across the line takes fifteen points, and nobody said you had to let them get there.'),
-        h('div.press', m.key('A', 'Enter'), 'Start'),
+        h('div.press', m.key('A', 'Enter'), m.device === 'touch' ? 'Tap to start' : 'Start'),
       );
       if (m.device === 'pad') col.append(h('div.sound-hint', 'On a gamepad? Click the page once so the browser lets the sound through.'));
       const build = typeof __BUILD__ === 'string' && __BUILD__ !== 'dev' ? `Build ${__BUILD__}. ` : '';
-      m.root.append(art(COVER, 'img.cover', ''), h('div.shade.title'), col, h('div.small-print', `${build}Grand Prix, Free Play and online rooms.`));
-      m.root.onclick = () => m.handle(['confirm']);
+      m.root.append(art(COVER, 'img.cover', ''), h('div.shade.title'), m.panes(col), h('div.small-print', `${build}Grand Prix, Free Play and online rooms.`));
+      m.root.onclick = () => {
+        // On a phone the browser's bars take a lot of a small screen: starting by touch goes full screen.
+        g.enterFullscreenFromTap();
+        m.handle(['confirm']);
+      };
       // Confirm anywhere on the title: an invisible item takes it.
       m.addItem(h('div'), h('div'), () => m.push('modes'));
     },
@@ -105,33 +134,45 @@ export function registerCommon(m: Menus, g: Game): void {
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
       m.button(list, 'Video', () => m.push('video'), { key: 'video', note: 'Panel lines, CRT screen, animation, screen shape' });
       col.append(h('h1', 'Play'), list);
-      m.root.append(h('div.shade'), col, m.footer(SELECT, BACK));
+      m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, BACK));
     },
     back: () => g.showTitle(),
   });
 
   m.register('controls', {
     render(m) {
-      const box = h('div.controls', h('h1', 'Controls'), h('p', 'Free steering while you race. Lock on and the track carries you, so the stick moves you around your target instead.'));
-      const grid = h('div.grid');
+      const touch = m.device === 'touch';
+      const box = h(
+        'div.controls',
+        h('h1', 'Controls'),
+        h('p', touch ? 'Steer with your left thumb anywhere on the left of the screen: the throttle is held for you. The buttons under your right thumb change when you lock on.' : 'Free steering while you race. Lock on and the track carries you, so the stick moves you around your target instead.'),
+      );
+      const grid = h('div.grid' + (touch ? '.touch' : ''));
       const left = h('div');
       const right = h('div');
       const keycaps = (text: string) => h('span.keys', ...(text ? text.split(' ').map((part) => (/^(stick|up|down|left|right)$/i.test(part) ? h('span.word', part) : h('span.key', part))) : ['']));
       CONTROLS.forEach(([title, rows], i) => {
         const into = i === 0 ? left : right;
         into.append(h('h2', title));
-        if (i < 2) into.append(h('div.rowc.head', h('span', ''), h('span', 'Gamepad'), h('span', 'Keyboard')));
-        for (const [label, pad, keys] of rows) into.append(h('div.rowc', h('span', label), keycaps(pad), keycaps(keys)));
+        if (i < 2) into.append(h('div.rowc.head', h('span', ''), h('span', touch ? 'Touch' : 'Gamepad'), h('span', touch ? 'Gamepad' : 'Keyboard')));
+        for (const [label, pad, keys] of rows) {
+          if (touch) {
+            const t = TOUCH[label];
+            if (t === undefined) continue;
+            into.append(h('div.rowc', h('span', label), h('span.keys', h('span.word', t || '–')), keycaps(pad)));
+          } else into.append(h('div.rowc', h('span', label), keycaps(pad), keycaps(keys)));
+        }
       });
       grid.append(left, right);
       box.append(grid);
-      m.root.append(h('div.shade.full'), box, m.footer(BACK));
+      m.root.append(h('div.shade.full'), m.panes(box), m.footer(BACK));
     },
   });
 
   m.register<DialogData>('dialog', {
     render(m, d) {
       const box = h('div.dialog');
+      box.dataset.scroll = '';
       box.append(h('h2', d.title));
       if (d.text) box.append(typeof d.text === 'string' ? h('p', d.text) : d.text);
       const list = h('div.list');
@@ -148,6 +189,7 @@ export function registerCommon(m: Menus, g: Game): void {
   m.register<EntryData & { error?: string; busy?: boolean; shift?: boolean }>('entry', {
     render(m, d) {
       const box = h('div.entry');
+      box.dataset.scroll = '';
       box.append(h('h2', d.title));
       if (d.hint) box.append(h('p', d.hint));
       const input = h<'input'>('input.field');
@@ -204,18 +246,25 @@ export function registerCommon(m: Menus, g: Game): void {
         }
       };
       (box as HTMLElement & { submit?: () => void }).submit = submit;
-      // Typing goes straight into the field on a keyboard.
+      // Enter in the field (a keyboard's, or the phone's own) is Done.
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          void submit();
+        }
+      });
+      // Typing goes straight into the field on a keyboard; on a phone a tap on
+      // it brings up the phone's own keyboard, so the pad's grid stands aside.
       if (m.device === 'keys') {
         requestAnimationFrame(() => {
           input.focus();
           input.setSelectionRange(input.value.length, input.value.length);
         });
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            void submit();
-          }
-        });
+        m.focus('done');
+      }
+      if (m.device === 'touch') {
+        grid.hidden = true;
+        input.enterKeyHint = 'done';
         m.focus('done');
       }
     },

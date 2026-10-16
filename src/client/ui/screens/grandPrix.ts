@@ -103,7 +103,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
         }
       }
       col.append(h('div.context', 'Grand Prix'), h('h1', 'Grand Prix'), h('p', 'Difficulty sets the rival pilots. It applies to a new cup or season; one under way keeps its own.'), list);
-      m.root.append(h('div.shade'), col, m.footer(SELECT, CHANGE, BACK));
+      m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, CHANGE, BACK));
     },
   });
 
@@ -135,7 +135,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       m.button(list, 'Hangar', () => g.openGpHangar(d.kind), { key: 'hangar' });
       col.append(list);
       const side = h('div.panel.standings', h('h2', ev.current > 0 ? `Standings after ${ev.kind === 'cup' ? 'round' : 'matchday'} ${ev.current}` : 'Standings'), gpTable(ev, ev.current - 1));
-      m.root.append(h('div.shade'), col, side, m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
+      m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
     },
     press(m, key, d) {
       if (key === 'y') {
@@ -165,7 +165,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       m.button(list, ready ? (last ? 'Final standings' : 'Continue') : 'Waiting for the other races…', () => (ready ? g.gpAdvance(d.kind) : m.toast('The other races are still running')), { key: 'go', go: ready });
       col.append(list);
       const side = h('div.panel.standings', h('h2', 'Standings'), gpTable(ev, ev.current));
-      m.root.append(h('div.shade.full'), col, side, m.footer(SELECT));
+      m.root.append(h('div.shade.full'), m.panes(col, side), m.footer(SELECT));
     },
     back() {},
   });
@@ -190,7 +190,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       m.button(list, 'Back to Grand Prix', () => g.finishGp(d.kind), { key: 'done', go: true });
       col.append(list);
       const side = h('div.panel.standings', h('h2', 'Final standings'), gpTable(ev, ev.rounds.length - 1));
-      m.root.append(h('div.shade.full'), col, side, m.footer(SELECT));
+      m.root.append(h('div.shade.full'), m.panes(col, side), m.footer(SELECT));
     },
     back: () => {},
   });

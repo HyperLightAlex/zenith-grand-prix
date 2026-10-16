@@ -62,7 +62,7 @@ export function registerOnline(m: Menus, g: Game): void {
       col.append(h('div.context', 'Online'), h('h1', 'Online'));
       if (!o.available) {
         col.append(h('p', 'Online play needs the game opened from its server, not this saved copy. Open it from the address you were given.'));
-        m.root.append(h('div.shade'), col, m.footer(BACK));
+        m.root.append(h('div.shade'), m.panes(col), m.footer(BACK));
         return;
       }
       if (g.onlineStatus) col.append(h('p.status', g.onlineStatus));
@@ -108,7 +108,7 @@ export function registerOnline(m: Menus, g: Game): void {
       }
       const panel = h('div.panel.squad', h('h2', members.length > 1 ? `Your squad · ${factionName(LIVERIES[faction])}` : 'Your squad'), bays);
       if (sq) panel.append(h('div.match-blurb', members.length > 1 ? `Squad code ${sq.code}. Pick your frame in the hangar (Y); in a room, Ready locks it in. ${lead ? 'You lead: you pick the faction and take everyone into rooms.' : 'Your leader picks the faction and takes everyone into rooms.'}` : `Squad code ${sq.code}. Invite friends to fly with you: a squad stays together on one team.`));
-      m.root.append(h('div.shade'), col, panel, m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
+      m.root.append(h('div.shade'), m.panes(col, panel), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
     },
     press(m, key) {
       if (key === 'y') {
@@ -126,7 +126,7 @@ export function registerOnline(m: Menus, g: Game): void {
       const o = g.online;
       const v = o.lobby;
       if (!v) {
-        m.root.append(h('div.shade'), h('div.col', h('h1', 'Room'), h('p', g.onlineStatus || 'Joining…')), m.footer(BACK));
+        m.root.append(h('div.shade'), m.panes(h('div.col', h('h1', 'Room'), h('p', g.onlineStatus || 'Joining…'))), m.footer(BACK));
         return;
       }
       const me = v.players.find((p) => p.pid === o.pid);
@@ -154,7 +154,7 @@ export function registerOnline(m: Menus, g: Game): void {
         const head = h(
           'div.side-head' + (why ? '' : '.pick'),
           emblem(s.faction),
-          h('b', h('i.arrow', '‹'), factionName(LIVERIES[s.faction]), h('i.arrow', '›')),
+          h('b', h('i.arr.l', '‹'), factionName(LIVERIES[s.faction]), h('i.arr.r', '›')),
           h('span', captain ? `Captain: ${captain.callsign}` : 'Computer pilots'),
         );
         m.addItem(colEl, head, () => step(1), (dir) => step(dir), { key: `faction-${side}`, locked: why });
@@ -260,7 +260,7 @@ export function registerOnline(m: Menus, g: Game): void {
       }
       if (!inMatch) extra.push(h('div.room-hint', `Pick a frame on either team to fly it; Ready locks it in, and the first to lock a frame keeps it.${host ? " As host you set both teams' factions: pick a team's name." : me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
       const col = h('div.room', top, sides, ...extra, h('div.bottom', panel, h('div.panel.actions-panel', list)));
-      m.root.append(h('div.shade.full'), col, m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your frame', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
+      m.root.append(h('div.shade.full'), m.panes(col), m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your frame', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
     },
     press(m, key) {
       const o = g.online;

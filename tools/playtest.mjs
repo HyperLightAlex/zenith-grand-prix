@@ -88,8 +88,9 @@ await ticks(8);
 m = await mine();
 // Overdrive waits for the speed lap (rules.overdriveLap): refused, Cell kept.
 check(m.overdriveT === 0 && m.cells === 3, `Overdrive refused on the battle lap, Cell kept (timer ${m.overdriveT}, cells ${m.cells})`);
-const tag = await page.evaluate(() => [...document.querySelectorAll('.ui *')].map((e) => e.childElementCount === 0 ? e.textContent : '').find((t) => t && t.startsWith('Overdrive')) ?? '');
-check(tag === 'Overdrive (speed lap)', `the HUD says when it opens (${tag})`);
+// The ability's name on the dash, beside the Cells.
+const tag = await page.evaluate(() => document.querySelector('.hud .dash-ability > span:last-child')?.textContent ?? '');
+check(tag === 'Overdrive (lap 3)', `the HUD says when it opens (${tag})`);
 await ticks(30);
 await shot('4-overdrive-waits');
 // Lock on and break away.
