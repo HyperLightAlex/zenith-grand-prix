@@ -25,7 +25,7 @@ import { TELL_COLOR, tellOf, type TellKind } from '../game/tells';
 import type { Feel } from '../game/tuning';
 import { CameraRig } from './cameraRig';
 import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
-import { MUZZLE_EDGE, RAM_TIP, WALL_EDGE } from './sprites';
+import { DEPTH, MUZZLE_EDGE, RAM_TIP, WALL_EDGE, wide } from './sprites';
 import { MechAnimator } from './mech/animate';
 import { buildFrame } from './mech/frames';
 import { drawClock, drawingStep, look, markCharacter } from './look';
@@ -452,7 +452,7 @@ export class RaceView {
       // road round a mech in Overdrive, in gold.
       v.crackleT = Math.max(0, v.crackleT - dt);
       if (!m.retired && (m.snareT > 0 || v.crackleT > 0)) {
-        this.fx.drawnKeep(`bracket${m.id}`, 'crackle', v.pos, 13, { row: 0, tint: m.snareT > 0 ? COLORS.snare : v.livery.glow, gain: 1.3 });
+        this.fx.drawnKeep(`bracket${m.id}`, 'crackle', v.pos, 13, { row: 0, tint: m.snareT > 0 ? COLORS.snare : v.livery.glow, gain: 1.3, depth: DEPTH.AROUND });
       }
       if (surge) {
         trackMatrix(track, v.s, v.d, v.h + 0.2, 0, m4);
@@ -462,7 +462,7 @@ export class RaceView {
       }
       // A staggered mech shorting out round its head and shoulders.
       if (!m.retired && m.act === ACT.STAGGER) {
-        this.fx.drawnKeep(`stun${m.id}`, 'stun', v.pos, CLASSES[m.role].radius * 3.4, { tint: 0xfff0a0, gain: 1.3 });
+        this.fx.drawnKeep(`stun${m.id}`, 'stun', v.pos, CLASSES[m.role].radius * 3.4, { tint: 0xfff0a0, gain: 1.3, depth: DEPTH.AROUND });
       }
       // The ram's prow: its bow shock ahead of the mech, once the charge's
       // own first drawings have played.
@@ -586,6 +586,7 @@ export class RaceView {
         const size = (CLASSES[m.role].radius + 1.2) * this.feel.tells;
         if (this.fx.tell(t.key, v.pos, size, color, Math.max(0, t.left - alpha), t.now, strong)) {
           // The glint: a hard little star at the head as the blow is committed.
+          // Part of the warning, so like the tell ring it shows through anything.
           v1.copy(v.pos);
           v1.y += v.rig.dims.height * 0.35;
           this.fx.flash(v1, strong ? 7 : 4.5, color, 0.22, v.rig.root);
@@ -721,23 +722,24 @@ export class RaceView {
     if (attack === ATK.FW_LANCE) {
       trackPoint(track, v.s + Math.cos(v.facing) * 6, v.d + Math.sin(v.facing) * 6, 4.6, v1);
       trackDir(track, v.s, Math.cos(v.facing), Math.sin(v.facing), v3);
-      return this.fx.drawnSprite('lance', v1, 18, { tint: color, follow: v.rig.root, dir: v3, gain: 1.3 });
+      // A thrust out ahead: behind the mech's own body when it points away.
+      return this.fx.drawnSprite('lance', v1, 18, { tint: color, follow: v.rig.root, dir: v3, gain: 1.3, depth: DEPTH.ON_MECH });
     }
     if (attack === ATK.MF_KICK) {
       trackPoint(track, v.s, v.d, 4.8, v1);
-      return this.fx.drawnSprite('kick', v1, 11, { tint: color, follow: v.rig.root, roll: tilt, flip: v.cut % 2 === 1, gain: 1.25 });
+      return this.fx.drawnSprite('kick', v1, 11, { tint: color, follow: v.rig.root, roll: tilt, flip: v.cut % 2 === 1, gain: 1.25, depth: DEPTH.AROUND });
     }
     if (attack === ATK.DF_HAMMER1 || attack === ATK.DF_HAMMER2) {
       // Brought down in front of the mech.
       trackPoint(track, v.s + Math.cos(v.facing) * 2, v.d + Math.sin(v.facing) * 2, 6, v1);
-      return this.fx.drawnSprite('hammer', v1, attack === ATK.DF_HAMMER2 ? 17 : 15, { tint: color, follow: v.rig.root, flip: v.cut % 2 === 1, gain: 1.25 });
+      return this.fx.drawnSprite('hammer', v1, attack === ATK.DF_HAMMER2 ? 17 : 15, { tint: color, follow: v.rig.root, flip: v.cut % 2 === 1, gain: 1.25, depth: DEPTH.AROUND });
     }
     trackPoint(track, v.s, v.d, 4.8, v1);
     const size = atk.heavy ? 13 : 10;
     if (atk.heavy) {
-      return this.fx.drawnSprite('cutHeavy', v1, size, { tint: color, follow: v.rig.root, roll: tilt, flip: v.cut % 2 === 1, gain: 1.2 });
+      return this.fx.drawnSprite('cutHeavy', v1, size, { tint: color, follow: v.rig.root, roll: tilt, flip: v.cut % 2 === 1, gain: 1.2, depth: DEPTH.AROUND });
     }
-    return this.fx.drawnSprite('cutLight', v1, size, { tint: color, follow: v.rig.root, roll: tilt, row: v.cut % 2, gain: 1.2 });
+    return this.fx.drawnSprite('cutLight', v1, size, { tint: color, follow: v.rig.root, roll: tilt, row: v.cut % 2, gain: 1.2, depth: DEPTH.AROUND });
   }
 
   /** A ring painted flat on the road under a mech (the anime look), or false in the plain look. */
@@ -746,7 +748,7 @@ export class RaceView {
     trackMatrix(track, v.s, v.d, 0.15, 0, m4);
     m4.decompose(v1, flatQ, v2);
     flatQ.multiply(layFlat);
-    return this.fx.drawnSprite('groundRing', v1, size, { tint: color, flat: flatQ, roll: Math.random() * Math.PI * 2, gain: 1.2 });
+    return this.fx.drawnSprite('groundRing', v1, size, { tint: color, flat: flatQ, roll: Math.random() * Math.PI * 2, gain: 1.2, depth: true });
   }
 
   /**
@@ -762,7 +764,7 @@ export class RaceView {
     // that far off the barrier, toward the road.
     trackPoint(track, v.s, face - side * (0.5 - WALL_EDGE) * size, h, v1);
     v2.copy(v.vel).multiplyScalar(0.5);
-    if (!this.fx.drawnSprite('wall', v1, size, { tint: color, dir: v3, vel: v2, gain: 1.3 })) return false;
+    if (!this.fx.drawnSprite('wall', v1, size, { tint: color, dir: v3, vel: v2, gain: 1.3, depth: DEPTH.ON_MECH })) return false;
     trackPoint(track, v.s, face - side * size * 0.15, h, v1);
     this.fx.drawnSprite('smoke', v1, size * 0.5, { row: 0, tint: this.dust, vel: v2, delay: 2, flip: side > 0, depth: true });
     return true;
@@ -813,7 +815,7 @@ export class RaceView {
       v4.copy(cam.position).addScaledVector(v2, k);
       size *= k;
     }
-    const o = { row: key ? 1 : 0, tint: 0xffa030, dir: v3, gain: 1.3, depth: away > 0.5, follow: key ? null : v.rig.root };
+    const o = { row: key ? 1 : 0, tint: 0xffa030, dir: v3, gain: 1.3, depth: DEPTH.ON_MECH, follow: key ? null : v.rig.root };
     return key ? this.fx.drawnKeep(key, 'ram', v4, size, o) : this.fx.drawnSprite('ram', v4, size, o);
   }
 
@@ -859,7 +861,7 @@ export class RaceView {
     if (v.rig.barrelDir(v4) && v4.dot(v3) > 0.5) v3.copy(v4);
     const size = scatter ? 7 : 6;
     v.rig.muzzle.getWorldPosition(v1).addScaledVector(v3, (0.5 - MUZZLE_EDGE) * size);
-    return this.fx.drawnSprite('muzzle', v1, size, { row: scatter ? 1 : 0, tint: v.livery.glow, follow: v.rig.root, dir: v3, gain: 1.3 });
+    return this.fx.drawnSprite('muzzle', v1, size, { row: scatter ? 1 : 0, tint: v.livery.glow, follow: v.rig.root, dir: v3, gain: 1.3, depth: DEPTH.ON_MECH });
   }
 
   /** React to something the simulation reported. */
@@ -886,7 +888,7 @@ export class RaceView {
           v.shieldFlash = 1;
           this.fx.burst(v1, v.vel, 8, 26, v.livery.glow, 0.4, 0.3);
           // Drawn: a spark in the blocker's colour.
-          if (!this.fx.drawnSprite('spark', v1, 6, { tint: v.livery.glow, follow: v.rig.root, roll: spin, flip: mirror, gain: 1.25 })) this.fx.flash(v1, 4.5, v.livery.glow, 0.14, v.rig.root, true);
+          if (!this.fx.drawnSprite('spark', v1, 6, { tint: v.livery.glow, follow: v.rig.root, roll: spin, flip: mirror, gain: 1.25, depth: DEPTH.AROUND })) this.fx.flash(v1, 4.5, v.livery.glow, 0.14, v.rig.root, true, DEPTH.AROUND);
         } else {
           const melee = atk.kind === 'melee';
           const wc = weaponColor(e.attack);
@@ -894,17 +896,17 @@ export class RaceView {
           // Drawn: the heavy impact for a big blow (in the heat's colour for a
           // momentum strike), a hit spark for the rest, gunfire's smaller.
           const drawn = big || surge
-            ? this.fx.drawnSprite('impact', v1, surge ? 14 : 11, { tint: surge ? HOT_HEX : wc, follow: v.rig.root, gain: 1.4, roll: spin, flip: mirror })
-            : this.fx.drawnSprite('spark', v1, melee ? 6.5 : 4, { tint: wc, follow: v.rig.root, roll: spin, flip: mirror, gain: 1.25 });
+            ? this.fx.drawnSprite('impact', v1, surge ? 14 : 11, { tint: surge ? HOT_HEX : wc, follow: v.rig.root, gain: 1.4, roll: spin, flip: mirror, depth: DEPTH.AROUND })
+            : this.fx.drawnSprite('spark', v1, melee ? 6.5 : 4, { tint: wc, follow: v.rig.root, roll: spin, flip: mirror, gain: 1.25, depth: DEPTH.AROUND });
           if (!drawn) {
-            this.fx.flash(v1, big ? 8.5 : melee ? 5.5 : 3.2, melee ? 0xfff2c8 : wc, big ? 0.2 : 0.12, v.rig.root);
-            if (big) this.fx.flash(v1, 7, 0xffffff, 0.28, v.rig.root, true);
+            this.fx.flash(v1, big ? 8.5 : melee ? 5.5 : 3.2, melee ? 0xfff2c8 : wc, big ? 0.2 : 0.12, v.rig.root, false, DEPTH.AROUND);
+            if (big) this.fx.flash(v1, 7, 0xffffff, 0.28, v.rig.root, true, DEPTH.AROUND);
           }
         }
         if (surge) {
-          if (!this.fx.drawnSprite('ring', v1, 16, { tint: HOT_HEX, follow: v.rig.root, gain: 1.3, roll: spin })) {
-            this.fx.flash(v1, 13, HOT_HEX, 0.3, v.rig.root, true);
-            this.fx.flash(v1, 10, 0xffe6c0, 0.18, v.rig.root);
+          if (!this.fx.drawnSprite('ring', v1, 16, { tint: HOT_HEX, follow: v.rig.root, gain: 1.3, roll: spin, depth: wide(16) })) {
+            this.fx.flash(v1, 13, HOT_HEX, 0.3, v.rig.root, true, wide(13));
+            this.fx.flash(v1, 10, 0xffe6c0, 0.18, v.rig.root, false, DEPTH.AROUND);
           }
           this.fx.burst(v1, v.vel, 40, 70, HOT_HEX, 0.6, 0.5);
         }
@@ -931,9 +933,9 @@ export class RaceView {
         v.shieldFlash = 1.6;
         trackPoint(track, v.s, v.d, 4.4, v1);
         // Drawn: the glint, clean and geometric, so a parry never reads as a hit.
-        if (!this.fx.drawnSprite('parry', v1, 13, { tint: v.livery.glow, follow: v.rig.root, gain: 1.45 })) {
-          this.fx.flash(v1, 12, 0xffffff, 0.28, v.rig.root, true);
-          this.fx.flash(v1, 9, v.livery.glow, 0.2, v.rig.root);
+        if (!this.fx.drawnSprite('parry', v1, 13, { tint: v.livery.glow, follow: v.rig.root, gain: 1.45, depth: DEPTH.AROUND })) {
+          this.fx.flash(v1, 12, 0xffffff, 0.28, v.rig.root, true, DEPTH.AROUND);
+          this.fx.flash(v1, 9, v.livery.glow, 0.2, v.rig.root, false, DEPTH.AROUND);
         }
         this.fx.burst(v1, v.vel, 30, 60, 0xffffff, 0.5, 0.4);
         if (e.mech === local || e.attacker === local) {
@@ -948,7 +950,7 @@ export class RaceView {
       case 'guardBreak': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 4.4, v1);
-        if (!this.fx.drawnSprite('impact', v1, 14, { tint: 0xff5a3c, follow: v.rig.root, gain: 1.4, roll: Math.random() * Math.PI * 2 })) this.fx.flash(v1, 13, 0xff5a3c, 0.3, v.rig.root, true);
+        if (!this.fx.drawnSprite('impact', v1, 14, { tint: 0xff5a3c, follow: v.rig.root, gain: 1.4, roll: Math.random() * Math.PI * 2, depth: DEPTH.AROUND })) this.fx.flash(v1, 13, 0xff5a3c, 0.3, v.rig.root, true, DEPTH.AROUND);
         this.fx.burst(v1, v.vel, 40, 55, v.livery.glow, 0.6, 0.55);
         if (e.mech === local || e.by === local) {
           this.cam.shake(0.7);
@@ -966,8 +968,8 @@ export class RaceView {
         this.trackVis.pulseWall(e.s, e.face, hard * this.feel.wallPulse, true);
         if (!this.wallStrike(v, e.face, e.side, 3.2 + v.h, 16, 0xff6ab0)) {
           trackPoint(track, v.s, e.face - e.side * 0.3, 3.2 + v.h, v1);
-          this.fx.flash(v1, 16, 0xff6ab0, 0.32);
-          this.fx.flash(v1, 11, 0xffffff, 0.2, null, true);
+          this.fx.flash(v1, 16, 0xff6ab0, 0.32, null, false, DEPTH.ON_MECH);
+          this.fx.flash(v1, 11, 0xffffff, 0.2, null, true, DEPTH.ON_MECH);
         }
         trackPoint(track, v.s, e.face - e.side * 0.3, 3.2 + v.h, v1);
         trackDir(track, v.s, 0.2, -e.side, v3);
@@ -988,11 +990,11 @@ export class RaceView {
         if (this.fx.explosion(v1, v.vel, 28)) {
           // The anime look: the painted explosion (flash, fireball, smoke
           // closing over it and breaking up), with a shock ring and sparks.
-          this.fx.flash(v1, 20, 0xff8a30, 0.5, v.rig.root, true);
+          this.fx.flash(v1, 20, 0xff8a30, 0.5, v.rig.root, true, wide(20));
           this.fx.burst(v1, v.vel, 40, 80, 0xffa040, 0.8, 0.9);
         } else {
-          this.fx.flash(v1, 26, 0xffffff, 0.45, v.rig.root);
-          this.fx.flash(v1, 20, 0xff8a30, 0.6, v.rig.root, true);
+          this.fx.flash(v1, 26, 0xffffff, 0.45, v.rig.root, false, wide(26));
+          this.fx.flash(v1, 20, 0xff8a30, 0.6, v.rig.root, true, wide(20));
           this.fx.burst(v1, v.vel, 90, 80, 0xffa040, 0.8, 0.9);
           this.fx.puff(v1, v.vel, 12, 0x2b2b33, 3.5, 1.8);
         }
@@ -1035,7 +1037,7 @@ export class RaceView {
         const scatter = ATTACKS[e.attack].shot!.pellets > 1;
         if (!this.drawnMuzzle(v, e.mech, e.proj, scatter)) {
           v.rig.muzzle.getWorldPosition(v1);
-          this.fx.flash(v1, scatter ? 2.6 : 3.4, v.livery.glow, 0.07, v.rig.root);
+          this.fx.flash(v1, scatter ? 2.6 : 3.4, v.livery.glow, 0.07, v.rig.root, false, DEPTH.ON_MECH);
         }
         if (e.mech === local) this.cam.shake(scatter ? 0.07 : 0.1);
         break;
@@ -1044,7 +1046,7 @@ export class RaceView {
         if (!e.charged) break;
         // Thrown with momentum: the heat in the trails goes into the blow.
         const v = this.mechs[e.mech];
-        this.fx.flash(v.pos, 11, HOT_HEX, 0.26, v.rig.root, true);
+        this.fx.flash(v.pos, 11, HOT_HEX, 0.26, v.rig.root, true, DEPTH.ON_MECH);
         this.fx.burst(v.pos, v.vel, 22, 40, HOT_HEX, 0.5, 0.35);
         if (e.mech === local) this.cam.shake(0.25);
         break;
@@ -1067,7 +1069,7 @@ export class RaceView {
       case 'dash': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 1.2, v1);
-        if (!this.groundRing(v, 11, v.livery.glow)) this.fx.flash(v1, 8, v.livery.glow, 0.2, null, true);
+        if (!this.groundRing(v, 11, v.livery.glow)) this.fx.flash(v1, 8, v.livery.glow, 0.2, null, true, true);
         trackPoint(track, v.s, v.d, 1.2, v1);
         this.fx.burst(v1, v.vel, 14, 30, v.livery.glow, 0.4, 0.3);
         break;
@@ -1077,7 +1079,7 @@ export class RaceView {
         // a bigger one and a jolt when it is full.
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 4.2, v1);
-        this.fx.flash(v1, e.full ? 10 : 5, v.livery.glow, e.full ? 0.3 : 0.2, v.rig.root, true);
+        this.fx.flash(v1, e.full ? 10 : 5, v.livery.glow, e.full ? 0.3 : 0.2, v.rig.root, true, DEPTH.ON_MECH);
         if (e.full) this.fx.burst(v1, v.vel, 14, 26, v.livery.glow, 0.4, 0.3);
         if (e.full && e.mech === local) this.cam.shake(0.15);
         break;
@@ -1086,7 +1088,8 @@ export class RaceView {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s - 2, v.d, 3.5, v1);
         // (Drawn, the ring is smaller: the painted flames carry the boost.)
-        this.fx.flash(v1, look.on ? 5.5 : 9, v.livery.glow, 0.25, v.rig.root, true);
+        // At the thrusters: hidden by the mech's own body seen from in front, and by anything else in the way.
+        this.fx.flash(v1, look.on ? 5.5 : 9, v.livery.glow, 0.25, v.rig.root, true, DEPTH.ON_MECH);
         this.fx.burst(v1, v.vel, 18, 36, v.livery.glow, 0.45, 0.35);
         if (e.mech === local) {
           this.cam.shake(0.2);
@@ -1098,7 +1101,7 @@ export class RaceView {
         // Off on a guard swing: a kick of sparks and a flash in the pilot's colour.
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 1.2, v1);
-        this.fx.flash(v1, 6, v.livery.glow, 0.18, v.rig.root, true);
+        this.fx.flash(v1, 6, v.livery.glow, 0.18, v.rig.root, true, DEPTH.ON_MECH);
         this.fx.burst(v1, v.vel, 18, 32, CARVE_COLORS[1], 0.4, 0.3);
         if (e.mech === local) this.cam.shake(0.12);
         break;
@@ -1109,7 +1112,7 @@ export class RaceView {
         const out = race.mechs[e.mech].carveDir > 0 ? 0 : 1;
         v.rig.heels[out].getWorldPosition(v1);
         this.fx.burst(v1, v.vel, 8 + e.tier * 6, 16 + e.tier * 5, CARVE_COLORS[e.tier], 0.4, 0.35);
-        if (e.tier >= 3) this.fx.flash(v1, 4, CARVE_COLORS[e.tier], 0.14, v.rig.root, true);
+        if (e.tier >= 3) this.fx.flash(v1, 4, CARVE_COLORS[e.tier], 0.14, v.rig.root, true, DEPTH.ON_MECH);
         break;
       }
       case 'carveBurst': {
@@ -1117,7 +1120,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         v.burstTier = e.tier;
         trackPoint(track, v.s - 2, v.d, 2.5, v1);
-        this.fx.flash(v1, 3.5 + e.tier, CARVE_COLORS[e.tier], 0.2, v.rig.root, true);
+        this.fx.flash(v1, 3.5 + e.tier, CARVE_COLORS[e.tier], 0.2, v.rig.root, true, DEPTH.ON_MECH);
         this.fx.burst(v1, v.vel, 10 + e.tier * 8, 26 + e.tier * 6, CARVE_COLORS[e.tier], 0.45, 0.35);
         if (e.mech === local) this.cam.shake(0.08 + e.tier * 0.05);
         break;
@@ -1126,7 +1129,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 0.6, v1);
         this.fx.burst(v1, v.vel, 26, 34, v.livery.glow, 0.5, 0.5);
-        if (!this.groundRing(v, 12, v.livery.glow)) this.fx.flash(v1, 8, 0xffffff, 0.2, null, true);
+        if (!this.groundRing(v, 12, v.livery.glow)) this.fx.flash(v1, 8, 0xffffff, 0.2, null, true, true);
         // Drawn: the road's dust kicked up behind.
         trackPoint(track, v.s - 1.5, v.d, 1.4, v1);
         v3.copy(v.vel).multiplyScalar(0.2);
@@ -1137,7 +1140,7 @@ export class RaceView {
       case 'escape': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 4.2, v1);
-        this.fx.flash(v1, e.type === 'escape' ? 12 : 6, v.livery.glow, 0.22, v.rig.root, true);
+        this.fx.flash(v1, e.type === 'escape' ? 12 : 6, v.livery.glow, 0.22, v.rig.root, true, DEPTH.ON_MECH);
         break;
       }
       case 'lapPhase':
@@ -1168,7 +1171,7 @@ export class RaceView {
           dusted = this.fx.drawnSprite('smoke', v4, 4 + k * 5, { row: k > 0.5 ? 1 : 0, tint: this.dust, vel: v3, flip: side > 0, depth: true, rise: 1.5 });
         }
         if (!dusted) this.fx.puff(v1, v.vel, Math.round(2 + k * 5), this.dust, 2.2 + k * 2, 0.9);
-        if (k > 0.3 && !this.groundRing(v, 8 + k * 9, 0xfff2d0)) this.fx.flash(v1, 6 + k * 6, 0xfff2d0, 0.12, null, true);
+        if (k > 0.3 && !this.groundRing(v, 8 + k * 9, 0xfff2d0)) this.fx.flash(v1, 6 + k * 6, 0xfff2d0, 0.12, null, true, true);
         if (e.mech === local) {
           this.cam.shake(0.1 + k * 0.5);
           this.onImpact(Math.min(0.8, k * 0.9));
@@ -1179,7 +1182,7 @@ export class RaceView {
         // Over the edge: a flash where the mech left the road.
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 2 + v.h, v1);
-        this.fx.flash(v1, 12, 0xff6ab0, 0.3, null, true);
+        this.fx.flash(v1, 12, 0xff6ab0, 0.3, null, true, DEPTH.ON_MECH);
         this.fx.burst(v1, v.vel, 24, 40, 0xffb0d8, 0.5, 0.5);
         if (e.mech === local) {
           this.cam.shake(0.5);
@@ -1195,7 +1198,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         const pos = race.mechs[e.mech];
         trackPoint(track, pos.s, pos.d, 6, v1);
-        if (!this.fx.drawnSprite('sparkle', v1, 16, { tint: v.livery.glow, gain: 1.4 })) this.fx.flash(v1, 16, v.livery.glow, 0.4, null, true);
+        if (!this.fx.drawnSprite('sparkle', v1, 16, { tint: v.livery.glow, gain: 1.4, depth: DEPTH.ON_MECH })) this.fx.flash(v1, 16, v.livery.glow, 0.4, null, true, DEPTH.ON_MECH);
         trackPoint(track, pos.s, pos.d, 0.5, v1);
         this.fx.spray(v1, v.vel, v3.set(0, 1, 0), 30, 30, v.livery.glow, 0.5, 0.6);
         this.groundRing(v, 15, v.livery.glow);
@@ -1208,7 +1211,7 @@ export class RaceView {
         trackPoint(track, v.s, v.d, 0.6, v1);
         // Drawn: a sparkle off the skates, riding along.
         trackPoint(track, v.s, v.d, 2.2, v4);
-        if (!this.fx.drawnSprite('sparkle', v4, 9, { tint: 0xff3d9a, follow: v.rig.root, gain: 1.35 })) this.fx.flash(v1, 9, 0xff3d9a, 0.22, null, true);
+        if (!this.fx.drawnSprite('sparkle', v4, 9, { tint: 0xff3d9a, follow: v.rig.root, gain: 1.35, depth: DEPTH.ON_MECH })) this.fx.flash(v1, 9, 0xff3d9a, 0.22, null, true, true);
         trackDir(track, v.s, -1, 0, v3);
         this.fx.spray(v1, v.vel, v3, 22, 40, 0xff6ab8, 0.4, 0.35);
         if (e.mech === local) {
@@ -1221,7 +1224,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         if (e.mech === local) this.trackVis.gates.pulse(e.gate);
         trackPoint(track, v.s, v.d, 4.2, v1);
-        if (!this.fx.drawnSprite('sparkle', v1, 12, { tint: COLORS.cell, follow: v.rig.root, gain: 1.4 })) this.fx.flash(v1, 9, COLORS.cell, 0.22, v.rig.root, true);
+        if (!this.fx.drawnSprite('sparkle', v1, 12, { tint: COLORS.cell, follow: v.rig.root, gain: 1.4, depth: DEPTH.ON_MECH })) this.fx.flash(v1, 9, COLORS.cell, 0.22, v.rig.root, true, DEPTH.ON_MECH);
         this.fx.burst(v1, v.vel, 18, 30, COLORS.cell, 0.4, 0.4);
         if (e.mech === local) this.flash(0.12);
         break;
@@ -1232,8 +1235,8 @@ export class RaceView {
         trackPoint(track, v.s, v.d, 4.2, v1);
         switch (e.ability) {
           case ABILITY.OVERDRIVE:
-            this.fx.flash(v1, 16, COLORS.cell, 0.34, v.rig.root, true);
-            this.fx.flash(v1, 10, 0xffffff, 0.2, v.rig.root);
+            this.fx.flash(v1, 16, COLORS.cell, 0.34, v.rig.root, true, wide(16));
+            this.fx.flash(v1, 10, 0xffffff, 0.2, v.rig.root, false, DEPTH.ON_MECH);
             this.fx.burst(v1, v.vel, 44, 46, COLORS.cell, 0.5, 0.5);
             if (mine) {
               this.cam.shake(0.4);
@@ -1244,8 +1247,8 @@ export class RaceView {
             break;
           case ABILITY.BREAKAWAY:
             v.crackleT = 0.6;
-            this.fx.flash(v1, 14, 0xffffff, 0.3, v.rig.root, true);
-            this.fx.flash(v1, 20, v.livery.glow, 0.42, null, true);
+            this.fx.flash(v1, 14, 0xffffff, 0.3, v.rig.root, true, wide(14));
+            this.fx.flash(v1, 20, v.livery.glow, 0.42, null, true, wide(20));
             this.fx.burst(v1, v.vel, 36, 60, 0xffffff, 0.45, 0.4);
             if (mine) {
               this.cam.shake(0.35);
@@ -1255,19 +1258,19 @@ export class RaceView {
             break;
           case ABILITY.SNARE:
             v.rig.muzzle.getWorldPosition(v1);
-            this.fx.flash(v1, 6, COLORS.snare, 0.14, v.rig.root);
+            this.fx.flash(v1, 6, COLORS.snare, 0.14, v.rig.root, false, DEPTH.ON_MECH);
             if (mine) this.cam.shake(0.18);
             break;
           case ABILITY.PULSE:
-            this.fx.flash(v1, race.rules.pulseRange * 1.3, 0xb48cff, 0.4, v.rig.root, true);
-            this.fx.flash(v1, race.rules.pulseRange * 0.7, 0xffffff, 0.22, v.rig.root, true);
+            this.fx.flash(v1, race.rules.pulseRange * 1.3, 0xb48cff, 0.4, v.rig.root, true, wide(race.rules.pulseRange * 1.3));
+            this.fx.flash(v1, race.rules.pulseRange * 0.7, 0xffffff, 0.22, v.rig.root, true, wide(race.rules.pulseRange * 0.7));
             this.fx.burst(v1, v.vel, 50, 70, 0xb48cff, 0.5, 0.45);
             if (mine || this.mechs[local].pos.distanceTo(v.pos) < race.rules.pulseRange * 1.4) this.cam.shake(0.45);
             break;
           case ABILITY.RAM:
             v.ramAge = 0;
             this.ramProw(v, race.mechs[e.mech], null);
-            this.fx.flash(v1, 12, 0xffa030, 0.3, v.rig.root, true);
+            this.fx.flash(v1, 12, 0xffa030, 0.3, v.rig.root, true, DEPTH.AROUND);
             this.fx.burst(v1, v.vel, 30, 40, 0xffa030, 0.5, 0.45);
             if (mine) {
               this.cam.shake(0.35);
@@ -1275,7 +1278,7 @@ export class RaceView {
             }
             break;
           case ABILITY.AEGIS:
-            this.fx.flash(v1, race.rules.aegisRange * 1.1, COLORS.cell, 0.45, v.rig.root, true);
+            this.fx.flash(v1, race.rules.aegisRange * 1.1, COLORS.cell, 0.45, v.rig.root, true, wide(race.rules.aegisRange * 1.1));
             this.fx.burst(v1, v.vel, 30, 36, COLORS.cell, 0.45, 0.5);
             break;
         }
@@ -1284,7 +1287,7 @@ export class RaceView {
       case 'snared': {
         const v = this.mechs[e.mech];
         trackPoint(track, v.s, v.d, 4.2, v1);
-        this.fx.flash(v1, 10, COLORS.snare, 0.3, v.rig.root, true);
+        this.fx.flash(v1, 10, COLORS.snare, 0.3, v.rig.root, true, DEPTH.AROUND);
         this.fx.burst(v1, v.vel, 26, 34, COLORS.snare, 0.45, 0.5);
         if (e.mech === local) {
           this.cam.shake(0.4);

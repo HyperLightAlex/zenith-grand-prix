@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { drawClock, look } from './look';
 import { COLORS } from './palette';
-import { SpriteFx, type SpriteKind, type SpriteOptions } from './sprites';
+import { SpriteFx, pullNearer, wide, type Depth, type SpriteKind, type SpriteOptions } from './sprites';
 
 const _v = new THREE.Vector3();
 
@@ -390,6 +390,10 @@ interface Flash {
   follow: THREE.Object3D | null;
   offset: THREE.Vector3;
   spin: number;
+  /** Units drawn nearer the camera (see SpriteOptions.depth). */
+  pull: number;
+  /** Its size this drawing, before the pull. */
+  scale: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -525,7 +529,7 @@ export class Fx {
       mesh.visible = false;
       mesh.renderOrder = 8;
       this.group.add(mesh);
-      this.flashes.push({ mesh, mat, life: 0, maxLife: 1, from: 1, to: 1, follow: null, offset: new THREE.Vector3(), spin: 0 });
+      this.flashes.push({ mesh, mat, life: 0, maxLife: 1, from: 1, to: 1, follow: null, offset: new THREE.Vector3(), spin: 0, pull: 0, scale: 1 });
     }
     // Blade arcs: a ring sector around the mech's forward direction (+Z in
     // its own space), with texture u running along the sweep.
@@ -675,12 +679,15 @@ export class Fx {
     s.mesh.visible = true;
   }
 
-  /** Starburst. Follows `follow` (plus an offset) if given, so it stays on a moving mech. */
-  flash(at: THREE.Vector3, size: number, color: number, life = 0.16, follow: THREE.Object3D | null = null, ring = false): void {
+  /**
+   * Starburst. Follows `follow` (plus an offset) if given, so it stays on a
+   * moving mech. `depth`: what it shows through (SpriteOptions.depth).
+   */
+  flash(at: THREE.Vector3, size: number, color: number, life = 0.16, follow: THREE.Object3D | null = null, ring = false, depth: Depth = false): void {
     // Drawn, a ring is the painted shock ring (its drawing peaks at about
     // the size the plain ring grows to).
     if (ring && this.drawn) {
-      this.sprites.spawn('ring', at, size * 0.95, { tint: color, follow, gain: 1.3, roll: Math.random() * Math.PI * 2 });
+      this.sprites.spawn('ring', at, size * 0.95, { tint: color, follow, gain: 1.3, roll: Math.random() * Math.PI * 2, depth });
       return;
     }
     let f = this.flashes[0];
@@ -707,6 +714,10 @@ export class Fx {
       f.offset.copy(at);
     }
     f.spin = Math.random() * Math.PI;
+    f.scale = f.from;
+    f.mat.depthTest = depth !== false;
+    f.mesh.renderOrder = depth !== false ? 7 : 8;
+    f.pull = typeof depth === 'number' ? depth : 0;
     f.mesh.visible = true;
   }
 
@@ -717,7 +728,7 @@ export class Fx {
    */
   explosion(at: THREE.Vector3, base: THREE.Vector3, size: number): boolean {
     if (!this.drawn) return false;
-    this.sprites.spawn('explosion', at, size, { vel: base, gain: 1.45 });
+    this.sprites.spawn('explosion', at, size, { vel: base, gain: 1.45, depth: wide(size) });
     return true;
   }
 
@@ -852,8 +863,7 @@ export class Fx {
       f.life -= dt;
       if (fresh) {
         const k = 1 - Math.max(0, f.life / f.maxLife);
-        const s = f.from + (f.to - f.from) * (1 - (1 - k) * (1 - k));
-        f.mesh.scale.setScalar(s);
+        f.scale = f.from + (f.to - f.from) * (1 - (1 - k) * (1 - k));
         f.mat.opacity = drawn ? (k < 0.6 ? 0.8 : 0.35) : (1 - k * k) * 0.8;
         // Drawn, each new drawing of the burst is turned a new way.
         if (drawn) f.spin = Math.random() * Math.PI * 2;
@@ -864,6 +874,7 @@ export class Fx {
       } else {
         f.mesh.position.copy(f.offset);
       }
+      f.mesh.scale.setScalar(f.scale * pullNearer(f.mesh.position, camera, f.pull));
       f.mesh.quaternion.copy(camera.quaternion);
       f.mesh.rotateZ(f.spin);
     }

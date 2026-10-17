@@ -97,6 +97,20 @@ bottom only: flipped side to side it pointed back the way it came on every
 other drawing). Pointing is worked out on screen, and held while the
 direction runs into or out of the picture, where its angle on screen is
 noise.
+
+**What an effect shows through.** Each drawn effect (and the plain look's
+flashes) says what hides it (`depth` in `sprites.ts`):
+
+| | Shows through | Hidden by | Effects |
+|---|---|---|---|
+| On top | everything | nothing | the wind-up tells and their glint (a warning has to be seen) |
+| Around (`DEPTH.AROUND`, drawn 10 units nearer the camera) | the fighters | a wall or the road well in front of them | blade swings, kicks and hammer blows; hits, sparks, parries and guard breaks; the stun and Snare crackle; ability bursts and knockouts (drawn nearer by their radius, `wide`, so the road does not cut them in half) |
+| On the mech (`DEPTH.ON_MECH`, 1.5 units nearer) | its own surface (not cut by it) | the mech's own body and anything in front | the boost ring, muzzle blasts, charge and dash flashes, carve and guard-swing flashes, the Ram's prow, the lance thrust, barrier strikes, gate and pad sparkles |
+| In place (`true`) | nothing | whatever is in front | smoke and dust, rings and cracks on the road, the Overdrive ring |
+
+Before, everything but smoke and the road's marks was drawn over
+everything: a boost ring showed through its own mech and the scenery, and
+a muzzle blast through the back of the mech that fired it.
 The procedural explosion the painted one replaced is still in
 `sprites/explosion.png` (`tools/fx/explosion.py`).
 

@@ -143,6 +143,45 @@ const FRAG = /* glsl */ `
     gl_FragColor = vec4(c, t.a);
   }`;
 
+/** What an effect shows through: see SpriteOptions.depth. */
+export type Depth = boolean | number;
+
+/**
+ * The usual depths, in units drawn nearer the camera. ON_MECH: a glow at a
+ * mech's surface (a muzzle, the boost, a charge ring): hidden behind the
+ * mech's own body, not cut by it. AROUND: a blade's swing round a mech, or
+ * a hit between two: over the fighters, whichever way round the camera
+ * looks at them, but not through a wall or the road well in front of them.
+ */
+export const DEPTH = { ON_MECH: 1.5, AROUND: 10 } as const;
+
+/**
+ * The depth for a ring or a burst `size` across, centred on a mech: drawn
+ * nearer by its radius, so the road under the mech does not cut off its
+ * lower half (an ability's ring, a knockout's fireball).
+ */
+export function wide(size: number): number {
+  return Math.max(DEPTH.AROUND, size * 0.5);
+}
+
+const _cam = new THREE.Vector3();
+
+/**
+ * Move `pos` toward the camera by up to `pull` units (never more than three
+ * quarters of the way there); returns how much smaller to draw it so it
+ * keeps its size on screen.
+ */
+export function pullNearer(pos: THREE.Vector3, camera: THREE.Camera, pull: number): number {
+  if (pull <= 0) return 1;
+  camera.getWorldPosition(_cam);
+  _cam.sub(pos);
+  const d = _cam.length();
+  if (d < 1e-3) return 1;
+  const p = Math.min(pull, d * 0.75);
+  pos.addScaledVector(_cam, p / d);
+  return (d - p) / d;
+}
+
 export interface SpriteOptions {
   /** The colour the cyan becomes. */
   tint?: number;
@@ -161,8 +200,15 @@ export interface SpriteOptions {
   dir?: THREE.Vector3;
   /** Lie flat in this orientation (a ring on the road) instead of facing the camera. */
   flat?: THREE.Quaternion;
-  /** Hidden behind whatever is in front of it (smoke and dust), rather than drawn over everything. */
-  depth?: boolean;
+  /**
+   * What it shows through. Left out (or false): nothing hides it, the old
+   * way, now only for what must always be seen. True: hidden by whatever is
+   * in front of it, where it is (smoke, dust, rings on the road). A number:
+   * hidden by whatever is in front, but drawn that many units nearer the
+   * camera (the same size on screen), so it shows over its own mech, or the
+   * pair it lies between, and not through the scene beyond (see DEPTH).
+   */
+  depth?: Depth;
   /** Wait this many drawings before it appears. */
   delay?: number;
   /** Climb, units a second (instead of the sheet's own rise). */
@@ -195,6 +241,9 @@ interface Sprite {
   turn: boolean;
   /** For one pointing along `dir`: the turn on screen it settled on (NaN until it has one). */
   dirRoll: number;
+  /** Units it is drawn nearer the camera (see SpriteOptions.depth), and its size before that. */
+  pull: number;
+  size: number;
 }
 
 const POOL = 64;
@@ -253,6 +302,8 @@ export class SpriteFx {
         seen: 0,
         turn: false,
         dirRoll: NaN,
+        pull: 0,
+        size: 1,
       });
     }
   }
@@ -303,12 +354,10 @@ export class SpriteFx {
       }
       if (o.flat && s.flat) s.flat.copy(o.flat);
       if (o.dir && s.dir) s.dir.copy(o.dir);
-      if (o.depth !== undefined) {
-        s.mat.depthTest = o.depth;
-        s.mesh.renderOrder = o.depth ? 7 : 8;
-      }
+      if (o.depth !== undefined) this.setDepth(s, o.depth);
       if (o.tint !== undefined) (s.mat.uniforms.uTint.value as THREE.Color).set(o.tint);
       if (o.gain !== undefined) s.mat.uniforms.uGain.value = o.gain;
+      s.size = size;
       s.mesh.scale.setScalar(size);
     }
     s.seen = this.tick;
@@ -353,12 +402,17 @@ export class SpriteFx {
     u.uPaint.value = PAINT[atlas.paint];
     u.uGain.value = o.gain ?? (atlas.paint === 'smoke' ? 1 : 1.5);
     u.uFlip.value = o.flip ? (o.dir ? 2 : 1) : 0;
-    // Smoke sits in the scene; the glows are drawn over it and everything else.
-    s.mat.depthTest = o.depth ?? false;
-    s.mesh.renderOrder = o.depth ? 7 : 8;
+    this.setDepth(s, o.depth ?? false);
     this.setCell(s);
+    s.size = size;
     s.mesh.scale.setScalar(size);
     s.mesh.visible = s.shown;
+  }
+
+  private setDepth(s: Sprite, depth: Depth): void {
+    s.mat.depthTest = depth !== false;
+    s.pull = typeof depth === 'number' ? depth : 0;
+    s.mesh.renderOrder = depth !== false ? 7 : 8;
   }
 
   private hold(s: Sprite): number {
@@ -433,6 +487,7 @@ export class SpriteFx {
         s.pos.y += dt * s.rise;
         s.mesh.position.copy(s.pos);
       }
+      if (s.pull > 0) s.mesh.scale.setScalar(s.size * pullNearer(s.mesh.position, camera, s.pull));
       if (s.flat) {
         s.mesh.quaternion.copy(s.flat);
         if (s.roll) s.mesh.rotateZ(s.roll);
