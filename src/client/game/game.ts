@@ -81,7 +81,7 @@ import { registerGrandPrix } from '../ui/screens/grandPrix';
 import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { registerRace } from '../ui/screens/race';
 import { registerVideo } from '../ui/screens/video';
-import { applyFrame, frame, onFrame, saveVideo, video, type VideoSettings } from '../video';
+import { applyFrame, frame, onFrame, RESOLUTIONS, saveVideo, video, type VideoSettings } from '../video';
 import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
@@ -277,6 +277,7 @@ export class Game {
     registerRace(this.menus, this);
     registerVideo(this.menus, this);
     this.renderer.crt = video.crt;
+    this.applyResolution();
     this.panel = new TuningPanel(uiRoot, this.tuning, {
       onClose: () => {},
       onSound: (n) => this.audio.play(n),
@@ -597,12 +598,18 @@ export class Game {
     Object.assign(video, change);
     saveVideo();
     this.renderer.crt = video.crt;
+    if (change.resolution !== undefined) this.applyResolution();
     applyFrame();
     if (panels) {
       setSunhawkPanels(video.panels);
       this.refreshSunhawk('all');
     }
     this.menus.refresh();
+  }
+
+  /** The video setting's resolution, on the renderer. */
+  private applyResolution(): void {
+    this.renderer.setResolution(RESOLUTIONS.find((r) => r.id === video.resolution)?.scale ?? 1);
   }
 
   /** The mechs' and effects' drawings a second in the anime look (the look's own tuning value). */

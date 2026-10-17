@@ -69,7 +69,10 @@ full screen. The menus work held either way round and scroll where they do
 not fit; races are played sideways (held upright, a race asks to be turned,
 and offline it waits). A handheld with its own controls, such as a Retroid
 Pocket, works as a gamepad on its own screen. The layouts follow the picture,
-so 16:9 and 4:3 (Video, Screen shape) both fit any screen.
+so 16:9 and 4:3 (Video, Screen shape) both fit any screen. The picture is
+drawn at full resolution unless you choose otherwise: on a slower device,
+Video, Resolution trades sharpness for speed (85%, 70%, 55%, or Automatic,
+which follows the frame rate).
 
 ## Controls
 

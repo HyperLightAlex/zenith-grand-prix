@@ -188,6 +188,8 @@ export class Renderer {
   private frameTimes: number[] = [];
   private lastScaleChange = 0;
   private scale = 1;
+  /** Whether the resolution follows the frame rate (the player's 'Automatic' setting); otherwise it stays where it is set. */
+  private autoScale = false;
   private viewport = { width: 0, height: 0, ratio: 0 };
 
   constructor(readonly canvas: HTMLCanvasElement) {
@@ -368,6 +370,19 @@ export class Renderer {
     this.bloom.strength = strength;
   }
 
+  /**
+   * The video setting's resolution: a fixed share of full resolution, or
+   * 'auto' to lower and raise it with the frame rate. Only the player
+   * chooses a lower one: lines drawn on a smaller picture and stretched up
+   * come out thinner and softer.
+   */
+  setResolution(scale: number | 'auto'): void {
+    this.autoScale = scale === 'auto';
+    this.scale = scale === 'auto' ? 1 : Math.min(1, Math.max(0.5, scale));
+    this.frameTimes.length = 0;
+    this.resize();
+  }
+
   setQuality(q: Quality): void {
     this.quality = q;
     this.bloom.enabled = q !== 'low';
@@ -396,8 +411,9 @@ export class Renderer {
     (this.crtPass.uniforms.uRes.value as THREE.Vector2).set(pw, ph);
   }
 
-  /** Drop resolution a notch if frames run long, raise it again when there is headroom. */
+  /** On 'Automatic': drop resolution a notch if frames run long, raise it again when there is headroom. */
   private adapt(dt: number, now: number): void {
+    if (!this.autoScale) return;
     this.frameTimes.push(dt);
     if (this.frameTimes.length < 45) return;
     const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;

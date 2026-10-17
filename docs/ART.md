@@ -470,8 +470,15 @@ Three full-screen passes (ink, about 22 texture reads a pixel; the mech
 mask, 9; film, about 21) and FXAA on the mechs' pixels, plus some extra
 branches in the materials. In a software renderer the
 whole frame costs about 17% more than the plain look; on a GPU the passes
-are a small part of the frame. The renderer's resolution scaling still
-works as before, and on the low quality setting the ink pass is skipped.
+are a small part of the frame. On the low quality setting the ink pass is
+skipped.
+
+Resolution is the player's choice (Video, Resolution): Full by default, or
+85%, 70% or 55% for a slow device, or Automatic, which lowers it whenever
+frames run slow and raises it again with headroom. The game never lowers
+it unasked: lines drawn on a smaller picture and stretched to the screen
+come out thinner and softer, and on a handheld the automatic drop took the
+geometry outlines' weight with it.
 
 Geometry ink adds up to two draws per visible mech per scene render (one
 at LOD2), including the traveller-mask render when active. The measured

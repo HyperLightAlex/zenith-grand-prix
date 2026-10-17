@@ -8,6 +8,9 @@
 //           everything (.crt-layer in styles.css)
 //   aspect  'wide' fills the window; 'classic' is a 4:3 picture boxed in it,
 //           the HUD and the menus with it
+//   resolution  how sharp the 3D picture is drawn: full, or a share of it
+//           for a slow device, or 'auto' (lowered and raised with the frame
+//           rate). The player's choice: the game never lowers it unasked.
 //
 // And the frame: the part of the window the picture, the HUD and the menus
 // fill (the whole window, or the 4:3 box), how big the interface's type is in
@@ -17,14 +20,27 @@
 
 export type Aspect = 'wide' | 'classic';
 
+/** How sharp the 3D picture is drawn (see RESOLUTIONS). */
+export type Resolution = 'full' | 'high' | 'medium' | 'low' | 'auto';
+
+/** The choices, in the order the setting steps through them: share of full resolution ('auto': follows the frame rate). */
+export const RESOLUTIONS: ReadonlyArray<{ id: Resolution; label: string; scale: number | 'auto' }> = [
+  { id: 'full', label: 'Full', scale: 1 },
+  { id: 'high', label: '85%', scale: 0.85 },
+  { id: 'medium', label: '70%', scale: 0.7 },
+  { id: 'low', label: '55%', scale: 0.55 },
+  { id: 'auto', label: 'Automatic', scale: 'auto' },
+];
+
 export interface VideoSettings {
   panels: boolean;
   crt: boolean;
   aspect: Aspect;
+  resolution: Resolution;
 }
 
 const KEY = 'zgp.video';
-const DEFAULTS: VideoSettings = { panels: true, crt: false, aspect: 'wide' };
+const DEFAULTS: VideoSettings = { panels: true, crt: false, aspect: 'wide', resolution: 'full' };
 
 function load(): VideoSettings {
   try {
@@ -33,6 +49,7 @@ function load(): VideoSettings {
       panels: typeof v.panels === 'boolean' ? v.panels : DEFAULTS.panels,
       crt: typeof v.crt === 'boolean' ? v.crt : DEFAULTS.crt,
       aspect: v.aspect === 'classic' ? 'classic' : 'wide',
+      resolution: RESOLUTIONS.some((r) => r.id === v.resolution) ? (v.resolution as Resolution) : DEFAULTS.resolution,
     };
   } catch {
     return { ...DEFAULTS };
