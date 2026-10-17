@@ -49,11 +49,16 @@ export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVarian
 }
 
 let loading: Promise<void> | undefined;
-export function preloadSunhawks(): Promise<void> {
+/** The files preloadSunhawks loads: four models and the detail atlas. */
+export const SUNHAWK_FILES = 5;
+
+/** Loads both Sunhawks and the detail atlas. `loaded` hears of each file as it lands (the boot screen's progress). */
+export function preloadSunhawks(loaded?: () => void): Promise<void> {
   const exports: Array<[SunhawkAssetVariant, number, string]> = [['current',0,currentUrl],['updated',0,updatedUrl],['updated',1,mediumUrl],['updated',2,farUrl]];
-  return loading ??= Promise.all([preloadSunhawkDetails(), ...exports.map(async ([variant, level, url]) => {
+  return loading ??= Promise.all([preloadSunhawkDetails().then(() => loaded?.()), ...exports.map(async ([variant, level, url]) => {
     const gltf = await new GLTFLoader().loadAsync(url);
     assets.set(`${variant}:${level}`, readSunhawkAsset(gltf.scene, variant));
+    loaded?.();
     gltf.scene.traverse((o) => {
       if (!(o instanceof THREE.Mesh) && !(o instanceof THREE.LineSegments)) return;
       o.geometry.dispose();

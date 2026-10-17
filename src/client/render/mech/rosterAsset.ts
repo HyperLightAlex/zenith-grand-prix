@@ -54,13 +54,15 @@ export function rosterAsset(id: string, level=0): RosterAsset {
   return asset;
 }
 let loading: Promise<void> | undefined;
-export function preloadRoster(): Promise<void> {
+/** Loads every roster model, all three levels of detail. `loaded` hears of each file as it lands (the boot screen's progress). */
+export function preloadRoster(loaded?: (id: string, level: number) => void): Promise<void> {
   return loading ??= Promise.all(ROSTER_IDS.flatMap(id=>[0,1,2].map(async level=>{
     const path=`./assets/roster/${id}${level?`-lod${level}`:''}.glb`;
     const url=urls[path];
     if(!url) throw new Error(`Missing roster asset ${id}:${level}`);
     const gltf=await new GLTFLoader().loadAsync(url);
     assets.set(`${id}:${level}`,readRosterAsset(gltf.scene,id));
+    loaded?.(id,level);
     gltf.scene.traverse(o => {
       if (!(o instanceof THREE.Mesh) && !(o instanceof THREE.LineSegments)) return;
       o.geometry.dispose();
