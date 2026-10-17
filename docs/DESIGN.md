@@ -682,7 +682,8 @@ person with a gamepad, and all of them are on the tuning panel:
 1. **Whether it now feels fast.** Speeds are up 15% on lap 1, 30% on lap 2
    and 25% on lap 3. The camera is lower and closer and opens up with speed,
    speed effects stay on in a lock, the walls have posts that strobe past,
-   and the pad rumbles with the road. Which of those does the work, and
+   and the pad rumbles on boosts, hits and the wall (plain driving and
+   steering are kept quiet so those stand out). Which of those does the work, and
    whether any of it is too much, is a matter of feel.
 2. **Camera height.** A tall mech hides the road if the camera drops much
    further. The default is a compromise; Height, Distance and Look height
