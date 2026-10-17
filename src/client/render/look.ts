@@ -23,6 +23,11 @@ export interface LookState {
    * boiling, breaking, lit, through the film). For side-by-side review.
    */
   mechLines: MechLineMode;
+  /**
+   * The geometry outline's weight, as a share of Step 1's traced contour
+   * (0.7 = as drawn so far). A temporary review setting: ?mechOutline=0.9.
+   */
+  mechOutline: number;
   /** Film layer strength (grain, halation, softness, fringe), 0..2. */
   film: number;
   /** Ink line strength, 0..2. */
@@ -36,10 +41,15 @@ export interface LookState {
 }
 
 // Read the review override once; a runtime switch may change it afterward.
-const lineModeParam = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('mechLines');
+const reviewParams = typeof location === 'undefined' ? null : new URLSearchParams(location.search);
+const lineModeParam = reviewParams?.get('mechLines') ?? null;
+const outlineParam = Number(reviewParams?.get('mechOutline') ?? NaN);
+/** The geometry outline's weight (see LookState.mechOutline), clamped to a sane range. */
+export const MECH_OUTLINE_DEFAULT = 0.7;
+const mechOutline = Number.isFinite(outlineParam) ? Math.min(2, Math.max(0.3, outlineParam)) : MECH_OUTLINE_DEFAULT;
 
 /** The look in force this frame. The game copies it from the tuning values every frame. */
-export const look: LookState = { on: true, mechLines: lineModeParam === 'traced' || lineModeParam === 'original' ? lineModeParam : 'geometry', film: 1, ink: 1, boil: 1, steps: 12, impact: true, still: true };
+export const look: LookState = { on: true, mechLines: lineModeParam === 'traced' || lineModeParam === 'original' ? lineModeParam : 'geometry', mechOutline, film: 1, ink: 1, boil: 1, steps: 12, impact: true, still: true };
 
 export function readLook(f: Feel): void {
   look.on = f.look >= 0.5;

@@ -14,10 +14,13 @@ const shared = {
   uInkColor: { value: new THREE.Color(0x150f22) },
   uRes: { value: new THREE.Vector2(1280,720) },
   uStrength: { value: 1 },
+  /** The shell's weight against Step 1's traced contour (look.mechOutline). */
+  uOutline: { value: 0.7 },
 };
 let enabled = false;
-export function configureMechInk(on: boolean, color: THREE.Color, strength: number): void {
+export function configureMechInk(on: boolean, color: THREE.Color, strength: number, outline = 0.7): void {
   enabled = on;
+  shared.uOutline.value = outline;
   shared.uInkColor.value.copy(color);
   shared.uStrength.value = Math.min(1, Math.max(0, strength));
   for (const m of live) m.visible = on;
@@ -63,7 +66,7 @@ const hullVertex = /* glsl */`
   #include <fog_pars_vertex>
   uniform mat4 uJoints[24];
   uniform vec2 uRes;
-  uniform float uStrength;
+  uniform float uStrength, uOutline;
   attribute float aJoint;
   attribute float aCharMark;
   attribute vec3 _outline_normal;
@@ -78,7 +81,7 @@ const hullVertex = /* glsl */`
     vec2 dir=(tip.xy/max(0.001,tip.w)-clip.xy/max(0.001,clip.w))*uRes;
     dir/=max(length(dir),0.0001);
     float width=clamp(uRes.y/1080.0,0.55,3.0)*mix(3.4,1.3,smoothstep(8.0,70.0,-mvPosition.z));
-    clip.xy+=dir*width*0.7*_ink_width*uStrength*2.0/uRes*clip.w;
+    clip.xy+=dir*width*uOutline*_ink_width*uStrength*2.0/uRes*clip.w;
     gl_Position=clip;
     vMark=aCharMark;vWidth=_ink_width;
     #include <fog_vertex>

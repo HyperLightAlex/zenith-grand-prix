@@ -294,6 +294,9 @@ export class Renderer {
   /** Review switch: changes ink without rebuilding a rig or restarting a race. */
   set mechLineMode(mode: MechLineMode) { look.mechLines=mode; }
   get mechLineMode(): MechLineMode { return look.mechLines; }
+  /** Review switch: the geometry outline's weight (look.mechOutline). */
+  set mechOutline(weight: number) { look.mechOutline = weight; }
+  get mechOutline(): number { return look.mechOutline; }
 
   /** End any cut in progress (a new race, or a restart). */
   clearMoments(): void {
@@ -314,7 +317,7 @@ export class Renderer {
     const original = look.mechLines === 'original';
     ink.uOriginal.value = original ? 1 : 0;
     ink.uGeometryMarks.value=geometryMarks;
-    configureMechInk(this.inking && look.mechLines==='geometry',ink.uInkColor.value,look.ink);
+    configureMechInk(this.inking && look.mechLines==='geometry',ink.uInkColor.value,look.ink,look.mechOutline);
     this.filmPass.enabled = on || this.impactT > 0 || this.stillT > 0;
     // The mechs' clean lines: sharp through the film, smoothed at the end (where the ink pass marked them).
     this.mechSmooth.enabled = this.inking && !original;
