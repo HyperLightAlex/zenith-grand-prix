@@ -1,5 +1,5 @@
 // Abilities, part two: the moves that act on other mechs. The midfielder's
-// Snare (free steering) and Disruptor pulse (locked on), the defender's Aegis
+// Disruptor pulse (free steering) and Snare (locked on), the defender's Aegis
 // (free steering) and Ram (locked on). The button itself, its cost and its
 // cooldown are in abilities.test.ts.
 import { describe, expect, it } from 'vitest';
@@ -71,11 +71,15 @@ const maxHp = (m: MechState) => CLASSES[m.role].maxHp;
 // =============================================================================
 
 describe('Snare', () => {
-  /** A midfielder with Cells and a rival forward `ahead` units up the road, `side` units across. */
+  /**
+   * A midfielder with Cells, locked on to a rival forward `ahead` units up
+   * the road, `side` units across (the Snare is its locked-on move).
+   */
   function sights(ahead = 40, side = 0, rules?: Partial<Rules>, lapPhase: 2 | 3 = 2) {
     const a = new Arena(lapPhase, 1, rules);
     const mf = giveCells(a.put(MF0, -200, 0));
     const foe = a.put(FW1, -200 + ahead, side);
+    setTarget(a.race, mf, FW1);
     return { a, mf, foe };
   }
 
@@ -96,8 +100,8 @@ describe('Snare', () => {
     expect(shots).toMatchObject([{ mech: MF0, attack: ATK.MF_SNARE, tick: T }]);
     expect(a.race.projectiles).toMatchObject([{ id: shots[0].proj, owner: MF0, team: 0, attack: ATK.MF_SNARE }]);
     expect(mf.cells).toBe(2);
-    // It needs no lock and takes none; the bolt leaves at once, with no wind-up.
-    expect(mf.target).toBe(-1);
+    // It keeps the lock; the bolt leaves at once, with no wind-up.
+    expect(mf.target).toBe(FW1);
     expect(mf.act).toBe(ACT.NONE);
     expect(foe.snareT).toBe(0);
     const n = a.until(() => foe.snareT > 0, 30);
@@ -199,8 +203,10 @@ describe('Snare', () => {
     expect(foe.mode).toBe(MODE.BATTLE);
     a.step(20);
     expect(foe.vs).toBeCloseTo(a.pace, 3);
+    setTarget(a.race, mf, FW1);
     fire(a);
     expect(foe.snareT).toBeGreaterThan(0);
+    setTarget(a.race, mf, -1);
     a.inputs[MF0].throttle = 0;
     a.inputs[MF0].brake = 1;
     a.step(60);
@@ -282,12 +288,10 @@ describe('Snare', () => {
     expect(foe.hp).toBe(maxHp(foe));
   });
 
-  it('with nobody in the sights it is refused ("target"): no bolt, no Cell spent, no cooldown', () => {
+  it('with the locked rival out of the bolt\'s reach it is refused ("target"): no bolt, no Cell spent, no cooldown', () => {
     const cases: Array<{ ahead: number; side: number; why: string }> = [
       { ahead: SNARE.shot!.range + 12, side: 0, why: 'too far up the road' },
-      { ahead: 10, side: 20, why: 'well off the nose (63 degrees; the sights cover about 31)' },
-      { ahead: -30, side: 0, why: 'behind' },
-      { ahead: 0, side: 15, why: 'alongside' },
+      { ahead: -(SNARE.shot!.range + 12), side: 0, why: 'too far back' },
     ];
     for (const c of cases) {
       const { a, mf } = sights(c.ahead, c.side);
@@ -301,7 +305,16 @@ describe('Snare', () => {
     }
   });
 
-  it('the refusal costs nothing, so the next press with a rival in the sights fires at once', () => {
+  it('locked on, it goes at the target wherever it is: behind, alongside, off the nose', () => {
+    for (const [ahead, side] of [[-30, 0], [0, 15], [10, 20]]) {
+      const { a, foe } = sights(ahead, side);
+      fire(a);
+      expect(a.events('snared')).toMatchObject([{ mech: FW1, by: MF0 }]);
+      expect(foe.snareT).toBeGreaterThan(0);
+    }
+  });
+
+  it('the refusal costs nothing, so the next press with the rival in reach fires at once', () => {
     const { a, mf, foe } = sights(SNARE.shot!.range + 12, 0);
     a.ability(MF0);
     expect(a.events('ability').length).toBe(0);
@@ -404,6 +417,7 @@ describe('Snare', () => {
     const df = giveCells(a.put(DF1, -160, 0));
     castRam(a, DF1, MF0);
     expect(df.ramT).toBeGreaterThan(0);
+    setTarget(a.race, mf, DF1);
     a.step(1);
     fire(a);
     expect(hitsOn(a, DF1)).toMatchObject([{ attacker: MF0, attack: ATK.MF_SNARE, damage: SNARE.damage, blocked: false }]);
@@ -439,9 +453,9 @@ describe('Snare', () => {
     expect(speedCap(soft.a.race, soft.foe, CLASSES[soft.foe.role])).toBe(soft.a.pace);
   });
 
-  it('the same button in a lock is the Disruptor, not a Snare', () => {
+  it('the same button free steering is the Disruptor, not a Snare', () => {
     const { a, mf } = sights(15, 6);
-    a.tap(MF0, BTN.LOCK);
+    setTarget(a.race, mf, -1);
     expect(abilityFor(mf)).toBe(ABILITY.PULSE);
     a.step(1);
     a.ability(MF0);
@@ -455,13 +469,12 @@ describe('Snare', () => {
 // =============================================================================
 
 describe('Disruptor pulse', () => {
-  /** A midfielder locked on a rival forward 16 units ahead and a little to the side. */
+  /** A midfielder free steering, a rival forward 16 units ahead and a little to the side. */
   function locked(rules: Partial<Rules> = QUIET) {
     const a = new Arena(2, 1, rules);
     const mf = giveCells(a.put(MF0, -200, 0));
     const foe = a.put(FW1, -184, 6);
-    a.tap(MF0, BTN.LOCK);
-    expect(mf.target).toBe(FW1);
+    expect(mf.target).toBe(-1);
     a.step(2);
     a.clearLog();
     return { a, mf, foe };
@@ -558,11 +571,10 @@ describe('Disruptor pulse', () => {
   it('with no rival in range it is refused ("target") and costs nothing', () => {
     const a = new Arena(2);
     const mf = giveCells(a.put(MF0, -200, 0));
-    const foe = a.put(FW1, -200 + 27, 0); // locked, in plain view, a unit too far
-    a.tap(MF0, BTN.LOCK);
+    const foe = a.put(FW1, -200 + 27, 0); // in plain view, a unit too far
     a.step(1);
     foe.s = mf.s + 27;
-    expect(mf.target).toBe(FW1);
+    expect(mf.target).toBe(-1);
     a.clearLog();
     const T = a.ability(MF0);
     expect(a.events('ability').length).toBe(0);
@@ -646,7 +658,7 @@ describe('Disruptor pulse', () => {
     expect(mf.cells).toBe(2);
   });
 
-  it('it is the rivals in range that matter, not the one that is locked', () => {
+  it('it is the rivals in range that matter, not the one anybody is locked on to', () => {
     // Locked on a team-mate (escorting), with a rival alongside.
     const a = new Arena(2);
     const mf = giveCells(a.put(MF0, -200, 0));
@@ -654,20 +666,19 @@ describe('Disruptor pulse', () => {
     const foe = a.put(DF1, -205, 12);
     a.tap(MF0, BTN.ALLY);
     expect(mf.target).toBe(FW0);
-    expect(abilityFor(mf)).toBe(ABILITY.PULSE);
+    expect(abilityFor(mf, a.race)).toBe(ABILITY.PULSE);
     a.step(1);
     a.ability(MF0);
     expect(a.events('hit').map((e) => e.victim)).toEqual([DF1]);
     expect(foe.act).toBe(ACT.STAGGER);
-    // And locked on a rival out of range, with another one inside it.
+    // And free steering, a rival out of range ahead, another one inside it.
     const b = new Arena(2);
     const mf2 = giveCells(b.put(MF0, -200, 0));
     const farFoe = b.put(FW1, -150, 0);
     const nearFoe = b.put(MF1, -205, 12);
-    setTarget(b.race, mf2, FW1);
     expect(dist(mf2, farFoe)).toBeGreaterThan(b.race.rules.pulseRange);
     b.step(1);
-    expect(mf2.target).toBe(FW1);
+    expect(mf2.target).toBe(-1);
     b.ability(MF0);
     expect(b.events('hit').map((e) => e.victim)).toEqual([MF1]);
     expect(farFoe.hp).toBe(maxHp(farFoe));
@@ -820,15 +831,17 @@ describe('Disruptor pulse', () => {
     expect(short.a.events('denied').map((e) => e.reason)).toEqual(['target']);
   });
 
-  it('free steering, the same button is the Snare: there is no pulse without a lock', () => {
+  it('locked on a rival, the same button is the Snare: there is no pulse in a lock', () => {
     const a = new Arena(2);
     const mf = giveCells(a.put(MF0, -200, 0));
-    const foe = a.put(FW1, -200, 12); // alongside: in pulse range, not in the Snare's sights
-    expect(abilityFor(mf)).toBe(ABILITY.SNARE);
+    const foe = a.put(FW1, -200, 12); // alongside: in pulse range
+    setTarget(a.race, mf, FW1);
+    expect(abilityFor(mf, a.race)).toBe(ABILITY.SNARE);
+    a.step(1);
     a.ability(MF0);
-    expect(a.events('ability').length).toBe(0);
-    expect(a.events('denied').map((e) => e.reason)).toEqual(['target']);
-    expect(foe.hp).toBe(maxHp(foe));
+    expect(a.events('ability')).toMatchObject([{ ability: ABILITY.SNARE }]);
+    expect(hitsOn(a, FW1).filter((e) => e.attack === ATK.MF_PULSE).length).toBe(0);
+    void foe;
   });
 });
 

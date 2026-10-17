@@ -663,7 +663,8 @@ export class Hud {
     // Hints: only what matters right now.
     // On a small or narrow screen, only the few that matter most (the Controls screen has the rest).
     const compact = frame.compact || frame.narrow;
-    const hintKey = `${this.device}|${me.retired ? 'r' : battle ? 'b' : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}|${shown}|${compact ? 'c' : ''}`;
+    const escorting = battle && race.mechs[me.target].team === me.team;
+    const hintKey = `${this.device}|${me.retired ? 'r' : battle ? (escorting ? 'e' : 'b') : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}|${shown}|${compact ? 'c' : ''}`;
     if (hintKey !== this.hintKey) {
       this.hintKey = hintKey;
       let items: Array<[string, string]> = [];
@@ -672,7 +673,7 @@ export class Hud {
       } else if (me.retired || me.finished) {
         items.push([k.lock, 'Next camera'], [k.pause, 'Pause']);
       } else if (battle) {
-        items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash'], [k.swing, 'Swing'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], [k.lock, 'Let go']);
+        items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash / boost'], [k.swing, 'Swing'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], escorting ? [k.ally, 'Back to the fight'] : [k.lock, 'Let go']);
         if (compact) items = [items[0], items[2], items[3], items[7]];
       } else {
         items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.carve, 'Carve'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);

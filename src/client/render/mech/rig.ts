@@ -149,6 +149,11 @@ const basis = new THREE.Matrix4();
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 const qBodyInv = new THREE.Quaternion();
 const footTarget = new THREE.Vector3();
+const aimFrom = new THREE.Vector3();
+const aimTo = new THREE.Vector3();
+const qAim = new THREE.Quaternion();
+const qParent = new THREE.Quaternion();
+const elbowAt = new THREE.Vector3();
 
 export class MechRig {
   /** Origin on the road under the hips, facing +z. */
@@ -213,6 +218,57 @@ export class MechRig {
       j(L ? 'wingL' : 'wingR', chest, side * 0.55, 0.75, -0.85);
     }
     hips.add(this.skirts.l, this.skirts.r, this.skirts.back);
+  }
+
+  /** The joints the gun hangs from (the shoulder and elbow above the muzzle), found once. */
+  private gunArm: { sh: THREE.Object3D; el: THREE.Object3D } | null | undefined;
+
+  private findGunArm(): { sh: THREE.Object3D; el: THREE.Object3D } | null {
+    if (this.gunArm !== undefined) return this.gunArm;
+    let sh: THREE.Object3D | null = null;
+    let el: THREE.Object3D | null = null;
+    for (let o: THREE.Object3D | null = this.muzzle.parent; o; o = o.parent) {
+      if (o === this.joints.elL || o === this.joints.elR) el = o;
+      if (o === this.joints.shL || o === this.joints.shR) {
+        sh = o;
+        break;
+      }
+    }
+    this.gunArm = sh && el ? { sh, el } : null;
+    return this.gunArm;
+  }
+
+  /**
+   * The way the gun points, in world space: from the elbow out through the
+   * muzzle. Needs the world matrices current.
+   */
+  barrelDir(out: THREE.Vector3): THREE.Vector3 | null {
+    const arm = this.findGunArm();
+    if (!arm) return null;
+    this.muzzle.getWorldPosition(out);
+    arm.el.getWorldPosition(elbowAt);
+    return out.sub(elbowAt).normalize();
+  }
+
+  /**
+   * Turn the gun arm at the shoulder so the barrel points along `dir` (world
+   * space), `w` of the way (0 to 1), keeping the pose's twist and elbow.
+   * Toward something behind the chest it gives up, gradually: an arm does
+   * not wrench round backwards. Call with the pose applied and the world
+   * matrices current; it leaves them stale.
+   */
+  aimArm(dir: THREE.Vector3, w: number): void {
+    const arm = this.findGunArm();
+    if (!arm || !arm.sh.parent || w <= 0) return;
+    arm.sh.parent.getWorldQuaternion(qParent).invert();
+    if (!this.barrelDir(aimFrom)) return;
+    aimFrom.applyQuaternion(qParent);
+    aimTo.copy(dir).applyQuaternion(qParent).normalize();
+    // Forward of the chest is +z: full aim out to about 70 degrees off it, none past about 105.
+    const k = w * Math.min(1, Math.max(0, (aimTo.z + 0.26) / 0.6));
+    if (k <= 0) return;
+    qAim.setFromUnitVectors(aimFrom, aimTo).multiply(arm.sh.quaternion);
+    arm.sh.quaternion.slerp(qAim, k);
   }
 
   /** Put the skeleton into a pose. */

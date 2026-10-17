@@ -82,7 +82,7 @@ knockout keeps its own colours. They play on the drawing clock.
 | Stun | 13B | A staggered mech shorting out round its head and shoulders, for as long as the stagger lasts |
 | Hammer | 14B | The Breaker and the Breaker Slam coming down; a slam also cracks the road round the mech it hits |
 | Muzzle blasts | 15 | Every shot, along its line: a spike from a rifle, a cone from the scatter cannon (once a volley) |
-| Ram | 16 | The Ram: the charge starting, then the prow's bow shock ahead of the mech while it lasts (seen from behind, smaller and behind the mech) |
+| Ram | 16 | The Ram: the charge starting, then the prow's bow shock ahead of the mech while it lasts (seen from behind, smaller and behind the mech, eased in as the charge turns away) |
 
 `tools/fx/ingest.py` keys out a sheet's magenta and cuts its panels (and
 can take out smoke an image model painted into a glow);
@@ -91,7 +91,12 @@ what needs lining up (the barrier strike's flat side, a muzzle, a prow's
 tip, a row painted off its panel). `src/client/render/sprites.ts` plays them: one-off effects run
 through their drawings once, some held for two; loops (the crackle) are
 asked for every frame they should show, and play their drawings in a
-random order, flipped and turned, so three drawings never visibly repeat.
+random order, flipped and turned, so three drawings never visibly repeat
+(one that points along a direction, the Ram's prow, is flipped top to
+bottom only: flipped side to side it pointed back the way it came on every
+other drawing). Pointing is worked out on screen, and held while the
+direction runs into or out of the picture, where its angle on screen is
+noise.
 The procedural explosion the painted one replaced is still in
 `sprites/explosion.png` (`tools/fx/explosion.py`).
 

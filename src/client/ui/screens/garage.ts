@@ -6,6 +6,7 @@ import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h } from '../dom';
 import { emblemUrl, pilotUrl } from '../factionArt';
+import { STAT_LABELS, frameStats } from '../frameStats';
 import { MATCH_OPTIONS, RIVALS, TRACK_BLURBS, type Menus } from '../menus';
 import { BACK, CHANGE, SELECT } from './common';
 
@@ -81,9 +82,8 @@ function frameCard(m: Menus, team: number, role: Role): { head: HTMLElement; inf
   };
   requestAnimationFrame(fit);
   const info = h('div.frame-info');
-  const power = [0.6, 0.55, 1][c.role];
-  const stats = [(c.topSpeed - 130) / 30, c.maxHp / 2200, (c.grip - 60) / 40, power];
-  ['Top speed', 'Armour', 'Handling', 'Hitting power'].forEach((label, i) => {
+  const stats = frameStats(c, CLASSES);
+  STAT_LABELS.forEach((label, i) => {
     const fill = h('i');
     fill.style.setProperty('--v', Math.max(0.08, Math.min(1, stats[i])).toFixed(2));
     info.append(h('div.stat', h('span', label), h('div.bar', fill)));

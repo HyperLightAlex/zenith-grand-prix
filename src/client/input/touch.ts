@@ -82,6 +82,8 @@ export class TouchControls {
   private abilityIcon: IconName | null = null;
   private abilityReady = false;
   private attackReady = false;
+  /** Locked on a team-mate: the lock button reads "Fight" (it goes back to the rival last fought). */
+  private escorting = false;
   /** Button size, CSS pixels. */
   private u = 52;
   /** Something on the layer was touched: the input switches to touch. */
@@ -158,10 +160,15 @@ export class TouchControls {
   }
 
   /** What the ability button says, and which buttons are live, for this frame. */
-  setState(mode: TouchMode, ability: { name: string; icon: IconName; ready: boolean }, attackReady: boolean): void {
+  setState(mode: TouchMode, ability: { name: string; icon: IconName; ready: boolean }, attackReady: boolean, escorting = false): void {
     const fresh = mode !== this.builtMode;
     if (fresh) this.build(mode);
     this.mode = mode;
+    if (fresh || escorting !== this.escorting) {
+      const lock = mode === 'battle' ? this.buttons.find((x) => x.bit === BTN.LOCK) : null;
+      if (lock) setText(lock.label, escorting ? 'Fight' : 'Let go');
+    }
+    this.escorting = escorting;
     const ab = this.buttons.find((x) => x.bit === BTN.ABILITY);
     if (ab && (fresh || ability.name !== this.abilityText || ability.icon !== this.abilityIcon)) {
       setText(ab.label, ability.name);

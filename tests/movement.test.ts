@@ -969,7 +969,10 @@ describe('dash and the limiter', () => {
     let prev = me.s;
     const peaks: number[] = [];
     for (let i = 0; i < ticks; i++) {
-      a.inputs[FW0].buttons = me.mode === MODE.BATTLE && me.cdDash === 0 && (me.prevButtons & BTN.A) === 0 ? BTN.A : 0;
+      const hop = me.mode === MODE.BATTLE && me.cdDash === 0 && (me.prevButtons & BTN.A) === 0;
+      a.inputs[FW0].buttons = hop ? BTN.A : 0;
+      // Stick back for the press: with no stick a dash goes at the target.
+      a.inputs[FW0].my = hop ? -1 : 0;
       a.step(1);
       dist += me.s - prev;
       a.recenter([FW0, chaserId]);

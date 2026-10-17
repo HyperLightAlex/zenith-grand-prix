@@ -96,6 +96,12 @@ export interface MechState {
   mode: Mode;
   target: number;
   outOfRange: number;
+  /**
+   * The rival last locked on to, or -1. Escorting a team-mate, the escort
+   * button (or the lock button) goes back to it, so a stray press on the
+   * escort button costs one more press, not the fight.
+   */
+  lastFoe: number;
 
   // --- gauges
   hp: number;

@@ -1686,7 +1686,8 @@ export class Game {
       const battle = me.mode === MODE.BATTLE && me.target >= 0 && !me.retired;
       const out = me.retired || me.finished || !me.human;
       const ab = abilityShown(race, me);
-      this.touchPad.setState(out ? 'out' : battle ? 'battle' : 'race', { name: ab.name, icon: ab.icon, ready: ab.ready }, weaponsFree(race) && !out);
+      const escorting = battle && race.mechs[me.target].team === me.team;
+      this.touchPad.setState(out ? 'out' : battle ? 'battle' : 'race', { name: ab.name, icon: ab.icon, ready: ab.ready }, weaponsFree(race) && !out, escorting);
       this.touchPad.countdown = race.phase === PHASE.COUNTDOWN;
     }
     // In full screen on a phone, the race holds the screen sideways.
@@ -1755,6 +1756,15 @@ export class Game {
     this.renderer.moments = this.state === 'race';
     const mine = this.session.race.mechs[this.session.localId];
     this.input.battle = this.state === 'race' && !!mine && mine.mode === MODE.BATTLE && !mine.retired;
+    // How far behind the mech the lock's target is (1 dead astern): on the
+    // keys and the touch screen, pushing toward it eases off the pace.
+    let behind = 0;
+    if (this.input.battle && mine && mine.target >= 0) {
+      const t = this.session.race.mechs[mine.target];
+      const ds = deltaS(this.session.track, t.s, mine.s);
+      behind = Math.max(0, -ds / (Math.hypot(ds, t.d - mine.d) || 1));
+    }
+    this.input.battleBehind = behind;
     this.input.poll();
     let menu = this.input.consumeMenu();
     if (menu.includes('model')) {

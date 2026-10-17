@@ -516,20 +516,20 @@ function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: b
       }
       return chasing || (hunted && (m.cells >= 2 || toGo < 1500));
     }
-    case ABILITY.SNARE: {
-      // Drag back a rival who is getting away. On the battle lap only a marked target is worth a Cell.
-      const a = ATTACKS[ATK.MF_SNARE];
-      const ts = race.teams[m.team];
+    case ABILITY.PULSE: {
+      // Racing in a crowd: knock the rivals round it out of their swings and
+      // drain their Drive. Worth a Cell with two in reach, or one about to hit.
+      let near = 0;
+      let pressing = false;
       for (const e of race.mechs) {
-        if (e.team === m.team || !inPlay(e) || e.snareT > 0 || e.shieldT > 0 || e.iframes > 0) continue;
-        const ds = deltaS(track, e.s, m.s);
-        const dd = e.d - m.d;
-        const dist = Math.hypot(ds, dd);
-        if (ds < 6 || dist > a.shot!.range - 12) continue;
-        if (Math.abs(wrapAngle(Math.atan2(dd, ds) - m.facing)) > a.arc * 0.7) continue;
-        if (lap3 ? e.role === ROLE.FW || e.place <= 2 : ts.tactic === TACTIC.MARK && ts.mark === e.id && m.cells >= 2) return true;
+        if (e.team === m.team || !inPlay(e) || e.iframes > 0 || !sameRoute(track, m, e)) continue;
+        const dist = distance(track, e, m);
+        if (dist > rules.pulseRange * 0.9) continue;
+        near++;
+        if (e.target === m.id && e.act === ACT.ATTACK && ATTACKS[e.attack].kind === 'melee' && e.actT < ATTACKS[e.attack].windup && dist < 16) pressing = true;
       }
-      return false;
+      if (lap3) return near >= 2 || pressing;
+      return m.cells >= 2 && (near >= 2 || pressing);
     }
     case ABILITY.RAM:
       return wantRam(race, track, m);
@@ -561,6 +561,7 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
       return m.cells >= 2 && ((staggered && m.chain >= 2 && hp < 0.6) || (hunters >= 2 && hp < 0.5));
     }
     case ABILITY.PULSE: {
+      // (A midfielder escorting a team-mate: its button is the Disruptor.)
       let near = 0;
       let swinging = false;
       let pressing = false;
@@ -577,6 +578,18 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
       if (pressing && hp < 0.35) return true;
       if (lap3) return near >= 2 || pressing;
       return m.cells >= 2 && near >= 2 && swinging;
+    }
+    case ABILITY.SNARE: {
+      // The bolt at the lock's target: drag back a rival who would otherwise
+      // get away. On the speed lap the forward, or anyone in the top two; on
+      // the battle lap a marked target, or the rival forward, with a Cell to spare.
+      const t = race.mechs[m.target];
+      if (!t || t.team === m.team || !inPlay(t) || t.snareT > 0 || t.shieldT > 0 || t.iframes > 0) return false;
+      const a = ATTACKS[ATK.MF_SNARE];
+      if (distance(track, t, m) > a.shot!.range - 12) return false;
+      const ts = race.teams[m.team];
+      if (lap3) return t.role === ROLE.FW || t.place <= 2;
+      return m.cells >= 2 && ((ts.tactic === TACTIC.MARK && ts.mark === t.id) || t.role === ROLE.FW);
     }
     case ABILITY.AEGIS:
       return wantAegis(race, track, m);
@@ -598,12 +611,16 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   const us = ds / dist;
   const ud = dd / dist;
   const radii = c.radius + classOf(t).radius;
+  // On the trigger, unless the one it wants is behind and too far: then off
+  // it, so they come back to it (see lockPace).
+  out.throttle = 1;
 
   if (t.team === m.team) {
     // Escort: sit just off the ally's shoulder, on the side away from the wall.
     const pref = radii + 9;
     out.my = clamp((dist - pref) / 6, -1, 1);
     out.mx = 0;
+    lockPace(m, ds, dist - pref, out, false);
     return;
   }
 
@@ -633,6 +650,7 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     ai.orbitUntil = tick + 50;
   }
   out.mx = ai.orbit * (m.role === ROLE.MF ? 0.7 : 0.4);
+  lockPace(m, ds, dist - pref, out, weaponsFree(race));
 
   // --- attack
   if (m.act === ACT.NONE && tick >= ai.attackAt && weaponsFree(race)) {
@@ -751,6 +769,20 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
       out.my = 0;
     }
     press(out, m, BTN.A);
+  }
+}
+
+/**
+ * Closing on whoever a lock is on, the way a person does: a rival well behind
+ * is let come back (off the trigger, by as much as the gap), one well ahead is
+ * run down on a boost (A held, stick at it), while there is Drive to spare.
+ * `gap` is how much further away than it wants to be.
+ */
+function lockPace(m: MechState, ds: number, gap: number, out: MechInput, boost: boolean): void {
+  if (ds < -4 && gap > 10) out.throttle = clamp(1 - (gap - 10) / 30, 0.4, 1);
+  if (boost && ds > 4 && gap > 22 && m.drive > 40 && m.act === ACT.NONE && out.my > 0.5) {
+    out.mx *= 0.3;
+    out.buttons |= BTN.A;
   }
 }
 

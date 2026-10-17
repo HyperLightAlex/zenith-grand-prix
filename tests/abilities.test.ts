@@ -81,8 +81,8 @@ function scene(id: number, locked: boolean, ahead: number, side: number): Case['
 const CASES: Case[] = [
   { ability: ABILITY.OVERDRIVE, id: FW0, locked: false, make: scene(FW0, false, 60, 14) },
   { ability: ABILITY.BREAKAWAY, id: FW0, locked: true, make: scene(FW0, true, 30, 8) },
-  { ability: ABILITY.SNARE, id: MF0, locked: false, make: scene(MF0, false, 40, 0) },
-  { ability: ABILITY.PULSE, id: MF0, locked: true, make: scene(MF0, true, 16, 8) },
+  { ability: ABILITY.PULSE, id: MF0, locked: false, make: scene(MF0, false, 16, 8) },
+  { ability: ABILITY.SNARE, id: MF0, locked: true, make: scene(MF0, true, 40, 0) },
   { ability: ABILITY.AEGIS, id: DF0, locked: false, make: scene(DF0, false, 60, 14) },
   { ability: ABILITY.RAM, id: DF0, locked: true, make: scene(DF0, true, 30, 8) },
 ];
@@ -99,7 +99,7 @@ describe('the ability table', () => {
     for (const a of ABILITIES) expect(a.blurb.length).toBeGreaterThan(10);
     expect(CLASSES.map((c) => [c.abilityFree, c.abilityLocked])).toEqual([
       [ABILITY.OVERDRIVE, ABILITY.BREAKAWAY],
-      [ABILITY.SNARE, ABILITY.PULSE],
+      [ABILITY.PULSE, ABILITY.SNARE],
       [ABILITY.AEGIS, ABILITY.RAM],
     ]);
     expect(CLASSES.map((c) => c.role)).toEqual([ROLE.FW, ROLE.MF, ROLE.DF]);
@@ -184,9 +184,9 @@ describe('abilityFor: which move the button would fire', () => {
     const a = new Arena(2);
     const m = a.put(MF0, 0, 0);
     m.act = ACT.ATTACK;
-    expect(abilityFor(m)).toBe(ABILITY.SNARE);
+    expect(abilityFor(m)).toBe(ABILITY.PULSE);
     m.act = ACT.DASH;
-    expect(abilityFor(m)).toBe(ABILITY.SNARE);
+    expect(abilityFor(m)).toBe(ABILITY.PULSE);
   });
 });
 

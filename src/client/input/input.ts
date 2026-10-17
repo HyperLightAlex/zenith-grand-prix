@@ -284,6 +284,10 @@ export class Input {
       lookBack = false;
     }
 
+    // Locked on, the keys and the touch screen hold full pace (the throttle is
+    // the pace a lock carries you at); pushing toward a target behind eases off.
+    if (this.battle && this.device !== 'pad') throttle = 1 - Math.max(0, my) * this.battleBehind;
+
     this.tapped = new Set();
     // A button still held from closing a menu is not a press in the race.
     this.swallow &= buttons;
@@ -331,6 +335,13 @@ export class Input {
    * raises the guard (as RB does) instead of braking. Set by the game each frame.
    */
   battle = false;
+  /**
+   * Locked on, how far behind the mech its target is: 0 ahead or abreast, 1
+   * dead astern. Set by the game each frame. The keys and the touch screen
+   * have no trigger to ease off with, so pushing toward a target behind
+   * eases off for them, by as much as it is behind.
+   */
+  battleBehind = 0;
   /** Until when (performance.now) a hit's rumble should not be overwritten by the road's. */
   private rumbleBusyUntil = 0;
 

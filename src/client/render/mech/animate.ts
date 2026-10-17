@@ -41,6 +41,12 @@ export class MechAnimator {
   private prevSpeed = 0;
   /** The garage: stand at rest in the bay instead of the grid's crouch. */
   display = false;
+  /**
+   * How far the gun arm should be turned onto its target this drawing (0 to
+   * 1): up while a gun attack is raised. The view does the aiming, since it
+   * knows where the target is (rig.aimArm).
+   */
+  aimWeight = 0;
 
   constructor(public rig: MechRig) {}
 
@@ -141,6 +147,7 @@ export class MechAnimator {
       this.lastShotT = -1;
     }
     const t = m.actT + alpha;
+    this.aimWeight = 0;
     if (m.act === ACT.ATTACK) {
       const a = ATTACKS[m.attack];
       const clip = CLIPS[m.attack];
@@ -152,6 +159,7 @@ export class MechAnimator {
         const up = ease(clamp01(t / Math.max(3, a.windup)));
         const down = 1 - ease(clamp01((t - a.windup - a.active) / Math.max(1, a.recovery)));
         blendPose(P, wind, Math.min(up, down));
+        this.aimWeight = Math.min(up, down);
         const shotIdx = Math.floor((t - a.windup) / a.shot.interval);
         if (t >= a.windup && shotIdx < a.shot.count && shotIdx !== this.lastShotT) {
           this.lastShotT = shotIdx;

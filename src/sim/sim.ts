@@ -14,6 +14,7 @@ import {
   BATTLE_CAP_LAP3,
   BATTLE_CAP_MULT,
   BATTLE_CARRY_PACE,
+  BATTLE_EASE_FLOOR,
   BATTLE_MIN_FRAC,
   BATTLE_STAGGER_DRAG,
   BOOST_ACCEL,
@@ -40,6 +41,7 @@ import {
   LAPS,
   LINK_RANGE,
   LOCK_BREAK,
+  LUNGE_ACCEL,
   LOCK_BREAK_TICKS,
   MAX_HEADING,
   MAX_RACE_TICKS,
@@ -106,6 +108,7 @@ import { freshAwardTicks, freshHurtBy, onPass, onRingout } from './awards';
 import {
   addVelocity,
   classOf,
+  backToFight,
   carveSteer,
   clearEffects,
   dropCarve,
@@ -186,6 +189,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       mode: MODE.SPEED,
       target: -1,
       outOfRange: 0,
+      lastFoe: -1,
       hp: c.maxHp * race.rules.armourScale,
       maxHp: c.maxHp * race.rules.armourScale,
       guard: c.guardMax,
@@ -475,13 +479,18 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
   }
   m.facing = approachAngle(m.facing, Math.atan2(ud, us), turn * DT);
   m.steer = approach(m.steer, 0, STEER_RATE * DT);
-  m.boosting = false;
   // Locked on, there is no carving, and a burst is spent.
   if (m.carving) dropCarve(m);
   m.carveT = 0;
   const limiter = limiterOf(race);
   const floor = limiter * BATTLE_MIN_FRAC;
   const move = race.rules.battleMove;
+  // Fighting pace: what the lock carries a mech at with the trigger held.
+  const ref = race.lapPhase < 3 ? limiter : battleCap(race, m, c, true);
+  // Off the trigger it eases down, as far as BATTLE_EASE_FLOOR of that.
+  const throttle = clamp(input.throttle, 0, 1);
+  const easeFloor = ref * BATTLE_EASE_FLOOR;
+  stepBattleBoost(race, m, input);
 
   if (m.act === ACT.STAGGER) {
     // Tumbling: no control, bleed speed.
@@ -516,7 +525,8 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     if (m.vs > over) m.vs = over;
     // The same the other way: a hop back takes only so much off, so hop
     // after hop cannot stop a mech dead or send it backwards down the road.
-    const under = Math.min(over, floor) - c.dash * DASH_OVER;
+    // (Below the pace the trigger asks for, which off the trigger is lower.)
+    const under = Math.min(over, lerp(easeFloor, floor, throttle)) - c.dash * DASH_OVER;
     if (m.vs < under) m.vs = under;
   } else {
     let mx = clamp(input.mx, -1, 1);
@@ -543,27 +553,36 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     }
     if (m.guarding) scale *= 0.5;
     scale *= move;
+    // Boosting at the target: as much again as a boost adds to a racing
+    // mech, toward it, whichever way that is (behind, it is a brake).
+    const boost = m.boosting ? ref * (race.rules.boostMult - 1) : 0;
     // A lunge goes the way the attack faces, not after the target.
     const fs = Math.cos(m.facing);
     const fd = Math.sin(m.facing);
-    const rs = (us * my * c.approach - ud * mx * c.strafe) * scale + fs * advance + us * charge;
-    const rd = (ud * my * c.approach + us * mx * c.strafe) * scale + fd * advance + ud * charge;
+    const rs = (us * my * c.approach - ud * mx * c.strafe) * scale + fs * advance + us * (charge + boost);
+    const rd = (ud * my * c.approach + us * mx * c.strafe) * scale + fd * advance + ud * (charge + boost);
 
-    // The track carries you at your target's pace, easing toward the
-    // limiter so a long fight does not grind to a halt.
-    const ref = race.lapPhase < 3 ? limiter : battleCap(race, m, c, true);
     // Carried at the target's pace, leaning toward race pace, so a fight
-    // moves down the road as fast as the race does.
-    const carry = lerp(t.vs, ref, BATTLE_CARRY_PACE);
-    const cap = battleCap(race, m, c, ds > 2) + (advance + charge) * 0.6;
+    // moves down the road as fast as the race does; off the trigger, eased
+    // down toward BATTLE_EASE_FLOOR of fighting pace.
+    const carried = lerp(t.vs, ref, BATTLE_CARRY_PACE);
+    const carry = lerp(Math.min(carried, easeFloor), carried, throttle);
+    // The band the road speed is held in: no faster than the lock's cap, no
+    // slower than the floor (or, off the trigger, the eased floor). Whatever
+    // drives at the target (a lunge, a Ram, a boost) widens it that way, and
+    // only that way: a charge at someone behind can brake as hard as one at
+    // someone ahead can push.
+    const cap0 = battleCap(race, m, c, ds > 2);
+    const push = fs * advance + us * (charge + boost);
+    const cap = cap0 + Math.max(0, push);
+    const low = lerp(Math.min(easeFloor, cap0), Math.min(floor, cap0), throttle) + Math.min(0, push);
     // Whatever a dash (or a shove) left over the cap, or under the slowest a
     // fight is carried, is made up at once.
-    const low = Math.min(floor, cap);
     if (m.vs > cap) m.vs = Math.max(cap, m.vs - DASH_BLEED * DT);
     else if (m.vs < low) m.vs = Math.min(low, m.vs + DASH_BLEED * DT);
-    const wantVs = clamp(carry + rs, Math.min(floor, cap), cap);
+    const wantVs = clamp(carry + rs, low, cap);
     const wantVd = rd;
-    const acc = c.battleAccel * move * (advance > 0 || charge > 0 ? 2.2 : 1) * DT;
+    const acc = c.battleAccel * move * (advance > 0 || charge > 0 ? LUNGE_ACCEL : m.boosting ? BOOST_ACCEL : 1) * DT;
     let dvs = wantVs - m.vs;
     let dvd = wantVd - m.vd;
     const dm = Math.hypot(dvs, dvd);
@@ -576,6 +595,24 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
   }
   m.speed = Math.hypot(m.vs, m.vd);
   m.heading = Math.atan2(m.vd, Math.max(m.vs, 1e-3));
+}
+
+/**
+ * Boost in a lock: A held with the stick toward the target (or left alone)
+ * once the dash that the press started is over. It pays like a boost when
+ * racing (a full BOOST_MIN_START to light, then BOOST_COST a second) and is
+ * out while staggered, dashing, attacking or snared.
+ */
+function stepBattleBoost(race: RaceState, m: MechState, input: MechInput): void {
+  const wasBoosting = m.boosting;
+  m.boosting = false;
+  const mag = Math.hypot(input.mx, input.my);
+  const toward = mag < 0.3 || input.my >= Math.abs(input.mx);
+  const fuel = wasBoosting ? BOOST_COST * DT : BOOST_MIN_START;
+  if ((input.buttons & BTN.A) === 0 || !toward || m.act !== ACT.NONE || m.snareT > 0 || m.drive < fuel) return;
+  m.boosting = true;
+  m.drive = Math.max(0, m.drive - BOOST_COST * DT);
+  if (!wasBoosting) race.events.push({ type: 'boost', mech: m.id });
 }
 
 function stepRetired(track: Track, m: MechState): void {
@@ -881,6 +918,10 @@ function handleLock(race: RaceState, track: Track, m: MechState, pressed: number
   if (pressed & BTN.LOCK) {
     if (cur && cur.team !== m.team) {
       setTarget(race, m, -1);
+    } else if (cur) {
+      // Escorting: back to the rival last fought (or the best one in reach),
+      // and with nobody in reach, let go.
+      setTarget(race, m, backToFight(race, track, m));
     } else {
       const t = pickTarget(race, track, m, false, -1);
       if (t >= 0) setTarget(race, m, t);
@@ -891,9 +932,10 @@ function handleLock(race: RaceState, track: Track, m: MechState, pressed: number
     }
   } else if (pressed & BTN.ALLY) {
     if (cur && cur.team === m.team) {
-      // Second press hops to the other teammate, or lets go.
-      const other = pickTarget(race, track, m, true, cur.id);
-      setTarget(race, m, other);
+      // The escort button toggles: from a team-mate, back to the fight (the
+      // other team-mate is the target switch's job), or with nobody to
+      // fight, let go.
+      setTarget(race, m, backToFight(race, track, m));
     } else {
       const t = pickTarget(race, track, m, true, -1);
       if (t >= 0) setTarget(race, m, t);

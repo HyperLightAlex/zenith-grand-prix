@@ -80,16 +80,17 @@ which follows the frame rate).
 |---|---|---|---|
 | Steer | Left stick | A D | Left thumb anywhere on the left of the screen |
 | Accelerate / brake | RT / LT | W / S | Held for you / Carve |
+| Locked on: ease off, so a target behind catches up | Let go of RT | W, with the target behind | Push toward a target behind |
 | Carve (hold through a corner, let go for a burst) | LT with the stick pushed over | S with A or D | Hold Carve and steer |
 | Boost (uses Drive) | A | Space | Boost |
 | Ability (uses a Cell) | B | R | The ability's own button |
 | Lock on to an enemy / let go (the one it would take is marked) | LB | Q | Lock on / Let go |
-| Escort a teammate / let go | Click the left stick | E | Escort |
+| Escort a teammate / back to the fight | Click the left stick | E | Escort / Fight |
 | Attack / special | X / Y | J / K | Attack / Special |
 | Guard (while locked on; press just before a hit to parry) | LT (RB works too) | L | Guard |
-| Dash (while locked on) | A | Space | Dash |
+| Dash (while locked on; forward or no stick goes at the target, hold to boost at it) | A | Space | Dash |
 | Guard swing: arc round your target (while guarding) | Stick left or right + A | A or D + Space | Hold Guard, steer, Dash |
-| Switch target (while locked on) | Right stick left / right, hold to keep stepping | Z C | Switch |
+| Switch target (while locked on; teammates while escorting) | Right stick left / right, hold to keep stepping | Z C | Switch |
 | Look around / look back | Right stick / R3 | V | |
 | Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 | Team, then the play |
 | Pause | Start | Esc | Pause (top right) |
@@ -203,14 +204,15 @@ leader's nose; a mech that is already full passes through without using it.
 | Frame | Free steering | Locked on |
 |---|---|---|
 | Swift (forward) | **Overdrive**, on the speed lap only: 4 s at +30% speed, ignoring armour damage | **Break Away**: works even mid-hit. Cancels the stagger, shakes off every lock and throws you clear |
-| Vector (midfielder) | **Snare**: a bolt that cuts the target's top speed by a quarter for 3.5 s and stops it boosting | **Disruptor**: a pulse that interrupts every enemy close by and drains their Drive |
+| Vector (midfielder) | **Disruptor**: a pulse that interrupts every enemy close by and drains their Drive | **Snare**: a bolt at your target that cuts its top speed by a quarter for 3.5 s and stops it boosting |
 | Bulwark (defender) | **Aegis**: 4 s shield over itself and teammates nearby. A third of the damage, no stagger | **Ram**: 3.5 s of unstoppable charge, driving straight at your target until it lands. Whatever its front hits takes heavy damage and is thrown aside |
 
 They answer each other. Overdrive and Break Away both burn off a Snare, an
 Aegis shrugs off a Ram and a Snare, a guard blunts a Ram or a Disruptor.
 On the battle lap a forward has Break Away but not Overdrive, so it cannot
 simply outrun the fight: its support has to carry it to lap 3 (the rule is
-`overdriveLap`). Escorting a team-mate, the defender's button is its Aegis.
+`overdriveLap`). Escorting a team-mate, the defender's button is its Aegis
+and the midfielder's its Disruptor.
 
 ## Fighting
 
@@ -235,6 +237,11 @@ simply outrun the fight: its support has to carry it to lap 3 (the rule is
   way of what was coming and onto its flank or past it. You are untouchable
   for the first part of it, and it costs what a dash costs. From further out
   it goes less far round.
+- **Pace in a fight.** Locked on, the trigger sets the pace: held, the fight
+  is carried at race pace; let go and it eases to three quarters of that, so
+  a rival behind comes back to you. A tap of A with the stick forward or
+  centred is a quick dash at your target; hold it to boost at the target for
+  Drive, which catches a rival who is running and brakes toward one behind.
 - **Big moments.** The camera darts in for a moment on a heavy blow, a parry,
   a guard break or a knockout you are part of (a slider sets how much), each
   weapon has its own colour of swing and sparks, and any knockout you had a

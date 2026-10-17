@@ -355,19 +355,31 @@ weapons at the start of lap 2.
 | Frame | Free steering | Locked on |
 |---|---|---|
 | Swift | **Overdrive**, from the speed lap (`overdriveLap` 3; refused before it, at no cost): 4 s, top speed +30%, armour penalty ignored, burns off a Snare. Takes the place of boost while it runs | **Break Away**: also works while staggered. Ends the stagger, clears a Snare, 40 ticks of invulnerability, drops every enemy lock on you, no enemy can lock you for 1.5 s, and you are released at 10% over your cap |
-| Vector | **Snare**: a fast bolt with aim assist out to 100 units. On a clean hit the target's speed cap is 74% for 3.5 s and it cannot boost | **Disruptor**: every enemy within 26 units takes a heavy hit that breaks through armoured wind-ups, and loses 30 Drive |
+| Vector | **Disruptor**: every enemy within 26 units takes a heavy hit that breaks through armoured wind-ups, and loses 30 Drive. Also the button while escorting a team-mate | **Snare**: a fast bolt at the target, out to 100 units. On a clean hit the target's speed cap is 74% for 3.5 s and it cannot boost |
 | Bulwark | **Aegis**: the defender and every teammate within 34 units take 35% damage and cannot be staggered for 4 s. Also the button while escorting a team-mate | **Ram**: 3.5 s, +12% speed, cannot be staggered, slowed or snared, three times the mass. It drives straight at the target (60 u/s over the fight's own movement) until its front lands; each enemy its front runs into takes 80 damage once and is thrown sideways; a wall on the far side does the rest. Let go of the lock and the charge runs on down the road |
 
 Counters: a guard reduces a Ram or a Disruptor to a block (neither can be
 parried); an Aegis ignores a Snare and takes the sting out of a Ram; a dodge
 slips a Ram without using it up; Snare and Disruptor are refused, at no cost,
-if there is nobody they would reach.
+if there is nobody they would reach (the Snare: if the target is out of
+its reach or on the other route).
+
+The midfielder's two were the other way round until the playtest after 0.5:
+a Snare fired free steering went to whoever the aim assist found, and the
+Disruptor, a pulse round the mech, made more sense with nobody picked out.
 
 ### Lock-on
 
-- LB locks an enemy within 95 units. Clicking the left stick locks a
-  teammate instead (escort). The lock breaks if the target gets more than 125
-  units away for two-thirds of a second, retires or finishes.
+- LB locks an enemy within 95 units. The lock breaks if the target gets
+  more than 125 units away for two-thirds of a second, retires or finishes.
+- **Escort.** Clicking the left stick (E, or Escort on touch) swaps the lock
+  between the two sides: from a rival to the nearest teammate, and back to
+  the rival you left (or, if it has gone, the best rival in reach; with
+  nobody in reach you let go). LB while escorting goes back to the fight the
+  same way, and on touch the lock button reads "Fight". The right stick
+  switches target within whichever side you are locked on to. (The left
+  stick used to step through teammates and LB was the only way back, so a
+  stray click mid-fight left you hunting for the rival you had.)
 - **Which enemy.** The lock takes whoever is nearest the middle of the
   picture (the way the mech faces, which is where the camera looks), then
   the nearer, with a pull toward the rival forward: among rivals roughly in
@@ -389,13 +401,31 @@ if there is nobody they would reach.
 - Locked on, the mech is in **battle mode**. It faces the target. Stick up
   closes, stick down backs off, left and right circle. The track carries you
   at the target's pace, leaning 30% of the way toward race pace.
+- **The trigger sets the pace.** Held down, as above. Let go and the fight
+  eases down to 75% of that pace (`BATTLE_EASE_FLOOR`), so a target behind
+  comes to you; between the two, in proportion. On keyboard and touch, where
+  the throttle is held for you, pushing toward a target behind eases off by
+  itself.
+- **A on the stick's forward or neutral** goes at the target: a tap is a
+  quick dash at it (a neutral stick used to hop back), and holding it boosts
+  at it after the dash, for Drive at the usual 15 a second. Toward a target
+  ahead that is the way to catch it; toward one behind, a brake. Sideways
+  is still the side dash (or, guarding, the guard swing) and back the hop
+  back. The boost adds to the band below, but only toward the target.
 - A fight is never carried slower than 90% of the limiter (70% before), and
   movement around the target is 60% quicker than in 0.1, so the battle lap
   runs at about 369 mph against the 375 limiter, locked on or not. In the
   first build of 0.2 a long fight averaged 338 mph, and a stagger at racing
   speed could bring a mech nearly to a stop.
-- You can close on a target ahead at up to 4% over the limiter, no more. To
-  catch someone who is running, or to get away, you let go and spend Drive.
+- You can close on a target ahead at up to 4% over the limiter on the stick
+  alone. To catch someone who is running, boost at it; to get away, you let
+  go and spend Drive.
+- Whatever drives at the target (a boost, a lunge like the Lance Dash or a
+  light move's step in, a Ram) widens that band toward it, and only toward
+  it, and gets there four times as quickly (`LUNGE_ACCEL`): a charge at a
+  target behind brakes as hard as one at a target ahead pushes. Before, the
+  band held a Ram at a rival 70 units behind down to the fight's floor and
+  it never arrived, and a Lance at a rival 20 behind fell short.
 - A dash down the road only carries 30% of its speed over that cap, and the
   excess is scrubbed off within a few ticks of the dash ending. (In 0.1
   dashes stacked: three in a row inside a lock reached twice the limiter.)
@@ -408,7 +438,7 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 | Frame | X (primary) | Y (secondary) |
 |---|---|---|
 | Swift (forward) | Edge: three blade strikes, 20 / 22 / 40 damage | Lance Dash: armoured lunge across a 30 m gap, 56 damage, 12 Drive |
-| Vector (midfielder) | Carbine: three-round burst to 62 m, 7 a round, a burst every 0.55 s; hold the trigger to keep firing (about 38 a second, against the blades' 75 to 80) | Stun Kick: 34 damage, big knockback |
+| Vector (midfielder) | Carbine: three-round burst to 62 m, 8 a round, a burst every 0.45 s; hold the trigger to keep firing (about 53 a second, against the blades' 75 to 80; it was 7 a round every 0.55 s, 38 a second) | Stun Kick: 34 damage, big knockback |
 | Bulwark (defender) | Breaker: two hammer blows, 36 / 54, the second breaks guards | Scatter Cannon: six pellets inside 30 m, 6 each, ready again 1.5 s after the blast (it was 2.7 s) |
 
 - **Guard** (LT, or RB; L on the keyboard): hits from the front do 15%
@@ -443,7 +473,8 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 - Four hits in a chain and the victim bursts free. A burst from a gun is one
   hit for this purpose (a carbine's three rounds, a scatter blast's pellets),
   so a carbine kept on a target sets it free on the fifth burst, not the
-  second.
+  second. A burst's rounds are counted from the first that landed, so the
+  quicker carbine's bursts do not run together into one endless hit.
 - **Heavies charge** (Y held): held through its wind-up, the Lance Dash,
   the Stun Kick or the Scatter Cannon holds at the end of it and charges for
   up to 0.6 s, then goes when let go: a full charge hits 60% harder (damage,
@@ -536,7 +567,19 @@ Breaker Slam 20 (18).
 | Top speed (lap 3) | 160 u/s | 152.5 | 145 |
 | Grip | 100 | 90 | 80 |
 | Guard | 80 | 100 | 130 |
-| Abilities | Overdrive, Break Away | Snare, Disruptor | Aegis, Ram |
+| Abilities | Overdrive, Break Away | Disruptor, Snare | Aegis, Ram |
+
+The hangar's five bars: top speed, armour and handling from the table, and
+two worked out from the attacks themselves (`src/client/ui/frameStats.ts`),
+so a change to an attack shows in the readout. **Hitting power** is damage a
+second, attack speed and all: the primary string thrown whole (each blow
+cancelled into the next as early as it can be), half against an open rival
+and half into a guard, plus half the secondary's, used whenever its
+cooldown allows. **Combat range** is the furthest the frame hits from: a
+gun's range, or a blow's reach plus the ground its lunge covers. Each is
+shown against the best of the three (Swift 0.82 and 0.38, Vector 0.60 and
+1.00, Bulwark 1.00 and 0.48). Hitting power was set by hand before (the
+Vector 0.55), and there was no bar for the one thing the Vector does best.
 
 ### Team plays
 

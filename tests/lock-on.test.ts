@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACT,
   BATTLE_CAP_MULT,
+  BATTLE_EASE_FLOOR,
   BATTLE_MIN_FRAC,
   BATTLE_STAGGER_DRAG,
   BTN,
@@ -16,9 +17,11 @@ import {
   RULE_LIMITS,
   cycleTarget,
   pickTarget,
+  setTarget,
 } from '../src/sim/index';
 import { retire, setStagger } from '../src/sim/combat';
-import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, dist } from './helpers';
+import { Arena, DF0, DF1, FW0, FW1, MF0, MF1, TRACK, dist, giveCells } from './helpers';
+import type { MechState } from '../src/sim/index';
 
 const L = TRACK.length;
 
@@ -131,33 +134,76 @@ describe('acquiring and releasing a lock', () => {
 });
 
 describe('ally lock', () => {
-  it('ALLY locks a team-mate; a second press lets go when there is nobody else', () => {
+  it('ALLY locks a team-mate; a second press, with no rival to go back to, lets go', () => {
     const a = new Arena(1);
     const me = a.put(FW0, 0, 0);
     a.put(MF0, 30, -5);
-    a.put(FW1, 20, 8); // an enemy even closer: must be ignored
+    const foe = a.put(FW1, 20, 8); // an enemy even closer: must be ignored
     a.tap(FW0, BTN.ALLY);
     expect(me.target).toBe(MF0);
     expect(me.mode).toBe(MODE.BATTLE);
     a.step(3);
+    // No rival about any more: the second press lets go.
+    a.put(FW1, 600, 8);
+    void foe;
     a.tap(FW0, BTN.ALLY);
     expect(me.target).toBe(-1);
     expect(me.mode).toBe(MODE.SPEED);
   });
 
-  it('a second press hops to the other team-mate when both are in range', () => {
+  it('the escort button toggles: a stray press mid-fight costs one more press, and the same rival comes back', () => {
+    const a = new Arena(1);
+    const me = a.put(FW0, 0, 0);
+    a.put(MF0, 30, -5);
+    a.put(DF0, 50, 5);
+    a.put(FW1, 40, 6);
+    a.put(MF1, 25, -8); // nearer, and more in the middle of the picture
+    setTarget(a.race, me, FW1); // fighting the forward
+    a.step(2);
+    a.tap(FW0, BTN.ALLY);
+    expect([MF0, DF0]).toContain(me.target);
+    a.step(3);
+    a.tap(FW0, BTN.ALLY);
+    expect(me.target).toBe(FW1);
+    // The lock button does the same from an escort.
+    a.step(2);
+    a.tap(FW0, BTN.ALLY);
+    expect([MF0, DF0]).toContain(me.target);
+    a.step(2);
+    a.tap(FW0, BTN.LOCK);
+    expect(me.target).toBe(FW1);
+  });
+
+  it('escorting, the target switch steps between team-mates', () => {
     const a = new Arena(1);
     const me = a.put(FW0, 0, 0);
     a.put(MF0, 30, -5);
     a.put(DF0, 50, 5);
     a.tap(FW0, BTN.ALLY);
-    expect(me.target).toBe(MF0);
+    const first = me.target;
+    expect([MF0, DF0]).toContain(first);
     a.step(3);
-    a.tap(FW0, BTN.ALLY);
-    expect(me.target).toBe(DF0);
+    a.tap(FW0, BTN.TNEXT);
+    expect(me.target).toBe(first === MF0 ? DF0 : MF0);
     a.step(3);
+    a.tap(FW0, BTN.TNEXT);
+    expect(me.target).toBe(first);
+  });
+
+  it('back to the fight: a rival that has gone (out of reach) is replaced by the best one in reach', () => {
+    const a = new Arena(1);
+    const me = a.put(FW0, 0, 0);
+    a.put(MF0, 30, -5);
+    a.put(FW1, 40, 6);
+    a.put(MF1, 60, -4);
+    setTarget(a.race, me, FW1);
+    a.step(2);
     a.tap(FW0, BTN.ALLY);
     expect(me.target).toBe(MF0);
+    a.step(2);
+    a.put(FW1, 700, 0); // gone up the road
+    a.tap(FW0, BTN.ALLY);
+    expect(me.target).toBe(MF1);
   });
 
   it('LOCK and ALLY switch sides directly', () => {
@@ -176,15 +222,15 @@ describe('ally lock', () => {
     expect(me.mode).toBe(MODE.BATTLE);
   });
 
-  it('LOCK with no enemy about keeps the ally lock and says so', () => {
+  it('LOCK while escorting with no enemy about lets go', () => {
     const a = new Arena(1);
     const me = a.put(FW0, 0, 0);
     a.put(MF0, 30, -5);
     a.tap(FW0, BTN.ALLY);
     a.step(2);
     a.tap(FW0, BTN.LOCK);
-    expect(me.target).toBe(MF0);
-    expect(a.events('denied').map((e) => e.reason)).toEqual(['target']);
+    expect(me.target).toBe(-1);
+    expect(me.mode).toBe(MODE.SPEED);
   });
 
   /**
@@ -644,5 +690,116 @@ describe('who an attacker hunts when several lock at once', () => {
     expect(a.mech(FW0).target).toBe(DF1);
     expect(a.mech(MF0).target).toBe(DF1);
     for (const id of [FW0, MF0, DF1, FW1, MF1, DF0]) expect(Number.isFinite(a.mech(id).s + a.mech(id).d)).toBe(true);
+  });
+});
+
+describe('locked-on pace: the trigger, the boost, and lunges at the target', () => {
+  const gap = (a: Arena, me: number, t: number) => a.mech(t).s - a.mech(me).s;
+
+  it('on the trigger the lock carries you at fighting pace; off it, the pace eases to BATTLE_EASE_FLOOR of it', () => {
+    for (const [th, want] of [[1, 1], [0, BATTLE_EASE_FLOOR], [0.5, (1 + BATTLE_EASE_FLOOR) / 2]] as const) {
+      const a = new Arena(2);
+      const me = a.put(FW0, -200, 0);
+      a.put(FW1, -230, 6);
+      setTarget(a.race, me, FW1);
+      a.inputs[FW0].throttle = th;
+      a.step(120, () => a.recenter([FW0, FW1]));
+      expect(me.vs).toBeCloseTo(a.pace * want, 1);
+    }
+  });
+
+  it('off the trigger, a target behind comes to you', () => {
+    const a = new Arena(2);
+    const me = a.put(FW0, -200, 0);
+    a.put(FW1, -240, 6);
+    setTarget(a.race, me, FW1);
+    a.inputs[FW0].throttle = 0;
+    a.step(60, () => a.recenter([FW0, FW1]));
+    expect(gap(a, FW0, FW1)).toBeGreaterThan(-25);
+  });
+
+  /** Ticks to get within 12 of a target `ahead` units up the road (negative: behind), stick at it, A held or not. */
+  function close(ahead: number, holdA: boolean): { ticks: number; me: MechState; a: Arena } {
+    const a = new Arena(2);
+    const me = a.put(FW0, -200, 0);
+    a.put(FW1, -200 + ahead, 6);
+    setTarget(a.race, me, FW1);
+    me.drive = 100;
+    a.inputs[FW0].my = 1;
+    a.inputs[FW0].buttons = holdA ? BTN.A : 0;
+    let n = 0;
+    while (n < 240 && Math.abs(gap(a, FW0, FW1)) > 12) {
+      a.step(1);
+      a.recenter([FW0, FW1]);
+      n++;
+    }
+    return { ticks: n, me, a };
+  }
+
+  it('A held with the stick at the target: the dash runs on into a boost at it, paid for like a boost', () => {
+    const plain = close(60, false);
+    const boosted = close(60, true);
+    expect(plain.ticks).toBe(240); // on the stick alone it barely gains
+    expect(boosted.ticks).toBeLessThan(110);
+    expect(boosted.a.events('dash')).toHaveLength(1);
+    expect(boosted.a.events('boost')).toHaveLength(1);
+    expect(boosted.me.boosting).toBe(true);
+    const spent = 100 - boosted.me.drive;
+    expect(spent).toBeGreaterThan(CLASSES[boosted.me.role].dashCost);
+  });
+
+  it('...and at a target behind, the boost is a brake: it closes just as fast', () => {
+    const plain = close(-60, false);
+    const boosted = close(-60, true);
+    expect(boosted.ticks).toBeLessThan(110);
+    expect(boosted.ticks).toBeLessThan(plain.ticks - 60);
+  });
+
+  it('no boost with the stick to the side or back (those are a side dash and a hop back)', () => {
+    for (const [mx, my] of [[1, 0], [-1, 0.2], [0, -1]] as const) {
+      const a = new Arena(2);
+      const me = a.put(FW0, -200, 0);
+      a.put(FW1, -140, 6);
+      setTarget(a.race, me, FW1);
+      me.drive = 100;
+      a.inputs[FW0].mx = mx;
+      a.inputs[FW0].my = my;
+      a.inputs[FW0].buttons = BTN.A;
+      a.step(40, () => a.recenter([FW0, FW1]));
+      expect(me.boosting).toBe(false);
+      expect(a.events('boost')).toHaveLength(0);
+    }
+  });
+
+  it('a Ram lands on a target behind as surely as on one ahead', () => {
+    for (const off of [40, -40, 70, -70]) {
+      const a = new Arena(2);
+      const df = giveCells(a.put(DF0, -200, 0));
+      a.put(MF1, -200 + off, 6);
+      setTarget(a.race, df, MF1);
+      a.ability(DF0);
+      let n = 0;
+      while (n < 210 && df.ramHits === 0) {
+        a.step(1);
+        a.recenter([DF0, MF1]);
+        n++;
+      }
+      expect(df.ramHits).not.toBe(0);
+      expect(n).toBeLessThan(90);
+    }
+  });
+
+  it('the Lance Dash lunges at a target behind as well as one ahead', () => {
+    for (const off of [20, -20]) {
+      const a = new Arena(2);
+      const me = a.put(FW0, -200, 0);
+      a.put(FW1, -200 + off, 0);
+      setTarget(a.race, me, FW1);
+      me.drive = 100;
+      a.step(2);
+      a.tap(FW0, BTN.Y);
+      a.step(30);
+      expect(a.events('hit').filter((e) => e.attacker === FW0)).toHaveLength(1);
+    }
   });
 });

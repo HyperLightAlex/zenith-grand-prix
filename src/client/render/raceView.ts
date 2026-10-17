@@ -101,6 +101,8 @@ const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
 const v4 = new THREE.Vector3();
 const camFwd = new THREE.Vector3();
+const aimV = new THREE.Vector3();
+const aimP = new THREE.Vector3();
 const ndc = new THREE.Vector3();
 const shadowScale = new THREE.Matrix4();
 /** A drawn ring lying on the road: the road's orientation, turned so the sprite's face is the road's. */
@@ -359,15 +361,23 @@ export class RaceView {
       // Steering feedback must not wait up to 125 ms for an 8 Hz drawing.
       // Only the human pilot's bank runs every frame; stride/actions stay on twos.
       const responsive = !this.solo && m.id === this.session.localId && m.human;
+      let posed = false;
       if (step <= 0 || idx !== v.poseIdx) {
         v.anim.display = this.solo && m.id === this.focusId;
         v.anim.update(v.poseAcc, m, alpha, responsive ? dt : v.poseAcc);
         v.poseAcc = 0;
         v.poseIdx = idx;
+        posed = true;
       } else if (responsive) {
         v.anim.updateSteering(dt, m);
+        posed = true;
       }
       v.rig.root.updateMatrixWorld(true);
+      // A gun raised: the arm turned onto what it is shooting at.
+      if (posed && v.anim.aimWeight > 0.01 && this.aimDir(m, v, alpha, aimV)) {
+        v.rig.aimArm(aimV, v.anim.aimWeight);
+        v.rig.root.updateMatrixWorld(true);
+      }
       trackPoint(track, v.s, v.d, 4.2 + v.h, v.pos);
       trackDir(track, v.s, m.vs, m.vd, v.vel).multiplyScalar(Math.hypot(m.vs, m.vd));
 
@@ -787,20 +797,47 @@ export class RaceView {
     trackDir(this.session.track, v.s, Math.cos(v.facing), Math.sin(v.facing), v3);
     const cam = this.renderer.camera;
     cam.getWorldDirection(camFwd);
-    const away = v3.dot(camFwd) > 0.3;
-    let size = (6 + r * 2.4) * (away ? 0.65 : 1);
+    // How far it charges away from the camera, eased in rather than switched
+    // at a line: locked on, the charge swings with the target, and a hard
+    // switch flicked the prow between in front of the mech and behind it.
+    const x = Math.min(1, Math.max(0, (v3.dot(camFwd) - 0.1) / 0.4));
+    const away = x * x * (3 - 2 * x);
+    let size = (6 + r * 2.4) * (1 - 0.35 * away);
     v4.copy(v.pos).addScaledVector(v3, r + 1.5 - (RAM_TIP - 0.5) * size);
-    if (away) {
+    if (away > 0) {
       // Further along the same line of sight, and bigger by as much: the same
       // place on screen, but behind the mech.
       v2.copy(v4).sub(cam.position);
       const d = v2.length() || 1;
-      const k = (d + r * 2.5) / d;
+      const k = (d + r * 2.5 * away) / d;
       v4.copy(cam.position).addScaledVector(v2, k);
       size *= k;
     }
-    const o = { row: key ? 1 : 0, tint: 0xffa030, dir: v3, gain: 1.3, depth: away, follow: key ? null : v.rig.root };
+    const o = { row: key ? 1 : 0, tint: 0xffa030, dir: v3, gain: 1.3, depth: away > 0.5, follow: key ? null : v.rig.root };
     return key ? this.fx.drawnKeep(key, 'ram', v4, size, o) : this.fx.drawnSprite('ram', v4, size, o);
+  }
+
+  /**
+   * Where a mech's gun should point, in world space: at the chest of the
+   * rival it is locked on to, or free steering along its newest shot.
+   * Null when there is nothing to aim at.
+   */
+  private aimDir(m: MechState, v: MechVisual, alpha: number, out: THREE.Vector3): THREE.Vector3 | null {
+    const { race, track } = this.session;
+    v.rig.muzzle.getWorldPosition(aimP);
+    const t = m.target >= 0 ? race.mechs[m.target] : null;
+    if (t && t.team !== m.team) {
+      const ses = this.session;
+      const ts = ses.prevS[t.id] + (t.s - ses.prevS[t.id]) * alpha;
+      const td = ses.prevD[t.id] + (t.d - ses.prevD[t.id]) * alpha;
+      const th = ses.prevH[t.id] + (t.h - ses.prevH[t.id]) * alpha;
+      trackPoint(track, ts, td, th + this.mechs[t.id].rig.dims.height * 0.55, out);
+      return out.sub(aimP).normalize();
+    }
+    let p = null;
+    for (const q of race.projectiles) if (q.owner === m.id && (!p || q.id > p.id)) p = q;
+    if (!p) return null;
+    return trackDir(track, v.s, p.vs - m.vs, p.vd - m.vd, out).normalize();
   }
 
   /**
@@ -817,6 +854,9 @@ export class RaceView {
     const p = race.projectiles.find((q) => q.id === proj);
     const aim = p ? Math.atan2(p.vd - m.vd, p.vs - m.vs) : m.facing;
     trackDir(track, v.s, Math.cos(aim), Math.sin(aim), v3);
+    // Out of the barrel, the way the arm points (it is turned onto the
+    // target: see aimDir), unless the arm is somehow well off the shot.
+    if (v.rig.barrelDir(v4) && v4.dot(v3) > 0.5) v3.copy(v4);
     const size = scatter ? 7 : 6;
     v.rig.muzzle.getWorldPosition(v1).addScaledVector(v3, (0.5 - MUZZLE_EDGE) * size);
     return this.fx.drawnSprite('muzzle', v1, size, { row: scatter ? 1 : 0, tint: v.livery.glow, follow: v.rig.root, dir: v3, gain: 1.3 });

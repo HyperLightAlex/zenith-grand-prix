@@ -156,9 +156,10 @@ export function tryDash(race: RaceState, track: Track, m: MechState, input: Mech
   let my = input.my;
   const mag = Math.hypot(mx, my);
   if (mag < 0.3) {
-    // No direction held: hop straight back.
+    // No direction held: straight at the target (held on, the dash runs on
+    // into a boost at it; see stepBattleMode).
     mx = 0;
-    my = -1;
+    my = 1;
   } else {
     mx /= mag;
     my /= mag;
@@ -222,9 +223,11 @@ export function abilityFor(m: MechState, race?: RaceState): Ability | -1 {
     return c.abilityLocked === ABILITY.BREAKAWAY ? ABILITY.BREAKAWAY : -1;
   }
   if (!locked) return c.abilityFree;
-  // A Ram charges whoever you are locked on to: escorting a team-mate, the
-  // defender's button is its Aegis instead.
-  if (c.abilityLocked === ABILITY.RAM && race && race.mechs[m.target]?.team === m.team) return c.abilityFree;
+  // A Ram charges, and a Snare is fired at, whoever you are locked on to:
+  // escorting a team-mate, the button is the free move instead (the
+  // defender's Aegis, the midfielder's Disruptor).
+  const atTarget = c.abilityLocked === ABILITY.RAM || c.abilityLocked === ABILITY.SNARE;
+  if (atTarget && race && race.mechs[m.target]?.team === m.team) return c.abilityFree;
   return c.abilityLocked;
 }
 
@@ -249,9 +252,14 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
   }
   const rules = race.rules;
   // Attacks that would hit nothing are refused rather than wasted.
-  if (ab === ABILITY.SNARE && !shotTarget(race, track, m, ATTACKS[ATK.MF_SNARE])) {
-    deny(race, m, 'target');
-    return false;
+  if (ab === ABILITY.SNARE) {
+    // Fired at the lock's target: refused when the bolt could not reach it.
+    const a = ATTACKS[ATK.MF_SNARE];
+    const t = shotTarget(race, track, m, a);
+    if (!t || !sameRoute(track, m, t) || Math.hypot(deltaS(track, t.s, m.s), t.d - m.d) > a.shot!.range + 8) {
+      deny(race, m, 'target');
+      return false;
+    }
   }
   if (ab === ABILITY.PULSE) {
     let any = false;
@@ -460,10 +468,15 @@ export function applyHit(
     } else {
       // One count per tick (a scatter blast is one hit for this purpose), and
       // one per burst of the same gun: a carbine's rounds are one hit too.
+      // Timed from the round that counted, not the latest one, or a gun
+      // firing as fast as the carbine does ran its bursts together into one
+      // endless hit that never set the target free.
       const key = att.id * 64 + attackIdx;
       const sameBurst = a.kind === 'shot' && victim.chainKey === key && race.tick - victim.chainTick <= CHAIN_SAME_SHOT;
-      if (victim.chainTick !== race.tick && !sameBurst) victim.chain++;
-      victim.chainTick = race.tick;
+      if (victim.chainTick !== race.tick && !sameBurst) {
+        victim.chain++;
+        victim.chainTick = race.tick;
+      }
       victim.chainKey = key;
       victim.chainT = CHAIN_TICKS;
       if (victim.chain > CHAIN_LIMIT) {

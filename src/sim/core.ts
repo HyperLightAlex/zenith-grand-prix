@@ -142,6 +142,7 @@ export function setTarget(race: RaceState, m: MechState, id: number): void {
   m.target = id;
   m.outOfRange = 0;
   if (id >= 0) {
+    if (race.mechs[id].team !== m.team) m.lastFoe = id;
     m.mode = MODE.BATTLE;
     race.events.push({ type: 'lock', mech: m.id, target: id });
   } else {
@@ -155,6 +156,17 @@ export function setTarget(race: RaceState, m: MechState, id: number): void {
     m.guarding = false;
     race.events.push({ type: 'unlock', mech: m.id });
   }
+}
+
+/**
+ * Back from escorting to the fight: the rival last locked on to, if the lock
+ * could still hold it, else the best rival in reach (as the lock button
+ * picks), else -1.
+ */
+export function backToFight(race: RaceState, track: Track, m: MechState): number {
+  const f = m.lastFoe >= 0 ? race.mechs[m.lastFoe] : null;
+  if (f && f.team !== m.team && lockable(f, m) && sameRoute(track, m, f) && Math.hypot(deltaS(track, f.s, m.s), f.d - m.d) <= LOCK_BREAK) return f.id;
+  return pickTarget(race, track, m, false, -1);
 }
 
 /** Lock-on scoring: points per radian off the line of sight, per unit away, and off for the rival forward. */

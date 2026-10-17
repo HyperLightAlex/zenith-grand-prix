@@ -233,7 +233,19 @@ export const LOCK_BREAK_TICKS = 40;
 export const AUTO_LOCK_RANGE = 45;
 export const BATTLE_CAP_MULT = 1.04; // of the limiter on laps 1-2, closing on a target ahead
 export const BATTLE_CAP_LAP3 = 0.93; // of the class top speed on lap 3
-export const BATTLE_MIN_FRAC = 0.9; // of the limiter: the slowest a fight is carried
+export const BATTLE_MIN_FRAC = 0.9; // of the limiter: the slowest a fight is carried, on the trigger
+/**
+ * Off the trigger in a lock the pace eases down, as far as this share of
+ * fighting pace (the limiter, or on the speed lap the lock's cap): a target
+ * behind comes to you, and the fight cannot fall far behind the pack.
+ */
+export const BATTLE_EASE_FLOOR = 0.75;
+/**
+ * A lunge (an attack's advance) or a Ram's charge drives this much harder
+ * than the stick: it reaches its speed in a few ticks, not a third of a
+ * second (it was 2.2, and a Lance Dash spent its active frames getting going).
+ */
+export const LUNGE_ACCEL = 4;
 /** A stagger bleeds less speed in a lock than at racing speed, so a fight keeps moving. */
 export const BATTLE_STAGGER_DRAG = 6;
 /** How far a lock's carry leans toward race pace rather than the target's own speed. */
@@ -294,8 +306,9 @@ export const INPUT_BUFFER = 8;
 export const CHAIN_LIMIT = 4; // hits in one stagger chain before a free escape
 /**
  * The rounds of one burst from one gun, landing inside this many ticks of
- * each other, count once toward a stagger chain: a carbine's three rounds
- * are one hit for this purpose, as a scatter blast already was.
+ * the first, count once toward a stagger chain: a carbine's three rounds
+ * are one hit for this purpose, as a scatter blast already was. (Under the
+ * carbine's 27 ticks from one burst to the next.)
  */
 export const CHAIN_SAME_SHOT = 20;
 /** How much harder a fully charged heavy hits (see AttackDef.charge). */
@@ -341,7 +354,7 @@ export interface AbilityDef {
 export const ABILITIES: AbilityDef[] = [
   { key: 'overdrive', name: 'Overdrive', blurb: 'On the speed lap: a few seconds far past top speed. Ignores armour damage.' },
   { key: 'breakaway', name: 'Break Away', blurb: 'Works even mid-hit: shake every lock and burst clear.' },
-  { key: 'snare', name: 'Snare', blurb: 'A bolt that drags a rival\'s top speed down and kills its boost.' },
+  { key: 'snare', name: 'Snare', blurb: 'A bolt at your target that drags its top speed down and kills its boost.' },
   { key: 'pulse', name: 'Disruptor', blurb: 'A pulse that interrupts everyone close by and drains their Drive.' },
   { key: 'ram', name: 'Ram', blurb: 'An unstoppable charge at your target. It, and whatever else the charge hits, is thrown aside.' },
   { key: 'aegis', name: 'Aegis', blurb: 'A shield over you and teammates nearby.' },
@@ -480,14 +493,15 @@ export const ATTACKS: AttackDef[] = [
   melee({ key: 'fw_lance', name: 'Lance Dash', windup: 15, active: 10, recovery: 22, damage: 56, stagger: 28, knockback: 34, reach: 6.5, advance: 75, armor: true, driveCost: 12, cooldown: 120, heavy: true, charge: 36 }),
   // Midfielder: carbine bursts at range, and a kick to make space.
   {
-    // A burst about every half second, 21 to a burst: about 38 a second at
-    // range, against the blades' 75 to 80 up close. Hold the trigger to keep
-    // firing. (It was a burst every 1.2 s, 18 to a burst: 15 a second.)
+    // A burst every 0.45 s, 24 to a burst: about 53 a second at range,
+    // against the blades' 75 to 80 up close. Hold the trigger to keep
+    // firing. (It was a burst every 0.55 s, 21 to a burst: 38 a second; and
+    // before that a burst every 1.2 s, 18 to a burst: 15 a second.)
     key: 'mf_burst', name: 'Carbine', kind: 'shot',
-    windup: 5, active: 10, recovery: 8,
+    windup: 5, active: 10, recovery: 6,
     reach: 0, arc: 0.4,
-    damage: 7, guardDamage: 3, stagger: 4, knockback: 2,
-    guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 10, next: -1, heavy: false,
+    damage: 8, guardDamage: 3, stagger: 4, knockback: 2,
+    guardBreak: false, armor: false, advance: 0, driveCost: 0, cooldown: 6, next: -1, heavy: false,
     shot: { count: 3, interval: 4, pellets: 1, speed: 240, spread: 0.065, range: 62 },
   },
   melee({ key: 'mf_kick', name: 'Stun Kick', windup: 12, active: 5, recovery: 18, damage: 34, stagger: 28, knockback: 38, reach: 6, cooldown: 55, heavy: true, charge: 36 }),
@@ -538,7 +552,8 @@ export const CLASSES: ClassDef[] = [
     battleAccel: 68, strafe: 26, approach: 30,
     guardMax: 100, guardRegen: 18, dash: 68, dashCost: 15, dashIframes: 10,
     primary: ATK.MF_BURST, secondary: ATK.MF_KICK, aiRange: 30,
-    abilityFree: ABILITY.SNARE, abilityLocked: ABILITY.PULSE,
+    // Free steering, the pulse round it; locked on, the bolt at the target.
+    abilityFree: ABILITY.PULSE, abilityLocked: ABILITY.SNARE,
   },
   {
     role: ROLE.DF, frame: 'Bulwark',

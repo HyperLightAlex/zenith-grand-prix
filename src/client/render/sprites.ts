@@ -121,7 +121,8 @@ const FRAG = /* glsl */ `
   varying vec2 vUv;
   void main() {
     vec2 uv = vUv;
-    if (uFlip > 0.5) uv.x = 1.0 - uv.x;
+    if (uFlip > 1.5) uv.y = 1.0 - uv.y;
+    else if (uFlip > 0.5) uv.x = 1.0 - uv.x;
     vec4 t = texture2D(uMap, uCell.xy + uv * uCell.zw);
     if (t.a < 0.02) discard;
     vec3 c = t.rgb;
@@ -192,12 +193,15 @@ interface Sprite {
   /** The frame a loop was last asked for. */
   seen: number;
   turn: boolean;
+  /** For one pointing along `dir`: the turn on screen it settled on (NaN until it has one). */
+  dirRoll: number;
 }
 
 const POOL = 64;
 const _v = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
+const _c = new THREE.Vector3();
 
 export class SpriteFx {
   readonly group = new THREE.Group();
@@ -248,6 +252,7 @@ export class SpriteFx {
         key: null,
         seen: 0,
         turn: false,
+        dirRoll: NaN,
       });
     }
   }
@@ -336,6 +341,7 @@ export class SpriteFx {
     s.vel.copy(o.vel ?? _v.set(0, 0, 0));
     s.roll = o.roll ?? 0;
     s.dir = o.dir ? (s.dir ?? new THREE.Vector3()).copy(o.dir) : null;
+    s.dirRoll = NaN;
     s.flat = o.flat ? (s.flat ?? new THREE.Quaternion()).copy(o.flat) : null;
     s.rise = o.rise ?? atlas.rise ?? 0;
     const delay = Math.max(0, Math.round(o.delay ?? 0));
@@ -346,7 +352,7 @@ export class SpriteFx {
     (u.uTint.value as THREE.Color).set(o.tint ?? (atlas.paint === 'smoke' ? 0x9a96a4 : 0x45e8ff));
     u.uPaint.value = PAINT[atlas.paint];
     u.uGain.value = o.gain ?? (atlas.paint === 'smoke' ? 1 : 1.5);
-    u.uFlip.value = o.flip ? 1 : 0;
+    u.uFlip.value = o.flip ? (o.dir ? 2 : 1) : 0;
     // Smoke sits in the scene; the glows are drawn over it and everything else.
     s.mat.depthTest = o.depth ?? false;
     s.mesh.renderOrder = o.depth ? 7 : 8;
@@ -390,6 +396,7 @@ export class SpriteFx {
 
   /** Advance on new drawings, follow, face the camera. `dt` 0 holds everything (a painted still). */
   update(dt: number, camera: THREE.Camera): void {
+    const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1;
     const fresh = drawClock.fresh && dt > 0;
     for (const s of this.pool) {
       if (s.frame < 0) continue;
@@ -405,7 +412,10 @@ export class SpriteFx {
           // A loop: another of its drawings, never the one just shown.
           const cols = ATLASES[s.kind].cols;
           s.frame = (s.frame + 1 + Math.floor(Math.random() * (cols - 1))) % cols;
-          s.mat.uniforms.uFlip.value = Math.random() < 0.5 ? 1 : 0;
+          // Mirrored at random for variety: top to bottom for one pointing
+          // along `dir` (the ram's prow), as side to side turned it round
+          // to point back the way it came on every other drawing.
+          s.mat.uniforms.uFlip.value = Math.random() < 0.5 ? (s.dir ? 2 : 1) : 0;
           if (s.turn) s.roll += (1 + Math.floor(Math.random() * 3)) * Math.PI * 0.5;
         } else if (++s.frame >= ATLASES[s.kind].cols) {
           this.end(s);
@@ -431,10 +441,28 @@ export class SpriteFx {
       s.mesh.quaternion.copy(camera.quaternion);
       let roll = s.roll;
       if (s.dir) {
-        // Point along a world direction as it looks from the camera.
+        // Point along a world direction as it looks from the camera. A
+        // direction running nearly into (or out of) the picture shows as a
+        // speck on screen whose angle swings wildly from one frame to the
+        // next: trust it only as far as it shows across the view, and
+        // otherwise hold the turn it had (a ram charging away from the
+        // camera kept spinning its prow round).
+        // (The angle is taken on screen, so across by the picture's aspect:
+        // taken straight from the projection, a wide screen squashed it and
+        // a slanting shot drew some 15 degrees steeper than it flew.)
         _a.copy(s.mesh.position).project(camera);
         _b.copy(s.mesh.position).add(s.dir).project(camera);
-        roll += Math.atan2(_b.y - _a.y, _b.x - _a.x);
+        const want = Math.atan2(_b.y - _a.y, (_b.x - _a.x) * aspect);
+        camera.getWorldPosition(_c);
+        _c.sub(s.mesh.position).normalize();
+        const across = Math.sqrt(Math.max(0, 1 - (_c.dot(s.dir) / (s.dir.length() || 1)) ** 2));
+        const trust = Math.min(1, Math.max(0, (across - 0.25) / 0.35));
+        if (Number.isNaN(s.dirRoll) || trust >= 1) s.dirRoll = want;
+        else if (trust > 0) {
+          const d = Math.atan2(Math.sin(want - s.dirRoll), Math.cos(want - s.dirRoll));
+          s.dirRoll += d * (1 - Math.pow(1 - trust, Math.max(dt, 0) * 60));
+        }
+        roll += s.dirRoll;
       }
       if (roll) s.mesh.rotateZ(roll);
     }

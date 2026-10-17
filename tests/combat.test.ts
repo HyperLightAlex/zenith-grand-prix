@@ -282,7 +282,8 @@ describe('melee attacks: range, timing and damage', () => {
     const passive = a.race.rules.drivePassive; // the battle-lap trickle, for both
     expect(att.drive - before.att).toBeCloseTo(20 * DRIVE_PER_DAMAGE_DEALT + ticks * passive * DT, 6);
     expect(vic.drive - before.vic).toBeCloseTo(20 * DRIVE_PER_DAMAGE_TAKEN + ticks * passive * DT, 6);
-    expect(vic.speed).toBeLessThan(a.pace * (1 - 20 * HIT_SLOW_PER_DAMAGE) + 1e-6);
+    // (Down the road: the blow's step-in may also have shoved it sideways.)
+    expect(vic.vs).toBeLessThan(a.pace * (1 - 20 * HIT_SLOW_PER_DAMAGE) + 1e-6);
 
     // The slow-down itself, on its own: 20 damage takes 5% off.
     const b = duel(FW0, FW1, 8);
@@ -546,7 +547,7 @@ describe('drive costs and cooldowns', () => {
 
   const cooled = [
     { name: 'Lance Dash', att: FW0, btn: BTN.Y, atk: ATK.FW_LANCE, cd: 120, gap: 11 },
-    { name: 'Carbine', att: MF0, btn: BTN.X, atk: ATK.MF_BURST, cd: 10, gap: 30 },
+    { name: 'Carbine', att: MF0, btn: BTN.X, atk: ATK.MF_BURST, cd: 6, gap: 30 },
     { name: 'Stun Kick', att: MF0, btn: BTN.Y, atk: ATK.MF_KICK, cd: 55, gap: 11 },
     { name: 'Scatter Cannon', att: DF0, btn: BTN.Y, atk: ATK.DF_SCATTER, cd: 90, gap: 15 },
   ];
@@ -937,7 +938,7 @@ describe('dash', () => {
     expect(me.act).toBe(ACT.NONE);
   });
 
-  it('goes where the stick points, relative to the target; no stick hops straight back', () => {
+  it('goes where the stick points, relative to the target; no stick goes straight at it', () => {
     const run = (mx: number, my: number) => {
       const a = arena(2);
       const me = a.put(FW0, 300, 0);
@@ -959,7 +960,7 @@ describe('dash', () => {
     const left = run(-1, 0);
     expect(toward.closed).toBeGreaterThan(3);
     expect(away.closed).toBeLessThan(-5);
-    expect(neutral.closed).toBeCloseTo(away.closed, 6);
+    expect(neutral.closed).toBeCloseTo(toward.closed, 6);
     expect(right.side).toBeGreaterThan(5);
     expect(left.side).toBeLessThan(-5);
     expect(Math.abs(toward.side)).toBeLessThan(1e-6);

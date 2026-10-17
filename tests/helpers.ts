@@ -138,7 +138,7 @@ function mechSum(m: MechState): number {
   return (
     m.id + m.team + m.role + m.skill +
     m.s + m.d + m.vs + m.vd + m.speed + m.heading + m.facing + m.steer + m.h + m.vh + m.fallT + m.padT +
-    m.mode + m.target + m.outOfRange +
+    m.mode + m.target + m.outOfRange + m.lastFoe +
     m.hp + m.guard + m.drive +
     m.act + m.actT + m.actDur + m.attack + m.attackStart + m.guardT + m.guardIdle + m.guardRest +
     m.iframes + m.chain + m.chainT + m.chainTick + m.chainKey + m.chargeT + m.bufBtn + m.bufT + m.cdPrimary + m.cdSecondary + m.cdDash +
