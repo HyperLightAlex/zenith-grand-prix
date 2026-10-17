@@ -11,8 +11,159 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Zenith GP</title>
+    <!--
+      The boot screen: race control's computer powering up while the game
+      downloads. It is here, in the page, so it shows from the first moment;
+      src/client/ui/boot.ts takes it over once the program has arrived and
+      fills it with the real progress (one line per mech as its models land).
+    -->
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b1020; }
+      .boot {
+        --b-glass: #02060d;
+        --b-phos: #45e8ff;
+        --b-dim: color-mix(in srgb, var(--b-phos) 38%, transparent);
+        --b-faint: color-mix(in srgb, var(--b-phos) 14%, transparent);
+        --b-signal: #ff7a1a;
+        --b-danger: #ff3d5a;
+        --b-glow: 0 0 0.35em color-mix(in srgb, var(--b-phos) 70%, transparent);
+        position: fixed; inset: 0; z-index: 100;
+        display: grid; place-items: center;
+        padding: max(2.5vmin, env(safe-area-inset-top)) max(2.5vmin, env(safe-area-inset-right)) max(2.5vmin, env(safe-area-inset-bottom)) max(2.5vmin, env(safe-area-inset-left));
+        background: #010307;
+        color: var(--b-phos);
+        font: 500 clamp(11px, 1.8vmin, 22px)/1.25 'Barlow Condensed', 'DIN Condensed', 'Arial Narrow', sans-serif;
+        font-variant-numeric: tabular-nums;
+        text-shadow: var(--b-glow);
+        user-select: none; -webkit-user-select: none;
+        box-sizing: border-box;
+      }
+      .boot *, .boot *::before, .boot *::after { box-sizing: border-box; }
+      /* The tube: glass with scan lines and a bloom in the middle. */
+      .boot-tube {
+        position: relative; width: min(100%, 78em); height: min(100%, 44em);
+        display: grid; grid-template-rows: auto 1fr auto; gap: 1.6em;
+        padding: 1.4em 2em 1.8em;
+        border: 1px solid var(--b-dim); border-radius: 1.2em;
+        background:
+          repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.32) 0 1px, transparent 1px 3px),
+          radial-gradient(90% 70% at 50% 45%, var(--b-faint), transparent 75%),
+          var(--b-glass);
+        box-shadow: 0 0 2.4em var(--b-faint), inset 0 0 4em rgba(0, 0, 0, 0.7);
+        overflow: hidden;
+        animation: boot-on 0.45s ease-out both;
+      }
+      .boot-head { display: flex; justify-content: space-between; gap: 1em; padding-bottom: 0.5em; border-bottom: 1px solid var(--b-dim); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+      .boot-head b { color: var(--b-signal); font-weight: 600; text-shadow: 0 0 0.35em color-mix(in srgb, var(--b-signal) 60%, transparent); }
+      .boot-main { display: grid; grid-template-columns: minmax(13em, 0.9fr) 1.6fr; gap: 3em; align-items: center; min-height: 0; }
+
+      /* The scope: race control's frame scanner, the count in its middle. */
+      .boot-scope { position: relative; justify-self: center; width: min(19em, 100%); aspect-ratio: 1; }
+      .boot-scope svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; fill: none; stroke: var(--b-phos); filter: drop-shadow(0 0 0.25em var(--b-dim)); }
+      .boot-scope .ring { stroke-width: 1.2; opacity: 0.7; }
+      .boot-scope .ticks { stroke-width: 7; stroke-dasharray: 1.2 6.48; opacity: 0.55; transform-origin: 100px 100px; animation: boot-turn 40s linear infinite; }
+      .boot-scope .inner { stroke-width: 1; stroke-dasharray: 3 5; opacity: 0.5; }
+      .boot-scope .cross { stroke-width: 1.4; opacity: 0.8; }
+      .boot-scope .sweep { position: absolute; inset: 3%; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0deg 300deg, var(--b-faint) 330deg, color-mix(in srgb, var(--b-phos) 45%, transparent) 359deg, transparent 360deg); animation: boot-turn 2.6s linear infinite; }
+      .boot-scope .readout { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 0.9em; }
+      /* The count in the HUD's airbrushed chrome. */
+      .boot-scope .readout b {
+        font-size: 5.6em; font-weight: 800; font-style: italic; line-height: 1; letter-spacing: -0.02em;
+        padding: 0 0.1em 0 0.04em;
+        background: linear-gradient(180deg, #ffffff 6%, #c4e8ff 34%, #3b8cff 50%, #ff8a1f 58%, #ffc25a 94%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        -webkit-text-stroke: 0.03em #0d1630; text-shadow: none;
+        filter: drop-shadow(0.04em 0.05em 0 #0d1630) drop-shadow(0 0 0.25em rgba(69, 232, 255, 0.35));
+      }
+      .boot-scope .readout i { font-size: 1.7em; font-weight: 700; font-style: italic; margin: -1.5em 0 0 0.08em; opacity: 0.85; }
+      .boot-scope .units { position: absolute; left: 0; right: 0; bottom: 26%; text-align: center; font-size: 0.95em; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.85; }
+
+      /* The log: lines from the top, the oldest scrolling off once it is full. */
+      .boot-log { list-style: none; margin: 0; padding: 0; height: 15em; align-self: center; display: flex; flex-direction: column; gap: 0.32em; overflow: hidden; font-size: 1.3em; letter-spacing: 0.1em; text-transform: uppercase; }
+      /* Once the oldest lines have scrolled off, the top of the screen fades. */
+      .boot-log.full { -webkit-mask-image: linear-gradient(180deg, transparent, #000 4.5em); mask-image: linear-gradient(180deg, transparent, #000 4.5em); }
+      .boot-log li { display: flex; gap: 0.6em; white-space: nowrap; animation: boot-type 0.22s steps(14) both; }
+      .boot-log li span { display: flex; flex: 1; min-width: 0; overflow: hidden; }
+      .boot-log li span::after { content: ''; flex: 1; min-width: 1.2em; margin: 0 0.1em 0.3em 0.6em; border-bottom: 0.14em dotted var(--b-dim); }
+      .boot-log li:not(:has(em)) span::after { content: none; }
+      .boot-log li em { font-style: normal; font-weight: 600; }
+      .boot-log li.frame em { color: var(--b-signal); text-shadow: 0 0 0.35em color-mix(in srgb, var(--b-signal) 60%, transparent); }
+      .boot-log li.now span::after, .boot-log li.now:not(:has(em)) span::after { content: '_'; flex: none; min-width: 0; margin: 0 0 0 0.15em; border: 0; animation: boot-cursor 0.8s steps(2) infinite; }
+      .boot-log li.fail { color: var(--b-danger); text-shadow: 0 0 0.35em color-mix(in srgb, var(--b-danger) 60%, transparent); white-space: normal; }
+      .boot-log li:nth-child(1) { animation-delay: 0.15s; }
+      .boot-log li:nth-child(2) { animation-delay: 0.4s; }
+      .boot-log li:nth-child(3) { animation-delay: 0.65s; }
+      .boot-log li:nth-child(4) { animation-delay: 0.9s; }
+      .boot.live .boot-log li { animation-delay: 0s; }
+
+      /* Progress: the hangar computer's segmented meter. */
+      .boot-bar { position: relative; height: 1.3em; background: repeating-linear-gradient(90deg, var(--b-faint) 0 0.75em, transparent 0.75em 1em); }
+      .boot-bar > i { position: absolute; inset: 0 auto 0 0; width: 0; background: repeating-linear-gradient(90deg, var(--b-phos) 0 0.75em, transparent 0.75em 1em); filter: drop-shadow(0 0 0.3em var(--b-dim)); transition: width 0.25s steps(4); }
+      /* Before the program has arrived there is nothing to count: one block runs along the meter. */
+      .boot:not(.live) .boot-bar > i { width: 4em; animation: boot-seek 1.6s steps(16) infinite alternate; }
+
+      .boot-retry { justify-self: start; margin-top: 0.4em; padding: 0.35em 1.2em; font: inherit; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--b-glass); background: var(--b-phos); border: 0; border-radius: 0.3em; box-shadow: 0 0 0.8em var(--b-dim); cursor: pointer; }
+      .boot-retry:focus-visible { outline: 0.15em solid var(--b-signal); outline-offset: 0.2em; }
+
+      /* Handing over: the tube switches off, down to a line and out. */
+      .boot.off { pointer-events: none; animation: boot-fade 0.42s ease-in both; }
+      .boot.off .boot-tube { animation: boot-off 0.36s ease-in both; }
+
+      @keyframes boot-on { 0% { transform: scale(0.7, 0.01); filter: brightness(4); } 45% { transform: scale(1, 0.01); filter: brightness(3); } 100% { transform: none; filter: none; } }
+      @keyframes boot-off { 0% { transform: none; filter: none; } 55% { transform: scale(1, 0.01); filter: brightness(3); } 100% { transform: scale(0, 0.01); filter: brightness(5); } }
+      @keyframes boot-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+      @keyframes boot-turn { to { transform: rotate(1turn); } }
+      @keyframes boot-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+      @keyframes boot-cursor { 50% { opacity: 0; } }
+      @keyframes boot-seek { from { left: 0; } to { left: calc(100% - 4em); } }
+
+      /* A phone held upright, or any tall window: the scope over the log. */
+      @media (max-aspect-ratio: 1/1) {
+        .boot { font-size: clamp(11px, 2.6vmin, 20px); }
+        .boot-tube { height: 100%; padding: 1.2em 1.3em 1.5em; }
+        .boot-main { grid-template-columns: 1fr; grid-template-rows: auto auto; align-content: center; gap: 2em; }
+        .boot-scope { width: min(17em, 70%); }
+        .boot-log { height: min(14em, 38vh); font-size: 1.2em; }
+      }
+      /* Short landscape screens (a phone on its side): a smaller scope and log. */
+      @media (min-aspect-ratio: 1/1) and (max-height: 480px) {
+        .boot-tube { gap: 1em; padding: 1em 1.4em 1.2em; }
+        .boot-log { font-size: 1.15em; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-tube, .boot-log li, .boot.off .boot-tube { animation: none; }
+        .boot-scope .ticks, .boot-scope .sweep, .boot:not(.live) .boot-bar > i { animation: none; }
+        .boot-log li.now span::after { animation: none; }
+        .boot.off { animation: boot-fade 0.2s linear both; }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot" class="boot">
+      <div class="boot-tube">
+        <div class="boot-head"><span>Zenith race control</span><b>Frame link</b></div>
+        <div class="boot-main">
+          <div class="boot-scope" aria-hidden="true">
+            <svg viewBox="0 0 200 200">
+              <circle class="ring" cx="100" cy="100" r="99" />
+              <circle class="ticks" cx="100" cy="100" r="88" />
+              <circle class="inner" cx="100" cy="100" r="66" />
+              <path class="cross" d="M100 -6v20M100 186v20M-6 100h20M186 100h20" />
+            </svg>
+            <div class="sweep"></div>
+            <div class="readout"><b id="boot-pct">00</b><i>%</i></div>
+            <div class="units" id="boot-count">Receiving</div>
+          </div>
+          <ol class="boot-log" id="boot-log" aria-hidden="true">
+            <li><span>Power on</span></li>
+            <li><span>Core memory</span><em>OK</em></li>
+            <li><span>Phosphor test</span><em>OK</em></li>
+            <li class="now"><span>Receiving race program</span></li>
+          </ol>
+        </div>
+        <div class="boot-bar" id="boot-bar" role="progressbar" aria-label="Loading the mechs" aria-valuemin="0" aria-valuemax="100"><i></i></div>
+      </div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/client/main.ts"></script>
   </body>

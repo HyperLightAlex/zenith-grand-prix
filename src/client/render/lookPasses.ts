@@ -3,9 +3,13 @@
 // Ink: lines traced from the depth buffer and the flat colours, the way an
 // inbetweener traces a drawing: an outline where a shape stands in front of
 // another, a line where a surface folds, and a line where two flat colours
-// meet. They are heavier up close, break here and there, fade into the
-// distance, and are traced again (a fraction of a pixel off) on every new
-// drawing, which makes them boil.
+// meet. They are heavier up close and fade into the distance. A background's
+// lines break here and there and are traced again (a fraction of a pixel
+// off) on every new drawing, which makes them boil. A mech's are clean: they
+// hold still, never break, are one ink whatever the light, keep their share
+// of the picture on a small screen, and are smoothed at the end (MechSmooth);
+// the film's blur, fringe and weave leave the mechs alone. The ink pass also
+// draws where the mechs are (InkPass.mask) for the passes after it.
 //
 // Film: what the camera did to the cels. Halation round bright light, a
 // little colour fringe and softness, a grade toward the painted palette
@@ -15,7 +19,9 @@
 // and the painted still (a freeze-frame laid down as a painting, pushing
 // slowly in, for a knockout).
 import * as THREE from 'three';
+import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 
 const VERTEX = /* glsl */ `
   varying vec2 vUv;
@@ -31,6 +37,30 @@ const COMMON = /* glsl */ `
   float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
   vec3 saturated(vec3 c, float k) { float l = luma(c); return max(mix(vec3(l), c, k), 0.0); }`;
 
+/**
+ * Which pixels are a mech's. A mech's pixels carry its mark in alpha (under
+ * 0.75; everything else is 1). The picture is multisampled, so at a mech's
+ * edge the mark is blended with what is behind it; a pixel is the mech's
+ * when the mech covers at least half of it, measured against the mark round
+ * it (markNear: the lowest alpha nearby), the same rule for every mech.
+ * (A plain 0.75 cut took a different share of each mech's edge pixels,
+ * which made their contours ragged.)
+ */
+const MECH = /* glsl */ `
+  float markNear(vec2 uv, vec2 px) {
+    float m = texture2D(tDiffuse, uv).a;
+    m = min(m, texture2D(tDiffuse, uv + vec2(px.x, 0.0)).a);
+    m = min(m, texture2D(tDiffuse, uv - vec2(px.x, 0.0)).a);
+    m = min(m, texture2D(tDiffuse, uv + vec2(0.0, px.y)).a);
+    m = min(m, texture2D(tDiffuse, uv - vec2(0.0, px.y)).a);
+    return m;
+  }
+  // 1 for a mech's pixel (alpha a) where the mark nearby is m.
+  float mechOf(float a, float m) {
+    if (m >= 0.75) return 0.0;
+    return step(a, 0.5 * (1.0 + m));
+  }`;
+
 const InkShader = {
   name: 'InkShader',
   uniforms: {
@@ -40,6 +70,10 @@ const InkShader = {
     uNear: { value: 0.5 },
     uFar: { value: 40000 },
     uInk: { value: 1 },
+    uMechLines: { value: 1 },
+    /** 1: ink the mechs as before the clean lines (look.mechLines 'original'), for comparison. */
+    uOriginal: { value: 0 },
+    uGeometryMarks: { value: new Float32Array(6) },
     uBoil: { value: 1 },
     uSeed: { value: 0 },
     uInkColor: { value: new THREE.Color(0x150f22) },
@@ -54,28 +88,43 @@ const InkShader = {
     uniform vec2 uRes;
     uniform vec2 uFade;
     uniform float uNear, uFar, uInk, uBoil, uSeed;
+    uniform float uMechLines, uGeometryMarks[6], uOriginal;
     uniform vec3 uInkColor;
     varying vec2 vUv;
     ${COMMON}
     float dist(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, uNear, uFar); }
-    // A character pixel (a mech) carries alpha 0.5; everything else is background.
-    float charAt(vec4 c) { return 1.0 - step(0.75, c.a); }
+    ${MECH}
+    // The mark nearby, for the samples round this pixel (see MECH).
+    float markHere;
+    // (The original look: a plain cut at 0.75.)
+    float charAt(vec4 c) { return uOriginal > 0.5 ? 1.0 - step(0.75, c.a) : mechOf(c.a, markHere); }
     void main() {
+      vec2 px = 1.0 / uRes;
+      // Lines are drawn for a 1080-line frame and scaled with it. A mech's
+      // keep their share of the picture down to a small screen (a phone, a
+      // handheld) rather than swallowing the detail they outline.
+      float scale = clamp(uRes.y / 1080.0, 0.75, 3.0);
+      float scaleMech = clamp(uRes.y / 1080.0, 0.55, 3.0);
+      // Is this pixel a mech's, where it really is (a mech's lines do not boil).
+      bool original = uOriginal > 0.5;
+      markHere = markNear(vUv, px);
+      float me = mechOf(texture2D(tDiffuse, vUv).a, markHere);
+      // Boil: each drawing traces a background's lines again, a fraction of a pixel off.
+      // (The original look boiled the mechs' too.)
+      vec2 cell = floor(vUv * uRes / (9.0 * scale));
+      vec2 jit = (vec2(hash(cell + uSeed), hash(cell + uSeed + 17.3)) - 0.5) * px * 1.1 * scale * uBoil * (original ? 1.0 : 1.0 - me);
+      vec2 uv = vUv + jit;
       vec4 src4 = texture2D(tDiffuse, vUv);
       vec3 src = src4.rgb;
-      vec2 px = 1.0 / uRes;
-      // Lines are drawn for a 1080-line frame and scaled with it.
-      float scale = clamp(uRes.y / 1080.0, 0.75, 3.0);
-      // Boil: each drawing traces the lines again, a fraction of a pixel off.
-      vec2 cell = floor(vUv * uRes / (9.0 * scale));
-      vec2 jit = (vec2(hash(cell + uSeed), hash(cell + uSeed + 17.3)) - 0.5) * px * 1.1 * scale * uBoil;
-      vec2 uv = vUv + jit;
       float zc = dist(uv);
-      float me = charAt(texture2D(tDiffuse, uv));
+      if (original) {
+        me = charAt(texture2D(tDiffuse, uv));
+        scaleMech = scale;
+      }
 
       // ---- the outer line: the near edge of a shape against what is behind it.
       // A character's contour is heavy close up and thins with distance; a background's is light.
-      float wo = scale * mix(mix(3.4, 1.3, smoothstep(8.0, 70.0, zc)), 1.0, 1.0 - me);
+      float wo = me > 0.5 ? scaleMech * mix(3.4, 1.3, smoothstep(8.0, 70.0, zc)) : scale;
       vec2 ox = vec2(px.x * wo, 0.0);
       vec2 oy = vec2(0.0, px.y * wo);
       float zl = dist(uv - ox), zr = dist(uv + ox), zb = dist(uv - oy), zt = dist(uv + oy);
@@ -103,7 +152,7 @@ const InkShader = {
       // shadow: cels never inked those.
       float inner = 0.0;
       if (me > 0.5) {
-        float wi = scale * mix(1.6, 1.0, smoothstep(8.0, 40.0, zc));
+        float wi = scaleMech * mix(1.6, 1.0, smoothstep(8.0, 40.0, zc));
         vec2 ix = vec2(px.x * wi, 0.0);
         vec2 iy = vec2(0.0, px.y * wi);
         float il = dist(uv - ix), ir = dist(uv + ix), ib = dist(uv - iy), it = dist(uv + iy);
@@ -113,10 +162,15 @@ const InkShader = {
         vec3 cl = texture2D(tDiffuse, uv - ix).rgb, cr = texture2D(tDiffuse, uv + ix).rgb;
         vec3 cb = texture2D(tDiffuse, uv - iy).rgb, ct = texture2D(tDiffuse, uv + iy).rgb;
         float hot = max(max(max(luma(cl), luma(cr)), max(luma(cb), luma(ct))), luma(src));
-        // Paint boundaries change brightness by a wide ratio; a shadow by much less.
+        // Paint boundaries change brightness by a wide ratio; a shadow by
+        // much less. Two paints in the same light keep their ratio in any
+        // light, so these lines hold as the light changes (white armour in
+        // full sun keeps them); only light itself, a glow or a lamp, is left
+        // uninked.
         float rx = abs(log((max(luma(cr), 0.0) + 0.015) / (max(luma(cl), 0.0) + 0.015)));
         float ry = abs(log((max(luma(ct), 0.0) + 0.015) / (max(luma(cb), 0.0) + 0.015)));
-        float colour = smoothstep(0.85, 1.25, max(rx, ry)) * (1.0 - smoothstep(0.9, 1.3, hot)) * 0.8;
+        vec2 hotCut = original ? vec2(0.9, 1.3) : vec2(1.8, 2.6);
+        float colour = smoothstep(0.85, 1.25, max(rx, ry)) * (1.0 - smoothstep(hotCut.x, hotCut.y, hot)) * 0.8;
         // A mech further off is drawn simpler, as a cel did: the lines where
         // paints meet (the edges of its numbers and emblems among them) and
         // its creases fade, its outline and overlaps stay.
@@ -126,11 +180,14 @@ const InkShader = {
         inner = max(max(over, fold), colour) * 0.72;
       }
 
-      // A hand-drawn line breaks here and there, and fades where a background painter would leave it out.
+      // A background's line breaks here and there, and fades where a
+      // background painter would leave it out. A mech's line is whole. (No
+      // background line on a mech's edge: the mech's own contour is there.)
       float breaks = smoothstep(0.04, 0.16, hash(floor(uv * uRes / (5.0 * scale)) + uSeed * 1.7));
       float bgFade = 1.0 - smoothstep(uFade.x, uFade.y, zc);
-      float charLine = max(contour, inner) * me * mix(1.0, breaks, 0.7);
-      float bgLine = outline * (1.0 - me) * breaks * bgFade * 0.7;
+      float authored = uGeometryMarks[int(clamp(floor((markHere-0.1)/0.065+0.5),0.0,5.0))];
+      float charLine = max(contour, inner) * me * (original ? mix(1.0, breaks, 0.7) : mix(1.0,uMechLines,authored));
+      float bgLine = outline * (1.0 - me) * (original ? 1.0 : step(0.75, markHere)) * breaks * bgFade * 0.7;
       // Coloured lines: inside a light area (a lit sky, the sunny side of a
       // cloud, a glow, a sunlit panel) the cel's line was traced in a deeper
       // shade of that colour, not in ink. A character's outer contour stays ink.
@@ -142,8 +199,10 @@ const InkShader = {
       vec3 trace = saturated(max(round4, src), 1.8) * 0.55;
       float shade = 0.55 + 0.45 * min(luma(src), 1.0);
       vec3 ink = uInkColor * shade;
-      float innerShare = inner / max(max(contour, inner), 1e-3);
-      vec3 charInk = mix(ink, trace, lit * innerShare * 0.85);
+      // A mech is inked in one ink, whatever the light on it.
+      vec3 charInk = uInkColor;
+      // (The original look: lighter in shadow, traced in colour in a light area.)
+      if (original) charInk = mix(ink, trace, lit * (inner / max(max(contour, inner), 1e-3)) * 0.85);
       vec3 bgInk = mix(mix(src * 0.4, ink, 0.5), trace, lit);
       vec3 col = mix(src, charInk, clamp(charLine * uInk, 0.0, 1.0));
       col = mix(col, bgInk, clamp(bgLine * uInk, 0.0, 1.0));
@@ -151,15 +210,85 @@ const InkShader = {
     }`,
 };
 
-/** The ink pass: needs the depth of the frame it inks, taken from the buffer it reads. */
+/**
+ * Where the mechs are, as the ink pass sees them, widened by a pixel so the
+ * outside edge of a mech's contour counts: 1 on a mech, 0 elsewhere. The film
+ * leaves these pixels sharp and MechSmooth smooths them.
+ */
+const MaskShader = {
+  name: 'MechMaskShader',
+  uniforms: {
+    tDiffuse: { value: null as THREE.Texture | null },
+    uRes: { value: new THREE.Vector2(1280, 720) },
+  },
+  vertexShader: VERTEX,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform vec2 uRes;
+    varying vec2 vUv;
+    void main() {
+      // Any mech's mark within a pixel (a mech's edge pixels included): nine
+      // reads, cheap enough for a phone at full resolution.
+      vec2 px = 1.0 / uRes;
+      float m = 1.0;
+      for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) m = min(m, texture2D(tDiffuse, vUv + vec2(float(x), float(y)) * px).a);
+      }
+      gl_FragColor = vec4(1.0 - step(0.75, m), 0.0, 0.0, 1.0);
+    }`,
+};
+
+/**
+ * The ink pass: needs the depth of the frame it inks, taken from the buffer
+ * it reads. It also draws where the mechs are into `mask`, for the film and
+ * the smoothing after it.
+ */
 export class InkPass extends ShaderPass {
+  readonly mask = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, type: THREE.UnsignedByteType });
+  private maskQuad = new FullScreenQuad(new THREE.ShaderMaterial(MaskShader));
+
   constructor() {
     super(InkShader);
+  }
+
+  override setSize(width: number, height: number): void {
+    this.mask.setSize(Math.max(1, width), Math.max(1, height));
+    ((this.maskQuad.material as THREE.ShaderMaterial).uniforms.uRes.value as THREE.Vector2).set(width, height);
   }
 
   override render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget, deltaTime: number, maskActive: boolean): void {
     this.uniforms.tDepth.value = readBuffer.depthTexture;
     super.render(renderer, writeBuffer, readBuffer, deltaTime, maskActive);
+    // Where the mechs are, from the same picture (the marks in its alpha).
+    (this.maskQuad.material as THREE.ShaderMaterial).uniforms.tDiffuse.value = readBuffer.texture;
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(this.mask);
+    this.maskQuad.render(renderer);
+    renderer.setRenderTarget(prev);
+  }
+}
+
+/**
+ * FXAA on the mechs alone, at the end, on the finished picture: smooths the
+ * steps out of their ink lines (lines drawn on a finished picture get none
+ * of its multisampling). The rest of the picture is left as it is.
+ */
+export class MechSmooth extends ShaderPass {
+  constructor(mask: THREE.Texture) {
+    super({
+      name: 'MechSmoothShader',
+      uniforms: { ...THREE.UniformsUtils.clone(FXAAShader.uniforms), tMech: { value: mask } },
+      vertexShader: FXAAShader.vertexShader,
+      fragmentShader: FXAAShader.fragmentShader.replace('uniform vec2 resolution;', 'uniform vec2 resolution;\nuniform sampler2D tMech;').replace(
+        'gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv );',
+        `float m = texture2D( tMech, vUv ).r;
+        gl_FragColor = m > 0.0 ? mix( texture2D( tDiffuse, vUv ), ApplyFXAA( tDiffuse, resolution.xy, vUv ), m ) : texture2D( tDiffuse, vUv );`,
+      ),
+    });
+  }
+
+  override setSize(width: number, height: number): void {
+    (this.uniforms.resolution.value as THREE.Vector2).set(1 / width, 1 / height);
   }
 }
 
@@ -182,12 +311,16 @@ const FilmShader = {
     uStill: { value: 0 },
     uStillZoom: { value: 0 },
     uPaperSeed: { value: 0 },
+    /** Where the mechs are (InkPass.mask), and whether to use it: the lens's blur, fringe and weave leave them sharp. */
+    tMech: { value: null as THREE.Texture | null },
+    uMechSharp: { value: 0 },
   },
   vertexShader: VERTEX,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
+    uniform sampler2D tMech;
     uniform vec2 uRes, uWeave;
-    uniform float uFilm, uGrainSeed, uImpact, uStill, uStillZoom, uPaperSeed;
+    uniform float uFilm, uGrainSeed, uImpact, uStill, uStillZoom, uPaperSeed, uMechSharp;
     uniform vec3 uShadowGrade, uLightGrade, uLift, uInkColor, uImpactDark, uImpactLight, uImpactLine;
     varying vec2 vUv;
     ${COMMON}
@@ -208,6 +341,11 @@ const FilmShader = {
       vec2 uv = vUv;
       // The painted still pushes slowly in.
       if (uStill > 0.0) uv = 0.5 + (uv - 0.5) / (1.0 + uStillZoom);
+      // A mech stays sharp: no weave, fringe or softness on it (its lines are
+      // the inker's, not the lens's). Not during a painted still, which
+      // moves the whole frame.
+      float sharp = uMechSharp > 0.5 && uStill <= 0.0 ? texture2D(tMech, vUv).r : 0.0;
+      vec2 still = uv;
       // Gate weave: the film never sits quite still in the gate.
       uv += uWeave;
       vec2 to = uv - 0.5;
@@ -217,6 +355,7 @@ const FilmShader = {
       vec3 c = vec3(tex(uv - to * ca).r, tex(uv).g, tex(uv + to * ca).b);
       vec3 soft = (tex(uv + vec2(px.x, 0.0)) + tex(uv - vec2(px.x, 0.0)) + tex(uv + vec2(0.0, px.y)) + tex(uv - vec2(0.0, px.y))) * 0.25;
       c = mix(c, soft, 0.2 * min(uFilm, 1.5));
+      if (sharp > 0.0) c = mix(c, tex(still), sharp);
       // Halation: bright light bleeds red-orange into the emulsion round it.
       // (From how bright the light is, not from any one channel: a painted
       // ultramarine sky carries a very high blue under the tone mapping, and

@@ -1,0 +1,92 @@
+[
+  {
+    "model": "sunhawk",
+    "beforeBytes": 3751932,
+    "afterBytes": 6181752,
+    "increasePercent": 64.8
+  },
+  {
+    "model": "anubis",
+    "beforeBytes": 1052852,
+    "afterBytes": 1697260,
+    "increasePercent": 61.2
+  },
+  {
+    "model": "daystar",
+    "beforeBytes": 1041980,
+    "afterBytes": 1663876,
+    "increasePercent": 59.7
+  },
+  {
+    "model": "fujin",
+    "beforeBytes": 1788584,
+    "afterBytes": 2881004,
+    "increasePercent": 61.1
+  },
+  {
+    "model": "horus",
+    "beforeBytes": 1261932,
+    "afterBytes": 2046256,
+    "increasePercent": 62.2
+  },
+  {
+    "model": "kamaitachi",
+    "beforeBytes": 1779084,
+    "afterBytes": 2874760,
+    "increasePercent": 61.6
+  },
+  {
+    "model": "longbow",
+    "beforeBytes": 1901532,
+    "afterBytes": 2997600,
+    "increasePercent": 57.6
+  },
+  {
+    "model": "maul",
+    "beforeBytes": 1077132,
+    "afterBytes": 1737504,
+    "increasePercent": 61.3
+  },
+  {
+    "model": "paladin",
+    "beforeBytes": 2033116,
+    "afterBytes": 3250772,
+    "increasePercent": 59.9
+  },
+  {
+    "model": "raijin",
+    "beforeBytes": 1795328,
+    "afterBytes": 2938208,
+    "increasePercent": 63.7
+  },
+  {
+    "model": "rampart",
+    "beforeBytes": 1084084,
+    "afterBytes": 1748432,
+    "increasePercent": 61.3
+  },
+  {
+    "model": "razor",
+    "beforeBytes": 950220,
+    "afterBytes": 1517644,
+    "increasePercent": 59.7
+  },
+  {
+    "model": "seraph",
+    "beforeBytes": 1813888,
+    "afterBytes": 2904124,
+    "increasePercent": 60.1
+  },
+  {
+    "model": "sobek",
+    "beforeBytes": 1461168,
+    "afterBytes": 2372552,
+    "increasePercent": 62.4
+  },
+  {
+    "model": "stinger",
+    "beforeBytes": 1081368,
+    "afterBytes": 1722352,
+    "increasePercent": 59.3
+  }
+]

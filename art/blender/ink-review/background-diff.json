@@ -1,0 +1,44 @@
+{
+  "desk-race": {
+    "backgroundPixels": 858020,
+    "changedPixels": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0,
+    "wholeFrameChanged": 15083
+  },
+  "nova-hangar": {
+    "backgroundPixels": 1067331,
+    "changedPixels": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0,
+    "wholeFrameChanged": 36140
+  },
+  "desk-hangar": {
+    "backgroundPixels": 818860,
+    "changedPixels": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0,
+    "wholeFrameChanged": 23081
+  },
+  "phone-hangar": {
+    "backgroundPixels": 2739352,
+    "changedPixels": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0,
+    "wholeFrameChanged": 73348
+  },
+  "phone-race": {
+    "backgroundPixels": 2826340,
+    "changedPixels": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0,
+    "wholeFrameChanged": 46865
+  },
+  "nova-race": {
+    "backgroundPixels": 1131715,
+    "changedPixels": 0,
+    "maxDelta": 0,
+    "meanAbsDelta": 0.0,
+    "wholeFrameChanged": 23965
+  }
+}

@@ -7,8 +7,9 @@ import { ROLE, type Role } from '../sim/index';
 import { NullAudio, type AudioEngine } from './audio/audio';
 import { Game } from './game/game';
 import { useOldSwift } from './render/mech/frames';
-import { preloadSunhawks } from './render/mech/sunhawkAsset';
-import { preloadRoster } from './render/mech/rosterAsset';
+import { preloadSunhawks, SUNHAWK_FILES } from './render/mech/sunhawkAsset';
+import { preloadRoster, ROSTER_IDS } from './render/mech/rosterAsset';
+import { BootScreen } from './ui/boot';
 import { setRosterModel } from './render/mech/rosterSelection';
 import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech/sunhawkSelection';
 import { installFrame, video } from './video';
@@ -43,22 +44,33 @@ async function boot(): Promise<void> {
   // The panel lines on the mechs' armor: the video setting (on by default),
   // unless the address sets them for a comparison.
   setSunhawkPanels(q.has('sunhawkPanels') ? q.get('sunhawkPanels') !== '0' : video.panels);
-  const loading = document.createElement('div');
-  loading.className = 'model-loading';
-  loading.textContent = 'Loading mech models…';
-  document.getElementById('app')!.append(loading);
-  try { await Promise.all([preloadSunhawks(),preloadRoster()]); }
-  catch (error) {
-    console.error('Mech model loading failed',error);
-    loading.textContent = 'The mech models could not load. ';
-    const retry = document.createElement('button');
-    retry.textContent = 'Retry'; retry.onclick = () => location.reload();
-    loading.append(retry);
+  // The boot screen (drawn by the page) counts the model files as they land,
+  // and logs each mech once all its levels of detail are in.
+  const bootScreen = new BootScreen();
+  bootScreen.start(SUNHAWK_FILES + ROSTER_IDS.length * 3, ROSTER_IDS.length + 1);
+  let sunhawkFiles = 0;
+  const rosterLevels = new Map<string, number>();
+  try {
+    await Promise.all([
+      preloadSunhawks(() => {
+        bootScreen.file();
+        if (++sunhawkFiles === SUNHAWK_FILES) bootScreen.frame('sunhawk');
+      }),
+      preloadRoster((id) => {
+        bootScreen.file();
+        const n = (rosterLevels.get(id) ?? 0) + 1;
+        rosterLevels.set(id, n);
+        if (n === 3) bootScreen.frame(id);
+      }),
+    ]);
+  } catch (error) {
+    console.error('Mech model loading failed', error);
+    bootScreen.fail();
     return;
   }
-  loading.remove();
   if (q.has('oldswift')) useOldSwift(true);
   if (q.get('debug') === 'mechs') {
+    bootScreen.close();
     const { runMechDebug } = await import('./debugMechs');
     runMechDebug();
     return;
@@ -102,6 +114,8 @@ async function boot(): Promise<void> {
     audio,
   });
   (window as unknown as { game: Game }).game = game;
+  // The title is up behind it: the boot screen switches off.
+  void bootScreen.finish();
 }
 
 boot();

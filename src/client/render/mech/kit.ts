@@ -118,9 +118,8 @@ const outlineMaterials = new Map<number, THREE.ShaderMaterial>();
 let hullOutlinesOn = true;
 
 /**
- * Show or hide the mechs' hull outlines. The anime look's ink pass draws
- * its own contour (with weight and breaks), so it turns these off while it
- * is inking.
+ * Show or hide the plain-look world-space hulls. The anime look draws
+ * its own contour, from geometry or tracing, so these are off while it inks.
  */
 export function setHullOutlines(on: boolean): void {
   hullOutlinesOn = on;
@@ -386,6 +385,9 @@ export class Kit {
     if (!preserveNormals) geo.deleteAttribute('normal');
     // Keep imported and procedural additions compatible when sharing a joint.
     if (!geo.hasAttribute('normal')) geo.computeVertexNormals();
+    // All merged parts carry the same custom attributes, including procedural additions.
+    if(!geo.hasAttribute('_outline_normal'))geo.setAttribute('_outline_normal',geo.getAttribute('normal').clone());
+    if(!geo.hasAttribute('_ink_width'))geo.setAttribute('_ink_width',new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count).fill(1),1));
     if (this.indexed && !geo.index) geo = mergeVertices(geo, 1e-5);
     if (slot === 'G') {
       this.glow.push(geo);

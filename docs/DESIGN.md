@@ -211,7 +211,10 @@ and whether it holds mechs on.
   end. Two mechs on opposite sides cannot lock on, hit, shoot, tow or touch;
   a lock breaks when the routes part. The routes are drawn apart (sideways
   and up or down) by the renderer only; in the simulation they are the two
-  halves of one wide road.
+  halves of one wide road. Routes that cross over and under each other (the
+  Crossover) part vertically first and only swing across once there is room
+  for a mech between the decks; a test holds them at least 20 units apart
+  wherever one is drawn over the other.
 - **Loops and corkscrews** hold mechs to the road (a 220 u/s² pull replaces
   gravity there).
 - **Banking** adds grip: a turn banked toward its inside grips up to about
@@ -682,7 +685,8 @@ person with a gamepad, and all of them are on the tuning panel:
 1. **Whether it now feels fast.** Speeds are up 15% on lap 1, 30% on lap 2
    and 25% on lap 3. The camera is lower and closer and opens up with speed,
    speed effects stay on in a lock, the walls have posts that strobe past,
-   and the pad rumbles with the road. Which of those does the work, and
+   and the pad rumbles on boosts, hits and the wall (plain driving and
+   steering are kept quiet so those stand out). Which of those does the work, and
    whether any of it is too much, is a matter of feel.
 2. **Camera height.** A tall mech hides the road if the camera drops much
    further. The default is a compromise; Height, Distance and Look height

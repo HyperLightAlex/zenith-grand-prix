@@ -1,3 +1,4 @@
+import { MechInkBuilder } from './ink';
 import * as THREE from 'three';
 import { decal } from './decals';
 import { Kit } from './kit';
@@ -29,6 +30,7 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
     (s === 1 ? J.wrL : J.wrR).position.x = s*.13;
     (s === 1 ? J.wingL : J.wingR).position.set(s*.62,.99,-.65);
   }
+  const ink=u && sunhawkAsset(variant).ink ? new MechInkBuilder(rig,joints) : null;
   for (let level = 0; level < (u ? 3 : 1); level++) {
     const groups: THREE.Object3D[] = [];
     const kits = new Map<AssetJoint, Kit>();
@@ -52,6 +54,7 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
       groups.push(built.group);
       if (built.glow) rig.glowMeshes.push(built.glow);
     }
+    ink?.addLevel(sunhawkAsset(variant,level).parts,sunhawkAsset(variant,level).lines,groups);
     rig.detailLevels.push(groups);
   }
   setMechDetail(rig, 0);

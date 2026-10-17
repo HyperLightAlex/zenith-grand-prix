@@ -1,0 +1,1157 @@
+{
+  "results": [
+    {
+      "name": "meridian-race",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:0,fujin:1,longbow:1,raijin:0,paladin:0"
+    },
+    {
+      "name": "canyon-race",
+      "state": "race",
+      "track": "canyon",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "24101a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "24101a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "24101a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "24101a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "24101a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "24101a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:0,fujin:2,longbow:2,raijin:2,paladin:1"
+    },
+    {
+      "name": "helios-race",
+      "state": "race",
+      "track": "helios",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:0,fujin:1,longbow:1,raijin:0,paladin:0"
+    },
+    {
+      "name": "pause",
+      "state": "paused",
+      "track": "helios",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:0,fujin:1,longbow:1,raijin:0,paladin:0"
+    },
+    {
+      "name": "impact",
+      "state": "race",
+      "track": "helios",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 2,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:0,fujin:1,longbow:1,raijin:0,paladin:0"
+    },
+    {
+      "name": "painted-still",
+      "state": "race",
+      "track": "helios",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 1
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:0,fujin:1,longbow:1,raijin:0,paladin:0"
+    },
+    {
+      "name": "crt",
+      "state": "race",
+      "track": "helios",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": true,
+      "lods": "kamaitachi:0,seraph:0,fujin:1,longbow:1,raijin:0,paladin:0"
+    },
+    {
+      "name": "low-quality",
+      "state": "race",
+      "track": "helios",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": false,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": false,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": false,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": false,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": false,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": false,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:0,fujin:1,longbow:1,raijin:0,paladin:0"
+    },
+    {
+      "name": "results",
+      "state": "results",
+      "track": "helios",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "0f1630",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "kamaitachi:0,seraph:2,fujin:2,longbow:2,raijin:2,paladin:2"
+    },
+    {
+      "name": "boost-light-change",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "sunhawk:0,razor:2,daystar:2,stinger:2,rampart:2,maul:2"
+    },
+    {
+      "name": "classic-4x3",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        960,
+        720
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            960,
+            720
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "sunhawk:0,razor:2,daystar:2,stinger:2,rampart:2,maul:2"
+    },
+    {
+      "name": "resize-4x3",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        640,
+        480
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            640,
+            480
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            640,
+            480
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            640,
+            480
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            640,
+            480
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            640,
+            480
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            640,
+            480
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "sunhawk:0,razor:2,daystar:2,stinger:2,rampart:2,maul:2"
+    },
+    {
+      "name": "resolution-scale",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        416,
+        312
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "sunhawk:0,razor:2,daystar:2,stinger:2,rampart:2,maul:2"
+    },
+    {
+      "name": "lod-0",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        416,
+        312
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "sunhawk:0,razor:0,daystar:0,stinger:0,rampart:0,maul:0"
+    },
+    {
+      "name": "lod-1",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        416,
+        312
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "sunhawk:1,razor:1,daystar:1,stinger:1,rampart:1,maul:1"
+    },
+    {
+      "name": "lod-2",
+      "state": "race",
+      "track": "meridian",
+      "resolution": [
+        416,
+        312
+      ],
+      "ink": [
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.10000000149011612
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.16500000655651093
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.23000000417232513
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.29499998688697815
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.36000001430511475
+        },
+        {
+          "color": "16112a",
+          "resolution": [
+            416,
+            312
+          ],
+          "visible": true,
+          "mark": 0.42500001192092896
+        }
+      ],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": "sunhawk:2,razor:2,daystar:2,stinger:2,rampart:2,maul:2"
+    },
+    {
+      "name": "current-fallback",
+      "state": "title",
+      "track": "meridian",
+      "resolution": [
+        640,
+        480
+      ],
+      "ink": [],
+      "film": {
+        "impact": 0,
+        "still": 0
+      },
+      "crt": false,
+      "lods": ""
+    }
+  ],
+  "errors": []
+}

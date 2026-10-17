@@ -1,10 +1,12 @@
-import type { BufferGeometry, Matrix4 } from 'three';
+import { Matrix3, type BufferGeometry, type Matrix4 } from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /** Bake and compact once at load time, retaining authored normal seams.
  * Armor uses projected panels; only the separate detail overlays need UVs. */
 export function prepareAssetGeometry(source: BufferGeometry, transform: Matrix4, detail = false): BufferGeometry {
   const geometry = source.clone().applyMatrix4(transform);
+  const outline=geometry.getAttribute('_outline_normal');
+  if (outline) outline.applyNormalMatrix(new Matrix3().getNormalMatrix(transform));
   if (detail) return geometry;
   geometry.deleteAttribute('uv');
   const compact = mergeVertices(geometry, 1e-5);

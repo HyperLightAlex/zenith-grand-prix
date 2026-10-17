@@ -418,7 +418,9 @@ export class Game {
     // The mechs (and anything else the view made) take the cel shading too.
     celify(this.renderer.scene);
     this.view.onImpact = (strength) => {
-      this.input.rumble(strength, 90 + strength * 160);
+      // Only the race you are flying shakes the pad: not the race behind the
+      // menus, nor yours run on by the computer behind the results.
+      if (this.state === 'race') this.input.rumble(strength, 90 + strength * 160);
       // Hit-stop: a beat's pause on every blow you land or take, longer for
       // the big ones (online it only holds the picture; the race runs on).
       if (strength >= 0.8) this.session.freeze(0.075);
@@ -1406,7 +1408,7 @@ export class Game {
         const h = this.heard(e.mech);
         const v = h.volume * Math.min(1, 0.35 + e.intensity * 0.02) * quiet;
         if (v > 0.03) A.play('land', { volume: v, pan: h.pan });
-        if (e.mech === this.view.focusId && e.intensity > 12) this.input.rumble(Math.min(1, e.intensity * 0.02), 140);
+        if (e.mech === local && inRace && e.intensity > 12) this.input.rumble(Math.min(1, e.intensity * 0.02), 140);
         break;
       }
       case 'fall': {
@@ -1518,9 +1520,12 @@ export class Game {
       }
       case 'dash':
         A.play('dash', { volume: this.heard(e.mech).volume * 0.8 * quiet });
+        if (e.mech === local && inRace) this.input.rumble(0.35, 90);
         break;
       case 'boost':
         A.play('boost', { volume: this.heard(e.mech).volume * quiet });
+        // The kick of lighting the boost; the rumble under it follows in roadRumble.
+        if (e.mech === local && inRace) this.input.rumble(0.55, 200);
         break;
       case 'award':
         // Your own support points chime, a step higher for a 2.
@@ -1782,6 +1787,12 @@ export class Game {
     switch (this.state) {
       case 'title': {
         this.menus.handle(menu);
+        // The title card itself holds the race behind it (no sound, no
+        // rumble); it runs on behind the main menu.
+        if (this.menus.screen === 'title') {
+          simDt = 0;
+          break;
+        }
         this.session.update(dt, null);
         for (const e of this.session.events) this.onEvent(e);
         // Cut between pilots every few seconds, like a broadcast.
@@ -1913,27 +1924,32 @@ export class Game {
     this.audio.setMusic('menu');
   }
 
-  /** A low rumble that follows the road: speed, charge strips, the wall, boost and Overdrive. */
+  /**
+   * The continuous rumble, kept for what the player did: a boost, Overdrive,
+   * a ram, scraping the wall, and a light buzz on a charge strip. Plain
+   * driving and steering are quiet, and so is a carve between its tiers
+   * (each tier has its own pulse), so the hits, the boosts and the big
+   * moments stand out instead of riding on a rumble that never stops.
+   */
   private roadRumble(dt: number): void {
     this.rumbleT -= dt;
     if (this.rumbleT > 0) return;
     this.rumbleT = 0.09;
     const m = this.session.race.mechs[this.session.localId];
     if (this.session.race.phase !== PHASE.RACING) return;
-    const sf = Math.min(1.4, m.speed / 160);
-    let weak = Math.max(0, sf - 0.35) * 0.16;
+    let weak = 0;
     let strong = 0;
-    if (m.onStrip) weak += 0.12;
-    if (m.boosting) weak += 0.14;
+    if (m.onStrip) weak += 0.06;
+    if (m.boosting) {
+      weak += 0.22;
+      strong += 0.06;
+    }
     if (m.overdriveT > 0) {
       weak += 0.25;
       strong += 0.2;
     }
     if (m.ramT > 0) strong += 0.18;
     if (m.wall > 0 && m.speed > 20) strong += 0.4;
-    if (m.mode === MODE.SPEED && Math.abs(m.steer) > 0.6) weak += (Math.abs(m.steer) - 0.6) * 0.3 * sf;
-    // Carving: the edges chatter, harder as the charge climbs.
-    if (m.carving && !m.air) weak += 0.08 + m.carveTier * 0.05;
     if (weak + strong > 0.015) this.input.rumbleRoad(strong, weak, 130);
   }
 

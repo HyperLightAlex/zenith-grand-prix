@@ -7,7 +7,12 @@ import bpy, bmesh, json, math
 from pathlib import Path
 from mathutils import Vector, Matrix
 from collections import defaultdict
-ROOT=Path('/Users/alexanderkelley/Projects/igpx')
+ROOT=Path(globals().get('PROJECT_ROOT',Path(__file__).resolve().parents[3]))
+import sys
+sys.path.insert(0,str(ROOT/'art/blender'))
+import ink_geometry, importlib
+importlib.reload(ink_geometry)
+from ink_geometry import smooth_normals, outline_weight, set_outline_attributes, design_edges, export_lines
 BASE=ROOT/'art/blender/roster'
 MODEL=globals().get('MODEL','daystar')
 data=json.loads((BASE/'source'/f'{MODEL}.json').read_text())
@@ -274,7 +279,9 @@ for i,part in enumerate(data['parts']):
     # Keep both flat paint faces and purposeful facets; remove triangulation noise.
     bb=[max(v[a] for v in vs)-min(v[a] for v in vs) for a in range(3)]
     edge=min(.024,min(bb)*.14) if slot in ('P','S','T','F','K') else .008
-    mesh(f'{MODEL} / {joint} / {slot} / {i:03}',joint,slot,vs,[(n,n+1,n+2) for n in range(0,len(vs),3)],edge)
+    ob=mesh(f'{MODEL} / {joint} / {slot} / {i:03}',joint,slot,vs,[(n,n+1,n+2) for n in range(0,len(vs),3)],edge)
+    if part.get('nozzle'):ob['ink_exclude']=True
+    if part.get('vent'):ob['ink_width']=0.
 
 # Continuous internal frame, mostly concealed by the existing armor. Shafts
 # reach the pivot centres and spherical seats cover the articulating seams.
@@ -391,13 +398,16 @@ for name,loc,power,size in [('Key',(-6,-10,14),1500,7),('Fill',(8,-4,7),800,8)]:
     ob=bpy.data.objects.new(name,light);collection.objects.link(ob);ob.location=loc;ob.rotation_euler=(target-ob.location).to_track_quat('-Z','Y').to_euler()
 scene.render.resolution_x=1000;scene.render.resolution_y=1000;scene.render.resolution_percentage=100
 bpy.context.view_layer.update()
+for ob in meshes:
+    set_outline_attributes(ob.data,smooth_normals(ob.data),[outline_weight(MODEL,ob)]*len(ob.data.vertices))
 bpy.data.libraries.write(str(BASE/f'{MODEL}-production.blend'),{scene},fake_user=True,compress=True)
 
 # Consolidate by joint/paint slot, preserving authored normals and shared vertices.
 reports=[]
 for level,ratio in [(0,1),(1,.52),(2,.24 if family=='tempest' else .26)]:
     temp=bpy.data.scenes.new('ROSTER EXPORT');bpy.context.window.scene=scene
-    groups=defaultdict(lambda:{'vertices':[],'normals':[],'faces':[],'lookup':{}})
+    groups=defaultdict(lambda:{'vertices':[],'normals':[],'faces':[],'lookup':{},'outline':[],'width':[]})
+    lines=defaultdict(list)
     mods=[]
     for ob in meshes:
         if level and not (sheet_polish and ob['slot']=='G'):
@@ -406,14 +416,17 @@ for level,ratio in [(0,1),(1,.52),(2,.24 if family=='tempest' else .26)]:
     for ob in meshes:
         ev=ob.evaluated_get(deps);me=ev.to_mesh();me.calc_loop_triangles()
         b=groups[(ob['joint'],ob['slot'])]
+        smooth=smooth_normals(me);weight=outline_weight(MODEL,ob)
+        if ob['slot']!='G':lines[ob['joint']].extend(design_edges(MODEL,ob,Matrix.Identity(4),me,level))
         for tri in me.loop_triangles:
             face=[]
             for vi,li in zip(tri.vertices,tri.loops):
                 p=tuple(me.vertices[vi].co);n=tuple(me.corner_normals[li].vector)
-                key=tuple(round(v,6) for v in (*p,*n))
+                on=smooth[vi]
+                key=tuple(round(v,6) for v in (*p,*n,*on,weight))
                 idx=b['lookup'].get(key)
                 if idx is None:
-                    idx=len(b['vertices']);b['lookup'][key]=idx;b['vertices'].append(p);b['normals'].append(n)
+                    idx=len(b['vertices']);b['lookup'][key]=idx;b['vertices'].append(p);b['normals'].append(n);b['outline'].append(tuple(on));b['width'].append(weight)
                 face.append(idx)
             if len(set(face))==3:b['faces'].append(face)
         ev.to_mesh_clear()
@@ -421,16 +434,19 @@ for level,ratio in [(0,1),(1,.52),(2,.24 if family=='tempest' else .26)]:
     root=bpy.data.objects.new(MODEL,None);temp.collection.objects.link(root)
     root['roster_schema']=1;root['model']=MODEL;root['dims']=dims;root['level']=level
     root['calf_thrusters_json']=json.dumps(thrusters)
+    root['ink_schema']=1
     export_meshes=[]
     for (joint,slot),g in groups.items():
         me=bpy.data.meshes.new(joint+'/'+slot);me.from_pydata(g['vertices'],[],g['faces']);me.update()
         for face in me.polygons:face.use_smooth=True
         me.normals_split_custom_set_from_vertices(g['normals']);me.materials.append(mats[slot]);export_meshes.append(me)
+        set_outline_attributes(me,g['outline'],g['width'])
         ob=bpy.data.objects.new(joint+'/'+slot,me);temp.collection.objects.link(ob);ob.parent=root;ob['joint']=joint;ob['slot']=slot
+    line_meshes,line_count=export_lines(temp,root,lines,mats['D']);export_meshes.extend(line_meshes)
     bpy.context.window.scene=temp
     out=ROOT/'src/client/render/mech/assets/roster'/f'{MODEL}{"-lod"+str(level) if level else ""}.glb'
-    bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',use_active_scene=True,export_yup=True,export_normals=True,export_texcoords=False,export_extras=True,export_animations=False,export_skins=False,export_cameras=False,export_lights=False,export_materials='EXPORT')
-    reports.append({'level':level,'triangles':sum(len(g['faces']) for g in groups.values()),'bytes':out.stat().st_size,'parts':len(groups)})
+    bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',use_active_scene=True,export_yup=True,export_normals=True,export_texcoords=False,export_extras=True,export_animations=False,export_skins=False,export_cameras=False,export_lights=False,export_materials='EXPORT',export_attributes=True,use_mesh_edges=True)
+    reports.append({'level':level,'triangles':sum(len(g['faces']) for g in groups.values()),'bytes':out.stat().st_size,'parts':len(groups),'line_segments':line_count,'ink_schema':1})
     bpy.context.window.scene=scene
     for ob in list(temp.objects):bpy.data.objects.remove(ob,do_unlink=True)
     bpy.data.scenes.remove(temp)

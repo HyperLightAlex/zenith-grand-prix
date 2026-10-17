@@ -25,7 +25,7 @@ each limit is one piece of the code.
 | Characters painted on cels in two flat tones, the shadow a separate colour mixed for each paint, often toward violet | Cel shading on every mech: one lit tone, one shadow tone, a highlight, a band of bounced light at the shadow's edge, a hard rim when the sun is behind |
 | Backgrounds painted separately, softer, with little or no line | The circuit and scenery get gentler cel tones and a light line in their own colour that fades with distance |
 | Every character traced in ink, heavier on the outside, thinner inside | An ink pass: a heavy contour round each mech that thins with distance, thin lines where parts overlap, fold or change paint, none where a paint meets its own shadow |
-| Each drawing traced again by hand, so lines shimmer | The lines are traced a fraction of a pixel off on every new drawing ("boil") |
+| Each drawing traced again by hand, so lines shimmer | A background's lines are traced a fraction of a pixel off on every new drawing ("boil") and break here and there. A mech's are clean: steady, unbroken, one ink in any light, sharp through the film and smoothed at the end (see "Clean mech lines") |
 | Animation on twos (12 drawings a second) and threes for held poses | Mech poses at 12 a second, 8 when held (boosting, carving, a burst); effects change shape on the same drawings. The human pilot's banking and foot placement respond every display frame, so steering never waits for a drawing; movement and the camera stay smooth, and the race simulates at 60 Hz. |
 | Effects drawn by hand: sparks as stars, smoke as shapes, glows as flat rings | The big effects are painted cel animation, a few drawings each (see Drawn effects below); the small sparks are four-pointed stars with a white core, light trails flat bands, the bloom cut into rings |
 | Speed shown with drawn lines | Drawn speed lines, mostly white and a few in ink, new on every drawing, more of them the faster it goes. Under them, in both looks, the world stretches past: each pixel smears away from the middle of the frame (the way the camera is going, so the streaks never lean into a bend ahead) by as far as the camera travels in a seventh of a frame over that pixel's distance (from the depth buffer), so the road, the barriers and the stands streak and the sky and the far hills hold still. The mechs, which travel with the camera, are drawn into a small mask each frame and left sharp. (The look first cut the blur to a third, and the road's dashes then went past crisp and read slower than the plain look.) |
@@ -297,10 +297,10 @@ The decals keep the frame's alpha, so their soft edges are not inked.
 
 ## Lines: coloured, and between mechs
 
-- **Coloured lines.** A line with light on both sides of it (a fold in white
-  armour, the edge of a pale barrier or of the Zenith Ring against the sky)
-  is traced in a deeper shade of that colour, as the cels did, not in ink. A
-  mech's outer contour stays ink.
+- **Coloured lines.** A background line with light on both sides of it (the
+  edge of a pale barrier or of the Zenith Ring against the sky) is traced in
+  a deeper shade of that colour, as the cels did, not in ink. A mech's lines
+  are all ink.
 - **Mech against mech.** Each mech carries its own mark in the alpha of the
   frame (on its parts' geometry, since the materials are shared within a
   team), and the ink pass draws a contour wherever one mech meets another,
@@ -344,6 +344,83 @@ top of the steady widening the boost brings, so the kick of it is felt
 | Impact frames | on | |
 | Knockout still | on | |
 
+## Clean mech lines
+
+The mechs' lines were boiling, breaking and blurring into the armour, and
+changing as the light and the camera moved, which made the designs read
+fuzzy and lose their small details. Everything here applies to the mechs
+alone: backgrounds are inked and filmed as before.
+
+- **Steady and whole.** No boil and no breaks on a mech's lines.
+- **One ink.** A mech's lines are the circuit's ink in any light: not
+  lighter in shadow, not traced in colour in bright light. The lines where
+  two paints meet hold in full sun (only light itself, a glow or a lamp, is
+  left uninked).
+- **Even edges.** The frame is multisampled, so at a mech's edge its mark is
+  blended with what is behind it. A pixel is the mech's when the mech covers
+  at least half of it, measured against the mark round it, the same rule for
+  every mech (a plain cut took a different share of each mech's edge pixels).
+- **Sharp through the film.** The ink pass also draws where the mechs are
+  (`InkPass.mask`); the film's weave, fringe and softness leave those pixels
+  alone. Grain, grade, halation and vignette still cover them.
+- **Smoothed.** Geometry lines share the frame's MSAA. FXAA on the mechs'
+  pixels alone (`MechSmooth`, after the output pass) finishes their edges
+  and smooths the traced fallback.
+- **Their share of the picture.** A mech's line widths scale with the frame
+  down to 55% of a 1080-line frame (backgrounds: 75%), so on a phone or a
+  handheld they do not swallow the detail they outline.
+
+Updated mechs now use **geometry ink** by default. For side-by-side review,
+one build can draw the mechs three ways:
+
+| URL | Mech lines |
+| --- | --- |
+| `?mechLines=original` | As before the clean lines: traced, boiling and breaking, lighter in shadow, through the film's blur and fringe, no smoothing (the same pixels as the ink pass before Step 1) |
+| `?mechLines=traced` | Step 1: traced, kept clean |
+| `?mechLines=geometry` (or nothing) | Steps 1 and 2: shells and authored strokes |
+
+Away from the mechs the picture is the same in all three. The renderer's `mechLineMode`
+setting can switch a running scene without rebuilding it. Review-only
+current/procedural models retain tracing, including in a mixed race.
+
+The silhouette is a back-face shell expanded in clip space, using baked
+smoothed normals and a per-vertex width. Width is 1.2 times the former
+traced contour width (the first pass used 0.7, which read too light beside
+the inner strokes), in drawing-buffer pixels, with the same distance
+thinning. While the weight is being settled, `?mechOutline=1.0` (0.3 to 2)
+sets that share for review, and the renderer's `mechOutline` setting
+changes it in a running scene; the inner strokes are unaffected. Raised details have zero shell width; fins, blades, horns and
+fingers have reduced width. Fog and the circuit's ink colour apply to both
+the shell and the authored lines.
+
+Inner lines come from clean pre-bevel design edges in Blender, rather than
+colour or lighting differences. `LineSegments2` draws opaque, depth-tested
+quads at 0.72 times the traced inner width. Paint boundaries thin out from
+22–60 units; creases and rims retain 40% weight at 60 units. LOD0 has the
+full set, LOD1 keeps longer boundaries/rims and stronger creases, and LOD2
+has only the shell. Lines follow the same rigid joint matrices as armour.
+Both are batched per mech: one shell draw and one line draw per visible LOD,
+with the existing LOD selection and hysteresis. The traveller mask uses the
+same joint shader, so the speed blur keeps these lines sharp too.
+
+Both shaders write the pilot's alpha mark (`0.1 + 0.065 * (id % 6)`).
+The existing mask, film exemption, MSAA4 and final mech FXAA remain active.
+Glows, flames, nozzle geometry, decals, race numbers, UV overlays, shields
+and bubbles do not receive authored lines. Transparent markings preserve
+the underlying mark as before. Plain and low-quality rendering keep the
+original world-space hull; the new materials are disabled there.
+
+`art/blender/ink_geometry.py` and `ink-overrides.json` reproduce the line
+selection, width rules and custom `_OUTLINE_NORMAL` / `_INK_WIDTH` exports.
+Sunhawk's six cobalt chest gills, their recessed navy lips and narrow gold
+cuirass piping deliberately use colour/geometry alone: zero shell width and
+no authored strokes. These are named model exceptions, not a global
+small-accent threshold. Name rules match whole words/plurals; finger width
+is explicitly 0.35, preserving the previously reviewed appearance.
+Read the roster README and Sunhawk export notes before regenerating assets.
+The [Step 2 review report](mech-lines-report.md) includes A/B crops, motion
+captures, background diffs, performance and asset sizes.
+
 ## How it is built
 
 The look is one switch, `look.on`, copied from the tuning values every
@@ -352,10 +429,9 @@ should only change on a new drawing (a pose, an effect's shape, the boil of
 the lines, the speed lines) keys off that clock.
 
 ```
-RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Film ─► Output (ACES, sRGB)
-   │           │
-   │           └ depth texture + the colour buffer's alpha (1 = background, 0.5 = a character)
-   └ cel-shaded materials write the character mark
+RenderPass (MSAA4) → DepthTap → Ink → Bloom → Speed → Film → Output → MechSmooth → CRT
+     armour / hull / lines       │                 ▲                  ▲
+        write alpha marks       └── mech mask ────┴──────────────────┘
 ```
 
 - `src/client/render/look.ts`: the switch and its settings, the drawing
@@ -366,8 +442,8 @@ RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Fi
   typical angle, so the two looks agree on how bright a circuit is. The key
   light is lifted toward overhead for the shading: a low sun would otherwise
   leave half of every mech in shadow from every angle. Mechs are marked as
-  characters (`markCharacter`) and write alpha 0.5, which is how the ink
-  pass tells a cel from a background.
+  characters (`markCharacter`) and write their pilot-specific alpha mark,
+  which is how the ink pass tells a cel from a background.
 - `src/client/render/lookPasses.ts`: the ink pass and the film pass, and
   each circuit's ink colour and grade. The ink pass finds outlines from the
   depth's second difference (large on the near side of a step, small across
@@ -375,6 +451,8 @@ RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Fi
   never inked) and paint edges from the ratio of brightness across a pixel
   (paint changes it a lot, a shadow much less). Line widths are set for a
   1080-line frame and scale with the resolution.
+- `src/client/render/mech/ink.ts`: the batched rigid-joint shell and authored
+  line shaders, export validation, pixel sizing and per-mech materials.
 - `src/client/render/renderer.ts`: the pass chain, the banded bloom, the
   drawn speed lines, and the moments (impact frames and stills, rate-limited
   and only while racing).
@@ -388,11 +466,22 @@ RenderPass ─► Ink ─► Bloom (banded) ─► Speed (drawn lines) ─► Fi
 
 ## Cost
 
-Two full-screen passes (ink, about 17 texture reads a pixel; film, about
-20) and some extra branches in the materials. In a software renderer the
+Three full-screen passes (ink, about 22 texture reads a pixel; the mech
+mask, 9; film, about 21) and FXAA on the mechs' pixels, plus some extra
+branches in the materials. In a software renderer the
 whole frame costs about 17% more than the plain look; on a GPU the passes
 are a small part of the frame. The renderer's resolution scaling still
 works as before, and on the low quality setting the ink pass is skipped.
+
+Geometry ink adds up to two draws per visible mech per scene render (one
+at LOD2), including the traveller-mask render when active. The measured
+six-mech Helios run added about 1.7% draw calls and 48–50% submitted triangles
+across all passes. Mean controlled frame work changed from 4.59 to 4.71 ms
+at 1280×720 and 5.94 to 5.95 ms at the Nova viewport on an M1 Pro. These
+headless Chrome measurements include GPU completion and are not display FPS
+or timings from physical handheld hardware. See the report for P95 and
+reproduction details. The 45 updated GLBs grew by about 61%; compression or
+packing their new attributes is a worthwhile follow-up.
 
 ## Checking it
 

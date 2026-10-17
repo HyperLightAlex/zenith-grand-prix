@@ -1,3 +1,4 @@
+import { readInkLines, validateOutline, type InkLines } from './ink';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import currentUrl from './assets/sunhawk-current.glb?url';
@@ -12,7 +13,7 @@ import { prepareAssetGeometry } from './assetGeometry';
 
 export type AssetJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack' | 'towerL' | 'towerR';
 export interface SunhawkPart { joint: AssetJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry; detail: boolean }
-export interface SunhawkAsset { dims: FrameDims; parts: SunhawkPart[] }
+export interface SunhawkAsset { dims: FrameDims; parts: SunhawkPart[]; lines: InkLines<AssetJoint>[]; ink: boolean }
 const assets = new Map<string, SunhawkAsset>();
 const dimensions: Array<keyof FrameDims> = ['hipY','hipX','hipDrop','thigh','shin','ankleY','spineY','chestY','shoulderX','shoulderY','headY','headZ','upperArm','foreArm','height'];
 const jointNames: readonly string[] = [...JOINTS, 'skirtL', 'skirtR', 'skirtBack', 'towerL', 'towerR'];
@@ -21,13 +22,17 @@ const jointNames: readonly string[] = [...JOINTS, 'skirtL', 'skirtR', 'skirtBack
 export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVariant): SunhawkAsset {
   let dims: FrameDims | undefined;
   const parts: SunhawkPart[] = [];
+  const lines: InkLines<AssetJoint>[]=[];
+  let ink=false;
   scene.updateMatrixWorld(true);
   scene.traverse((o) => {
+    if(o.userData.ink_schema===1)ink=true;
     if (o.userData.sunhawk_schema === 1 && o.userData.variant === variant) {
       const d = o.userData.dims as FrameDims | undefined;
       if (!d || dimensions.some((k) => !Number.isFinite(d[k]) || d[k] < 0)) throw new Error(`Invalid ${variant} Sunhawk dimensions`);
       dims = { ...d };
     }
+    if(o instanceof THREE.LineSegments) { lines.push(readInkLines<AssetJoint>(o,jointNames)); return; }
     if (!(o instanceof THREE.Mesh)) return;
     const { joint, slot } = o.userData;
     if (!jointNames.includes(joint) || !['P','S','T','F','K','D','C','G'].includes(slot)) throw new Error(`Invalid Sunhawk part ${o.name}`);
@@ -39,17 +44,23 @@ export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVarian
     parts.push({ joint, slot, geometry, detail });
   });
   if (!dims || jointNames.some((j) => !parts.some((p) => p.joint === j))) throw new Error(`Incomplete ${variant} Sunhawk export`);
-  return { dims, parts };
+  if(ink)parts.filter(p=>p.slot!=='G'&&!p.detail).forEach(p=>validateOutline(p.geometry));
+  return { dims, parts, lines, ink };
 }
 
 let loading: Promise<void> | undefined;
-export function preloadSunhawks(): Promise<void> {
+/** The files preloadSunhawks loads: four models and the detail atlas. */
+export const SUNHAWK_FILES = 5;
+
+/** Loads both Sunhawks and the detail atlas. `loaded` hears of each file as it lands (the boot screen's progress). */
+export function preloadSunhawks(loaded?: () => void): Promise<void> {
   const exports: Array<[SunhawkAssetVariant, number, string]> = [['current',0,currentUrl],['updated',0,updatedUrl],['updated',1,mediumUrl],['updated',2,farUrl]];
-  return loading ??= Promise.all([preloadSunhawkDetails(), ...exports.map(async ([variant, level, url]) => {
+  return loading ??= Promise.all([preloadSunhawkDetails().then(() => loaded?.()), ...exports.map(async ([variant, level, url]) => {
     const gltf = await new GLTFLoader().loadAsync(url);
     assets.set(`${variant}:${level}`, readSunhawkAsset(gltf.scene, variant));
+    loaded?.();
     gltf.scene.traverse((o) => {
-      if (!(o instanceof THREE.Mesh)) return;
+      if (!(o instanceof THREE.Mesh) && !(o instanceof THREE.LineSegments)) return;
       o.geometry.dispose();
       for (const material of Array.isArray(o.material) ? o.material : [o.material]) material.dispose();
     });
