@@ -433,17 +433,30 @@ export function buildCircuit(def: CircuitDef): Track {
   const OPEN = 60;
   for (const fs of forkSpans) {
     const len = fs.s1 - fs.s0;
-    const ramp = clamp((len - 2 * OPEN) / 2, 0, 170);
+    // Routes that cross over and under each other (each drawn toward the
+    // other's side) part vertically first, while still side by side, and
+    // only swing across once the upper one is high enough to clear a mech
+    // on the lower (rising and swinging together, the decks met with 5
+    // units between them and the mechs below drove through the one above).
+    const crossing = (fs.spec.left?.shift ?? 0) > 0 || (fs.spec.right?.shift ?? 0) < 0;
+    const ramp = clamp((len - 2 * OPEN) / (crossing ? 2.7 : 2), 0, 170);
     for (let k = 0; k < n; k++) {
       const s = k * ds;
       if (s < fs.s0 || s > fs.s1) continue;
       const open = smoothstep(fs.s0, fs.s0 + OPEN, s) * (1 - smoothstep(fs.s1 - OPEN, fs.s1, s));
       median[k] = Math.max(median[k], fs.spec.median * open);
-      const e = ramp > 0 ? smoothstep(fs.s0 + OPEN, fs.s0 + OPEN + ramp, s) * (1 - smoothstep(fs.s1 - OPEN - ramp, fs.s1 - OPEN, s)) : 0;
-      shiftL[k] = (fs.spec.left?.shift ?? 0) * e;
-      riseL[k] = (fs.spec.left?.rise ?? 0) * e;
-      shiftR[k] = (fs.spec.right?.shift ?? 0) * e;
-      riseR[k] = (fs.spec.right?.rise ?? 0) * e;
+      let across = 0;
+      let up = 0;
+      if (ramp > 0 && !crossing) {
+        across = up = smoothstep(fs.s0 + OPEN, fs.s0 + OPEN + ramp, s) * (1 - smoothstep(fs.s1 - OPEN - ramp, fs.s1 - OPEN, s));
+      } else if (ramp > 0) {
+        up = smoothstep(fs.s0 + 20, fs.s0 + OPEN + 0.7 * ramp, s) * (1 - smoothstep(fs.s1 - OPEN - 0.7 * ramp, fs.s1 - 20, s));
+        across = smoothstep(fs.s0 + OPEN + 0.35 * ramp, fs.s0 + OPEN + 1.35 * ramp, s) * (1 - smoothstep(fs.s1 - OPEN - 1.35 * ramp, fs.s1 - OPEN - 0.35 * ramp, s));
+      }
+      shiftL[k] = (fs.spec.left?.shift ?? 0) * across;
+      riseL[k] = (fs.spec.left?.rise ?? 0) * up;
+      shiftR[k] = (fs.spec.right?.shift ?? 0) * across;
+      riseR[k] = (fs.spec.right?.rise ?? 0) * up;
     }
   }
 

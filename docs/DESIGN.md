@@ -211,7 +211,10 @@ and whether it holds mechs on.
   end. Two mechs on opposite sides cannot lock on, hit, shoot, tow or touch;
   a lock breaks when the routes part. The routes are drawn apart (sideways
   and up or down) by the renderer only; in the simulation they are the two
-  halves of one wide road.
+  halves of one wide road. Routes that cross over and under each other (the
+  Crossover) part vertically first and only swing across once there is room
+  for a mech between the decks; a test holds them at least 20 units apart
+  wherever one is drawn over the other.
 - **Loops and corkscrews** hold mechs to the road (a 220 u/s² pull replaces
   gravity there).
 - **Banking** adds grip: a turn banked toward its inside grips up to about

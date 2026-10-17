@@ -90,6 +90,22 @@ describe.each(CIRCUITS)('$name: geometry', (def) => {
     }
   });
 
+  it('draws a fork whose routes cross with room for a mech between the decks', () => {
+    // Where the two routes are drawn over one another, the lower one's mechs
+    // (about 11 units with fins) and the upper deck's underside (6.2 deep)
+    // must not meet: at least 20 units between the two road surfaces.
+    for (let k = 0; k < t.n; k++) {
+      const m = t.median[k];
+      if (m < 0.5) continue;
+      const hw = t.hw[k];
+      const lo = Math.max(-hw + t.shiftL[k], m + t.shiftR[k]);
+      const hi = Math.min(-m + t.shiftL[k], hw + t.shiftR[k]);
+      if (hi <= lo) continue;
+      const gap = Math.abs(t.riseL[k] - t.riseR[k]);
+      if (gap < 20) throw new Error(`fork decks ${gap.toFixed(1)} apart where they overlap, at s ${(k * t.ds).toFixed(0)}`);
+    }
+  });
+
   it('closes: evenly spaced samples all the way round, seam included', () => {
     expect(t.n * t.ds).toBeCloseTo(t.length, 6);
     for (let i = 0; i < t.n; i++) {
