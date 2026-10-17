@@ -79,6 +79,7 @@ import { confirmDialog, messageDialog, registerCommon, type DialogData, type Ent
 import { registerGarage, type HangarData } from '../ui/screens/garage';
 import { registerGrandPrix } from '../ui/screens/grandPrix';
 import { inviteDialog, registerOnline } from '../ui/screens/online';
+import { gpBlocked, registerOnlineGp } from '../ui/screens/onlineGp';
 import { registerRace } from '../ui/screens/race';
 import { registerVideo } from '../ui/screens/video';
 import { applyFrame, frame, onFrame, RESOLUTIONS, saveVideo, video, type VideoSettings } from '../video';
@@ -110,7 +111,7 @@ function garageShift(): [number, number] {
   return [GARAGE_SHIFT, 0];
 }
 /** Screens shown over the hangar, with your mech in its bay. */
-const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'room']);
+const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room']);
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -274,6 +275,7 @@ export class Game {
     registerGarage(this.menus, this);
     registerGrandPrix(this.menus, this);
     registerOnline(this.menus, this);
+    registerOnlineGp(this.menus, this);
     registerRace(this.menus, this);
     registerVideo(this.menus, this);
     this.renderer.crt = video.crt;
@@ -697,7 +699,7 @@ export class Game {
 
   /** From the results (or a restart after the flag): the next round, or what follows the match. */
   next(): void {
-    if (this.mode === 'online') return void this.online.sendRoom('continue');
+    if (this.mode === 'online') return void this.online.sendRoom('continue', { at: this.online.lobby?.phase });
     if (this.match && this.match.winner < 0) return this.startRound();
     if (this.mode === 'gp') return this.gpMatchDone();
     this.startFree();
@@ -716,10 +718,8 @@ export class Game {
     const a = factionName(LIVERIES[this.raceFactions[0]]);
     const b = factionName(LIVERIES[this.raceFactions[1]]);
     let gp = '';
-    if (this.mode === 'gp') {
-      const ev = this.gpEvents[this.gpKind];
-      if (ev) gp = `${eventName(ev)}, round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`;
-    }
+    const ev = this.mode === 'gp' ? this.gpEvents[this.gpKind] : this.mode === 'online' ? this.online.lobby?.gp : null;
+    if (ev) gp = `${eventName(ev)}, round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`;
     if (!m || (m.cfg.mode === 'series' && m.cfg.bestOf === 1)) return gp;
     const round = `Round ${m.rounds.length + 1}`;
     const pre = gp ? `${gp} · ` : '';
@@ -981,6 +981,32 @@ export class Game {
     }
   }
 
+  /** The squad's Grand Prix (its leader only): the online hub's Grand Prix screen. */
+  openOnlineGp(): void {
+    const why = gpBlocked(this);
+    if (why) return this.menus.toast(why);
+    this.menus.push('online-gp');
+  }
+
+  /** A room that is the squad's cup or season; the squad follows the leader in. */
+  async createGpRoom(kind: GpKind): Promise<void> {
+    const why = gpBlocked(this);
+    const ticket = this.squadTicket();
+    if (why || !ticket) return this.menus.toast(why ?? 'The Grand Prix online is for a squad of two or three');
+    this.onlineStatus = kind === 'cup' ? 'Setting up the cup…' : 'Setting up the season…';
+    this.menus.refresh();
+    try {
+      await this.online.createRoom(this.loadoutMsg(), ticket, { kind, difficulty: this.gpDifficulty() });
+      this.onlineStatus = '';
+      if (this.online.room) this.online.sendSquad('go', { code: this.online.room.roomId });
+      this.toRoom();
+    } catch (e) {
+      this.onlineStatus = '';
+      this.menus.refresh();
+      this.menus.toast(failure(e), 4);
+    }
+  }
+
   askRoomCode(): void {
     this.menus.push<EntryData>('entry', {
       title: 'Join room',
@@ -1065,7 +1091,7 @@ export class Game {
     const v = this.online.lobby;
     const me = v?.players.find((p) => p.pid === this.online.pid);
     if (!v || !me || me.side < 0) return;
-    if (v.phase !== 'lobby' && v.phase !== 'countdown') return this.menus.toast('Seats change between matches');
+    if (v.phase !== 'lobby' && v.phase !== 'countdown') return this.menus.toast(v.gp ? 'Frames change at the next briefing' : 'Seats change between matches');
     // Everything is read from the room as it is at each update: the captain
     // may change the faction, teammates pick and lock in, the captain may leave.
     const o = this.online;
@@ -1074,14 +1100,15 @@ export class Game {
       const cur = now?.players.find((p) => p.pid === o.pid);
       return now && cur && cur.side >= 0 ? { now, cur, side: now.sides[cur.side] } : null;
     };
-    // Your team's captain picks its faction, and so can the host.
+    // Your team's captain picks its faction, and so can the host (not in a Grand Prix: the event set it).
     const captain = () => {
       const s = seat();
-      return !!s && (s.side.captain === o.pid || s.now.host === o.pid);
+      return !!s && !s.now.gp && (s.side.captain === o.pid || s.now.host === o.pid);
     };
     this.menus.push<HangarData>('hangar', {
       context: () => {
         const s = seat();
+        if (s?.now.gp) return `${eventName(s.now.gp)} · ${factionName(LIVERIES[s.side.faction])} · online`;
         return s ? `Room ${s.now.code} · ${factionName(LIVERIES[s.side.faction])}` : `Room ${v.code}`;
       },
       confirm: 'Done',
@@ -1091,7 +1118,11 @@ export class Game {
         const s = seat();
         return s ? { team: s.side.faction, role: s.cur.role } : null;
       },
-      factionLock: () => (captain() ? null : "Your team's captain or the host picks its faction"),
+      factionLock: () => {
+        const gp = o.lobby?.gp;
+        if (gp) return `Your faction is fixed for the whole ${gp.kind === 'cup' ? 'cup' : 'season'}`;
+        return captain() ? null : "Your team's captain or the host picks its faction";
+      },
       factionTaken: (f) => {
         const s = seat();
         return s && f === s.now.sides[1 - s.cur.side].faction ? 'The other team flies that faction' : null;
@@ -1119,6 +1150,10 @@ export class Game {
 
   confirmLeaveRoom(): void {
     const v = this.online.lobby;
+    if (v?.gp) {
+      if (v.phase === 'award') return this.leaveRoom();
+      return confirmDialog(this.menus, 'Leave the Grand Prix?', 'Your squad carries on without you, and a computer pilot takes your frame.', 'Leave', () => this.leaveRoom());
+    }
     const inMatch = !!v && v.phase !== 'lobby' && v.phase !== 'countdown';
     confirmDialog(this.menus, 'Leave the room?', inMatch ? 'Your seat goes to a computer pilot for the rest of this match.' : 'You can come back with its code while it is open.', 'Leave', () => this.leaveRoom());
   }
@@ -1261,7 +1296,7 @@ export class Game {
       // Still in a race the room has finished with (its lobbyAgain was missed
       // while the connection was down): back to the room with everyone else.
       const racing = this.state === 'race' || this.state === 'paused' || this.state === 'results';
-      if (this.mode === 'online' && racing && (v.phase === 'lobby' || v.phase === 'countdown')) return this.roomAgain(null);
+      if (this.mode === 'online' && racing && v.phase !== 'race' && v.phase !== 'results' && v.phase !== 'final') return this.roomAgain(null);
       const s = this.menus.screen;
       if (s === 'room') {
         this.menus.refresh();
@@ -1315,7 +1350,7 @@ export class Game {
       // the hangar opened from it, shows the squad as it is now (a room
       // above them shows the room's teams instead).
       if (!this.menus.has('online') || this.menus.has('room')) return;
-      if (this.menus.screen === 'online' || this.menus.screen === 'hangar') this.menus.refresh();
+      if (this.menus.screen === 'online' || this.menus.screen === 'online-gp' || this.menus.screen === 'hangar') this.menus.refresh();
       this.preview(this.previewLoadout(this.menus.screen ?? 'online'));
     });
     o.on('follow', ({ code, size }) => {

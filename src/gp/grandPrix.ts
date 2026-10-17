@@ -307,21 +307,69 @@ export function backgroundSeats(skill: number, names: [string[], string[]]): Sea
 }
 
 /**
+ * A background fixture raced a slice at a time: a single race, or a
+ * best-of-3 series, between computer pilots of equal skill. Deterministic
+ * for a seed, however it is sliced. The online Grand Prix runs its slices
+ * between the server's other work; offline it runs whole in a worker.
+ */
+export class FixtureSim {
+  private readonly track;
+  private readonly match;
+  private race: ReturnType<typeof createRace> | null = null;
+  private races = 0;
+  private guard = 0;
+  result: GpFixtureResult | null = null;
+
+  constructor(
+    readonly fx: GpFixture,
+    cfg: MatchConfig,
+    private readonly skill: number,
+    private readonly names: [string[], string[]] = [['', '', ''], ['', '', '']],
+    /** Test setting: shorter races. */
+    private readonly laps?: number,
+  ) {
+    this.track = buildTrack(trackById(fx.circuit) ?? TRACKS[0]);
+    this.match = createMatch(cfg);
+  }
+
+  /** Race up to `ticks` more ticks; the result once the match is decided. */
+  step(ticks: number): GpFixtureResult | null {
+    while (!this.result && ticks > 0) {
+      if (!this.race) {
+        if (this.match.winner >= 0 || this.races >= 9) {
+          const m = this.match;
+          this.result = { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: this.races, winner: (m.winner === 1 ? 1 : 0) as 0 | 1 };
+          break;
+        }
+        this.race = createRace(this.track, { seed: this.fx.seed + this.races * 7919, seats: backgroundSeats(this.skill, this.names), gridFlip: this.races % 2 === 1, laps: this.laps });
+        this.guard = 0;
+      }
+      const race = this.race;
+      while (race.phase !== PHASE.FINISHED && this.guard < 60 * 60 * 10 && ticks > 0) {
+        stepRace(race, this.track, []);
+        this.guard++;
+        ticks--;
+      }
+      if (race.phase === PHASE.FINISHED || this.guard >= 60 * 60 * 10) {
+        recordRound(this.match, race);
+        this.races++;
+        this.race = null;
+      }
+    }
+    // A decided match whose last race ended on the final tick of a slice.
+    if (!this.result && !this.race && (this.match.winner >= 0 || this.races >= 9)) this.step(1);
+    return this.result;
+  }
+}
+
+/**
  * Race a background fixture to its end: a single race, or a best-of-3
  * series, between computer pilots of equal skill. Deterministic for a seed.
  * Takes a second or so per race.
  */
 export function simulateFixture(fx: GpFixture, cfg: MatchConfig, skill: number, names: [string[], string[]] = [['', '', ''], ['', '', '']]): GpFixtureResult {
-  const def = trackById(fx.circuit) ?? TRACKS[0];
-  const track = buildTrack(def);
-  const match = createMatch(cfg);
-  let races = 0;
-  while (match.winner < 0 && races < 9) {
-    const race = createRace(track, { seed: fx.seed + races * 7919, seats: backgroundSeats(skill, names), gridFlip: races % 2 === 1 });
-    let guard = 0;
-    while (race.phase !== PHASE.FINISHED && guard++ < 60 * 60 * 10) stepRace(race, track, []);
-    recordRound(match, race);
-    races++;
-  }
-  return { wins: [match.wins[0], match.wins[1]], points: [match.totals[0], match.totals[1]], races, winner: (match.winner === 1 ? 1 : 0) as 0 | 1 };
+  const sim = new FixtureSim(fx, cfg, skill, names);
+  let result: GpFixtureResult | null = null;
+  while (!result) result = sim.step(1e9);
+  return result;
 }

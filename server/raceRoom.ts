@@ -4,7 +4,7 @@
 import crypto from 'node:crypto';
 import { Room, ServerError, type Client } from '@colyseus/core';
 import { RoomCore } from '../src/net/roomCore';
-import { NET_PROTOCOL, RECONNECT_SECONDS, callsignProblem, cleanCallsign, versionText, type ClientMessages, type JoinOptions } from '../src/net/protocol';
+import { NET_PROTOCOL, RECONNECT_SECONDS, callsignProblem, cleanCallsign, versionText, type ClientMessages, type GpRequest, type JoinOptions } from '../src/net/protocol';
 import { claimCode, releaseCode } from './codes';
 import { log } from './log';
 import { TEST_LAPS } from './config';
@@ -27,6 +27,15 @@ export function checkOptions(options: Partial<JoinOptions> | undefined, roomVers
   const name = cleanCallsign(String(o.callsign ?? ''));
   const problem = callsignProblem(name);
   if (problem) throw new ServerError(ERR.BAD, `Callsign: ${problem}`);
+}
+
+/** A create's Grand Prix request, checked: a cup or a season at a difficulty, or nothing. */
+function gpRequest(gp: unknown): GpRequest | undefined {
+  if (!gp || typeof gp !== 'object') return undefined;
+  const { kind, difficulty } = gp as Partial<GpRequest>;
+  if (kind !== 'cup' && kind !== 'season') return undefined;
+  const d = Number(difficulty);
+  return { kind, difficulty: Number.isInteger(d) && d >= 0 && d <= 2 ? d : 1 };
 }
 
 export class RaceRoom extends Room {
@@ -57,7 +66,7 @@ export class RaceRoom extends Room {
           c.leave(4001, text);
         }
       },
-    }, Number(options?.loadout?.faction) || 0, { laps: TEST_LAPS });
+    }, Number(options?.loadout?.faction) || 0, { laps: TEST_LAPS, gp: gpRequest(options?.gp) });
     this.setSimulationInterval((dt) => {
       this.core.update(dt);
       if (this.core.empty && this.clients.length === 0) void this.disconnect();
@@ -66,7 +75,7 @@ export class RaceRoom extends Room {
       const pid = this.pidOf.get(client.sessionId);
       if (pid && typeof type === 'string') this.core.message(pid, type as keyof ClientMessages, msg as never);
     });
-    log('room', code, 'created');
+    log('room', code, 'created', this.core.gp ? `grand prix (${this.core.gp.event.kind})` : '');
   }
 
   override onAuth(_client: Client, options: JoinOptions): boolean {

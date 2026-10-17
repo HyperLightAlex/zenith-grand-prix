@@ -3,7 +3,7 @@
 // messages and events.
 
 import { Client, type Room } from '@colyseus/sdk';
-import { NET_PROTOCOL, type JoinOptions, type LobbyView, type Loadout, type ServerMessages, type SquadServerMessages, type SquadTicket, type SquadView } from '../../net/protocol';
+import { NET_PROTOCOL, type GpRequest, type JoinOptions, type LobbyView, type Loadout, type ServerMessages, type SquadServerMessages, type SquadTicket, type SquadView } from '../../net/protocol';
 import { callsign, deviceId, readResume, writeResume } from './identity';
 
 export interface OnlineEvents {
@@ -95,9 +95,10 @@ export class Online {
 
   // ---- rooms -------------------------------------------------------------------
 
-  async createRoom(loadout: Loadout, squad?: SquadTicket): Promise<void> {
+  /** A new room, with you as host; `gp`: your squad's Grand Prix. */
+  async createRoom(loadout: Loadout, squad?: SquadTicket, gp?: GpRequest): Promise<void> {
     await this.leaveRoom();
-    this.attachRoom(await this.sdk().create('race', this.options(loadout, squad)));
+    this.attachRoom(await this.sdk().create('race', { ...this.options(loadout, squad), gp }));
   }
 
   async joinRoom(code: string, loadout: Loadout, squad?: SquadTicket): Promise<void> {

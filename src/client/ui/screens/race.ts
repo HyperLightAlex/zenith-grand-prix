@@ -30,8 +30,10 @@ export function registerRace(m: Menus, g: Game): void {
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
       m.button(list, 'Video', () => m.push('video'), { key: 'video' });
       if (online) {
-        m.button(list, 'Leave match', () => confirmDialog(m, 'Leave the match?', 'Your seat goes to a computer pilot for the rest of this match.', 'Leave', () => g.leaveMatch()), { key: 'leave' });
-        if (g.online.lobby?.host === g.online.pid) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the room.', 'End match', () => g.online.sendRoom('endMatch')), { key: 'end' });
+        const gp = !!g.online.lobby?.gp;
+        m.button(list, gp ? 'Leave the Grand Prix' : 'Leave match', () => confirmDialog(m, gp ? 'Leave the Grand Prix?' : 'Leave the match?', gp ? 'Your squad carries on without you, and a computer pilot takes your frame.' : 'Your seat goes to a computer pilot for the rest of this match.', 'Leave', () => g.leaveMatch()), { key: 'leave' });
+        // A Grand Prix match plays to its end.
+        if (g.online.lobby?.host === g.online.pid && !gp) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the room.', 'End match', () => g.online.sendRoom('endMatch')), { key: 'end' });
       } else {
         m.button(list, g.mode === 'gp' ? 'Back to the briefing' : 'Back to setup', () => g.toSetup(), { key: 'setup' });
         m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
@@ -181,9 +183,10 @@ export function registerRace(m: Menus, g: Game): void {
         const n = v?.continued.length ?? 0;
         const final = v?.phase === 'final';
         const t = Math.max(0, v?.timer ?? 0);
-        const note = final ? `Back to the lobby in ${t}` : `Next round in ${t}: ${n} of ${racers} ready`;
-        m.button(list, done ? (final ? 'Waiting…' : 'Ready for the next round') : final ? 'Back to the room' : 'Continue', () => g.online.sendRoom('continue'), { key: 'next', go: !done, note });
-        m.button(list, 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
+        const gp = !!v?.gp;
+        const note = final ? (gp ? `The standings in ${t}` : `Back to the lobby in ${t}`) : `Next round in ${t}: ${n} of ${racers} ready`;
+        m.button(list, done ? (final ? 'Waiting…' : 'Ready for the next round') : final ? (gp ? 'The standings' : 'Back to the room') : 'Continue', () => g.online.sendRoom('continue', { at: v?.phase }), { key: 'next', go: !done, note });
+        m.button(list, gp ? 'Leave the Grand Prix' : 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
       } else if (g.mode === 'gp') {
         m.button(list, over ? 'Continue' : 'Next round', () => g.next(), { key: 'next', go: true });
         m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });

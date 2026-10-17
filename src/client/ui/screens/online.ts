@@ -9,11 +9,12 @@ import { h } from '../dom';
 import { emblemUrl, pilotUrl } from '../factionArt';
 import type { Menus } from '../menus';
 import { BACK, SELECT, confirmDialog, type DialogData } from './common';
+import { gpBlocked, renderGpRoom } from './onlineGp';
 
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 const SHORT = ['FW', 'MF', 'DF'];
 
-function face(f: number, role: Role): HTMLElement {
+export function face(f: number, role: Role): HTMLElement {
   const el = h('i.face');
   el.style.backgroundImage = `url(${pilotUrl(f, role)})`;
   return el;
@@ -74,6 +75,9 @@ export function registerOnline(m: Menus, g: Game): void {
       const follow = !lead ? "Your squad's leader takes the squad into rooms" : null;
       m.button(list, 'Create room', () => void g.createRoom(), { key: 'create', go: true, locked: follow });
       m.button(list, 'Join room', () => g.askRoomCode(), { key: 'join', locked: follow });
+      // Always there; open to a squad of two or three, from its leader.
+      const gpWhy = gpBlocked(g);
+      m.button(list, 'Grand Prix', () => g.openOnlineGp(), { key: 'gp', locked: gpWhy, hint: gpWhy ?? 'A cup or a season together, against computer pilots' });
       // Invite while there is an open position; join someone else's squad only while on your own.
       if (members.length < 3) m.button(list, 'Invite to squad', () => void g.inviteToSquad(), { key: 'invite' });
       if (members.length <= 1) m.button(list, 'Join a squad', () => g.askSquadCode(), { key: 'joinsquad' });
@@ -122,6 +126,14 @@ export function registerOnline(m: Menus, g: Game): void {
 
   m.register('room', {
     initialFocus: 'ready',
+    // A Grand Prix room moves on by itself: each stage starts on its own button.
+    stage() {
+      const v = g.online.lobby;
+      if (!v?.gp) return null;
+      const phase = v.phase === 'countdown' ? 'lobby' : v.phase;
+      const focus = phase === 'lobby' ? 'ready' : phase === 'standings' ? 'go' : phase === 'award' ? 'done' : 'leave';
+      return { id: `${phase}:${v.gp.current}`, focus };
+    },
     render(m) {
       const o = g.online;
       const v = o.lobby;
@@ -129,6 +141,7 @@ export function registerOnline(m: Menus, g: Game): void {
         m.root.append(h('div.shade'), m.panes(h('div.col', h('h1', 'Room'), h('p', g.onlineStatus || 'Joining…'))), m.footer(BACK));
         return;
       }
+      if (v.gp) return renderGpRoom(m, g, v);
       const me = v.players.find((p) => p.pid === o.pid);
       const byPid = new Map(v.players.map((p) => [p.pid, p] as [string, LobbyPlayer]));
       const host = v.host === o.pid;
@@ -274,7 +287,7 @@ export function registerOnline(m: Menus, g: Game): void {
         g.openRoomHangar();
         return true;
       }
-      if ((key === 'lb' || key === 'rb') && me) {
+      if ((key === 'lb' || key === 'rb') && me && !v?.gp) {
         const k = m.selectedKey;
         const mm = /^seat-(\d)-(\d)$/.exec(k);
         if (mm) m.focus(`seat-${1 - Number(mm[1])}-${mm[2]}`);

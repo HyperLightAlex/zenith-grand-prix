@@ -4,7 +4,7 @@
 import { PHASE, emptyInput, type MechInput } from '../src/sim/index';
 import { Predictor } from '../src/net/prediction';
 import { RoomCore, type CoreIO } from '../src/net/roomCore';
-import type { ClientMessages, LobbyView, MatchStartMsg, RoundEndMsg, ServerMessages, TickMsg } from '../src/net/protocol';
+import type { ClientMessages, GpRequest, LobbyView, MatchStartMsg, RoundEndMsg, ServerMessages, TickMsg } from '../src/net/protocol';
 import type { JoinInfo } from '../src/net/lobby';
 import { makeRandom } from './helpers';
 
@@ -99,7 +99,7 @@ export class TestNet {
   private mail: Letter[] = [];
   readonly random = makeRandom(77);
 
-  constructor(opts: { laps?: number; faction?: number } = {}) {
+  constructor(opts: { laps?: number; faction?: number; gp?: GpRequest } = {}) {
     const io: CoreIO = {
       send: (pid, type, msg) => {
         const c = this.clients.get(pid);
@@ -117,7 +117,7 @@ export class TestNet {
       now: () => this.clock,
       random: this.random,
     };
-    this.core = new RoomCore('K7Q2X', 'test', io, opts.faction ?? 0, { laps: opts.laps });
+    this.core = new RoomCore('K7Q2X', 'test', io, opts.faction ?? 0, { laps: opts.laps, gp: opts.gp });
   }
 
   post(delay: number, run: () => void): void {

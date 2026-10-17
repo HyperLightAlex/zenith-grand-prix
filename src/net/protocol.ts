@@ -10,9 +10,10 @@
 // answers the stick at once (prediction).
 
 import type { MatchConfig, MatchState, MechInput, RaceState, Role, RoundResult, SeatConfig } from '../sim/index';
+import type { GpEvent, GpKind } from '../gp/grandPrix';
 
-/** Bumped when a message changes shape: a client and a room must agree on it. */
-export const NET_PROTOCOL = 1;
+/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix.) */
+export const NET_PROTOCOL = 2;
 
 /** The server sends the inputs it used every this many ticks (30 packets a second). */
 export const TICKS_PER_PACKET = 2;
@@ -28,6 +29,10 @@ export const READY_COUNTDOWN = 5;
 export const RESULTS_SECONDS = 15;
 /** After the match: the final results stay up this long before the room's lobby (seconds). */
 export const FINAL_SECONDS = 10;
+/** A Grand Prix room: once every result of a round is in, the table stays up until everyone continues, or this long (seconds). */
+export const STANDINGS_SECONDS = 30;
+/** A Grand Prix room races the other factions' fixtures this many ticks at a time, between the server's other work. */
+export const GP_BACKGROUND_TICKS = 40;
 /** Seats held for a squad's members while they follow their leader in (seconds). */
 export const SQUAD_HOLD_SECONDS = 20;
 /** At most this many people in a room. */
@@ -141,9 +146,23 @@ export interface JoinOptions {
   loadout: Loadout;
   /** Coming as a squad (the leader), or following one (a member). */
   squad?: SquadTicket;
+  /** With a create: the room is the squad's Grand Prix, against computer pilots. */
+  gp?: GpRequest;
 }
 
-export type RoomPhase = 'lobby' | 'countdown' | 'race' | 'results' | 'final';
+/** A squad's Grand Prix: a cup or a season, at a difficulty, for the leader's faction. */
+export interface GpRequest {
+  kind: GpKind;
+  /** 0 rookie, 1 pro, 2 ace. */
+  difficulty: number;
+}
+
+/**
+ * Where a room is. A Grand Prix room adds two: `standings` (after your
+ * match, or a matchday you sit out: the table, once the other results are
+ * in) and `award` (the event is over). Its `lobby` is the round's briefing.
+ */
+export type RoomPhase = 'lobby' | 'countdown' | 'race' | 'results' | 'final' | 'standings' | 'award';
 
 export interface RoomSettings {
   /** Circuit id. */
@@ -211,6 +230,8 @@ export interface LobbyView {
   callerAsks: [string | null, string | null];
   /** People who have pressed continue on the results. */
   continued: string[];
+  /** A squad's Grand Prix: the event as it stands (schedule, results), or null in an ordinary room. */
+  gp: GpEvent | null;
 }
 
 // ---- messages -------------------------------------------------------------------
@@ -230,7 +251,8 @@ export interface ClientMessages {
   kick: { pid: string };
   /** Inputs for consecutive ticks, the first numbered `s`, for the race begun by the matchStart with epoch `e`. */
   input: { s: number; i: WireInput[]; e: number };
-  continue: Record<string, never>;
+  /** On from the results (or a Grand Prix's standings): `at` the phase it was pressed in, so a late press does not skip the next. */
+  continue: { at?: RoomPhase };
   endMatch: Record<string, never>;
   resync: Record<string, never>;
   ping: { t: number; rtt: number };
@@ -285,7 +307,7 @@ export interface RoundEndMsg {
 }
 
 export interface ErrorMsg {
-  code: 'full' | 'version' | 'started' | 'squad' | 'kicked' | 'replaced' | 'closed' | 'bad' | 'host';
+  code: 'full' | 'version' | 'started' | 'squad' | 'kicked' | 'replaced' | 'closed' | 'bad' | 'host' | 'gp';
   text: string;
 }
 

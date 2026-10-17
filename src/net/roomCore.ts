@@ -2,6 +2,12 @@
 // nothing of sockets: the server's Colyseus room (server/raceRoom.ts) feeds
 // it joins, drops and messages and gives it a way to send, and the tests
 // drive it the same way with no network at all.
+//
+// A room can also be a squad's Grand Prix: a cup or a season as offline,
+// the squad on team 1 and every rival a computer pilot. The room keeps the
+// event, sets each round up from it (its circuit, format and rival), races
+// the other factions' fixtures a slice at a time between everything else,
+// and goes briefing (the lobby), match, standings, briefing... to the award.
 
 import {
   BTN_MASK,
@@ -24,6 +30,20 @@ import {
   type Track,
 } from '../sim/index';
 import { PILOT_NAMES } from './factions';
+import {
+  FixtureSim,
+  GP_SKILL,
+  advance,
+  isOver,
+  matchFormat,
+  newCup,
+  newSeason,
+  pendingFixtures,
+  recordYours,
+  roundComplete,
+  CUPS,
+  type GpEvent,
+} from '../gp/grandPrix';
 import {
   addMember,
   allReady,
@@ -51,16 +71,19 @@ import {
 import {
   CHECKSUM_TICKS,
   FINAL_SECONDS,
+  GP_BACKGROUND_TICKS,
   KEYFRAME_TICKS,
   MATCH_FORMATS,
   READY_COUNTDOWN,
   RECONNECT_SECONDS,
   RESULTS_SECONDS,
   SKILL_VALUES,
+  STANDINGS_SECONDS,
   TICKS_PER_PACKET,
   packInput,
   unpackInput,
   type ClientMessages,
+  type GpRequest,
   type RoomPhase,
   type ServerMessages,
   type TickMsg,
@@ -92,6 +115,17 @@ interface Queued {
   wire: WireInput;
 }
 
+/** A squad's Grand Prix, kept by its room. */
+interface GpState {
+  event: GpEvent;
+  /** The squad whose event it is (the first to come in brings it). */
+  squad: string | null;
+  /** Every device that has been in: back after a reload without a squad ticket, they still get in. */
+  devices: Set<string>;
+  /** The other factions' fixture being raced, a slice at a time. */
+  sim: FixtureSim | null;
+}
+
 export class RoomCore {
   readonly lobby: Lobby;
   phase: RoomPhase = 'lobby';
@@ -120,16 +154,39 @@ export class RoomCore {
   private resyncAt = new Map<string, number>();
   /** Every member removed: the host should close the room. */
   empty = false;
+  /** A squad's Grand Prix, or null. */
+  gp: GpState | null = null;
 
   constructor(
     readonly code: string,
     readonly version: string,
     private io: CoreIO,
     firstFaction = 0,
-    /** Test settings: shorter races. */
-    private opts: { laps?: number } = {},
+    /** Test settings: shorter races. `gp`: the room is a squad's Grand Prix. */
+    private opts: { laps?: number; gp?: GpRequest } = {},
   ) {
     this.lobby = createLobby(code, version, firstFaction);
+    const req = opts.gp;
+    if (req && (req.kind === 'cup' || req.kind === 'season')) {
+      const faction = this.lobby.factions[0];
+      const seed = Math.floor(io.random() * 1e9);
+      const difficulty = Number.isInteger(req.difficulty) ? req.difficulty : 1;
+      const event = req.kind === 'cup' ? newCup(CUPS[0].id, faction, difficulty, seed) : newSeason(faction, difficulty, seed);
+      this.gp = { event, squad: null, devices: new Set(), sim: null };
+      this.lobby.fixed = true;
+      this.setUpRound();
+    }
+  }
+
+  /** A Grand Prix round with a match of yours: its circuit, format, rival and skill. */
+  private setUpRound(): void {
+    const ev = this.gp?.event;
+    const r = ev?.rounds[ev.current];
+    if (!ev || !r?.you) return;
+    const cfg = matchFormat(ev);
+    const fmt = MATCH_FORMATS.findIndex((f) => f.cfg.mode === cfg.mode && f.cfg.bestOf === cfg.bestOf && f.cfg.target === cfg.target);
+    this.lobby.settings = { track: r.circuit, match: Math.max(0, fmt), skill: ev.difficulty };
+    this.lobby.factions = [ev.faction, r.you.b];
   }
 
   private now(): number {
@@ -151,9 +208,24 @@ export class RoomCore {
       this.reconnect(known.pid);
       return { ok: true, member: known, resumed: true };
     }
+    const gp = this.gp;
+    if (gp) {
+      // The squad's own: the first in brings the squad (a squad of two or
+      // three), and then only its members (or a device already in) get in.
+      const ticket = info.squad && typeof info.squad.id === 'string' ? info.squad : undefined;
+      if (gp.squad === null) {
+        if (!ticket || ticket.size < 2) return { ok: false, code: 'gp', text: 'The Grand Prix online is for a squad of two or three.' };
+      } else if (ticket?.id !== gp.squad && !gp.devices.has(info.deviceId)) {
+        return { ok: false, code: 'gp', text: "That room is a squad's Grand Prix." };
+      }
+    }
     const midMatch = this.phase === 'race' || this.phase === 'results' || this.phase === 'final';
     const res = addMember(this.lobby, info, this.now(), midMatch);
     if (!res.ok) return res;
+    if (gp) {
+      gp.squad ??= info.squad!.id;
+      gp.devices.add(info.deviceId);
+    }
     this.io.send(info.pid, 'welcome', { pid: info.pid, code: this.code });
     if (this.phase === 'countdown') this.toLobbyPhase();
     this.dirty = true;
@@ -284,11 +356,15 @@ export class RoomCore {
         return;
       }
       case 'continue':
-        if (this.phase !== 'results' && this.phase !== 'final') return;
+        if (this.phase !== 'results' && this.phase !== 'final' && this.phase !== 'standings') return;
+        // Pressed on the screen before (its message overtaken by the room
+        // moving on): a match's results do not skip a Grand Prix's standings.
+        if (this.phase === 'standings' ? body.at !== undefined && body.at !== 'standings' : body.at === 'standings') return;
         this.continued.add(pid);
         this.dirty = true;
         return;
       case 'endMatch':
+        if (this.gp) return report({ ok: false, text: 'A Grand Prix match plays to its end' });
         if (this.lobby.host !== pid) return report({ ok: false, text: 'Only the host ends the match' });
         if (!inLobby) this.backToLobby('ended');
         return;
@@ -344,6 +420,7 @@ export class RoomCore {
         this.afterRemoval();
       }
     }
+    if (this.gp) this.raceBackground();
     switch (this.phase) {
       case 'lobby':
         if (allReady(this.lobby)) {
@@ -371,12 +448,24 @@ export class RoomCore {
         if (now >= this.timerEnd || this.everyoneContinued()) this.nextRound();
         break;
       case 'final':
-        if (now >= this.timerEnd || this.everyoneContinued()) this.backToLobby('over');
+        if (now >= this.timerEnd || this.everyoneContinued()) {
+          if (this.gp) this.gpMatchDone();
+          else this.backToLobby('over');
+        }
+        break;
+      case 'standings':
+        // Once every result of the round is in, the table stays up until
+        // everyone continues (or a while), then the next briefing.
+        if (!this.gp || !roundComplete(this.gp.event, this.gp.event.current)) break;
+        if (this.timerEnd < 0) {
+          this.timerEnd = now + STANDINGS_SECONDS * 1000;
+          this.dirty = true;
+        } else if (now >= this.timerEnd || this.everyoneContinued()) this.gpAdvance();
         break;
     }
     // The lobby goes out on any change, and every two seconds for the pings.
     if (this.dirtyPing && now - this.lastLobbySend > 2000) this.dirty = true;
-    if (this.dirty || ((this.phase === 'countdown' || this.phase === 'results' || this.phase === 'final') && now - this.lastLobbySend > 1000)) this.sendLobby();
+    if (this.dirty || ((this.phase === 'countdown' || this.phase === 'results' || this.phase === 'final' || (this.phase === 'standings' && this.timerEnd > 0)) && now - this.lastLobbySend > 1000)) this.sendLobby();
   }
 
   private toLobbyPhase(): void {
@@ -392,7 +481,7 @@ export class RoomCore {
 
   sendLobby(): void {
     const timer = this.timerEnd > 0 ? Math.max(0, Math.ceil((this.timerEnd - this.now()) / 1000)) : -1;
-    this.io.broadcast('lobby', lobbyView(this.lobby, this.phase, timer, this.match, [...this.continued]));
+    this.io.broadcast('lobby', lobbyView(this.lobby, this.phase, timer, this.match, [...this.continued], this.gp?.event ?? null));
     this.dirty = false;
     this.dirtyPing = false;
     this.lastLobbySend = this.now();
@@ -609,6 +698,60 @@ export class RoomCore {
       m.autopilot = false;
     }
     this.io.broadcast('lobbyAgain', { reason });
+    this.dirty = true;
+  }
+
+  // ---- the Grand Prix -----------------------------------------------------------------
+
+  /**
+   * The other factions' fixtures, earliest first, a few ticks at a time:
+   * the whole event is raced long before its table is wanted, and the
+   * server is never held up for a whole race.
+   */
+  private raceBackground(): void {
+    const gp = this.gp!;
+    let budget = GP_BACKGROUND_TICKS;
+    while (budget > 0) {
+      if (!gp.sim) {
+        const next = pendingFixtures(gp.event)[0];
+        if (!next) return;
+        const names: [string[], string[]] = [[...PILOT_NAMES[next.a]], [...PILOT_NAMES[next.b]]];
+        gp.sim = new FixtureSim(next, matchFormat(gp.event), GP_SKILL[gp.event.difficulty] ?? GP_SKILL[1], names, this.opts.laps);
+      }
+      const result = gp.sim.step(budget);
+      budget = 0;
+      if (result) {
+        gp.sim.fx.result = result;
+        gp.sim = null;
+        this.dirty = true;
+      }
+    }
+  }
+
+  /** The squad's match is decided: into the event, and the round's standings. */
+  private gpMatchDone(): void {
+    const gp = this.gp!;
+    const m = this.match;
+    if (m) recordYours(gp.event, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 });
+    this.io.log?.('gp', gp.event.kind, 'round', gp.event.current + 1, 'done');
+    // Out of the race for everyone, as at the end of any match.
+    this.backToLobby('over');
+    this.phase = 'standings';
+  }
+
+  /** On from the standings: the next round's briefing, a matchday off, or the award. */
+  private gpAdvance(): void {
+    const ev = this.gp!.event;
+    if (!advance(ev)) return;
+    this.continued.clear();
+    this.timerEnd = -1;
+    clearReady(this.lobby);
+    if (isOver(ev)) this.phase = 'award';
+    else if (!ev.rounds[ev.current].you) this.phase = 'standings';
+    else {
+      this.setUpRound();
+      this.phase = 'lobby';
+    }
     this.dirty = true;
   }
 }

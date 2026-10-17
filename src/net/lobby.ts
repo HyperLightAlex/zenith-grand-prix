@@ -16,6 +16,9 @@
 //   Shot caller  Only on a team of two people and one computer pilot: the one
 //              of the two whose calls the computer pilot follows. It starts
 //              with the captain (or the squad's leader) and can be passed.
+//   Grand Prix A squad's cup or season (`fixed`): the event sets the factions,
+//              circuit, format and skill, and the other team is computer
+//              pilots only, so people sit on team 1 (side 0) alone.
 
 import { ROLE, TRACKS, type Role } from '../sim/index';
 import {
@@ -32,6 +35,7 @@ import {
   type SquadTicket,
 } from './protocol';
 import type { MatchState } from '../sim/index';
+import type { GpEvent } from '../gp/grandPrix';
 
 export const FACTION_COUNT = 5;
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
@@ -71,6 +75,8 @@ export interface Lobby {
   /** A request for shot calling, by side: who asked. */
   callerAsks: [string | null, string | null];
   arrivals: number;
+  /** A squad's Grand Prix: factions and settings come from the event, and only side 0 takes people. */
+  fixed: boolean;
 }
 
 export interface JoinInfo {
@@ -81,7 +87,7 @@ export interface JoinInfo {
   squad?: SquadTicket;
 }
 
-export type JoinResult = { ok: true; member: Member } | { ok: false; code: 'full' | 'squad' | 'kicked'; text: string };
+export type JoinResult = { ok: true; member: Member } | { ok: false; code: 'full' | 'squad' | 'kicked' | 'gp'; text: string };
 
 export function defaultSettings(): RoomSettings {
   return { track: TRACKS[0].id, match: 1, skill: 1 };
@@ -101,8 +107,17 @@ export function createLobby(code: string, version: string, firstFaction = 0): Lo
     banned: [],
     callerAsks: [null, null],
     arrivals: 0,
+    fixed: false,
   };
 }
+
+/** The sides people may sit on: both, or in a Grand Prix only the squad's. */
+function openSides(lobby: Lobby): number[] {
+  return lobby.fixed ? [0] : [0, 1];
+}
+
+/** Why something a Grand Prix decides cannot be changed by hand. */
+const FIXED_TEXT = 'The Grand Prix sets this';
 
 function validFaction(f: number): boolean {
   return Number.isInteger(f) && f >= 0 && f < FACTION_COUNT;
@@ -177,8 +192,8 @@ export function callerOf(lobby: Lobby, side: number): Member | undefined {
 
 function becameCaptain(lobby: Lobby, m: Member): void {
   // The first person on a team brings their faction with them, unless the
-  // other team already flies it.
-  if (captainOf(lobby, m.side) !== m) return;
+  // other team already flies it (or a Grand Prix has set it).
+  if (lobby.fixed || captainOf(lobby, m.side) !== m) return;
   const other = lobby.factions[1 - m.side];
   if (validFaction(m.loadout.faction) && m.loadout.faction !== other) lobby.factions[m.side] = m.loadout.faction;
 }
@@ -200,9 +215,9 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
   } else if (squad && squad.size > 1 && !squad.follow) {
     // A squad's leader: every member needs a place on the same team.
     const need = Math.min(TEAM_SIZE, Math.max(1, squad.size | 0));
-    const sides = [0, 1].filter((s) => placesFree(lobby, s) >= need).sort((a, b) => placesFree(lobby, b) - placesFree(lobby, a) || fewer(a, b));
+    const sides = openSides(lobby).filter((s) => placesFree(lobby, s) >= need).sort((a, b) => placesFree(lobby, b) - placesFree(lobby, a) || fewer(a, b));
     if (!sides.length) {
-      const best = [0, 1].sort((a, b) => placesFree(lobby, b) - placesFree(lobby, a))[0];
+      const best = openSides(lobby).sort((a, b) => placesFree(lobby, b) - placesFree(lobby, a))[0];
       const free = Math.max(0, placesFree(lobby, best));
       return { ok: false, code: 'squad', text: `Team ${best + 1} has ${free} free place${free === 1 ? '' : 's'}; your squad has ${need}.` };
     }
@@ -211,8 +226,8 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
   } else {
     // On your own: the team with fewer people; a squad member whose held
     // places have run out goes to the squad's team if it has room.
-    const sides = [0, 1].filter((s) => placesFree(lobby, s) > 0).sort(fewer);
-    if (!sides.length) return { ok: false, code: 'full', text: 'Room full' };
+    const sides = openSides(lobby).filter((s) => placesFree(lobby, s) > 0).sort(fewer);
+    if (!sides.length) return { ok: false, code: 'full', text: lobby.fixed ? 'The squad is full' : 'Room full' };
     side = sides[0];
     const mates = squad ? lobby.members.find((x) => x.squad === squad.id && x.side >= 0 && placesFree(lobby, x.side) > 0) : undefined;
     if (mates) side = mates.side;
@@ -287,6 +302,7 @@ export function switchTeam(lobby: Lobby, pid: string, side: number, role?: Role)
   if (!m || m.side < 0) return no('You have no place on a team');
   if (side !== 0 && side !== 1) return no('No such team');
   if (m.side === side) return role === undefined ? yes() : pickFrame(lobby, pid, role);
+  if (!openSides(lobby).includes(side)) return no('Computer pilots fly the other team in a Grand Prix');
   if (placesFree(lobby, side, m.squad) < 1) return no('That team is full');
   // A place held there for your own squad is the one you take.
   const hold = m.squad ? lobby.holds.find((h) => h.side === side && h.squad === m.squad) : undefined;
@@ -309,6 +325,7 @@ export function switchTeam(lobby: Lobby, pid: string, side: number, role?: Role)
 export function setFaction(lobby: Lobby, pid: string, faction: number, side?: number): Outcome {
   const m = member(lobby, pid);
   if (!m) return no('You are not in this room');
+  if (lobby.fixed) return no(FIXED_TEXT);
   const s = side === 0 || side === 1 ? side : m.side;
   if (s !== 0 && s !== 1) return no('You have no seat');
   if (lobby.host !== pid && captainOf(lobby, s) !== m) return no(s === m.side ? "Only your team's captain or the host picks its faction" : "Only that team's captain or the host picks its faction");
@@ -322,6 +339,7 @@ export function setFaction(lobby: Lobby, pid: string, faction: number, side?: nu
 
 /** The host changes the circuit, the format or the computer pilots' skill. Everyone's ready mark clears. */
 export function setSettings(lobby: Lobby, pid: string, s: Partial<RoomSettings>): Outcome {
+  if (lobby.fixed) return no(FIXED_TEXT);
   if (lobby.host !== pid) return no('Only the host changes the settings');
   const next = { ...lobby.settings };
   if (s.track !== undefined) {
@@ -412,7 +430,7 @@ export function kick(lobby: Lobby, pid: string, target: string): Outcome {
 }
 
 /** What every client is shown. */
-export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: MatchState | null, continued: string[]): LobbyView {
+export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: MatchState | null, continued: string[], gp: GpEvent | null = null): LobbyView {
   const sides = [0, 1].map(
     (side): SideView => ({
       faction: lobby.factions[side],
@@ -436,5 +454,6 @@ export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: 
     match,
     callerAsks: [...lobby.callerAsks] as [string | null, string | null],
     continued: [...continued],
+    gp,
   };
 }

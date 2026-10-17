@@ -1009,6 +1009,9 @@ html.narrow:not(.compact):not(.portrait) .controls .grid { grid-template-columns
 .item.locked { opacity: 0.55; }
 .item.locked .choice .arr { visibility: hidden; }
 .item.locked.sel { opacity: 0.8; }
+/* A line under an item that shows only while it is highlighted (why a locked one is locked). */
+.item small.hint { display: none; }
+.item.sel small.hint { display: block; }
 .item small { display: block; margin-top: 0.15em; }
 .list .item { flex-wrap: wrap; }
 .list .item > small { flex-basis: 100%; }

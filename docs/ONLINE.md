@@ -65,7 +65,7 @@ two players.
 ## What a player sees
 
 - **Online hub.** Your squad's three positions, with Create room, Join
-  room, Invite to squad, Join a squad and your callsign. Entering Online
+  room, Grand Prix, Invite to squad, Join a squad and your callsign. Entering Online
   makes you the leader of a squad of one.
 - **Callsign.** Asked for once, 3 to 16 characters, passed through a short
   word filter, and changeable on the hub.
@@ -112,6 +112,24 @@ two players.
   matchmaking, when there is some, the squad will have to be on different
   frames to queue.) Invite to squad shows while there is an open place,
   Join a squad only while you are on your own.
+- **Grand Prix with your squad.** The hub's Grand Prix is always there, and
+  opens for a squad of two or three, from its leader (highlighted, it says
+  which it is waiting for). The leader picks the Horizon Cup or the Zenith
+  Cup season and the difficulty, and the squad follows into its own room:
+  the event as offline, for the squad's faction, the squad on one team (a
+  computer teammate in any frame nobody flies) and every rival a computer
+  pilot. Each round opens on its briefing (the rival, the circuit, the
+  squad's three frames and the table so far): pick a frame, Ready locks it
+  in, and the round starts when everyone is ready. After the match, the
+  round's standings, with the other factions' results as they come in; the
+  next briefing follows when everyone presses Continue, or 30 seconds after
+  the last result. A season's matchday off is its standings alone. At the
+  end, the award; Back to Online leaves. It is played in one sitting:
+  nothing is saved and no medals or cups are recorded. Only the squad can
+  join (and anyone who was in it, after a reload), nobody can sit on the
+  rivals' team, the event sets the factions, circuit, format and skill, and
+  a match is not ended early. Leaving hands your frame to a computer
+  teammate and the squad carries on.
 
 ## How it works
 
@@ -152,6 +170,17 @@ two players.
   when people drop or come back. The change rides with the inputs, so every
   copy of the race makes it at the same tick.
 - **Squads** are their own small Colyseus room (`src/net/squadCore.ts`).
+- **A squad's Grand Prix** is a race room made with `gp` in its create
+  options: the room keeps the event (`src/gp/grandPrix.ts`, the same as
+  offline), sets each round up from it, and goes lobby (the briefing),
+  match, `standings`, lobby... to `award`, sending the event with the
+  lobby. The lobby is `fixed`: side 0 only, factions and settings from the
+  event. The other factions' fixtures are raced on the server
+  (`FixtureSim`), 40 ticks (`GP_BACKGROUND_TICKS`) on each of the room's
+  updates, so a race takes about 5 seconds and the server is never held up
+  for one; they start when the room is made, so a round's results are in
+  long before its standings. A Continue carries the phase it was pressed
+  in, so a late press on a match's results cannot skip the standings.
 - **The lobby rules** (teams and places, frame picks and lock-in, captains,
   factions, shot callers, squads) are plain functions in `src/net/lobby.ts`.
   When a match starts, `settleFrames` gives each person their locked-in
@@ -167,6 +196,7 @@ two players.
 | Codes | 5 characters from 31 that cannot be misread (no 0/O, 1/I/L): about 28 million |
 | Code guessing | 30 room codes a minute per address, when `FORWARDED_HOPS` is set |
 | A dropped seat | Kept 60 s |
+| A squad's Grand Prix | Its squad only; the rivals' team is computer pilots |
 | Inbound message | 16 KB at most |
 
 Codes are an invitation, not a secret. Anyone with a code can join until the
@@ -187,6 +217,7 @@ On this sandbox's 2-core Linux machine, with Node 22:
 | Traffic per player (2 people racing) | 4.6 KB/s down, 2.2 KB/s up |
 | Server CPU, two full rooms of six bots racing | 5% of one core, about 2.5% per room |
 | Rooms per core (from that) | about 40 |
+| A squad's Grand Prix, while it races the other factions' fixtures | about 9% of one core more, for about 5 s a race (a cup has 3, a season up to 30) |
 | Inputs predicted ahead on localhost | 1 to 6 ticks; up to 16 with 12 bots on the same machine |
 | Confirmed race vs server | identical at every checksum, in tests and in 12-bot runs (no resyncs) |
 
@@ -197,7 +228,13 @@ On this sandbox's 2-core Linux machine, with Node 22:
   network (`tests/net-*.test.ts`). They check that each client's confirmed
   race matches the server's, that prediction runs ahead by about a round
   trip, reconnecting mid-race, the shot caller in the race, the pause
-  menu's computer pilot, and late arrivals.
+  menu's computer pilot, and late arrivals. `tests/net-gp.test.ts` plays a
+  squad's cup through (briefing, match, standings, award), a season's
+  matchday off, and who may come in.
+- `tools/online-gp-check.mjs` takes two browsers through a squad's cup:
+  the hub's Grand Prix (locked alone, open with two), the setup, following
+  the leader in, picking frames in the briefing, the races, the standings
+  and the award. Start the server with `TEST_LAPS=1` for one-lap races.
 - `npm run bots -- 6 4` puts four rooms of six bots on a running server
   (`npm start`, or `npm run server`), races them, and reports resyncs. It is
   also the load test.

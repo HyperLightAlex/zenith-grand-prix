@@ -30,6 +30,7 @@ export type ScreenId =
   | 'standings'
   | 'award'
   | 'online'
+  | 'online-gp'
   | 'room'
   | 'entry'
   | 'dialog'
@@ -108,6 +109,13 @@ export interface ScreenDef<D = unknown> {
   initialFocus?: string;
   /** The highlight moved to the item with this key (to describe it, say). */
   selected?(m: Menus, key: string, data: D): void;
+  /**
+   * A screen that moves through stages by itself (a Grand Prix room: the
+   * briefing, the standings, the award): the stage it is at, and the item to
+   * highlight when it reaches a new one, so a press meant for the last stage
+   * cannot land on whatever now sits where its button was.
+   */
+  stage?(m: Menus, data: D): { id: string; focus: string } | null;
 }
 
 interface Entry {
@@ -115,6 +123,8 @@ interface Entry {
   data: unknown;
   sel: number;
   key: string;
+  /** The stage last drawn (see ScreenDef.stage). */
+  stage?: string;
 }
 
 export interface MenuHost {
@@ -253,7 +263,16 @@ export class Menus {
     this.items = [];
     def?.render(this, top.data as never);
     R.append(this.toastEl);
-    // Keep the highlight on the same item when it is still there.
+    // A new stage: its own item. Otherwise keep the highlight on the same item when it is still there.
+    const stage = def?.stage?.(this, top.data as never) ?? null;
+    if (stage && stage.id !== top.stage) {
+      // (Reached once its item is there: the room may be drawn before it knows you.)
+      const at = this.items.findIndex((it) => it.key === stage.focus);
+      if (at >= 0) {
+        top.stage = stage.id;
+        return this.select(at, false);
+      }
+    }
     const byKey = top.key ? this.items.findIndex((it) => it.key === top.key) : def?.initialFocus ? this.items.findIndex((it) => it.key === def.initialFocus) : -1;
     const i = byKey >= 0 ? byKey : Math.min(top.sel, this.items.length - 1);
     if (this.items.length) this.select(Math.max(0, i), false);
@@ -332,9 +351,9 @@ export class Menus {
     return this.addItem(list, h('div.item', h('span', label), h('span.choice', h('i.arr.l', '‹'), h('span.val', value), h('i.arr.r', '›'))), undefined, change, opts);
   }
 
-  /** An item that does something. */
-  button(list: HTMLElement, label: string | HTMLElement, activate: () => void, opts: ItemOpts & { go?: boolean; note?: string } = {}): HTMLElement {
-    const el = h('div.item' + (opts.go ? '.go' : ''), typeof label === 'string' ? h('span', label) : label, opts.note ? h('small', opts.note) : null);
+  /** An item that does something. `hint`: a line shown only while it is highlighted. */
+  button(list: HTMLElement, label: string | HTMLElement, activate: () => void, opts: ItemOpts & { go?: boolean; note?: string; hint?: string } = {}): HTMLElement {
+    const el = h('div.item' + (opts.go ? '.go' : ''), typeof label === 'string' ? h('span', label) : label, opts.note ? h('small', opts.note) : null, opts.hint ? h('small.hint', opts.hint) : null);
     return this.addItem(list, el, activate, undefined, opts);
   }
 

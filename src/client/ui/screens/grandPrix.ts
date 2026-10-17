@@ -27,16 +27,16 @@ export interface GpData {
   kind: GpKind;
 }
 
-const ORD = ['1st', '2nd', '3rd', '4th', '5th'];
-const MEDAL_NAMES: Record<string, string> = { gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
+export const ORD = ['1st', '2nd', '3rd', '4th', '5th'];
+export const MEDAL_NAMES: Record<string, string> = { gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
 
-function emblem(f: number): HTMLElement {
+export function emblem(f: number): HTMLElement {
   const el = h('i.emb');
   el.style.backgroundImage = `url(${emblemUrl(f)})`;
   return el;
 }
 
-function circuitName(id: string): string {
+export function circuitName(id: string): string {
   return TRACKS.find((t) => t.id === id)?.name ?? id;
 }
 
@@ -61,12 +61,27 @@ export function gpTable(ev: GpEvent, upTo: number): HTMLElement {
   return table;
 }
 
-function fixtureLine(f: GpFixture, ev: GpEvent): HTMLElement {
+export function fixtureLine(f: GpFixture, ev: GpEvent): HTMLElement {
   const a = factionName(LIVERIES[f.a]);
   const b = factionName(LIVERIES[f.b]);
   const r = f.result;
   const score = !r ? 'racing…' : ev.kind === 'cup' ? `${r.points[0]}–${r.points[1]}` : `${r.wins[0]}–${r.wins[1]}`;
   return h('div.fixture' + (f.a === ev.faction ? '.me' : ''), emblem(f.a), h('span', a), h('b', score), h('span', b), emblem(f.b));
+}
+
+/** The award: the medal or cup (if any), the headline and a line under it. */
+export function awardLines(ev: GpEvent, place: number, medal: string | null): HTMLElement[] {
+  let headline: string;
+  let line: string;
+  if (ev.kind === 'cup') {
+    headline = medal ? `${MEDAL_NAMES[medal]} medal` : `${ORD[place - 1]} place`;
+    line = medal ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: ${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}: a medal needs the top three.`;
+  } else {
+    headline = place === 1 ? 'The Zenith Cup' : `${ORD[place - 1]} in the season`;
+    line = place === 1 ? `${factionName(LIVERIES[ev.faction])} top the table at ${GP_DIFFICULTY[ev.difficulty]}. The cup is yours.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}. Only the top of the table takes the cup.`;
+  }
+  const badge = h('div.medal.' + (ev.kind === 'season' ? (place === 1 ? 'cup' : 'none') : (medal ?? 'none')));
+  return [badge, h('h1', headline), h('p', line)];
 }
 
 export function registerGrandPrix(m: Menus, g: Game): void {
@@ -175,17 +190,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       const ev = g.gpEvent(d.kind);
       if (!ev) return void m.pop();
       const col = h('div.col.gp-award');
-      let headline: string;
-      let line: string;
-      if (ev.kind === 'cup') {
-        headline = d.medal ? `${MEDAL_NAMES[d.medal]} medal` : `${ORD[d.place - 1]} place`;
-        line = d.medal ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: ${factionName(LIVERIES[ev.faction])} finish ${ORD[d.place - 1]}.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[d.place - 1]}: a medal needs the top three.`;
-      } else {
-        headline = d.place === 1 ? 'The Zenith Cup' : `${ORD[d.place - 1]} in the season`;
-        line = d.place === 1 ? `${factionName(LIVERIES[ev.faction])} top the table at ${GP_DIFFICULTY[ev.difficulty]}. The cup is yours.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[d.place - 1]}. Only the top of the table takes the cup.`;
-      }
-      const badge = h('div.medal.' + (ev.kind === 'season' ? (d.place === 1 ? 'cup' : 'none') : (d.medal ?? 'none')));
-      col.append(h('div.context', eventName(ev)), badge, h('h1', headline), h('p', line));
+      col.append(h('div.context', eventName(ev)), ...awardLines(ev, d.place, d.medal));
       const list = h('div.list');
       m.button(list, 'Back to Grand Prix', () => g.finishGp(d.kind), { key: 'done', go: true });
       col.append(list);
