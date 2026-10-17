@@ -665,13 +665,15 @@ The teams swap sides of the grid from one round to the next.
 - **Feel is separate from rules.** Camera and effect settings are client
   values (`src/client/game/tuning.ts`); they never reach the simulation.
 - **Rendering.** Three.js with a short post chain (bloom, then a speed pass:
-  radial blur, streaks, vignette, flash). Mechs are assembled in code from a
-  small kit, cel-shaded with an inverted-hull outline; legs are solved by
-  two-bone IK; the upper body blends a pose library. On the `art-80s`
-  branch an 80s anime look sits on top behind one switch: cel tones on
+  radial blur, streaks, vignette, flash). The mechs are built in Blender
+  from their model sheets and exported as GLBs at three levels of detail,
+  rigid on a joint skeleton (the first ones were assembled in code from a
+  small kit); legs are solved by two-bone IK; the upper body blends a pose
+  library. The 80s anime look sits on top behind one switch: cel tones on
   every material, an ink pass and a film pass, banded bloom, drawn speed
   lines and effects, poses on twos, and cuts of its own for big moments.
-  See [ART.md](ART.md).
+  See [ART.md](ART.md), and [VISUAL-WORKFLOW.md](VISUAL-WORKFLOW.md) for
+  how its art is made and checked.
 - **Sound.** Synthesised at run time: engine, wind, 55 effects, and music
   that follows the lap phase, in a different style on each circuit. No audio
   files. Every continuous layer (engine, wind, afterburner, strip hum,
@@ -812,10 +814,11 @@ guard on the left trigger and the guard swing, fights that are easier to
 read, armour down, and the three circuits rebuilt round carving. 822
 simulation tests.
 
-**Art experiment (branch `art-80s`): the 80s anime look.** Cel and ink,
-film, animation on twos, drawn effects, impact frames, painted stills, title
-cards and an eyecatch, all behind one switch (G). What it would take to
-finish it is in [ART.md](ART.md).
+**The 80s anime look (begun on the `art-80s` branch, now the default).**
+Cel and ink, film, animation on twos, drawn effects, impact frames, painted
+stills, title cards and an eyecatch, all behind one switch (G). The rules
+are in [ART.md](ART.md), the way its art is made in
+[VISUAL-WORKFLOW.md](VISUAL-WORKFLOW.md).
 
 **M2 and M3, done: modes and online (0.5).** The garage split into a shared
 hangar and a setup for each mode; Grand Prix (cups for medals, a season for

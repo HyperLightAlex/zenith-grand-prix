@@ -26,11 +26,12 @@ and a setup screen for each mode. How online works and how to host it is in
 [docs/ONLINE.md](docs/ONLINE.md); the rest of the design is in
 [docs/DESIGN.md](docs/DESIGN.md).
 
-**On the `art-80s` branch** the game is drawn as an 80s mecha anime: cel
-shading and ink, film grain and halation, poses and effects on twos, drawn
-speed lines and sparks, impact frames, a painted still on a knockout, title
-cards and an eyecatch. Press **G** to switch between that and the plain look.
-See [docs/ART.md](docs/ART.md).
+**The look.** The game is drawn as an 80s mecha anime: cel shading and
+ink, film grain and halation, poses and effects on twos, drawn speed lines
+and sparks, impact frames, a painted still on a knockout, title cards and
+an eyecatch. Press **G** to switch between that and the plain look. The
+rules are in [docs/ART.md](docs/ART.md); how its art is made and checked is
+in [docs/VISUAL-WORKFLOW.md](docs/VISUAL-WORKFLOW.md).
 
 ## Play
 
@@ -322,9 +323,12 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run sim -- 100 1 track=canyon` | The same on another circuit (`meridian`, `canyon`, `helios`) |
 | `npx tsx tools/circuit-plot.ts canyon` | Plan, height and features of a circuit, as numbers and an SVG |
 
-The browser-driving helpers in `tools/` (`shot.mjs`, `playtest.mjs`,
-`audio-check.mjs`, and `online-check.mjs`, which takes two browsers through
-an online room and race) need Playwright, which is not a dependency of the project:
+The browser-driving helpers in `tools/` (`shot.mjs`, `screens.mjs`,
+`playtest.mjs`, `audio-check.mjs`, `online-check.mjs` and
+`online-gp-check.mjs`, which take two browsers through an online room and a
+squad's Grand Prix, and the capture tools in `tools/capture`, which render
+the game through scripted cameras for checking and footage) need
+Playwright, which is not a dependency of the project:
 `npm i -D playwright && npx playwright install chromium` if you want them.
 
 Dev shortcuts on the page URL: `?auto=FW` (or `MF`, `DF`) jumps straight into

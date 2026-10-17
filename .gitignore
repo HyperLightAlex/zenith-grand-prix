@@ -7,3 +7,8 @@ __pycache__/
 *.blend1
 *.blend2
 dist-server
+# Captures, scans and the trailer's renders and song (see tools/capture, tools/trailer)
+tools/trailer/out/
+tools/trailer/song.*
+captures/
+scans/

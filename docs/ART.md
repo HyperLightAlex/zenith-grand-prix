@@ -1,12 +1,14 @@
 # The 80s anime look
 
-An experiment on the `art-80s` branch: the same game, drawn as if it were a
-mecha series from the 1980s (Gundam, Macross, the look Evangelion inherited),
-the way Orbitals on the Switch 2 dresses a modern game as a cel-animated
-show. Nothing in the race changes. The simulation, its timing and its tests
-are untouched; this is all presentation.
+The game is drawn as if it were a mecha series from the 1980s (Gundam,
+Macross, the look Evangelion inherited), the way Orbitals on the Switch 2
+dresses a modern game as a cel-animated show. It began as an experiment on
+the `art-80s` branch and is now the game's look. Nothing in the race
+depends on it: the simulation, its timing and its tests are untouched; this
+is all presentation. How its art is made and checked, step by step, is in
+[VISUAL-WORKFLOW.md](VISUAL-WORKFLOW.md).
 
-The look is on by default on this branch. To compare:
+The look is on by default; the plain look is still there. To compare:
 
 - **G** on the keyboard switches between the anime look and the plain one at
   any time, even mid-race.
@@ -512,5 +514,7 @@ packing their new attributes is a worthwhile follow-up.
 ## Checking it
 
 `?look=plain` and `?look=anime` with the usual shortcuts
-(`?auto=FW&demo=1&seed=7&track=canyon`) give the same race in each look,
-which is how the comparison shots for this branch were made.
+(`?auto=FW&demo=1&seed=7&track=canyon`) give the same race in each look.
+For the same moment before and after a change, through any camera, use
+`tools/capture` (its README); the whole routine, screen sizes and devices
+included, is in [VISUAL-WORKFLOW.md](VISUAL-WORKFLOW.md).
