@@ -38,11 +38,12 @@ describe('batched authored mech ink',()=>{
       for(const pose of [POSES.standby,POSES.boost,POSES.guard,POSES.victory]) {
         rig.apply(pose);scene.updateMatrixWorld(true);
         hull.onBeforeRender({} as THREE.WebGLRenderer,scene,camera,hull.geometry,mat,null as never);
-        const matrices=mat.uniforms.uJoints.value as THREE.Matrix4[];
+        // The shaders read each joint's matrix from the joint texture (see ink.ts).
+        expect(mat.uniforms.uJointTex.value).toBeInstanceOf(THREE.DataTexture);
         const ids=hull.geometry.getAttribute('aJoint'),p=hull.geometry.getAttribute('position');
         for(let i=0;i<p.count;i+=137) {
           const local=new THREE.Vector3().fromBufferAttribute(p,i);
-          const actual=local.clone().applyMatrix4(matrices[ids.getX(i)]).applyMatrix4(rig.root.matrixWorld);
+          const actual=local.clone().applyMatrix4(ink.jointMatrix(ids.getX(i))).applyMatrix4(rig.root.matrixWorld);
           const joint=Object.values(joints)[ids.getX(i)];
           expect(actual.distanceTo(joint.localToWorld(local))).toBeLessThan(1e-5);
         }
@@ -68,7 +69,9 @@ describe('batched authored mech ink',()=>{
   it('patches the installed r186 fat-line shader and keeps an opaque mark after its colour/fog output',()=>{
     const shader={vertexShader:THREE.ShaderLib.line.vertexShader,fragmentShader:THREE.ShaderLib.line.fragmentShader};
     patchInkLineShader(shader);
-    expect(shader.vertexShader).toContain('uJoints[int(instanceJoint)]');
+    expect(shader.vertexShader).toContain('inkJoint(instanceJoint)');
+    expect(shader.vertexShader).toContain('texelFetch(uJointTex');
+    expect(shader.vertexShader).not.toContain('uJoints');
     expect(shader.fragmentShader).toContain('gl_FragColor=vec4(uInkColor,uMark)');
     expect(shader.fragmentShader).toContain('if(uMask>0.5)gl_FragColor=vec4(1.0)');
     expect(()=>patchInkLineShader({vertexShader:'changed',fragmentShader:''})).toThrow('contract changed');

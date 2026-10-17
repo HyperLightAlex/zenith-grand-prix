@@ -1,5 +1,10 @@
 // Authored mech ink. Rigid joints are batched into two draws per mech/LOD,
 // with exactly the same joint matrices as the armour (no second animation).
+// The joints' matrices reach the shaders in a small float texture, one row a
+// joint, read with texelFetch (as three.js skins characters), not as a
+// uniform array indexed per vertex: some handheld GPUs fetched the wrong
+// matrix from the array for some joints, and the ink on the legs, hips and
+// towers was drawn somewhere else entirely.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
@@ -63,10 +68,17 @@ export function validateOutline(g: THREE.BufferGeometry): void {
 }
 
 const BONES = 24;
+/** The joint matrix for a vertex: four texels of the joint texture's row (columns of the matrix). */
+const JOINT_FETCH = /* glsl */`
+  uniform highp sampler2D uJointTex;
+  mat4 inkJoint(float index) {
+    int j = int(index + 0.5);
+    return mat4(texelFetch(uJointTex, ivec2(0, j), 0), texelFetch(uJointTex, ivec2(1, j), 0), texelFetch(uJointTex, ivec2(2, j), 0), texelFetch(uJointTex, ivec2(3, j), 0));
+  }`;
 const hullVertex = /* glsl */`
   #include <common>
   #include <fog_pars_vertex>
-  uniform mat4 uJoints[24];
+  ${JOINT_FETCH}
   uniform vec2 uRes;
   uniform float uStrength, uOutline;
   attribute float aJoint;
@@ -75,7 +87,7 @@ const hullVertex = /* glsl */`
   attribute float _ink_width;
   varying float vMark, vWidth;
   void main() {
-    mat4 joint=uJoints[int(aJoint)];
+    mat4 joint=inkJoint(aJoint);
     vec4 mvPosition=modelViewMatrix*joint*vec4(position,1.0);
     vec3 n=normalize(normalMatrix*mat3(joint)*_outline_normal);
     vec4 clip=projectionMatrix*mvPosition;
@@ -103,18 +115,18 @@ const hullFragment = /* glsl */`
   }`;
 
 /** The only r186 LineMaterial patches; fail loudly if three changes its source. */
-export function patchInkLineShader(shader: {vertexShader: string; fragmentShader: string}, count = BONES): void {
+export function patchInkLineShader(shader: {vertexShader: string; fragmentShader: string}): void {
   const replace=(s:string, from:string,to:string)=>{
     if(!s.includes(from)) throw new Error(`LineMaterial contract changed: ${from}`);
     return s.replace(from,to);
   };
   shader.vertexShader=replace(shader.vertexShader,'#include <common>',`#include <common>
-    uniform mat4 uJoints[${count}];
+    ${JOINT_FETCH}
     uniform float uDistance, uStrength;
     attribute float instanceJoint, instanceKind;
     varying float vInkWidth;`);
-  shader.vertexShader=replace(shader.vertexShader,'vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );','vec4 start = modelViewMatrix * uJoints[int(instanceJoint)] * vec4(instanceStart,1.0);');
-  shader.vertexShader=replace(shader.vertexShader,'vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );',`vec4 end = modelViewMatrix * uJoints[int(instanceJoint)] * vec4(instanceEnd,1.0);
+  shader.vertexShader=replace(shader.vertexShader,'vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );','vec4 start = modelViewMatrix * inkJoint(instanceJoint) * vec4(instanceStart,1.0);');
+  shader.vertexShader=replace(shader.vertexShader,'vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );',`vec4 end = modelViewMatrix * inkJoint(instanceJoint) * vec4(instanceEnd,1.0);
     float nearInk=1.0-smoothstep(22.0,60.0,uDistance);
     float weight=instanceKind>0.5 && instanceKind<1.5 ? nearInk : mix(0.4,1.0,nearInk);
     vInkWidth=weight*uStrength;
@@ -133,7 +145,11 @@ export function patchInkLineShader(shader: {vertexShader: string; fragmentShader
 
 /** One shared pair of materials per mech, one pair of meshes per LOD. */
 export class MechInkBuilder {
-  private matrices=Array.from({length:BONES},()=>new THREE.Matrix4());
+  /** The joints' matrices, root-relative: one row of four texels (the matrix's columns) per joint. */
+  private jointData=new Float32Array(BONES*16);
+  private jointTex=new THREE.DataTexture(this.jointData,4,BONES,THREE.RGBAFormat,THREE.FloatType);
+  private joint=new THREE.Matrix4();
+  private lastFrame=-1;
   private inverse=new THREE.Matrix4();
   private center=new THREE.Vector3();
   private names: string[];
@@ -143,7 +159,10 @@ export class MechInkBuilder {
   constructor(private rig: MechRig, private joints: Record<string,THREE.Object3D>) {
     this.names=Object.keys(joints);
     if(this.names.length>BONES)throw new Error('Too many ink joints');
-    this.uniforms={...shared,uJoints:{value:this.matrices},uMark:{value:.5},uMask:{value:0},uDistance:{value:0}};
+    this.jointTex.minFilter=this.jointTex.magFilter=THREE.NearestFilter;
+    this.jointTex.generateMipmaps=false;
+    this.jointTex.needsUpdate=true;
+    this.uniforms={...shared,uJointTex:{value:this.jointTex},uMark:{value:.5},uMask:{value:0},uDistance:{value:0}};
     this.hull=new THREE.ShaderMaterial({uniforms:{...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),...this.uniforms},vertexShader:hullVertex,fragmentShader:hullFragment,side:THREE.BackSide,fog:true});
     this.line=new LineMaterial({worldUnits:false,linewidth:1,resolution:shared.uRes.value.clone(),color:0xffffff,fog:true,transparent:false,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-.5,polygonOffsetUnits:-.5});
     this.line.onBeforeCompile=shader=>{Object.assign(shader.uniforms,this.uniforms);patchInkLineShader(shader);};
@@ -155,9 +174,18 @@ export class MechInkBuilder {
     }
     rig.root.userData.geometryInk=true;
   }
-  private update(camera: THREE.Camera, scene: THREE.Scene): void {
-    this.inverse.copy(this.rig.root.matrixWorld).invert();
-    this.names.forEach((n,i)=>this.matrices[i].multiplyMatrices(this.inverse,this.joints[n].matrixWorld));
+  /** The matrix the shaders use for joint `i` (from the joint texture). */
+  jointMatrix(i: number, out = new THREE.Matrix4()): THREE.Matrix4 {
+    return out.fromArray(this.jointData, i*16);
+  }
+  private update(camera: THREE.Camera, scene: THREE.Scene, frame?: number): void {
+    // The joints once a frame (the hull, the lines and the speed mask share them).
+    if (frame === undefined || frame !== this.lastFrame) {
+      this.lastFrame = frame ?? -1;
+      this.inverse.copy(this.rig.root.matrixWorld).invert();
+      this.names.forEach((n,i)=>this.joint.multiplyMatrices(this.inverse,this.joints[n].matrixWorld).toArray(this.jointData,i*16));
+      this.jointTex.needsUpdate=true;
+    }
     this.center.set(0,this.rig.dims.height*.5,0).applyMatrix4(this.rig.root.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
     const z=Math.max(0,-this.center.z);
     this.uniforms.uDistance.value=z;
@@ -181,7 +209,7 @@ export class MechInkBuilder {
     // Conservative root-space bounds enclose every rigid animation, including
     // outstretched arms and fins. Joint-local transport bounds cannot cull these.
     h.geometry.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,this.rig.dims.height*.5,0),this.rig.dims.height);
-    h.onBeforeRender=(_r,s,c)=>this.update(c,s);
+    h.onBeforeRender=(r,s,c)=>this.update(c,s,r.info?.render?.frame);
     group.add(h);geometries.forEach(g=>g.dispose());
     if(lines.length) {
       const positions:number[]=[],joints:number[]=[],kinds:number[]=[];
@@ -191,7 +219,7 @@ export class MechInkBuilder {
       g.setAttribute('instanceKind',new THREE.InstancedBufferAttribute(new Float32Array(kinds),1));
       const l=new LineSegments2(g,this.line);l.name='Batched authored ink';l.frustumCulled=true;g.boundingSphere=h.geometry.boundingSphere.clone();l.castShadow=false;l.userData.ownMaterial=true;
       const object: THREE.Object3D=l;
-      object.onBeforeRender=(_r,s,c)=>this.update(c,s);
+      object.onBeforeRender=(r,s,c)=>this.update(c,s,r.info?.render?.frame);
       group.add(l);
     }
     this.rig.root.add(group);groups.push(group);
