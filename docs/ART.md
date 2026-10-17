@@ -384,9 +384,10 @@ setting can switch a running scene without rebuilding it. Review-only
 current/procedural models retain tracing, including in a mixed race.
 
 The silhouette is a back-face shell expanded in clip space, using baked
-smoothed normals and a per-vertex width. Width is 0.7 times the former
-traced contour width, in drawing-buffer pixels, with the same distance
-thinning. While the weight is being chosen, `?mechOutline=0.9` (0.3 to 2)
+smoothed normals and a per-vertex width. Width is 1.2 times the former
+traced contour width (the first pass used 0.7, which read too light beside
+the inner strokes), in drawing-buffer pixels, with the same distance
+thinning. While the weight is being settled, `?mechOutline=1.0` (0.3 to 2)
 sets that share for review, and the renderer's `mechOutline` setting
 changes it in a running scene; the inner strokes are unaffected. Raised details have zero shell width; fins, blades, horns and
 fingers have reduced width. Fog and the circuit's ink colour apply to both

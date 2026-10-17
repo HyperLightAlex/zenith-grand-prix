@@ -9,16 +9,18 @@ import type { MechRig } from './rig';
 
 export interface InkLines<J extends string = string> { joint: J; positions: Float32Array; kinds: Float32Array }
 export const geometryMarks = new Float32Array(6);
+/** The shell's weight, as a share of Step 1's traced contour (look.mechOutline). */
+export const MECH_OUTLINE_DEFAULT = 1.2;
 const live = new Set<THREE.ShaderMaterial>();
 const shared = {
   uInkColor: { value: new THREE.Color(0x150f22) },
   uRes: { value: new THREE.Vector2(1280,720) },
   uStrength: { value: 1 },
   /** The shell's weight against Step 1's traced contour (look.mechOutline). */
-  uOutline: { value: 0.7 },
+  uOutline: { value: MECH_OUTLINE_DEFAULT },
 };
 let enabled = false;
-export function configureMechInk(on: boolean, color: THREE.Color, strength: number, outline = 0.7): void {
+export function configureMechInk(on: boolean, color: THREE.Color, strength: number, outline = MECH_OUTLINE_DEFAULT): void {
   enabled = on;
   shared.uOutline.value = outline;
   shared.uInkColor.value.copy(color);

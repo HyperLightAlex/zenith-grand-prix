@@ -1,4 +1,4 @@
-import { geometryMarks } from './mech/ink';
+import { geometryMarks, MECH_OUTLINE_DEFAULT } from './mech/ink';
 // The 80s anime look: one switch and its settings, the drawing clock, and the
 // cel shading every lit material is given.
 //
@@ -25,7 +25,8 @@ export interface LookState {
   mechLines: MechLineMode;
   /**
    * The geometry outline's weight, as a share of Step 1's traced contour
-   * (0.7 = as drawn so far). A temporary review setting: ?mechOutline=0.9.
+   * (1.2 by default; 0.7 was the first pass). A temporary review setting:
+   * ?mechOutline=1.0.
    */
   mechOutline: number;
   /** Film layer strength (grain, halation, softness, fringe), 0..2. */
@@ -44,8 +45,6 @@ export interface LookState {
 const reviewParams = typeof location === 'undefined' ? null : new URLSearchParams(location.search);
 const lineModeParam = reviewParams?.get('mechLines') ?? null;
 const outlineParam = Number(reviewParams?.get('mechOutline') ?? NaN);
-/** The geometry outline's weight (see LookState.mechOutline), clamped to a sane range. */
-export const MECH_OUTLINE_DEFAULT = 0.7;
 const mechOutline = Number.isFinite(outlineParam) ? Math.min(2, Math.max(0.3, outlineParam)) : MECH_OUTLINE_DEFAULT;
 
 /** The look in force this frame. The game copies it from the tuning values every frame. */
