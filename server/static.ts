@@ -28,6 +28,8 @@ const MIME: Record<string, string> = {
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.glb': 'model/gltf-binary',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
   '.txt': 'text/plain; charset=utf-8',
   '.map': 'application/json; charset=utf-8',
 };

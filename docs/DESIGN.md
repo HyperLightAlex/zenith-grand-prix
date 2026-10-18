@@ -266,6 +266,15 @@ E Phrygian, 128 BPM, a broken beat; Helios: D major, 145 BPM, trance). Each
 follows the same arrangement over the three laps, and the lap and phase
 stingers are moved into the circuit's key.
 
+An experiment, behind `?music=suno`: the race music as a recorded song
+(made in Suno) that builds the same way. Its stems are mixed into four
+layers: lap 1 plays the drums, muffled, and the bass and keys; lap 2 opens
+the drums and brings in the percussion, brass and guitar; lap 3 brings in
+the lead, the full song; the finish goes to the song's ending. Each change
+waits for the next bar line, and the middle of the song loops for as long
+as the race lasts. Meridian has one so far; see
+[tools/music](../tools/music/README.md).
+
 ### Free steering
 
 - The stick turns the mech. How hard it can turn falls with speed.
@@ -676,7 +685,8 @@ The teams swap sides of the grid from one round to the next.
   how its art is made and checked.
 - **Sound.** Synthesised at run time: engine, wind, 55 effects, and music
   that follows the lap phase, in a different style on each circuit. No audio
-  files. Every continuous layer (engine, wind, afterburner, strip hum,
+  files (except the recorded song of the `?music=suno` experiment, which
+  plays through the same engine and falls back to the synthesised music). Every continuous layer (engine, wind, afterburner, strip hum,
   slipstream, scrape, carve, alarm) has its own level on the tuning panel
   (the carve's edge hiss follows the scrape slider, its tier hum the strip
   one), and the panel can play any one-shot by name.

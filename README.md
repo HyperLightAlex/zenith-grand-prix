@@ -324,7 +324,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npx tsx tools/circuit-plot.ts canyon` | Plan, height and features of a circuit, as numbers and an SVG |
 
 The browser-driving helpers in `tools/` (`shot.mjs`, `screens.mjs`,
-`playtest.mjs`, `audio-check.mjs`, `online-check.mjs` and
+`playtest.mjs`, `audio-check.mjs`, `song-check.mjs`, `online-check.mjs` and
 `online-gp-check.mjs`, which take two browsers through an online room and a
 squad's Grand Prix, and the capture tools in `tools/capture`, which render
 the game through scripted cameras for checking and footage) need
@@ -339,7 +339,9 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 `&match=0..4` picks the match format,
 `&track=canyon` (or `helios`, `meridian`) picks the circuit, `&look=plain`
 (or `anime`) picks the look for that visit, `&tune=1` opens the tuning panel,
-`&mute=1` turns sound off, and `?debug=mechs` opens a model viewer.
+`&mute=1` turns sound off, `&music=suno` plays a recorded song as the race
+music where a circuit has one (Meridian so far, built up lap by lap: see
+[tools/music](tools/music/README.md)), and `?debug=mechs` opens a model viewer.
 Online: `?room=K7Q2X` and `?squad=K7Q2X` are invite links, `&server=URL` uses
 another game server, and `&player=2` gives the tab its own identity, so two
 tabs of one browser can be two players.
@@ -442,10 +444,12 @@ src/client/     Everything you see and hear.
   input/        Gamepad and keyboard
   ui/           HUD, the tuning panel and the menus (DOM + CSS); each menu
                 screen is in ui/screens/
-  audio/        Synthesised sound and music (Web Audio, no files)
+  audio/        Synthesised sound and music (Web Audio, no files); song.ts
+                plays a recorded song instead, with ?music=suno
 tests/          Simulation, Grand Prix, lobby, online and model tests (vitest)
 tools/          Headless race runner, bots, track plotter, screenshot, online
-                and audio checks
+                and audio checks; music/ builds a recorded song's layers
+public/music/   Recorded race music, as tools/music builds it
 docs/           Design document, ONLINE.md, and ART.md for the anime look
 play/           Prebuilt single-file game
 ```

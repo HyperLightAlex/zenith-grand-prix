@@ -2,6 +2,7 @@
 // run time with the Web Audio API: no samples, no worklets.
 //
 //   music.ts   tracks ─► musicIn (ducking) ─► musicBus ─┐
+//   song.ts    (or a recorded song, with ?music=suno)    │
 //   sfx.ts     voices ─► [pan] ───────────► sfxBus ────┤
 //   layers.ts  engine, wind, alarm ───────► engineBus ─┼─► mix ─► compressor ─► soft clip ─► master ─► out
 //   reverb sends (music, sfx) ─► convolver ─► return ──┘
@@ -18,6 +19,7 @@ import { clamp, compressorFullRangeGain, makeImpulse, makeNoise, Rng, softClipCu
 import { EngineLayers, type LayerMix } from './layers';
 import type { MusicTrack, TrackInfo, TrackName } from './music';
 import { createTrack, RACE_STYLES } from './music';
+import { SongSource, SongTrack } from './song';
 import type { Voice } from './sfx';
 import { buildSfx, SFX_META } from './sfx';
 
@@ -49,7 +51,7 @@ const REVERB_SECONDS = 1.3;
 const REVERB_RETURN = 2;
 
 /** Overall trim on the music so that, at the default volumes, it sits under the effects. */
-const MUSIC_TRIM = 0.8;
+export const MUSIC_TRIM = 0.8;
 
 interface Playing {
   voice: Voice;
@@ -104,11 +106,24 @@ export class SynthAudio implements AudioEngine {
   private track: MusicTrack | null = null;
   private dying: Array<{ track: MusicTrack; at: number }> = [];
   private lapPhase = 1;
+  private finished = false;
+  /** Recorded songs by circuit, when there are any (see song.ts). */
+  private readonly songs = new Map<string, SongSource>();
   private lastUpdate = -1;
   /** Recent worst-case time between update() calls, in seconds of audio clock. */
   private frameGap = 0;
   private duckUntil = 0;
   private duckLevel = 1;
+
+  /**
+   * `songs`: recorded race music, by circuit (style), as the folder each one's
+   * files are in. Their download starts now; they are decoded once there is
+   * an audio context, and a circuit with one plays it instead of its
+   * synthesised music.
+   */
+  constructor(opts: { songs?: Record<string, string> } = {}) {
+    for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
+  }
 
   // ---- AudioEngine ----------------------------------------------------------
 
@@ -181,8 +196,17 @@ export class SynthAudio implements AudioEngine {
       if (gap > 0) this.frameGap = Math.max(Math.min(gap, 0.5), this.frameGap * 0.97);
       const ahead = LOOKAHEAD + 2 * this.frameGap;
       this.lapPhase = finite(scene.lapPhase, 1);
+      this.finished = scene.finished === true;
       g.layers.update(now, clamp(finite(dt, 0), 0, 0.25), scene, ahead);
-      if (this.track) this.track.schedule(now, this.lapPhase, ahead);
+      if (this.track) {
+        this.track.schedule(now, this.lapPhase, ahead, this.finished);
+        if (this.track.broken) {
+          // A song that could not be loaded: the synthesised music instead.
+          this.track.dispose();
+          this.track = null;
+          this.applyMusic();
+        }
+      }
       if (this.voices.length || this.fading.length || this.dying.length) this.sweep(now);
     } catch (err) {
       this.report(err);
@@ -240,7 +264,7 @@ export class SynthAudio implements AudioEngine {
     this.guard(() => {
       this.want = track === 'menu' || track === 'race' ? track : null;
       this.wantStyle = style;
-      this.applyMusic();
+      this.applyMusic(true);
     });
   }
 
@@ -282,6 +306,16 @@ export class SynthAudio implements AudioEngine {
     for (const [k, n] of Object.entries(g.layers.taps)) taps[`layer.${k}`] = n;
     if (this.track) for (const [k, n] of Object.entries(this.track.taps)) taps[`music.${k}`] = n;
     return taps;
+  }
+
+  /** The recorded songs, by circuit, for the audio check. */
+  debugSongs(): ReadonlyMap<string, SongSource> {
+    return this.songs;
+  }
+
+  /** Resolves once every recorded song has loaded or failed to. */
+  async debugSongsLoaded(): Promise<void> {
+    while ([...this.songs.values()].some((s) => s.state === 'loading')) await new Promise((r) => setTimeout(r, 50));
   }
 
   debugInfo(): AudioDebugInfo {
@@ -374,6 +408,7 @@ export class SynthAudio implements AudioEngine {
 
     const layers = new EngineLayers(ctx, white, pink, engineBus);
     layers.setMix(this.layerMix);
+    for (const song of this.songs.values()) song.decode(ctx);
 
     this.g = { ctx, live, rng, white, pink, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
     this.applyMusic();
@@ -452,12 +487,14 @@ export class SynthAudio implements AudioEngine {
     }
   }
 
-  private applyMusic(): void {
+  /** `fresh`: asked for by a race starting, so a recorded song starts again from its top. */
+  private applyMusic(fresh = false): void {
     const g = this.g;
     if (!g) return;
     // Racing on a different circuit is a change of music too.
     const style = this.want === 'race' ? (RACE_STYLES.includes(this.wantStyle) ? this.wantStyle : 'meridian') : 'menu';
-    if ((this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style)) return;
+    const same = (this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style);
+    if (same && !(fresh && this.track?.restartsWithRace)) return;
     const now = g.ctx.currentTime;
     if (this.track) {
       // Fade the old track out over about a second, then tear it down.
@@ -466,12 +503,14 @@ export class SynthAudio implements AudioEngine {
       this.track = null;
     }
     if (this.want) {
-      const t = createTrack(this.want, g.ctx, g.white, now, this.wantStyle);
+      const song = this.want === 'race' ? this.songs.get(style) : undefined;
+      const t = song && song.state !== 'failed' ? new SongTrack(g.ctx, song, style) : createTrack(this.want, g.ctx, g.white, now, this.wantStyle);
       t.dry.connect(g.musicIn);
       t.wet.connect(g.musicWetIn);
       t.fade(MUSIC_TRIM, now, 0.2);
       this.track = t;
-      t.schedule(now, this.lapPhase, LOOKAHEAD + 2 * this.frameGap);
+      // (A new race is not finished, whatever the last one was.)
+      t.schedule(now, this.lapPhase, LOOKAHEAD + 2 * this.frameGap, false);
     }
   }
 }

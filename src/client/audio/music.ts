@@ -6,6 +6,7 @@
 
 import type { Ctx } from './dsp';
 import { BLOCK, mtof, Patch, perBlock } from './dsp';
+import type { SongInfo } from './song';
 
 export type TrackName = 'menu' | 'race';
 
@@ -21,6 +22,28 @@ export interface TrackInfo {
   barDur: number;
   /** Context time at which the current phase began, or -1. */
   changeAt: number;
+  /** For a recorded song (song.ts): where it is and what it has done. */
+  song?: SongInfo;
+}
+
+/** What synth.ts plays: a synthesised track here, or a recorded song (song.ts). */
+export interface MusicTrack {
+  readonly name: TrackName;
+  readonly style: string;
+  /** Direct signal and reverb send; synth.ts connects both and fades them together. */
+  readonly dry: GainNode;
+  readonly wet: GainNode;
+  /** Each part's own output, so the audio check can measure the mix. */
+  readonly taps: Record<string, AudioNode>;
+  /** Queue what is due before now + ahead. `finished`: the race is over for the player. */
+  schedule(now: number, lapPhase: number, ahead: number, finished?: boolean): void;
+  fade(to: number, now: number, tau: number): void;
+  dispose(): void;
+  info(): TrackInfo;
+  /** Starts again from the top when a new race asks for it, rather than carrying on. */
+  readonly restartsWithRace?: boolean;
+  /** It cannot play (a song that failed to load): the engine puts the synthesised track on instead. */
+  readonly broken?: boolean;
 }
 
 /** Node factory that remembers every running source so a track can be torn down. */
@@ -891,8 +914,6 @@ class MenuTrack extends Track {
     if (bar % 4 === 3 && step === 6) this.ring(t, ch.tones[5] + 12, 0.3);
   }
 }
-
-export type MusicTrack = Track;
 
 /** `style` picks the race music: a circuit's theme id ('meridian', 'canyon', 'helios'). */
 export function createTrack(name: TrackName, ctx: Ctx, white: AudioBuffer, now: number, style = 'meridian'): MusicTrack {

@@ -241,7 +241,7 @@ export class Game {
   private garageShown: { team: number; role: Role } | null = null;
   /** The race behind the title is on screen. */
   private attracting = false;
-  private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false };
+  private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false, finished: false };
 
   /** The on-screen controls (a race played by touch). */
   private touchPad: TouchControls;
@@ -1952,6 +1952,8 @@ export class Game {
     sc.carve = f.carving && !f.air ? Math.max(0.15, Math.abs(f.steer)) : 0;
     sc.carveTier = f.carving ? f.carveTier : 0;
     sc.critical = f.hp > 0 && f.hp < 0.25 * f.maxHp && !f.retired && this.state === 'race';
+    // Over for the player: a recorded song plays its ending.
+    sc.finished = (!!own && own.finished) || cur.phase === PHASE.FINISHED;
     this.audio.update(dt, sc);
 
     if (drawDt > 0) {

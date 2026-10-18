@@ -123,6 +123,10 @@ export default defineConfig(({ mode, command }) => {
   const build = command === 'build' ? buildName() : 'dev';
   return {
     base: './',
+    // The one-file build carries nothing beside it: no recorded music (it
+    // could not be fetched from a file:// page anyway), so it keeps the
+    // synthesised race music.
+    publicDir: single ? false : 'public',
     define: { __BUILD__: JSON.stringify(build) },
     plugins: single ? [inlineEverything()] : [buildInfo(build), precompress()],
     build: {

@@ -16,7 +16,8 @@
 import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio';
 import { mtof } from '../src/client/audio/dsp';
 import { SFX_NAMES } from '../src/client/audio/sfx';
-import { MASTER, MAX_VOICES, SynthAudio } from '../src/client/audio/synth';
+import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
+import { XFADE, type SongInfo } from '../src/client/audio/song';
 
 type Cell = string | number;
 type Row = Record<string, Cell>;
@@ -400,11 +401,14 @@ async function render(
   each?: (t: number, a: SynthAudio, ctx: OfflineAudioContext) => void,
   vol?: [number, number, number],
   preTap = true,
+  songs?: Record<string, string>,
 ): Promise<Render> {
   const ctx = new OfflineAudioContext(preTap ? 4 : 2, Math.ceil(seconds * SR), SR);
-  const audio = new SynthAudio();
+  const audio = new SynthAudio(songs ? { songs } : {});
   if (vol) audio.setVolumes(vol[0], vol[1], vol[2]);
   audio.debugAttach(ctx);
+  // A recorded song decodes in the background: wait for it, so the render starts with it ready.
+  if (songs) await audio.debugSongsLoaded();
   const tap = audio.preLimiter;
   if (!tap) throw new Error('debugAttach did not build a graph');
   if (preTap) {
@@ -1209,6 +1213,136 @@ async function offlineMusic(): Promise<void> {
   await dump('music-race-3', buf, T_P3 + 2, T_END);
 }
 
+/**
+ * The recorded song (?music=suno) through the whole engine, offline: a race
+ * whose lap phase changes mid-bar, long enough to loop, then the finish.
+ * Every change has to land on its bar line with the files lined up to the
+ * sample: around each one, the render is compared with the layers summed by
+ * hand at the levels for each lap, and has to match on both sides.
+ */
+async function offlineSong(): Promise<void> {
+  log('--- offline: recorded song ---');
+  const T_RACE = 0.5;
+  const T_P2 = 30.37;
+  const T_P3 = 95.21;
+  const T_FIN = 160.83;
+  const T_END = T_FIN + 10;
+  const sceneAt = (t: number): AudioScene => ({ ...OFF, lapPhase: t >= T_P3 ? 3 : t >= T_P2 ? 2 : 1, finished: t >= T_FIN });
+  let info: SongInfo | null = null;
+  const { buf, audio, warnings } = await render(T_END, [{ t: T_RACE, run: (a) => a.setMusic('race', 'meridian') }], sceneAt, (_t, a) => {
+    info = a.debugInfo().music?.song ?? info;
+  }, undefined, true, { meridian: '/music/meridian/' });
+  if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) while playing the song`);
+  const src = audio.debugSongs().get('meridian');
+  const song = info as SongInfo | null;
+  if (!src || src.state !== 'ready' || !src.manifest || !song) {
+    fail(`the song did not load (${src?.state ?? 'no song'})`);
+    return;
+  }
+  const m = src.manifest;
+  const when = (what: RegExp) => song.log.find((e) => what.test(e.what))?.at ?? NaN;
+  const start = when(/^start/);
+  const lap2 = when(/^lap 2/);
+  const lap3 = when(/^lap 3/);
+  const seam = when(/^loop/);
+  const ending = when(/^ending/);
+  for (const e of song.log) table('recorded song: what it did (offline)').push({ at: r3(e.at), what: e.what, bar: e.bar });
+  // Each change on a bar line: the song position at that moment is a bar line.
+  const posAt = (t: number) => (t < seam ? t - start : t < ending ? m.loop[0] + (t - seam) : m.ending + (t - ending));
+  for (const [name, t, asked] of [['lap 2', lap2, T_P2], ['lap 3', lap3, T_P3], ['ending', ending, T_FIN]] as const) {
+    if (!Number.isFinite(t)) {
+      fail(`the song never did its ${name}`);
+      continue;
+    }
+    // (Where the song had got to: for the ending, in the loop it cuts short.)
+    const p = posAt(t - 1e-6);
+    const onBar = m.bars.some((b) => Math.abs(b - p) < 0.0005);
+    if (!onBar) fail(`the song's ${name} is not on a bar line (song position ${p.toFixed(4)} s)`);
+    if (t < asked || t > asked + 0.3 + 1.8) fail(`the song's ${name} came ${(t - asked).toFixed(2)} s after it was asked for`);
+  }
+  if (Math.abs(seam - (start + m.loop[1])) > 0.001) fail(`the loop came at ${seam}, not at the loop's end (${start + m.loop[1]})`);
+
+  // The render against the layers summed by hand, either side of each change.
+  const scale = VOL.music * MUSIC_TRIM * 10 ** (m.level / 20);
+  const gain = (id: string, lap: number) => {
+    const g = m.laps[id]?.[lap - 1];
+    return g === null || g === undefined ? 0 : 10 ** (g / 20);
+  };
+  const chans = src.buffers.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
+  const rate = src.buffers[0].sampleRate;
+  if (rate !== SR) fail(`the song was decoded at ${rate} Hz, not the render's ${SR}`);
+  const out = [buf.getChannelData(2), buf.getChannelData(3)];
+  const side = (t0: number, t1: number, pos0: number, lap: number) => {
+    // pos0: file position at t0. Compare over [t0, t1] at lags of up to 5 ms.
+    const n = Math.floor((t1 - t0) * SR);
+    const i0 = Math.round(t0 * SR);
+    const j0 = Math.round((pos0 + src.shift) * rate);
+    const want = new Float32Array(n);
+    for (let k = 0; k < n; k++) {
+      let v = 0;
+      for (let l = 0; l < m.layers.length; l++) v += gain(m.layers[l].id, lap) * (chans[l][0][j0 + k] ?? 0);
+      want[k] = v * scale;
+    }
+    let best = 0;
+    let bestScore = -Infinity;
+    for (let lag = -240; lag <= 240; lag++) {
+      let s2 = 0;
+      for (let k = 0; k < n; k++) s2 += want[k] * (out[0][i0 + k + lag] ?? 0);
+      if (s2 > bestScore) {
+        bestScore = s2;
+        best = lag;
+      }
+    }
+    let res = 0;
+    let sig = 0;
+    for (let k = 0; k < n; k++) {
+      const d = out[0][i0 + k + best] - want[k];
+      res += d * d;
+      sig += want[k] * want[k];
+    }
+    return { lag: best, residual: sig > 0 ? 10 * Math.log10(res / sig + 1e-12) : NaN };
+  };
+  const checks: Array<[string, number, number, number, number, number]> = [
+    // name, change time, file position just before, lap before, file position just after, lap after
+    ['lap 3 comes in', lap3, lap3 - start, 2, lap3 - start, 3],
+    ['the loop', seam, m.loop[1], 3, m.loop[0], 3],
+    ['the ending', ending, posAt(ending - 1e-6), 3, m.ending, 3],
+  ];
+  for (const [name, t, before, lapB, after, lapA] of checks) {
+    if (!Number.isFinite(t)) continue;
+    const a = side(t - 0.4, t - XFADE - 0.002, before - 0.4, lapB);
+    const b = side(t + 0.03, t + 0.4, after + 0.03, lapA);
+    table('recorded song: each change against the layers summed by hand (offline)').push({
+      change: name,
+      'at (s)': r3(t),
+      'before: lag (samples)': a.lag,
+      'before: residual (dB)': Math.round(a.residual * 10) / 10,
+      'after: lag (samples)': b.lag,
+      'after: residual (dB)': Math.round(b.residual * 10) / 10,
+    });
+    // (A sample either way is the rounding of the window's start, not the song's.)
+    if (Math.abs(a.lag) > 1 || Math.abs(b.lag) > 1) fail(`${name}: the render is ${a.lag} / ${b.lag} samples off the files either side`);
+    if (a.residual > -60 || b.residual > -60) fail(`${name}: the render does not match the layers summed by hand (${a.residual.toFixed(1)} / ${b.residual.toFixed(1)} dB)`);
+  }
+  // No clicks at the joins: the biggest step between samples there, against the biggest elsewhere nearby.
+  const step = (t0: number, t1: number) => {
+    let mx = 0;
+    for (let i = Math.round(t0 * SR); i < Math.round(t1 * SR); i++) mx = Math.max(mx, Math.abs(out[0][i] - out[0][i - 1]), Math.abs(out[1][i] - out[1][i - 1]));
+    return mx;
+  };
+  for (const [name, t] of [['the loop', seam], ['the ending', ending]] as const) {
+    if (!Number.isFinite(t)) continue;
+    const at = step(t - XFADE - 0.002, t + 0.002);
+    const around = step(t - 1, t + 1);
+    table('recorded song: the joins (offline)').push({ join: name, 'largest step at the join': r3(at), 'largest within a second of it': r3(around) });
+    if (at > around * 1.01 && at > 0.02) fail(`${name}: a click at the join (step ${at.toFixed(3)}, ${around.toFixed(3)} around it)`);
+  }
+  const fullAt = analyse(buf, lap3 + 1, seam - 1);
+  table('recorded song: level (offline, default volumes)').push({ stretch: 'lap 3', 'rms dBFS': db(fullAt.rms), peak: r3(fullAt.peak), 'pre-limiter peak': r3(fullAt.prePeak) });
+  if (fullAt.peak >= CLIP) fail('the song clips');
+  await dump('song', buf, 0, T_END);
+}
+
 async function offlineStyles(): Promise<void> {
   log('--- offline: each circuit\'s race music ---');
   // Every circuit's race music through its three lap phases, then a change
@@ -1443,6 +1577,7 @@ async function main(): Promise<void> {
     ['layers', offlineLayers],
     ['speeds', offlineSpeeds],
     ['music', offlineMusic],
+    ['song', offlineSong],
     ['styles', offlineStyles],
     ['stack', offlineStack],
     ['race', offlineRace],

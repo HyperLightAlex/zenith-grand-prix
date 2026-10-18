@@ -22,6 +22,8 @@ import { installFrame, video } from './video';
 //   &mute=1         no sound                      ?debug=mechs  model viewer
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   &track=canyon   circuit: meridian, canyon or helios
+//   &music=suno     race music from a recorded song where a circuit has one
+//                   (Meridian), built up lap by lap: see src/client/audio/song.ts
 //   &sunhawk=current|updated|game   model comparison; B cycles without restarting
 //   &sunhawkPanels=0|1            panel lines on the imported armor off or on, whatever the
 //                                 video setting says (on by default)
@@ -90,8 +92,8 @@ async function boot(): Promise<void> {
   let audio: AudioEngine = new NullAudio();
   if (!q.has('mute')) {
     try {
-      const { SynthAudio } = await import('./audio/synth');
-      audio = new SynthAudio();
+      const [{ SynthAudio }, { SONGS }] = await Promise.all([import('./audio/synth'), import('./audio/song')]);
+      audio = new SynthAudio(q.get('music') === 'suno' ? { songs: SONGS } : {});
     } catch (err) {
       console.warn('Audio unavailable', err);
     }

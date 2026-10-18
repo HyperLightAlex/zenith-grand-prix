@@ -64,6 +64,11 @@ export interface AudioScene {
   carveTier?: number;
   /** Armour below a quarter. */
   critical: boolean;
+  /**
+   * The race is over for the player (finished, or the race has ended). A
+   * recorded song goes on to its ending. Optional: left out, it is not.
+   */
+  finished?: boolean;
 }
 
 export interface AudioEngine {

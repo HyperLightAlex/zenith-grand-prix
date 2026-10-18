@@ -1,0 +1,22 @@
+{
+  "id": "meridian",
+  "title": "海空の速さ",
+  "layers": {
+    "drums": ["Drums"],
+    "base": ["Bass", "Keyboard"],
+    "battle": ["Percussion", "Brass", "Guitar", "Other"],
+    "lead": ["Synth", "Strings", "Woodwinds"]
+  },
+  "laps": {
+    "drums": [0, 1.5, 0],
+    "base": [3, 1.5, 0],
+    "battle": [null, 1.5, 0],
+    "lead": [null, null, 0]
+  },
+  "muffle": { "layer": "drums", "hz": 700, "laps": [1] },
+  "loop": [49, 81],
+  "ending": 98,
+  "master": { "gain": -4.4, "lowShelf": [150, 3], "highShelf": [5000, 1.5] },
+  "loudness": -11.5,
+  "codec": "mp3"
+}
