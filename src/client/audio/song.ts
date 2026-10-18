@@ -2,10 +2,14 @@
 // into a few layers (tools/music), played so that it builds lap by lap the
 // way the synthesised race music does.
 //
-//   lap 1   drums (muffled) and the base: bass and keys
-//   lap 2   the drums open up, and the battle layer comes in
+//   lap 1   the base (bass and keys) over the drums' hats alone: no kick yet
+//   lap 2   the whole kit drops in on the bar line, and the battle layer
+//           (brass, percussion, guitar, effects)
 //   lap 3   the lead comes in: the full song
 //   finish  on to the song's ending
+
+// (Like the synthesised music's formation lap, which has hats but no kick
+// or snare until the battle lap.)
 //
 // Every change waits for the next bar line. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
@@ -37,8 +41,13 @@ export interface SongManifest {
   end: number;
   /** Each layer's level on laps 1, 2 and 3, in dB; null for silent. */
   laps: Record<string, Array<number | null>>;
-  /** A layer played through a low-pass on some laps. */
-  muffle: { layer: string; hz: number; laps: number[] } | null;
+  /**
+   * A layer heard through a filter on some laps (Meridian: the drums
+   * through a high-pass on lap 1, so only the hats play). When the filter
+   * comes off, `open` says how: 'sweep' opens it up from the lap change to
+   * the bar line, 'cut' drops the whole layer in on the bar line.
+   */
+  filter: { layer: string; type: 'lowpass' | 'highpass'; hz: number; laps: number[]; open: 'sweep' | 'cut' } | null;
   /** Gain on the whole song, in dB, to sit it at the synthesised music's level. */
   level: number;
   /** The level of one layer, one byte per millisecond for the first two seconds, from ffmpeg's decoding. */
@@ -54,8 +63,8 @@ export const XFADE = 0.012;
 const QUEUE_AHEAD = 3;
 /** A lap change heard this soon goes to the bar line after (so there is time to build into it). */
 const CHANGE_LEAD = 0.3;
-/** The muffled layer's filter, open. */
-const OPEN_HZ = 20000;
+/** Where a sweep takes the filter before the layer goes over to its direct path. */
+const OPEN_HZ = { lowpass: 20000, highpass: 20 } as const;
 /** Most a browser's decoder is allowed to differ from ffmpeg's in where it starts the audio. */
 const MAX_SHIFT_MS = 60;
 
@@ -329,13 +338,13 @@ interface Layer {
   /** The lap's level for this layer. */
   gain: GainNode;
   /**
-   * For a layer that is muffled on some laps: the low-pass pair, and the two
-   * paths it is heard through, filtered and direct. The filter opens up
-   * towards the bar line, and there the layer goes over to the direct path,
-   * so once open it is heard exactly as recorded.
+   * For a layer that is filtered on some laps: the filter pair, and the two
+   * paths the layer is heard through, filtered and direct. On the bar line
+   * it goes over to the direct path, so without its filter it is heard
+   * exactly as recorded.
    */
   filters: BiquadFilterNode[];
-  muffledPath: GainNode | null;
+  filteredPath: GainNode | null;
   directPath: GainNode | null;
 }
 
@@ -469,9 +478,9 @@ export class SongTrack implements MusicTrack {
     return db === null || db === undefined ? 0 : 10 ** (db / 20);
   }
 
-  private muffled(id: string, phase: Phase): boolean {
-    const m = this.source.manifest!.muffle;
-    return !!m && m.layer === id && m.laps.includes(phase);
+  private filtered(id: string, phase: Phase): boolean {
+    const f = this.source.manifest!.filter;
+    return !!f && f.layer === id && f.laps.includes(phase);
   }
 
   private begin(at: number, phase: Phase): void {
@@ -486,33 +495,33 @@ export class SongTrack implements MusicTrack {
       const out = ctx.createGain();
       out.connect(level);
       const filters: BiquadFilterNode[] = [];
-      let muffledPath: GainNode | null = null;
+      let filteredPath: GainNode | null = null;
       let directPath: GainNode | null = null;
-      if (m.muffle?.layer === l.id) {
-        const on = this.muffled(l.id, phase);
-        // A fourth-order Butterworth low-pass: two biquads (Q in dB).
+      if (m.filter?.layer === l.id) {
+        const on = this.filtered(l.id, phase);
+        // A fourth-order Butterworth: two biquads (Q in dB).
         for (const q of [-5.33, 2.33]) {
           const f = ctx.createBiquadFilter();
-          f.type = 'lowpass';
+          f.type = m.filter.type;
           f.Q.value = q;
-          f.frequency.value = on ? m.muffle.hz : OPEN_HZ;
+          f.frequency.value = on ? m.filter.hz : OPEN_HZ[m.filter.type];
           filters.push(f);
         }
-        muffledPath = ctx.createGain();
-        muffledPath.gain.value = on ? 1 : 0;
+        filteredPath = ctx.createGain();
+        filteredPath.gain.value = on ? 1 : 0;
         directPath = ctx.createGain();
         directPath.gain.value = on ? 0 : 1;
         gain.connect(filters[0]);
         filters[0].connect(filters[1]);
-        filters[1].connect(muffledPath);
-        muffledPath.connect(out);
+        filters[1].connect(filteredPath);
+        filteredPath.connect(out);
         gain.connect(directPath);
         directPath.connect(out);
       } else {
         gain.connect(out);
       }
       this.taps[l.id] = out;
-      return { id: l.id, gain, filters, muffledPath, directPath };
+      return { id: l.id, gain, filters, filteredPath, directPath };
     });
     this.plan = new SongPlan(m);
     this.phase = this.target = phase;
@@ -582,7 +591,7 @@ export class SongTrack implements MusicTrack {
     for (const e of p.envs) e.disconnect();
   }
 
-  /** Lap phase `to` from the bar line at `at`; a muffled layer opens up from now until then. */
+  /** Lap phase `to` from the bar line at `at` (a filtered layer may open up from now until then). */
   private change(to: Phase, at: number, now: number, bar: number): void {
     const m = this.source.manifest!;
     for (const l of this.layers) {
@@ -590,13 +599,13 @@ export class SongTrack implements MusicTrack {
       g.cancelScheduledValues(at - XFADE);
       g.setTargetAtTime(this.gainFor(l.id, to), at - XFADE, XFADE / 3);
       if (l.filters.length) {
-        const was = this.muffled(l.id, this.target);
-        const will = this.muffled(l.id, to);
-        if (was && !will) this.unmuffle(l, now, at);
+        const was = this.filtered(l.id, this.target);
+        const will = this.filtered(l.id, to);
+        if (was && !will) this.unfilter(l, now, at);
         else if (will && !was) {
           for (const f of l.filters) {
             f.frequency.cancelScheduledValues(at - XFADE);
-            f.frequency.setValueAtTime(m.muffle!.hz, at - XFADE);
+            f.frequency.setValueAtTime(m.filter!.hz, at - XFADE);
           }
           this.paths(l, true, at);
         }
@@ -623,7 +632,7 @@ export class SongTrack implements MusicTrack {
     for (const l of this.layers) {
       l.gain.gain.cancelScheduledValues(at - XFADE);
       l.gain.gain.setTargetAtTime(this.gainFor(l.id, 3), at - XFADE, XFADE / 3);
-      if (l.filters.length && this.muffled(l.id, this.targetAt >= 0 && now < this.targetAt ? this.phase : this.target)) this.unmuffle(l, now, at);
+      if (l.filters.length && this.filtered(l.id, this.targetAt >= 0 && now < this.targetAt ? this.phase : this.target)) this.unfilter(l, now, at);
     }
     this.targetAt = -1;
     this.phase = this.target = 3;
@@ -631,19 +640,25 @@ export class SongTrack implements MusicTrack {
     this.note('ending', at, plan.map.bars.length - 1);
   }
 
-  /** Open a muffled layer up from now to the bar line at `at`, then hear it directly from there. */
-  private unmuffle(l: Layer, now: number, at: number): void {
-    for (const f of l.filters) {
-      f.frequency.cancelScheduledValues(now);
-      f.frequency.setValueAtTime(Math.max(20, f.frequency.value), now);
-      f.frequency.exponentialRampToValueAtTime(OPEN_HZ, at);
+  /**
+   * Take a layer's filter off at the bar line at `at`: swept open from now
+   * until then, or (a 'cut') the whole layer dropping in on it.
+   */
+  private unfilter(l: Layer, now: number, at: number): void {
+    const f = this.source.manifest!.filter!;
+    if (f.open === 'sweep') {
+      for (const bq of l.filters) {
+        bq.frequency.cancelScheduledValues(now);
+        bq.frequency.setValueAtTime(Math.max(20, bq.frequency.value), now);
+        bq.frequency.exponentialRampToValueAtTime(OPEN_HZ[f.type], at);
+      }
     }
     this.paths(l, false, at);
   }
 
-  /** Over to the muffled path (or the direct one) in the moment before the bar line at `at`. */
-  private paths(l: Layer, muffled: boolean, at: number): void {
-    for (const [p, to] of [[l.muffledPath, muffled ? 1 : 0], [l.directPath, muffled ? 0 : 1]] as const) {
+  /** Over to the filtered path (or the direct one) in the moment before the bar line at `at`. */
+  private paths(l: Layer, filtered: boolean, at: number): void {
+    for (const [p, to] of [[l.filteredPath, filtered ? 1 : 0], [l.directPath, filtered ? 0 : 1]] as const) {
       if (!p) continue;
       p.gain.cancelScheduledValues(at - XFADE);
       p.gain.setValueAtTime(1 - to, at - XFADE);

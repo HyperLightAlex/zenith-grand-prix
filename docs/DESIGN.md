@@ -268,9 +268,9 @@ stingers are moved into the circuit's key.
 
 An experiment, behind `?music=suno`: the race music as a recorded song
 (made in Suno) that builds the same way. Its stems are mixed into four
-layers: lap 1 plays the drums, muffled, and the bass and keys; lap 2 opens
-the drums and brings in the percussion, brass and guitar; lap 3 brings in
-the lead, the full song; the finish goes to the song's ending. Each change
+layers: lap 1 plays the bass and keys over the drums' hats alone; on lap 2
+the whole kit drops in with the brass, percussion and guitar; lap 3 brings
+in the lead, the full song; the finish goes to the song's ending. Each change
 waits for the next bar line, and the middle of the song loops for as long
 as the race lasts. Meridian has one so far; see
 [tools/music](../tools/music/README.md).

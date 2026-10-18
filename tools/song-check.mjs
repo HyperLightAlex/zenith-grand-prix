@@ -56,9 +56,10 @@ await page.evaluate(() => {
       for (const v of buf) s += v * v;
       an.getFloatFrequencyData(spec);
       // Share of the layer's energy above 2 kHz.
-      let hi = 0, all = 0;
+      let hi = 0, lo = 0, all = 0;
       for (let i = 1; i < spec.length; i++) { const e = 10 ** (spec[i] / 10); all += e; if ((i * ctx.sampleRate) / 2048 > 2000) hi += e; }
-      out[k] = { rms: s / buf.length, hi: all > 0 ? hi / all : 0 };
+      for (let i = 1; i < spec.length; i++) if ((i * ctx.sampleRate) / 2048 < 250) lo += 10 ** (spec[i] / 10);
+      out[k] = { rms: s / buf.length, hi: all > 0 ? hi / all : 0, lo: all > 0 ? lo / all : 0 };
     }
     return out;
   };
@@ -114,7 +115,7 @@ const spans = [
   ['ending', changes.ending ?? Infinity, (changes.ending ?? Infinity) + 7.5],
 ];
 const layers = Object.keys(samples.find((s) => s.meter && Object.keys(s.meter).length)?.meter ?? {});
-console.log('\neach layer, by lap (dB, as the meters read it; drums: share above 2 kHz)');
+console.log('\neach layer, by lap (dB, as the meters read it; drums: share of their energy below 250 Hz and above 2 kHz)');
 console.log('         ' + layers.map((l) => l.padStart(8)).join(''));
 const table = {};
 for (const [name, a, b] of spans) {
@@ -123,13 +124,15 @@ for (const [name, a, b] of spans) {
   const row = {};
   for (const l of layers) row[l] = ss.reduce((acc, s) => acc + s.meter[l].rms, 0) / ss.length;
   const hi = ss.reduce((acc, s) => acc + (s.meter.drums?.hi ?? 0), 0) / ss.length;
-  table[name] = { ...row, hi };
-  console.log(name.padEnd(9) + layers.map((l) => dB(row[l]).padStart(8)).join('') + `   ${(hi * 100).toFixed(1)}%`);
+  const lo = ss.reduce((acc, s) => acc + (s.meter.drums?.lo ?? 0), 0) / ss.length;
+  table[name] = { ...row, hi, lo };
+  console.log(name.padEnd(9) + layers.map((l) => dB(row[l]).padStart(8)).join('') + `   ${(lo * 100).toFixed(1)}% / ${(hi * 100).toFixed(1)}%`);
 }
 if (table['lap 1'] && table['lap 2']) {
   check(table['lap 1'].battle < 1e-9 && table['lap 1'].lead < 1e-9, 'lap 1: only the drums and the base play');
   check(table['lap 2'].battle > 1e-6 && table['lap 2'].lead < 1e-9, 'lap 2: the battle layer comes in');
-  check(table['lap 2'].hi > table['lap 1'].hi * 3, 'lap 2: the drums open up');
+  // Lap 1 has the drums' hats alone (a high-pass): the kick drops in on lap 2.
+  check(table['lap 1'].lo < 0.01 && table['lap 2'].lo > 0.2, 'lap 2: the kick drops in (none on lap 1)');
 }
 if (table['lap 3']) check(table['lap 3'].lead > 1e-6, 'lap 3: the lead comes in');
 if (table.ending) check(layers.every((l) => table.ending[l] > 1e-7), 'the ending: everything plays');

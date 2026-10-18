@@ -1303,20 +1303,22 @@ async function offlineSong(): Promise<void> {
     return { lag: best, residual: sig > 0 ? 10 * Math.log10(res / sig + 1e-12) : NaN };
   };
   const checks: Array<[string, number, number, number, number, number]> = [
-    // name, change time, file position just before, lap before, file position just after, lap after
+    // name, change time, file position just before (NaN: not compared), lap before, file position just after, lap after
+    // (Before lap 2 the drums go through their filter, which this does not model: only after it is compared.)
+    ['the kit drops in (lap 2)', lap2, NaN, 1, lap2 - start, 2],
     ['lap 3 comes in', lap3, lap3 - start, 2, lap3 - start, 3],
     ['the loop', seam, m.loop[1], 3, m.loop[0], 3],
     ['the ending', ending, posAt(ending - 1e-6), 3, m.ending, 3],
   ];
   for (const [name, t, before, lapB, after, lapA] of checks) {
     if (!Number.isFinite(t)) continue;
-    const a = side(t - 0.4, t - XFADE - 0.002, before - 0.4, lapB);
+    const a = Number.isFinite(before) ? side(t - 0.4, t - XFADE - 0.002, before - 0.4, lapB) : { lag: 0, residual: -Infinity };
     const b = side(t + 0.03, t + 0.4, after + 0.03, lapA);
     table('recorded song: each change against the layers summed by hand (offline)').push({
       change: name,
       'at (s)': r3(t),
-      'before: lag (samples)': a.lag,
-      'before: residual (dB)': Math.round(a.residual * 10) / 10,
+      'before: lag (samples)': Number.isFinite(before) ? a.lag : '-',
+      'before: residual (dB)': Number.isFinite(before) ? Math.round(a.residual * 10) / 10 : '-',
       'after: lag (samples)': b.lag,
       'after: residual (dB)': Math.round(b.residual * 10) / 10,
     });

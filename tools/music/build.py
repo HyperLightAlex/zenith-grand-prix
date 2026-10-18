@@ -26,10 +26,14 @@ import base64, glob, json, os, subprocess, sys, tempfile
 import numpy as np
 import soundfile as sf
 from scipy.signal import lfilter, butter, sosfilt, correlate
+import pyloudnorm as pyln  # pip install pyloudnorm
 
 PAD = 0.05          # seconds kept before the ending, for the cross-fade into it
 CEILING = -1.5      # dBFS: the loudest layer's peak, so the encoder has room
 SYNC_SECONDS = 2    # how much of the start the decoder check compares
+# From the song's output to the speakers at the game's default volumes: the
+# music trim (0.8, synth.ts), the music volume (0.45) and the master (0.8).
+OUTPUT_DB = 20 * np.log10(0.8 * 0.45 * 0.8)
 # MP3 by default: every browser decodes it (AAC is missing from open-source
 # Chromium builds, Opus from older Safari). Its encoder delay differs from
 # decoder to decoder; the game measures and allows for that (song.json's sync).
@@ -105,24 +109,29 @@ def main():
     for lid in layers:
         layers[lid] *= scale
 
-    # Levels on each lap over the loop (file positions = song positions up to the loop's end).
-    a, b = int(bars[A] * sr), int(bars[B] * sr)
-    sos = butter(4, cfg['muffle']['hz'], 'low', fs=sr, output='sos') if cfg.get('muffle') else None
-    def lap_mix(lap):
+    # Loudness on each lap (LUFS, as ears hear it), in the stretch each lap
+    # mostly plays: lap 1 the song's start up to the loop, laps 2 and 3 the
+    # loop. The game's gain is set so lap 3 comes out at `loudness` with the
+    # game's default volumes.
+    flt = cfg.get('filter')
+    sos = butter(4, flt['hz'], {'lowpass': 'low', 'highpass': 'high'}[flt['type']], fs=sr, output='sos') if flt else None
+    meter = pyln.Meter(sr)
+    def lap_mix(lap, a, b):
+        a, b = int(a * sr), int(b * sr)
         y = np.zeros((b - a, 2))
         for lid, gains in cfg['laps'].items():
             g = gains[lap - 1]
             if g is None:
                 continue
             seg = layers[lid][a:b]
-            if sos is not None and lid == cfg['muffle']['layer'] and lap in cfg['muffle']['laps']:
+            if sos is not None and lid == flt['layer'] and lap in flt['laps']:
                 seg = sosfilt(sos, seg, axis=0)
             y += seg * 10 ** (g / 20)
         return y
-    rms = [db(lap_mix(lap)) for lap in (1, 2, 3)]
-    level = cfg['loudness'] - rms[2]
-    print('lap mixes over the loop, as the files hold them: %s dBFS; the game plays them %+.1f dB up, so lap 3 sits at %.1f' %
-          (' / '.join('%.1f' % r for r in rms), level, cfg['loudness']))
+    lufs = [meter.integrated_loudness(lap_mix(1, 0, bars[A])), meter.integrated_loudness(lap_mix(2, bars[A], bars[B])), meter.integrated_loudness(lap_mix(3, bars[A], bars[B]))]
+    level = cfg['loudness'] - lufs[2] - OUTPUT_DB
+    print('loudness at the game\'s default volumes: lap 1 %.1f, lap 2 %.1f, lap 3 %.1f LUFS (steps of %.1f and %.1f); the game plays the files %+.1f dB up' %
+          (*(v + level + OUTPUT_DB for v in lufs), lufs[1] - lufs[0], lufs[2] - lufs[1], level))
 
     # Encode. The files start where the song starts, at the same sample.
     codec = cfg.get('codec', 'mp3')
@@ -166,7 +175,7 @@ def main():
         'ending': round(float(loop_end + PAD), 5),
         'end': round(frames / sr, 5),
         'laps': cfg['laps'],
-        'muffle': cfg.get('muffle'),
+        'filter': cfg.get('filter'),
         'level': round(level, 2),
         'sync': {'layer': lid, 'env': base64.b64encode(env.tobytes()).decode()},
     }

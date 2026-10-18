@@ -8,15 +8,15 @@
     "lead": ["Synth", "Strings", "Woodwinds"]
   },
   "laps": {
-    "drums": [0, 1.5, 0],
-    "base": [3, 1.5, 0],
-    "battle": [null, 1.5, 0],
+    "drums": [3, 0, 0],
+    "base": [1.5, 0, 0],
+    "battle": [null, 0, 0],
     "lead": [null, null, 0]
   },
-  "muffle": { "layer": "drums", "hz": 700, "laps": [1] },
+  "filter": { "layer": "drums", "type": "highpass", "hz": 3000, "laps": [1], "open": "cut" },
   "loop": [49, 81],
   "ending": 98,
   "master": { "gain": -4.4, "lowShelf": [150, 3], "highShelf": [5000, 1.5] },
-  "loudness": -11.5,
+  "loudness": -16.5,
   "codec": "mp3"
 }
