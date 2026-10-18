@@ -44,6 +44,8 @@ export interface MusicTrack {
   readonly restartsWithRace?: boolean;
   /** It cannot play (a song that failed to load): the engine puts the synthesised track on instead. */
   readonly broken?: boolean;
+  /** It has played to its end (a song after its ending): the engine moves on to the menu music. */
+  readonly done?: boolean;
 }
 
 /** Node factory that remembers every running source so a track can be torn down. */

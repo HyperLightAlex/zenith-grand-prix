@@ -1226,11 +1226,15 @@ async function offlineSong(): Promise<void> {
   const T_P2 = 30.37;
   const T_P3 = 95.21;
   const T_FIN = 160.83;
-  const T_END = T_FIN + 10;
+  // Long enough for the ending to play out and the menu music to take over.
+  const T_END = T_FIN + 16;
   const sceneAt = (t: number): AudioScene => ({ ...OFF, lapPhase: t >= T_P3 ? 3 : t >= T_P2 ? 2 : 1, finished: t >= T_FIN });
   let info: SongInfo | null = null;
-  const { buf, audio, warnings } = await render(T_END, [{ t: T_RACE, run: (a) => a.setMusic('race', 'meridian') }], sceneAt, (_t, a) => {
-    info = a.debugInfo().music?.song ?? info;
+  let menuAt = NaN;
+  const { buf, audio, warnings } = await render(T_END, [{ t: T_RACE, run: (a) => a.setMusic('race', 'meridian') }], sceneAt, (t, a) => {
+    const music = a.debugInfo().music;
+    info = music?.song ?? info;
+    if (music?.name === 'menu' && Number.isNaN(menuAt)) menuAt = t;
   }, undefined, true, { meridian: '/music/meridian/' });
   if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) while playing the song`);
   const src = audio.debugSongs().get('meridian');
@@ -1339,9 +1343,25 @@ async function offlineSong(): Promise<void> {
     table('recorded song: the joins (offline)').push({ join: name, 'largest step at the join': r3(at), 'largest within a second of it': r3(around) });
     if (at > around * 1.01 && at > 0.02) fail(`${name}: a click at the join (step ${at.toFixed(3)}, ${around.toFixed(3)} around it)`);
   }
-  const fullAt = analyse(buf, lap3 + 1, seam - 1);
-  table('recorded song: level (offline, default volumes)').push({ stretch: 'lap 3', 'rms dBFS': db(fullAt.rms), peak: r3(fullAt.peak), 'pre-limiter peak': r3(fullAt.prePeak) });
-  if (fullAt.peak >= CLIP) fail('the song clips');
+  for (const [name, a, b] of [['lap 1', start + 2, lap2], ['lap 2', lap2 + 0.5, lap3], ['lap 3', lap3 + 0.5, seam], ['ending', ending + 0.1, ending + (m.end - m.ending) - 0.5]] as const) {
+    const st = analyse(buf, a, b);
+    table('recorded song: level (offline, default volumes)').push({ stretch: name, 'rms dBFS': db(st.rms), peak: r3(st.peak), 'pre-limiter peak': r3(st.prePeak) });
+    if (st.peak >= CLIP) fail(`the song clips (${name})`);
+  }
+
+  // Once the ending has played out, the menu music, with no long silence first.
+  const endOfSong = ending + (m.end - m.ending);
+  if (!(menuAt >= endOfSong && menuAt <= endOfSong + 1)) fail(`the menu music did not follow the song's ending (it ends at ${r3(endOfSong)}, menu at ${r3(menuAt)})`);
+  let quiet = 0;
+  let longest = 0;
+  for (let t = endOfSong; t < endOfSong + 4; t += 0.05) {
+    quiet = analyse(buf, t, t + 0.05).rms < 0.001 ? quiet + 0.05 : 0;
+    longest = Math.max(longest, quiet);
+  }
+  const menu = analyse(buf, menuAt + 1, menuAt + 4);
+  table('recorded song: after the ending (offline)').push({ 'song ends (s)': r3(endOfSong), 'menu music from (s)': r3(menuAt), 'longest silence (s)': r3(longest), 'menu music, rms dBFS': db(menu.rms) });
+  if (longest > 1.2) fail(`${longest.toFixed(2)} s of silence after the song's ending`);
+  if (menu.rms < 0.004) fail('the menu music after the song is inaudible');
   await dump('song', buf, 0, T_END);
 }
 

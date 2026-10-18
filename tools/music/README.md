@@ -10,20 +10,27 @@ Meridian has a song so far: 海空の速さ.
 | 1 | the base (bass and keys) over the drums' hats alone: a 3 kHz high-pass takes out the kick and the snare's body |
 | 2 | the whole kit drops in on the bar line, with the battle layer: brass, percussion, guitar, effects |
 | 3 | the lead comes in: synth, strings, woodwinds. The full song |
-| finish | on to the song's ending, every layer in |
+| finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
 This copies the synthesised music's arrangement, which has hats but no kick
-or snare on the formation lap, so the battle lap lands as a drop. (The first
-version kept the kick, muffled, on lap 1 and lifted laps 1 and 2 to make up
-for what they lacked: in play the laps were too alike.) Each lap is about 3
-LU louder than the one before: -23, -20 and -16.5 LUFS at the game's
-default volumes, against the synthesised Meridian's -23, -21 and -20.
+or snare on the formation lap, so the battle lap lands as a drop. Every lap
+is equally loud (-16.5 LUFS at the game's default volumes, from the start):
+a lap is told from the last by what comes in, not by getting louder, so
+the layers already playing ease back a little as new ones join (lap 1's
+are 8 dB up on their level in the full song, lap 2's 3.5 dB).
+
+How it got here, from playtests: the first version kept the kick, muffled,
+on lap 1, and its laps were too alike; the second dropped the kick from lap
+1 but let each lap get about 3 LU louder, and its start was too quiet.
 
 Every change waits for the next bar line, so a layer comes in with the
 downbeat. The song plays from its start, loops a stretch from its middle
 for as long as the race needs, and jumps to its ending when the race is
-over for the player (finished, or the race has ended). The lap and phase
-stingers still play: Meridian's are already in A minor, the song's key.
+over for the player (finished, or the race has ended). When the ending has
+played out (and 0.6 s more) the menu music comes in, so the wait for the
+results is not silent: it is what the results play, so it carries on into
+them. The lap and phase stingers still play: Meridian's are already in A
+minor, the song's key.
 
 How it plays (`src/client/audio/song.ts`): each layer is one decoded
 buffer, and every stretch of the song (the start, each pass of the loop,
@@ -55,8 +62,8 @@ loaded or decoded, the circuit's synthesised music plays instead.
    - `layers`: which stems make each layer. Four layers, up to: one per
      lap plus the drums alone, which are filtered on lap 1.
    - `laps`: each layer's level on laps 1 to 3, in dB, or `null` for
-     silent. Meridian lifts lap 1 a little (the hats +3 dB, the base
-     +1.5 dB) so its steps up are even, about 3 LU each.
+     silent: the balance of the layers within each lap (Meridian: all
+     level).
    - `filter`: the layer heard through a filter on some laps, its type
      (`highpass` or `lowpass`), cutoff, laps, and how it comes off: `cut`
      at the bar line, or `sweep` open up to it.
@@ -66,9 +73,10 @@ loaded or decoded, the circuit's synthesised music plays instead.
    - `master`: the gain and two shelves that make the summed stems sound
      like `song.wav` (Suno's stems are the mix before mastering: summed,
      they are louder and duller). Find them by comparing the two.
-   - `loudness`: how loud lap 3 should be, in LUFS at the game's default
-     volumes (Meridian: -16.5, 3 dB above the synthesised music's speed
-     lap). The build prints all three laps' loudness.
+   - `loudness`: how loud each lap should be, in LUFS at the game's
+     default volumes (Meridian: -16.5 on all three). The build sets each
+     lap's level to meet it and prints what it got, and the layers' levels
+     on each lap.
 4. **Build it**: `python3 tools/music/build.py tools/music/songs/<circuit>.json <folder>`.
    It writes `public/music/<circuit>/`: one MP3 per layer and `song.json`.
    Only what can be heard is kept: from the start to the loop's end, then
@@ -79,10 +87,12 @@ loaded or decoded, the circuit's synthesised music plays instead.
    - `node tools/audio-check.mjs --only song` renders a race offline
      through the engine and checks each change lands on its bar line, the
      render matching the layers summed by hand to the sample on both sides,
-     with no click at the joins, and the level.
+     with no click at the joins, each lap's level, and the menu music
+     coming in after the ending.
    - `URL=http://127.0.0.1:8090/ node tools/song-check.mjs` races in a real
      browser (after `npm run build` and `npm start`) and checks what each
-     layer plays on each lap.
+     layer plays on each lap, and (holding the results back, as when the
+     others are still racing) that the menu music follows the ending.
    - Then listen: `?auto=FW&demo=1&track=meridian&music=suno`, with
      `&skip=70` to reach lap 2 sooner (the song still starts from its
      top).

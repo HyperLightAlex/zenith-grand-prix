@@ -7,7 +7,10 @@
 //
 // Needs the game served (npm run build, then npm start; or the dev server).
 // The computer flies the player's mech; skip starts the race that far in, so
-// the lap changes come sooner (the song still starts from its top).
+// the lap changes come sooner (the song still starts from its top). The
+// results are held back 12 s after the race ends, as when the player is over
+// the line before the others, so the song's ending plays out on the race
+// screen and the menu music has to take over from it.
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 let chromium;
@@ -68,6 +71,9 @@ await page.evaluate(() => {
 const samples = [];
 const lapAt = {};
 let finishAt = null;
+let menuAt = null;
+let resultsAt = null;
+const manifest = await page.evaluate(() => fetch('music/meridian/song.json').then((r) => r.json()));
 let lastPhase = null;
 for (let i = 0; i < 3000; i++) {
   const s = await page.evaluate(() => {
@@ -83,8 +89,16 @@ for (let i = 0; i < 3000; i++) {
     lastPhase = s.lapPhase;
   }
   // Over for the player as the game tells the music: finished, or the race is over.
-  if ((s.finished || s.over) && finishAt === null) finishAt = s.time;
-  if (s.state === 'results' || (finishAt !== null && s.time > finishAt + 12)) break;
+  if ((s.finished || s.over) && finishAt === null) {
+    finishAt = s.time;
+    // Hold the results back, as when the player is over the line and the
+    // others are still racing: the song's ending plays out on the race screen.
+    await page.evaluate(() => { const g = window.game; const hold = () => { if (g.resultsAt > 0) g.resultsAt = g.time + 12; else setTimeout(hold, 50); }; hold(); });
+  }
+  if (s.music?.name === 'menu' && menuAt === null) menuAt = s.time;
+  if (s.state === 'results' && resultsAt === null) resultsAt = s.time;
+  // On a little into the results (or well past the song's end, if they are slow to come).
+  if ((resultsAt !== null && s.time > resultsAt + 2) || (finishAt !== null && s.time > finishAt + 20)) break;
   await page.waitForTimeout(200);
 }
 const last = samples.findLast((s) => s.music?.song) ?? samples[samples.length - 1];
@@ -101,6 +115,14 @@ for (const [p, t] of Object.entries(lapAt)) {
 }
 if (finishAt) {
   const e = log.find((x) => x.what === 'ending');
+  // Once the ending has played out, music again: the menu music, before the
+  // results if they are slow to come, or with them.
+  if (e) {
+    const songEnd = e.at + (manifest.end - manifest.ending);
+    const gap = menuAt === null ? Infinity : menuAt - songEnd;
+    console.log(`the song ended at ${songEnd.toFixed(2)}, the menu music came in at ${menuAt?.toFixed(2) ?? 'never'}, the results at ${resultsAt?.toFixed(2) ?? 'never'}`);
+    check(gap >= 0 && gap <= 1.5 && (resultsAt === null || menuAt < resultsAt), `the menu music within moments of the song's end, on the race screen (${gap === Infinity ? 'never' : gap.toFixed(2) + ' s after'})`);
+  }
   check(!!e && e.at >= finishAt && e.at <= finishAt + 0.12 + barMax + 0.25, `the ending starts on a bar line within a bar of the finish (${e ? (e.at - finishAt).toFixed(2) + ' s after' : 'never'})`);
 }
 

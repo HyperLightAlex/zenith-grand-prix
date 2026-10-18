@@ -111,15 +111,18 @@ def main():
 
     # Loudness on each lap (LUFS, as ears hear it), in the stretch each lap
     # mostly plays: lap 1 the song's start up to the loop, laps 2 and 3 the
-    # loop. The game's gain is set so lap 3 comes out at `loudness` with the
-    # game's default volumes.
+    # loop. `loudness` is each lap's target at the game's default volumes
+    # (or one number, for lap 3 alone): the build sets each lap's level to
+    # meet it, on top of the balance `laps` gives the layers within a lap.
+    # Meridian has all three the same, so a lap is told from the last by
+    # what plays, not by how loud it is.
     flt = cfg.get('filter')
     sos = butter(4, flt['hz'], {'lowpass': 'low', 'highpass': 'high'}[flt['type']], fs=sr, output='sos') if flt else None
     meter = pyln.Meter(sr)
-    def lap_mix(lap, a, b):
+    def lap_mix(laps, lap, a, b):
         a, b = int(a * sr), int(b * sr)
         y = np.zeros((b - a, 2))
-        for lid, gains in cfg['laps'].items():
+        for lid, gains in laps.items():
             g = gains[lap - 1]
             if g is None:
                 continue
@@ -128,10 +131,16 @@ def main():
                 seg = sosfilt(sos, seg, axis=0)
             y += seg * 10 ** (g / 20)
         return y
-    lufs = [meter.integrated_loudness(lap_mix(1, 0, bars[A])), meter.integrated_loudness(lap_mix(2, bars[A], bars[B])), meter.integrated_loudness(lap_mix(3, bars[A], bars[B]))]
-    level = cfg['loudness'] - lufs[2] - OUTPUT_DB
-    print('loudness at the game\'s default volumes: lap 1 %.1f, lap 2 %.1f, lap 3 %.1f LUFS (steps of %.1f and %.1f); the game plays the files %+.1f dB up' %
-          (*(v + level + OUTPUT_DB for v in lufs), lufs[1] - lufs[0], lufs[2] - lufs[1], level))
+    stretch = [(0, bars[A]), (bars[A], bars[B]), (bars[A], bars[B])]
+    measure = lambda laps: [meter.integrated_loudness(lap_mix(laps, i + 1, *stretch[i])) for i in range(3)]
+    lufs = measure(cfg['laps'])
+    want = cfg['loudness'] if isinstance(cfg['loudness'], list) else [None, None, cfg['loudness']]
+    lift = [0.0 if w is None else w - v - OUTPUT_DB for w, v in zip(want, lufs)]
+    level = lift[2]
+    laps_out = {lid: [None if g is None else round(float(g + (lift[i] - level if want[i] is not None else 0)), 2) for i, g in enumerate(gains)] for lid, gains in cfg['laps'].items()}
+    got = [v + level + OUTPUT_DB for v in measure(laps_out)]
+    print('loudness at the game\'s default volumes: lap 1 %.1f, lap 2 %.1f, lap 3 %.1f LUFS; the game plays the files %+.1f dB up' % (*got, level))
+    print('each layer by lap (dB, with the laps\' levels):', ', '.join('%s %s' % (lid, g) for lid, g in laps_out.items()))
 
     # Encode. The files start where the song starts, at the same sample.
     codec = cfg.get('codec', 'mp3')
@@ -174,7 +183,7 @@ def main():
         'loop': [round(float(bars[A]), 5), round(float(bars[B]), 5)],
         'ending': round(float(loop_end + PAD), 5),
         'end': round(frames / sr, 5),
-        'laps': cfg['laps'],
+        'laps': laps_out,
         'filter': cfg.get('filter'),
         'level': round(level, 2),
         'sync': {'layer': lid, 'env': base64.b64encode(env.tobytes()).decode()},

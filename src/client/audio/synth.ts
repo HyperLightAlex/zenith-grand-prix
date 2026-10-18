@@ -205,6 +205,8 @@ export class SynthAudio implements AudioEngine {
           this.track.dispose();
           this.track = null;
           this.applyMusic();
+        } else if (this.track.done && this.want === 'race') {
+          this.afterSong(now, ahead);
         }
       }
       if (this.voices.length || this.fading.length || this.dying.length) this.sweep(now);
@@ -485,6 +487,25 @@ export class SynthAudio implements AudioEngine {
       p.setTargetAtTime(level, now, 0.03);
       p.setTargetAtTime(1, this.duckUntil, 0.25);
     }
+  }
+
+  /**
+   * A song has played its ending while the race is still on screen (the
+   * player is over the line, the others are not): on to the menu music, as
+   * the results will want, so the wait is not silent. When the results then
+   * ask for the menu music, it is already playing and carries on.
+   */
+  private afterSong(now: number, ahead: number): void {
+    const g = this.g;
+    if (!g || !this.track) return;
+    this.track.fade(0, now, 0.05);
+    this.dying.push({ track: this.track, at: now + 0.5 });
+    const t = createTrack('menu', g.ctx, g.white, now);
+    t.dry.connect(g.musicIn);
+    t.wet.connect(g.musicWetIn);
+    t.fade(MUSIC_TRIM, now, 0.5);
+    this.track = t;
+    t.schedule(now, this.lapPhase, ahead);
   }
 
   /** `fresh`: asked for by a race starting, so a recorded song starts again from its top. */

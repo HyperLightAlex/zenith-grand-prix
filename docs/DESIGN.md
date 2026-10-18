@@ -270,9 +270,11 @@ An experiment, behind `?music=suno`: the race music as a recorded song
 (made in Suno) that builds the same way. Its stems are mixed into four
 layers: lap 1 plays the bass and keys over the drums' hats alone; on lap 2
 the whole kit drops in with the brass, percussion and guitar; lap 3 brings
-in the lead, the full song; the finish goes to the song's ending. Each change
-waits for the next bar line, and the middle of the song loops for as long
-as the race lasts. Meridian has one so far; see
+in the lead, the full song; the finish goes to the song's ending, then the
+menu music (what the results play) so there is no silence while the others
+finish. Every lap is equally loud: the build is in what comes in. Each
+change waits for the next bar line, and the middle of the song loops for as
+long as the race lasts. Meridian has one so far; see
 [tools/music](../tools/music/README.md).
 
 ### Free steering

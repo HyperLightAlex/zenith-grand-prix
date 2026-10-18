@@ -6,10 +6,12 @@
 //   lap 2   the whole kit drops in on the bar line, and the battle layer
 //           (brass, percussion, guitar, effects)
 //   lap 3   the lead comes in: the full song
-//   finish  on to the song's ending
-
+//   finish  on to the song's ending; once it has played out, the engine
+//           moves on to the menu music (see SynthAudio.afterSong)
+//
 // (Like the synthesised music's formation lap, which has hats but no kick
-// or snare until the battle lap.)
+// or snare until the battle lap.) Every lap is equally loud: the build sets
+// each lap's levels so, and a lap is told from the last by what comes in.
 //
 // Every change waits for the next bar line. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
@@ -65,6 +67,8 @@ const QUEUE_AHEAD = 3;
 const CHANGE_LEAD = 0.3;
 /** Where a sweep takes the filter before the layer goes over to its direct path. */
 const OPEN_HZ = { lowpass: 20000, highpass: 20 } as const;
+/** The pause after the ending's last note before the engine moves on to the menu music. */
+export const AFTER_ENDING = 0.6;
 /** Most a browser's decoder is allowed to differ from ffmpeg's in where it starts the audio. */
 const MAX_SHIFT_MS = 60;
 
@@ -372,6 +376,8 @@ export class SongTrack implements MusicTrack {
   private targetAt = -1;
   private changeAt = -1;
   private ending = false;
+  /** Context time the ending's last note ends, once it is queued. */
+  private endingEnd = -1;
   /** Seen the race unfinished since starting: a finish only counts after that. */
   private armed = false;
   private readonly log: SongInfo['log'] = [];
@@ -422,6 +428,14 @@ export class SongTrack implements MusicTrack {
       else this.playing.push(p);
     }
     plan.prune(now - 1);
+  }
+
+  /**
+   * The ending has played out (and a moment more): the engine moves on to
+   * the menu music, so the wait for the results is not silent.
+   */
+  get done(): boolean {
+    return this.endingEnd >= 0 && this.ctx.currentTime >= this.endingEnd + AFTER_ENDING;
   }
 
   fade(to: number, now: number, tau: number): void {
@@ -637,6 +651,7 @@ export class SongTrack implements MusicTrack {
     this.targetAt = -1;
     this.phase = this.target = 3;
     this.play(done.ending, true);
+    this.endingEnd = plan.endOf(done.ending);
     this.note('ending', at, plan.map.bars.length - 1);
   }
 
