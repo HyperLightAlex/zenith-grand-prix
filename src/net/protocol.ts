@@ -371,6 +371,8 @@ export interface SquadClientMessages {
   go: { code: string };
   /** The leader is out of their room again. */
   home: Record<string, never>;
+  /** Send me the squad as it is now (joined, but not heard it yet). */
+  view: Record<string, never>;
   ping: { t: number; rtt: number };
 }
 

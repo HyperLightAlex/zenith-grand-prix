@@ -173,7 +173,15 @@ two players.
   copy of the race makes it at the same tick.
 - **Squads** are their own small Colyseus room (`src/net/squadCore.ts`).
   The leader's client tells it which room they go into (`go`) and when they
-  are back out (`home`), so a newcomer can be sent after them.
+  are back out (`home`), so a newcomer can be sent after them. The client
+  does one squad operation at a time (opening Online makes a squad of one
+  in the background, and a join can come while it is on its way: run
+  together, you could end up in your own squad while your friends' still
+  showed you), listens to a squad the moment it is in (its welcome and
+  first view come at once, and waiting to leave the old squad first lost
+  them over a real connection, so the squad showed nothing until it next
+  changed), asks for the view again if it has not come (`view`), and
+  ignores anything still arriving from a squad or room it has left.
 - **Joining never waits for ever.** A create or join gives up after 20 s
   (`JOIN_TIMEOUT_SECONDS`). Once in, a client that has not had the room's
   view asks for it again every 2 s (`view`), and after 20 s leaves and
@@ -245,9 +253,17 @@ On this sandbox's 2-core Linux machine, with Node 22:
   squad's cup through (briefing, match, standings, award), a season's
   matchday off, and who may come in.
 - `tools/squad-check.mjs` takes three browsers through a squad of three:
-  following the leader into a room and into the Grand Prix, all on the
-  squad's team; the third joining the squad after the other two are in
-  (taken in after them), and nobody joining once the leader is back out.
+  everyone seeing the whole squad as they join; following the leader into
+  a room and into the Grand Prix, all on the squad's team; the third
+  joining the squad after the other two are in (taken in after them);
+  nobody taken in once the leader is back out; and joining a squad while
+  your own squad of one is still being made. Run it over a real network's
+  delay too: `node tools/lag-proxy.mjs 8092 8090 60`, then
+  `SERVER=http://127.0.0.1:8092` (the page loads directly; only the online
+  traffic goes through the proxy). Two of these bugs only showed that way.
+  Over 120 ms round trips: a join shows to the squad in about 0.3 s, a
+  frame change in 0.2 s, a closed tab as Reconnecting in 0.2 s (its place
+  is then kept for 60 s).
 - `tools/online-gp-check.mjs` takes two browsers through a squad's cup:
   the hub's Grand Prix (locked alone, open with two), the setup, following
   the leader in, picking frames in the briefing, the races, the standings

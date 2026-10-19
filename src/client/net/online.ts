@@ -148,16 +148,21 @@ export class Online {
   private viewWait = 0;
 
   private attachRoom(room: Room): void {
+    // Only ever one: anything still connected is left.
+    if (this.room && this.room !== room) void this.room.leave(true).catch(() => {});
     this.room = room;
     this.dropped = false;
     this.lobby = null;
+    // Nothing from a room you have moved on from counts.
+    const mine = () => this.room === room;
     const resume = readResume();
     resume.room = { code: room.roomId, token: room.reconnectionToken };
     writeResume(resume);
     room.onMessage('welcome', (m: ServerMessages['welcome']) => {
-      this.pid = m.pid;
+      if (mine()) this.pid = m.pid;
     });
     room.onMessage('lobby', (v: LobbyView) => {
+      if (!mine()) return;
       this.lobby = v;
       window.clearInterval(this.viewWait);
       this.emit('lobby', v);
@@ -184,15 +189,17 @@ export class Online {
     room.onMessage('pong', (m: { t: number }) => {
       this.rtt = Math.max(0, performance.now() - m.t);
     });
-    room.onMessage('error', (m: { code: string; text: string }) => this.emit('error', m));
+    room.onMessage('error', (m: { code: string; text: string }) => mine() && this.emit('error', m));
     for (const t of ['matchStart', 'tick', 'key', 'roundEnd', 'lobbyAgain', 'callerAsk', 'notice'] as const) {
-      room.onMessage(t, (m: never) => this.emit(t, m));
+      room.onMessage(t, (m: never) => mine() && this.emit(t, m));
     }
     room.onDrop(() => {
+      if (!mine()) return;
       this.dropped = true;
       this.emit('drop', {});
     });
     room.onReconnect(() => {
+      if (!mine()) return;
       this.dropped = false;
       const r = readResume();
       r.room = { code: room.roomId, token: room.reconnectionToken };
@@ -243,37 +250,75 @@ export class Online {
   }
 
   // ---- squads ------------------------------------------------------------------
+  //
+  // One squad operation at a time. Opening Online makes you a squad of one in
+  // the background, and joining a friend's squad (a link, a code) can come
+  // while that is still on its way: run together, the second to finish won,
+  // which could leave you in a squad of your own while your friends' squad
+  // still showed you, connected, for ever. Queued, a join waits for the
+  // squad of one and then leaves it.
 
-  async createSquad(loadout: Loadout): Promise<void> {
-    await this.leaveSquad();
-    this.attachSquad(await this.sdk().create('squad', this.options(loadout)));
+  private squadOps: Promise<unknown> = Promise.resolve();
+  private squadViewWait = 0;
+  private queueSquad<T>(op: () => Promise<T>): Promise<T> {
+    const run = this.squadOps.then(op, op);
+    this.squadOps = run.catch(() => {});
+    return run;
   }
 
-  async joinSquad(code: string, loadout: Loadout): Promise<void> {
+  /** A squad of your own, unless you are in one by the time it is your turn. */
+  createSquad(loadout: Loadout): Promise<void> {
+    return this.queueSquad(async () => {
+      if (this.squad) return;
+      this.attachSquad(await inTime(this.sdk().create('squad', this.options(loadout))));
+    });
+  }
+
+  joinSquad(code: string, loadout: Loadout): Promise<void> {
+    return this.queueSquad(() => this.joinSquadNow(code, loadout));
+  }
+
+  private async joinSquadNow(code: string, loadout: Loadout): Promise<void> {
     if (this.squad && this.squad.roomId === code) return;
-    const next = await this.sdk().joinById(code, this.options(loadout));
-    await this.leaveSquad();
+    const next = await inTime(this.sdk().joinById(code, this.options(loadout)));
+    // Listening to the new squad straight away (its welcome and first view
+    // come at once), and the old one left after: waiting to leave it first
+    // lost them on a real connection, and the squad showed nothing until it
+    // next changed.
     this.attachSquad(next);
   }
 
   private attachSquad(room: Room): void {
+    // Only ever one: anything still connected is left.
+    if (this.squad && this.squad !== room) void this.squad.leave(true).catch(() => {});
+    window.clearInterval(this.squadViewWait);
     this.squad = room;
+    this.squadView = null;
     const resume = readResume();
     resume.squad = { code: room.roomId, token: room.reconnectionToken };
     writeResume(resume);
+    // Nothing from a squad you have moved on from counts.
+    const mine = () => this.squad === room;
     room.onMessage('welcome', (m: { pid: string }) => {
-      this.squadPid = m.pid;
+      if (mine()) this.squadPid = m.pid;
     });
     room.onMessage('squad', (v: SquadView) => {
+      if (!mine()) return;
       this.squadView = v;
+      window.clearInterval(this.squadViewWait);
       this.emit('squad', v);
     });
-    room.onMessage('follow', (m: SquadServerMessages['follow']) => this.emit('follow', m));
-    room.onMessage('notice', (m: { text: string }) => this.emit('notice', m));
-    room.onMessage('error', (m: { code: string; text: string }) => this.emit('error', m));
+    // As with a room: if the squad's view has not come, ask for it again.
+    this.squadViewWait = window.setInterval(() => {
+      if (!mine() || this.squadView) return window.clearInterval(this.squadViewWait);
+      room.send('view', {});
+    }, VIEW_RETRY_SECONDS * 1000);
+    room.onMessage('follow', (m: SquadServerMessages['follow']) => mine() && this.emit('follow', m));
+    room.onMessage('notice', (m: { text: string }) => mine() && this.emit('notice', m));
+    room.onMessage('error', (m: { code: string; text: string }) => mine() && this.emit('error', m));
     room.onMessage('pong', () => {});
     room.onLeave((code: number, reason?: string) => {
-      if (this.squad !== room) return;
+      if (!mine()) return;
       this.squad = null;
       this.squadView = null;
       const r = readResume();
@@ -293,7 +338,11 @@ export class Online {
     if (this.squad && this.squadView && this.squadView.members.length > 0 && this.leading) this.squad.send('home', {});
   }
 
-  async leaveSquad(): Promise<void> {
+  leaveSquad(): Promise<void> {
+    return this.queueSquad(() => this.leaveSquadNow());
+  }
+
+  private async leaveSquadNow(): Promise<void> {
     const room = this.squad;
     if (!room) return;
     this.squad = null;
@@ -322,19 +371,22 @@ export class Online {
     const r = readResume();
     let back = false;
     if (r.squad) {
-      try {
-        this.attachSquad(await this.sdk().reconnect(r.squad.token));
-      } catch {
+      const squad = r.squad;
+      await this.queueSquad(async () => {
         try {
-          await this.joinSquad(r.squad.code, loadout);
+          this.attachSquad(await inTime(this.sdk().reconnect(squad.token)));
         } catch {
-          delete r.squad;
+          try {
+            await this.joinSquadNow(squad.code, loadout);
+          } catch {
+            delete r.squad;
+          }
         }
-      }
+      });
     }
     if (r.room) {
       try {
-        this.attachRoom(await this.sdk().reconnect(r.room.token));
+        this.attachRoom(await inTime(this.sdk().reconnect(r.room.token)));
         back = true;
       } catch {
         try {

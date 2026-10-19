@@ -126,6 +126,10 @@ export class SquadCore {
         if (lead) this.room = null;
         return;
       }
+      case 'view':
+        // Joined but not heard the squad yet: everyone gets it again on the next update.
+        this.dirty = true;
+        return;
       case 'ping':
         this.io.send(pid, 'pong', { t: Number(msg.t) || 0 });
         return;

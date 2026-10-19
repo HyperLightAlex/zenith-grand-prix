@@ -97,4 +97,16 @@ describe('squads', () => {
     core.leave('a');
     expect(core.room).toBeNull();
   });
+
+  it('sends the squad again to anyone who asks (joined, and not heard it yet)', () => {
+    const { core, inbox, tick } = squad();
+    core.join('a', 'A', { faction: 0, role: ROLE.FW });
+    tick(200);
+    inbox.length = 0;
+    tick(200);
+    expect(inbox.some(([, t]) => t === 'squad')).toBe(false);
+    core.message('a', 'view', {});
+    tick(200);
+    expect(inbox.filter(([, t]) => t === 'squad').map(([p]) => p)).toEqual(['a']);
+  });
 });
