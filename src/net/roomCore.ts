@@ -153,6 +153,7 @@ export class RoomCore {
   private dirty = true;
   private lastLobbySend = 0;
   private resyncAt = new Map<string, number>();
+  private viewAt = new Map<string, number>();
   /** Every member removed: the host should close the room. */
   empty = false;
   /** A squad's Grand Prix, or null. */
@@ -369,10 +370,16 @@ export class RoomCore {
         if (this.lobby.host !== pid) return report({ ok: false, text: 'Only the host ends the match' });
         if (!inLobby) this.backToLobby('ended');
         return;
-      case 'view':
-        // Joined but still waiting for the room: send it again (to everyone, on the next update).
-        this.dirty = true;
+      case 'view': {
+        // Joined but still waiting for the room: send it again (to everyone,
+        // on the next update; once a second at most for each person).
+        const at = this.viewAt.get(pid) ?? -1e9;
+        if (this.now() - at > 1000) {
+          this.viewAt.set(pid, this.now());
+          this.dirty = true;
+        }
         return;
+      }
       case 'resync': {
         const at = this.resyncAt.get(pid) ?? -1e9;
         if (this.race && this.now() - at > 1000) {
