@@ -37,6 +37,9 @@ OUTPUT_DB = 20 * np.log10(0.8 * 0.45 * 0.8)
 # MP3 by default: every browser decodes it (AAC is missing from open-source
 # Chromium builds, Opus from older Safari). Its encoder delay differs from
 # decoder to decoder; the game measures and allows for that (song.json's sync).
+# `quality` in the recipe is LAME's VBR setting: 0 is its best (about 220
+# kbps here, and nothing cut below 19 kHz); 4 (its default) cuts above 16 kHz
+# and is audibly rougher once four layers are summed.
 ENCODERS = {
     'mp3': ['-c:a', 'libmp3lame', '-q:a', '4'],
     'aac': ['-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart'],
@@ -117,7 +120,7 @@ def main():
     # Meridian has all three the same, so a lap is told from the last by
     # what plays, not by how loud it is.
     flt = cfg.get('filter')
-    sos = butter(4, flt['hz'], {'lowpass': 'low', 'highpass': 'high'}[flt['type']], fs=sr, output='sos') if flt else None
+    sos = None if not flt else butter(4, flt['hz'], {'lowpass': 'low', 'highpass': 'high'}[flt['type']], fs=sr, output='sos')
     meter = pyln.Meter(sr)
     def lap_mix(laps, lap, a, b):
         a, b = int(a * sr), int(b * sr)
@@ -153,7 +156,8 @@ def main():
             wav = os.path.join(tmp, lid + '.wav')
             sf.write(wav, x.astype(np.float32), sr, subtype='FLOAT')
             dst = os.path.join(out, lid + '.' + ext)
-            subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', wav, *ENCODERS[codec], '-ar', str(sr), dst], check=True)
+            enc = ENCODERS[codec] if codec != 'mp3' else ['-c:a', 'libmp3lame', '-q:a', str(cfg.get('quality', 4))]
+            subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', wav, *enc, '-ar', str(sr), dst], check=True)
             # Check what a decoder gives back: the same length, starting on the same sample.
             back = os.path.join(tmp, lid + '-back.wav')
             subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', dst, '-f', 'wav', back], check=True)
