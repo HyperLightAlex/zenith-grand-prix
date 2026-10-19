@@ -1354,12 +1354,13 @@ export class Game {
       this.preview(this.previewLoadout(this.menus.screen ?? 'online'));
     });
     o.on('follow', ({ code, size }) => {
-      const sq = o.squadView;
-      if (!sq) return;
-      // Your leader has gone into a room: follow them in.
+      // (The squad's code is its room's: known from joining it, before its first view.)
+      const squad = o.squadView?.code ?? o.squad?.roomId;
+      if (!squad) return;
+      // Your leader has gone into a room (or is in one as you join their squad): follow them in.
       void (async () => {
         try {
-          await o.joinRoom(code, this.loadoutMsg(), { id: sq.code, size, follow: true });
+          await o.joinRoom(code, this.loadoutMsg(), { id: squad, size, follow: true });
           if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
             this.state = 'garage';
             this.hud.hide();

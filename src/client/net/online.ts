@@ -3,7 +3,7 @@
 // messages and events.
 
 import { Client, type Room } from '@colyseus/sdk';
-import { NET_PROTOCOL, type GpRequest, type JoinOptions, type LobbyView, type Loadout, type ServerMessages, type SquadServerMessages, type SquadTicket, type SquadView } from '../../net/protocol';
+import { JOIN_TIMEOUT_SECONDS, NET_PROTOCOL, VIEW_RETRY_SECONDS, type GpRequest, type JoinOptions, type LobbyView, type Loadout, type ServerMessages, type SquadServerMessages, type SquadTicket, type SquadView } from '../../net/protocol';
 import { callsign, deviceId, readResume, writeResume } from './identity';
 
 export interface OnlineEvents {
@@ -37,6 +37,33 @@ export function serverEndpoint(): string | null {
   // Served below a path (example.com/zenith/): the server is there too.
   const dir = location.pathname.replace(/\/[^/]*$/, '');
   return location.origin + dir;
+}
+
+const TIMED_OUT = 'The room is not answering. Try joining again in a moment.';
+
+/**
+ * A create or join that gives up after JOIN_TIMEOUT_SECONDS rather than wait
+ * for ever; if it gets in after all, it leaves again.
+ */
+function inTime(join: Promise<Room>): Promise<Room> {
+  return new Promise((ok, fail) => {
+    let done = false;
+    const timer = window.setTimeout(() => {
+      done = true;
+      fail(new Error(TIMED_OUT));
+    }, JOIN_TIMEOUT_SECONDS * 1000);
+    join.then(
+      (room) => {
+        window.clearTimeout(timer);
+        if (done) void room.leave(true).catch(() => {});
+        else ok(room);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        if (!done) fail(err);
+      },
+    );
+  });
 }
 
 /** A failed create or join, in words a player can act on. */
@@ -98,14 +125,27 @@ export class Online {
   /** A new room, with you as host; `gp`: your squad's Grand Prix. */
   async createRoom(loadout: Loadout, squad?: SquadTicket, gp?: GpRequest): Promise<void> {
     await this.leaveRoom();
-    this.attachRoom(await this.sdk().create('race', { ...this.options(loadout, squad), gp }));
+    this.attachRoom(await inTime(this.sdk().create('race', { ...this.options(loadout, squad), gp })));
   }
 
   async joinRoom(code: string, loadout: Loadout, squad?: SquadTicket): Promise<void> {
     if (this.room && this.room.roomId === code) return;
+    // Already on the way into it (a follow and a link at once): the same join.
+    if (this.joining?.code === code) return this.joining.done;
     await this.leaveRoom();
-    this.attachRoom(await this.sdk().joinById(code, this.options(loadout, squad)));
+    const done = (async () => {
+      this.attachRoom(await inTime(this.sdk().joinById(code, this.options(loadout, squad))));
+    })();
+    this.joining = { code, done };
+    try {
+      await done;
+    } finally {
+      if (this.joining?.done === done) this.joining = null;
+    }
   }
+  private joining: { code: string; done: Promise<void> } | null = null;
+  /** Waiting for the room's view after joining: ask again, then give up. */
+  private viewWait = 0;
 
   private attachRoom(room: Room): void {
     this.room = room;
@@ -119,8 +159,28 @@ export class Online {
     });
     room.onMessage('lobby', (v: LobbyView) => {
       this.lobby = v;
+      window.clearInterval(this.viewWait);
       this.emit('lobby', v);
     });
+    // The room's view comes straight after joining. If it has not come (a
+    // message lost, or a server too busy to send it), ask again now and then,
+    // and in the end give up and say so rather than wait for ever.
+    window.clearInterval(this.viewWait);
+    const joinedAt = performance.now();
+    this.viewWait = window.setInterval(() => {
+      if (this.room !== room || this.lobby) return window.clearInterval(this.viewWait);
+      if (performance.now() - joinedAt > JOIN_TIMEOUT_SECONDS * 1000) {
+        window.clearInterval(this.viewWait);
+        this.room = null;
+        const r = readResume();
+        delete r.room;
+        writeResume(r);
+        void room.leave(true).catch(() => {});
+        this.emit('roomLeft', { text: TIMED_OUT });
+        return;
+      }
+      room.send('view', {});
+    }, VIEW_RETRY_SECONDS * 1000);
     room.onMessage('pong', (m: { t: number }) => {
       this.rtt = Math.max(0, performance.now() - m.t);
     });
@@ -144,6 +204,7 @@ export class Online {
       this.room = null;
       this.lobby = null;
       this.dropped = false;
+      this.home();
       const r = readResume();
       delete r.room;
       writeResume(r);
@@ -170,6 +231,7 @@ export class Online {
     if (!room) return;
     this.room = null;
     this.lobby = null;
+    this.home();
     const r = readResume();
     delete r.room;
     writeResume(r);
@@ -224,6 +286,11 @@ export class Online {
 
   sendSquad(type: string, msg: unknown = {}): void {
     this.squad?.send(type, msg);
+  }
+
+  /** Out of a room: if you lead a squad, it no longer takes newcomers to it. */
+  private home(): void {
+    if (this.squad && this.squadView && this.squadView.members.length > 0 && this.leading) this.squad.send('home', {});
   }
 
   async leaveSquad(): Promise<void> {

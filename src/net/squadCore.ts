@@ -30,6 +30,10 @@ const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 export class SquadCore {
   members: Person[] = [];
   leader: string | null = null;
+  /** The room the leader is in, so someone joining the squad later can follow them in. */
+  room: string | null = null;
+  /** New members to send after the leader, once they have the squad's view. */
+  private toFollow = new Set<string>();
   private arrivals = 0;
   private dirty = true;
   empty = false;
@@ -54,6 +58,7 @@ export class SquadCore {
     const faction = Number.isInteger(loadout?.faction) && loadout.faction >= 0 && loadout.faction < 5 ? loadout.faction : 0;
     this.members.push({ pid, callsign, loadout: { faction, role }, connected: true, joinedAt: ++this.arrivals, droppedAt: -1 });
     if (!this.leader) this.leader = pid;
+    else if (this.room) this.toFollow.add(pid);
     this.io.send(pid, 'welcome', { pid, code: this.code });
     this.dirty = true;
     return { ok: true };
@@ -63,7 +68,11 @@ export class SquadCore {
     const i = this.members.findIndex((m) => m.pid === pid);
     if (i < 0) return;
     this.members.splice(i, 1);
-    if (this.leader === pid) this.leader = this.longest();
+    this.toFollow.delete(pid);
+    if (this.leader === pid) {
+      this.leader = this.longest();
+      this.room = null;
+    }
     if (!this.members.length) this.empty = true;
     this.dirty = true;
   }
@@ -109,7 +118,12 @@ export class SquadCore {
         if (!lead) return;
         const code = String(msg.code ?? '');
         if (!/^[A-Z0-9]{5}$/.test(code)) return;
+        this.room = code;
         for (const m of this.members) if (m.pid !== pid && m.connected) this.io.send(m.pid, 'follow', { code, size: this.members.length });
+        return;
+      }
+      case 'home': {
+        if (lead) this.room = null;
         return;
       }
       case 'ping':
@@ -141,6 +155,7 @@ export class SquadCore {
       const next = this.longest();
       if (next && next !== this.leader && this.members.find((m) => m.pid === next)?.connected) {
         this.leader = next;
+        this.room = null;
         this.dirty = true;
       }
     }
@@ -148,5 +163,10 @@ export class SquadCore {
       this.io.broadcast('squad', this.view());
       this.dirty = false;
     }
+    // Joined while the leader is in a room: after them, now the squad's view is out.
+    for (const pid of this.toFollow) {
+      if (this.room && pid !== this.leader && this.members.find((m) => m.pid === pid)?.connected) this.io.send(pid, 'follow', { code: this.room, size: this.members.length });
+    }
+    this.toFollow.clear();
   }
 }

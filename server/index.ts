@@ -19,6 +19,7 @@ import { RaceRoom, setServerBuild } from './raceRoom';
 import { SquadRoom } from './squadRoom';
 import { codesInUse } from './codes';
 import { log } from './log';
+import { TRACKS, sharedTrack } from '../src/sim/index';
 
 // One misbehaving connection must never take the server down.
 process.on('unhandledRejection', (reason) => log('unhandled rejection', reason instanceof Error ? reason.message : String(reason)));
@@ -56,6 +57,12 @@ const gameServer = new Server({
     });
   },
 });
+// Every circuit built now, once: a room that builds one mid-race holds every
+// other room up for a tenth of a second or more.
+const t0 = Date.now();
+for (const def of TRACKS) sharedTrack(def);
+log('server', `circuits built in ${Date.now() - t0} ms`);
+
 gameServer.define('race', RaceRoom);
 gameServer.define('squad', SquadRoom);
 

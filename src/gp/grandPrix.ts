@@ -14,7 +14,7 @@
 // This module is plain logic over plain data (no DOM), so it saves as JSON
 // and the background races can run in a worker or in a test.
 
-import { ROLE, createMatch, createRace, recordRound, stepRace, buildTrack, trackById, PHASE, TRACKS, type SeatConfig, type MatchConfig } from '../sim/index';
+import { ROLE, createMatch, createRace, recordRound, stepRace, sharedTrack, trackById, PHASE, TRACKS, type SeatConfig, type MatchConfig } from '../sim/index';
 
 export type GpKind = 'cup' | 'season';
 
@@ -328,7 +328,7 @@ export class FixtureSim {
     /** Test setting: shorter races. */
     private readonly laps?: number,
   ) {
-    this.track = buildTrack(trackById(fx.circuit) ?? TRACKS[0]);
+    this.track = sharedTrack(trackById(fx.circuit) ?? TRACKS[0]);
     this.match = createMatch(cfg);
   }
 

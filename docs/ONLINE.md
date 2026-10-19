@@ -106,7 +106,9 @@ two players.
 - **Squads.** The leader picks the faction and takes everyone into rooms:
   when the leader makes or joins a room, the others follow by themselves. The
   room holds places on one team for them for 20 seconds; someone slower than
-  that still joins the squad's team if it has a place free. Everyone picks
+  that still joins the squad's team if it has a place free. Someone who
+  joins the squad while the leader is already in a room is taken into it
+  too, onto the squad's team (until the leader is back at the hub). Everyone picks
   whatever frame they like in the hangar; two of a frame is marked on the
   Online screen, not refused, and Ready sorts it out in the room. (For
   matchmaking, when there is some, the squad will have to be on different
@@ -170,16 +172,27 @@ two players.
   when people drop or come back. The change rides with the inputs, so every
   copy of the race makes it at the same tick.
 - **Squads** are their own small Colyseus room (`src/net/squadCore.ts`).
+  The leader's client tells it which room they go into (`go`) and when they
+  are back out (`home`), so a newcomer can be sent after them.
+- **Joining never waits for ever.** A create or join gives up after 20 s
+  (`JOIN_TIMEOUT_SECONDS`). Once in, a client that has not had the room's
+  view asks for it again every 2 s (`view`), and after 20 s leaves and
+  says the room is not answering, rather than sit on "Joining…".
 - **A squad's Grand Prix** is a race room made with `gp` in its create
   options: the room keeps the event (`src/gp/grandPrix.ts`, the same as
   offline), sets each round up from it, and goes lobby (the briefing),
   match, `standings`, lobby... to `award`, sending the event with the
   lobby. The lobby is `fixed`: side 0 only, factions and settings from the
   event. The other factions' fixtures are raced on the server
-  (`FixtureSim`), 40 ticks (`GP_BACKGROUND_TICKS`) on each of the room's
-  updates, so a race takes about 5 seconds and the server is never held up
-  for one; they start when the room is made, so a round's results are in
-  long before its standings. A Continue carries the phase it was pressed
+  (`FixtureSim`) on each of the room's updates, at most 40 ticks
+  (`GP_BACKGROUND_TICKS`) and 3 ms (`GP_BACKGROUND_MS`), so the server is
+  never held up for one, however slow its machine: a cup's other fixtures
+  are about 4.5 s of work here, spread over about 20 s. They start when the
+  room is made, just as the squad comes in, which is why the time limit
+  matters; a round's results are still in long before its standings.
+  Every circuit is built once when the server starts (`sharedTrack`):
+  building one takes 60 to 120 ms, which used to land mid-update for every
+  fixture and every round. A Continue carries the phase it was pressed
   in, so a late press on a match's results cannot skip the standings.
 - **The lobby rules** (teams and places, frame picks and lock-in, captains,
   factions, shot callers, squads) are plain functions in `src/net/lobby.ts`.
@@ -217,7 +230,7 @@ On this sandbox's 2-core Linux machine, with Node 22:
 | Traffic per player (2 people racing) | 4.6 KB/s down, 2.2 KB/s up |
 | Server CPU, two full rooms of six bots racing | 5% of one core, about 2.5% per room |
 | Rooms per core (from that) | about 40 |
-| A squad's Grand Prix, while it races the other factions' fixtures | about 9% of one core more, for about 5 s a race (a cup has 3, a season up to 30) |
+| A squad's Grand Prix, while it races the other factions' fixtures | at most 3 ms in each 16.7 ms update (18% of one core), median 3.3 ms, worst 21 ms; a cup's are done in about 20 s |
 | Inputs predicted ahead on localhost | 1 to 6 ticks; up to 16 with 12 bots on the same machine |
 | Confirmed race vs server | identical at every checksum, in tests and in 12-bot runs (no resyncs) |
 
@@ -231,6 +244,10 @@ On this sandbox's 2-core Linux machine, with Node 22:
   menu's computer pilot, and late arrivals. `tests/net-gp.test.ts` plays a
   squad's cup through (briefing, match, standings, award), a season's
   matchday off, and who may come in.
+- `tools/squad-check.mjs` takes three browsers through a squad of three:
+  following the leader into a room and into the Grand Prix, all on the
+  squad's team; the third joining the squad after the other two are in
+  (taken in after them), and nobody joining once the leader is back out.
 - `tools/online-gp-check.mjs` takes two browsers through a squad's cup:
   the hub's Grand Prix (locked alone, open with two), the setup, following
   the leader in, picking frames in the briefing, the races, the standings

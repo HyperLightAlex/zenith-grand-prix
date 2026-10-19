@@ -31,8 +31,19 @@ export const RESULTS_SECONDS = 15;
 export const FINAL_SECONDS = 10;
 /** A Grand Prix room: once every result of a round is in, the table stays up until everyone continues, or this long (seconds). */
 export const STANDINGS_SECONDS = 30;
-/** A Grand Prix room races the other factions' fixtures this many ticks at a time, between the server's other work. */
+/**
+ * A Grand Prix room races the other factions' fixtures between the server's
+ * other work: at most this many ticks, and this many milliseconds, each time
+ * the room updates (60 times a second). The time limit keeps a slow server
+ * answering while it does (the whole cup's other fixtures are several
+ * seconds of work, done just as the squad is coming in).
+ */
 export const GP_BACKGROUND_TICKS = 40;
+export const GP_BACKGROUND_MS = 3;
+/** A client that has joined a room asks for it again after this long without hearing it (seconds), and gives up after JOIN_TIMEOUT_SECONDS. */
+export const VIEW_RETRY_SECONDS = 2;
+/** How long joining a room may take before the client gives up and says so (seconds). */
+export const JOIN_TIMEOUT_SECONDS = 20;
 /** Seats held for a squad's members while they follow their leader in (seconds). */
 export const SQUAD_HOLD_SECONDS = 20;
 /** At most this many people in a room. */
@@ -255,6 +266,8 @@ export interface ClientMessages {
   continue: { at?: RoomPhase };
   endMatch: Record<string, never>;
   resync: Record<string, never>;
+  /** Send me the room as it is now: a client that has joined but not heard it yet asks again. */
+  view: Record<string, never>;
   ping: { t: number; rtt: number };
   loadout: Loadout;
 }
@@ -354,8 +367,10 @@ export interface SquadClientMessages {
   /** Your faction (it counts for the leader) and the frame you picked. */
   loadout: Loadout;
   kick: { pid: string };
-  /** The leader is going into a room: everyone follows. */
+  /** The leader is going into a room: everyone follows (and anyone who joins the squad while they are in it). */
   go: { code: string };
+  /** The leader is out of their room again. */
+  home: Record<string, never>;
   ping: { t: number; rtt: number };
 }
 

@@ -15,7 +15,7 @@ import {
   PHASE,
   ROLE,
   TRACKS,
-  buildTrack,
+  sharedTrack,
   createMatch,
   createRace,
   emptyInput,
@@ -71,6 +71,7 @@ import {
 import {
   CHECKSUM_TICKS,
   FINAL_SECONDS,
+  GP_BACKGROUND_MS,
   GP_BACKGROUND_TICKS,
   KEYFRAME_TICKS,
   MATCH_FORMATS,
@@ -368,6 +369,10 @@ export class RoomCore {
         if (this.lobby.host !== pid) return report({ ok: false, text: 'Only the host ends the match' });
         if (!inLobby) this.backToLobby('ended');
         return;
+      case 'view':
+        // Joined but still waiting for the room: send it again (to everyone, on the next update).
+        this.dirty = true;
+        return;
       case 'resync': {
         const at = this.resyncAt.get(pid) ?? -1e9;
         if (this.race && this.now() - at > 1000) {
@@ -520,7 +525,7 @@ export class RoomCore {
     for (const m of this.lobby.members) m.nextRound = false;
     const round = this.match.rounds.length;
     const def = trackById(this.lobby.settings.track) ?? TRACKS[0];
-    this.track = buildTrack(def);
+    this.track = sharedTrack(def);
     const seats = this.buildSeats();
     const seed = Math.floor(this.io.random() * 1e9);
     this.race = createRace(this.track, { seed, seats, gridFlip: round % 2 === 1, laps: this.opts.laps });
@@ -710,6 +715,10 @@ export class RoomCore {
    */
   private raceBackground(): void {
     const gp = this.gp!;
+    // Wall-clock time, whatever clock the room is given: this is about the
+    // server's own load. Ten ticks at a time, up to the tick and time budgets.
+    const clock = (globalThis as { performance?: { now(): number } }).performance ?? Date;
+    const until = clock.now() + GP_BACKGROUND_MS;
     let budget = GP_BACKGROUND_TICKS;
     while (budget > 0) {
       if (!gp.sim) {
@@ -717,14 +726,19 @@ export class RoomCore {
         if (!next) return;
         const names: [string[], string[]] = [[...PILOT_NAMES[next.a]], [...PILOT_NAMES[next.b]]];
         gp.sim = new FixtureSim(next, matchFormat(gp.event), GP_SKILL[gp.event.difficulty] ?? GP_SKILL[1], names, this.opts.laps);
+        // Setting a race up is the dearest step of all: nothing more this update.
+        return;
       }
-      const result = gp.sim.step(budget);
-      budget = 0;
+      const n = Math.min(10, budget);
+      const result = gp.sim.step(n);
+      budget -= n;
       if (result) {
         gp.sim.fx.result = result;
         gp.sim = null;
         this.dirty = true;
+        return;
       }
+      if (clock.now() >= until) return;
     }
   }
 

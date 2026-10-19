@@ -329,6 +329,22 @@ export function buildTrack(def: TrackDef | CircuitDef): Track {
   return 'pieces' in def ? buildCircuitTrack(def) : buildPlanTrack(def);
 }
 
+const built = new WeakMap<TrackDef | CircuitDef, Track>();
+
+/**
+ * The circuit built once and kept: building one takes 60 to 120 ms, which a
+ * server running rooms on one thread should spend once, not every race.
+ * Safe to share because nothing a race does writes to its track.
+ */
+export function sharedTrack(def: TrackDef | CircuitDef): Track {
+  let t = built.get(def);
+  if (!t) {
+    t = buildTrack(def);
+    built.set(def, t);
+  }
+  return t;
+}
+
 // Filled in by circuit.ts, which imports this module (kept as a hook so the
 // two files do not import each other at load time).
 let buildCircuitTrack: (def: CircuitDef) => Track = () => {

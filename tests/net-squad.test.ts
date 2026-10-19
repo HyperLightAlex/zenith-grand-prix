@@ -55,4 +55,46 @@ describe('squads', () => {
     tick(61_000);
     expect(core.empty).toBe(true);
   });
+
+  it('takes someone who joins while the leader is in a room in after them, once they have the squad', () => {
+    const { core, inbox, tick } = squad();
+    core.join('a', 'A', { faction: 0, role: ROLE.FW });
+    core.join('b', 'B', { faction: 0, role: ROLE.MF });
+    core.message('a', 'go', { code: 'K7Q2X' });
+    tick(16);
+    inbox.length = 0;
+    // The third arrives: the squad's view first, then where to follow.
+    core.join('c', 'C', { faction: 0, role: ROLE.DF });
+    expect(inbox.some(([p, t]) => p === 'c' && t === 'follow')).toBe(false);
+    tick(16);
+    const toC = inbox.filter(([p]) => p === 'c').map(([, t, m]) => [t, m]);
+    expect(toC.map(([t]) => t)).toEqual(['welcome', 'squad', 'follow']);
+    expect(toC[2][1]).toEqual({ code: 'K7Q2X', size: 3 });
+    // Nobody else is sent again, and a reconnect is not sent (it has its own way back).
+    expect(inbox.filter(([p, t]) => p !== 'c' && t === 'follow')).toHaveLength(0);
+    inbox.length = 0;
+    core.drop('c');
+    core.join('c', 'C', { faction: 0, role: ROLE.DF });
+    tick(16);
+    expect(inbox.some(([, t]) => t === 'follow')).toBe(false);
+  });
+
+  it('stops taking newcomers in once the leader is out of the room, or someone else leads', () => {
+    const { core, inbox, tick } = squad();
+    core.join('a', 'A', { faction: 0, role: ROLE.FW });
+    core.message('a', 'go', { code: 'K7Q2X' });
+    // A member saying they are home does not count: only the leader.
+    core.join('b', 'B', { faction: 0, role: ROLE.MF });
+    core.message('b', 'home', {});
+    tick(16);
+    expect(inbox.filter(([p, t]) => p === 'b' && t === 'follow')).toHaveLength(1);
+    core.message('a', 'home', {});
+    core.join('c', 'C', { faction: 0, role: ROLE.DF });
+    tick(16);
+    expect(inbox.some(([p, t]) => p === 'c' && t === 'follow')).toBe(false);
+    // A new leader starts with no room.
+    core.message('a', 'go', { code: 'ABCDE' });
+    core.leave('a');
+    expect(core.room).toBeNull();
+  });
 });

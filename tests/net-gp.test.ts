@@ -157,3 +157,15 @@ describe("a squad's Grand Prix online", () => {
     expect(ev.rounds[bye].others.every((f) => f.result)).toBe(true);
   }, 300_000);
 });
+
+describe('a room asked for its view again', () => {
+  it('sends it: someone who joined but has not heard it yet', () => {
+    const { net, lead } = squadRoom('cup');
+    const before = lead.received.filter((t) => t === 'lobby').length;
+    net.run(500);
+    expect(lead.received.filter((t) => t === 'lobby').length).toBe(before);
+    lead.send('view', {});
+    net.run(200);
+    expect(lead.received.filter((t) => t === 'lobby').length).toBe(before + 1);
+  });
+});

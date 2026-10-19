@@ -127,4 +127,14 @@ describe('background races', () => {
     expect(a.wins[a.winner]).toBe(1);
     expect(a.points[0] + a.points[1]).toBeGreaterThan(0);
   });
+
+  it('come out the same on a circuit shared with other races (built once, never written to)', () => {
+    const ev = newCup('horizon', 0, 1, 1);
+    const cfg = { mode: 'series' as const, bestOf: 1, target: 50 };
+    const fx = { ...ev.rounds[0].others[0], circuit: 'helios' };
+    const first = simulateFixture(fx, cfg, 0.55);
+    // Another race on the same circuit in between, then the first again.
+    simulateFixture({ ...ev.rounds[0].others[1], circuit: 'helios', seed: fx.seed + 17 }, cfg, 0.55);
+    expect(simulateFixture(fx, cfg, 0.55)).toEqual(first);
+  });
 });
