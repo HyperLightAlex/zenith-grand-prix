@@ -41,6 +41,9 @@ export const MASTER = {
   clipCeiling: 0.95,
 } as const;
 
+/** Seconds a circuit has to stay named (prepareMusic) before its song is decoded. */
+const PREPARE_AFTER = 1;
+
 /** How far ahead of the audio clock music is queued, before allowing for the frame rate. */
 const LOOKAHEAD = 0.2;
 
@@ -109,6 +112,9 @@ export class SynthAudio implements AudioEngine {
   private finished = false;
   /** Recorded songs by circuit, when there are any (see song.ts). */
   private readonly songs = new Map<string, SongSource>();
+  /** The circuit prepareMusic named, to decode its song (after PREPARE_AFTER, and once there is a context). */
+  private nextSong: string | null = null;
+  private prepareTimer: ReturnType<typeof setTimeout> | null = null;
   private lastUpdate = -1;
   /** Recent worst-case time between update() calls, in seconds of audio clock. */
   private frameGap = 0;
@@ -117,9 +123,9 @@ export class SynthAudio implements AudioEngine {
 
   /**
    * `songs`: recorded race music, by circuit (style), as the folder each one's
-   * files are in. Their download starts now; they are decoded once there is
-   * an audio context, and a circuit with one plays it instead of its
-   * synthesised music.
+   * files are in. Their download starts now; each is decoded when a race on
+   * its circuit starts (one at a time: see prepareSong), and a circuit with
+   * one plays it instead of its synthesised music.
    */
   constructor(opts: { songs?: Record<string, string> } = {}) {
     for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
@@ -270,6 +276,24 @@ export class SynthAudio implements AudioEngine {
     });
   }
 
+  prepareMusic(style: string): void {
+    this.guard(() => {
+      // Once it has been settled on for a moment: flicking through the
+      // circuits on a menu should not start decoding each one.
+      if (this.prepareTimer !== null) {
+        if (this.nextSong === style) return;
+        clearTimeout(this.prepareTimer);
+      }
+      this.nextSong = style;
+      this.prepareTimer = setTimeout(() => {
+        this.prepareTimer = null;
+        this.guard(() => {
+          if (this.nextSong) this.prepareSong(this.nextSong);
+        });
+      }, PREPARE_AFTER * 1000);
+    });
+  }
+
   // ---- hooks for tools/audio-check ------------------------------------------
 
   /** The last node before the speakers. Tap an AnalyserNode here to measure. */
@@ -315,8 +339,10 @@ export class SynthAudio implements AudioEngine {
     return this.songs;
   }
 
-  /** Resolves once every recorded song has loaded or failed to. */
+  /** Decodes every recorded song now (after debugAttach), and resolves once each is ready or has failed. */
   async debugSongsLoaded(): Promise<void> {
+    const g = this.g;
+    if (g) for (const s of this.songs.values()) s.decode(g.ctx);
     while ([...this.songs.values()].some((s) => s.state === 'loading')) await new Promise((r) => setTimeout(r, 50));
   }
 
@@ -410,9 +436,9 @@ export class SynthAudio implements AudioEngine {
 
     const layers = new EngineLayers(ctx, white, pink, engineBus);
     layers.setMix(this.layerMix);
-    for (const song of this.songs.values()) song.decode(ctx);
-
     this.g = { ctx, live, rng, white, pink, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
+    // A song is decoded for the circuit named ahead (prepareMusic), or when a race asks for one.
+    if (this.nextSong) this.prepareSong(this.nextSong);
     this.applyMusic();
   }
 
@@ -508,12 +534,34 @@ export class SynthAudio implements AudioEngine {
     t.schedule(now, this.lapPhase, ahead);
   }
 
+  /**
+   * A race on a circuit with a recorded song, coming or starting: decode it,
+   * and let go of any other circuit's, so only one song is held decoded
+   * (each takes over 200 MB). The game names the circuit as soon as it builds
+   * it (prepareMusic), which is often well before the race; when it is not,
+   * the song starts once decoded, a second or two into the countdown.
+   */
+  private prepareSong(style: string): void {
+    const g = this.g;
+    const song = this.songs.get(style);
+    if (!g || !song) return;
+    // Never the song of the race on now, for one coming after it.
+    if (this.want === 'race' && this.raceStyle() !== style && this.songs.has(this.raceStyle())) return;
+    for (const [s, other] of this.songs) if (s !== style) other.release();
+    song.decode(g.ctx);
+  }
+
+  private raceStyle(): string {
+    return RACE_STYLES.includes(this.wantStyle) ? this.wantStyle : 'meridian';
+  }
+
   /** `fresh`: asked for by a race starting, so a recorded song starts again from its top. */
   private applyMusic(fresh = false): void {
     const g = this.g;
     if (!g) return;
     // Racing on a different circuit is a change of music too.
-    const style = this.want === 'race' ? (RACE_STYLES.includes(this.wantStyle) ? this.wantStyle : 'meridian') : 'menu';
+    const style = this.want === 'race' ? this.raceStyle() : 'menu';
+    if (this.want === 'race') this.prepareSong(style);
     const same = (this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style);
     if (same && !(fresh && this.track?.restartsWithRace)) return;
     const now = g.ctx.currentTime;

@@ -133,6 +133,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       col.append(h('div.context', `${eventName(ev)} · ${GP_DIFFICULTY[ev.difficulty]} · ${factionName(LIVERIES[ev.faction])}`));
       if (r.you) {
         const rival = r.you.b;
+        g.circuitAhead(r.circuit);
         col.append(
           h('h1', `Round ${yourRoundNumber(ev)} of ${total}`),
           h('div.versus', emblem(ev.faction), h('span', factionName(LIVERIES[ev.faction])), h('b', 'vs'), h('span', factionName(LIVERIES[rival])), emblem(rival)),

@@ -1,9 +1,10 @@
-// A race on Meridian with its recorded song (?music=suno), in headless
-// Chromium: checks that the song loads, comes in lap by lap on bar lines,
-// loops, and goes to its ending at the finish, and measures each layer's
-// level on each lap from the page's own audio graph.
+// A race with a circuit's recorded song (?music=suno), in headless Chromium:
+// checks that the song loads, comes in lap by lap on bar lines, loops, and
+// goes to its ending at the finish, and measures each layer's level on each
+// lap from the page's own audio graph.
 //
 //   URL=http://127.0.0.1:8090/ node tools/song-check.mjs [skip seconds, default 70]
+//   TRACK=canyon ...   another circuit with a song (default meridian)
 //
 // Needs the game served (npm run build, then npm start; or the dev server).
 // The computer flies the player's mech; skip starts the race that far in, so
@@ -18,6 +19,7 @@ try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require(
 
 const base = process.env.URL ?? 'http://127.0.0.1:8090/';
 const skip = Number(process.argv[2] ?? 70);
+const track = process.env.TRACK ?? 'meridian';
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
 const problems = [];
@@ -25,7 +27,7 @@ page.on('console', (m) => { if (m.type() === 'error' || /\[audio\]/.test(m.text(
 page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}`));
 const check = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (!ok) problems.push('check failed: ' + what); };
 
-await page.goto(`${base}?auto=FW&demo=1&seed=7&track=meridian&music=suno&skip=${skip}`, { waitUntil: 'load' });
+await page.goto(`${base}?auto=FW&demo=1&seed=7&track=${track}&music=suno&skip=${skip}`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.game !== undefined, null, { timeout: 180000 });
 // Software rendering is slow: draw nothing, so the race runs at its own pace.
 await page.evaluate(() => { const r = window.game.renderer; r.render = () => {}; });
@@ -73,7 +75,7 @@ const lapAt = {};
 let finishAt = null;
 let menuAt = null;
 let resultsAt = null;
-const manifest = await page.evaluate(() => fetch('music/meridian/song.json').then((r) => r.json()));
+const manifest = await page.evaluate((t) => fetch(`music/${t}/song.json`).then((r) => r.json()), track);
 let lastPhase = null;
 for (let i = 0; i < 3000; i++) {
   const s = await page.evaluate(() => {
@@ -108,7 +110,7 @@ for (const e of log) console.log(`  ${e.at.toFixed(3).padStart(8)}  ${e.what}${e
 console.log('the race: ' + Object.entries(lapAt).map(([p, t]) => `lap phase ${p} at ${t.toFixed(2)}`).join(', ') + (finishAt ? `, over for the player at ${finishAt.toFixed(2)}` : ', not over'));
 
 // Each lap change heard at the bar line after it (and only just after).
-const barMax = 1.75;
+const barMax = Math.max(...manifest.bars.slice(1).map((b, i) => b - manifest.bars[i]));
 for (const [p, t] of Object.entries(lapAt)) {
   const e = log.find((x) => x.what === `lap ${p}`);
   check(!!e && e.at >= t && e.at <= t + 0.3 + barMax + 0.25, `lap ${p} comes in on a bar line within a bar of the lap change (${e ? (e.at - t).toFixed(2) + ' s after' : 'never'})`);

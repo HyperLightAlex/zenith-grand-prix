@@ -2,20 +2,22 @@
 // into a few layers (tools/music), played so that it builds lap by lap the
 // way the synthesised race music does.
 //
-//   lap 1   the melody (keys, synth, strings, guitar) and the bass, a little quieter
+//   lap 1   the melody and the bass, a little quieter
 //   lap 2   the drums come in: the beat, for the fighting
-//   lap 3   the brass, percussion, effects and woodwinds: the full song, at full
-//           volume, with the kick and bass lifted (a low shelf)
+//   lap 3   the rest (Meridian: brass, percussion, effects; Canyon: percussion
+//           and effects): the full song, at full volume, with the kick and
+//           bass lifted (a low shelf)
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
 // Each lap is a little louder than the last (the build sets each lap's
 // level: -18.5, -17.5 and -15.5 LUFS), but a lap is told from the last by
 // what comes in, and the last by its weight too. The layers follow how cleanly
-// Suno's stems come apart (they are separated out of the finished mix): the
-// keys, synth, strings and guitar were carved out of one another, and heard
-// apart each has holes where the others were, which sounds hollow, like
-// music down a telephone. So they come in together. See tools/music.
+// Suno's stems come apart (they are separated out of the finished mix): some
+// were carved out of one another (Meridian's keys, synth, strings and guitar;
+// Canyon's guitar, strings, brass, woodwinds and voices), and heard apart each
+// has holes where the others were, which sounds hollow, like music down a
+// telephone. So they come in together. See tools/music.
 //
 // Every change waits for the next bar line. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
@@ -30,6 +32,7 @@ import type { MusicTrack, TrackInfo } from './music';
 /** The songs there are, by circuit: where each one's files are. */
 export const SONGS: Record<string, string> = {
   meridian: 'music/meridian/',
+  canyon: 'music/canyon/',
 };
 
 /** What tools/music/build.py writes as song.json. Times are positions in the layer files, in seconds. */
@@ -210,10 +213,13 @@ const decodeOne = (ctx: BaseAudioContext, data: ArrayBuffer): Promise<AudioBuffe
   });
 
 /**
- * A song's files: downloaded as soon as this is made, decoded once there is
- * an audio context, kept for the rest of the visit.
+ * A song's files: downloaded as soon as this is made and kept for the visit
+ * (about 20 MB). Decoded when a race on its circuit asks for it, and let go
+ * of when a race on another circuit with a song does: decoded, a song takes
+ * over 200 MB, so only one is held at a time.
  */
 export class SongSource {
+  /** 'loading' until it is decoded (or while it is not, once let go of). */
   state: 'loading' | 'ready' | 'failed' = 'loading';
   manifest: SongManifest | null = null;
   buffers: AudioBuffer[] = [];
@@ -221,6 +227,8 @@ export class SongSource {
   shift = 0;
   private readonly files: Promise<{ manifest: SongManifest; data: ArrayBuffer[] }>;
   private decoding = false;
+  /** Counts the times the decoded song was let go of, so a decode under way then is dropped. */
+  private released = 0;
 
   constructor(readonly base: string) {
     this.files = (async () => {
@@ -239,10 +247,12 @@ export class SongSource {
     this.files.catch((err) => this.fail(err));
   }
 
-  /** Decode into buffers for `ctx`. Called once the engine has a context; later calls do nothing. */
+  /** Decode into buffers for `ctx`, unless that is done or under way. */
   decode(ctx: BaseAudioContext): void {
-    if (this.decoding || this.state === 'failed') return;
+    if (this.decoding || this.state !== 'loading') return;
     this.decoding = true;
+    const round = this.released;
+    const current = () => round === this.released;
     void (async () => {
       const { manifest, data } = await this.files;
       // Decoded, the layers take 8 bytes a sample frame each: over 200 MB at
@@ -259,18 +269,41 @@ export class SongSource {
           into = ctx;
         }
       }
-      // One at a time, and each download let go of as it is decoded.
+      // Two at a time (where there are cores to spare, that is near half the
+      // wait, and only two layers are mid-decode at once), each from a copy:
+      // the browser takes over the data it decodes, and the download is kept
+      // to decode again after a release.
       const buffers: AudioBuffer[] = [];
-      for (let i = 0; i < data.length; i++) {
-        buffers.push(await decodeOne(into, data[i]));
-        data[i] = new ArrayBuffer(0);
+      for (let i = 0; i < data.length; i += 2) {
+        if (!current()) return;
+        buffers.push(...(await Promise.all(data.slice(i, i + 2).map((d) => decodeOne(into, d.slice(0))))));
       }
+      if (!current()) return;
       const s = manifest.layers.findIndex((l) => l.id === manifest.sync.layer);
       this.shift = s >= 0 ? syncShift(buffers[s], manifest.sync.env) : 0;
       this.manifest = manifest;
       this.buffers = buffers;
       this.state = 'ready';
-    })().catch((err) => this.fail(err));
+    })()
+      .catch((err) => {
+        if (current()) this.fail(err);
+      })
+      .finally(() => {
+        if (current()) this.decoding = false;
+      });
+  }
+
+  /**
+   * Let go of the decoded layers (or a decode under way), keeping the
+   * download to decode from again. What is still playing from them plays
+   * on: the browser keeps a buffer while a source plays it.
+   */
+  release(): void {
+    if (this.state === 'failed') return;
+    this.released++;
+    this.decoding = false;
+    this.buffers = [];
+    this.state = 'loading';
   }
 
   private fail(err: unknown): void {
@@ -579,6 +612,12 @@ export class SongTrack implements MusicTrack {
 
   /** Start one stretch's sources: with a cross-fade from what plays before it, or straight in. */
   private play(seg: Segment, xfade: boolean): void {
+    if (this.source.buffers.length !== this.layers.length) {
+      // Let go of under it (the engine keeps the song of the race on, so
+      // this should not happen): the engine starts it again.
+      this.broken = true;
+      return;
+    }
     const ctx = this.ctx;
     const shift = this.source.shift;
     const x = xfade ? XFADE : 0;

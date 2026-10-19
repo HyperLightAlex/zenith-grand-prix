@@ -234,6 +234,7 @@ export function registerOnline(m: Menus, g: Game): void {
       const settings = h('div.list.settings');
       const lockSet = host ? null : 'Only the host changes the settings';
       const ti = Math.max(0, TRACKS.findIndex((t) => t.id === v.settings.track));
+      g.circuitAhead(TRACKS[ti].id);
       m.choice(settings, 'Circuit', TRACKS[ti].name, (dir) => o.sendRoom('settings', { track: TRACKS[(ti + dir + TRACKS.length) % TRACKS.length].id }), { key: 'track', locked: lockSet ?? (inMatch ? 'Not during a match' : null) });
       m.choice(settings, 'Format', MATCH_FORMATS[v.settings.match]?.label ?? '', (dir) => o.sendRoom('settings', { match: (v.settings.match + dir + MATCH_FORMATS.length) % MATCH_FORMATS.length }), { key: 'match', locked: lockSet ?? (inMatch ? 'Not during a match' : null) });
       m.choice(settings, 'Computer pilots', SKILL_NAMES[v.settings.skill], (dir) => o.sendRoom('settings', { skill: (v.settings.skill + dir + 3) % 3 }), { key: 'skill', locked: lockSet ?? (inMatch ? 'Not during a match' : null) });

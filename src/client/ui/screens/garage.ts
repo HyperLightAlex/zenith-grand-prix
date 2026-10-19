@@ -187,6 +187,7 @@ export function registerGarage(m: Menus, g: Game): void {
       const col = h('div.col');
       const list = h('div.list');
       const circuit = TRACKS.find((t) => t.id === c.track) ?? TRACKS[0];
+      g.circuitAhead(circuit.id);
       const opt = MATCH_OPTIONS[c.match] ?? MATCH_OPTIONS[0];
       const save = () => {
         g.saveFree();

@@ -17,7 +17,7 @@ import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio'
 import { mtof } from '../src/client/audio/dsp';
 import { SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
-import { XFADE, type SongInfo } from '../src/client/audio/song';
+import { SONGS, XFADE, type SongInfo } from '../src/client/audio/song';
 
 type Cell = string | number;
 type Row = Record<string, Cell>;
@@ -1247,27 +1247,32 @@ async function offlineMusic(): Promise<void> {
  * sample: around each one, the render is compared with the layers summed by
  * hand at the levels for each lap, and has to match on both sides.
  */
-async function offlineSong(): Promise<void> {
-  log('--- offline: recorded song ---');
+async function offlineSongs(): Promise<void> {
+  for (const style of Object.keys(SONGS)) await offlineSong(style);
+}
+
+async function offlineSong(style: string): Promise<void> {
+  log(`--- offline: recorded song (${style}) ---`);
   const T_RACE = 0.5;
   const T_P2 = 30.37;
   const T_P3 = 95.21;
+  // (Late enough that the loop has come round: Meridian's at 139 s, Canyon's at 147.)
   const T_FIN = 160.83;
   // Long enough for the ending to play out and the menu music to take over.
   const T_END = T_FIN + 16;
   const sceneAt = (t: number): AudioScene => ({ ...OFF, lapPhase: t >= T_P3 ? 3 : t >= T_P2 ? 2 : 1, finished: t >= T_FIN });
   let info: SongInfo | null = null;
   let menuAt = NaN;
-  const { buf, audio, warnings } = await render(T_END, [{ t: T_RACE, run: (a) => a.setMusic('race', 'meridian') }], sceneAt, (t, a) => {
+  const { buf, audio, warnings } = await render(T_END, [{ t: T_RACE, run: (a) => a.setMusic('race', style) }], sceneAt, (t, a) => {
     const music = a.debugInfo().music;
     info = music?.song ?? info;
     if (music?.name === 'menu' && Number.isNaN(menuAt)) menuAt = t;
-  }, undefined, true, { meridian: '/music/meridian/' });
-  if (warnings) fail(`the engine swallowed ${warnings} Web Audio error(s) while playing the song`);
-  const src = audio.debugSongs().get('meridian');
+  }, undefined, true, { [style]: '/' + SONGS[style] });
+  if (warnings) fail(`${style}: the engine swallowed ${warnings} Web Audio error(s) while playing the song`);
+  const src = audio.debugSongs().get(style);
   const song = info as SongInfo | null;
   if (!src || src.state !== 'ready' || !src.manifest || !song) {
-    fail(`the song did not load (${src?.state ?? 'no song'})`);
+    fail(`${style}: the song did not load (${src?.state ?? 'no song'})`);
     return;
   }
   const m = src.manifest;
@@ -1277,21 +1282,24 @@ async function offlineSong(): Promise<void> {
   const lap3 = when(/^lap 3/);
   const seam = when(/^loop/);
   const ending = when(/^ending/);
-  for (const e of song.log) table('recorded song: what it did (offline)').push({ at: r3(e.at), what: e.what, bar: e.bar });
-  // Each change on a bar line: the song position at that moment is a bar line.
+  for (const e of song.log) table(`recorded song (${style}): what it did (offline)`).push({ at: r3(e.at), what: e.what, bar: e.bar });
+  // Each change on a bar line: the song position at that moment is a bar line
+  // (at most a bar after the lap change asked for it, and the lead before it).
+  const barMax = Math.max(...m.bars.slice(1).map((b, i) => b - m.bars[i]));
   const posAt = (t: number) => (t < seam ? t - start : t < ending ? m.loop[0] + (t - seam) : m.ending + (t - ending));
   for (const [name, t, asked] of [['lap 2', lap2, T_P2], ['lap 3', lap3, T_P3], ['ending', ending, T_FIN]] as const) {
     if (!Number.isFinite(t)) {
-      fail(`the song never did its ${name}`);
+      fail(`${style}: the song never did its ${name}`);
       continue;
     }
     // (Where the song had got to: for the ending, in the loop it cuts short.)
     const p = posAt(t - 1e-6);
     const onBar = m.bars.some((b) => Math.abs(b - p) < 0.0005);
-    if (!onBar) fail(`the song's ${name} is not on a bar line (song position ${p.toFixed(4)} s)`);
-    if (t < asked || t > asked + 0.3 + 1.8) fail(`the song's ${name} came ${(t - asked).toFixed(2)} s after it was asked for`);
+    if (!onBar) fail(`${style}: the song's ${name} is not on a bar line (song position ${p.toFixed(4)} s)`);
+    if (t < asked || t > asked + 0.3 + barMax + STEP) fail(`${style}: the song's ${name} came ${(t - asked).toFixed(2)} s after it was asked for`);
   }
-  if (Math.abs(seam - (start + m.loop[1])) > 0.001) fail(`the loop came at ${seam}, not at the loop's end (${start + m.loop[1]})`);
+  if (start + m.loop[1] > T_FIN - 1) fail(`${style}: the loop ends after this check's finish; move T_FIN later`);
+  if (Math.abs(seam - (start + m.loop[1])) > 0.001) fail(`${style}: the loop came at ${seam}, not at the loop's end (${start + m.loop[1]})`);
 
   // The render against the layers summed by hand, either side of each change.
   const scale = VOL.music * MUSIC_TRIM * 10 ** (m.level / 20);
@@ -1301,7 +1309,7 @@ async function offlineSong(): Promise<void> {
   };
   const chans = src.buffers.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
   const rate = src.buffers[0].sampleRate;
-  if (rate !== SR) fail(`the song was decoded at ${rate} Hz, not the render's ${SR}`);
+  if (rate !== SR) fail(`${style}: the song was decoded at ${rate} Hz, not the render's ${SR}`);
   const out = [buf.getChannelData(2), buf.getChannelData(3)];
   /**
    * A layer through the game's low shelf (Web Audio's lowshelf: the RBJ
@@ -1384,7 +1392,7 @@ async function offlineSong(): Promise<void> {
     // (The low shelf's input is known up to the join on each side: before it, the old stretch; after it, the new.)
     const a = Number.isFinite(before) ? side(t - 0.4, t - XFADE - 0.002, before - 0.4, lapB, before - 0.5) : { lag: 0, residual: -Infinity };
     const b = side(t + 0.03, t + 0.4, after + 0.03, lapA, after);
-    table('recorded song: each change against the layers summed by hand (offline)').push({
+    table(`recorded song (${style}): each change against the layers summed by hand (offline)`).push({
       change: name,
       'at (s)': r3(t),
       'before: lag (samples)': Number.isFinite(before) ? a.lag : '-',
@@ -1393,8 +1401,8 @@ async function offlineSong(): Promise<void> {
       'after: residual (dB)': Math.round(b.residual * 10) / 10,
     });
     // (A sample either way is the rounding of the window's start, not the song's.)
-    if (Math.abs(a.lag) > 1 || Math.abs(b.lag) > 1) fail(`${name}: the render is ${a.lag} / ${b.lag} samples off the files either side`);
-    if (a.residual > -60 || b.residual > -60) fail(`${name}: the render does not match the layers summed by hand (${a.residual.toFixed(1)} / ${b.residual.toFixed(1)} dB)`);
+    if (Math.abs(a.lag) > 1 || Math.abs(b.lag) > 1) fail(`${style}: ${name}: the render is ${a.lag} / ${b.lag} samples off the files either side`);
+    if (a.residual > -60 || b.residual > -60) fail(`${style}: ${name}: the render does not match the layers summed by hand (${a.residual.toFixed(1)} / ${b.residual.toFixed(1)} dB)`);
   }
   // No clicks at the joins: the biggest step between samples there, against the biggest elsewhere nearby.
   const step = (t0: number, t1: number) => {
@@ -1406,19 +1414,19 @@ async function offlineSong(): Promise<void> {
     if (!Number.isFinite(t)) continue;
     const at = step(t - XFADE - 0.002, t + 0.002);
     const around = step(t - 1, t + 1);
-    table('recorded song: the joins (offline)').push({ join: name, 'largest step at the join': r3(at), 'largest within a second of it': r3(around) });
-    if (at > around * 1.01 && at > 0.02) fail(`${name}: a click at the join (step ${at.toFixed(3)}, ${around.toFixed(3)} around it)`);
+    table(`recorded song (${style}): the joins (offline)`).push({ join: name, 'largest step at the join': r3(at), 'largest within a second of it': r3(around) });
+    if (at > around * 1.01 && at > 0.02) fail(`${style}: ${name}: a click at the join (step ${at.toFixed(3)}, ${around.toFixed(3)} around it)`);
   }
   for (const [name, a, b] of [['lap 1', start + 2, lap2], ['lap 2', lap2 + 0.5, lap3], ['lap 3', lap3 + 0.5, seam], ['ending', ending + 0.1, ending + (m.end - m.ending) - 0.5]] as const) {
     const st = analyse(buf, a, b);
     const lim = limiting(buf, a, b, VOL.master);
-    table('recorded song: level (offline, default volumes)').push({ stretch: name, 'rms dBFS': db(st.rms), peak: r3(st.peak), 'pre-limiter peak': r3(st.prePeak), 'limiter: median / 95% (dB)': `${lim.median.toFixed(1)} / ${lim.p95.toFixed(1)}`, 'limiter over 2 dB': `${Math.round(lim.over2 * 100)}%` });
-    if (st.peak >= CLIP) fail(`the song clips (${name})`);
+    table(`recorded song (${style}): level (offline, default volumes)`).push({ stretch: name, 'rms dBFS': db(st.rms), peak: r3(st.peak), 'pre-limiter peak': r3(st.prePeak), 'limiter: median / 95% (dB)': `${lim.median.toFixed(1)} / ${lim.p95.toFixed(1)}`, 'limiter over 2 dB': `${Math.round(lim.over2 * 100)}%` });
+    if (st.peak >= CLIP) fail(`${style}: the song clips (${name})`);
   }
 
   // Once the ending has played out, the menu music, with no long silence first.
   const endOfSong = ending + (m.end - m.ending);
-  if (!(menuAt >= endOfSong && menuAt <= endOfSong + 1)) fail(`the menu music did not follow the song's ending (it ends at ${r3(endOfSong)}, menu at ${r3(menuAt)})`);
+  if (!(menuAt >= endOfSong && menuAt <= endOfSong + 1)) fail(`${style}: the menu music did not follow the song's ending (it ends at ${r3(endOfSong)}, menu at ${r3(menuAt)})`);
   let quiet = 0;
   let longest = 0;
   for (let t = endOfSong; t < endOfSong + 4; t += 0.05) {
@@ -1426,10 +1434,10 @@ async function offlineSong(): Promise<void> {
     longest = Math.max(longest, quiet);
   }
   const menu = analyse(buf, menuAt + 1, menuAt + 4);
-  table('recorded song: after the ending (offline)').push({ 'song ends (s)': r3(endOfSong), 'menu music from (s)': r3(menuAt), 'longest silence (s)': r3(longest), 'menu music, rms dBFS': db(menu.rms) });
-  if (longest > 1.2) fail(`${longest.toFixed(2)} s of silence after the song's ending`);
-  if (menu.rms < 0.004) fail('the menu music after the song is inaudible');
-  await dump('song', buf, 0, T_END);
+  table(`recorded song (${style}): after the ending (offline)`).push({ 'song ends (s)': r3(endOfSong), 'menu music from (s)': r3(menuAt), 'longest silence (s)': r3(longest), 'menu music, rms dBFS': db(menu.rms) });
+  if (longest > 1.2) fail(`${style}: ${longest.toFixed(2)} s of silence after the song's ending`);
+  if (menu.rms < 0.004) fail(`${style}: the menu music after the song is inaudible`);
+  await dump(`song-${style}`, buf, 0, T_END);
 }
 
 async function offlineStyles(): Promise<void> {
@@ -1666,7 +1674,7 @@ async function main(): Promise<void> {
     ['layers', offlineLayers],
     ['speeds', offlineSpeeds],
     ['music', offlineMusic],
-    ['song', offlineSong],
+    ['song', offlineSongs],
     ['styles', offlineStyles],
     ['stack', offlineStack],
     ['race', offlineRace],

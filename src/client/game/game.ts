@@ -482,6 +482,17 @@ export class Game {
     celify(this.trackVis.group);
     celify(this.world.group);
     scene.add(this.trackVis.group, this.world.group);
+    this.circuitAhead(def.id);
+  }
+
+  /**
+   * The next race is likely on this circuit (it is built, or shown on the
+   * screen before a race): its race music can get ready. A recorded song
+   * takes a moment to decode, so this is said as early as it is known.
+   */
+  circuitAhead(id: string): void {
+    const def = trackById(id);
+    if (def) this.audio.prepareMusic?.(def.theme ?? 'meridian');
   }
 
   showTitle(): void {

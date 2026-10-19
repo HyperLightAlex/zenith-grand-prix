@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
-import { bestLag, SONGS, SongPlan, syncShift, type SongManifest } from '../src/client/audio/song';
+import { describe, expect, it, vi } from 'vitest';
+import { bestLag, SONGS, SongPlan, SongSource, syncShift, type SongManifest } from '../src/client/audio/song';
 
 // A song with a bar every 2 s from 1 s: bar 3 (7 s) to bar 10 (21 s) loops,
 // and the ending sits in the files just after the loop's end.
@@ -99,6 +99,81 @@ describe("the decoder check", () => {
   it('lines up two envelopes', () => {
     const env = [0, 0, 0, ...ref];
     expect(bestLag(ref, env)).toBe(3);
+  });
+});
+
+describe('holding one song at a time', () => {
+  // A song of four layers, served by a stand-in fetch, decoded by a stand-in
+  // context that checks it is given data it can have (the browser takes over
+  // what it decodes, so the source has to hand over a copy).
+  const manifest = { layers: ['a', 'b', 'c', 'd'].map((id) => ({ id, file: `${id}.mp3` })), sync: { layer: 'a', env: Buffer.from([0, 0, 0]).toString('base64') } };
+  const fakeFetch = async (url: string) => ({
+    ok: true,
+    status: 200,
+    json: async () => manifest,
+    // (Each layer's download a size of its own: a 8 bytes, b 16, c 24, d 32.)
+    arrayBuffer: async () => new ArrayBuffer(8 * ('abcd'.indexOf(url.slice(-5, -4)) + 1)),
+  });
+  const buffer = { sampleRate: 48000, length: 48000, numberOfChannels: 1, getChannelData: () => new Float32Array(48000) };
+  const ctx = (decoded: number[], wait?: Promise<void>) =>
+    ({
+      sampleRate: 48000,
+      decodeAudioData: (data: ArrayBuffer, ok: (b: unknown) => void) => {
+        expect(data.byteLength).toBeGreaterThan(0);
+        decoded.push(data.byteLength);
+        // (The browser's way: the callback, and a promise too.)
+        const p = (async () => {
+          if (wait) await wait;
+          return buffer;
+        })();
+        void p.then(ok);
+        return p;
+      },
+    }) as unknown as BaseAudioContext;
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it('decodes when asked, lets go, and decodes again from the download it kept', async () => {
+    vi.stubGlobal('fetch', fakeFetch);
+    try {
+      const src = new SongSource('music/x/');
+      await settle();
+      expect(src.state).toBe('loading');
+      const decoded: number[] = [];
+      src.decode(ctx(decoded));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      expect(src.buffers).toHaveLength(4);
+      src.release();
+      expect(src.state).toBe('loading');
+      expect(src.buffers).toHaveLength(0);
+      src.decode(ctx(decoded));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      expect(decoded).toEqual([8, 16, 24, 32, 8, 16, 24, 32]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('drops a decode let go of halfway', async () => {
+    vi.stubGlobal('fetch', fakeFetch);
+    try {
+      const src = new SongSource('music/x/');
+      let go = () => {};
+      const decoded: number[] = [];
+      src.decode(ctx(decoded, new Promise((r) => (go = r))));
+      // Two at a time: the first two under way.
+      await vi.waitFor(() => expect(decoded).toEqual([8, 16]));
+      src.release();
+      go();
+      await settle();
+      await settle();
+      expect(src.state).toBe('loading');
+      expect(decoded).toEqual([8, 16]);
+      // And it can be asked for again.
+      src.decode(ctx(decoded));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

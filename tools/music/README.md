@@ -3,20 +3,28 @@
 A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
 For now this is an experiment, heard only with `?music=suno` in the address.
-Meridian has a song so far: 海空の速さ.
+Two circuits have a song: Meridian (海空の速さ) and Corkscrew Canyon
+(紅砂のレース).
 
 | Lap | What plays |
 |---|---|
-| 1 | the melody (keys, synth, strings, guitar) and the bass, a little quieter |
+| 1 | the melody and the bass, a little quieter |
 | 2 | the drums come in: the beat, for the fighting |
-| 3 | the brass, percussion, effects and woodwinds: the full song, at full volume, with the kick and bass lifted (+5 dB below 140 Hz) |
+| 3 | the rest: the full song, at full volume, with the kick and bass lifted (+5 dB below 140 Hz) |
 | finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
+| Layer | Meridian | Canyon |
+|---|---|---|
+| melody | keys, synth, strings, guitar | keys, synth, guitar, strings, brass, woodwinds, voices |
+| bass | bass | bass |
+| drums | drums | drums |
+| lap 3's | brass, percussion, effects, woodwinds | percussion, effects |
+
 Laps 1 and 2 are -18.5 and -17.5 LUFS at the game's default volumes,
-almost exactly what their layers come to by themselves (the build lifts
+almost exactly what their layers come to by themselves (the build moves
 lap 1 by under 1 dB). Lap 3 is the jump: everything in, the drums' and
 bass's low end up 5 dB (a low shelf at 140 Hz, on the bar line, so the kick
-lands harder), and -15.5 LUFS. Against lap 2 that is 5.6 dB more below
+lands harder), and -15.5 LUFS. On Meridian, against lap 2, that is 5.6 dB more below
 140 Hz and 2.6 LU louder (it was 1.4 dB and 1.8 LU without the shelf:
 not enough of a step).
 
@@ -27,8 +35,8 @@ holes where they were, which sounds hollow and phasey, like music down a
 telephone. All of them together sum back to the song. So a layer must hold
 every stem that is tangled with another, and only clean stems can come in
 on their own. To tell which is which, compare the stems' phase where they
-overlap: carved from one mix, they agree; apart, they do not. Meridian's
-(1 is fully carved, 0 apart):
+overlap: carved from one mix, they agree; apart, they do not
+(`tangle.py`). Meridian's (1 is fully carved, 0 apart):
 
 | | Drums | Bass | Keyboard | Synth | Strings | Guitar | Brass |
 |---|---|---|---|---|---|---|---|
@@ -40,7 +48,25 @@ So the keys, synth, strings and guitar are one layer, and come in
 together; the drums, bass, percussion and effects (0.02 to 0.16 against
 everything) can each come in alone; the brass, in between, comes in last.
 
-How it got here, from playtests: the first version kept the kick, muffled,
+Canyon's, over its loop:
+
+| | Guitar | Strings | Brass | Woodwinds | Lead vocals | Synth | Keyboard |
+|---|---|---|---|---|---|---|---|
+| Guitar | | 0.74 | 0.79 | 0.62 | 0.67 | 0.30 | 0.16 |
+| Strings | 0.74 | | 0.63 | 0.61 | 0.60 | 0.32 | 0.16 |
+| Synth | 0.30 | 0.32 | . | 0.38 | 0.33 | | 0.36 |
+
+Here the brass, woodwinds and voices were carved out of the guitar and
+strings, and they are no small part of it: the brass is up front for six
+bars before the loop (on lap 1), the woodwinds and voices for stretches of
+the loop. So they are all in the melody, and lap 3 brings only the percussion
+and effects (0.01 to 0.12 against everything, like the drums and bass), with
+the low end lifted and 2 LU more, as on Meridian. Its new layer is quieter
+than Meridian's (15 dB under the full song, against 12), so the lift does
+more of the work. The song is centred on E, as Canyon's synthesised music
+is, so the stingers already sit in its key.
+
+How Meridian's recipe got here, from playtests (Canyon's follows it): the first version kept the kick, muffled,
 on lap 1, and its laps were too alike; the second took the kick out of
 lap 1 with a high-pass and let each lap get about 3 LU louder, and its
 start was too quiet; the third evened the laps out, which brought lap 1's
@@ -87,8 +113,8 @@ loaded or decoded, the circuit's synthesised music plays instead.
    where the sections change. It writes `<folder>/bars.json`.
 3. **Write its recipe** in `songs/<circuit>.json` (see `meridian.json`):
    - `layers`: which stems make each layer, up to four. Keep tangled stems
-     in one layer (see above: `bars.py` does not measure it yet; the phase
-     comparison is a few lines of numpy).
+     in one layer: `python3 tools/music/tangle.py <folder>` prints how far
+     each pair agrees (the tables above; '.' is too little overlap to tell).
    - `laps`: each layer's level on laps 1 to 3, in dB, or `null` for
      silent: the balance of the layers within each lap (Meridian: all
      level).
@@ -101,10 +127,15 @@ loaded or decoded, the circuit's synthesised music plays instead.
      now: a filtered layer turned up to the others' level sounds thin.
    - `loop` and `ending`: bar numbers from step 2. Meridian loops bars 49
      to 81 (32 bars, 54 s), the best match in the song, and ends from bar
-     98.
+     98; Canyon loops bars 37 to 80 (43 bars, 78 s: the chords and the
+     sound either side match best there) and ends from bar 107, a
+     C, D, E cadence onto its last chord.
    - `master`: the gain and two shelves that make the summed stems sound
      like `song.wav` (Suno's stems are the mix before mastering: summed,
-     they are louder and duller). Find them by comparing the two.
+     they are louder and duller). Find them by comparing the two (fit
+     the difference between their spectra, a third of an octave at a time:
+     Meridian's is -4.4 dB with +3 dB below 150 Hz and +1.5 above 5 kHz,
+     Canyon's -4.8 dB, +3.3 below 260 Hz and +2.5 above 2.9 kHz).
    - `loudness`: how loud each lap should be, in LUFS at the game's
      default volumes (Meridian: -18.5, -17.5, -15.5). The build sets each
      lap's level to meet it and prints what it got, and the layers' levels
@@ -114,20 +145,22 @@ loaded or decoded, the circuit's synthesised music plays instead.
    Only what can be heard is kept: from the start to the loop's end, then
    the ending (Meridian: 147 s of its 175, 18.1 MB at LAME's best VBR,
    `quality` 0; its default, 4, cuts above 16 kHz and is audibly rougher
-   once four layers are summed).
+   once four layers are summed. Canyon: 155 s of its 204, 19.4 MB).
 5. **Add it** to `SONGS` in `src/client/audio/song.ts`.
 6. **Check it**:
    - `npm test` checks every song's files and map.
    - `node tools/audio-check.mjs --only song` renders a race offline
-     through the engine and checks each change lands on its bar line, the
+     through the engine, for every song, and checks each change lands on its bar line, the
      render matching the layers summed by hand to the sample on both sides,
      with no click at the joins, each lap's level, and the menu music
      coming in after the ending.
    - `URL=http://127.0.0.1:8090/ node tools/song-check.mjs` races in a real
-     browser (after `npm run build` and `npm start`) and checks what each
+     browser (after `npm run build` and `npm start`; `TRACK=canyon` for
+     Canyon's) and checks what each
      layer plays on each lap, and (holding the results back, as when the
      others are still racing) that the menu music follows the ending.
-   - Then listen: `?auto=FW&demo=1&track=meridian&music=suno`, with
+   - Then listen: `?auto=FW&demo=1&track=meridian&music=suno` (or
+     `track=canyon`), with
      `&skip=70` to reach lap 2 sooner (the song still starts from its
      top).
 
@@ -141,7 +174,16 @@ decodes it) and the game measures its own decoder against it and allows
 for the difference (Chromium's matches to the sample).
 
 Decoded, each layer takes 8 bytes a sample frame: Meridian's four take
-about 225 MB at 48 kHz. Only on a device that says it has 2 GB of memory
-or less are they decoded at 32 kHz instead (150 MB): the browser then
-resamples them as they play, which dulls the top end. The files download when the game starts with the switch
-on, whichever circuit is raced, and are kept for the visit.
+about 225 MB at 48 kHz, Canyon's 237 MB. So only one song is held decoded:
+the one for the circuit coming up. The game names it as soon as it knows
+(the circuit it has built, and the circuit shown on the race setup, the
+online room and the Grand Prix briefing, once it has stayed there a
+second), and the engine decodes that song and lets go of any other. A
+race on a circuit nobody named decodes its song as it starts, and the song
+comes in when that is done, a second or two into the countdown (about 1.5 s
+in desktop Chromium, two layers at a time). Only on a device that says it
+has 2 GB of memory or less are the layers decoded at 32 kHz instead (a
+third less): the browser then resamples them as they play, which dulls the
+top end. The files (about 20 MB a song) download when the game starts with
+the switch on, whichever circuit is raced, and are kept for the visit, so a
+song can be decoded again without downloading it again.

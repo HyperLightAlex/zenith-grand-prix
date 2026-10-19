@@ -268,14 +268,17 @@ stingers are moved into the circuit's key.
 
 An experiment, behind `?music=suno`: the race music as a recorded song
 (made in Suno) that builds the same way. Its stems are mixed into four
-layers: lap 1 plays the melody (keys, synth, strings and guitar, which
-have to come in together: see tools/music) and the bass, a little quieter;
-lap 2 brings in the drums; lap 3 the brass, percussion and effects, the
-full song at full volume, with the kick and bass lifted; the finish goes to the song's ending, then the
-menu music (what the results play) so there is no silence while the others
-finish. The build is in what comes in, more than in how loud it gets. Each
-change waits for the next bar line, and the middle of the song loops for as
-long as the race lasts. Meridian has one so far; see
+layers: lap 1 plays the melody (the stems that were carved out of one
+another, which have to come in together: see tools/music) and the bass, a
+little quieter; lap 2 brings in the drums; lap 3 the rest (Meridian's
+brass, percussion and effects; Canyon's percussion and effects), the full
+song at full volume, with the kick and bass lifted; the finish goes to the
+song's ending, then the menu music (what the results play) so there is no
+silence while the others finish. The build is in what comes in, more than
+in how loud it gets. Each change waits for the next bar line, and the
+middle of the song loops for as long as the race lasts. Meridian and Canyon
+have one (Canyon's is centred on E, like its synthesised music, so the
+stingers fit both); only the circuit coming up has its song decoded. See
 [tools/music](../tools/music/README.md).
 
 ### Free steering
@@ -688,7 +691,7 @@ The teams swap sides of the grid from one round to the next.
   how its art is made and checked.
 - **Sound.** Synthesised at run time: engine, wind, 55 effects, and music
   that follows the lap phase, in a different style on each circuit. No audio
-  files (except the recorded song of the `?music=suno` experiment, which
+  files (except the recorded songs of the `?music=suno` experiment, which
   plays through the same engine and falls back to the synthesised music). Every continuous layer (engine, wind, afterburner, strip hum,
   slipstream, scrape, carve, alarm) has its own level on the tuning panel
   (the carve's edge hiss follows the scrape slider, its tier hum the strip

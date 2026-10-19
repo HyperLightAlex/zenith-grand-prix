@@ -84,6 +84,12 @@ export interface AudioEngine {
    * `style` picks the race music: the circuit's theme ('meridian', 'canyon', 'helios').
    */
   setMusic(track: 'menu' | 'race' | null, style?: string): void;
+  /**
+   * The next race is likely on this circuit (its theme): get its race music
+   * ready ahead of time (a recorded song is decoded, which takes a moment).
+   * Optional: only an engine with recorded songs has anything to do.
+   */
+  prepareMusic?(style: string): void;
 }
 
 /** Silent stand-in, used until the page has had a user gesture and in tests. */
