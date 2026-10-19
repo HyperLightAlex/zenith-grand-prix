@@ -2,7 +2,7 @@
   "id": "canyon",
   "title": "紅砂のレース",
   "layers": {"drums": ["Drums"], "bass": ["Bass"], "melody": ["Keyboard", "Synth", "Strings", "Brass", "Woodwinds", "Lead Vocals", "Backing Vocals"], "guitar": ["Guitar"], "percussion": ["Percussion", "Other"]},
-  "laps": {"drums": [null, 0, 0], "bass": [0, 0, 0], "melody": [0, 0, 0], "guitar": [-4, 0, 0], "percussion": [null, null, 0]},
+  "laps": {"drums": [null, 0, 0], "bass": [0, 0, 0], "melody": [0, 0, 0], "guitar": [-2, 0, 0], "percussion": [null, null, 0]},
   "filter": null,
   "lowShelf": {"layers": ["drums", "bass"], "hz": 140, "db": [0, 0, 5]},
   "loop": [37, 80],

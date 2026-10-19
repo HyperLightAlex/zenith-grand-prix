@@ -16,7 +16,7 @@ Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
 | Layer | Meridian | Canyon | Helios |
 |---|---|---|---|
 | melody | keys, synth, strings, guitar | keys, synth, strings, brass, woodwinds, voices | keys, synth |
-| guitar | | guitar: 4 dB down on lap 1 | |
+| guitar | | guitar: 2 dB down on lap 1 | |
 | bass | bass | bass | bass |
 | drums | drums | drums | drums |
 | lap 3's | brass, percussion, effects, woodwinds | percussion, effects | percussion, effects |
@@ -69,9 +69,10 @@ the low end lifted and 2 LU more, as on Meridian. Its new layer is quieter
 than Meridian's (15 dB under the full song, against 12), so the lift does
 more of the work. The guitar is the loudest single stem (-20 LUFS, the
 synth -21, the keys -22), as loud as the drums, so on lap 1, without
-them, it stood out: it is a layer of its own, 3.9 dB under the rest there
-and level with them on laps 2 and 3. Turned down a few dB rather than out,
-a tangled stem leaves no holes.
+them, it stood out: it is a layer of its own, 2 dB under the rest there
+and level with them on laps 2 and 3 (4 dB was too much: the synth
+covered it). Turned down a few dB rather than out, a tangled stem leaves
+no holes.
 
 Helios's stems are fewer (drums, bass, keys, synth, percussion, effects)
 and come apart as Meridian's do: the keys and synth are tangled (0.42),

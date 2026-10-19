@@ -286,7 +286,7 @@ finish goes to the song's ending, then the menu music (what the results
 play) so there is no silence while the others finish. The build is in what
 comes in, more than in how loud it gets. Each change waits for the next bar
 line, and the middle of the song loops for as long as the race lasts.
-Canyon's guitar is a layer of its own, 4 dB down on lap 1, where without
+Canyon's guitar is a layer of its own, 2 dB down on lap 1, where without
 the drums it stood out. Helios's song has a drop, and lap 3 goes to it: on
 the lap change it jumps to the build into the drop, at the same place in
 its 16-bar chord cycle, so only the energy changes, and loops the drop to
