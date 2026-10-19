@@ -700,6 +700,31 @@ function base64(bytes: Uint8Array): string {
 }
 
 /** Hand a stretch of the output to the runner as a 16-bit stereo WAV. */
+/**
+ * How hard the master limiter works over a stretch: its gain reduction,
+ * 10 ms at a time, from the output against the mix before it (channels 2-3),
+ * against what it passes at low levels (`unity`). The median, the 95th
+ * percentile, and the share of the time it takes off more than 2 dB.
+ */
+function limiting(buf: AudioBuffer, t0: number, t1: number, unity: number): { median: number; p95: number; over2: number } {
+  const out = [buf.getChannelData(0), buf.getChannelData(1)];
+  const pre = [buf.getChannelData(2), buf.getChannelData(3)];
+  const step = Math.round(SR * 0.01);
+  const gr: number[] = [];
+  for (let i = Math.floor(t0 * SR); i + step < Math.min(buf.length, t1 * SR); i += step) {
+    let o = 0;
+    let p = 0;
+    for (let c = 0; c < 2; c++) for (let j = i; j < i + step; j++) {
+      o += out[c][j] * out[c][j];
+      p += pre[c][j] * pre[c][j];
+    }
+    if (p > 1e-8) gr.push(Math.max(0, -10 * Math.log10(o / p / (unity * unity))));
+  }
+  gr.sort((a, b) => a - b);
+  const at = (q: number) => gr[Math.min(gr.length - 1, Math.floor(q * gr.length))] ?? 0;
+  return { median: at(0.5), p95: at(0.95), over2: gr.filter((g) => g > 2).length / Math.max(1, gr.length) };
+}
+
 async function dump(name: string, buf: AudioBuffer, t0: number, t1: number): Promise<void> {
   if (!DUMP || !window.__audioDump) return;
   const i0 = Math.max(0, Math.floor(t0 * SR));
@@ -1150,6 +1175,8 @@ async function offlineMusic(): Promise<void> {
       'low/mid/high %': `${Math.round(s.low * 100)}/${Math.round(s.mid * 100)}/${Math.round(s.high * 100)}`,
       'left-right dB': Math.round((db(s.rmsLeft) - db(s.rmsRight)) * 10) / 10,
     });
+    const lim = limiting(buf, t0, t1, VOL.master);
+    table('music: the master limiter (offline)').push({ state: name, 'median / 95% (dB)': `${lim.median.toFixed(1)} / ${lim.p95.toFixed(1)}`, 'over 2 dB': `${Math.round(lim.over2 * 100)}%` });
     if (s.rms < 0.004) fail(`music state "${name}" is inaudible`);
     if (s.peak >= CLIP) fail(`music state "${name}" clips`);
     if (Math.abs(db(s.rmsLeft) - db(s.rmsRight)) > 2) fail(`music state "${name}" leans to one side by ${(db(s.rmsLeft) - db(s.rmsRight)).toFixed(1)} dB`);
@@ -1308,8 +1335,8 @@ async function offlineSong(): Promise<void> {
   };
   const checks: Array<[string, number, number, number, number, number]> = [
     // name, change time, file position just before (NaN: not compared), lap before, file position just after, lap after
-    // (Before lap 2 the drums go through their filter, which this does not model: only after it is compared.)
-    ['the kit drops in (lap 2)', lap2, NaN, 1, lap2 - start, 2],
+    // (A layer heard through a filter is not modelled here: then only after the change is compared.)
+    ['lap 2 comes in', lap2, m.filter ? NaN : lap2 - start, 1, lap2 - start, 2],
     ['lap 3 comes in', lap3, lap3 - start, 2, lap3 - start, 3],
     ['the loop', seam, m.loop[1], 3, m.loop[0], 3],
     ['the ending', ending, posAt(ending - 1e-6), 3, m.ending, 3],
@@ -1345,7 +1372,8 @@ async function offlineSong(): Promise<void> {
   }
   for (const [name, a, b] of [['lap 1', start + 2, lap2], ['lap 2', lap2 + 0.5, lap3], ['lap 3', lap3 + 0.5, seam], ['ending', ending + 0.1, ending + (m.end - m.ending) - 0.5]] as const) {
     const st = analyse(buf, a, b);
-    table('recorded song: level (offline, default volumes)').push({ stretch: name, 'rms dBFS': db(st.rms), peak: r3(st.peak), 'pre-limiter peak': r3(st.prePeak) });
+    const lim = limiting(buf, a, b, VOL.master);
+    table('recorded song: level (offline, default volumes)').push({ stretch: name, 'rms dBFS': db(st.rms), peak: r3(st.peak), 'pre-limiter peak': r3(st.prePeak), 'limiter: median / 95% (dB)': `${lim.median.toFixed(1)} / ${lim.p95.toFixed(1)}`, 'limiter over 2 dB': `${Math.round(lim.over2 * 100)}%` });
     if (st.peak >= CLIP) fail(`the song clips (${name})`);
   }
 

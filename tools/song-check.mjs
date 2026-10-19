@@ -150,13 +150,16 @@ for (const [name, a, b] of spans) {
   table[name] = { ...row, hi, lo };
   console.log(name.padEnd(9) + layers.map((l) => dB(row[l]).padStart(8)).join('') + `   ${(lo * 100).toFixed(1)}% / ${(hi * 100).toFixed(1)}%`);
 }
-if (table['lap 1'] && table['lap 2']) {
-  check(table['lap 1'].battle < 1e-9 && table['lap 1'].lead < 1e-9, 'lap 1: only the drums and the base play');
-  check(table['lap 2'].battle > 1e-6 && table['lap 2'].lead < 1e-9, 'lap 2: the battle layer comes in');
-  // Lap 1 has the drums' hats alone (a high-pass): the kick drops in on lap 2.
-  check(table['lap 1'].lo < 0.01 && table['lap 2'].lo > 0.2, 'lap 2: the kick drops in (none on lap 1)');
+// Each lap plays the layers song.json has on for it, and only those.
+for (const [lap, name] of [[1, 'lap 1'], [2, 'lap 2'], [3, 'lap 3']]) {
+  if (!table[name]) continue;
+  const on = layers.filter((l) => manifest.laps[l]?.[lap - 1] !== null);
+  const off = layers.filter((l) => manifest.laps[l]?.[lap - 1] === null);
+  check(on.every((l) => table[name][l] > 1e-6) && off.every((l) => table[name][l] < 1e-9), `${name}: ${on.join(', ')} play${off.length ? `, not ${off.join(', ')}` : ''}`);
 }
-if (table['lap 3']) check(table['lap 3'].lead > 1e-6, 'lap 3: the lead comes in');
+// A layer heard through a high-pass on some laps has no low end there.
+const f = manifest.filter;
+if (f?.type === 'highpass' && f.layer === 'drums' && table['lap 1'] && table['lap 2']) check(table['lap 1'].lo < 0.01 && table['lap 2'].lo > 0.2, 'lap 2: the kick drops in (none on lap 1)');
 if (table.ending) check(layers.every((l) => table.ending[l] > 1e-7), 'the ending: everything plays');
 
 await browser.close();

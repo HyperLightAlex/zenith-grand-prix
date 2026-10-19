@@ -7,21 +7,42 @@ Meridian has a song so far: 海空の速さ.
 
 | Lap | What plays |
 |---|---|
-| 1 | the base (bass and keys) over the drums' hats alone: a 3 kHz high-pass takes out the kick and the snare's body |
-| 2 | the whole kit drops in on the bar line, with the battle layer: brass, percussion, guitar, effects |
-| 3 | the lead comes in: synth, strings, woodwinds. The full song |
+| 1 | the drums and the bass |
+| 2 | the melody comes in: keys, synth, strings, guitar |
+| 3 | the brass, percussion, effects and woodwinds: the full song |
 | finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
-This copies the synthesised music's arrangement, which has hats but no kick
-or snare on the formation lap, so the battle lap lands as a drop. Every lap
-is equally loud (-16.5 LUFS at the game's default volumes, from the start):
-a lap is told from the last by what comes in, not by getting louder, so
-the layers already playing ease back a little as new ones join (lap 1's
-are 8 dB up on their level in the full song, lap 2's 3.5 dB).
+Every lap is equally loud (-16.5 LUFS at the game's default volumes, from
+the start): a lap is told from the last by what comes in, not by getting
+louder, so the layers already playing ease back as new ones join (lap 1's
+are 8.75 dB up on their level in the full song, lap 2's 1 dB).
+
+**Which stems can be heard apart.** Suno's stems are separated out of the
+finished mix, not recorded apart, and some come apart cleanly while others
+were carved out of one another: heard without its partners, a stem has
+holes where they were, which sounds hollow and phasey, like music down a
+telephone. All of them together sum back to the song. So a layer must hold
+every stem that is tangled with another, and only clean stems can come in
+on their own. To tell which is which, compare the stems' phase where they
+overlap: carved from one mix, they agree; apart, they do not. Meridian's
+(1 is fully carved, 0 apart):
+
+| | Drums | Bass | Keyboard | Synth | Strings | Guitar | Brass |
+|---|---|---|---|---|---|---|---|
+| Keyboard | 0.07 | 0.14 | | 0.53 | 0.38 | 0.21 | 0.27 |
+| Synth | 0.10 | 0.21 | 0.53 | | 0.57 | 0.39 | 0.27 |
+| Strings | 0.11 | 0.16 | 0.38 | 0.57 | | 0.78 | 0.18 |
+
+So the keys, synth, strings and guitar are one layer; the drums, bass,
+percussion and effects (0.02 to 0.08 against everything) can each come in
+alone; the brass, in between, comes in last.
 
 How it got here, from playtests: the first version kept the kick, muffled,
-on lap 1, and its laps were too alike; the second dropped the kick from lap
-1 but let each lap get about 3 LU louder, and its start was too quiet.
+on lap 1, and its laps were too alike; the second took the kick out of
+lap 1 with a high-pass and let each lap get about 3 LU louder, and its
+start was too quiet; the third evened the laps out, which brought lap 1's
+keys (without the synth they are tangled with) and its tinny high-passed
+hats up 8 dB, and the music sounded muffled, like a telephone.
 
 Every change waits for the next bar line, so a layer comes in with the
 downbeat. The song plays from its start, loops a stretch from its middle
@@ -59,14 +80,16 @@ loaded or decoded, the circuit's synthesised music plays instead.
    follows A, and what comes before it most like what comes before A) and
    where the sections change. It writes `<folder>/bars.json`.
 3. **Write its recipe** in `songs/<circuit>.json` (see `meridian.json`):
-   - `layers`: which stems make each layer. Four layers, up to: one per
-     lap plus the drums alone, which are filtered on lap 1.
+   - `layers`: which stems make each layer, up to four. Keep tangled stems
+     in one layer (see above: `bars.py` does not measure it yet; the phase
+     comparison is a few lines of numpy).
    - `laps`: each layer's level on laps 1 to 3, in dB, or `null` for
      silent: the balance of the layers within each lap (Meridian: all
      level).
-   - `filter`: the layer heard through a filter on some laps, its type
-     (`highpass` or `lowpass`), cutoff, laps, and how it comes off: `cut`
-     at the bar line, or `sweep` open up to it.
+   - `filter` (or null): a layer heard through a filter on some laps, its
+     type (`highpass` or `lowpass`), cutoff, laps, and how it comes off:
+     `cut` at the bar line, or `sweep` open up to it. Meridian has none
+     now: a filtered layer turned up to the others' level sounds thin.
    - `loop` and `ending`: bar numbers from step 2. Meridian loops bars 49
      to 81 (32 bars, 54 s), the best match in the song, and ends from bar
      98.
@@ -80,7 +103,9 @@ loaded or decoded, the circuit's synthesised music plays instead.
 4. **Build it**: `python3 tools/music/build.py tools/music/songs/<circuit>.json <folder>`.
    It writes `public/music/<circuit>/`: one MP3 per layer and `song.json`.
    Only what can be heard is kept: from the start to the loop's end, then
-   the ending (Meridian: 147 s of its 175, 11.4 MB).
+   the ending (Meridian: 147 s of its 175, 18.1 MB at LAME's best VBR,
+   `quality` 0; its default, 4, cuts above 16 kHz and is audibly rougher
+   once four layers are summed).
 5. **Add it** to `SONGS` in `src/client/audio/song.ts`.
 6. **Check it**:
    - `npm test` checks every song's files and map.
@@ -107,7 +132,7 @@ decodes it) and the game measures its own decoder against it and allows
 for the difference (Chromium's matches to the sample).
 
 Decoded, each layer takes 8 bytes a sample frame: Meridian's four take
-about 225 MB at 48 kHz. On a device that says it has less than 6 GB of
-memory they are decoded at 32 kHz instead (150 MB; the stems have little
-above 16 kHz). The files download when the game starts with the switch
+about 225 MB at 48 kHz. Only on a device that says it has 2 GB of memory
+or less are they decoded at 32 kHz instead (150 MB): the browser then
+resamples them as they play, which dulls the top end. The files download when the game starts with the switch
 on, whichever circuit is raced, and are kept for the visit.

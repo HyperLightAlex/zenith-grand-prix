@@ -2,16 +2,18 @@
 // into a few layers (tools/music), played so that it builds lap by lap the
 // way the synthesised race music does.
 //
-//   lap 1   the base (bass and keys) over the drums' hats alone: no kick yet
-//   lap 2   the whole kit drops in on the bar line, and the battle layer
-//           (brass, percussion, guitar, effects)
-//   lap 3   the lead comes in: the full song
+//   lap 1   the drums and the bass
+//   lap 2   the melody comes in: keys, synth, strings, guitar
+//   lap 3   the brass, percussion and effects: the full song
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
-// (Like the synthesised music's formation lap, which has hats but no kick
-// or snare until the battle lap.) Every lap is equally loud: the build sets
-// each lap's levels so, and a lap is told from the last by what comes in.
+// Every lap is equally loud: the build sets each lap's levels so, and a lap
+// is told from the last by what comes in. The layers follow how cleanly
+// Suno's stems come apart (they are separated out of the finished mix): the
+// keys, synth, strings and guitar were carved out of one another, and heard
+// apart each has holes where the others were, which sounds hollow, like
+// music down a telephone. So they come in together. See tools/music.
 //
 // Every change waits for the next bar line. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
@@ -237,10 +239,11 @@ export class SongSource {
     void (async () => {
       const { manifest, data } = await this.files;
       // Decoded, the layers take 8 bytes a sample frame each: over 200 MB at
-      // 48 kHz. On a device with little memory they are decoded at 32 kHz
-      // instead (a third less; the stems have little above 16 kHz anyway).
+      // 48 kHz. Only on a device with very little memory (2 GB or less) are
+      // they decoded at 32 kHz instead: a third less, but the browser then
+      // has to resample them as they play, which dulls the top end.
       const mem = (globalThis.navigator as (Navigator & { deviceMemory?: number }) | undefined)?.deviceMemory;
-      const rate = mem !== undefined && mem < 6 ? Math.min(32000, ctx.sampleRate) : ctx.sampleRate;
+      const rate = mem !== undefined && mem < 4 ? Math.min(32000, ctx.sampleRate) : ctx.sampleRate;
       let into: BaseAudioContext = ctx;
       if (rate !== ctx.sampleRate && typeof OfflineAudioContext !== 'undefined') {
         try {
