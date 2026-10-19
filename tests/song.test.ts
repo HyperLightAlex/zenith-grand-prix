@@ -121,6 +121,11 @@ describe('the songs shipped', () => {
       expect(m.layers.every((l) => m.laps[l.id][2] !== null)).toBe(true);
       expect(Number.isFinite(m.level)).toBe(true);
       expect(m.layers.map((l) => l.id)).toContain(m.sync.layer);
+      if (m.lowShelf) {
+        for (const id of m.lowShelf.layers) expect(m.layers.map((l) => l.id)).toContain(id);
+        expect(m.lowShelf.db).toHaveLength(3);
+        expect(m.lowShelf.hz).toBeGreaterThan(20);
+      }
       expect(Buffer.from(m.sync.env, 'base64').length).toBeGreaterThan(1000);
     });
   }

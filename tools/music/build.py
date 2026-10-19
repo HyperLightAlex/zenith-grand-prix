@@ -122,6 +122,7 @@ def main():
     flt = cfg.get('filter')
     sos = None if not flt else butter(4, flt['hz'], {'lowpass': 'low', 'highpass': 'high'}[flt['type']], fs=sr, output='sos')
     meter = pyln.Meter(sr)
+    low = cfg.get('lowShelf')
     def lap_mix(laps, lap, a, b):
         a, b = int(a * sr), int(b * sr)
         y = np.zeros((b - a, 2))
@@ -132,6 +133,9 @@ def main():
             seg = layers[lid][a:b]
             if sos is not None and lid == flt['layer'] and lap in flt['laps']:
                 seg = sosfilt(sos, seg, axis=0)
+            if low and lid in low['layers'] and low['db'][lap - 1]:
+                # The same shelf as the game's (Web Audio's lowshelf is the RBJ one, slope 1).
+                seg = shelf(seg, sr, low['hz'], low['db'][lap - 1], 'low')
             y += seg * 10 ** (g / 20)
         return y
     stretch = [(0, bars[A]), (bars[A], bars[B]), (bars[A], bars[B])]
@@ -189,6 +193,7 @@ def main():
         'end': round(frames / sr, 5),
         'laps': laps_out,
         'filter': cfg.get('filter'),
+        'lowShelf': cfg.get('lowShelf'),
         'level': round(level, 2),
         'sync': {'layer': lid, 'env': base64.b64encode(env.tobytes()).decode()},
     }

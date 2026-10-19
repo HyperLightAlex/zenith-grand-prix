@@ -1303,17 +1303,55 @@ async function offlineSong(): Promise<void> {
   const rate = src.buffers[0].sampleRate;
   if (rate !== SR) fail(`the song was decoded at ${rate} Hz, not the render's ${SR}`);
   const out = [buf.getChannelData(2), buf.getChannelData(3)];
-  const side = (t0: number, t1: number, pos0: number, lap: number) => {
+  /**
+   * A layer through the game's low shelf (Web Audio's lowshelf: the RBJ
+   * shelf, slope 1), from file position `from` (where its input is known)
+   * so the filter has settled by the window.
+   */
+  const shelved = (data: Float32Array, j0: number, n: number, warm: number, db: number): Float64Array => {
+    const A = 10 ** (db / 40);
+    const w = (2 * Math.PI * (m.lowShelf?.hz ?? 100)) / SR;
+    const cs = Math.cos(w);
+    const al = (Math.sin(w) / 2) * Math.SQRT2;
+    const sa = 2 * Math.sqrt(A) * al;
+    const b0 = A * (A + 1 - (A - 1) * cs + sa);
+    const b1 = 2 * A * (A - 1 - (A + 1) * cs);
+    const b2 = A * (A + 1 - (A - 1) * cs - sa);
+    const a0 = A + 1 + (A - 1) * cs + sa;
+    const a1 = -2 * (A - 1 + (A + 1) * cs);
+    const a2 = A + 1 + (A - 1) * cs - sa;
+    const y = new Float64Array(n);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let k = -warm; k < n; k++) {
+      const x = data[j0 + k] ?? 0;
+      const v = (b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+      x2 = x1;
+      x1 = x;
+      y2 = y1;
+      y1 = v;
+      if (k >= 0) y[k] = v;
+    }
+    return y;
+  };
+  const side = (t0: number, t1: number, pos0: number, lap: number, from: number) => {
     // pos0: file position at t0. Compare over [t0, t1] at lags of up to 5 ms.
     const n = Math.floor((t1 - t0) * SR);
     const i0 = Math.round(t0 * SR);
     const j0 = Math.round((pos0 + src.shift) * rate);
+    const warm = Math.max(0, Math.min(Math.round(0.05 * rate), Math.floor((pos0 - from) * rate)));
     const want = new Float32Array(n);
-    for (let k = 0; k < n; k++) {
-      let v = 0;
-      for (let l = 0; l < m.layers.length; l++) v += gain(m.layers[l].id, lap) * (chans[l][0][j0 + k] ?? 0);
-      want[k] = v * scale;
+    const sum = new Float64Array(n);
+    for (let l = 0; l < m.layers.length; l++) {
+      const id = m.layers[l].id;
+      const g = gain(id, lap);
+      if (g === 0) continue;
+      const db = m.lowShelf?.layers.includes(id) ? (m.lowShelf.db[lap - 1] ?? 0) : 0;
+      if (db) {
+        const y = shelved(chans[l][0], j0, n, warm, db);
+        for (let k = 0; k < n; k++) sum[k] += g * y[k];
+      } else for (let k = 0; k < n; k++) sum[k] += g * (chans[l][0][j0 + k] ?? 0);
     }
+    for (let k = 0; k < n; k++) want[k] = sum[k] * scale;
     let best = 0;
     let bestScore = -Infinity;
     for (let lag = -240; lag <= 240; lag++) {
@@ -1343,8 +1381,9 @@ async function offlineSong(): Promise<void> {
   ];
   for (const [name, t, before, lapB, after, lapA] of checks) {
     if (!Number.isFinite(t)) continue;
-    const a = Number.isFinite(before) ? side(t - 0.4, t - XFADE - 0.002, before - 0.4, lapB) : { lag: 0, residual: -Infinity };
-    const b = side(t + 0.03, t + 0.4, after + 0.03, lapA);
+    // (The low shelf's input is known up to the join on each side: before it, the old stretch; after it, the new.)
+    const a = Number.isFinite(before) ? side(t - 0.4, t - XFADE - 0.002, before - 0.4, lapB, before - 0.5) : { lag: 0, residual: -Infinity };
+    const b = side(t + 0.03, t + 0.4, after + 0.03, lapA, after);
     table('recorded song: each change against the layers summed by hand (offline)').push({
       change: name,
       'at (s)': r3(t),

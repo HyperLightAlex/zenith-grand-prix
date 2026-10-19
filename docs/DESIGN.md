@@ -271,7 +271,7 @@ An experiment, behind `?music=suno`: the race music as a recorded song
 layers: lap 1 plays the melody (keys, synth, strings and guitar, which
 have to come in together: see tools/music) and the bass, a little quieter;
 lap 2 brings in the drums; lap 3 the brass, percussion and effects, the
-full song at full volume; the finish goes to the song's ending, then the
+full song at full volume, with the kick and bass lifted; the finish goes to the song's ending, then the
 menu music (what the results play) so there is no silence while the others
 finish. The build is in what comes in, more than in how loud it gets. Each
 change waits for the next bar line, and the middle of the song loops for as

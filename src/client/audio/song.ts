@@ -4,13 +4,14 @@
 //
 //   lap 1   the melody (keys, synth, strings, guitar) and the bass, a little quieter
 //   lap 2   the drums come in: the beat, for the fighting
-//   lap 3   the brass, percussion, effects and woodwinds: the full song, at full volume
+//   lap 3   the brass, percussion, effects and woodwinds: the full song, at full
+//           volume, with the kick and bass lifted (a low shelf)
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
 // Each lap is a little louder than the last (the build sets each lap's
-// level: -18.5, -17.5 and -16.5 LUFS), but a lap is told from the last by
-// what comes in. The layers follow how cleanly
+// level: -18.5, -17.5 and -15.5 LUFS), but a lap is told from the last by
+// what comes in, and the last by its weight too. The layers follow how cleanly
 // Suno's stems come apart (they are separated out of the finished mix): the
 // keys, synth, strings and guitar were carved out of one another, and heard
 // apart each has holes where the others were, which sounds hollow, like
@@ -53,6 +54,11 @@ export interface SongManifest {
    * the bar line, 'cut' drops the whole layer in on the bar line.
    */
   filter: { layer: string; type: 'lowpass' | 'highpass'; hz: number; laps: number[]; open: 'sweep' | 'cut' } | null;
+  /**
+   * A low shelf on some layers, its boost (dB) on each lap: Meridian's kick
+   * and bass come up on the last lap. Optional.
+   */
+  lowShelf?: { layers: string[]; hz: number; db: number[] } | null;
   /** Gain on the whole song, in dB, to sit it at the synthesised music's level. */
   level: number;
   /** The level of one layer, one byte per millisecond for the first two seconds, from ffmpeg's decoding. */
@@ -352,6 +358,8 @@ interface Layer {
    * exactly as recorded.
    */
   filters: BiquadFilterNode[];
+  /** The lap-by-lap low shelf, on a layer that has one. */
+  shelf: BiquadFilterNode | null;
   filteredPath: GainNode | null;
   directPath: GainNode | null;
 }
@@ -496,6 +504,18 @@ export class SongTrack implements MusicTrack {
     return db === null || db === undefined ? 0 : 10 ** (db / 20);
   }
 
+  /** The low shelf's boost on a lap, in dB. */
+  private shelfFor(phase: Phase): number {
+    return this.source.manifest!.lowShelf?.db[phase - 1] ?? 0;
+  }
+
+  /** A layer's low shelf to lap `to`'s boost, on the bar line at `at`. */
+  private shelve(l: Layer, to: Phase, at: number): void {
+    if (!l.shelf) return;
+    l.shelf.gain.cancelScheduledValues(at - XFADE);
+    l.shelf.gain.setTargetAtTime(this.shelfFor(to), at - XFADE, XFADE / 3);
+  }
+
   private filtered(id: string, phase: Phase): boolean {
     const f = this.source.manifest!.filter;
     return !!f && f.layer === id && f.laps.includes(phase);
@@ -511,7 +531,16 @@ export class SongTrack implements MusicTrack {
       const gain = ctx.createGain();
       gain.gain.value = this.gainFor(l.id, phase);
       const out = ctx.createGain();
-      out.connect(level);
+      // The layer's own low shelf, if it has one, between it and the song's level.
+      let shelf: BiquadFilterNode | null = null;
+      if (m.lowShelf?.layers.includes(l.id)) {
+        shelf = ctx.createBiquadFilter();
+        shelf.type = 'lowshelf';
+        shelf.frequency.value = m.lowShelf.hz;
+        shelf.gain.value = this.shelfFor(phase);
+        out.connect(shelf);
+        shelf.connect(level);
+      } else out.connect(level);
       const filters: BiquadFilterNode[] = [];
       let filteredPath: GainNode | null = null;
       let directPath: GainNode | null = null;
@@ -538,8 +567,8 @@ export class SongTrack implements MusicTrack {
       } else {
         gain.connect(out);
       }
-      this.taps[l.id] = out;
-      return { id: l.id, gain, filters, filteredPath, directPath };
+      this.taps[l.id] = shelf ?? out;
+      return { id: l.id, gain, filters, shelf, filteredPath, directPath };
     });
     this.plan = new SongPlan(m);
     this.phase = this.target = phase;
@@ -616,6 +645,7 @@ export class SongTrack implements MusicTrack {
       const g = l.gain.gain;
       g.cancelScheduledValues(at - XFADE);
       g.setTargetAtTime(this.gainFor(l.id, to), at - XFADE, XFADE / 3);
+      this.shelve(l, to, at);
       if (l.filters.length) {
         const was = this.filtered(l.id, this.target);
         const will = this.filtered(l.id, to);
@@ -650,6 +680,7 @@ export class SongTrack implements MusicTrack {
     for (const l of this.layers) {
       l.gain.gain.cancelScheduledValues(at - XFADE);
       l.gain.gain.setTargetAtTime(this.gainFor(l.id, 3), at - XFADE, XFADE / 3);
+      this.shelve(l, 3, at);
       if (l.filters.length && this.filtered(l.id, this.targetAt >= 0 && now < this.targetAt ? this.phase : this.target)) this.unfilter(l, now, at);
     }
     this.targetAt = -1;
