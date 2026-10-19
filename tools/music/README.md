@@ -3,8 +3,8 @@
 A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
 For now this is an experiment, heard only with `?music=suno` in the address.
-Two circuits have a song: Meridian (海空の速さ) and Corkscrew Canyon
-(紅砂のレース).
+Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
+(紅砂のレース) and Helios Drop (午間の雲上レース).
 
 | Lap | What plays |
 |---|---|
@@ -13,12 +13,16 @@ Two circuits have a song: Meridian (海空の速さ) and Corkscrew Canyon
 | 3 | the rest: the full song, at full volume, with the kick and bass lifted (+5 dB below 140 Hz) |
 | finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
-| Layer | Meridian | Canyon |
-|---|---|---|
-| melody | keys, synth, strings, guitar | keys, synth, guitar, strings, brass, woodwinds, voices |
-| bass | bass | bass |
-| drums | drums | drums |
-| lap 3's | brass, percussion, effects, woodwinds | percussion, effects |
+| Layer | Meridian | Canyon | Helios |
+|---|---|---|---|
+| melody | keys, synth, strings, guitar | keys, synth, strings, brass, woodwinds, voices | keys, synth |
+| guitar | | guitar: 4 dB down on lap 1 | |
+| bass | bass | bass | bass |
+| drums | drums | drums | drums |
+| lap 3's | brass, percussion, effects, woodwinds | percussion, effects | percussion, effects |
+
+Helios's lap 3 is also a change of place: its song has a drop, and lap 3
+jumps to it (see "The finale" below).
 
 Laps 1 and 2 are -18.5 and -17.5 LUFS at the game's default volumes,
 almost exactly what their layers come to by themselves (the build moves
@@ -63,8 +67,36 @@ the loop. So they are all in the melody, and lap 3 brings only the percussion
 and effects (0.01 to 0.12 against everything, like the drums and bass), with
 the low end lifted and 2 LU more, as on Meridian. Its new layer is quieter
 than Meridian's (15 dB under the full song, against 12), so the lift does
-more of the work. The song is centred on E, as Canyon's synthesised music
-is, so the stingers already sit in its key.
+more of the work. The guitar is the loudest single stem (-20 LUFS, the
+synth -21, the keys -22), as loud as the drums, so on lap 1, without
+them, it stood out: it is a layer of its own, 3.9 dB under the rest there
+and level with them on laps 2 and 3. Turned down a few dB rather than out,
+a tangled stem leaves no holes.
+
+Helios's stems are fewer (drums, bass, keys, synth, percussion, effects)
+and come apart as Meridian's do: the keys and synth are tangled (0.42),
+the bass a little with the synth (0.36: it plays from lap 1 with them
+anyway), and the drums, percussion and effects are clean (0.01 to 0.10).
+
+**The finale.** Helios's song is trance: intro, a long groove, a
+breakdown, a build and a drop, then an outro, all on one 16-bar chord
+cycle (E minor: Em, Am, D, G, C, Am, then four bars of B). Laps 1 and 2
+loop the groove (bars 16 to 64, 80 s). On lap 3 the song jumps, on the
+same bar line as the lap change, into the build (bars 80 to 87) or the
+drop (from bar 88), at the same place in the chord cycle as the bar it
+leaves, so the chord carries on and only the energy changes: a lap 3 that
+starts early in the cycle gets a few bars of build first, one that starts
+late goes straight into the drop. The drop then loops (bars 88 to 104,
+26 s) to the finish. The breakdown is never heard: played through, it
+would take the drums away half way through lap 2.
+
+**Stingers.** The race stingers are written for Meridian's synthesised
+music, and each circuit moves them into its own key, including the key
+change its synthesised music makes on the last lap. The songs make no key
+change, so a song can give its own: Canyon's and Helios's are both centred
+on E and end on E major, so while they play, the battle-lap stab resolves
+to E minor and the finish flag is in E major (`stingers` in the recipe).
+Meridian's song is in A minor, the stingers' own key.
 
 How Meridian's recipe got here, from playtests (Canyon's follows it): the first version kept the kick, muffled,
 on lap 1, and its laps were too alike; the second took the kick out of
@@ -82,14 +114,14 @@ for as long as the race needs, and jumps to its ending when the race is
 over for the player (finished, or the race has ended). When the ending has
 played out (and 0.6 s more) the menu music comes in, so the wait for the
 results is not silent: it is what the results play, so it carries on into
-them. The lap and phase stingers still play: Meridian's are already in A
-minor, the song's key.
+them.
 
 How it plays (`src/client/audio/song.ts`): each layer is one decoded
 buffer, and every stretch of the song (the start, each pass of the loop,
-the ending) starts all of them together, on a whole sample, so they can
-never drift apart. A loop pass or the ending is queued ahead against the
-audio clock, with a 12 ms cross-fade that ends on the bar line. A lap change
+the jump to the finale, the ending) starts all of them together, on a
+whole sample, so they can never drift apart. A loop pass, the finale or
+the ending is queued ahead against the audio clock, with a 12 ms
+cross-fade that ends on the bar line. A lap change
 moves each layer's level at the bar line, and the filtered drums go over
 to an unfiltered path there (a 'cut'; a low-pass can instead be swept open
 up to the bar line), so without the filter they are heard exactly as
@@ -129,13 +161,23 @@ loaded or decoded, the circuit's synthesised music plays instead.
      to 81 (32 bars, 54 s), the best match in the song, and ends from bar
      98; Canyon loops bars 37 to 80 (43 bars, 78 s: the chords and the
      sound either side match best there) and ends from bar 107, a
-     C, D, E cadence onto its last chord.
+     C, D, E cadence onto its last chord; Helios loops its groove, bars 16
+     to 64 (three turns of its chord cycle), and ends from bar 116, a
+     wind-down onto a last E major hit.
+   - `finale` (optional): `{"lap": 3, "from": 80, "loop": [88, 104],
+     "cycle": 16}` (Helios): on lap 3, jump to the bar from `from` on at
+     the same place in the `cycle`-bar chord cycle, then loop `loop`. Both
+     loops should be whole cycles.
+   - `stingers` (optional): semitones to move each race stinger by while
+     the song plays, in place of the circuit's (see above).
    - `master`: the gain and two shelves that make the summed stems sound
      like `song.wav` (Suno's stems are the mix before mastering: summed,
      they are louder and duller). Find them by comparing the two (fit
      the difference between their spectra, a third of an octave at a time:
      Meridian's is -4.4 dB with +3 dB below 150 Hz and +1.5 above 5 kHz,
-     Canyon's -4.8 dB, +3.3 below 260 Hz and +2.5 above 2.9 kHz).
+     Canyon's -4.8 dB, +3.3 below 260 Hz and +2.5 above 2.9 kHz). Helios
+     came as stems only, so it has the two averaged (+3 dB below 200 Hz,
+     +2 above 4 kHz); with its full mix, it can be matched.
    - `loudness`: how loud each lap should be, in LUFS at the game's
      default volumes (Meridian: -18.5, -17.5, -15.5). The build sets each
      lap's level to meet it and prints what it got, and the layers' levels
@@ -145,7 +187,8 @@ loaded or decoded, the circuit's synthesised music plays instead.
    Only what can be heard is kept: from the start to the loop's end, then
    the ending (Meridian: 147 s of its 175, 18.1 MB at LAME's best VBR,
    `quality` 0; its default, 4, cuts above 16 kHz and is audibly rougher
-   once four layers are summed. Canyon: 155 s of its 204, 19.4 MB).
+   once four layers are summed. Canyon: 155 s of its 204, 24.2 MB in five
+   layers; Helios: 157 s of its 203, 19.2 MB).
 5. **Add it** to `SONGS` in `src/client/audio/song.ts`.
 6. **Check it**:
    - `npm test` checks every song's files and map.
@@ -174,7 +217,7 @@ decodes it) and the game measures its own decoder against it and allows
 for the difference (Chromium's matches to the sample).
 
 Decoded, each layer takes 8 bytes a sample frame: Meridian's four take
-about 225 MB at 48 kHz, Canyon's 237 MB. So only one song is held decoded:
+about 225 MB at 48 kHz, Canyon's five 297 MB, Helios's four 241 MB. So only one song is held decoded:
 the one for the circuit coming up. The game names it as soon as it knows
 (the circuit it has built, and the circuit shown on the race setup, the
 online room and the Grand Prix briefing, once it has stayed there a

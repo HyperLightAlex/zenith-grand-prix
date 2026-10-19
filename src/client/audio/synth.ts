@@ -294,6 +294,10 @@ export class SynthAudio implements AudioEngine {
     });
   }
 
+  stingerKey(): Partial<Record<SfxName, number>> | null {
+    return this.track instanceof SongTrack ? (this.track.stingers as Partial<Record<SfxName, number>> | null) : null;
+  }
+
   // ---- hooks for tools/audio-check ------------------------------------------
 
   /** The last node before the speakers. Tap an AnalyserNode here to measure. */

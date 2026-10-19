@@ -76,6 +76,9 @@ let finishAt = null;
 let menuAt = null;
 let resultsAt = null;
 const manifest = await page.evaluate((t) => fetch(`music/${t}/song.json`).then((r) => r.json()), track);
+// The race stingers in the song's own keys, if it has them, while it plays.
+const keys = await page.evaluate(() => window.game.audio.stingerKey?.() ?? null);
+check(JSON.stringify(keys) === JSON.stringify(manifest.stingers ?? null), `the stingers in the song's keys (${JSON.stringify(keys)})`);
 let lastPhase = null;
 for (let i = 0; i < 3000; i++) {
   const s = await page.evaluate(() => {
@@ -115,6 +118,12 @@ for (const [p, t] of Object.entries(lapAt)) {
   const e = log.find((x) => x.what === `lap ${p}`);
   check(!!e && e.at >= t && e.at <= t + 0.3 + barMax + 0.25, `lap ${p} comes in on a bar line within a bar of the lap change (${e ? (e.at - t).toFixed(2) + ' s after' : 'never'})`);
 }
+// A song with a finale goes on to it with lap 3, on the same bar line.
+if (manifest.finale && lapAt[3] !== undefined) {
+  const l3 = log.find((x) => x.what === 'lap 3');
+  const fi = log.find((x) => x.what === 'finale');
+  check(!!l3 && !!fi && Math.abs(fi.at - l3.at) < 1e-6, `lap 3 goes on to the finale on its bar line (${fi ? 'bar ' + fi.bar : 'never'})`);
+}
 if (finishAt) {
   const e = log.find((x) => x.what === 'ending');
   // Once the ending has played out, music again: the menu music, before the
@@ -125,7 +134,9 @@ if (finishAt) {
     console.log(`the song ended at ${songEnd.toFixed(2)}, the menu music came in at ${menuAt?.toFixed(2) ?? 'never'}, the results at ${resultsAt?.toFixed(2) ?? 'never'}`);
     check(gap >= 0 && gap <= 1.5 && (resultsAt === null || menuAt < resultsAt), `the menu music within moments of the song's end, on the race screen (${gap === Infinity ? 'never' : gap.toFixed(2) + ' s after'})`);
   }
-  check(!!e && e.at >= finishAt && e.at <= finishAt + 0.12 + barMax + 0.25, `the ending starts on a bar line within a bar of the finish (${e ? (e.at - finishAt).toFixed(2) + ' s after' : 'never'})`);
+  // (finishAt is when this check saw it, polling every 200 ms; the engine
+  // sees it on the frame, and can queue the ending 0.12 s on, before that.)
+  check(!!e && e.at >= finishAt - 0.25 && e.at <= finishAt + 0.12 + barMax + 0.25, `the ending starts on a bar line within a bar of the finish (${e ? (e.at - finishAt).toFixed(2) + ' s after' : 'never'})`);
 }
 
 // Levels: each layer by lap, from the meters (mean power over each stretch, in dB).

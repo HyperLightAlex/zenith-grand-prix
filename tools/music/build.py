@@ -12,9 +12,17 @@ that tools/music/bars.py wrote into it. Writes, into public/music/<id>/ (or
                 layers' level on each lap, and the overall level
 
 The files hold only what the game can play: the song from its start to the
-loop's end, then the ending (with a moment before it, for the cross-fade).
-What lies between is never heard, so it is left out (it would only cost
-download and memory). Times in song.json are positions in these files.
+loop's end, then the finale if it has one (from its first bar to the end of
+its loop), then the ending (each with a moment before it, for the
+cross-fade). What lies between is never heard, so it is left out (it would
+only cost download and memory). Times in song.json are positions in these
+files.
+
+The finale (optional): a stretch the song jumps to when the last lap starts,
+on the next bar line (Helios: the build into the drop, then the drop, looped).
+Where it lands in it depends on where the song was: songs built on a chord
+cycle (Helios's is 16 bars) go to the same place in the cycle, so the chord
+carries on and only the energy changes.
 
 The mastering. Suno's stems are the mix before mastering: summed, they come
 out louder and a little duller than song.wav. The song file says how to
@@ -93,12 +101,24 @@ def main():
     if unused:
         print('stems in no layer (left out):', ', '.join(unused))
 
-    # Sections: the start to the loop's end, then the ending.
+    # Sections: the start to the loop's end, the finale (if any), the ending.
     A, B = cfg['loop']
     E = cfg['ending']
+    fin = cfg.get('finale')
     loop_end = bars[B]
-    ending_from = bars[E] - PAD
-    cut = [(0, int(round(loop_end * sr))), (int(round(ending_from * sr)), n)]
+    cut = [(0, int(round(loop_end * sr)))]
+    if fin:
+        F0, (FA, FB), cyc = fin['from'], fin['loop'], fin['cycle']
+        if not (B < F0 <= FA < FB < E):
+            sys.exit('the finale has to come after the loop and before the ending, and start before its own loop')
+        if (FB - FA) % cyc or (B - A) % cyc:
+            print('warning: a loop that is not a whole number of chord cycles (%d bars)' % cyc)
+        cut.append((int(round((bars[F0] - PAD) * sr)), int(round(bars[FB] * sr))))
+    cut.append((int(round((bars[E] - PAD) * sr)), n))
+    offs = np.cumsum([0] + [b - a for a, b in cut])
+    def file_pos(t, piece):
+        """Song time t (s), in cut piece `piece`, as a position in the files (s)."""
+        return (offs[piece] + t * sr - cut[piece][0]) / sr
     m = cfg['master']
     layers = {}
     for lid, names in cfg['layers'].items():
@@ -138,7 +158,7 @@ def main():
                 seg = shelf(seg, sr, low['hz'], low['db'][lap - 1], 'low')
             y += seg * 10 ** (g / 20)
         return y
-    stretch = [(0, bars[A]), (bars[A], bars[B]), (bars[A], bars[B])]
+    stretch = [(0, bars[A]), (bars[A], bars[B]), (file_pos(bars[FA], 1), file_pos(bars[FB], 1)) if fin else (bars[A], bars[B])]
     measure = lambda laps: [meter.integrated_loudness(lap_mix(laps, i + 1, *stretch[i])) for i in range(3)]
     lufs = measure(cfg['laps'])
     want = cfg['loudness'] if isinstance(cfg['loudness'], list) else [None, None, cfg['loudness']]
@@ -187,13 +207,22 @@ def main():
         'rate': sr,
         'frames': frames,
         'layers': [{'id': l, 'file': l + '.' + ext} for l in cfg['layers']],
-        'bars': [round(float(t), 5) for t in bars[:B + 1]],
+        'bars': [round(float(t), 5) for t in bars[:B + 1]] + ([round(float(file_pos(bars[t], 1)), 5) for t in range(F0, FB + 1)] if fin else []),
         'loop': [round(float(bars[A]), 5), round(float(bars[B]), 5)],
-        'ending': round(float(loop_end + PAD), 5),
+        'ending': round(float(file_pos(bars[E], len(cut) - 1)), 5),
         'end': round(frames / sr, 5),
         'laps': laps_out,
         'filter': cfg.get('filter'),
         'lowShelf': cfg.get('lowShelf'),
+        'finale': {
+            'lap': fin.get('lap', 3),
+            'cycle': cyc,
+            # Where to land for each place in the cycle: the bar line it
+            # leaves from, numbered as in the song, modulo the cycle.
+            'entry': [round(float(file_pos(bars[F0 + (k - F0) % cyc], 1)), 5) for k in range(cyc)],
+            'loop': [round(float(file_pos(bars[FA], 1)), 5), round(float(file_pos(bars[FB], 1)), 5)],
+        } if fin else None,
+        'stingers': cfg.get('stingers'),
         'level': round(level, 2),
         'sync': {'layer': lid, 'env': base64.b64encode(env.tobytes()).decode()},
     }
@@ -201,8 +230,10 @@ def main():
     text = '{\n' + ',\n'.join(' %s: %s' % (json.dumps(k), json.dumps(v, ensure_ascii=False, separators=(',', ':'))) for k, v in manifest.items()) + '\n}\n'
     open(os.path.join(out, 'song.json'), 'w').write(text)
     total = sum(os.path.getsize(os.path.join(out, l + '.' + ext)) for l in layers)
-    print('wrote %s: %.1f MB, %.1f s (loop %.1f s, ending %.1f s); %.0f MB once decoded at %d Hz' %
-          (os.path.relpath(out), total / 1e6, frames / sr, bars[B] - bars[A], frames / sr - loop_end - PAD, frames * 2 * 4 * len(layers) / 1e6, sr))
+    print('wrote %s: %.1f MB, %.1f s (loop %.1f s,%s ending %.1f s); %.0f MB once decoded at %d Hz' %
+          (os.path.relpath(out), total / 1e6, frames / sr, bars[B] - bars[A],
+           ' finale %.1f s with a %.1f s loop,' % (bars[FB] - bars[F0], bars[FB] - bars[FA]) if fin else '',
+           frames / sr - manifest['ending'], frames * 2 * 4 * len(layers) / 1e6, sr))
 
 
 if __name__ == '__main__':

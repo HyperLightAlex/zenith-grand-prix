@@ -4,9 +4,10 @@
 //
 //   lap 1   the melody and the bass, a little quieter
 //   lap 2   the drums come in: the beat, for the fighting
-//   lap 3   the rest (Meridian: brass, percussion, effects; Canyon: percussion
-//           and effects): the full song, at full volume, with the kick and
-//           bass lifted (a low shelf)
+//   lap 3   the rest (Meridian: brass, percussion, effects; Canyon and
+//           Helios: percussion and effects): the full song, at full volume,
+//           with the kick and bass lifted (a low shelf). A song can also go
+//           somewhere else for it (Helios: into its drop; see `finale`)
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
@@ -17,7 +18,8 @@
 // were carved out of one another (Meridian's keys, synth, strings and guitar;
 // Canyon's guitar, strings, brass, woodwinds and voices), and heard apart each
 // has holes where the others were, which sounds hollow, like music down a
-// telephone. So they come in together. See tools/music.
+// telephone. So they come in together (a tangled stem can still be turned
+// down a little, as Canyon's guitar is on lap 1). See tools/music.
 //
 // Every change waits for the next bar line. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
@@ -33,6 +35,7 @@ import type { MusicTrack, TrackInfo } from './music';
 export const SONGS: Record<string, string> = {
   meridian: 'music/meridian/',
   canyon: 'music/canyon/',
+  helios: 'music/helios/',
 };
 
 /** What tools/music/build.py writes as song.json. Times are positions in the layer files, in seconds. */
@@ -62,6 +65,22 @@ export interface SongManifest {
    * and bass come up on the last lap. Optional.
    */
   lowShelf?: { layers: string[]; hz: number; db: number[] } | null;
+  /**
+   * Optional: a stretch the song jumps to as lap `lap` starts, on the bar
+   * line it would have changed on anyway, and loops `loop` from then on
+   * (Helios: the build into the drop, then the drop). It lands at the same
+   * place in the song's chord cycle as the bar line it leaves from:
+   * `entry[bar % cycle]`, where bar is that bar line's number (the bars in
+   * the files up to the loop's end are numbered as in the song). Its bar
+   * lines follow the loop's end in `bars`.
+   */
+  finale?: { lap: number; cycle: number; entry: number[]; loop: [number, number] } | null;
+  /**
+   * Optional: semitones to move each race stinger by while this song plays,
+   * in place of its circuit's (the stingers are written for Meridian's
+   * synthesised music; see STINGER_KEY in game.ts).
+   */
+  stingers?: Record<string, number> | null;
   /** Gain on the whole song, in dB, to sit it at the synthesised music's level. */
   level: number;
   /** The level of one layer, one byte per millisecond for the first two seconds, from ffmpeg's decoding. */
@@ -111,14 +130,18 @@ export interface SongMap {
  */
 export class SongPlan {
   readonly segs: Segment[] = [];
-  constructor(readonly map: SongMap) {}
+  /** The stretch being looped: the map's loop, or the one a jump() went on to. */
+  loop: [number, number];
+  constructor(readonly map: SongMap) {
+    this.loop = map.loop;
+  }
 
   endOf(s: Segment): number {
     return s.at + (s.until - s.from);
   }
 
   start(at: number, from = 0): Segment {
-    const seg: Segment = { at, from, until: this.map.loop[1], kind: 'body' };
+    const seg: Segment = { at, from, until: this.loop[1], kind: 'body' };
     this.segs.push(seg);
     return seg;
   }
@@ -160,7 +183,7 @@ export class SongPlan {
       if (!last || last.kind !== 'body') return added;
       const t = this.endOf(last);
       if (t > by) return added;
-      const seg: Segment = { at: t, from: this.map.loop[0], until: this.map.loop[1], kind: 'body' };
+      const seg: Segment = { at: t, from: this.loop[0], until: this.loop[1], kind: 'body' };
       this.segs.push(seg);
       added.push(seg);
     }
@@ -193,6 +216,25 @@ export class SongPlan {
     const ending: Segment = { at: next.at, from: this.map.ending, until: this.map.end, kind: 'ending' };
     this.segs.push(ending);
     return { ending, cut, dropped };
+  }
+
+  /**
+   * From the first bar line at or after `t`, on to another stretch: from
+   * file position `pick(bar)` (`bar`: the number of the bar line it leaves
+   * from), looping `loop` from then on. Like finish(), whatever was queued to
+   * start from then on is dropped, and what is playing stops there.
+   */
+  jump(t: number, pick: (bar: number) => number, loop: [number, number]): { seg: Segment; cut: Segment | null; dropped: Segment[] } | null {
+    const next = this.nextBar(t);
+    if (!next) return null;
+    const dropped = this.segs.filter((s) => s.at >= next.at - 1e-6);
+    for (const s of dropped) this.segs.splice(this.segs.indexOf(s), 1);
+    const cut = this.segAt(next.at - 1e-6);
+    if (cut) cut.until = cut.from + (next.at - cut.at);
+    this.loop = loop;
+    const seg: Segment = { at: next.at, from: pick(next.bar), until: loop[1], kind: 'body' };
+    this.segs.push(seg);
+    return { seg, cut, dropped };
   }
 
   /** Forget stretches that ended before `t`. */
@@ -425,6 +467,8 @@ export class SongTrack implements MusicTrack {
   private endingEnd = -1;
   /** Seen the race unfinished since starting: a finish only counts after that. */
   private armed = false;
+  /** Gone on to the finale (see SongManifest.finale). */
+  private inFinale = false;
   private readonly log: SongInfo['log'] = [];
   private startTime = -1;
   private disposed = false;
@@ -481,6 +525,11 @@ export class SongTrack implements MusicTrack {
    */
   get done(): boolean {
     return this.endingEnd >= 0 && this.ctx.currentTime >= this.endingEnd + AFTER_ENDING;
+  }
+
+  /** The song's own keys for the race stingers, if it has them. */
+  get stingers(): Record<string, number> | null {
+    return this.source.manifest?.stingers ?? null;
   }
 
   fade(to: number, now: number, tau: number): void {
@@ -606,12 +655,18 @@ export class SongTrack implements MusicTrack {
     this.plan = new SongPlan(m);
     this.phase = this.target = phase;
     this.startTime = at + m.bars[0];
-    this.play(this.plan.start(at, 0), false);
+    // (Started on the finale's lap, as on joining a race late: in the finale.)
+    const f = m.finale;
+    if (f && phase >= f.lap) {
+      this.plan.loop = f.loop;
+      this.inFinale = true;
+    }
+    this.play(this.plan.start(at, this.inFinale && f ? f.entry[0] : 0), false);
     this.note(`start, lap ${phase}`, at, -1);
   }
 
   /** Start one stretch's sources: with a cross-fade from what plays before it, or straight in. */
-  private play(seg: Segment, xfade: boolean): void {
+  private play(seg: Segment, xfade: boolean, jumped = false): void {
     if (this.source.buffers.length !== this.layers.length) {
       // Let go of under it (the engine keeps the song of the race on, so
       // this should not happen): the engine starts it again.
@@ -647,7 +702,7 @@ export class SongTrack implements MusicTrack {
     // What plays before it fades out over the same moment.
     if (x > 0) for (const p of this.playing) if (p.seg !== seg && Math.abs(this.plan!.endOf(p.seg) - seg.at) < 1e-6) this.fadeOut(p, seg.at);
     this.playing.push({ seg, srcs, envs });
-    if (seg.kind === 'body' && seg.from === this.source.manifest!.loop[0] && seg.at > this.startTime) this.note('loop', seg.at, this.source.manifest!.bars.indexOf(seg.from));
+    if (!jumped && seg.kind === 'body' && seg.from === this.plan!.loop[0] && seg.at > this.startTime) this.note('loop', seg.at, this.source.manifest!.bars.indexOf(seg.from));
   }
 
   private fadeOut(p: Playing, at: number): void {
@@ -702,6 +757,22 @@ export class SongTrack implements MusicTrack {
     this.targetAt = at;
     this.changeAt = at;
     this.note(`lap ${to}`, at, bar);
+    if (m.finale && !this.inFinale && to >= m.finale.lap) this.toFinale(at);
+  }
+
+  /** On to the finale on the bar line at `at`, at the place in the chord cycle the song has got to. */
+  private toFinale(at: number): void {
+    const f = this.source.manifest!.finale!;
+    const done = this.plan!.jump(at, (bar) => f.entry[((bar % f.cycle) + f.cycle) % f.cycle], f.loop);
+    if (!done) return;
+    this.inFinale = true;
+    for (const seg of done.dropped) {
+      const i = this.playing.findIndex((p) => p.seg === seg);
+      if (i >= 0) this.release(this.playing.splice(i, 1)[0]);
+    }
+    // (What is playing now fades out into it: play() sees it ends there.)
+    this.play(done.seg, true, true);
+    this.note('finale', done.seg.at, this.source.manifest!.bars.indexOf(done.seg.from));
   }
 
   /** The finish: on to the ending at the next bar line, every layer in. */
@@ -758,11 +829,11 @@ export class SongTrack implements MusicTrack {
   /** Back into the loop after a stall, where it would have got to. */
   private resume(at: number): void {
     const plan = this.plan!;
-    const m = plan.map;
+    const loop = plan.loop;
     const last = plan.segs[plan.segs.length - 1];
-    const len = m.loop[1] - m.loop[0];
+    const len = loop[1] - loop[0];
     const over = last ? (at - plan.endOf(last)) % len : 0;
-    this.play(plan.start(at, m.loop[0] + Math.max(0, over)), false);
+    this.play(plan.start(at, loop[0] + Math.max(0, over)), false);
     this.note('resume', at, plan.barAt(at));
   }
 }

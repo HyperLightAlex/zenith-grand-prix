@@ -230,6 +230,15 @@ going (the jump only above 100 u/s), their role (forwards like the quick way)
 and the side of the road they favour; in 100 races about 63% of passes take
 the busier route.
 
+Charge strips are spread so that no stretch of a lap goes long without one:
+the longest gap is 16% of the lap on Meridian, 26% on Canyon and 19% on
+Helios. Helios had 39% (from T1's exit, up the climb, over the Drop and
+round to after the Loop) until playtesters said they ran out of Drive
+there; it now has strips up the long climb, down off the Drop and on
+closing A, nine in all (two of them on the two routes of Split Decision).
+In 160 simulated races the change moved nothing measurable (the computer
+pilots spend Drive as they get it); it is for people, who save it.
+
 **Corners for carving.** In 0.4 each circuit was rebuilt round carving:
 corners tight enough that a carve is the quick way round (at the speed-lap
 pace most of them cannot be taken flat without one), each followed by a
@@ -267,18 +276,24 @@ follows the same arrangement over the three laps, and the lap and phase
 stingers are moved into the circuit's key.
 
 An experiment, behind `?music=suno`: the race music as a recorded song
-(made in Suno) that builds the same way. Its stems are mixed into four
-layers: lap 1 plays the melody (the stems that were carved out of one
+(made in Suno) that builds the same way. Its stems are mixed into four or
+five layers: lap 1 plays the melody (the stems that were carved out of one
 another, which have to come in together: see tools/music) and the bass, a
 little quieter; lap 2 brings in the drums; lap 3 the rest (Meridian's
-brass, percussion and effects; Canyon's percussion and effects), the full
-song at full volume, with the kick and bass lifted; the finish goes to the
-song's ending, then the menu music (what the results play) so there is no
-silence while the others finish. The build is in what comes in, more than
-in how loud it gets. Each change waits for the next bar line, and the
-middle of the song loops for as long as the race lasts. Meridian and Canyon
-have one (Canyon's is centred on E, like its synthesised music, so the
-stingers fit both); only the circuit coming up has its song decoded. See
+brass, percussion and effects; Canyon's and Helios's percussion and
+effects), the full song at full volume, with the kick and bass lifted; the
+finish goes to the song's ending, then the menu music (what the results
+play) so there is no silence while the others finish. The build is in what
+comes in, more than in how loud it gets. Each change waits for the next bar
+line, and the middle of the song loops for as long as the race lasts.
+Canyon's guitar is a layer of its own, 4 dB down on lap 1, where without
+the drums it stood out. Helios's song has a drop, and lap 3 goes to it: on
+the lap change it jumps to the build into the drop, at the same place in
+its 16-bar chord cycle, so only the energy changes, and loops the drop to
+the finish. All three circuits have one; only the circuit coming up has
+its song decoded. Canyon's and Helios's songs are centred on E and end on E
+major, so while they play the stingers take keys of their own (the battle
+stab resolving to E minor, the flag in E major). See
 [tools/music](../tools/music/README.md).
 
 ### Free steering

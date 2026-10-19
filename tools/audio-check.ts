@@ -17,7 +17,7 @@ import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio'
 import { mtof } from '../src/client/audio/dsp';
 import { SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
-import { SONGS, XFADE, type SongInfo } from '../src/client/audio/song';
+import { SONGS, XFADE, type SongInfo, type SongManifest } from '../src/client/audio/song';
 
 type Cell = string | number;
 type Row = Record<string, Cell>;
@@ -1253,11 +1253,15 @@ async function offlineSongs(): Promise<void> {
 
 async function offlineSong(style: string): Promise<void> {
   log(`--- offline: recorded song (${style}) ---`);
+  const map = (await (await fetch('/' + SONGS[style] + 'song.json')).json()) as SongManifest;
   const T_RACE = 0.5;
   const T_P2 = 30.37;
-  const T_P3 = 95.21;
-  // (Late enough that the loop has come round: Meridian's at 139 s, Canyon's at 147.)
-  const T_FIN = 160.83;
+  // A song with a finale jumps to it on lap 3: then lap 3 comes after the
+  // loop has come round once (Helios's at 107 s), so both loops are heard.
+  const T_P3 = map.finale ? Math.max(95.21, T_RACE + map.loop[1] + 4.37) : 95.21;
+  // Late enough that the loop has come round (Meridian's at 139 s, Canyon's
+  // at 147), and the finale's.
+  const T_FIN = Math.max(160.83, map.finale ? T_P3 + 2 + map.finale.loop[1] - Math.min(...map.finale.entry) + 4 : 0);
   // Long enough for the ending to play out and the menu music to take over.
   const T_END = T_FIN + 16;
   const sceneAt = (t: number): AudioScene => ({ ...OFF, lapPhase: t >= T_P3 ? 3 : t >= T_P2 ? 2 : 1, finished: t >= T_FIN });
@@ -1281,12 +1285,22 @@ async function offlineSong(style: string): Promise<void> {
   const lap2 = when(/^lap 2/);
   const lap3 = when(/^lap 3/);
   const seam = when(/^loop/);
+  const finale = when(/^finale/);
   const ending = when(/^ending/);
   for (const e of song.log) table(`recorded song (${style}): what it did (offline)`).push({ at: r3(e.at), what: e.what, bar: e.bar });
   // Each change on a bar line: the song position at that moment is a bar line
   // (at most a bar after the lap change asked for it, and the lead before it).
   const barMax = Math.max(...m.bars.slice(1).map((b, i) => b - m.bars[i]));
-  const posAt = (t: number) => (t < seam ? t - start : t < ending ? m.loop[0] + (t - seam) : m.ending + (t - ending));
+  // Where in the files the song is, from what it did: each start, loop, jump
+  // and the ending says where it went on to.
+  const anchors = song.log
+    .filter((e) => /^(start|loop|finale|ending)/.test(e.what))
+    .map((e) => ({ at: e.at, what: e.what, pos: /^start/.test(e.what) ? 0 : /^ending/.test(e.what) ? m.ending : m.bars[e.bar] }));
+  const posAt = (t: number) => {
+    let a = anchors[0];
+    for (const x of anchors) if (x.at <= t) a = x;
+    return a.pos + (t - a.at);
+  };
   for (const [name, t, asked] of [['lap 2', lap2, T_P2], ['lap 3', lap3, T_P3], ['ending', ending, T_FIN]] as const) {
     if (!Number.isFinite(t)) {
       fail(`${style}: the song never did its ${name}`);
@@ -1298,8 +1312,22 @@ async function offlineSong(style: string): Promise<void> {
     if (!onBar) fail(`${style}: the song's ${name} is not on a bar line (song position ${p.toFixed(4)} s)`);
     if (t < asked || t > asked + 0.3 + barMax + STEP) fail(`${style}: the song's ${name} came ${(t - asked).toFixed(2)} s after it was asked for`);
   }
-  if (start + m.loop[1] > T_FIN - 1) fail(`${style}: the loop ends after this check's finish; move T_FIN later`);
-  if (Math.abs(seam - (start + m.loop[1])) > 0.001) fail(`${style}: the loop came at ${seam}, not at the loop's end (${start + m.loop[1]})`);
+  // Every loop from the end of the stretch it loops back to its start, and
+  // the loop (and the finale's, if any) heard at least once.
+  const loops = anchors.filter((a) => a.what === 'loop');
+  const ends = [m.loop, ...(m.finale ? [m.finale.loop] : [])];
+  for (const a of loops) {
+    const before = posAt(a.at - 1e-6);
+    if (!ends.some(([from, until]) => Math.abs(a.pos - from) < 1e-4 && Math.abs(before - until) < 0.001)) fail(`${style}: a loop at ${r3(a.at)} went from ${before.toFixed(4)} to ${a.pos.toFixed(4)}, not from a loop's end to its start`);
+  }
+  for (const [from] of ends) if (!loops.some((a) => Math.abs(a.pos - from) < 1e-4)) fail(`${style}: the loop from ${from.toFixed(3)} never came round before the finish; move T_FIN later`);
+  if (m.finale) {
+    // The finale on lap 3's bar line, landing where the chord cycle had got to.
+    if (!(Math.abs(finale - lap3) < 1e-6)) fail(`${style}: the finale came at ${r3(finale)}, not with lap 3 (${r3(lap3)})`);
+    const e = song.log.find((x) => x.what === 'finale');
+    const was = m.bars.findIndex((b) => Math.abs(b - posAt(finale - 1e-6)) < 0.0005);
+    if (e && was >= 0 && m.bars[e.bar] !== m.finale.entry[was % m.finale.cycle]) fail(`${style}: the finale landed on bar ${e.bar}, not where the cycle had got to (from bar ${was})`);
+  }
 
   // The render against the layers summed by hand, either side of each change.
   const scale = VOL.music * MUSIC_TRIM * 10 ** (m.level / 20);
@@ -1383,8 +1411,8 @@ async function offlineSong(style: string): Promise<void> {
     // name, change time, file position just before (NaN: not compared), lap before, file position just after, lap after
     // (A layer heard through a filter is not modelled here: then only after the change is compared.)
     ['lap 2 comes in', lap2, m.filter ? NaN : lap2 - start, 1, lap2 - start, 2],
-    ['lap 3 comes in', lap3, lap3 - start, 2, lap3 - start, 3],
-    ['the loop', seam, m.loop[1], 3, m.loop[0], 3],
+    ['lap 3 comes in', lap3, posAt(lap3 - 1e-6), 2, posAt(lap3), 3],
+    ...loops.map((a, i): [string, number, number, number, number, number] => [loops.length > 1 ? `loop ${i + 1}` : 'the loop', a.at, posAt(a.at - 1e-6), a.at < lap2 ? 1 : a.at < lap3 ? 2 : 3, a.pos, a.at < lap2 ? 1 : a.at < lap3 ? 2 : 3]),
     ['the ending', ending, posAt(ending - 1e-6), 3, m.ending, 3],
   ];
   for (const [name, t, before, lapB, after, lapA] of checks) {
@@ -1410,14 +1438,14 @@ async function offlineSong(style: string): Promise<void> {
     for (let i = Math.round(t0 * SR); i < Math.round(t1 * SR); i++) mx = Math.max(mx, Math.abs(out[0][i] - out[0][i - 1]), Math.abs(out[1][i] - out[1][i - 1]));
     return mx;
   };
-  for (const [name, t] of [['the loop', seam], ['the ending', ending]] as const) {
+  for (const [name, t] of [['the loop', seam], ['the finale', finale], ['the ending', ending]] as const) {
     if (!Number.isFinite(t)) continue;
     const at = step(t - XFADE - 0.002, t + 0.002);
     const around = step(t - 1, t + 1);
     table(`recorded song (${style}): the joins (offline)`).push({ join: name, 'largest step at the join': r3(at), 'largest within a second of it': r3(around) });
     if (at > around * 1.01 && at > 0.02) fail(`${style}: ${name}: a click at the join (step ${at.toFixed(3)}, ${around.toFixed(3)} around it)`);
   }
-  for (const [name, a, b] of [['lap 1', start + 2, lap2], ['lap 2', lap2 + 0.5, lap3], ['lap 3', lap3 + 0.5, seam], ['ending', ending + 0.1, ending + (m.end - m.ending) - 0.5]] as const) {
+  for (const [name, a, b] of [['lap 1', start + 2, lap2], ['lap 2', lap2 + 0.5, lap3], ['lap 3', lap3 + 0.5, ending], ['ending', ending + 0.1, ending + (m.end - m.ending) - 0.5]] as const) {
     const st = analyse(buf, a, b);
     const lim = limiting(buf, a, b, VOL.master);
     table(`recorded song (${style}): level (offline, default volumes)`).push({ stretch: name, 'rms dBFS': db(st.rms), peak: r3(st.peak), 'pre-limiter peak': r3(st.prePeak), 'limiter: median / 95% (dB)': `${lim.median.toFixed(1)} / ${lim.p95.toFixed(1)}`, 'limiter over 2 dB': `${Math.round(lim.over2 * 100)}%` });

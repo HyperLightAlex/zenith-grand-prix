@@ -65,6 +65,28 @@ describe('the song timeline', () => {
     expect(plan.posAt(127.5)).toBeCloseTo(21.55);
   });
 
+  it('jumps on a bar line to another stretch, and loops that from then on', () => {
+    // A finale after the loop: bars at 30, 32 ... 38 in the files, looping 32 to 38.
+    const plan = new SongPlan({ ...map, bars: [...bars, 30, 32, 34, 36, 38], ending: 40.05, end: 48 });
+    plan.start(100);
+    plan.extend(123);
+    // At 112.6 (position 12.6) the next bar line is 13 (bar 6), at 113: on to position 30 + (6 % 2) * 2.
+    const done = plan.jump(112.6, (bar) => 30 + (bar % 2) * 2, [32, 38])!;
+    expect(done.seg).toEqual({ at: 113, from: 30, until: 38, kind: 'body' });
+    expect(done.cut!.until).toBeCloseTo(13);
+    expect(done.dropped.map((s) => s.at)).toEqual([121]);
+    expect(plan.posAt(112.9)).toBeCloseTo(12.9);
+    expect(plan.posAt(113.5)).toBeCloseTo(30.5);
+    expect(plan.barAt(113.5)).toBe(11);
+    // From then on it loops the new stretch: 32 to 38, from 121.
+    expect(plan.extend(122).map((s) => [s.at, s.from, s.until])).toEqual([[121, 32, 38]]);
+    expect(plan.posAt(121.5)).toBeCloseTo(32.5);
+    expect(plan.nextBar(126.5)).toEqual({ at: 127, bar: 15 });
+    // And the finish still goes to the ending from there.
+    const end = plan.finish(126.5)!;
+    expect(end.ending).toEqual({ at: 127, from: 40.05, until: 48, kind: 'ending' });
+  });
+
   it('forgets what has finished, keeping the last', () => {
     const plan = new SongPlan(map);
     plan.start(100);
@@ -186,8 +208,22 @@ describe('the songs shipped', () => {
       // Bars in order, the loop on two of them, the ending after the loop.
       for (let i = 1; i < m.bars.length; i++) expect(m.bars[i]).toBeGreaterThan(m.bars[i - 1]);
       expect(m.bars).toContain(m.loop[0]);
-      expect(m.bars[m.bars.length - 1]).toBe(m.loop[1]);
-      expect(m.ending).toBeGreaterThan(m.loop[1]);
+      // The bars run to the loop's end, then the finale's, if there is one.
+      const f = m.finale;
+      expect(m.bars[m.bars.length - 1]).toBe(f ? f.loop[1] : m.loop[1]);
+      expect(m.bars).toContain(m.loop[1]);
+      expect(m.ending).toBeGreaterThan(f ? f.loop[1] : m.loop[1]);
+      if (f) {
+        // Somewhere to land for every place in the cycle, each on one of its bar lines, after the loop.
+        expect(f.entry).toHaveLength(f.cycle);
+        for (const e of [...f.entry, ...f.loop]) {
+          expect(m.bars).toContain(e);
+          expect(e).toBeGreaterThan(m.loop[1]);
+        }
+        expect(f.loop[1]).toBeGreaterThan(f.loop[0]);
+        expect([2, 3]).toContain(f.lap);
+      }
+      if (m.stingers) for (const v of Object.values(m.stingers)) expect(Math.abs(v)).toBeLessThanOrEqual(12);
       expect(m.end).toBeGreaterThan(m.ending + 2);
       expect(m.end).toBeCloseTo(m.frames / m.rate, 3);
       // Every layer has a level on each lap, something plays on lap 1, and everything on lap 3.

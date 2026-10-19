@@ -1657,7 +1657,9 @@ export class Game {
 
   /** A race stinger, moved into the key of this circuit's music. */
   private sting(name: SfxName): void {
-    const semis = STINGER_KEY[this.session.track.def.theme ?? 'meridian']?.[name] ?? 0;
+    // (A recorded song can have keys of its own for them.)
+    const keys = this.audio.stingerKey?.() ?? STINGER_KEY[this.session.track.def.theme ?? 'meridian'];
+    const semis = keys?.[name] ?? 0;
     this.audio.play(name, semis ? { pitch: 2 ** (semis / 12) } : undefined);
   }
 

@@ -1,0 +1,16 @@
+{
+  "id": "helios",
+  "title": "午間の雲上レース",
+  "layers": {"drums": ["Drums"], "bass": ["Bass"], "melody": ["Keyboard", "Synth"], "percussion": ["Percussion", "Other"]},
+  "laps": {"drums": [null, 0, 0], "bass": [0, 0, 0], "melody": [0, 0, 0], "percussion": [null, null, 0]},
+  "filter": null,
+  "lowShelf": {"layers": ["drums", "bass"], "hz": 140, "db": [0, 0, 5]},
+  "loop": [16, 64],
+  "finale": {"lap": 3, "from": 80, "loop": [88, 104], "cycle": 16},
+  "ending": 116,
+  "master": {"gain": -4.6, "lowShelf": [200, 3.0], "highShelf": [4000, 2.0]},
+  "loudness": [-18.5, -17.5, -15.5],
+  "stingers": {"lap_phase": -5, "finish": 2},
+  "codec": "mp3",
+  "quality": 0
+}

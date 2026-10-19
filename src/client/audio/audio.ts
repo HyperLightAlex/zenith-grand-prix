@@ -90,6 +90,11 @@ export interface AudioEngine {
    * Optional: only an engine with recorded songs has anything to do.
    */
   prepareMusic?(style: string): void;
+  /**
+   * Semitones to move each race stinger by, when the music playing has keys
+   * of its own for them (a recorded song); null to use the circuit's.
+   */
+  stingerKey?(): Partial<Record<SfxName, number>> | null;
 }
 
 /** Silent stand-in, used until the page has had a user gesture and in tests. */
