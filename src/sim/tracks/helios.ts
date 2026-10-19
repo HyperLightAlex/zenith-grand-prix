@@ -58,9 +58,15 @@ export const HELIOS: CircuitDef = {
   ],
   closeWith: [17, 35],
   settle: 36,
+  // The first half of the lap had only the two by the start, then nothing
+  // for 39% of the lap (T1's exit to after the Loop): playtesters ran dry
+  // there. The three in it now leave no gap longer than a fifth of the lap.
   strips: [
     { piece: 0, at: 0.25, len: 200, d: 14, halfW: 5 },
     { piece: 2, at: 0.1, len: 200, d: -15, halfW: 5 },
+    { piece: 3, at: 0.4, len: 200, d: 14, halfW: 5 }, // up the long climb
+    { piece: 11, at: 0.25, len: 200, d: -15, halfW: 5 }, // down off the Drop, on the inside for the Switchback's left
+    { piece: 17, at: 0.35, len: 200, d: 14, halfW: 5 }, // closing A, before the Loop
     { piece: 19, at: 0.1, len: 180, d: 0, halfW: 5 },
     { piece: 27, at: 0.1, len: 190, d: 24, halfW: 5 }, // safe route of Split Decision
     { piece: 34, at: 0.0, len: 180, d: -24, halfW: 5 }, // after the jump route's landing
