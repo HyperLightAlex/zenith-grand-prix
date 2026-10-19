@@ -2,14 +2,15 @@
 // into a few layers (tools/music), played so that it builds lap by lap the
 // way the synthesised race music does.
 //
-//   lap 1   the drums and the bass
-//   lap 2   the melody comes in: keys, synth, strings, guitar
-//   lap 3   the brass, percussion and effects: the full song
+//   lap 1   the melody (keys, synth, strings, guitar) and the bass, a little quieter
+//   lap 2   the drums come in: the beat, for the fighting
+//   lap 3   the brass, percussion, effects and woodwinds: the full song, at full volume
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
-// Every lap is equally loud: the build sets each lap's levels so, and a lap
-// is told from the last by what comes in. The layers follow how cleanly
+// Each lap is a little louder than the last (the build sets each lap's
+// level: -18.5, -17.5 and -16.5 LUFS), but a lap is told from the last by
+// what comes in. The layers follow how cleanly
 // Suno's stems come apart (they are separated out of the finished mix): the
 // keys, synth, strings and guitar were carved out of one another, and heard
 // apart each has holes where the others were, which sounds hollow, like

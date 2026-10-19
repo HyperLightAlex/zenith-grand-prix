@@ -7,15 +7,15 @@ Meridian has a song so far: 海空の速さ.
 
 | Lap | What plays |
 |---|---|
-| 1 | the drums and the bass |
-| 2 | the melody comes in: keys, synth, strings, guitar |
-| 3 | the brass, percussion, effects and woodwinds: the full song |
+| 1 | the melody (keys, synth, strings, guitar) and the bass, a little quieter |
+| 2 | the drums come in: the beat, for the fighting |
+| 3 | the brass, percussion, effects and woodwinds: the full song, at full volume |
 | finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
-Every lap is equally loud (-16.5 LUFS at the game's default volumes, from
-the start): a lap is told from the last by what comes in, not by getting
-louder, so the layers already playing ease back as new ones join (lap 1's
-are 8.75 dB up on their level in the full song, lap 2's 1 dB).
+Lap 1 is 2 LU under the last lap and lap 2 1 LU under it (-18.5, -17.5 and
+-16.5 LUFS at the game's default volumes), which is almost exactly what the
+layers come to by themselves: the build lifts lap 1 by under 1 dB. The
+build is in what comes in, not in how loud it gets.
 
 **Which stems can be heard apart.** Suno's stems are separated out of the
 finished mix, not recorded apart, and some come apart cleanly while others
@@ -33,16 +33,18 @@ overlap: carved from one mix, they agree; apart, they do not. Meridian's
 | Synth | 0.10 | 0.21 | 0.53 | | 0.57 | 0.39 | 0.27 |
 | Strings | 0.11 | 0.16 | 0.38 | 0.57 | | 0.78 | 0.18 |
 
-So the keys, synth, strings and guitar are one layer; the drums, bass,
-percussion and effects (0.02 to 0.08 against everything) can each come in
-alone; the brass, in between, comes in last.
+So the keys, synth, strings and guitar are one layer, and come in
+together; the drums, bass, percussion and effects (0.02 to 0.16 against
+everything) can each come in alone; the brass, in between, comes in last.
 
 How it got here, from playtests: the first version kept the kick, muffled,
 on lap 1, and its laps were too alike; the second took the kick out of
 lap 1 with a high-pass and let each lap get about 3 LU louder, and its
 start was too quiet; the third evened the laps out, which brought lap 1's
 keys (without the synth they are tangled with) and its tinny high-passed
-hats up 8 dB, and the music sounded muffled, like a telephone.
+hats up 8 dB, and the music sounded muffled, like a telephone; the fourth
+kept tangled stems together but opened on the drums and bass, when the
+melody is what should be heard first.
 
 Every change waits for the next bar line, so a layer comes in with the
 downbeat. The song plays from its start, loops a stretch from its middle
@@ -97,7 +99,7 @@ loaded or decoded, the circuit's synthesised music plays instead.
      like `song.wav` (Suno's stems are the mix before mastering: summed,
      they are louder and duller). Find them by comparing the two.
    - `loudness`: how loud each lap should be, in LUFS at the game's
-     default volumes (Meridian: -16.5 on all three). The build sets each
+     default volumes (Meridian: -18.5, -17.5, -16.5). The build sets each
      lap's level to meet it and prints what it got, and the layers' levels
      on each lap.
 4. **Build it**: `python3 tools/music/build.py tools/music/songs/<circuit>.json <folder>`.
