@@ -4,7 +4,10 @@ A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
 For now this is an experiment, heard only with `?music=suno` in the address.
 Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
-(紅砂のレース) and Helios Drop (午間の雲上レース).
+(紅砂のレース) and Helios Drop (午間の雲上レース). The results have one when
+the player's team wins (トロフィーセレモニー; see "Screens' music" below).
+What each song was asked for, and what is still to make, is in
+[prompts.md](prompts.md).
 
 | Lap | What plays |
 |---|---|
@@ -129,6 +132,21 @@ up to the bar line), so without the filter they are heard exactly as
 recorded. If the files cannot be
 loaded or decoded, the circuit's synthesised music plays instead.
 
+## Screens' music
+
+A screen can have a song too (`SCREEN_SONGS` in `song.ts`). It plays whole,
+every layer in (it is built as one layer), from its top, then round its
+loop until the screen moves on, when the menu music comes back. Small, so
+it is decoded as soon as there is an audio context and kept.
+
+The results play the win theme, トロフィーセレモニー, when the player's team
+won the round (and the Grand Prix award, for first place). It goes
+straight in from its top and loops bars 22 to 48 (51 s; the first 95 s
+play through before it), at -19.5 LUFS: between the menu music (-24) and a
+race's first lap (-18.5). A loss has no song yet, so the menu music plays
+on, as before; a song at `results-loss` will be played for it. The title
+and the hangar can have theirs the same way.
+
 ## Making one
 
 1. **Make the song in Suno and export its stems** (the WAV of the full
@@ -190,7 +208,9 @@ loaded or decoded, the circuit's synthesised music plays instead.
    `quality` 0; its default, 4, cuts above 16 kHz and is audibly rougher
    once four layers are summed. Canyon: 155 s of its 204, 24.2 MB in five
    layers; Helios: 157 s of its 203, 19.2 MB).
-5. **Add it** to `SONGS` in `src/client/audio/song.ts`.
+5. **Add it** to `SONGS` in `src/client/audio/song.ts` (a screen's: to
+   `SCREEN_SONGS`, as one layer with every stem in it, `laps` all 0, and
+   one `loudness`; see `songs/results-win.json`).
 6. **Check it**:
    - `npm test` checks every song's files and map.
    - `node tools/audio-check.mjs --only song` renders a race offline
@@ -198,6 +218,10 @@ loaded or decoded, the circuit's synthesised music plays instead.
      render matching the layers summed by hand to the sample on both sides,
      with no click at the joins, each lap's level, and the menu music
      coming in after the ending.
+   - `node tools/audio-check.mjs --only results` checks the results' music
+     the same way: in from the menu music, round its loop to the sample, and
+     back; `URL=http://127.0.0.1:8090/ node tools/results-check.mjs` races to
+     the results in a real browser and checks the music fits the outcome.
    - `URL=http://127.0.0.1:8090/ node tools/song-check.mjs` races in a real
      browser (after `npm run build` and `npm start`; `TRACK=canyon` for
      Canyon's) and checks what each

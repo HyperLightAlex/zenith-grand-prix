@@ -340,7 +340,8 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 `&track=canyon` (or `helios`, `meridian`) picks the circuit, `&look=plain`
 (or `anime`) picks the look for that visit, `&tune=1` opens the tuning panel,
 `&mute=1` turns sound off, `&music=suno` plays a recorded song as the race
-music where a circuit has one (all three, built up lap by lap: see
+music where a circuit has one (all three, built up lap by lap) and a win
+theme on the results (see
 [tools/music](tools/music/README.md)), and `?debug=mechs` opens a model viewer.
 Online: `?room=K7Q2X` and `?squad=K7Q2X` are invite links, `&server=URL` uses
 another game server, and `&player=2` gives the tab its own identity, so two

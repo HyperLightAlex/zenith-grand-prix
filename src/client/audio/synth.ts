@@ -112,6 +112,8 @@ export class SynthAudio implements AudioEngine {
   private finished = false;
   /** Recorded songs by circuit, when there are any (see song.ts). */
   private readonly songs = new Map<string, SongSource>();
+  /** Songs for screens, by what they are for ('results-win'...). */
+  private readonly screenSongs = new Map<string, SongSource>();
   /** The circuit prepareMusic named, to decode its song (after PREPARE_AFTER, and once there is a context). */
   private nextSong: string | null = null;
   private prepareTimer: ReturnType<typeof setTimeout> | null = null;
@@ -125,10 +127,13 @@ export class SynthAudio implements AudioEngine {
    * `songs`: recorded race music, by circuit (style), as the folder each one's
    * files are in. Their download starts now; each is decoded when a race on
    * its circuit starts (one at a time: see prepareSong), and a circuit with
-   * one plays it instead of its synthesised music.
+   * one plays it instead of its synthesised music. `screenSongs`: songs for
+   * screens (see SCREEN_SONGS in song.ts), decoded as soon as there is an
+   * audio context and kept.
    */
-  constructor(opts: { songs?: Record<string, string> } = {}) {
+  constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string> } = {}) {
     for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
+    for (const [id, base] of Object.entries(opts.screenSongs ?? {})) this.screenSongs.set(id, new SongSource(base));
   }
 
   // ---- AudioEngine ----------------------------------------------------------
@@ -268,9 +273,9 @@ export class SynthAudio implements AudioEngine {
     });
   }
 
-  setMusic(track: 'menu' | 'race' | null, style = 'meridian'): void {
+  setMusic(track: 'menu' | 'race' | 'results' | null, style = 'meridian'): void {
     this.guard(() => {
-      this.want = track === 'menu' || track === 'race' ? track : null;
+      this.want = track === 'menu' || track === 'race' || track === 'results' ? track : null;
       this.wantStyle = style;
       this.applyMusic(true);
     });
@@ -343,11 +348,17 @@ export class SynthAudio implements AudioEngine {
     return this.songs;
   }
 
+  /** The screens' recorded songs, for the audio check. */
+  debugScreenSongs(): ReadonlyMap<string, SongSource> {
+    return this.screenSongs;
+  }
+
   /** Decodes every recorded song now (after debugAttach), and resolves once each is ready or has failed. */
   async debugSongsLoaded(): Promise<void> {
     const g = this.g;
-    if (g) for (const s of this.songs.values()) s.decode(g.ctx);
-    while ([...this.songs.values()].some((s) => s.state === 'loading')) await new Promise((r) => setTimeout(r, 50));
+    const all = [...this.songs.values(), ...this.screenSongs.values()];
+    if (g) for (const s of all) s.decode(g.ctx);
+    while (all.some((s) => s.state === 'loading')) await new Promise((r) => setTimeout(r, 50));
   }
 
   debugInfo(): AudioDebugInfo {
@@ -441,8 +452,10 @@ export class SynthAudio implements AudioEngine {
     const layers = new EngineLayers(ctx, white, pink, engineBus);
     layers.setMix(this.layerMix);
     this.g = { ctx, live, rng, white, pink, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
-    // A song is decoded for the circuit named ahead (prepareMusic), or when a race asks for one.
+    // A song is decoded for the circuit named ahead (prepareMusic), or when a
+    // race asks for one; the screens' songs (small) straight away.
     if (this.nextSong) this.prepareSong(this.nextSong);
+    for (const s of this.screenSongs.values()) s.decode(ctx);
     this.applyMusic();
   }
 
@@ -563,8 +576,12 @@ export class SynthAudio implements AudioEngine {
   private applyMusic(fresh = false): void {
     const g = this.g;
     if (!g) return;
+    // The results' music only where there is a song for the outcome (the
+    // style, 'win' or 'loss'); otherwise the menu music plays (or carries on).
+    const results = this.screenSongs.get(`results-${this.wantStyle}`);
+    if (this.want === 'results' && (!results || results.state === 'failed')) this.want = 'menu';
     // Racing on a different circuit is a change of music too.
-    const style = this.want === 'race' ? this.raceStyle() : 'menu';
+    const style = this.want === 'race' ? this.raceStyle() : this.want === 'results' ? this.wantStyle : 'menu';
     if (this.want === 'race') this.prepareSong(style);
     const same = (this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style);
     if (same && !(fresh && this.track?.restartsWithRace)) return;
@@ -576,8 +593,11 @@ export class SynthAudio implements AudioEngine {
       this.track = null;
     }
     if (this.want) {
-      const song = this.want === 'race' ? this.songs.get(style) : undefined;
-      const t = song && song.state !== 'failed' ? new SongTrack(g.ctx, song, style) : createTrack(this.want, g.ctx, g.white, now, this.wantStyle);
+      const song = this.want === 'race' ? this.songs.get(style) : this.want === 'results' ? this.screenSongs.get(`results-${style}`) : undefined;
+      const t =
+        song && song.state !== 'failed'
+          ? new SongTrack(g.ctx, song, style, this.want === 'results' ? 'results' : null)
+          : createTrack(this.want === 'results' ? 'menu' : this.want, g.ctx, g.white, now, this.wantStyle);
       t.dry.connect(g.musicIn);
       t.wet.connect(g.musicWetIn);
       t.fade(MUSIC_TRIM, now, 0.2);

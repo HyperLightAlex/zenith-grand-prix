@@ -138,6 +138,8 @@ export interface GameOptions {
 }
 
 const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
+/** Screens the results' music carries on under: the results, the award, and what opens over them. */
+const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'award', 'controls', 'video', 'dialog', 'pause']);
 /**
  * Semitones to move the race stingers by on each circuit so they land in the
  * key its music is in (they are written for Meridian's A minor, B minor and
@@ -226,6 +228,8 @@ export class Game {
   private last = performance.now();
   private attractTimer = 0;
   private resultsAt = -1;
+  /** The music last asked for: results music gives way to the menu's once its screens are left. */
+  private musicNow: 'menu' | 'race' | 'results' | null = null;
   private prevButtons = 0;
   private lastShotKey = '';
   private slowmo = 0;
@@ -500,7 +504,7 @@ export class Game {
     if (this.online.room) void this.online.leaveRoom();
     this.hud.hide();
     this.menus.reset('title');
-    this.audio.setMusic('menu');
+    this.music('menu');
   }
 
   /**
@@ -519,8 +523,32 @@ export class Game {
     else window.addEventListener('pointerup', () => setTimeout(apply, 0), { once: true, capture: true });
   }
 
+  private music(track: 'menu' | 'race' | 'results', style?: string): void {
+    this.musicNow = track;
+    this.audio.setMusic(track, style);
+  }
+
+  /**
+   * Whether the player's team won the round just raced: the results' music
+   * (null when nobody here raced, or the round is not scored yet).
+   */
+  private wonRound(race: RaceState, local: number): boolean | null {
+    const me = local >= 0 ? race.mechs[local] : undefined;
+    const round = this.match?.rounds[this.match.rounds.length - 1];
+    return me && round ? round.winner === me.team : null;
+  }
+
+  /** The results screen's music: the win or loss theme, or the menu's when it is not known. */
+  private resultsMusic(): void {
+    const won = this.resultsRace ? this.wonRound(this.resultsRace, this.resultsLocal) : null;
+    if (won === null) this.music('menu');
+    else this.music('results', won ? 'win' : 'loss');
+  }
+
   /** The scene behind the menus follows the screen on top: the attract race, or your mech in the hangar. */
   private screenChanged(id: ScreenId | null): void {
+    // Off the results (or the Grand Prix award) to anywhere but a dialog over them: the menu music again.
+    if (this.musicNow === 'results' && id !== null && !RESULTS_MUSIC_SCREENS.has(id)) this.music('menu');
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
       if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'video' || id === 'dialog') return;
     }
@@ -705,7 +733,7 @@ export class Game {
       this.mode = 'free';
       this.menus.reset('setup', undefined, ['title', 'modes', { id: 'hangar', data: this.freeHangar() }]);
     }
-    this.audio.setMusic('menu');
+    this.music('menu');
   }
 
   /** From the results (or a restart after the flag): the next round, or what follows the match. */
@@ -763,7 +791,7 @@ export class Game {
     this.hud.setDevice(this.input.device);
     this.view.cam.reset();
     this.view.cam.mode = this.session.race.phase === PHASE.COUNTDOWN ? 'intro' : 'play';
-    this.audio.setMusic('race', this.session.track.def.theme ?? 'meridian');
+    this.music('race', this.session.track.def.theme ?? 'meridian');
   }
 
   private pause(): void {
@@ -878,7 +906,7 @@ export class Game {
     this.match = null;
     this.state = 'garage';
     this.hud.hide();
-    this.audio.setMusic('menu');
+    this.music('menu');
     this.menus.reset('standings', { kind: this.gpKind }, ['title', 'modes', 'gp']);
   }
 
@@ -894,6 +922,7 @@ export class Game {
       else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
       this.menus.replace('award', { kind, place, medal });
       this.audio.play(place === 1 ? 'win' : 'lose');
+      this.music('results', place === 1 ? 'win' : 'loss');
     } else {
       this.menus.replace('briefing', { kind });
     }
@@ -1185,7 +1214,7 @@ export class Game {
     this.eyecatch.hide();
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') this.state = 'garage';
     this.menus.reset('online', undefined, ['title', 'modes']);
-    this.audio.setMusic('menu');
+    this.music('menu');
     void this.ensureSquad();
     if (text) messageDialog(this.menus, 'Out of the room', text);
   }
@@ -1235,7 +1264,7 @@ export class Game {
       this.state = 'garage';
       this.hud.hide();
       this.eyecatch.hide();
-      this.audio.setMusic('menu');
+      this.music('menu');
     }
     this.toRoom();
     if (toast) this.menus.toast(toast);
@@ -1329,6 +1358,8 @@ export class Game {
       const me = this.session instanceof NetSession && this.session.localId >= 0 ? this.session.race.mechs[this.session.localId] : null;
       if (me && this.state === 'race') this.audio.play(msg.round.winner === me.team ? 'win' : 'lose');
       if (this.menus.screen === 'results') this.menus.refresh();
+      // (Should the room's word come after the results are up, their music follows it.)
+      if (this.state === 'results' && this.menus.screen === 'results') this.resultsMusic();
     });
     o.on('lobbyAgain', (msg) => {
       if (this.mode !== 'online' && !this.menus.has('room')) return;
@@ -1989,7 +2020,7 @@ export class Game {
     this.resultsRace = online ? (this.session as NetSession).confirmed : race;
     this.resultsLocal = local;
     this.menus.reset('results');
-    this.audio.setMusic('menu');
+    this.resultsMusic();
   }
 
   /**

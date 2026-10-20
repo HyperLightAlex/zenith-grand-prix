@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { bestLag, SONGS, SongPlan, SongSource, syncShift, type SongManifest } from '../src/client/audio/song';
+import { bestLag, SCREEN_SONGS, SONGS, SongPlan, SongSource, syncShift, type SongManifest } from '../src/client/audio/song';
 
 // A song with a bar every 2 s from 1 s: bar 3 (7 s) to bar 10 (21 s) loops,
 // and the ending sits in the files just after the loop's end.
@@ -200,7 +200,7 @@ describe('holding one song at a time', () => {
 });
 
 describe('the songs shipped', () => {
-  for (const [style, base] of Object.entries(SONGS)) {
+  for (const [style, base] of Object.entries({ ...SONGS, ...SCREEN_SONGS })) {
     it(`${style}: its files are there, and its map makes sense`, () => {
       const dir = `public/${base}`;
       const m = JSON.parse(readFileSync(`${dir}song.json`, 'utf8')) as SongManifest;

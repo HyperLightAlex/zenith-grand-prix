@@ -293,8 +293,12 @@ its 16-bar chord cycle, so only the energy changes, and loops the drop to
 the finish. All three circuits have one; only the circuit coming up has
 its song decoded. Canyon's and Helios's songs are centred on E and end on E
 major, so while they play the stingers take keys of their own (the battle
-stab resolving to E minor, the flag in E major). See
-[tools/music](../tools/music/README.md).
+stab resolving to E minor, the flag in E major). The results have a song
+when the player's team won the round (and the Grand Prix award for first):
+トロフィーセレモニー, looping until the screen is left; a loss keeps the
+menu music until it has a song of its own. See
+[tools/music](../tools/music/README.md), and its prompts.md for what each
+song was asked for.
 
 ### Free steering
 

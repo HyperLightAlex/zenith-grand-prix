@@ -82,8 +82,10 @@ export interface AudioEngine {
   /**
    * 'menu' is calm, 'race' builds with the lap phase, null fades out.
    * `style` picks the race music: the circuit's theme ('meridian', 'canyon', 'helios').
+   * 'results' is the results screen's, with `style` 'win' or 'loss' (the
+   * player's team's): a recorded song where there is one, else the menu music.
    */
-  setMusic(track: 'menu' | 'race' | null, style?: string): void;
+  setMusic(track: 'menu' | 'race' | 'results' | null, style?: string): void;
   /**
    * The next race is likely on this circuit (its theme): get its race music
    * ready ahead of time (a recorded song is decoded, which takes a moment).

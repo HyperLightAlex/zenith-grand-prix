@@ -17,7 +17,7 @@ import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio'
 import { mtof } from '../src/client/audio/dsp';
 import { SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
-import { SONGS, XFADE, type SongInfo, type SongManifest } from '../src/client/audio/song';
+import { SCREEN_SONGS, SONGS, XFADE, type SongInfo, type SongManifest } from '../src/client/audio/song';
 
 type Cell = string | number;
 type Row = Record<string, Cell>;
@@ -402,13 +402,14 @@ async function render(
   vol?: [number, number, number],
   preTap = true,
   songs?: Record<string, string>,
+  screenSongs?: Record<string, string>,
 ): Promise<Render> {
   const ctx = new OfflineAudioContext(preTap ? 4 : 2, Math.ceil(seconds * SR), SR);
-  const audio = new SynthAudio(songs ? { songs } : {});
+  const audio = new SynthAudio({ ...(songs ? { songs } : {}), ...(screenSongs ? { screenSongs } : {}) });
   if (vol) audio.setVolumes(vol[0], vol[1], vol[2]);
   audio.debugAttach(ctx);
   // A recorded song decodes in the background: wait for it, so the render starts with it ready.
-  if (songs) await audio.debugSongsLoaded();
+  if (songs || screenSongs) await audio.debugSongsLoaded();
   const tap = audio.preLimiter;
   if (!tap) throw new Error('debugAttach did not build a graph');
   if (preTap) {
@@ -1468,6 +1469,99 @@ async function offlineSong(style: string): Promise<void> {
   await dump(`song-${style}`, buf, 0, T_END);
 }
 
+/**
+ * The results' music (?music=suno): from the menu music to the win theme,
+ * which plays from its top and then round its loop (checked to the sample
+ * against the file, either side of the join), then back to the menu music;
+ * and a loss, which has no song yet, leaving the menu music playing as it was.
+ */
+async function offlineResults(): Promise<void> {
+  log('--- offline: results music ---');
+  const map = (await (await fetch('/' + SCREEN_SONGS['results-win'] + 'song.json')).json()) as SongManifest;
+  const T_WIN = 2;
+  // Past the loop's first join, then back to the menus.
+  const T_MENU = T_WIN + map.loop[1] + 3;
+  const T_LOSS = T_MENU + 4;
+  const T_END = T_LOSS + 3;
+  const cues: Cue[] = [
+    { t: 0, run: (a) => a.setMusic('menu') },
+    { t: T_WIN, run: (a) => a.setMusic('results', 'win') },
+    { t: T_MENU, run: (a) => a.setMusic('menu') },
+    { t: T_LOSS, run: (a) => a.setMusic('results', 'loss') },
+  ];
+  let info: SongInfo | null = null;
+  let menuStart = NaN;
+  let menuAfterLoss = NaN;
+  let alive = 0;
+  const { buf, audio, warnings } = await render(T_END, cues, () => OFF, (t, a) => {
+    const music = a.debugInfo().music;
+    if (music?.name === 'results') info = music.song ?? info;
+    if (music?.name === 'menu' && t > T_MENU + 0.5 && t < T_LOSS) menuStart = music.startTime;
+    if (music?.name === 'menu' && t > T_LOSS + 0.5) menuAfterLoss = music.startTime;
+    if (t > T_LOSS - 0.2 && t < T_LOSS) alive = (music ? 1 : 0) + a.debugInfo().fadingTracks;
+  }, undefined, true, undefined, { 'results-win': '/' + SCREEN_SONGS['results-win'] });
+  if (warnings) fail(`results: the engine swallowed ${warnings} Web Audio error(s)`);
+  const src = audio.debugScreenSongs().get('results-win');
+  const song = info as SongInfo | null;
+  if (!src || src.state !== 'ready' || !src.manifest || !song) {
+    fail(`results: the win theme did not load (${src?.state ?? 'no song'})`);
+    return;
+  }
+  const m = src.manifest;
+  for (const e of song.log) table('results music: what it did (offline)').push({ at: r3(e.at), what: e.what, bar: e.bar });
+  const start = song.log.find((e) => /^start/.test(e.what))?.at ?? NaN;
+  const seam = song.log.find((e) => e.what === 'loop')?.at ?? NaN;
+  if (!(start >= T_WIN && start < T_WIN + 0.2)) fail(`results: the win theme started at ${r3(start)}, not as asked (${T_WIN})`);
+  if (!(Math.abs(seam - (start + m.loop[1])) < 0.001)) fail(`results: the loop came at ${r3(seam)}, not at the loop's end (${r3(start + m.loop[1])})`);
+  // Either side of the join, the render against the file (one layer, at full level).
+  const scale = VOL.music * MUSIC_TRIM * 10 ** (m.level / 20) * 10 ** ((m.laps[m.layers[0].id][2] ?? 0) / 20);
+  const data = src.buffers[0].getChannelData(0);
+  const out = buf.getChannelData(2);
+  const side = (t0: number, t1: number, pos0: number) => {
+    const n = Math.floor((t1 - t0) * SR);
+    const i0 = Math.round(t0 * SR);
+    const j0 = Math.round((pos0 + src.shift) * SR);
+    let best = 0;
+    let bestScore = -Infinity;
+    for (let lag = -240; lag <= 240; lag++) {
+      let s2 = 0;
+      for (let k = 0; k < n; k++) s2 += data[j0 + k] * (out[i0 + k + lag] ?? 0);
+      if (s2 > bestScore) {
+        bestScore = s2;
+        best = lag;
+      }
+    }
+    let res = 0;
+    let sig = 0;
+    for (let k = 0; k < n; k++) {
+      const want = data[j0 + k] * scale;
+      const d = out[i0 + k + best] - want;
+      res += d * d;
+      sig += want * want;
+    }
+    return { lag: best, residual: sig > 0 ? 10 * Math.log10(res / sig + 1e-12) : NaN };
+  };
+  if (Number.isFinite(seam)) {
+    const a = side(seam - 0.4, seam - XFADE - 0.002, m.loop[1] - 0.4);
+    const b = side(seam + 0.03, seam + 0.4, m.loop[0] + 0.03);
+    table('results music: the loop against the file (offline)').push({ 'at (s)': r3(seam), 'before: lag': a.lag, 'before: residual (dB)': Math.round(a.residual * 10) / 10, 'after: lag': b.lag, 'after: residual (dB)': Math.round(b.residual * 10) / 10 });
+    if (Math.abs(a.lag) > 1 || Math.abs(b.lag) > 1) fail(`results: the loop is ${a.lag} / ${b.lag} samples off the file`);
+    if (a.residual > -60 || b.residual > -60) fail(`results: the render does not match the file at the loop (${a.residual.toFixed(1)} / ${b.residual.toFixed(1)} dB)`);
+  }
+  const win = analyse(buf, start + 2, seam - 1);
+  const lim = limiting(buf, start + 2, seam - 1, VOL.master);
+  const menu = analyse(buf, T_MENU + 2, T_LOSS);
+  const loss = analyse(buf, T_LOSS + 1, T_END);
+  table('results music: level (offline, default volumes)').push({ 'win theme rms dBFS': db(win.rms), peak: r3(win.peak), 'limiter: median / 95% (dB)': `${lim.median.toFixed(1)} / ${lim.p95.toFixed(1)}`, 'menu after it, rms dBFS': db(menu.rms), 'after a loss, rms dBFS': db(loss.rms) });
+  if (win.peak >= CLIP) fail('results: the win theme clips');
+  if (menu.rms < 0.004) fail('results: no menu music after the win theme');
+  if (alive > 1) fail(`results: ${alive} music tracks still alive 4 s after going back to the menu music`);
+  // A loss has no song: the menu music plays on, not started again.
+  if (!(Number.isFinite(menuAfterLoss) && menuAfterLoss === menuStart)) fail(`results: a loss started the menu music again (or stopped it): ${menuStart} then ${menuAfterLoss}`);
+  if (loss.rms < 0.004) fail('results: silence after a loss');
+  await dump('results-win', buf, 0, T_END);
+}
+
 async function offlineStyles(): Promise<void> {
   log('--- offline: each circuit\'s race music ---');
   // Every circuit's race music through its three lap phases, then a change
@@ -1703,6 +1797,7 @@ async function main(): Promise<void> {
     ['speeds', offlineSpeeds],
     ['music', offlineMusic],
     ['song', offlineSongs],
+    ['results', offlineResults],
     ['styles', offlineStyles],
     ['stack', offlineStack],
     ['race', offlineRace],

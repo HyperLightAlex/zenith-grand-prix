@@ -1,0 +1,13 @@
+{
+  "id": "results-win",
+  "title": "トロフィーセレモニー",
+  "layers": {"all": ["Drums", "Bass", "Guitar", "Keyboard", "Percussion", "Strings", "Synth", "Other", "Brass", "Backing Vocals"]},
+  "laps": {"all": [0, 0, 0]},
+  "filter": null,
+  "loop": [22, 48],
+  "ending": 66,
+  "master": {"gain": -4.6, "lowShelf": [200, 3.0], "highShelf": [4000, 2.0]},
+  "loudness": -19.5,
+  "codec": "mp3",
+  "quality": 0
+}

@@ -29,13 +29,24 @@
 // Experimental: only with ?music=suno in the address (see main.ts). Without
 // it, nothing here loads.
 
-import type { MusicTrack, TrackInfo } from './music';
+import type { MusicTrack, TrackInfo, TrackName } from './music';
 
 /** The songs there are, by circuit: where each one's files are. */
 export const SONGS: Record<string, string> = {
   meridian: 'music/meridian/',
   canyon: 'music/canyon/',
   helios: 'music/helios/',
+};
+
+/**
+ * Songs for screens, by what they are for: the results when the player's
+ * team has won ('results-win', also the Grand Prix award for first) or lost
+ * ('results-loss'). They play whole, every layer in, from the top and then
+ * round their loop for as long as the screen is up. Small (one layer), so
+ * they are decoded once there is an audio context and kept.
+ */
+export const SCREEN_SONGS: Record<string, string> = {
+  'results-win': 'music/results-win/',
 };
 
 /** What tools/music/build.py writes as song.json. Times are positions in the layer files, in seconds. */
@@ -445,13 +456,18 @@ interface Playing {
   envs: GainNode[];
 }
 
-/** The race music when a circuit has a song. Same interface as the synthesised tracks. */
+/**
+ * A recorded song as a music track (same interface as the synthesised
+ * ones): the race music, built up lap by lap to its ending at the finish;
+ * or, given a `screen`, the music of a screen (the results), every layer in
+ * and looping until the screen moves on.
+ */
 export class SongTrack implements MusicTrack {
-  readonly name = 'race' as const;
+  readonly name: TrackName;
   readonly dry: GainNode;
   readonly wet: GainNode;
   readonly taps: Record<string, AudioNode> = {};
-  readonly restartsWithRace = true;
+  readonly restartsWithRace: boolean;
   broken = false;
 
   private plan: SongPlan | null = null;
@@ -477,7 +493,10 @@ export class SongTrack implements MusicTrack {
     private readonly ctx: BaseAudioContext,
     private readonly source: SongSource,
     readonly style: string,
+    private readonly screen: TrackName | null = null,
   ) {
+    this.name = screen ?? 'race';
+    this.restartsWithRace = !screen;
     this.dry = ctx.createGain();
     this.dry.gain.value = 0;
     this.wet = ctx.createGain();
@@ -486,6 +505,11 @@ export class SongTrack implements MusicTrack {
 
   schedule(now: number, lapPhase: number, _ahead: number, finished = false): void {
     if (this.disposed) return;
+    // A screen's song has no laps and no finish: everything in, round and round.
+    if (this.screen) {
+      lapPhase = 3;
+      finished = false;
+    }
     if (!this.plan) {
       if (this.source.state === 'failed') this.broken = true;
       else if (this.source.state === 'ready') this.begin(now + 0.05, phaseOf(lapPhase));

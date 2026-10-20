@@ -8,7 +8,8 @@ import type { Ctx } from './dsp';
 import { BLOCK, mtof, Patch, perBlock } from './dsp';
 import type { SongInfo } from './song';
 
-export type TrackName = 'menu' | 'race';
+/** 'results' is only ever a recorded song (see song.ts SCREEN_SONGS); without one the menu music plays. */
+export type TrackName = 'menu' | 'race' | 'results';
 
 export interface TrackInfo {
   name: TrackName;
