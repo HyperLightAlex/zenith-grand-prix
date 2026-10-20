@@ -1,16 +1,20 @@
 // One-shot sound effects. Each is a recipe that layers a few oscillators and
-// filtered noise bursts onto a Voice; the engine in synth.ts owns volume,
-// panning, the voice limit and cleaning up afterwards.
+// filtered noise bursts onto a Voice, or, where there are recordings of it
+// (sfxBank.ts, with ?music=suno), one of those; the engine in synth.ts owns
+// volume, panning, the voice limit and cleaning up afterwards.
 
 import type { SfxName } from './audio';
 import type { Ctx, Rng } from './dsp';
 import { mtof, perBlock } from './dsp';
+import type { SfxBank, Take } from './sfxBank';
 
 export interface SfxHost {
   readonly ctx: Ctx;
   readonly white: AudioBuffer;
   readonly pink: AudioBuffer;
   readonly rng: Rng;
+  /** Recorded takes, played in place of the recipes they have. */
+  readonly bank?: SfxBank | null;
 }
 
 /** perc: strike then die away. flat: on, hold, off. swell: rise to a peak then fall. */
@@ -194,6 +198,20 @@ export class Voice {
     env.connect(this.out);
     src.start(at, rng.next() * (buf.duration - 0.05));
     this.begin(src, at, d);
+  }
+
+  /** A recorded take, from its start, at `g`. The voice's pitch plays it faster or slower. */
+  sample(take: Take, g: number): void {
+    const { ctx } = this.host;
+    const src = ctx.createBufferSource();
+    src.buffer = take.buffer;
+    src.playbackRate.value = this.pitch;
+    const env = ctx.createGain();
+    env.gain.value = g;
+    src.connect(env);
+    env.connect(this.out);
+    src.start(this.t0, take.start);
+    this.begin(src, this.t0, (take.buffer.duration - take.start) * this.ts);
   }
 
   /** A struck, ringing tone made by frequency modulation. */
@@ -786,9 +804,14 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
 
 export const SFX_NAMES = Object.keys(RECIPES) as SfxName[];
 
-/** Build the nodes for one sound. The caller connects `voice.out` and tracks it. */
+/**
+ * Build the nodes for one sound: a recorded take where the bank has one,
+ * the recipe otherwise. The caller connects `voice.out` and tracks it.
+ */
 export function buildSfx(host: SfxHost, name: SfxName, t0: number, pitch: number): Voice {
   const v = new Voice(host, t0, pitch);
-  RECIPES[name](v, host.rng);
+  const rec = host.bank?.pick(name, host.rng);
+  if (rec) v.sample(rec.take, rec.gain);
+  else RECIPES[name](v, host.rng);
   return v;
 }

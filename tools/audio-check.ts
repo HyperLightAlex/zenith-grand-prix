@@ -405,13 +405,14 @@ async function render(
   songs?: Record<string, string>,
   screenSongs?: Record<string, string>,
   setlist?: string,
+  sfx?: string,
 ): Promise<Render> {
   const ctx = new OfflineAudioContext(preTap ? 4 : 2, Math.ceil(seconds * SR), SR);
-  const audio = new SynthAudio({ ...(songs ? { songs } : {}), ...(screenSongs ? { screenSongs } : {}), ...(setlist ? { setlist } : {}) });
+  const audio = new SynthAudio({ ...(songs ? { songs } : {}), ...(screenSongs ? { screenSongs } : {}), ...(setlist ? { setlist } : {}), ...(sfx ? { sfx } : {}) });
   if (vol) audio.setVolumes(vol[0], vol[1], vol[2]);
   audio.debugAttach(ctx);
-  // A recorded song decodes in the background: wait for it, so the render starts with it ready.
-  if (songs || screenSongs || setlist) await audio.debugSongsLoaded();
+  // Recorded songs and sounds decode in the background: wait for them, so the render starts with them ready.
+  if (songs || screenSongs || setlist || sfx) await audio.debugSongsLoaded();
   const tap = audio.preLimiter;
   if (!tap) throw new Error('debugAttach did not build a graph');
   if (preTap) {
@@ -729,32 +730,44 @@ function limiting(buf: AudioBuffer, t0: number, t1: number, unity: number): { me
   return { median: at(0.5), p95: at(0.95), over2: gr.filter((g) => g > 2).length / Math.max(1, gr.length) };
 }
 
-async function dump(name: string, buf: AudioBuffer, t0: number, t1: number): Promise<void> {
+/**
+ * Write t0 to t1 of `buf` as a WAV: channels 0 and 1 (the output, 16-bit), or
+ * from `ch` (2: before the limiter, where it can go past full scale, so as
+ * 32-bit float).
+ */
+async function dump(name: string, buf: AudioBuffer, t0: number, t1: number, ch = 0): Promise<void> {
   if (!DUMP || !window.__audioDump) return;
+  const float = ch !== 0;
+  const bps = float ? 4 : 2;
   const i0 = Math.max(0, Math.floor(t0 * SR));
   const n = Math.min(buf.length, Math.floor(t1 * SR)) - i0;
-  const bytes = new Uint8Array(44 + n * 4);
+  const bytes = new Uint8Array(44 + n * 2 * bps);
   const v = new DataView(bytes.buffer);
   const text = (o: number, s: string): void => {
     for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
   };
   text(0, 'RIFF');
-  v.setUint32(4, 36 + n * 4, true);
+  v.setUint32(4, 36 + n * 2 * bps, true);
   text(8, 'WAVEfmt ');
   v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true);
+  v.setUint16(20, float ? 3 : 1, true);
   v.setUint16(22, 2, true);
   v.setUint32(24, SR, true);
-  v.setUint32(28, SR * 4, true);
-  v.setUint16(32, 4, true);
-  v.setUint16(34, 16, true);
+  v.setUint32(28, SR * 2 * bps, true);
+  v.setUint16(32, 2 * bps, true);
+  v.setUint16(34, 8 * bps, true);
   text(36, 'data');
-  v.setUint32(40, n * 4, true);
-  const L = buf.getChannelData(0);
-  const R = buf.getChannelData(1);
+  v.setUint32(40, n * 2 * bps, true);
+  const L = buf.getChannelData(ch);
+  const R = buf.getChannelData(ch + 1);
   for (let i = 0; i < n; i++) {
-    v.setInt16(44 + i * 4, Math.round(Math.max(-1, Math.min(1, L[i0 + i])) * 32767), true);
-    v.setInt16(46 + i * 4, Math.round(Math.max(-1, Math.min(1, R[i0 + i])) * 32767), true);
+    if (float) {
+      v.setFloat32(44 + i * 8, L[i0 + i], true);
+      v.setFloat32(48 + i * 8, R[i0 + i], true);
+    } else {
+      v.setInt16(44 + i * 4, Math.round(Math.max(-1, Math.min(1, L[i0 + i])) * 32767), true);
+      v.setInt16(46 + i * 4, Math.round(Math.max(-1, Math.min(1, R[i0 + i])) * 32767), true);
+    }
   }
   await window.__audioDump(name, base64(bytes));
 }
@@ -812,6 +825,8 @@ async function offlineSfx(): Promise<void> {
       if (s.peak >= CLIP) fail(`sfx ${name} clips offline (peak ${s.peak.toFixed(3)})`);
       if (s.prePeak < 0.3 && Math.abs(through) > 0.3) fail(`limiter is not unity for quiet sound ${name}: ${through} dB`);
       await dump(`sfx-${name}`, buf, at, at + Math.min(SLOT, s.onset + s.dur + 0.5));
+      // Before the limiter, which tools/sfx/build.py --reference measures.
+      await dump(`sfxpre-${name}`, buf, at, at + Math.min(SLOT, s.onset + s.dur + 0.5), 2);
     } else if (label.includes('pitch')) {
       await dump(`sfx-${label.replace(/ /g, '-')}`, buf, at, at + Math.min(SLOT, s.onset + s.dur + 0.5));
     }
@@ -1983,9 +1998,132 @@ async function offlineRace(): Promise<void> {
   await dump('race-finish', buf, T_FINISH - 10, T_END);
 }
 
+/**
+ * The loudest tenth of a second between t0 and t1, K-weighted as LUFS are
+ * (ITU-R BS.1770's two filters): how tools/sfx/build.py measures a take.
+ * Channels 0 and 1 (the output), or from `ch` (2: before the limiter).
+ */
+function kLoudness(buf: AudioBuffer, t0: number, t1: number, ch = 0): number {
+  const i0 = Math.max(0, Math.floor(t0 * SR));
+  const i1 = Math.min(buf.length, Math.floor(t1 * SR));
+  const biquad = (x: Float64Array, b: number[], a: number[]): Float64Array => {
+    const y = new Float64Array(x.length);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < x.length; i++) {
+      const v = b[0] * x[i] + b[1] * x1 + b[2] * x2 - a[1] * y1 - a[2] * y2;
+      x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+    }
+    return y;
+  };
+  let K = Math.tan((Math.PI * 1681.974450955533) / SR);
+  let Q = 0.7071752369554196;
+  const Vh = 10 ** (3.999843853973347 / 20);
+  const Vb = Vh ** 0.4996667741545416;
+  let a0 = 1 + K / Q + K * K;
+  const shelfB = [(Vh + (Vb * K) / Q + K * K) / a0, (2 * (K * K - Vh)) / a0, (Vh - (Vb * K) / Q + K * K) / a0];
+  const shelfA = [1, (2 * (K * K - 1)) / a0, (1 - K / Q + K * K) / a0];
+  K = Math.tan((Math.PI * 38.13547087602444) / SR);
+  Q = 0.5003270373238773;
+  a0 = 1 + K / Q + K * K;
+  const hpA = [1, (2 * (K * K - 1)) / a0, (1 - K / Q + K * K) / a0];
+  const power = new Float64Array(i1 - i0);
+  for (let c = ch; c < ch + 2; c++) {
+    const x = Float64Array.from(buf.getChannelData(c).subarray(i0, i1));
+    const y = biquad(biquad(x, shelfB, shelfA), [1, -2, 1], hpA);
+    for (let i = 0; i < y.length; i++) power[i] += y[i] * y[i];
+  }
+  const n = Math.round(0.1 * SR);
+  let sum = 0;
+  let most = 0;
+  for (let i = 0; i < power.length; i++) {
+    sum += power[i] - (i >= n ? power[i - n] : 0);
+    most = Math.max(most, sum / n);
+  }
+  return -0.691 + 10 * Math.log10(most + 1e-20);
+}
+
+/**
+ * The recorded sound effects (public/sfx, built by tools/sfx/build.py), where
+ * there are any: each played as the game plays it and as its synthesised
+ * recipe, the two compared. A recording should come in where the recipe sat
+ * (plus any trim sounds.json gives it), start on its cue as the recipe does,
+ * and not clip. Levels are compared before the limiter, where the build set
+ * them; what the limiter then takes off each is in the table too.
+ */
+/** Seconds from t0 to the first sample within 50 dB of the loudest between t0 and t1: where a sound starts. */
+function startOf(buf: AudioBuffer, t0: number, t1: number): number {
+  const i0 = Math.max(0, Math.floor(t0 * SR));
+  const i1 = Math.min(buf.length, Math.floor(t1 * SR));
+  const ch = [buf.getChannelData(0), buf.getChannelData(1)];
+  let peak = 0;
+  for (const d of ch) for (let i = i0; i < i1; i++) peak = Math.max(peak, Math.abs(d[i]));
+  const floor = peak * 10 ** (-50 / 20);
+  for (let i = i0; i < i1; i++) if (Math.abs(ch[0][i]) > floor || Math.abs(ch[1][i]) > floor) return (i - i0) / SR;
+  return t1 - t0;
+}
+
+async function offlineRecorded(): Promise<void> {
+  log('--- offline: recorded sound effects ---');
+  const res = await fetch('/sfx/manifest.json');
+  // (The dev server answers a missing file with the page itself.)
+  if (!res.ok || res.headers.get('content-type')?.includes('text/html')) {
+    report.notes.push('no recorded sound effects (public/sfx/manifest.json) to check');
+    return;
+  }
+  const manifest = (await res.json()) as { sounds: Record<string, { gain: number; files: string[]; trim?: number }> };
+  const names = Object.keys(manifest.sounds) as SfxName[];
+  const SLOT = 7;
+  const LEAD = 1;
+  // Each recording twice (a different take the second time, where there are two).
+  const plays = names.flatMap((n) => [n, n]);
+  const cues: Cue[] = plays.map((name, i) => ({ t: LEAD + i * SLOT, run: (a) => a.play(name) }));
+  const seconds = LEAD + plays.length * SLOT;
+  const rec = await render(seconds, cues, () => OFF, undefined, undefined, true, undefined, undefined, undefined, '/sfx/');
+  const recorded = rec.audio.debugInfo().recorded;
+  if (recorded?.state !== 'ready') fail(`recorded sound effects did not load (${recorded?.state})`);
+  const synth = await render(seconds, cues, () => OFF);
+  for (let i = 0; i < plays.length; i++) {
+    const name = plays[i];
+    const at = LEAD + i * SLOT;
+    const r = analyse(rec.buf, at, at + SLOT);
+    const lr = kLoudness(rec.buf, at, at + SLOT, 2);
+    const ls = kLoudness(synth.buf, at, at + SLOT, 2);
+    const out = kLoudness(rec.buf, at, at + SLOT);
+    const recipeOut = kLoudness(synth.buf, at, at + SLOT);
+    const trim = manifest.sounds[name].trim ?? 0;
+    table('recorded sfx (offline, default volumes)').push({
+      name: i % 2 ? `${name} (again)` : name,
+      takes: manifest.sounds[name].files.length,
+      'LUFS (100 ms)': Math.round(lr * 10) / 10,
+      'recipe LUFS': Math.round(ls * 10) / 10,
+      'vs recipe dB': Math.round((lr - ls) * 10) / 10,
+      'heard vs recipe dB': Math.round((out - recipeOut) * 10) / 10,
+      'starts (ms)': Math.round(startOf(rec.buf, at, at + SLOT) * 1000),
+      'recipe starts (ms)': Math.round(startOf(synth.buf, at, at + SLOT) * 1000),
+      peak: r3(r.peak),
+      'length (s)': r3(r.dur),
+    });
+    if (r.peak < SILENT) fail(`recorded ${name} is silent (peak ${r.peak.toFixed(4)})`);
+    if (r.peak >= CLIP) fail(`recorded ${name} clips (peak ${r.peak.toFixed(3)})`);
+    // Allow a little: a sound with a random spread of pitch varies from play
+    // to play, and played off its pitch, a recording loses some of its top.
+    if (Math.abs(lr - ls - trim) > 1.5) fail(`recorded ${name} is ${(lr - ls).toFixed(1)} dB from its recipe (trim ${trim} dB)`);
+    // As soon after its cue as the recipe: anything more is silence in front of it.
+    const starts = startOf(rec.buf, at, at + SLOT);
+    const recipeStarts = startOf(synth.buf, at, at + SLOT);
+    if (starts > recipeStarts + 0.003) fail(`recorded ${name} starts ${Math.round((starts - recipeStarts) * 1000)} ms later after its cue than its recipe`);
+    if (i % 2 === 0) {
+      await dump(`recorded-${name}`, rec.buf, at, at + Math.min(SLOT, r.onset + r.dur + 0.5));
+      await dump(`recordedpre-${name}`, rec.buf, at, at + Math.min(SLOT, r.onset + r.dur + 0.5), 2);
+      await dump(`recipepre-${name}`, synth.buf, at, at + Math.min(SLOT, r.onset + r.dur + 0.5), 2);
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const parts: Array<[string, () => Promise<void>]> = [
     ['sfx', offlineSfx],
+    ['recorded', offlineRecorded],
     ['layers', offlineLayers],
     ['speeds', offlineSpeeds],
     ['music', offlineMusic],

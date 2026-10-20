@@ -3,7 +3,7 @@
 //   node tools/audio-check.mjs [--quick] [--only <parts>] [--dump <dir>] [--url <page url>]
 //
 // --quick  skip the real-time pass (offline renders only, under a minute)
-// --only   run just some parts, comma separated: sfx, layers, speeds, music, song, title, results, hangar, styles, stack, race, realtime
+// --only   run just some parts, comma separated: sfx, recorded, layers, speeds, music, song, title, results, hangar, styles, stack, race, realtime
 // --dump   write the offline renders to <dir> as WAV files, for listening
 //
 // Uses the Vite dev server on http://localhost:5173 (or the local port in

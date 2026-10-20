@@ -4,6 +4,7 @@
 //   music.ts   tracks ─► musicIn (ducking) ─► musicBus ─┐
 //   song.ts    (or a recorded song, with ?music=suno)    │
 //   sfx.ts     voices ─► [pan] ───────────► sfxBus ────┤
+//   sfxBank.ts (recorded takes, with ?music=suno)        │
 //   layers.ts  engine, wind, alarm ───────► engineBus ─┼─► mix ─► compressor ─► soft clip ─► master ─► out
 //   reverb sends (music, sfx) ─► convolver ─► return ──┘
 //
@@ -23,6 +24,7 @@ import { Setlist, SetlistTrack } from './setlist';
 import { SongSource, SongTrack } from './song';
 import type { Voice } from './sfx';
 import { buildSfx, SFX_META } from './sfx';
+import { SfxBank } from './sfxBank';
 
 /**
  * Master limiter. Below the threshold the chain is exactly unity, so a level
@@ -72,6 +74,8 @@ interface Graph {
   rng: Rng;
   white: AudioBuffer;
   pink: AudioBuffer;
+  /** Recorded sound effects, when there are any. */
+  bank: SfxBank | null;
   master: GainNode;
   mix: GainNode;
   musicBus: GainNode;
@@ -90,6 +94,8 @@ export interface AudioDebugInfo {
   voices: number;
   music: TrackInfo | null;
   fadingTracks: number;
+  /** The sounds playing recordings, and how loading those is going (null: none asked for). */
+  recorded: { state: string; names: string[] } | null;
 }
 
 const finite = (v: number | undefined, fallback: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
@@ -117,6 +123,8 @@ export class SynthAudio implements AudioEngine {
   private readonly screenSongs = new Map<string, SongSource>();
   /** The hangar's setlist (setlist.ts), when there is one. It keeps its place for the visit. */
   private setlist: Setlist | null = null;
+  /** Recorded sound effects (sfxBank.ts), when asked for. */
+  private readonly bank: SfxBank | null = null;
   /** The circuit prepareMusic named, to decode its song (after PREPARE_AFTER, and once there is a context). */
   private nextSong: string | null = null;
   private prepareTimer: ReturnType<typeof setTimeout> | null = null;
@@ -132,12 +140,14 @@ export class SynthAudio implements AudioEngine {
    * its circuit starts (one at a time: see prepareSong), and a circuit with
    * one plays it instead of its synthesised music. `screenSongs`: songs for
    * screens (see SCREEN_SONGS in song.ts), decoded as soon as there is an
-   * audio context and kept.
+   * audio context and kept. `sfx`: where the recorded sound effects are;
+   * each sound with recordings plays one of them instead of its recipe.
    */
-  constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string>; setlist?: string } = {}) {
+  constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string>; setlist?: string; sfx?: string } = {}) {
     for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
     for (const [id, base] of Object.entries(opts.screenSongs ?? {})) this.screenSongs.set(id, new SongSource(base));
     if (opts.setlist) this.setlist = new Setlist(opts.setlist);
+    if (opts.sfx) this.bank = new SfxBank(opts.sfx);
   }
 
   // ---- AudioEngine ----------------------------------------------------------
@@ -372,12 +382,12 @@ export class SynthAudio implements AudioEngine {
     return this.setlist;
   }
 
-  /** Decodes every recorded song now (after debugAttach), and resolves once each is ready or has failed. */
+  /** Decodes every recorded song now (after debugAttach), and resolves once each, and the recorded sound effects, are ready or have failed. */
   async debugSongsLoaded(): Promise<void> {
     const g = this.g;
     const all = [...this.songs.values(), ...this.screenSongs.values()];
     if (g) for (const s of all) s.decode(g.ctx);
-    while (all.some((s) => s.state === 'loading') || this.setlist?.state === 'loading') await new Promise((r) => setTimeout(r, 50));
+    while (all.some((s) => s.state === 'loading') || this.setlist?.state === 'loading' || this.bank?.state === 'loading') await new Promise((r) => setTimeout(r, 50));
   }
 
   debugInfo(): AudioDebugInfo {
@@ -388,6 +398,7 @@ export class SynthAudio implements AudioEngine {
       voices: this.voices.length,
       music: this.track ? this.track.info() : null,
       fadingTracks: this.dying.length,
+      recorded: this.bank ? { state: this.bank.state, names: this.bank.names() } : null,
     };
   }
 
@@ -470,7 +481,8 @@ export class SynthAudio implements AudioEngine {
 
     const layers = new EngineLayers(ctx, white, pink, engineBus);
     layers.setMix(this.layerMix);
-    this.g = { ctx, live, rng, white, pink, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
+    this.g = { ctx, live, rng, white, pink, bank: this.bank, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
+    this.bank?.decode(ctx);
     // A song is decoded for the circuit named ahead (prepareMusic), or when a
     // race asks for one; the screens' songs (small) straight away.
     if (this.nextSong) this.prepareSong(this.nextSong);

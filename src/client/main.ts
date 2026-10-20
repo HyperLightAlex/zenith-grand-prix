@@ -92,8 +92,12 @@ async function boot(): Promise<void> {
   let audio: AudioEngine = new NullAudio();
   if (!q.has('mute')) {
     try {
-      const [{ SynthAudio }, { SONGS, SCREEN_SONGS }, { SETLISTS }] = await Promise.all([import('./audio/synth'), import('./audio/song'), import('./audio/setlist')]);
-      audio = new SynthAudio(q.get('music') === 'suno' ? { songs: SONGS, screenSongs: SCREEN_SONGS, setlist: SETLISTS.hangar } : {});
+      const [{ SynthAudio }, { SONGS, SCREEN_SONGS }, { SETLISTS }, { SFX_BASE }] = await Promise.all([import('./audio/synth'), import('./audio/song'), import('./audio/setlist'), import('./audio/sfxBank')]);
+      // The recorded music, and the recorded sound effects with it (&sfx=synth
+      // keeps the synthesised ones, to compare).
+      audio = new SynthAudio(
+        q.get('music') === 'suno' ? { songs: SONGS, screenSongs: SCREEN_SONGS, setlist: SETLISTS.hangar, sfx: q.get('sfx') === 'synth' ? undefined : SFX_BASE } : {},
+      );
     } catch (err) {
       console.warn('Audio unavailable', err);
     }
