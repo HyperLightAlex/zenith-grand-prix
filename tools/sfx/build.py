@@ -13,9 +13,11 @@ in one at a time. Writes, into public/sfx/:
   <sound>-<n>.mp3   one file a take
   manifest.json     each sound's takes, and its gain
 
-Each take is cut to the sound itself: from just before it starts (the game
-should hear the hit the moment it happens, not a run-up of silence) to where
-it has died away, or to twice the length it was asked for (sounds.json) if it
+Each take is first shaped as sounds.json asks (see shape(): a high-pass, a
+brighter top, a start just before its peak), then cut to the sound itself:
+from just before it starts (the game should hear the hit the moment it
+happens, not a run-up of silence) to where it has died away, or to its
+`max` length (twice the length asked for, unless sounds.json says) if it
 goes on; the end fades out. It is folded to mono unless its stereo is wide
 enough to matter (an explosion, say); the game pans every sound to where it
 happens anyway. All the takes of one sound are brought to the same loudness,
@@ -36,7 +38,7 @@ check then compares each recording with its recipe as the game plays them.
 import argparse, glob, json, os, re, subprocess, sys, tempfile
 import numpy as np
 import soundfile as sf
-from scipy.signal import lfilter
+from scipy.signal import butter, lfilter, sosfilt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -109,6 +111,45 @@ def read(path):
     return x
 
 
+def high_shelf(x, sr, f0, gain_db):
+    """RBJ high shelf (slope 1)."""
+    A = 10 ** (gain_db / 40)
+    w = 2 * np.pi * f0 / sr
+    alpha = np.sin(w) / 2 * np.sqrt(2)
+    cw, sa = np.cos(w), 2 * np.sqrt(A) * alpha
+    b = [A * ((A + 1) + (A - 1) * cw + sa), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - sa)]
+    a = [(A + 1) - (A - 1) * cw + sa, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sa]
+    return lfilter(np.array(b) / a[0], np.array(a) / a[0], x, axis=0)
+
+
+def shape(x, sr, cfg):
+    """
+    What sounds.json asks of a sound's takes, before they are cut:
+      hp      a high-pass (Hz), for low end the sound should not have: the
+              game's music has the bass and the kick, and a boom under
+              every blow would sit on them
+      bright  [Hz, dB]: a high shelf, for a sound that wants more edge
+      lead    start this many seconds before the take's loudest moment,
+              rising into it: a sound that builds slowly would otherwise
+              peak after the moment the game plays it for (a swing's
+              whoosh after the blow has landed)
+    """
+    if cfg.get('hp'):
+        x = sosfilt(butter(4, cfg['hp'], 'highpass', fs=sr, output='sos'), x, axis=0)
+    if cfg.get('bright'):
+        x = high_shelf(x, sr, *cfg['bright'])
+    if cfg.get('lead') is not None:
+        a = np.abs(x).max(axis=1)
+        n = int(0.005 * sr)
+        env = np.sqrt(np.convolve(a ** 2, np.ones(n) / n, mode='same'))
+        peak = int(np.argmax(env))
+        s = max(0, peak - int(cfg['lead'] * sr))
+        x = x[s:].copy()
+        if peak > s:
+            x[:peak - s] *= (np.linspace(0, 1, peak - s, endpoint=False) ** 2)[:, None]
+    return x.astype(np.float32)
+
+
 def cut(x, sr, most):
     """From just before the sound starts to where it dies away (or `most` seconds), the end faded."""
     a = np.abs(x).max(axis=1)
@@ -128,7 +169,8 @@ def cut(x, sr, most):
     fade_in = start - s
     if fade_in > 0:
         y[:fade_in] *= np.linspace(0, 1, fade_in, endpoint=False)[:, None]
-    fade = min(int(0.05 * sr), len(y) // 5)
+    # Cut short, it dies away over the last third; otherwise it had, and only the last moment is smoothed.
+    fade = len(y) // 3 if e < end else min(int(0.05 * sr), len(y) // 5)
     if fade > 0:
         y[-fade:] *= (np.cos(np.linspace(0, np.pi, fade)) * 0.5 + 0.5)[:, None]
     return y, s / sr, e < end
@@ -186,7 +228,7 @@ def build(folders, out):
         most = cfg.get('max', max(2 * cfg.get('asked', 1.5), cfg.get('asked', 1.5) + 0.5))
         built = []
         for i, path in sorted(takes[name]):
-            x = read(path)
+            x = shape(read(path), SR, cfg)
             y, at, capped = cut(x, SR, most)
             y, side = mono_or_stereo(y)
             built.append((i, path, y, at, capped, side, loudness(y, SR)))

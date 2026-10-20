@@ -37,12 +37,30 @@ audio context. They are small: a few seconds at most, tens of kilobytes a take.
    that clips, starts late, or sits more than 1.5 dB from where the recipe
    was. Add `--dump <dir>` to get WAVs to listen to.
 
-What the build does to a take: cuts it from just before the sound starts to
-where it has died away (or to twice the length asked for, `asked` in
-sounds.json, if it rings on), and fades the end; folds it to mono unless
-its stereo is wide enough to matter (an explosion, say); brings every take
-of a sound to the same loudness; and encodes it as MP3 (every browser
-decodes it).
+What the build does to a take: shapes it, where sounds.json asks (below);
+cuts it from just before the sound starts to where it has died away (or to
+its `max` length, twice the length asked for unless given, if it rings on),
+and fades the end; folds it to mono unless its stereo is wide enough to
+matter (an explosion, say); brings every take of a sound to the same
+loudness; and encodes it as MP3 (every browser decodes it).
+
+## Shaping a take
+
+The game wants anime sound effects: short, dry and bright, with an instant
+attack. A take that comes out heavier than that (Suno leans cinematic: a
+sub-bass boom, a long tail, a slow swell; see prompts.md) can be brought
+round in the build, per sound, in sounds.json:
+
+| Key | What it does | The first takes |
+|---|---|---|
+| `hp` | a high-pass, Hz: low end the sound should not have (the music has the bass and the kick) | swings 150 to 400, hits 90 to 250 |
+| `bright` | `[Hz, dB]`: a high shelf, for more edge | the heavy hit, +3 dB from 3 kHz |
+| `lead` | start this many seconds before the take's loudest moment, rising into it, so a slow swell peaks when the game plays it (the blow lands about 0.1 s after the swing sound starts) | swings 0.03 to 0.05, hits 0.003 |
+| `max` | the longest it may run, seconds, the last third fading | 0.35 to 0.8 |
+| `db` | lift or lower the sound in the mix, from where its recipe sat | |
+
+A take that is right to begin with keeps more of itself, so re-prompting
+comes first; the shaping is for a take that is nearly there.
 
 ## Levels
 

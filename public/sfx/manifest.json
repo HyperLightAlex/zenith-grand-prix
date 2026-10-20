@@ -1,0 +1,33 @@
+{
+ "sounds": {
+  "hit_heavy": {
+   "gain": 4.54,
+   "files": [
+    "hit_heavy-1.mp3",
+    "hit_heavy-2.mp3"
+   ]
+  },
+  "hit_light": {
+   "gain": -2.41,
+   "files": [
+    "hit_light-1.mp3",
+    "hit_light-2.mp3"
+   ]
+  },
+  "swing_heavy": {
+   "gain": -4.85,
+   "files": [
+    "swing_heavy-1.mp3",
+    "swing_heavy-2.mp3"
+   ]
+  },
+  "swing_light": {
+   "gain": -11.46,
+   "files": [
+    "swing_light-1.mp3",
+    "swing_light-2.mp3",
+    "swing_light-3.mp3"
+   ]
+  }
+ }
+}
