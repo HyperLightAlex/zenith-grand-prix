@@ -12,9 +12,9 @@
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
-// Each lap is a little louder than the last (the build sets each lap's
-// level: -18.5, -17.5 and -15.5 LUFS), but a lap is told from the last by
-// what comes in, and the last by its weight too. The layers follow how cleanly
+// Laps 1 and 2 sit under the racing (the build sets each lap's level: -23.5
+// and -22.5 LUFS, so the effects come through); the last lap has the song at
+// full weight (-15.5), as well as everything in. The layers follow how cleanly
 // Suno's stems come apart (they are separated out of the finished mix): some
 // were carved out of one another (Meridian's keys, synth, strings and guitar;
 // Canyon's guitar, strings, brass, voices and synth), and heard apart each

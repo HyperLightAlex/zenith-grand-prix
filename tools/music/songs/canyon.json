@@ -9,7 +9,7 @@
   "finale": {"lap": 3, "from": 94, "loop": [94, 106], "cycle": 4, "phrase": {"bars": 4, "first": 2}},
   "ending": 106,
   "master": {"gain": -4.6, "lowShelf": [200, 3.0], "highShelf": [4000, 2.0]},
-  "loudness": [-18.5, -17.5, -15.5],
+  "loudness": [-23.5, -22.5, -15.5],
   "stingers": {"lap": 3, "lap_phase": -2, "final_lap": -2, "finish": -2},
   "codec": "mp3",
   "quality": 0

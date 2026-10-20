@@ -30,13 +30,15 @@ On Canyon and Helios lap 3 is also a change of place: Helios's song jumps
 to its drop, Canyon's to its last chorus, a key up (see "The finale"
 below).
 
-Laps 1 and 2 are -18.5 and -17.5 LUFS at the game's default volumes,
-almost exactly what their layers come to by themselves (the build moves
-lap 1 by under 1 dB). Lap 3 is the jump: everything in, the drums' and
-bass's low end up 5 dB (a low shelf at 140 Hz, on the bar line, so the kick
-lands harder), and -15.5 LUFS. On Meridian, against lap 2, that is 5.6 dB more below
-140 Hz and 2.6 LU louder (it was 1.4 dB and 1.8 LU without the shelf:
-not enough of a step).
+Laps 1 and 2 are -23.5 and -22.5 LUFS at the game's default volumes:
+under the racing, about where the synthesised race music sits (-23.3 and
+-20.9; a finished song fills more of the spectrum, so it covers the
+effects more at the same loudness). Lap 3 is the jump: everything in, the
+drums' and bass's low end up 5 dB (a low shelf at 140 Hz, on the bar line,
+so the kick lands harder), and -15.5 LUFS, the song at full weight for the
+last lap. (The laps were -18.5, -17.5 and -15.5 until playtests found the
+music drowning the effects on the first two; before the shelf, lap 3 was
+too like lap 2.)
 
 **Which stems can be heard apart.** Suno's stems are separated out of the
 finished mix, not recorded apart, and some come apart cleanly while others
@@ -164,7 +166,7 @@ The results play the win theme, トロフィーセレモニー, when the player'
 won the round (and the Grand Prix award, for first place). It goes
 straight in from its top and loops bars 22 to 48 (51 s; the first 95 s
 play through before it), at -19.5 LUFS: between the menu music (-24) and a
-race's first lap (-18.5). When it lost, the loss theme, Minor Theme (E
+race's last lap (-15.5). When it lost, the loss theme, Minor Theme (E
 minor, the win theme's relative minor, 100 BPM; synth-led, 80s anime):
 from its top (solo keys, then the band), then round bars 9 to 42 (79 s:
 from its second full-band part back to the keys alone, as the song itself
@@ -256,7 +258,7 @@ browser (the setup plays it, the corner shows it, M and a tap go on).
      疾走の回路, the screens') have the two averaged (+3 dB below 200 Hz,
      +2 above 4 kHz); with a full mix, a song can be matched.
    - `loudness`: how loud each lap should be, in LUFS at the game's
-     default volumes (Meridian: -18.5, -17.5, -15.5). The build sets each
+     default volumes (all three: -23.5, -22.5, -15.5). The build sets each
      lap's level to meet it and prints what it got, and the layers' levels
      on each lap.
 4. **Build it**: `python3 tools/music/build.py tools/music/songs/<circuit>.json <folder>`.
