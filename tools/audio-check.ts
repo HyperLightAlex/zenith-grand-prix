@@ -17,6 +17,7 @@ import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio'
 import { mtof } from '../src/client/audio/dsp';
 import { SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
+import { GAP, SETLISTS, SKIP_FADE, type SetlistInfo, type SetlistManifest, type ShuffleBag } from '../src/client/audio/setlist';
 import { SCREEN_SONGS, SONGS, XFADE, type SongInfo, type SongManifest, type SongSource } from '../src/client/audio/song';
 
 type Cell = string | number;
@@ -398,18 +399,19 @@ async function render(
   seconds: number,
   cues: Cue[],
   sceneAt: (t: number) => AudioScene,
-  each?: (t: number, a: SynthAudio, ctx: OfflineAudioContext) => void,
+  each?: (t: number, a: SynthAudio, ctx: OfflineAudioContext) => void | Promise<unknown>,
   vol?: [number, number, number],
   preTap = true,
   songs?: Record<string, string>,
   screenSongs?: Record<string, string>,
+  setlist?: string,
 ): Promise<Render> {
   const ctx = new OfflineAudioContext(preTap ? 4 : 2, Math.ceil(seconds * SR), SR);
-  const audio = new SynthAudio({ ...(songs ? { songs } : {}), ...(screenSongs ? { screenSongs } : {}) });
+  const audio = new SynthAudio({ ...(songs ? { songs } : {}), ...(screenSongs ? { screenSongs } : {}), ...(setlist ? { setlist } : {}) });
   if (vol) audio.setVolumes(vol[0], vol[1], vol[2]);
   audio.debugAttach(ctx);
   // A recorded song decodes in the background: wait for it, so the render starts with it ready.
-  if (songs || screenSongs) await audio.debugSongsLoaded();
+  if (songs || screenSongs || setlist) await audio.debugSongsLoaded();
   const tap = audio.preLimiter;
   if (!tap) throw new Error('debugAttach did not build a graph');
   if (preTap) {
@@ -429,17 +431,18 @@ async function render(
   };
   const sorted = [...cues].sort((x, y) => x.t - y.t);
   let ci = 0;
-  const tick = (t: number): void => {
+  // (`each` can hold the render while something outside it finishes, a decoding say, by returning a promise.)
+  const tick = (t: number): void | Promise<unknown> => {
     while (ci < sorted.length && sorted[ci].t <= t + 1e-6) sorted[ci++].run(audio);
     audio.update(STEP, sceneAt(t));
-    each?.(t, audio, ctx);
+    return each?.(t, audio, ctx);
   };
   try {
     tick(0);
     for (let k = 1; k * STEP < seconds; k++) {
-      void ctx.suspend(k * STEP).then(() => {
+      void ctx.suspend(k * STEP).then(async () => {
         try {
-          tick(ctx.currentTime);
+          await tick(ctx.currentTime);
         } finally {
           void ctx.resume();
         }
@@ -1638,6 +1641,120 @@ async function offlineResultsFor(outcome: string): Promise<void> {
   await dump(id, buf, 0, T_END);
 }
 
+/**
+ * The hangar's setlist (?music=suno): a track from its start (to the sample,
+ * against its file), skipped (it fades out), the next to its natural end,
+ * then the one after it a moment later (GAP), and back to the menu music.
+ * The order is fixed here (it is shuffled in the game).
+ */
+async function offlineHangar(): Promise<void> {
+  log('--- offline: hangar music ---');
+  const base = '/' + SETLISTS.hangar;
+  const list = (await (await fetch(base + 'setlist.json')).json()) as SetlistManifest;
+  const idx = (id: string) => list.tracks.findIndex((t) => t.id === id);
+  // The longest first (skipped), then the shortest (played out), then another.
+  const byLength = list.tracks.map((t, i) => i).sort((a, b) => list.tracks[a].length - list.tracks[b].length);
+  const seq = [byLength[byLength.length - 1], byLength[0], byLength[1]];
+  const T_END = 6 + list.tracks[seq[1]].length + 40;
+  let info: SetlistInfo | null = null;
+  let skipped = false;
+  let menuAt = NaN;
+  let alive = 0;
+  const cues: Cue[] = [
+    {
+      t: 0.5,
+      run: (a) => {
+        const sl = a.debugSetlist()!;
+        const order = [...seq];
+        sl.bag = { next: () => order.shift() ?? seq[2] } as unknown as ShuffleBag;
+        a.setMusic('hangar');
+      },
+    },
+  ];
+  const { buf, audio, warnings } = await render(T_END, cues, () => OFF, (t, a) => {
+    const music = a.debugInfo().music;
+    if (music?.name === 'hangar') info = music.setlist ?? info;
+    const plays = (info as SetlistInfo | null)?.log.filter((e) => e.what === 'play') ?? [];
+    // Skip the first a few seconds in; back to the menus a few seconds into the third.
+    if (!skipped && plays.length === 1 && t > plays[0].at + 6) {
+      skipped = true;
+      a.skipTrack();
+    }
+    if (Number.isNaN(menuAt) && plays.length === 3 && t > plays[2].at + 5) {
+      menuAt = t;
+      a.setMusic('menu');
+    }
+    if (!Number.isNaN(menuAt) && t > menuAt + 2 && t < menuAt + 2.2) alive = (music ? 1 : 0) + a.debugInfo().fadingTracks;
+    // An offline render runs far faster than a track decodes: it waits for the decoding.
+    if (music?.setlist?.decoding) return new Promise((r) => setTimeout(r, 25));
+  }, undefined, true, undefined, undefined, base);
+  if (warnings) fail(`hangar: the engine swallowed ${warnings} Web Audio error(s)`);
+  const sl = audio.debugSetlist();
+  const got = info as SetlistInfo | null;
+  if (!sl || sl.state !== 'ready' || !got) {
+    fail(`hangar: the setlist did not load (${sl?.state ?? 'none'})`);
+    return;
+  }
+  for (const e of got.log) table('hangar music: what it did (offline)').push({ at: r3(e.at), what: e.what, track: e.id });
+  const plays = got.log.filter((e) => e.what === 'play');
+  const skip = got.log.find((e) => e.what === 'skip');
+  if (plays.length < 3 || !skip) {
+    fail(`hangar: expected three tracks and a skip, got ${plays.map((p) => p.id).join(', ')}${skip ? ' and a skip' : ''}`);
+    return;
+  }
+  for (let k = 0; k < 3; k++) if (plays[k].id !== list.tracks[seq[k]].id) fail(`hangar: track ${k + 1} was ${plays[k].id}, not ${list.tracks[seq[k]].id}`);
+  // Each against its file, a second in.
+  const ctx = new OfflineAudioContext(2, 1, SR);
+  const out = buf.getChannelData(2);
+  const decoded: AudioBuffer[] = [];
+  for (let k = 0; k < 3; k++) decoded.push(await sl.decode(seq[k], ctx));
+  for (let k = 0; k < 3; k++) {
+    const t0 = plays[k].at + 1;
+    const data = decoded[k].getChannelData(0);
+    const scale = VOL.music * MUSIC_TRIM * 10 ** (list.tracks[seq[k]].gain / 20);
+    const n = Math.floor(0.4 * SR);
+    const i0 = Math.round(t0 * SR);
+    const j0 = Math.round(1 * SR);
+    let best = 0;
+    let bestScore = -Infinity;
+    for (let lag = -240; lag <= 240; lag++) {
+      let s2 = 0;
+      for (let q = 0; q < n; q++) s2 += data[j0 + q] * (out[i0 + q + lag] ?? 0);
+      if (s2 > bestScore) {
+        bestScore = s2;
+        best = lag;
+      }
+    }
+    let res = 0;
+    let sig = 0;
+    for (let q = 0; q < n; q++) {
+      const want = data[j0 + q] * scale;
+      res += (out[i0 + q + best] - want) ** 2;
+      sig += want * want;
+    }
+    const residual = 10 * Math.log10(res / sig + 1e-12);
+    const st = analyse(buf, plays[k].at + 1, Math.min(plays[k].at + 30, k < 2 ? plays[k + 1].at - 2 : menuAt));
+    table('hangar music: each track (offline)').push({ track: plays[k].id, 'starts (s)': r3(plays[k].at), 'against its file: lag / residual': `${best} / ${residual.toFixed(1)} dB`, 'rms dBFS': db(st.rms), peak: r3(st.peak) });
+    if (Math.abs(best) > 1 || residual > -60) fail(`hangar: ${plays[k].id} does not play as its file (${best} samples, ${residual.toFixed(1)} dB)`);
+    if (st.peak >= CLIP) fail(`hangar: ${plays[k].id} clips`);
+    if (db(st.rms) < -36 || db(st.rms) > -16) fail(`hangar: ${plays[k].id} at ${db(st.rms)} dBFS, far from the others`);
+  }
+  // The skipped one fades out: quiet from SKIP_FADE after the skip until the next starts.
+  if (plays[1].at > skip.at + SKIP_FADE + 0.15) {
+    const q = analyse(buf, skip.at + SKIP_FADE + 0.05, plays[1].at - 0.02);
+    if (q.peak > 0.003) fail(`hangar: the skipped track still sounds ${SKIP_FADE} s after the skip (peak ${q.peak.toFixed(4)})`);
+  }
+  // Played out, then the next one GAP after its end.
+  const want = plays[1].at + decoded[1].duration + GAP;
+  table('hangar music: after a track ends (offline)').push({ 'ends (s)': r3(plays[1].at + decoded[1].duration), 'next starts (s)': r3(plays[2].at), 'gap (s)': r3(plays[2].at - plays[1].at - decoded[1].duration) });
+  if (Math.abs(plays[2].at - want) > 0.03) fail(`hangar: the next track came ${r3(plays[2].at - plays[1].at - decoded[1].duration)} s after the last ended, not ${GAP}`);
+  // Back to the menus: one track playing (the menu music) and the setlist let go of.
+  if (alive > 1) fail(`hangar: ${alive} music tracks still alive 2 s after going back to the menu music`);
+  const menu = analyse(buf, menuAt + 2, T_END);
+  if (menu.rms < 0.004) fail('hangar: no menu music after the hangar\'s');
+  await dump('hangar', buf, 0, T_END);
+}
+
 async function offlineStyles(): Promise<void> {
   log('--- offline: each circuit\'s race music ---');
   // Every circuit's race music through its three lap phases, then a change
@@ -1875,6 +1992,7 @@ async function main(): Promise<void> {
     ['song', offlineSongs],
     ['title', offlineTitle],
     ['results', offlineResults],
+    ['hangar', offlineHangar],
     ['styles', offlineStyles],
     ['stack', offlineStack],
     ['race', offlineRace],

@@ -19,6 +19,7 @@ import { clamp, compressorFullRangeGain, makeImpulse, makeNoise, Rng, softClipCu
 import { EngineLayers, type LayerMix } from './layers';
 import type { MusicTrack, TrackInfo, TrackName } from './music';
 import { createTrack, RACE_STYLES } from './music';
+import { Setlist, SetlistTrack } from './setlist';
 import { SongSource, SongTrack } from './song';
 import type { Voice } from './sfx';
 import { buildSfx, SFX_META } from './sfx';
@@ -114,6 +115,8 @@ export class SynthAudio implements AudioEngine {
   private readonly songs = new Map<string, SongSource>();
   /** Songs for screens, by what they are for ('results-win'...). */
   private readonly screenSongs = new Map<string, SongSource>();
+  /** The hangar's setlist (setlist.ts), when there is one. It keeps its place for the visit. */
+  private setlist: Setlist | null = null;
   /** The circuit prepareMusic named, to decode its song (after PREPARE_AFTER, and once there is a context). */
   private nextSong: string | null = null;
   private prepareTimer: ReturnType<typeof setTimeout> | null = null;
@@ -131,9 +134,10 @@ export class SynthAudio implements AudioEngine {
    * screens (see SCREEN_SONGS in song.ts), decoded as soon as there is an
    * audio context and kept.
    */
-  constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string> } = {}) {
+  constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string>; setlist?: string } = {}) {
     for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
     for (const [id, base] of Object.entries(opts.screenSongs ?? {})) this.screenSongs.set(id, new SongSource(base));
+    if (opts.setlist) this.setlist = new Setlist(opts.setlist);
   }
 
   // ---- AudioEngine ----------------------------------------------------------
@@ -273,9 +277,9 @@ export class SynthAudio implements AudioEngine {
     });
   }
 
-  setMusic(track: 'menu' | 'race' | 'results' | null, style = 'meridian'): void {
+  setMusic(track: 'menu' | 'race' | 'results' | 'hangar' | null, style = 'meridian'): void {
     this.guard(() => {
-      this.want = track === 'menu' || track === 'race' || track === 'results' ? track : null;
+      this.want = track === 'menu' || track === 'race' || track === 'results' || track === 'hangar' ? track : null;
       this.wantStyle = style;
       this.applyMusic(true);
     });
@@ -296,6 +300,16 @@ export class SynthAudio implements AudioEngine {
           if (this.nextSong) this.prepareSong(this.nextSong);
         });
       }, PREPARE_AFTER * 1000);
+    });
+  }
+
+  nowPlaying(): { id: string; title: string } | null {
+    return this.track instanceof SetlistTrack ? this.track.current() : null;
+  }
+
+  skipTrack(): void {
+    this.guard(() => {
+      if (this.g && this.track instanceof SetlistTrack) this.track.skip(this.g.ctx.currentTime);
     });
   }
 
@@ -353,12 +367,17 @@ export class SynthAudio implements AudioEngine {
     return this.screenSongs;
   }
 
+  /** The hangar's setlist, for the audio check. */
+  debugSetlist(): Setlist | null {
+    return this.setlist;
+  }
+
   /** Decodes every recorded song now (after debugAttach), and resolves once each is ready or has failed. */
   async debugSongsLoaded(): Promise<void> {
     const g = this.g;
     const all = [...this.songs.values(), ...this.screenSongs.values()];
     if (g) for (const s of all) s.decode(g.ctx);
-    while (all.some((s) => s.state === 'loading')) await new Promise((r) => setTimeout(r, 50));
+    while (all.some((s) => s.state === 'loading') || this.setlist?.state === 'loading') await new Promise((r) => setTimeout(r, 50));
   }
 
   debugInfo(): AudioDebugInfo {
@@ -590,8 +609,10 @@ export class SynthAudio implements AudioEngine {
     // style, 'win' or 'loss'); otherwise the menu music plays (or carries on).
     const results = this.screenSongs.get(`results-${this.wantStyle}`);
     if (this.want === 'results' && (!results || results.state === 'failed')) this.want = 'menu';
+    // The hangar's setlist likewise.
+    if (this.want === 'hangar' && (!this.setlist || this.setlist.state === 'failed')) this.want = 'menu';
     // Racing on a different circuit is a change of music too.
-    const style = this.want === 'race' ? this.raceStyle() : this.want === 'results' ? this.wantStyle : 'menu';
+    const style = this.want === 'race' ? this.raceStyle() : this.want === 'results' ? this.wantStyle : this.want === 'hangar' ? 'hangar' : 'menu';
     if (this.want === 'race') this.prepareSong(style);
     const same = (this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style);
     if (same && !(fresh && this.track?.restartsWithRace)) return;
@@ -605,6 +626,7 @@ export class SynthAudio implements AudioEngine {
     if (this.want) {
       let t: MusicTrack;
       if (this.want === 'menu') t = this.menuTrack(now);
+      else if (this.want === 'hangar') t = new SetlistTrack(g.ctx, this.setlist!);
       else {
         // (The results only get here with a song: see the top.)
         const song = this.want === 'race' ? this.songs.get(style) : this.screenSongs.get(`results-${style}`);

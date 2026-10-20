@@ -6,10 +6,14 @@
 
 import type { Ctx } from './dsp';
 import { BLOCK, mtof, Patch, perBlock } from './dsp';
+import type { SetlistInfo } from './setlist';
 import type { SongInfo } from './song';
 
-/** 'results' is only ever a recorded song (see song.ts SCREEN_SONGS); without one the menu music plays. */
-export type TrackName = 'menu' | 'race' | 'results';
+/**
+ * 'results' is only ever a recorded song (see song.ts SCREEN_SONGS), and
+ * 'hangar' a setlist of them (setlist.ts); without them the menu music plays.
+ */
+export type TrackName = 'menu' | 'race' | 'results' | 'hangar';
 
 export interface TrackInfo {
   name: TrackName;
@@ -25,6 +29,8 @@ export interface TrackInfo {
   changeAt: number;
   /** For a recorded song (song.ts): where it is and what it has done. */
   song?: SongInfo;
+  /** For the hangar's setlist (setlist.ts): what plays, and what it has done. */
+  setlist?: SetlistInfo;
 }
 
 /** What synth.ts plays: a synthesised track here, or a recorded song (song.ts). */

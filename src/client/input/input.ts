@@ -8,7 +8,8 @@ import type { TouchControls } from './touch';
 export type Device = 'pad' | 'keys' | 'touch';
 
 /** One menu press. Presses are queued, so none are lost on a slow frame. */
-export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune' | 'look' | 'model' | 'rosterModel' | 'x' | 'y' | 'lb' | 'rb';
+/** 'track': on to the next track of the hangar's music (M, or the right stick pressed). */
+export type MenuInput = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'tune' | 'look' | 'model' | 'rosterModel' | 'x' | 'y' | 'lb' | 'rb' | 'track';
 
 /** Whether the keyboard is typing into a text field (a callsign, a code): its keys are not controls then. */
 export function typing(): boolean {
@@ -111,6 +112,7 @@ export class Input {
       if (e.code === 'KeyY') m.push('y');
       if (e.code === 'KeyQ') m.push('lb');
       if (e.code === 'KeyE') m.push('rb');
+      if (e.code === 'KeyM') m.push('track');
       if (artReview && e.code === 'KeyB') m.push('model');
       if (artReview && e.code === 'KeyN') m.push('rosterModel');
     });
@@ -264,6 +266,7 @@ export class Input {
       if (edge(PAD.Y)) m.push('y');
       if (edge(PAD.LB)) m.push('lb');
       if (edge(PAD.RB)) m.push('rb');
+      if (edge(PAD.RS)) m.push('track');
       if (edge(PAD.BACK)) m.push('tune');
       this.prevStickX = sx;
       this.prevStickY = sy;

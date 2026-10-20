@@ -21,7 +21,7 @@ build matches its mastering).
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
 | Results, loss (and the Grand Prix award below first) | Minor Theme | E minor, 100 BPM | in the game (from the second brief below: the first was too hopeful, not synth or anime enough) |
-| Hangar | (to make) | | a setlist of 80s songs: briefs below (one dedicated song was smooth jazz, then far too high energy) |
+| Hangar | a setlist: 蒼い火花 (the opening), 赤いランプ, Silver Dawn, 青い軌道, 湾岸線を抜けて, Neon Garage Drive and two instrumentals | | in the game, eight so far (one dedicated song was smooth jazz, then far too high energy; titles here are stand-ins where the file lost its own) |
 
 ## Title theme
 
@@ -40,7 +40,7 @@ Exclude: `brass fanfare, orchestral, marching snare`
 
 ## Hangar: a setlist
 
-Not one song on repeat: a handful of 1980s-flavoured tracks, played one
+In the game (see README.md, "The hangar's music"); more can join it. Not one song on repeat: a handful of 1980s-flavoured tracks, played one
 after another under the hangar, setup, briefing and lobby screens, that the
 player can skip through, like the pit crew's radio. Background music: mid
 to low energy, nothing that builds to a climax. Each plays through once,

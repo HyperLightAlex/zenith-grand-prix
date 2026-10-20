@@ -7,7 +7,8 @@ Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
 (疾走の回路) and Helios Drop (午間の雲上レース). The menus have a title
 theme (Blue Night Sky), and the results one for when the player's team
 wins (トロフィーセレモニー) and one for when it loses (Minor Theme; see
-"Screens' music" below).
+"Screens' music" below). The hangar screens play a setlist of songs, one
+after another ("The hangar's music").
 What each song was asked for, and what is still to make, is in
 [prompts.md](prompts.md).
 
@@ -170,6 +171,37 @@ from its second full-band part back to the keys alone, as the song itself
 goes after its first). It is at -22.5 LUFS: half of it is keys alone, so
 that puts its full-band parts about 1 dB under the win theme's. An outcome
 with no song would leave the menus' music playing.
+
+## The hangar's music
+
+The hangar screens (the hangar, the setups, the Grand Prix and its
+briefings and standings, the online hub and rooms) play a setlist rather
+than one song on repeat, like the pit crew's radio: eight songs so far
+(`songs/hangar.json`), sung and not, about 20 minutes. Each plays through
+once, then 1.5 s of quiet, then the next; the order is shuffled and goes
+round them all before any comes again (never one twice running). The
+title and the other menus keep the title theme; leaving the hangar and
+coming back carries on with the next track.
+
+What plays shows in the bottom corner, level with the prompts bar; M, the
+right stick pressed, or a tap or click on it goes on to the next (the
+skipped one fades out in 0.4 s). Each track plays at -22 LUFS, a little
+under the title theme: it is background.
+
+Built by `python3 tools/music/setlist.py tools/music/songs/hangar.json
+<folder>` from the finished songs (Suno's .m4a will do: no stems, bars or
+loop): each is trimmed of silence, faded out (3 s where it stops dead, a
+short fade otherwise), and written as an MP3 (LAME `quality` 2: the sources
+are already compressed, so the best setting buys nothing), with
+`setlist.json` (titles, lengths, each one's gain). 27 MB in all, but each
+file is fetched only when it is next up (as the one before it starts), and
+only the track playing is held decoded (the next one too, for its last 20
+s), so it costs memory like one screen song.
+
+Checked by `node tools/audio-check.mjs --only hangar` (a track against its
+file to the sample, a skip, a track to its end and the next one GAP after
+it, and back to the menu music) and by `tools/screen-music-check.mjs` in a
+browser (the setup plays it, the corner shows it, M and a tap go on).
 
 ## Making one
 

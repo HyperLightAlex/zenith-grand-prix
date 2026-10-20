@@ -170,6 +170,12 @@ export class Menus {
     return this.stack.some((e) => e.id === id);
   }
 
+  /** The top screen that is none of `over` (the dialogs and pages that open over others), or null. */
+  under(over: ReadonlySet<ScreenId>): ScreenId | null {
+    for (let i = this.stack.length - 1; i >= 0; i--) if (!over.has(this.stack[i].id)) return this.stack[i].id;
+    return null;
+  }
+
   setDevice(d: Device): void {
     if (this.device === d) return;
     this.device = d;

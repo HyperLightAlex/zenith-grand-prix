@@ -84,8 +84,9 @@ export interface AudioEngine {
    * `style` picks the race music: the circuit's theme ('meridian', 'canyon', 'helios').
    * 'results' is the results screen's, with `style` 'win' or 'loss' (the
    * player's team's): a recorded song where there is one, else the menu music.
+   * 'hangar' is the hangar screens' setlist where there is one, else the same.
    */
-  setMusic(track: 'menu' | 'race' | 'results' | null, style?: string): void;
+  setMusic(track: 'menu' | 'race' | 'results' | 'hangar' | null, style?: string): void;
   /**
    * The next race is likely on this circuit (its theme): get its race music
    * ready ahead of time (a recorded song is decoded, which takes a moment).
@@ -97,6 +98,10 @@ export interface AudioEngine {
    * of its own for them (a recorded song); null to use the circuit's.
    */
   stingerKey?(): Partial<Record<SfxName, number>> | null;
+  /** The hangar's setlist: what plays now (null when it is not, or between tracks). */
+  nowPlaying?(): { id: string; title: string } | null;
+  /** The hangar's setlist: on to the next track. */
+  skipTrack?(): void;
 }
 
 /** Silent stand-in, used until the page has had a user gesture and in tests. */

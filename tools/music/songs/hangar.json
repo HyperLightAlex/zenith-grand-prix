@@ -1,0 +1,15 @@
+{
+  "id": "hangar",
+  "loudness": -22,
+  "quality": 2,
+  "tracks": [
+    {"id": "opening", "title": "蒼い火花", "source": "opening.m4a"},
+    {"id": "red-lamps", "title": "赤いランプ", "source": "red-lamps.m4a"},
+    {"id": "silver-dawn", "title": "Silver Dawn", "source": "silver-dawn.m4a"},
+    {"id": "blue-orbit", "title": "青い軌道", "source": "blue-orbit.m4a"},
+    {"id": "bayshore", "title": "湾岸線を抜けて", "source": "bayshore.m4a"},
+    {"id": "neon-garage-drive", "title": "Neon Garage Drive", "source": "neon-garage-drive.m4a"},
+    {"id": "instrumental-a", "title": "Untitled (3:00)", "source": "instrumental-a.m4a"},
+    {"id": "instrumental-b", "title": "Untitled (3:34)", "source": "instrumental-b.m4a"}
+  ]
+}

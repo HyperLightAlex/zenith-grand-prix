@@ -72,6 +72,7 @@ import { toggleRosterModel, rosterLabel } from '../render/mech/rosterSelection';
 import { LIVERIES, factionName } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
+import { NowPlaying } from '../ui/nowPlaying';
 import { emblemUrl } from '../ui/factionArt';
 import { Hud, abilityShown } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice, type ScreenId } from '../ui/menus';
@@ -140,6 +141,8 @@ export interface GameOptions {
 const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
 /** Screens the results' music carries on under: the results, the award, and what opens over them. */
 const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'award', 'controls', 'video', 'dialog', 'pause']);
+/** Screens that open over others: the music is the one for the screen under them. */
+const OVER_SCREENS = new Set<ScreenId>(['controls', 'video', 'dialog', 'pause']);
 /**
  * Semitones to move the race stingers by on each circuit so they land in the
  * key its music is in (they are written for Meridian's A minor, B minor and
@@ -230,6 +233,9 @@ export class Game {
   private resultsAt = -1;
   /** The music last asked for: results music gives way to the menu's once its screens are left. */
   private musicNow: 'menu' | 'race' | 'results' | null = null;
+  /** Which of the menus' music plays: the hangar's on the hangar screens, else the title theme's. */
+  private menuMusic: 'menu' | 'hangar' | null = null;
+  private readonly nowPlaying: NowPlaying;
   private prevButtons = 0;
   private lastShotKey = '';
   private slowmo = 0;
@@ -268,6 +274,7 @@ export class Game {
     this.useTrack(this.free.track);
     this.hud = new Hud(uiRoot);
     this.eyecatch = new Eyecatch(uiRoot);
+    this.nowPlaying = new NowPlaying(uiRoot, () => this.nextTrack());
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
     this.hud.onCritical = () => this.audio.play('critical');
     this.menus = new Menus(uiRoot, {
@@ -524,8 +531,34 @@ export class Game {
   }
 
   private music(track: 'menu' | 'race' | 'results', style?: string): void {
+    // The menus' music depends on the screen (the hangar's or the title
+    // theme), which is often only settled just after this is asked for: it
+    // is chosen each frame (menusMusic), the next one included.
+    if (track === 'menu') {
+      if (this.musicNow !== 'menu') this.menuMusic = null;
+      this.musicNow = 'menu';
+      return;
+    }
     this.musicNow = track;
+    this.menuMusic = null;
     this.audio.setMusic(track, style);
+  }
+
+  /** Each frame, in the menus: the hangar's music on the hangar screens, the title theme on the rest. */
+  private menusMusic(): void {
+    if (this.musicNow !== 'menu') return;
+    const under = this.menus.under(OVER_SCREENS);
+    const want = under !== null && HANGAR_SCREENS.has(under) ? 'hangar' : 'menu';
+    if (want === this.menuMusic) return;
+    this.menuMusic = want;
+    this.audio.setMusic(want);
+  }
+
+  /** On to the next track of the hangar's music, if it is playing. */
+  private nextTrack(): void {
+    if (this.musicNow !== 'menu' || this.menuMusic !== 'hangar' || !this.audio.skipTrack) return;
+    this.audio.skipTrack();
+    this.audio.play('ui_select');
   }
 
   /**
@@ -1855,6 +1888,14 @@ export class Game {
       this.cycleRoster();
       menu = menu.filter((m) => m !== 'rosterModel');
     }
+    // The hangar's music: on to the next track (M, or the right stick pressed).
+    if (menu.includes('track')) {
+      this.nextTrack();
+      menu = menu.filter((m) => m !== 'track');
+    }
+    this.menusMusic();
+    const playing = this.musicNow === 'menu' && this.menuMusic === 'hangar' && this.menus.screen !== null ? (this.audio.nowPlaying?.()?.title ?? null) : null;
+    this.nowPlaying.update(playing, this.input.device);
     // The look switch (G) and the tuning panel (T, the pad's Back) are tools
     // for working on the game: without DEV_TOOLS their keys do nothing.
     if (!DEV_TOOLS) menu = menu.filter((m) => m !== 'look' && m !== 'tune');

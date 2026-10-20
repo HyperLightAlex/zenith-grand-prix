@@ -7,6 +7,8 @@ import { h } from '../dom';
 import { COVER, LOGO } from '../keyArt';
 import { art, type Menus } from '../menus';
 
+const RECORDED_MUSIC = typeof location !== 'undefined' && new URLSearchParams(location.search).get('music') === 'suno';
+
 const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
   [
     'Racing',
@@ -49,10 +51,13 @@ const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
       ['Mark: all on my target', 'D-pad left', '4'],
     ],
   ],
+  // The hangar's music is a setlist only with the recorded music (?music=suno).
+  ...(RECORDED_MUSIC ? [['Hangar', [['Next track', 'R3', 'M']]] as [string, Array<[string, string, string]>]] : []),
 ];
 
 /** The same controls on the touch screen, by the rows' labels ('' for one with no touch control). */
 const TOUCH: Record<string, string> = {
+  'Next track': 'Tap what plays, bottom right',
   Steer: 'Left thumb, anywhere on the left',
   Accelerate: 'Held for you',
   Brake: 'Carve (tap)',

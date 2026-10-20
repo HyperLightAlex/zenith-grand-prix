@@ -1,0 +1,13 @@
+{
+ "id": "hangar",
+ "tracks": [
+  {"id": "opening", "title": "蒼い火花", "file": "opening.mp3", "length": 74.773, "gain": 6.49},
+  {"id": "red-lamps", "title": "赤いランプ", "file": "red-lamps.mp3", "length": 73.973, "gain": 5.77},
+  {"id": "silver-dawn", "title": "Silver Dawn", "file": "silver-dawn.mp3", "length": 73.974, "gain": 5.37},
+  {"id": "blue-orbit", "title": "青い軌道", "file": "blue-orbit.mp3", "length": 150.013, "gain": 4.64},
+  {"id": "bayshore", "title": "湾岸線を抜けて", "file": "bayshore.mp3", "length": 212.934, "gain": 4.5},
+  {"id": "neon-garage-drive", "title": "Neon Garage Drive", "file": "neon-garage-drive.mp3", "length": 192.106, "gain": 3.93},
+  {"id": "instrumental-a", "title": "Untitled (3:00)", "file": "instrumental-a.mp3", "length": 179.021, "gain": 4.72},
+  {"id": "instrumental-b", "title": "Untitled (3:34)", "file": "instrumental-b.mp3", "length": 213.57, "gain": 4.38}
+ ]
+}

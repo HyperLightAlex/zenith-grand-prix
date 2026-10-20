@@ -296,7 +296,10 @@ coming up has its song decoded. While a song plays the stingers can take
 keys of its own (Helios's E minor, Canyon's G minor rising to A minor).
 The results have a song for each outcome of the round (and the Grand Prix
 award, first place or not): トロフィーセレモニー when the player's team
-won, Minor Theme when it lost, each looping until the screen is left. See
+won, Minor Theme when it lost, each looping until the screen is left. The
+hangar screens play a setlist, like a radio: songs one after another in a
+shuffled order, what plays shown in the corner, M (or R3, or a tap) for
+the next. See
 [tools/music](../tools/music/README.md), and its prompts.md for what each
 song was asked for. The menus' music is the title theme, Blue Night Sky,
 in the same J-rock as the opening.

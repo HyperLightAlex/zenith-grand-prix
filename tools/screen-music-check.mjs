@@ -1,9 +1,11 @@
 // The screens' music with ?music=suno, in headless Chromium. The title
-// screen plays the title theme, and it carries on (not started again) into
-// the setup screens. Then races to their results: the win theme if the
-// player's team won the round, the loss theme if it lost (the menus' music
-// while there is none); the other outcome, by turning the round round; and
-// off the results, the menus' music again.
+// screen plays the title theme, and it carries on (not started again) to the
+// modes. The hangar screens play the hangar's setlist, with what plays shown
+// in the corner; M goes on to the next track; back at the title, the title
+// theme. Then races to their results: the win theme if the player's team won
+// the round, the loss theme if it lost (the menus' music while there is
+// none); the other outcome, by turning the round round; and off the results,
+// the hangar's music again (the setup is a hangar screen).
 //
 //   URL=http://127.0.0.1:8090/ node tools/screen-music-check.mjs
 //
@@ -26,11 +28,32 @@ const check = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (!
   const ok = await page.waitForFunction(() => window.game.audio.debugInfo().music?.song?.state === 'playing', null, { timeout: 30000 }).then(() => true, () => false);
   const t = await page.evaluate(() => { const m = window.game.audio.debugInfo().music; return { name: m?.name, id: m?.song?.id, start: m?.startTime, screen: window.game.menus.screen }; });
   check(ok && t.name === 'menu' && t.id === 'title', `the title screen (${t.screen}) plays the title theme (${t.name}, ${t.id})`);
-  // On into the setup screens: the same theme carries on.
-  await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); g.menus.push('setup'); });
+  // On to the modes: the same theme carries on.
+  await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); });
   await page.waitForTimeout(1500);
   const s = await page.evaluate(() => { const m = window.game.audio.debugInfo().music; return { name: m?.name, id: m?.song?.id, start: m?.startTime, screen: window.game.menus.screen }; });
   check(s.name === 'menu' && s.id === 'title' && s.start === t.start, `on to ${s.screen}, the theme carries on (not started again)`);
+  // Into the setup, a hangar screen: the hangar's music, and what plays shown.
+  await page.evaluate(() => window.game.menus.push('setup'));
+  const hangar = await page.waitForFunction(() => window.game.audio.nowPlaying?.(), null, { timeout: 30000 }).then(() => true, () => false);
+  await page.waitForTimeout(500);
+  const a = await page.evaluate(() => ({ music: window.game.audio.debugInfo().music?.name, now: window.game.audio.nowPlaying?.(), label: document.querySelector('.now-playing .np-title')?.textContent ?? null, shown: !document.querySelector('.np-layer')?.hidden }));
+  check(hangar && a.music === 'hangar' && !!a.now, `the setup plays the hangar's music (${a.music}: ${a.now?.title})`);
+  check(a.shown && a.label === a.now?.title, `what plays is shown in the corner ("${a.label}")`);
+  // M: on to the next track.
+  await page.keyboard.press('KeyM');
+  const moved = await page.waitForFunction((id) => { const n = window.game.audio.nowPlaying?.(); return n && n.id !== id; }, a.now?.id, { timeout: 15000 }).then(() => true, () => false);
+  const b = await page.evaluate(() => ({ now: window.game.audio.nowPlaying?.(), label: document.querySelector('.now-playing .np-title')?.textContent ?? null }));
+  check(moved && b.label === b.now?.title, `M goes on to the next track ("${a.now?.title}", then "${b.now?.title}")`);
+  // A tap on the label does too.
+  await page.click('.now-playing');
+  const tapped = await page.waitForFunction((id) => { const n = window.game.audio.nowPlaying?.(); return n && n.id !== id; }, b.now?.id, { timeout: 15000 }).then(() => true, () => false);
+  check(tapped, 'a tap on it goes on to the next too');
+  // Back at the title: the title theme, and nothing shown.
+  await page.evaluate(() => window.game.menus.reset('title'));
+  await page.waitForTimeout(1500);
+  const c = await page.evaluate(() => { const m = window.game.audio.debugInfo().music; return { name: m?.name, id: m?.song?.id, shown: !document.querySelector('.np-layer')?.hidden }; });
+  check(c.name === 'menu' && c.id === 'title' && !c.shown, `back at the title, the title theme (${c.name}, ${c.id}), and no track shown`);
   await page.close();
 }
 for (const seed of [7, 11]) {
@@ -70,7 +93,7 @@ for (const seed of [7, 11]) {
   await page.evaluate(() => window.game.toSetup());
   await page.waitForTimeout(1500);
   const after = await page.evaluate(() => ({ screen: window.game.menus.screen, music: window.game.audio.debugInfo().music?.name }));
-  check(after.music === 'menu', `seed ${seed}: off the results (to ${after.screen}), the menu music (${after.music})`);
+  check(after.music === 'hangar', `seed ${seed}: off the results (to ${after.screen}), the hangar's music (${after.music})`);
   await page.close();
 }
 await browser.close();

@@ -267,12 +267,32 @@ export class SongPlan {
 
 // ---- loading ----------------------------------------------------------------------
 
-const decodeOne = (ctx: BaseAudioContext, data: ArrayBuffer): Promise<AudioBuffer> =>
+export const decodeOne = (ctx: BaseAudioContext, data: ArrayBuffer): Promise<AudioBuffer> =>
   new Promise((ok, fail) => {
     // Older Safari only has the callback form; newer browsers return a promise too.
     const p = ctx.decodeAudioData(data, ok, (e) => fail(e ?? new Error('could not decode')));
     if (p && typeof p.catch === 'function') p.catch(fail);
   });
+
+/**
+ * What to decode recorded music with for `ctx`. Decoded, audio takes 8 bytes
+ * a sample frame: a race song's layers over 200 MB at 48 kHz. Only on a
+ * device with very little memory (2 GB or less) is it decoded at 32 kHz
+ * instead: a third less, but the browser then has to resample it as it
+ * plays, which dulls the top end.
+ */
+export function decodeInto(ctx: BaseAudioContext): BaseAudioContext {
+  const mem = (globalThis.navigator as (Navigator & { deviceMemory?: number }) | undefined)?.deviceMemory;
+  const rate = mem !== undefined && mem < 4 ? Math.min(32000, ctx.sampleRate) : ctx.sampleRate;
+  if (rate !== ctx.sampleRate && typeof OfflineAudioContext !== 'undefined') {
+    try {
+      return new OfflineAudioContext(2, 1, rate);
+    } catch {
+      return ctx;
+    }
+  }
+  return ctx;
+}
 
 /**
  * A song's files: downloaded as soon as this is made and kept for the visit
@@ -317,20 +337,7 @@ export class SongSource {
     const current = () => round === this.released;
     void (async () => {
       const { manifest, data } = await this.files;
-      // Decoded, the layers take 8 bytes a sample frame each: over 200 MB at
-      // 48 kHz. Only on a device with very little memory (2 GB or less) are
-      // they decoded at 32 kHz instead: a third less, but the browser then
-      // has to resample them as they play, which dulls the top end.
-      const mem = (globalThis.navigator as (Navigator & { deviceMemory?: number }) | undefined)?.deviceMemory;
-      const rate = mem !== undefined && mem < 4 ? Math.min(32000, ctx.sampleRate) : ctx.sampleRate;
-      let into: BaseAudioContext = ctx;
-      if (rate !== ctx.sampleRate && typeof OfflineAudioContext !== 'undefined') {
-        try {
-          into = new OfflineAudioContext(2, 1, rate);
-        } catch {
-          into = ctx;
-        }
-      }
+      const into = decodeInto(ctx);
       // Two at a time (where there are cores to spare, that is near half the
       // wait, and only two layers are mid-decode at once), each from a copy:
       // the browser takes over the data it decodes, and the download is kept
