@@ -147,7 +147,7 @@ function mechSum(m: MechState): number {
     m.boostT + m.relightT + m.maxHp + m.carveDir + m.carveCharge + m.carveTier + m.carveT + m.carveBoost + m.airT + m.arcDir + m.arcFrom + m.arcSweep + m.arcR +
     m.support + m.pressure + m.backup + m.aegisSaved + m.shieldBy + sum(m.awardPts) + sum(m.awardTick) + sum(m.hurtBy) + sum(m.passTick) +
     m.lap + m.finishTime + m.retireTick + m.place + m.points +
-    m.prevButtons + m.prevCmd + m.prevThrottle + m.throttleTick + m.throttleRest +
+    m.prevButtons + m.prevCmd + m.rev + m.revFrom + m.bogT +
     m.lastHitBy + m.lastHitTick + m.deniedTick + m.dmgDealt + m.dmgTaken + m.kos +
     ai.intent + ai.intentTarget + ai.nextThink + ai.lane + ai.orbit + ai.orbitUntil +
     ai.attackAt + ai.guardFrom + ai.guardUntil + ai.dodgeAt + ai.reactedTo + ai.comboLeft +

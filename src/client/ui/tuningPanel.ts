@@ -24,6 +24,8 @@ const SOUND_TEST: Array<[SfxName, string]> = [
   ['boost', 'Boost (lit)'],
   ['dash', 'Dash'],
   ['launch', 'Perfect launch'],
+  ['rev_green', 'Revs in the green'],
+  ['bog', 'Over-revved start'],
   ['lock', 'Lock on'],
   ['unlock', 'Let go'],
   ['denied', 'Refused'],

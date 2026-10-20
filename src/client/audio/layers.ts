@@ -346,7 +346,10 @@ export class EngineLayers {
 
   /** `ahead` is how far past `now` timed events (the alarm beeps) should be queued. */
   update(now: number, dt: number, s: AudioScene, ahead: number): void {
-    const on = s.racing;
+    // On the grid the engine runs on the revs (and only the engine: nothing moves).
+    const rev = s.rev !== undefined && Number.isFinite(s.rev) ? clamp(s.rev, 0, 1) : -1;
+    const grid = rev >= 0;
+    const on = s.racing || grid;
     const x = clamp(Number.isFinite(s.speed) ? s.speed : 0, 0, MAX_SPEED) / LIMIT_SPEED;
     const x1 = Math.min(1, x);
     // Speed as the layers hear it: the real thing up to TOP, easing off above (see TOP).
@@ -368,15 +371,20 @@ export class EngineLayers {
     // on getting louder, the body by half the extra speed and the whine by
     // all of it, or the wind would bury them both.
     // Locked on and fighting, it is turned down and darkened.
-    const f0 = IDLE_HZ * 2 ** (1.3 * xs) * (1 + 0.035 * thr);
+    // (On the grid: the revs as the speed, a full gauge a little past the
+    // formation lap's limiter; past the redline it bounces off the limiter.)
+    const xe = grid ? rev * 1.15 : xs;
+    const xe1 = grid ? Math.min(1, rev * 1.15) : x1;
+    const limiter = grid && rev > 0.97 && Math.sin(now * 56) > 0 ? 0.92 : 1;
+    const f0 = IDLE_HZ * 2 ** (1.3 * xe) * (1 + 0.035 * thr) * limiter;
     for (let i = 0; i < this.f0.length; i++) this.f0[i].to(f0 * this.ratios[i], now);
-    const over = Math.max(0, xs - 1);
-    this.engCut.to((170 + 950 * xs ** 1.2 * (0.5 + 0.5 * thr)) * (s.battle ? 0.6 : 1), now);
+    const over = Math.max(0, xe - 1);
+    this.engCut.to((170 + 950 * xe ** 1.2 * (0.5 + 0.5 * thr)) * (s.battle ? 0.6 : 1), now);
     const mix = this.mix;
-    this.engGain.to(on ? LEVEL.engine * mix.engine * (0.45 + 0.35 * thr + 0.2 * x1) * (1 + 0.5 * over) * (s.battle ? 0.68 : 1) : 0, now);
+    this.engGain.to(on ? LEVEL.engine * mix.engine * (0.45 + 0.35 * thr + 0.2 * xe1) * (1 + 0.5 * over) * (s.battle ? 0.68 : 1) * (limiter < 1 ? 0.8 : 1) : 0, now);
     // The whine only grows a little past the formation lap's limiter: at the
     // speeds of laps 2 and 3 it was getting shrill.
-    this.whineGain.to(on ? LEVEL.whine * mix.engine * x1 ** 1.5 * (1 + 0.2 * over) * (0.5 + 0.5 * thr) * (s.battle ? 0.5 : 1) : 0, now);
+    this.whineGain.to(on ? LEVEL.whine * mix.engine * xe1 ** 1.5 * (1 + 0.2 * over) * (0.5 + 0.5 * thr) * (s.battle ? 0.5 : 1) : 0, now);
 
     // Air and road. In a slipstream the broad rush drops and a hollow band takes over.
     const draft = on && s.drafting;

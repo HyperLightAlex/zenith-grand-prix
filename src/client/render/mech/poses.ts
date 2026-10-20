@@ -86,6 +86,58 @@ const guard = makePose({
   wingR: [-0.4, 0, 0],
 });
 
+/** On the grid: ready, light on the skates, waiting for the lights. */
+const ready = makePose({
+  hips: [-0.55, 0, 0.14, 0, 0],
+  spine: [0.08, 0, 0],
+  chest: [0.06, 0, 0],
+  head: [-0.14, 0, 0],
+  shL: [0.12, 0, 0.2],
+  elL: [-0.4, 0, 0],
+  shR: [0.12, 0, -0.2],
+  elR: [-0.4, 0, 0],
+  footL: [0.95, 0, 0.4, 0, 0],
+  footR: [-0.95, 0, -0.4, 0, 0],
+  wingL: [0, 0.15, 0.05],
+  wingR: [0, -0.15, -0.05],
+});
+
+/**
+ * Revved up on the grid: a speed skater's start, coiled low over the front
+ * skate, the back one set behind to push from, one arm forward and one back
+ * to drive with, the wings open.
+ */
+const launchSet = makePose({
+  hips: [-1.75, 0.35, 0.72, 0, 0],
+  spine: [0.3, 0, 0],
+  chest: [0.2, 0, 0],
+  head: [-1.05, 0, 0],
+  shL: [-0.7, 0, 0.25],
+  elL: [-0.95, 0, 0],
+  shR: [1.05, 0, -0.25],
+  elR: [-0.3, 0, 0],
+  footL: [0.85, 0, 1.15, 0, 0],
+  footR: [-0.85, 0, -1.9, 0.3, 0],
+  wingL: [0.25, 0.8, 0.4],
+  wingR: [0.25, -0.8, -0.4],
+});
+
+/** GO: the push off the line, the back leg driving out straight, the arms swapping over. */
+const launchPush = makePose({
+  hips: [-1.25, 0.65, 0.85, 0, 0],
+  spine: [0.4, 0, 0],
+  chest: [0.3, 0, 0],
+  head: [-1.3, 0, 0],
+  shL: [0.95, 0, 0.3],
+  elL: [-0.35, 0, 0],
+  shR: [-0.55, 0, -0.25],
+  elR: [-0.8, 0, 0],
+  footL: [0.9, 0, 1.3, 0, 0],
+  footR: [-0.9, 0.15, -2.6, 0.5, 0],
+  wingL: [0.3, 1.0, 0.5],
+  wingR: [0.3, -1.0, -0.5],
+});
+
 /** Hit: thrown back off balance. */
 const stagger = makePose({
   hips: [-0.5, -0.5, -0.32, 0.2, 0.12],
@@ -384,6 +436,9 @@ const standby = makePose({
 export const POSES = {
   stand: makePose(),
   standby,
+  ready,
+  launchSet,
+  launchPush,
   tuck,
   boost,
   carveRight,

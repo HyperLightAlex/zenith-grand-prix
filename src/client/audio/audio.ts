@@ -11,6 +11,7 @@ export type SfxName =
   | 'count_beep' | 'count_go' | 'launch'
   | 'boost' | 'dash' | 'lock' | 'unlock' | 'denied'
   | 'carve_tier' | 'carve_burst'
+  | 'rev_green' | 'bog'
   | 'swing_light' | 'swing_heavy' | 'hit_light' | 'hit_heavy' | 'block' | 'block_heavy' | 'parry' | 'guard_break'
   | 'tell' | 'tell_dodge' | 'momentum' | 'momentum_hit' | 'ringout'
   | 'shot_carbine' | 'shot_scatter' | 'bullet_hit'
@@ -64,6 +65,13 @@ export interface AudioScene {
   carveTier?: number;
   /** Armour below a quarter. */
   critical: boolean;
+  /**
+   * On the grid, through the countdown: the revs (0 to 1). The engine runs
+   * on them, up to its top-speed pitch at the redline and stuttering on the
+   * limiter past it; the wind and road stay quiet, nothing moving yet.
+   * Optional: left out, it is not on the grid.
+   */
+  rev?: number;
   /**
    * The race is over for the player (finished, or the race has ended). A
    * recorded song goes on to its ending. Optional: left out, it is not.

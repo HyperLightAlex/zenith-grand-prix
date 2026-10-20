@@ -1,7 +1,7 @@
 // Drives a rig from simulation state: blends the pose library by mode and
 // action, adds the skating stride and body lean, and sizes thruster flames.
 import type * as THREE from 'three';
-import { ACT, ATTACKS, MODE, PACE, type MechState } from '../../../sim/index';
+import { ACT, ATTACKS, MODE, PACE, REV_PERFECT, REV_RED, START, startGrade, type MechState } from '../../../sim/index';
 import { COLORS } from '../palette';
 import { setFlameTime } from './frames';
 import { CLIPS, POSES } from './poses';
@@ -13,6 +13,8 @@ const clamp01 = (t: number) => (t < 0 ? 0 : t > 1 ? 1 : t);
 const toward = (v: number, target: number, rate: number, dt: number) => v + (target - v) * (1 - Math.exp(-rate * dt));
 
 const staggerMirror = mirrorPose(POSES.stagger);
+/** Seconds the push off the line takes to settle into the tuck. */
+const PUSH_SECS = 0.45;
 const carveLeft = mirrorPose(POSES.carveRight);
 
 export class MechAnimator {
@@ -41,6 +43,23 @@ export class MechAnimator {
   private prevSpeed = 0;
   /** The garage: stand at rest in the bay instead of the grid's crouch. */
   display = false;
+  /**
+   * On the grid, through the countdown (the view sets it): the ready stance,
+   * crouching into the launch as the revs build. When it goes, the push off
+   * the line, as hard as the start was good.
+   */
+  grid = false;
+  private wasGrid = false;
+  private gridW = 0;
+  /** The revs, smoothed between ticks. */
+  private revW = 0;
+  /** Seconds since GO, while the push lasts; how hard it was (0 to 1). */
+  private pushT = PUSH_SECS;
+  private pushK = 0;
+  /** A bogged start's stumble. */
+  private stumbleW = 0;
+  /** Standing still or nearly: the stance out of the tuck, eased. */
+  private idleW = 0;
   /**
    * How far the gun arm should be turned onto its target this drawing (0 to
    * 1): up while a gun attack is raised. The view does the aiming, since it
@@ -97,9 +116,52 @@ export class MechAnimator {
     P.hips[0] += Math.abs(cs) * 0.12 * amp;
     P.shL[0] += sn * 0.3 * amp;
     P.shR[0] -= sn * 0.3 * amp;
-    // Standing on the grid: rise out of the tuck.
-    const idle = 1 - clamp01(m.speed / 14);
-    if (idle > 0) blendPose(P, POSES.battle, idle * 0.55 * (1 - this.battleW));
+    // Standing still or nearly: rise out of the tuck. Eased in time, so a
+    // jump in speed (a launch) never snaps the stance.
+    this.idleW = toward(this.idleW, 1 - clamp01(m.speed / 14), 8, dt);
+    if (this.idleW > 0.001) blendPose(P, POSES.battle, this.idleW * 0.55 * (1 - this.battleW));
+
+    // ---- the start
+    if (this.grid) {
+      this.gridW = 1;
+    } else {
+      if (this.wasGrid) {
+        // GO: push off the line, as hard as the start was good (a bog stumbles instead).
+        const g = startGrade(m.rev);
+        this.pushT = 0;
+        this.pushK = g === START.PERFECT ? 1 : g === START.GOOD ? 0.8 : g === START.PLAIN ? 0.45 : 0;
+      }
+      this.gridW = toward(this.gridW, 0, 9, dt);
+    }
+    this.wasGrid = this.grid;
+    if (this.grid) this.revW = toward(this.revW, m.rev, 14, dt);
+    if (this.gridW > 0.001 && !this.display) {
+      // Ready, crouching into the launch as the revs build: all the way down by the redline.
+      const r = ease(clamp01(this.revW / REV_RED));
+      copyPose(this.tmp, POSES.ready);
+      blendPose(this.tmp, POSES.launchSet, r);
+      // A breath while waiting; in the green and past it, shaking with the engine.
+      this.tmp.hips[0] += Math.sin(this.time * 1.6) * 0.03 * (1 - r);
+      const hot = clamp01((this.revW - REV_PERFECT) / (1 - REV_PERFECT)) ** 2;
+      this.tmp.hips[0] += Math.sin(this.time * 41) * 0.035 * hot;
+      this.tmp.chest[2] += Math.sin(this.time * 57) * 0.03 * hot;
+      this.tmp.head[2] -= Math.sin(this.time * 57) * 0.02 * hot;
+      blendPose(P, this.tmp, this.gridW);
+    }
+    if (this.pushT < PUSH_SECS) {
+      this.pushT += dt;
+      const t = this.pushT;
+      const w = t < 0.07 ? t / 0.07 : Math.max(0, 1 - (t - 0.07) / (PUSH_SECS - 0.07)) ** 2;
+      if (this.pushK > 0) blendPose(P, POSES.launchPush, w * this.pushK);
+    }
+    // A bogged start: jolted off balance while the engine sputters.
+    this.stumbleW = toward(this.stumbleW, m.bogT > 0 && !m.retired ? 1 : 0, 12, dt);
+    if (this.stumbleW > 0.001) {
+      blendPose(P, POSES.stagger, ease(this.stumbleW) * 0.7);
+      const judder = Math.sin(this.time * 33) * 0.06 * this.stumbleW;
+      P.chest[2] += judder;
+      P.head[2] -= judder;
+    }
 
     // ---- in the air: knees up, toes down, arms out for balance; falling,
     // the legs drop and the arms go up
@@ -216,6 +278,11 @@ export class MechAnimator {
       // Thrusters hold it level in the air, and fight the drop in a fall.
       if (m.air) want = Math.max(want, m.fallT > 0 ? 1.3 : 0.75);
       if (m.finished) want = 0.25;
+      // On the grid the thrusters build with the revs; off the line they
+      // fire as hard as the start was good; a bog sputters.
+      if (this.gridW > 0.5) want = 0.1 + this.revW * 0.95;
+      if (this.pushT < 0.35) want = Math.max(want, 1.15 * this.pushK);
+      if (m.bogT > 0) want = Math.sin(this.time * 23) > 0.3 ? 0.45 : 0.08;
       // Indoors, standing: only the pilot lights.
       if (this.display) want = 0.08;
     }

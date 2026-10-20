@@ -15,6 +15,9 @@ import {
   BTN,
   MODE,
   PHASE,
+  REV_PERFECT,
+  REV_RED,
+  START,
   ROLE,
   ROLE_NAMES,
   TICK_RATE,
@@ -251,6 +254,8 @@ export class Game {
   private garageShown: { team: number; role: Role } | null = null;
   /** The race behind the title is on screen. */
   private attracting = false;
+  /** The player's revs on the grid, by band (0 below the green, 2 in it, 3 past it), for the tick into the green. */
+  private revZone = 0;
   private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false, finished: false };
 
   /** The on-screen controls (a race played by touch). */
@@ -1507,7 +1512,12 @@ export class Game {
         if (e.n === 0) this.view.cam.mode = this.state === 'garage' ? 'orbit' : 'play';
         break;
       case 'launch':
-        if (e.mech === local && inRace) A.play('launch');
+        // The start the revs earned: the launch's burst (smaller for a good one), or the engine bogging.
+        if (e.mech === local && inRace) {
+          if (e.grade === START.PERFECT) A.play('launch');
+          else if (e.grade === START.GOOD) A.play('launch', { volume: 0.55, pitch: 0.94 });
+          else if (e.grade === START.BOG) A.play('bog');
+        }
         break;
       case 'lapPhase':
         if (inRace) this.sting(e.lap >= 3 ? 'final_lap' : 'lap_phase');
@@ -2054,6 +2064,12 @@ export class Game {
     sc.carve = f.carving && !f.air ? Math.max(0.15, Math.abs(f.steer)) : 0;
     sc.carveTier = f.carving ? f.carveTier : 0;
     sc.critical = f.hp > 0 && f.hp < 0.25 * f.maxHp && !f.retired && this.state === 'race';
+    // On the grid the engine runs on the revs; a tick as the player's come into the green.
+    const grid = cur.phase === PHASE.COUNTDOWN && this.state === 'race' && !f.retired;
+    sc.rev = grid ? f.rev : undefined;
+    const zone = grid && own ? (own.rev > REV_RED ? 3 : own.rev >= REV_PERFECT ? 2 : 0) : 0;
+    if (zone === 2 && this.revZone !== 2) this.audio.play('rev_green');
+    this.revZone = zone;
     // Over for the player: a recorded song plays its ending.
     sc.finished = (!!own && own.finished) || cur.phase === PHASE.FINISHED;
     this.audio.update(dt, sc);

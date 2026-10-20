@@ -10,8 +10,15 @@ import {
   FINISH_GRACE_TICKS,
   LAPS,
   MODE,
-  PERFECT_START_WINDOW,
   PHASE,
+  BOG_TICKS,
+  REV_FALL,
+  REV_GOOD,
+  REV_PERFECT,
+  REV_RED,
+  REV_RISE,
+  START,
+  startGrade,
   ROLE,
   TACTIC,
   TICK_RATE,
@@ -24,10 +31,12 @@ import { retire } from '../src/sim/combat';
 import { DF0, DF1, FW0, FW1, MF0, MF1, TRACK, effectTimers, makeInputs, newRace, runCountdown, runToEnd, snapshot } from './helpers';
 import type { Inputs } from './helpers';
 
-/** Speed a perfect launch leaves the line at (set in stepRace on the GO tick). */
+/** Speed a perfect launch leaves the line at (set in stepRace on the GO tick), and the Drive it adds. */
 const LAUNCH_SPEED = 44;
-/** Drive a perfect launch adds. */
 const LAUNCH_DRIVE = 10;
+/** The same for a good one. */
+const GOOD_SPEED = 26;
+const GOOD_DRIVE = 5;
 
 const L = TRACK.length;
 
@@ -213,97 +222,170 @@ describe('countdown', () => {
   });
 });
 
-describe('perfect launch', () => {
-  /** Run the countdown with the forward's throttle going down at `pressTick`. */
-  function launch(pressTick: number, releaseTick = Infinity): { race: RaceState; launched: boolean } {
+describe('the rev-up and the launch', () => {
+  /** The countdown tick to start holding the throttle so the revs stand at `rev` at GO. */
+  const holdFor = (rev: number): number => COUNTDOWN_TICKS + 1 - Math.round(rev / REV_RISE);
+  /**
+   * Run the countdown with the forward's throttle as `throttleAt(tick, revs)`
+   * says; returns the race at GO and the start it was graded.
+   */
+  function start(throttleAt: (t: number, rev: number) => number, rules: Partial<RaceState['rules']> = {}): { race: RaceState; grade: number; revs: number[] } {
     // The formation-lap trickle is off: these tests count the launch's Drive exactly.
-    const race = newRace(5, { humans: [FW0], skill: 0, rules: { lap1Trickle: 0 } });
+    const race = newRace(5, { humans: [FW0], skill: 0, rules: { lap1Trickle: 0, ...rules } });
     const inputs = makeInputs(race);
-    let launched = false;
+    let grade = -1;
+    const revs: number[] = [];
     for (let t = 1; t <= COUNTDOWN_TICKS; t++) {
-      inputs[FW0]!.throttle = t >= pressTick && t < releaseTick ? 1 : 0;
+      inputs[FW0]!.throttle = throttleAt(t, race.mechs[FW0].rev);
       stepRace(race, TRACK, inputs);
-      if (race.events.some((e) => e.type === 'launch' && e.mech === FW0)) {
-        launched = true;
+      revs.push(race.mechs[FW0].rev);
+      for (const e of race.events) {
+        if (e.type !== 'launch' || e.mech !== FW0) continue;
+        grade = e.grade;
         expect(race.tick).toBe(COUNTDOWN_TICKS);
       }
     }
-    return { race, launched };
+    return { race, grade, revs };
   }
+  const holding = (from: number) => (t: number) => (t >= from ? 1 : 0);
 
-  it('rewards a throttle squeezed just before the lights go out', () => {
-    const { race, launched } = launch(COUNTDOWN_TICKS - 10);
-    expect(launched).toBe(true);
+  it('builds revs while the throttle is held and lets them fall while it is not', () => {
+    const { revs } = start((t) => (t <= 60 ? 1 : 0));
+    expect(revs[59]).toBeCloseTo(60 * REV_RISE, 9);
+    expect(revs[69]).toBeCloseTo(60 * REV_RISE - 10 * REV_FALL, 9);
+    expect(Math.min(...revs)).toBeGreaterThanOrEqual(0);
+    // Held on, they fill and stop there.
+    expect(Math.max(...start(() => 1).revs)).toBe(1);
+  });
+
+  it('grades the start on where the revs stand at GO: the green is perfect, short of it good, past the redline a bog', () => {
+    expect(startGrade(0)).toBe(START.PLAIN);
+    expect(startGrade(REV_GOOD - 1e-9)).toBe(START.PLAIN);
+    expect(startGrade(REV_GOOD)).toBe(START.GOOD);
+    expect(startGrade(REV_PERFECT)).toBe(START.PERFECT);
+    expect(startGrade(REV_RED)).toBe(START.PERFECT);
+    expect(startGrade(REV_RED + 1e-9)).toBe(START.BOG);
+    expect(startGrade(1)).toBe(START.BOG);
+  });
+
+  it('launches a perfect start: off the line at speed, with Drive', () => {
+    const { race, grade } = start(holding(holdFor(0.78)));
+    expect(grade).toBe(START.PERFECT);
     const m = race.mechs[FW0];
     // Off the line at the launch speed (and already pulling: the GO tick is a racing tick).
     expect(m.speed).toBeGreaterThanOrEqual(LAUNCH_SPEED);
     expect(m.speed).toBeLessThan(LAUNCH_SPEED + CLASSES[m.role].accel * DT + 1e-9);
-    // +10 Drive (with the formation-lap trickle switched off, nothing else feeds the gauge).
     expect(m.drive).toBe(race.rules.driveStart + LAUNCH_DRIVE);
   });
 
   it('adds its Drive on top of rules.driveStart, up to a full gauge', () => {
-    const run = (driveStart: number) => {
-      const race = newRace(5, { humans: [FW0], skill: 0, rules: { driveStart, lap1Trickle: 0 } });
-      const inputs = makeInputs(race);
-      for (let t = 1; t <= COUNTDOWN_TICKS; t++) {
-        inputs[FW0]!.throttle = t >= COUNTDOWN_TICKS - 10 ? 1 : 0;
-        stepRace(race, TRACK, inputs);
-      }
-      return race.mechs[FW0].drive;
-    };
+    const run = (driveStart: number) => start(holding(holdFor(0.78)), { driveStart }).race.mechs[FW0].drive;
     expect(run(35)).toBe(35 + LAUNCH_DRIVE);
     expect(run(95)).toBe(DRIVE_MAX);
   });
 
-  it('covers exactly the last PERFECT_START_WINDOW ticks, GO tick included', () => {
-    expect(launch(COUNTDOWN_TICKS).launched).toBe(true);
-    expect(launch(COUNTDOWN_TICKS - PERFECT_START_WINDOW).launched).toBe(true);
-    expect(launch(COUNTDOWN_TICKS - PERFECT_START_WINDOW - 1).launched).toBe(false);
+  it('gives a good start a smaller launch', () => {
+    const { race, grade } = start(holding(holdFor(0.55)));
+    expect(grade).toBe(START.GOOD);
+    const m = race.mechs[FW0];
+    expect(m.speed).toBeGreaterThanOrEqual(GOOD_SPEED);
+    expect(m.speed).toBeLessThan(GOOD_SPEED + CLASSES[m.role].accel * DT + 1e-9);
+    expect(m.drive).toBe(race.rules.driveStart + GOOD_DRIVE);
   });
 
-  it('is not given for a throttle held from the start', () => {
-    const { race, launched } = launch(1);
-    expect(launched).toBe(false);
-    expect(race.mechs[FW0].speed).toBeLessThan(5);
-    expect(race.mechs[FW0].drive).toBe(race.rules.driveStart);
+  it('gives nothing to a throttle never pressed, or let go in time to sink below the good band', () => {
+    expect(start(() => 0).grade).toBe(START.PLAIN);
+    // Into the green, then let go half a second before GO: 0.5 s at REV_FALL takes them out of it.
+    const early = start((t) => (t >= holdFor(0.8) - 30 && t < COUNTDOWN_TICKS - 30 ? 1 : 0));
+    expect(early.revs[COUNTDOWN_TICKS - 32]).toBeGreaterThanOrEqual(REV_PERFECT);
+    expect(early.grade).toBe(START.PLAIN);
+    expect(early.race.mechs[FW0].drive).toBe(early.race.rules.driveStart);
   });
 
-  it('is not given for a throttle let go again before GO, or never pressed', () => {
-    expect(launch(COUNTDOWN_TICKS - 10, COUNTDOWN_TICKS - 2).launched).toBe(false);
-    expect(launch(Infinity).launched).toBe(false);
+  it('bogs a throttle held from the start: no throttle and no boost while the mech stumbles', () => {
+    const { race, grade } = start(() => 1, { driveStart: 50 });
+    expect(grade).toBe(START.BOG);
+    const m = race.mechs[FW0];
+    const inputs = makeInputs(race);
+    inputs[FW0]!.throttle = 1;
+    for (let i = 1; i < BOG_TICKS; i++) {
+      // Boost pressed and held throughout: it must not light either.
+      inputs[FW0]!.buttons = BTN.A;
+      stepRace(race, TRACK, inputs);
+      expect(m.speed).toBeLessThan(1);
+      expect(m.boostT).toBe(0);
+    }
+    expect(m.bogT).toBe(0);
+    // Then the engine catches.
+    for (let i = 0; i < 30; i++) stepRace(race, TRACK, inputs);
+    expect(m.speed).toBeGreaterThan(5);
   });
 
-  it('a perfect launch really is quicker off the line', () => {
-    const good = launch(COUNTDOWN_TICKS - 5);
-    const late = launch(1);
+  it('can be held in the green by feathering the throttle, as a player reading the gauge would', () => {
+    // From the first tick: up to the middle of the green, then on and off around it.
+    const { grade, revs } = start((t, rev) => (rev < 0.75 ? 1 : 0));
+    expect(grade).toBe(START.PERFECT);
+    // In the green for the whole last second and a half.
+    for (const r of revs.slice(-90)) {
+      expect(r).toBeGreaterThanOrEqual(REV_PERFECT);
+      expect(r).toBeLessThanOrEqual(REV_RED);
+    }
+  });
+
+  it('a perfect start really is quicker off the line than a plain one, and a plain one than a bog', () => {
     const run = (race: RaceState): number => {
       const inputs: Inputs = makeInputs(race);
       inputs[FW0]!.throttle = 1;
       for (let i = 0; i < 120; i++) stepRace(race, TRACK, inputs);
       return race.mechs[FW0].s;
     };
-    expect(run(good.race)).toBeGreaterThan(run(late.race) + 10);
+    const perfect = run(start(holding(holdFor(0.78))).race);
+    const plain = run(start(() => 0).race);
+    const bog = run(start(() => 1).race);
+    expect(perfect).toBeGreaterThan(plain + 10);
+    expect(plain).toBeGreaterThan(bog + 5);
   });
 
-  it('AI pilots launch by skill: never at skill 0, sometimes at skill 1', () => {
-    let none = 0;
-    let some = 0;
-    for (let seed = 1; seed <= 12; seed++) {
-      for (const skill of [0, 1]) {
+  it('the computer revs up too, and starts by skill: perfect never at skill 0, often at skill 1', () => {
+    const count = (skill: number): { perfect: number; bog: number; revving: number } => {
+      const out = { perfect: 0, bog: 0, revving: 0 };
+      for (let seed = 1; seed <= 12; seed++) {
         const race = newRace(seed, { skill });
-        let launches = 0;
         for (let i = 0; i < COUNTDOWN_TICKS; i++) {
           stepRace(race, TRACK, []);
-          launches += race.events.filter((e) => e.type === 'launch').length;
+          if (race.tick === COUNTDOWN_TICKS - 1) out.revving += race.mechs.filter((m) => m.rev > 0).length;
+          for (const e of race.events) {
+            if (e.type !== 'launch') continue;
+            if (e.grade === START.PERFECT) out.perfect++;
+            if (e.grade === START.BOG) out.bog++;
+          }
         }
-        if (skill === 0) none += launches;
-        else some += launches;
       }
+      return out;
+    };
+    const zero = count(0);
+    const one = count(1);
+    expect(zero.perfect).toBe(0);
+    expect(one.perfect).toBeGreaterThan(24); // 72 seats at 60%
+    expect(one.perfect).toBeLessThan(72);
+    // A pilot at full skill never over-revs.
+    expect(one.bog).toBe(0);
+    // Every mech's revs are up as the lights go out (if only a blip).
+    expect(one.revving).toBe(72);
+    expect(zero.revving).toBe(72);
+  });
+
+  it('the launch event grades every mech at GO, and only then', () => {
+    const race = newRace(9);
+    let launches = 0;
+    for (let i = 0; i < COUNTDOWN_TICKS + 30; i++) {
+      stepRace(race, TRACK, []);
+      const here = race.events.filter((e) => e.type === 'launch');
+      if (race.tick !== COUNTDOWN_TICKS) expect(here.length).toBe(0);
+      launches += here.length;
     }
-    expect(none).toBe(0);
-    expect(some).toBeGreaterThan(12); // 72 seats at 60%
-    expect(some).toBeLessThan(72);
+    expect(launches).toBe(race.mechs.length);
+    expect(REV_FALL).toBeGreaterThan(REV_RISE);
   });
 });
 

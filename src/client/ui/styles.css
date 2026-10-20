@@ -310,6 +310,35 @@ html.crt-on .crt-layer {
 .hud.anime .chargebar .bar { border: 0.12em solid #151a26; }
 @keyframes carve-burst { from { transform: scale(1.12); } to { transform: none; } }
 
+/*
+ * The rev-up gauge: front and centre over the countdown (hud.ts), above the mech so it never hides the crouch. Its bands
+ * are the starts: dim gold a good one, green a perfect launch, red a bog.
+ * The fill takes the colour of the band it is in; past the redline it blinks.
+ * After GO the label says what the start was, and the gauge fades.
+ */
+.revbar { position: absolute; left: 50%; top: 17%; display: flex; flex-direction: column; align-items: center; gap: 0.45em; opacity: 0; transform: translate(-50%, 0.4em); transition: opacity 0.18s, transform 0.18s; pointer-events: none; --rev: #d8ecff; }
+.revbar.on { opacity: 1; transform: translate(-50%, 0); }
+.revbar .label { font-weight: 800; font-size: 1.25em; color: #f2f6ff; text-shadow: 0 0.08em 0 rgba(15, 21, 36, 0.8); letter-spacing: 0.03em; white-space: nowrap; }
+.revbar .label .key { margin: 0 0.15em; }
+.revbar .gauge { position: relative; width: 26em; height: 1.15em; background: rgba(15, 21, 36, 0.78); transform: skewX(-18deg); overflow: hidden; box-shadow: 0 0 0 0.12em rgba(15, 21, 36, 0.6); }
+.revbar .gauge > span { position: absolute; top: 0; bottom: 0; }
+.revbar .gauge > .good { background: rgba(255, 201, 58, 0.22); }
+.revbar .gauge > .green { background: rgba(76, 255, 122, 0.3); box-shadow: inset 0.12em 0 0 #4cff7a, inset -0.12em 0 0 #4cff7a; }
+.revbar .gauge > .red { background: repeating-linear-gradient(-55deg, rgba(255, 58, 58, 0.45) 0 0.5em, rgba(255, 58, 58, 0.25) 0.5em 1em); }
+.revbar .gauge > i { position: absolute; inset: 0; background: var(--rev); transform-origin: left center; transform: scaleX(0); opacity: 0.92; }
+.revbar[data-zone='good'] { --rev: #ffc93a; }
+.revbar[data-zone='green'] { --rev: #4cff7a; }
+.revbar[data-zone='green'] .gauge { box-shadow: 0 0 0 0.12em #4cff7a, 0 0 1em rgba(76, 255, 122, 0.7); }
+.revbar[data-zone='red'] { --rev: #ff3a3a; }
+.revbar[data-zone='red'] .gauge > i { animation: blink 0.2s steps(2) infinite; }
+.revbar[data-grade='3'] .label { color: #4cff7a; font-size: 2em; animation: rev-pop 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+.revbar[data-grade='2'] .label { color: #ffc93a; font-size: 1.7em; animation: rev-pop 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+@keyframes rev-pop { from { transform: scale(1.8); opacity: 0; } to { transform: none; opacity: 1; } }
+/* (Used across the HUD with steps(2): on, then dim.) */
+@keyframes blink { 50% { opacity: 0.25; } }
+.revbar[data-grade='0'] .label { color: var(--ink); font-size: 1.7em; padding: 0.1em 0.9em; background: repeating-linear-gradient(-55deg, var(--hazard) 0 0.7em, #f0b500 0.7em 1.4em); text-shadow: none; }
+.hud.anime .revbar .gauge { border: 0.12em solid #151a26; }
+
 /* The guard meter: under the mech, in the charge meter's place, while it matters (hud.ts). */
 .guardbar { position: absolute; left: 50%; top: 67%; display: flex; flex-direction: column; align-items: center; gap: 0.3em; opacity: 0; transform: translate(-50%, 0.4em); transition: opacity 0.15s, transform 0.15s; pointer-events: none; --g: var(--hazard); }
 .guardbar.on { opacity: 1; transform: translate(-50%, 0); }
@@ -908,7 +937,7 @@ html.crt-on .crt-layer {
 .menu.anime .results tr.me td.flag { background-color: var(--paper); }
 
 @media (prefers-reduced-motion: reduce) {
-  .banner .strip, .count span, .comms .msg, .reticle.snap i { animation: none; }
+  .banner .strip, .count span, .comms .msg, .reticle.snap i, .revbar .label, .revbar .gauge > i { animation: none; }
   .tower .row, .item { transition: none; }
   .menu.anime .col, .menu.anime .kit, .menu.anime .controls, .menu.anime .bay, .menu.anime .ec-pause, .menu.anime .item.sel > span:first-child::after { animation: none; }
 }
@@ -1497,6 +1526,7 @@ html.compact .hud .banner.anime .kick { font-size: 0.95em; }
 html.compact .hud .banner.anime .small { font-size: 1.1em; }
 html.compact .hud .count { top: 26%; font-size: 9em; }
 html.compact .hud .notice { top: 62%; font-size: 1.15em; }
+html.compact .hud .revbar { top: 15%; font-size: 0.8em; }
 html.compact .hud .retired { top: calc(4.8 * var(--ui-em) + var(--st, 0px)); }
 html.compact .hud .retired .big { font-size: 2em; }
 html.compact .hud .retired .small { font-size: 1em; }

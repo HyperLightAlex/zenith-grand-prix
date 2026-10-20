@@ -48,7 +48,15 @@ import {
   MODE,
   OVERCAP_DRAG,
   OVERDRIVE_ACCEL,
-  PERFECT_START_WINDOW,
+  BOG_TICKS,
+  LAUNCH_GOOD,
+  LAUNCH_PERFECT,
+  REV_FALL,
+  REV_GOOD,
+  REV_PERFECT,
+  REV_RED,
+  REV_RISE,
+  START,
   PHASE,
   POINTS,
   RAM_ARC,
@@ -104,6 +112,7 @@ import {
   type ClassDef,
   type Tactic,
 } from './config';
+import type { StartGrade } from './config';
 import { freshAwardTicks, freshHurtBy, onPass, onRingout } from './awards';
 import {
   addVelocity,
@@ -258,9 +267,9 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       points: 0,
       prevButtons: 0,
       prevCmd: 0,
-      prevThrottle: 0,
-      throttleTick: -9999,
-      throttleRest: 0,
+      rev: 0,
+      revFrom: -1,
+      bogT: 0,
       lastHitBy: -1,
       lastHitTick: -9999,
       deniedTick: -9999,
@@ -1058,8 +1067,30 @@ const controls: MechInput[] = [];
 const startS: number[] = [];
 const movedS: number[] = [];
 const movedD: number[] = [];
-/** Ticks the throttle must be up before a press can earn the launch bonus. */
-const LAUNCH_REST = 30;
+/**
+ * The computer's rev-up, planned as the countdown starts. By skill: a perfect
+ * launch (aiming somewhere in the green), a good one, a plain start (a blip
+ * of the throttle), or now and then, the less often the better the pilot, an
+ * over-rev. It then holds the throttle from the tick that lands its revs
+ * there at GO, so its mech crouches and its thrusters build as a person's do.
+ */
+function planRev(race: RaceState, m: MechState): void {
+  const r = rngNext(race);
+  const aim = rngNext(race);
+  const perfect = m.skill * 0.6;
+  const good = perfect + 0.15 + 0.25 * m.skill;
+  let target: number;
+  if (r < perfect) target = REV_PERFECT + (REV_RED - REV_PERFECT) * (0.15 + 0.7 * aim);
+  else if (r < good) target = REV_GOOD + (REV_PERFECT - REV_GOOD) * (0.2 + 0.6 * aim);
+  else if (r > 1 - (1 - m.skill) * 0.08) target = 1.2;
+  else target = 0.08 + 0.25 * aim;
+  m.revFrom = COUNTDOWN_TICKS + 1 - Math.round(target / REV_RISE);
+}
+
+/** A start's grade from the revs at GO. */
+export function startGrade(rev: number): StartGrade {
+  return rev > REV_RED ? START.BOG : rev >= REV_PERFECT ? START.PERFECT : rev >= REV_GOOD ? START.GOOD : START.PLAIN;
+}
 
 const fin = (v: number, lo: number, hi: number): number => (Number.isFinite(v) ? clamp(v, lo, hi) : 0);
 
@@ -1089,19 +1120,12 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   if (race.phase === PHASE.COUNTDOWN) {
     const remaining = COUNTDOWN_TICKS - tick;
     for (const m of ms) {
+      if (tick === 1 && !m.human) planRev(race, m);
       const inp = m.human ? inputs[m.id] : null;
-      const th = inp && Number.isFinite(inp.throttle) ? inp.throttle : 0;
-      if (th > 0.5) {
-        if (m.prevThrottle <= 0.5) {
-          // Only a press after a proper pause counts; blipping the throttle
-          // through the countdown is a jump start, not a launch.
-          m.throttleTick = m.throttleRest >= LAUNCH_REST ? tick : -9999;
-        }
-        m.throttleRest = 0;
-      } else {
-        m.throttleRest++;
-      }
-      m.prevThrottle = th;
+      // The rev-up: up while the throttle is held, down while it is not (a
+      // trigger part-way feathers them). The computer holds from its plan.
+      const th = m.human ? (inp && Number.isFinite(inp.throttle) ? clamp(inp.throttle, 0, 1) : 0) : m.revFrom >= 0 && tick >= m.revFrom ? 1 : 0;
+      m.rev = clamp(m.rev + th * REV_RISE - (1 - th) * REV_FALL, 0, 1);
       // Buttons held through the countdown are not presses on the GO tick.
       if (inp) {
         m.prevButtons = inp.buttons | 0;
@@ -1115,16 +1139,17 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     race.phase = PHASE.RACING;
     race.events.push({ type: 'countdown', n: 0 });
     for (const m of ms) {
-      // Launch bonus: squeeze the throttle just before the lights go out.
-      const good = m.human
-        ? m.prevThrottle > 0.5 && tick - m.throttleTick <= PERFECT_START_WINDOW
-        : rngNext(race) < m.skill * 0.6;
-      if (good) {
-        m.speed = 44;
-        m.drive = Math.min(DRIVE_MAX, m.drive + 10);
+      // Off the line as the revs stood when the lights went out.
+      const grade = startGrade(m.rev);
+      const launch = grade === START.PERFECT ? LAUNCH_PERFECT : grade === START.GOOD ? LAUNCH_GOOD : null;
+      if (launch) {
+        m.speed = launch.speed;
+        m.drive = Math.min(DRIVE_MAX, m.drive + launch.drive);
         syncFromSpeed(m);
-        race.events.push({ type: 'launch', mech: m.id });
+      } else if (grade === START.BOG) {
+        m.bogT = BOG_TICKS;
       }
+      race.events.push({ type: 'launch', mech: m.id, grade });
     }
   }
 
@@ -1134,6 +1159,12 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
   for (const m of ms) {
     const inp = m.human && !m.finished ? inputs[m.id] : null;
     controls[m.id] = inp ? sanitize(inp, scratch[m.id]) : aiControl(race, track, m, scratch[m.id]);
+    // A bogged start: no throttle and no boost until the engine catches.
+    if (m.bogT > 0) {
+      m.bogT--;
+      controls[m.id].throttle = 0;
+      controls[m.id].buttons &= ~BTN.A;
+    }
   }
   if (race.phase === PHASE.RACING) {
     for (let team = 0; team < 2; team++) aiCaptain(race, track, team);

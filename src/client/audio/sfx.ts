@@ -299,6 +299,23 @@ const RECIPES: Record<SfxName, Recipe> = {
     v.tone({ f: 2637, t: 0.33, d: 0.6, g: 0.14 });
   },
 
+  // -- the rev-up on the grid --
+  // Into the green: a quick bright double tick, the gauge's "now".
+  rev_green: (v) => {
+    v.tone({ w: 'triangle', f: 1975.5, d: 0.05, g: 0.6, a: 0.001 });
+    v.tone({ w: 'triangle', f: 2637, t: 0.055, d: 0.09, g: 0.65, a: 0.001 });
+    v.tone({ f: 5274, t: 0.055, d: 0.06, g: 0.08 });
+  },
+  // Over-revved at GO: the engine coughing, three ragged pops falling away, and a sag.
+  bog: (v, r) => {
+    for (let i = 0; i < 3; i++) {
+      const t = i * 0.11 + r.range(0, 0.03);
+      v.noise({ k: 'p', t, d: 0.09, g: 1.6 - i * 0.35, a: 0.002, ft: 'lowpass', ff: 900, ff2: 250, fq: 1 });
+      v.tone({ w: 'sawtooth', f: 90 - i * 12, f2: 55 - i * 8, t, d: 0.08, g: 0.35, lp: 600 });
+    }
+    v.tone({ w: 'sawtooth', f: 140, f2: 60, ft: 0.4, t: 0.02, d: 0.45, g: 0.18, lp: 700 });
+  },
+
   // -- movement --
   boost: (v) => {
     v.tone({ f: 140, f2: 48, d: 0.3, g: 0.9, a: 0.003 });
@@ -759,6 +776,8 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   count_beep: m(0.4, 0.05, 2),
   count_go: m(0.325, 0.2, 2, 0, 0.03, [0.25, 0.5]),
   launch: m(0.6, 0.25, 2),
+  rev_green: m(0.3, 0.05, 2),
+  bog: m(0.5, 0.1, 2),
   boost: m(0.3, 0.1, 1),
   carve_tier: m(0.22, 0.2, 2, 0, 0.05),
   carve_burst: m(0.36, 0.1, 1, 0.04),

@@ -44,8 +44,30 @@ export const PACK_BONUS = 0.14;
 export const MPH_PER_UNIT = 3;
 
 export const COUNTDOWN_TICKS = 4 * TICK_RATE;
-/** A throttle press this close to GO earns a launch bonus. */
-export const PERFECT_START_WINDOW = 22;
+/**
+ * The rev-up on the grid. Through the countdown the throttle builds revs,
+ * 0 to 1, shown on a gauge: they climb while it is held and fall while it
+ * is let go (a trigger part-way in feathers them: about 0.6 of the way holds
+ * them where they are). Where they stand as the lights go out sets the start:
+ * in the green (REV_PERFECT to REV_RED) a perfect launch; just short of it
+ * (from REV_GOOD) a good one; past the redline (over REV_RED) the engine
+ * bogs and the mech stumbles off the line; below REV_GOOD, a plain start.
+ * Held from the first moment, revs reach the green in about a second and
+ * the redline a few tenths after: the time to press is around the "1".
+ */
+export const REV_RISE = 1 / (1.6 * TICK_RATE);
+export const REV_FALL = 1 / (1.0 * TICK_RATE);
+export const REV_GOOD = 0.45;
+export const REV_PERFECT = 0.65;
+export const REV_RED = 0.9;
+/** The starts, as the launch event grades them. */
+export const START = { BOG: 0, PLAIN: 1, GOOD: 2, PERFECT: 3 } as const;
+export type StartGrade = (typeof START)[keyof typeof START];
+/** Off the line: the speed and the Drive a good and a perfect launch give. */
+export const LAUNCH_GOOD = { speed: 26, drive: 5 } as const;
+export const LAUNCH_PERFECT = { speed: 44, drive: 10 } as const;
+/** An over-revved start: ticks the throttle does nothing while the mech stumbles off the line. */
+export const BOG_TICKS = 30;
 /** Seconds the race stays open after the winner crosses the line. */
 export const FINISH_GRACE_TICKS = 25 * TICK_RATE;
 /** Hard stop: a race that somehow has no finisher is flagged after this long. */

@@ -220,11 +220,12 @@ export interface MechState {
   // --- bookkeeping
   prevButtons: number;
   prevCmd: number;
-  prevThrottle: number;
-  /** Tick the throttle last went down, for the launch bonus. */
-  throttleTick: number;
-  /** Ticks the throttle had been up before that press. */
-  throttleRest: number;
+  /** The rev-up on the grid, 0 to 1 (see REV_RISE): where it stands at GO sets the start. */
+  rev: number;
+  /** An AI's rev-up: the countdown tick it starts holding the throttle (-1: it does not). */
+  revFrom: number;
+  /** Ticks left of a bogged start, the throttle doing nothing (see BOG_TICKS). */
+  bogT: number;
   lastHitBy: number;
   lastHitTick: number;
   deniedTick: number;
@@ -289,7 +290,8 @@ export interface TeamState {
 
 export type SimEvent =
   | { type: 'countdown'; n: number }
-  | { type: 'launch'; mech: number }
+  /** Each mech's start, at GO: `grade` is a START value. */
+  | { type: 'launch'; mech: number; grade: number }
   | { type: 'lapPhase'; lap: number }
   | { type: 'lap'; mech: number; lap: number }
   | { type: 'finish'; mech: number; place: number }

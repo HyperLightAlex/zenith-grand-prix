@@ -111,9 +111,17 @@ coordinated team play online.
 
 ### The race
 
-- Standing start after a four-second countdown. Squeeze the throttle in the
-  last 22 ticks (about a third of a second) before GO for a launch bonus: a
-  running start and 10 Drive. Holding it early, or blipping it, earns nothing.
+- Standing start after a four-second countdown, with a rev-up. Through the
+  countdown the throttle builds revs on a gauge in the middle of the screen:
+  they climb while it is held (empty to full in 1.6 s) and fall while it is
+  let go (in 1 s). Where they stand as the lights go out sets the start: in
+  the green (0.65 to 0.9) a perfect launch, a running start (44) and 10
+  Drive; just short of it (from 0.45) a good one, 26 and 5 Drive; past the
+  redline, over-revved, the engine bogs and the mech stumbles off the line,
+  half a second with no throttle and no boost; below that, a plain start.
+  Held from the start the revs reach the green in about a second: the time
+  to press is around the "1", and the throttle can be feathered to stay in
+  the green. The computer revs up too, aiming by skill.
 - Three laps of one of three circuits, picked in the garage. On Meridian
   Skyway (8,640 units round) the leader's laps take about 80, 70 and 52
   seconds (the first counted from the start of the countdown) and the winner
@@ -347,7 +355,7 @@ One gauge, 0 to 100. It pays for boost, dashes and the forward's Lance Dash.
   second, and 3 more in a slipstream; 6 for a clean landing after a real jump
   (a third of a second in the air, landed softly); 4 for passing a rival
   within 10 across the road, once per rival every 5 s (and not for passing
-  in a fight, or a teammate); 10 for a perfect launch. A typical pilot
+  in a fight, or a teammate); 10 for a perfect launch (5 for a good one). A typical pilot
   starts lap 2 full.
 - From lap 2 it also comes from being linked to an escorted teammate and
   from dealing or taking damage.

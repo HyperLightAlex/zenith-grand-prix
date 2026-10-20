@@ -12,6 +12,7 @@ import {
   DT,
   MODE,
   PHASE,
+  START,
   ROLE,
   TICK_RATE,
   roadAt,
@@ -364,6 +365,7 @@ export class RaceView {
       let posed = false;
       if (step <= 0 || idx !== v.poseIdx) {
         v.anim.display = this.solo && m.id === this.focusId;
+        v.anim.grid = race.phase === PHASE.COUNTDOWN;
         v.anim.update(v.poseAcc, m, alpha, responsive ? dt : v.poseAcc);
         v.poseAcc = 0;
         v.poseIdx = idx;
@@ -1126,14 +1128,35 @@ export class RaceView {
         break;
       }
       case 'launch': {
+        // GO: dust thrown up off the skates and kicked back along the road,
+        // as much as the start was good; a perfect launch bursts and rings
+        // off the line as well. A bog coughs smoke from the thrusters instead.
         const v = this.mechs[e.mech];
+        const k = e.grade === START.PERFECT ? 1 : e.grade === START.GOOD ? 0.65 : 0.3;
         trackPoint(track, v.s, v.d, 0.6, v1);
-        this.fx.burst(v1, v.vel, 26, 34, v.livery.glow, 0.5, 0.5);
-        if (!this.groundRing(v, 12, v.livery.glow)) this.fx.flash(v1, 8, 0xffffff, 0.2, null, true, true);
-        // Drawn: the road's dust kicked up behind.
-        trackPoint(track, v.s - 1.5, v.d, 1.4, v1);
-        v3.copy(v.vel).multiplyScalar(0.2);
-        this.fx.drawnSprite('smoke', v1, 6, { row: 0, tint: this.dust, vel: v3, flip: Math.random() < 0.5, depth: true });
+        if (e.grade === START.PERFECT) {
+          this.fx.burst(v1, v.vel, 26, 34, v.livery.glow, 0.5, 0.5);
+          if (!this.groundRing(v, 12, v.livery.glow)) this.fx.flash(v1, 8, 0xffffff, 0.2, null, true, true);
+        }
+        trackDir(track, v.s, -1, 0, v2);
+        let dusted = false;
+        const puffs = e.grade === START.PERFECT ? 3 : e.grade === START.GOOD ? 2 : 1;
+        for (let i = 0; i < 2; i++) {
+          v.rig.heels[i].getWorldPosition(v4);
+          for (let p = 0; p < puffs; p++) {
+            // Each one later and bigger, drifting back: a cloud building behind the skate.
+            v3.copy(v2).multiplyScalar(4 + p * 3 * k).addScaledVector(v.vel, 0.15);
+            dusted =
+              this.fx.drawnSprite('smoke', v4, 3 + k * 4 + p * 1.5, { row: p === 0 && k === 1 ? 1 : 0, tint: this.dust, vel: v3, flip: (i + p) % 2 === 1, depth: true, delay: p, rise: 1.2 }) || dusted;
+          }
+        }
+        if (!dusted) this.fx.puff(v1, v3.copy(v2).multiplyScalar(5), Math.round(2 + k * 6), this.dust, 2 + k * 2, 0.9);
+        if (e.grade === START.BOG) {
+          trackPoint(track, v.s - 1.4, v.d, 4.2, v4);
+          v3.copy(v2).multiplyScalar(2);
+          if (!this.fx.drawnSprite('smoke', v4, 5, { row: 1, tint: 0x3c3c40, vel: v3, depth: true, rise: 2 })) this.fx.puff(v4, v3, 5, 0x3c3c40, 3, 1.2);
+        }
+        if (e.mech === local && e.grade === START.PERFECT) this.cam.shake(0.15);
         break;
       }
       case 'evade':

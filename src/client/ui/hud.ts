@@ -15,7 +15,11 @@ import {
   MODE,
   MPH_PER_UNIT,
   PHASE,
+  REV_GOOD,
+  REV_PERFECT,
+  REV_RED,
   ROLE,
+  START,
   ROLE_KEYS,
   ROLE_NAMES,
   TACTIC,
@@ -206,6 +210,16 @@ export class Hud {
   private chargeFade = 0;
   private chargeShown = 0;
   /**
+   * The rev-up gauge: front and centre under the countdown, its bands the
+   * starts (the green a perfect launch, short of it a good one, the red a
+   * bog), then the start the revs earned, for a moment after GO.
+   */
+  private revBox = h('div.revbar');
+  private revLabel = h('div.label');
+  private revFill = h('i');
+  private revHintFor = '';
+  private revResultT = 0;
+  /**
    * The guard meter, under your mech where the charge meter goes: up while
    * you guard and while it refills in a fight, lingering a moment after.
    */
@@ -296,6 +310,14 @@ export class Hud {
     this.chargeBox.append(this.chargeLabel, h('div.bar', this.chargeFill));
     this.guardBox.append(h('span.label', icon('guard'), this.guardLabel), h('div.bar', this.guardFill));
     R.append(this.chargeBox, this.guardBox);
+    const band = (cls: string, from: number, to: number) => {
+      const el = h(`span.${cls}`);
+      el.style.left = `${from * 100}%`;
+      el.style.width = `${(to - from) * 100}%`;
+      return el;
+    };
+    this.revBox.append(this.revLabel, h('div.gauge', band('good', REV_GOOD, REV_PERFECT), band('green', REV_PERFECT, REV_RED), band('red', REV_RED, 1), this.revFill));
+    R.append(this.revBox);
     const tact = h('div.tactics', this.tacticHub);
     for (const [cls, tac] of [['up', TACTIC.BLITZ], ['right', TACTIC.RUN], ['down', TACTIC.SHIELD], ['left', TACTIC.MARK]] as const) {
       const el = h('div.t.' + cls);
@@ -592,6 +614,23 @@ export class Hud {
     }
     this.chipSnared.hidden = !(me.snareT > 0) || me.retired;
     if (me.snareT > 0) setText(this.chipSnaredText, `Snared ${left(me.snareT)}`);
+
+    // The rev-up: through the countdown, then the start it earned.
+    if (race.phase === PHASE.COUNTDOWN) {
+      const r = me.rev;
+      this.revFill.style.transform = `scaleX(${r.toFixed(3)})`;
+      this.revBox.dataset.zone = r > REV_RED ? 'red' : r >= REV_PERFECT ? 'green' : r >= REV_GOOD ? 'good' : '';
+      setClass(this.revBox, 'on', true);
+      this.revBox.dataset.grade = '';
+      if (this.revHintFor !== this.device) {
+        this.revHintFor = this.device;
+        this.revLabel.replaceChildren(...(k.accel ? ['Hold ', h('span.key', k.accel), ' to rev up: go in the green'] : ['Hold the stick to rev up: go in the green']));
+      }
+    } else {
+      this.revResultT = Math.max(0, this.revResultT - dt);
+      setClass(this.revBox, 'on', this.revResultT > 0);
+      this.revHintFor = '';
+    }
 
     // Charge meter: up while a heavy is held charging, lingering a moment after.
     {
@@ -1031,9 +1070,15 @@ export class Hud {
           }
         }
         break;
-      case 'launch':
-        if (e.mech === this.localId) this.showNotice('Perfect launch');
+      case 'launch': {
+        // The start the revs earned, in the gauge's place; a plain one just clears it.
+        if (e.mech !== this.localId) break;
+        const said = e.grade === START.PERFECT ? 'Perfect start!' : e.grade === START.GOOD ? 'Good start' : e.grade === START.BOG ? 'Over-revved!' : '';
+        this.revBox.dataset.grade = said ? String(e.grade) : '';
+        this.revLabel.replaceChildren(said);
+        this.revResultT = said ? 1.4 : 0.25;
         break;
+      }
       case 'award': {
         // Your own in large, your teammates' in small, theirs not at all.
         const who = race.mechs[e.mech];
