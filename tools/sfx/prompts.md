@@ -31,9 +31,12 @@ itself.
 **The anime prompts worked.** The hit_light prompt's takes came back
 bright (centred at 3 to 5 kHz), short (gone in half a second) and dry,
 and nine of them were enough for three sounds: the single clean cracks
-for hit_light; the crackling, ringing ones (more electric, more energy)
-for block; and the two with a thud or a double crunch under the crack for
-hit_heavy. Whooshes still build slowly (the light swings peak 0.35 to 0.45
+for hit_light; the two with a thud or a double crunch under the crack for
+block (they sound like energy: the force field taking it); and the
+crackling, ringing ones for hit_heavy (they sound like contact: metal
+striking metal). That last pair was sorted by ear: going by the measures,
+crackle and ring had seemed the electric ones, the shield's, and the thud
+the blow's. Listen before deciding what a take is for. Whooshes still build slowly (the light swings peak 0.35 to 0.45
 s in), which the build's `lead` takes care of; and a take can hold two
 sounds (the heavy swing's did), which split into two takes.
 
@@ -53,7 +56,7 @@ due for another look later.
 | For | Sound | Status |
 |---|---|---|
 | Combat | swing_light, swing_heavy | in the game: anime takes (the heavy one take holding two swings, split) |
-| Combat | hit_light, block, hit_heavy | in the game: nine takes of the hit_light prompt, sorted by ear and by measure (below) |
+| Combat | hit_light, block, hit_heavy | in the game: nine takes of the hit_light prompt, sorted by ear (below) |
 | Combat | parry … bullet_hit (6 to 13) | asked for |
 | Movement and the circuit | boost … recover (14 to 24) | asked for |
 | Abilities | overdrive … aegis (25 to 31) | asked for |

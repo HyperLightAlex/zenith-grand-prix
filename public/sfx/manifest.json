@@ -1,18 +1,18 @@
 {
  "sounds": {
   "block": {
-   "gain": 2.45,
+   "gain": -0.28,
    "files": [
     "block-1.mp3",
-    "block-2.mp3",
-    "block-3.mp3"
+    "block-2.mp3"
    ]
   },
   "hit_heavy": {
-   "gain": 2.06,
+   "gain": 4.79,
    "files": [
     "hit_heavy-1.mp3",
-    "hit_heavy-2.mp3"
+    "hit_heavy-2.mp3",
+    "hit_heavy-3.mp3"
    ]
   },
   "hit_light": {

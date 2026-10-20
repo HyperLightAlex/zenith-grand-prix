@@ -4,9 +4,9 @@
  },
  "block": {
   "asked": 0.4,
-  "hp": 200,
+  "hp": 80,
   "lead": 0.005,
-  "max": 0.5
+  "max": 0.6
  },
  "boost": {
   "asked": 0.8
@@ -34,9 +34,9 @@
  },
  "hit_heavy": {
   "asked": 0.6,
-  "hp": 80,
+  "hp": 200,
   "lead": 0.005,
-  "max": 0.6
+  "max": 0.5
  },
  "hit_light": {
   "asked": 0.3,
