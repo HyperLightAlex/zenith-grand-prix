@@ -276,8 +276,8 @@ follows the same arrangement over the three laps, and the lap and phase
 stingers are moved into the circuit's key.
 
 An experiment, behind `?music=suno`: the race music as a recorded song
-(made in Suno) that builds the same way. Its stems are mixed into four or
-five layers: lap 1 plays the melody (the stems that were carved out of one
+(made in Suno) that builds the same way. Its stems are mixed into four
+layers: lap 1 plays the melody (the stems that were carved out of one
 another, which have to come in together: see tools/music) and the bass, a
 little quieter; lap 2 brings in the drums; lap 3 the rest (Meridian's
 brass, percussion and effects; Canyon's and Helios's percussion and
@@ -286,17 +286,17 @@ finish goes to the song's ending, then the menu music (what the results
 play) so there is no silence while the others finish. The build is in what
 comes in, more than in how loud it gets. Each change waits for the next bar
 line, and the middle of the song loops for as long as the race lasts.
-Canyon's guitar is a layer of its own, 2 dB down on lap 1, where without
-the drums it stood out. Helios's song has a drop, and lap 3 goes to it: on
-the lap change it jumps to the build into the drop, at the same place in
-its 16-bar chord cycle, so only the energy changes, and loops the drop to
-the finish. All three circuits have one; only the circuit coming up has
-its song decoded. Canyon's and Helios's songs are centred on E and end on E
-major, so while they play the stingers take keys of their own (the battle
-stab resolving to E minor, the flag in E major). The results have a song
-when the player's team won the round (and the Grand Prix award for first):
-トロフィーセレモニー, looping until the screen is left; a loss keeps the
-menu music until it has a song of its own. See
+Two songs go somewhere for lap 3. Helios's has a drop: on the lap change
+it jumps to the build into the drop, at the same place in its 16-bar
+chord cycle, so only the energy changes, and loops the drop to the
+finish. Canyon's (疾走の回路) lifts a key for its last chorus: the lap
+change waits for the next 4-bar phrase (a key change lands as meant only
+on one) and goes into it. All three circuits have one; only the circuit
+coming up has its song decoded. While a song plays the stingers can take
+keys of its own (Helios's E minor, Canyon's G minor rising to A minor).
+The results have a song for each outcome of the round (and the Grand Prix
+award, first place or not): トロフィーセレモニー when the player's team
+won, Minor Theme when it lost, each looping until the screen is left. See
 [tools/music](../tools/music/README.md), and its prompts.md for what each
 song was asked for. The menus' music is the title theme, Blue Night Sky,
 in the same J-rock as the opening.

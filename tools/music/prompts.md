@@ -16,11 +16,11 @@ build matches its mastering).
 |---|---|---|---|
 | The opening (trailer) | 蒼い火花が夜を裂く… | 152 BPM, sung | used in the opening |
 | Meridian race | 海空の速さ | A minor | in the game |
-| Canyon race | 紅砂のレース | E | in the game |
+| Canyon race | 疾走の回路 | G minor (A minor last chorus), ~140 BPM | in the game (replaced 紅砂のレース, E, which did not fit the vibe) |
 | Helios race | 午間の雲上レース | E minor, ~145 BPM | in the game |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
-| Results, loss | (to make) | E minor, ~88 BPM | brief below (second try: the first was too hopeful, not synth or anime enough) |
+| Results, loss (and the Grand Prix award below first) | Minor Theme | E minor, 100 BPM | in the game (from the second brief below: the first was too hopeful, not synth or anime enough) |
 | Hangar | (to make) | | a setlist of 80s songs: briefs below (one dedicated song was smooth jazz, then far too high energy) |
 
 ## Title theme
@@ -92,7 +92,7 @@ Lyrics (structure only), for any of them:
 
 ## Results, loss
 
-Plays on the results when the player's team loses the round, and on the
+Made: Minor Theme. Plays on the results when the player's team loses the round, and on the
 Grand Prix award below first place. The other half of トロフィーセレモニー
 (G major): E minor is its relative minor. Synth-led and plainly 80s anime:
 the music under an episode's ending after a defeat. It stays sad; no lift

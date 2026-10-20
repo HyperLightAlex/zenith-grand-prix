@@ -22,7 +22,9 @@ The finale (optional): a stretch the song jumps to when the last lap starts,
 on the next bar line (Helios: the build into the drop, then the drop, looped).
 Where it lands in it depends on where the song was: songs built on a chord
 cycle (Helios's is 16 bars) go to the same place in the cycle, so the chord
-carries on and only the energy changes.
+carries on and only the energy changes. Or, with `phrase`, it waits for the
+next phrase to start (a bar numbered `first` + n x `bars`) and goes in at
+the finale's start (Canyon: a key change, which only sounds meant on one).
 
 The mastering. Suno's stems are the mix before mastering: summed, they come
 out louder and a little duller than song.wav. The song file says how to
@@ -109,7 +111,7 @@ def main():
     cut = [(0, int(round(loop_end * sr)))]
     if fin:
         F0, (FA, FB), cyc = fin['from'], fin['loop'], fin['cycle']
-        if not (B < F0 <= FA < FB < E):
+        if not (B < F0 <= FA < FB <= E):
             sys.exit('the finale has to come after the loop and before the ending, and start before its own loop')
         if (FB - FA) % cyc or (B - A) % cyc:
             print('warning: a loop that is not a whole number of chord cycles (%d bars)' % cyc)
@@ -221,6 +223,7 @@ def main():
             # leaves from, numbered as in the song, modulo the cycle.
             'entry': [round(float(file_pos(bars[F0 + (k - F0) % cyc], 1)), 5) for k in range(cyc)],
             'loop': [round(float(file_pos(bars[FA], 1)), 5), round(float(file_pos(bars[FB], 1)), 5)],
+            'phrase': fin.get('phrase'),
         } if fin else None,
         'stingers': cfg.get('stingers'),
         'level': round(level, 2),

@@ -7,7 +7,8 @@
 //   lap 3   the rest (Meridian: brass, percussion, effects; Canyon and
 //           Helios: percussion and effects): the full song, at full volume,
 //           with the kick and bass lifted (a low shelf). A song can also go
-//           somewhere else for it (Helios: into its drop; see `finale`)
+//           somewhere else for it (Helios: into its drop; Canyon: its last
+//           chorus, a key up; see `finale`)
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
@@ -16,10 +17,10 @@
 // what comes in, and the last by its weight too. The layers follow how cleanly
 // Suno's stems come apart (they are separated out of the finished mix): some
 // were carved out of one another (Meridian's keys, synth, strings and guitar;
-// Canyon's guitar, strings, brass, woodwinds and voices), and heard apart each
+// Canyon's guitar, strings, brass, voices and synth), and heard apart each
 // has holes where the others were, which sounds hollow, like music down a
 // telephone. So they come in together (a tangled stem can still be turned
-// down a little, as Canyon's guitar is on lap 1). See tools/music.
+// down a little on a lap). See tools/music.
 //
 // Every change waits for the next bar line. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
@@ -49,6 +50,7 @@ export const SONGS: Record<string, string> = {
 export const SCREEN_SONGS: Record<string, string> = {
   title: 'music/title/',
   'results-win': 'music/results-win/',
+  'results-loss': 'music/results-loss/',
 };
 
 /** What tools/music/build.py writes as song.json. Times are positions in the layer files, in seconds. */
@@ -85,9 +87,12 @@ export interface SongManifest {
    * place in the song's chord cycle as the bar line it leaves from:
    * `entry[bar % cycle]`, where bar is that bar line's number (the bars in
    * the files up to the loop's end are numbered as in the song). Its bar
-   * lines follow the loop's end in `bars`.
+   * lines follow the loop's end in `bars`. With `phrase`, the lap change
+   * (and the jump) waits instead for the next phrase to start: a bar line
+   * numbered `first` + n x `bars` (Canyon: its finale is a key change, which
+   * sounds meant only on a phrase).
    */
-  finale?: { lap: number; cycle: number; entry: number[]; loop: [number, number] } | null;
+  finale?: { lap: number; cycle: number; entry: number[]; loop: [number, number]; phrase?: { bars: number; first: number } | null } | null;
   /**
    * Optional: semitones to move each race stinger by while this song plays,
    * in place of its circuit's (the stingers are written for Meridian's
@@ -109,6 +114,8 @@ export const XFADE = 0.012;
 const QUEUE_AHEAD = 3;
 /** A lap change heard this soon goes to the bar line after (so there is time to build into it). */
 const CHANGE_LEAD = 0.3;
+/** How far ahead the song is queued while looking for a phrase's first bar line (see SongManifest.finale). */
+const PHRASE_AHEAD = 15;
 /** Where a sweep takes the filter before the layer goes over to its direct path. */
 const OPEN_HZ = { lowpass: 20000, highpass: 20 } as const;
 /** The pause after the ending's last note before the engine moves on to the menu music. */
@@ -530,7 +537,7 @@ export class SongTrack implements MusicTrack {
 
     const want = phaseOf(lapPhase);
     if (!this.ending && want !== this.target) {
-      const next = plan.nextBar(now + CHANGE_LEAD);
+      const next = this.changeBar(want, now);
       if (next) this.change(want, next.at, now, next.bar);
     }
     if (this.targetAt >= 0 && now >= this.targetAt) {
@@ -687,7 +694,9 @@ export class SongTrack implements MusicTrack {
       this.plan.loop = f.loop;
       this.inFinale = true;
     }
-    this.play(this.plan.start(at, this.inFinale && f ? f.entry[0] : 0), false);
+    // (From its first bar: a phrase's first, where it waits for one; else the cycle's.)
+    const into = f ? f.entry[f.phrase ? ((f.phrase.first % f.cycle) + f.cycle) % f.cycle : 0] : 0;
+    this.play(this.plan.start(at, this.inFinale ? into : 0), false);
     this.note(`start, lap ${phase}`, at, -1);
   }
 
@@ -784,6 +793,27 @@ export class SongTrack implements MusicTrack {
     this.changeAt = at;
     this.note(`lap ${to}`, at, bar);
     if (m.finale && !this.inFinale && to >= m.finale.lap) this.toFinale(at);
+  }
+
+  /**
+   * The bar line a change to lap phase `to` happens on: the next one far
+   * enough ahead, or, going into a finale that waits for a phrase, the next
+   * phrase's first (queueing the song far enough ahead to find it).
+   */
+  private changeBar(to: Phase, now: number): { at: number; bar: number } | null {
+    const plan = this.plan!;
+    const f = this.source.manifest!.finale;
+    const p = f && !this.inFinale && to >= f.lap ? f.phrase : null;
+    if (!p) return plan.nextBar(now + CHANGE_LEAD);
+    for (const seg of plan.extend(now + PHRASE_AHEAD)) this.play(seg, true);
+    let t = now + CHANGE_LEAD;
+    for (let i = 0; i <= p.bars; i++) {
+      const next = plan.nextBar(t);
+      if (!next) return null;
+      if ((((next.bar - p.first) % p.bars) + p.bars) % p.bars === 0) return next;
+      t = next.at + 1e-3;
+    }
+    return null;
   }
 
   /** On to the finale on the bar line at `at`, at the place in the chord cycle the song has got to. */

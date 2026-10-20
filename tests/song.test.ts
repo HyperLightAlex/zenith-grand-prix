@@ -222,6 +222,11 @@ describe('the songs shipped', () => {
         }
         expect(f.loop[1]).toBeGreaterThan(f.loop[0]);
         expect([2, 3]).toContain(f.lap);
+        if (f.phrase) {
+          expect(f.phrase.bars).toBeGreaterThanOrEqual(1);
+          // From a phrase's first bar line, it goes in at the finale's start.
+          expect(f.entry[((f.phrase.first % f.cycle) + f.cycle) % f.cycle]).toBe(Math.min(...f.entry));
+        }
       }
       if (m.stingers) for (const v of Object.values(m.stingers)) expect(Math.abs(v)).toBeLessThanOrEqual(12);
       expect(m.end).toBeGreaterThan(m.ending + 2);

@@ -4,9 +4,10 @@ A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
 For now this is an experiment, heard only with `?music=suno` in the address.
 Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
-(紅砂のレース) and Helios Drop (午間の雲上レース). The menus have a title
-theme (Blue Night Sky) and the results one for when the player's team wins
-(トロフィーセレモニー; see "Screens' music" below).
+(疾走の回路) and Helios Drop (午間の雲上レース). The menus have a title
+theme (Blue Night Sky), and the results one for when the player's team
+wins (トロフィーセレモニー) and one for when it loses (Minor Theme; see
+"Screens' music" below).
 What each song was asked for, and what is still to make, is in
 [prompts.md](prompts.md).
 
@@ -19,14 +20,14 @@ What each song was asked for, and what is still to make, is in
 
 | Layer | Meridian | Canyon | Helios |
 |---|---|---|---|
-| melody | keys, synth, strings, guitar | keys, synth, strings, brass, woodwinds, voices | keys, synth |
-| guitar | | guitar: 2 dB down on lap 1 | |
+| melody | keys, synth, strings, guitar | synth, keys, guitar, strings, brass, voices | keys, synth |
 | bass | bass | bass | bass |
 | drums | drums | drums | drums |
 | lap 3's | brass, percussion, effects, woodwinds | percussion, effects | percussion, effects |
 
-Helios's lap 3 is also a change of place: its song has a drop, and lap 3
-jumps to it (see "The finale" below).
+On Canyon and Helios lap 3 is also a change of place: Helios's song jumps
+to its drop, Canyon's to its last chorus, a key up (see "The finale"
+below).
 
 Laps 1 and 2 are -18.5 and -17.5 LUFS at the game's default volumes,
 almost exactly what their layers come to by themselves (the build moves
@@ -56,27 +57,22 @@ So the keys, synth, strings and guitar are one layer, and come in
 together; the drums, bass, percussion and effects (0.02 to 0.16 against
 everything) can each come in alone; the brass, in between, comes in last.
 
-Canyon's, over its loop:
+Canyon's (疾走の回路, G minor, 140 BPM, led by its synth), over its loop:
 
-| | Guitar | Strings | Brass | Woodwinds | Lead vocals | Synth | Keyboard |
-|---|---|---|---|---|---|---|---|
-| Guitar | | 0.74 | 0.79 | 0.62 | 0.67 | 0.30 | 0.16 |
-| Strings | 0.74 | | 0.63 | 0.61 | 0.60 | 0.32 | 0.16 |
-| Synth | 0.30 | 0.32 | . | 0.38 | 0.33 | | 0.36 |
+| | Guitar | Strings | Brass | Lead vocals | Synth | Keyboard |
+|---|---|---|---|---|---|---|
+| Guitar | | 0.73 | 0.52 | 0.68 | 0.40 | 0.18 |
+| Strings | 0.73 | | 0.67 | 0.65 | 0.23 | 0.11 |
+| Synth | 0.40 | 0.23 | 0.18 | 0.26 | | 0.36 |
 
-Here the brass, woodwinds and voices were carved out of the guitar and
-strings, and they are no small part of it: the brass is up front for six
-bars before the loop (on lap 1), the woodwinds and voices for stretches of
-the loop. So they are all in the melody, and lap 3 brings only the percussion
-and effects (0.01 to 0.12 against everything, like the drums and bass), with
-the low end lifted and 2 LU more, as on Meridian. Its new layer is quieter
-than Meridian's (15 dB under the full song, against 12), so the lift does
-more of the work. The guitar is the loudest single stem (-20 LUFS, the
-synth -21, the keys -22), as loud as the drums, so on lap 1, without
-them, it stood out: it is a layer of its own, 2 dB under the rest there
-and level with them on laps 2 and 3 (4 dB was too much: the synth
-covered it). Turned down a few dB rather than out, a tangled stem leaves
-no holes.
+The guitar, strings, brass and the vocal chops were carved out of one
+another, and the guitar out of the synth too, so they are all one melody
+layer with the synth and keys; the drums, bass, percussion and effects
+are clean (0.01 to 0.28), and lap 3 brings the percussion and effects.
+A tangled stem can still be turned down a few dB on a lap (not out: that
+leaves the holes): Canyon's first song, 紅砂のレース, had its guitar, its
+loudest stem, as a layer of its own, 2 dB down on lap 1 where without
+the drums it stood out (4 dB was too much: the synth covered it).
 
 Helios's stems are fewer (drums, bass, keys, synth, percussion, effects)
 and come apart as Meridian's do: the keys and synth are tangled (0.42),
@@ -95,15 +91,31 @@ late goes straight into the drop. The drop then loops (bars 88 to 104,
 26 s) to the finish. The breakdown is never heard: played through, it
 would take the drums away half way through lap 2.
 
+Canyon's song lifts a whole step for its last chorus (G minor to A minor,
+from bar 94: the loudest part of it, the guitar back in from bar 98).
+That is its lap 3. A key change sounds meant only at the start of a
+phrase, so the lap change waits for the next one (its phrases are 4 bars,
+from bar 2: where the crashes fall), up to 4 bars (about 7 s) after the
+lap line, and goes in at bar 94, all layers at once. It loops bars 94 to
+106 (12 bars, 20 s: the seam falls where the song itself drops the
+guitar, on the same F chord) and ends from bar 106, the cadence onto its
+last A minor hit. Laps 1 and 2 loop bars 26 to 66 (69 s, phrase to
+phrase).
+
 **Stingers.** The race stingers are written for Meridian's synthesised
 music, and each circuit moves them into its own key, including the key
-change its synthesised music makes on the last lap. The songs make no key
-change, so a song can give its own: Canyon's and Helios's are both centred
-on E and end on E major, so while they play, the battle-lap stab resolves
-to E minor and the finish flag is in E major (`stingers` in the recipe).
-Meridian's song is in A minor, the stingers' own key.
+change its synthesised music makes on the last lap. A song can give its
+own (`stingers` in the recipe, semitones from the written key):
 
-How Meridian's recipe got here, from playtests (Canyon's follows it): the first version kept the kick, muffled,
+- Helios's is centred on E and ends on E major: the battle-lap stab
+  resolves to E minor and the finish flag is in E major.
+- Canyon's is in G minor and lifts to A minor for its last chorus: the
+  lap chime is on G and D, the battle stab resolves to G minor, the
+  final-lap fanfare's open chord is on A (the key it is about to lift to)
+  and the flag is in C major, the relative major of where it ends.
+- Meridian's is in A minor, the stingers' own key.
+
+How Meridian's recipe got here, from playtests (the others follow it): the first version kept the kick, muffled,
 on lap 1, and its laps were too alike; the second took the kick out of
 lap 1 with a high-pass and let each lap get about 3 LU louder, and its
 start was too quiet; the third evened the laps out, which brought lap 1's
@@ -151,8 +163,13 @@ The results play the win theme, トロフィーセレモニー, when the player'
 won the round (and the Grand Prix award, for first place). It goes
 straight in from its top and loops bars 22 to 48 (51 s; the first 95 s
 play through before it), at -19.5 LUFS: between the menu music (-24) and a
-race's first lap (-18.5). A loss has no song yet, so the menu music plays
-on, as before; a song at `results-loss` will be played for it.
+race's first lap (-18.5). When it lost, the loss theme, Minor Theme (E
+minor, the win theme's relative minor, 100 BPM; synth-led, 80s anime):
+from its top (solo keys, then the band), then round bars 9 to 42 (79 s:
+from its second full-band part back to the keys alone, as the song itself
+goes after its first). It is at -22.5 LUFS: half of it is keys alone, so
+that puts its full-band parts about 1 dB under the win theme's. An outcome
+with no song would leave the menus' music playing.
 
 ## Making one
 
@@ -185,15 +202,16 @@ on, as before; a song at `results-loss` will be played for it.
      now: a filtered layer turned up to the others' level sounds thin.
    - `loop` and `ending`: bar numbers from step 2. Meridian loops bars 49
      to 81 (32 bars, 54 s), the best match in the song, and ends from bar
-     98; Canyon loops bars 37 to 80 (43 bars, 78 s: the chords and the
-     sound either side match best there) and ends from bar 107, a
-     C, D, E cadence onto its last chord; Helios loops its groove, bars 16
+     98; Canyon loops bars 26 to 66 (40 bars, 69 s, phrase to phrase)
+     and ends from bar 106; Helios loops its groove, bars 16
      to 64 (three turns of its chord cycle), and ends from bar 116, a
      wind-down onto a last E major hit.
    - `finale` (optional): `{"lap": 3, "from": 80, "loop": [88, 104],
      "cycle": 16}` (Helios): on lap 3, jump to the bar from `from` on at
      the same place in the `cycle`-bar chord cycle, then loop `loop`. Both
-     loops should be whole cycles.
+     loops should be whole cycles. With `"phrase": {"bars": 4, "first":
+     2}` (Canyon) it waits instead for the next phrase's first bar line
+     and goes in at `from`.
    - `stingers` (optional): semitones to move each race stinger by while
      the song plays, in place of the circuit's (see above).
    - `master`: the gain and two shelves that make the summed stems sound
@@ -201,9 +219,10 @@ on, as before; a song at `results-loss` will be played for it.
      they are louder and duller). Find them by comparing the two (fit
      the difference between their spectra, a third of an octave at a time:
      Meridian's is -4.4 dB with +3 dB below 150 Hz and +1.5 above 5 kHz,
-     Canyon's -4.8 dB, +3.3 below 260 Hz and +2.5 above 2.9 kHz). Helios
-     came as stems only, so it has the two averaged (+3 dB below 200 Hz,
-     +2 above 4 kHz); with its full mix, it can be matched.
+     Canyon's first song's -4.8 dB, +3.3 below 260 Hz and +2.5 above
+     2.9 kHz). The songs that came as stems only (Helios's, Canyon's
+     疾走の回路, the screens') have the two averaged (+3 dB below 200 Hz,
+     +2 above 4 kHz); with a full mix, a song can be matched.
    - `loudness`: how loud each lap should be, in LUFS at the game's
      default volumes (Meridian: -18.5, -17.5, -15.5). The build sets each
      lap's level to meet it and prints what it got, and the layers' levels
@@ -213,8 +232,8 @@ on, as before; a song at `results-loss` will be played for it.
    Only what can be heard is kept: from the start to the loop's end, then
    the ending (Meridian: 147 s of its 175, 18.1 MB at LAME's best VBR,
    `quality` 0; its default, 4, cuts above 16 kHz and is audibly rougher
-   once four layers are summed. Canyon: 155 s of its 204, 24.2 MB in five
-   layers; Helios: 157 s of its 203, 19.2 MB).
+   once four layers are summed. Canyon: 145 s of its 192, 17.9 MB;
+   Helios: 157 s of its 203, 19.2 MB).
 5. **Add it** to `SONGS` in `src/client/audio/song.ts` (a screen's: to
    `SCREEN_SONGS`, as one layer with every stem in it, `laps` all 0, and
    one `loudness`; see `songs/results-win.json`).
@@ -251,7 +270,7 @@ decodes it) and the game measures its own decoder against it and allows
 for the difference (Chromium's matches to the sample).
 
 Decoded, each layer takes 8 bytes a sample frame: Meridian's four take
-about 225 MB at 48 kHz, Canyon's five 297 MB, Helios's four 241 MB. So only one song is held decoded:
+about 225 MB at 48 kHz, Canyon's 222 MB, Helios's 241 MB. So only one song is held decoded:
 the one for the circuit coming up. The game names it as soon as it knows
 (the circuit it has built, and the circuit shown on the race setup, the
 online room and the Grand Prix briefing, once it has stayed there a

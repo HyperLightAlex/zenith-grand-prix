@@ -33,7 +33,8 @@ await page.waitForFunction(() => window.game !== undefined, null, { timeout: 180
 await page.evaluate(() => { const r = window.game.renderer; r.render = () => {}; });
 await page.evaluate(() => window.game.audio.unlock());
 const t0 = Date.now();
-await page.waitForFunction(() => window.game.audio.debugInfo().music?.song?.state === 'playing', null, { timeout: 120000 });
+// (The race's song: the menus and the results can have songs of their own now.)
+await page.waitForFunction(() => { const m = window.game.audio.debugInfo().music; return m?.name === 'race' && m.song?.state === 'playing'; }, null, { timeout: 120000 });
 const first = await page.evaluate(() => window.game.audio.debugInfo().music.song);
 console.log(`song playing ${((Date.now() - t0) / 1000).toFixed(1)} s after the audio started; decoded at ${first.rate} Hz, decoder ${first.shiftMs} ms off ffmpeg's`);
 // Chromium's decoders start on ffmpeg's sample: anything else here is the check itself going wrong.
@@ -106,7 +107,7 @@ for (let i = 0; i < 3000; i++) {
   if ((resultsAt !== null && s.time > resultsAt + 2) || (finishAt !== null && s.time > finishAt + 20)) break;
   await page.waitForTimeout(200);
 }
-const last = samples.findLast((s) => s.music?.song) ?? samples[samples.length - 1];
+const last = samples.findLast((s) => s.music?.name === 'race' && s.music?.song) ?? samples[samples.length - 1];
 const log = last.music?.song?.log ?? [];
 console.log('\nwhat the song did (audio clock):');
 for (const e of log) console.log(`  ${e.at.toFixed(3).padStart(8)}  ${e.what}${e.bar >= 0 ? `, bar ${e.bar}` : ''}`);
@@ -116,7 +117,9 @@ console.log('the race: ' + Object.entries(lapAt).map(([p, t]) => `lap phase ${p}
 const barMax = Math.max(...manifest.bars.slice(1).map((b, i) => b - manifest.bars[i]));
 for (const [p, t] of Object.entries(lapAt)) {
   const e = log.find((x) => x.what === `lap ${p}`);
-  check(!!e && e.at >= t && e.at <= t + 0.3 + barMax + 0.25, `lap ${p} comes in on a bar line within a bar of the lap change (${e ? (e.at - t).toFixed(2) + ' s after' : 'never'})`);
+  // (A finale that waits for a phrase can take that many bars to come in.)
+  const wait = Number(p) === manifest.finale?.lap && manifest.finale?.phrase ? manifest.finale.phrase.bars : 1;
+  check(!!e && e.at >= t && e.at <= t + 0.3 + barMax * wait + 0.25, `lap ${p} comes in on a bar line within ${wait > 1 ? `a phrase (${wait} bars)` : 'a bar'} of the lap change (${e ? (e.at - t).toFixed(2) + ' s after' : 'never'})`);
 }
 // A song with a finale goes on to it with lap 3, on the same bar line.
 if (manifest.finale && lapAt[3] !== undefined) {
@@ -141,10 +144,10 @@ if (finishAt) {
 
 // Levels: each layer by lap, from the meters (mean power over each stretch, in dB).
 const dB = (p) => (p > 1e-12 ? (10 * Math.log10(p)).toFixed(1) : '  -  ');
-const stretch = (from, to) => samples.filter((s) => s.music?.song && s.time > from && s.time < to && s.meter);
+const stretch = (from, to) => samples.filter((s) => s.music?.name === 'race' && s.music?.song && s.time > from && s.time < to && s.meter);
 const changes = Object.fromEntries(log.filter((x) => /^lap|^ending/.test(x.what)).map((x) => [x.what, x.at]));
 const spans = [
-  ['lap 1', samples.find((s) => s.music?.song?.state === 'playing')?.time ?? 0, changes['lap 2'] ?? Infinity],
+  ['lap 1', samples.find((s) => s.music?.name === 'race' && s.music?.song?.state === 'playing')?.time ?? 0, changes['lap 2'] ?? Infinity],
   ['lap 2', changes['lap 2'] ?? Infinity, changes['lap 3'] ?? Infinity],
   ['lap 3', changes['lap 3'] ?? Infinity, changes.ending ?? Infinity],
   ['ending', changes.ending ?? Infinity, (changes.ending ?? Infinity) + 7.5],
