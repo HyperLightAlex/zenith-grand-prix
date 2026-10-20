@@ -23,7 +23,9 @@
 // telephone. So they come in together (a tangled stem can still be turned
 // down a little on a lap). See tools/music.
 //
-// Every change waits for the next bar line. The song plays from its start;
+// A lap's layers come in on the next beat, as the lap changes; a jump (into
+// the loop, a finale, the ending) waits for the next bar line, or a finale
+// with a phrase for that phrase's first. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
 // often as the race needs, and the finish jumps to its ending. All layers
 // play from one buffer each, started together, so they can never drift apart.
@@ -113,8 +115,16 @@ const phaseOf = (lapPhase: number): Phase => (lapPhase >= 3 ? 3 : lapPhase >= 2 
 export const XFADE = 0.012;
 /** How far ahead the loop's next pass is queued. */
 const QUEUE_AHEAD = 3;
-/** A lap change heard this soon goes to the bar line after (so there is time to build into it). */
+/** A jump (into a finale) heard this soon goes to the bar line after (so there is time to build into it). */
 const CHANGE_LEAD = 0.3;
+/**
+ * A lap's layers come in on the next beat at least this far ahead: as the
+ * lap changes, near enough, and on the beat. (They are in time with one
+ * another whatever bar they come in on; only a jump has to wait for a bar.)
+ */
+const BEAT_LEAD = 0.05;
+/** Beats to a bar: every song is in 4/4. */
+const BEATS = 4;
 /** How far ahead the song is queued while looking for a phrase's first bar line (see SongManifest.finale). */
 const PHRASE_AHEAD = 15;
 /** Where a sweep takes the filter before the layer goes over to its direct path. */
@@ -208,6 +218,28 @@ export class SongPlan {
       this.segs.push(seg);
       added.push(seg);
     }
+  }
+
+  /**
+   * The first beat at or after context time `t`, in the stretches queued so
+   * far: a bar line, or a quarter of the way, half or three quarters through
+   * its bar. (A stretch ending before its next beat goes on to the next
+   * stretch's start, a bar line.)
+   */
+  nextBeat(t: number): number | null {
+    const bars = this.map.bars;
+    for (const s of this.segs) {
+      if (s.kind !== 'body' || this.endOf(s) < t - 1e-9) continue;
+      const p = s.from + Math.max(0, t - s.at);
+      for (let i = 0; i + 1 < bars.length; i++) {
+        if (bars[i + 1] < p - 1e-9) continue;
+        const beat = (bars[i + 1] - bars[i]) / BEATS;
+        const pos = bars[i] + Math.max(0, Math.ceil((p - bars[i]) / beat - 1e-9)) * beat;
+        if (pos <= s.until + 1e-9) return s.at + (pos - s.from);
+        break;
+      }
+    }
+    return null;
   }
 
   /** The first bar line at or after context time `t`, in the stretches queued so far. */
@@ -545,8 +577,14 @@ export class SongTrack implements MusicTrack {
 
     const want = phaseOf(lapPhase);
     if (!this.ending && want !== this.target) {
-      const next = this.changeBar(want, now);
-      if (next) this.change(want, next.at, now, next.bar);
+      // The layers on the next beat; a jump into a finale on its bar line (or phrase) after.
+      const beat = plan.nextBeat(now + BEAT_LEAD);
+      const f = this.source.manifest!.finale;
+      const jump = f && !this.inFinale && want >= f.lap ? this.changeBar(want, now) : null;
+      if (beat !== null && (!f || this.inFinale || want < f.lap || jump)) {
+        this.change(want, beat, now);
+        if (jump) this.toFinale(jump.at);
+      }
     }
     if (this.targetAt >= 0 && now >= this.targetAt) {
       this.phase = this.target;
@@ -775,8 +813,8 @@ export class SongTrack implements MusicTrack {
     for (const e of p.envs) e.disconnect();
   }
 
-  /** Lap phase `to` from the bar line at `at` (a filtered layer may open up from now until then). */
-  private change(to: Phase, at: number, now: number, bar: number): void {
+  /** Lap phase `to` from the beat at `at` (a filtered layer may open up from now until then). */
+  private change(to: Phase, at: number, now: number): void {
     const m = this.source.manifest!;
     for (const l of this.layers) {
       const g = l.gain.gain;
@@ -799,14 +837,13 @@ export class SongTrack implements MusicTrack {
     this.target = to;
     this.targetAt = at;
     this.changeAt = at;
-    this.note(`lap ${to}`, at, bar);
-    if (m.finale && !this.inFinale && to >= m.finale.lap) this.toFinale(at);
+    this.note(`lap ${to}`, at, this.plan!.barAt(at));
   }
 
   /**
-   * The bar line a change to lap phase `to` happens on: the next one far
-   * enough ahead, or, going into a finale that waits for a phrase, the next
-   * phrase's first (queueing the song far enough ahead to find it).
+   * The bar line a jump into the finale (for lap phase `to`) happens on: the
+   * next one far enough ahead, or, for a finale that waits for a phrase, the
+   * next phrase's first (queueing the song far enough ahead to find it).
    */
   private changeBar(to: Phase, now: number): { at: number; bar: number } | null {
     const plan = this.plan!;

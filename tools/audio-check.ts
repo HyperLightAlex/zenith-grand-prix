@@ -1309,9 +1309,11 @@ async function offlineSong(style: string): Promise<void> {
   const finale = when(/^finale/);
   const ending = when(/^ending/);
   for (const e of song.log) table(`recorded song (${style}): what it did (offline)`).push({ at: r3(e.at), what: e.what, bar: e.bar });
-  // Each change on a bar line: the song position at that moment is a bar line
-  // (at most a bar after the lap change asked for it, and the lead before it).
+  // A lap's layers on a beat, as the lap changes (at most a beat after it was
+  // asked for, and the lead before it); the ending on a bar line, at most a
+  // bar after; a finale on its bar line (or phrase) after the lap's layers.
   const barMax = Math.max(...m.bars.slice(1).map((b, i) => b - m.bars[i]));
+  const beatMax = barMax / 4;
   // Where in the files the song is, from what it did: each start, loop, jump
   // and the ending says where it went on to.
   const anchors = song.log
@@ -1329,10 +1331,18 @@ async function offlineSong(style: string): Promise<void> {
     }
     // (Where the song had got to: for the ending, in the loop it cuts short.)
     const p = posAt(t - 1e-6);
-    const onBar = m.bars.some((b) => Math.abs(b - p) < 0.0005);
-    if (!onBar) fail(`${style}: the song's ${name} is not on a bar line (song position ${p.toFixed(4)} s)`);
-    const bars = name === 'lap 3' && m.finale?.phrase ? m.finale.phrase.bars : 1;
-    if (t < asked || t > asked + 0.3 + barMax * bars + STEP) fail(`${style}: the song's ${name} came ${(t - asked).toFixed(2)} s after it was asked for`);
+    if (name === 'ending') {
+      const onBar = m.bars.some((b) => Math.abs(b - p) < 0.0005);
+      if (!onBar) fail(`${style}: the song's ending is not on a bar line (song position ${p.toFixed(4)} s)`);
+      if (t < asked || t > asked + 0.3 + barMax + STEP) fail(`${style}: the song's ending came ${(t - asked).toFixed(2)} s after it was asked for`);
+    } else {
+      const i = m.bars.findIndex((b, k) => k + 1 < m.bars.length && m.bars[k + 1] > p - 0.0005);
+      const beat = i >= 0 ? (m.bars[i + 1] - m.bars[i]) / 4 : 0;
+      const onBeat = i >= 0 && Math.abs((p - m.bars[i]) / beat - Math.round((p - m.bars[i]) / beat)) * beat < 0.0005;
+      if (!onBeat) fail(`${style}: the song's ${name} is not on a beat (song position ${p.toFixed(4)} s)`);
+      if (t < asked || t > asked + 0.05 + beatMax + STEP) fail(`${style}: the song's ${name} came ${(t - asked).toFixed(2)} s after it was asked for`);
+      table(`recorded song (${style}): lap changes (offline)`).push({ lap: name, 'heard after the lap change (s)': r3(t - asked) });
+    }
   }
   // Every loop from the end of the stretch it loops back to its start, and
   // the loop (and the finale's, if any) heard at least once.
@@ -1345,8 +1355,11 @@ async function offlineSong(style: string): Promise<void> {
   }
   for (const [from] of ends) if (!loops.some((a) => Math.abs(a.pos - from) < 1e-4)) fail(`${style}: the loop from ${from.toFixed(3)} never came round before the finish; move T_FIN later`);
   if (m.finale) {
-    // The finale on lap 3's bar line, landing where the chord cycle had got to.
-    if (!(Math.abs(finale - lap3) < 1e-6)) fail(`${style}: the finale came at ${r3(finale)}, not with lap 3 (${r3(lap3)})`);
+    // The finale on the bar line (or phrase) after lap 3's layers came in, landing where the chord cycle had got to.
+    const wait = m.finale.phrase ? m.finale.phrase.bars : 1;
+    if (!(finale >= lap3 - 1e-6 && finale <= lap3 + 0.3 + barMax * wait + STEP)) fail(`${style}: the finale came at ${r3(finale)}, not on the bar line after lap 3 (${r3(lap3)})`);
+    const onBar = m.bars.some((b) => Math.abs(b - posAt(finale - 1e-6)) < 0.0005);
+    if (!onBar) fail(`${style}: the finale is not on a bar line`);
     const e = song.log.find((x) => x.what === 'finale');
     const was = m.bars.findIndex((b) => Math.abs(b - posAt(finale - 1e-6)) < 0.0005);
     if (e && was >= 0 && m.bars[e.bar] !== m.finale.entry[was % m.finale.cycle]) fail(`${style}: the finale landed on bar ${e.bar}, not where the cycle had got to (from bar ${was})`);
@@ -2121,10 +2134,82 @@ async function offlineRecorded(): Promise<void> {
   }
 }
 
+/**
+ * The K-weighted loudness of t0 to t1 on average (the mean of its power, as
+ * LUFS are, ungated), channels 0 and 1 or from `ch`: how loud the music runs.
+ */
+function kMean(buf: AudioBuffer, t0: number, t1: number, ch = 0): number {
+  // The loudest tenth of a second of each tenth, averaged: kLoudness over short windows.
+  let sum = 0;
+  let n = 0;
+  for (let t = t0; t + 0.1 <= t1; t += 0.1) {
+    sum += 10 ** ((kLoudness(buf, t, t + 0.1, ch) + 0.691) / 10);
+    n++;
+  }
+  return -0.691 + 10 * Math.log10(sum / Math.max(1, n) + 1e-20);
+}
+
+/**
+ * A fight over each lap of a race song, as a race plays it: the engine and
+ * the wind at the limiter, the song (its lap 1, 2 and 3), and the effects at
+ * the volumes the game plays them at (the swings at 0.8, bullets at 0.6), the
+ * recorded ones where there are recordings. Reports how loud the music runs
+ * on each lap against the effects' loudness, and dumps mix-<circuit>.wav to
+ * listen to. &mix=canyon picks the circuit.
+ */
+async function offlineMix(): Promise<void> {
+  const style = params.get('mix') ?? 'meridian';
+  log(`--- offline: a fight over the race song (${style}) ---`);
+  const map = (await (await fetch('/' + SONGS[style] + 'song.json')).json()) as SongManifest;
+  const T_RACE = 0.5;
+  const T_P2 = 30.37;
+  const T_P3 = map.finale ? Math.max(95.21, T_RACE + map.loop[1] + 4.37) : 95.21;
+  // What a fight plays, at seconds from its start, and how loud the game plays each.
+  const fight: Array<[number, SfxName, number]> = [];
+  const string = (t0: number, light: SfxName, heavy: SfxName): void => {
+    for (const [tick, name] of [[5, 'swing_light'], [6, light], [25, 'swing_light'], [26, light], [51, 'swing_heavy'], [52, heavy]] as const) {
+      fight.push([t0 + tick / 60, name, name.startsWith('swing') ? 0.8 : 1]);
+    }
+  };
+  string(0, 'hit_light', 'hit_heavy');
+  string(2, 'block', 'block_heavy');
+  for (let b = 0; b < 3; b++) {
+    for (let k = 0; k < 3; k++) {
+      const t = 4 + (b * 27 + k * 4) / 60;
+      fight.push([t, 'shot_carbine', 1], [t + 0.13, 'bullet_hit', 0.6]);
+    }
+  }
+  fight.push([6, 'shot_scatter', 1], [6.12, 'bullet_hit', 0.6], [7.6, 'parry', 1], [9.1, 'guard_break', 1], [10.6, 'momentum_hit', 1], [12.2, 'ringout', 1], [13.2, 'ko', 1]);
+  const LEN = 15;
+  const fights = [T_RACE + 14, T_P2 + 14, T_P3 + 14];
+  const cues: Cue[] = [{ t: T_RACE, run: (a) => a.setMusic('race', style) }];
+  for (const f0 of fights) for (const [dt, name, volume] of fight) cues.push({ t: f0 + dt, run: (a) => a.play(name, { volume }) });
+  const sceneAt = (t: number): AudioScene => ({ ...BASE, lapPhase: t >= T_P3 ? 3 : t >= T_P2 ? 2 : 1 });
+  const T_END = fights[2] + LEN + 1;
+  const { buf, warnings } = await render(T_END, cues, sceneAt, undefined, undefined, true, { [style]: '/' + SONGS[style] }, undefined, undefined, '/sfx/');
+  if (warnings) fail(`mix ${style}: the engine swallowed ${warnings} Web Audio error(s)`);
+  for (const [lap, f0] of fights.entries()) {
+    // The music (and the engine and wind) in the ten seconds before the fight; the fight's loudest moments.
+    const music = kMean(buf, f0 - 10, f0, 2);
+    const s = analyse(buf, f0, f0 + LEN);
+    table(`a fight over ${style}'s song (offline, default volumes)`).push({
+      lap: lap + 1,
+      'music + engine LUFS (before the limiter)': Math.round(music * 10) / 10,
+      'the light string (loudest 100 ms)': Math.round(kLoudness(buf, f0, f0 + 1.9, 2) * 10) / 10,
+      'the carbine and its hits': Math.round(kLoudness(buf, f0 + 4, f0 + 5.4, 2) * 10) / 10,
+      'the knockout': Math.round(kLoudness(buf, f0 + 13.2, f0 + 14.6, 2) * 10) / 10,
+      peak: r3(s.peak),
+    });
+    if (s.peak >= CLIP) fail(`mix ${style}: the fight on lap ${lap + 1} clips (peak ${s.peak.toFixed(3)})`);
+  }
+  await dump(`mix-${style}`, buf, 0, T_END);
+}
+
 async function main(): Promise<void> {
   const parts: Array<[string, () => Promise<void>]> = [
     ['sfx', offlineSfx],
     ['recorded', offlineRecorded],
+    ['mix', offlineMix],
     ['layers', offlineLayers],
     ['speeds', offlineSpeeds],
     ['music', offlineMusic],

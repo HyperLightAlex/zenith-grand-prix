@@ -43,10 +43,12 @@ sounds (the heavy swing's did), which split into two takes.
 **The second round** (hits redone, blocks, guns, parry, shield break,
 momentum hit, knockout, ring-out): asked for one shot, the carbine came back
 as bursts, several shots each with a falling zap, over a noise bed. The
-game plays one sound a shot (three shots 67 ms apart), so the build cuts
-each burst at its shots (sounds.json `split`, the times read off the
-spectrograms: the third burst's are 60 to 71 ms apart, close to the
-game's own) into single shots, eleven in all. The scatter cannon sounded
+game plays one sound a shot (three shots 67 ms apart). Cut at its shots
+into eleven single shots, each ended at the next one, they sounded cut
+off: a shot's sound runs on well past the next one's start. So each take
+is now the last shot of a burst, with its tail (sounds.json `split`, one
+time per take, read off the spectrograms): three whole shots, which
+overlap into a burst in the game. The scatter cannon sounded
 slowed down; the build plays it 12% faster (`speed`). The blocks and
 some hits still carry deep low end (the light block's energy centres
 near 50 Hz: an electric buzz), which was kept, these having been chosen
@@ -71,7 +73,7 @@ due for another look later.
 | Combat | hit_light, hit_heavy | in the game: the anime prompts' takes, the second round |
 | Combat | block, block_heavy | in the game: one take each, a block for light blows and one for heavy (block_heavy was added for these) |
 | Combat | parry, guard_break, momentum_hit, ko | in the game |
-| Combat | shot_carbine, shot_scatter, bullet_hit | in the game (the carbine's takes, bursts, cut into eleven single shots; the scatter cannon's played 12% faster) |
+| Combat | shot_carbine, shot_scatter, bullet_hit | in the game (the carbine's takes, bursts: the last shot of each, whole; the scatter cannon's played 12% faster) |
 | Combat | ringout | in the game (two takes, sent as "wall_collision") |
 | Movement and the circuit | boost … recover (14 to 24) | asked for |
 | Abilities | overdrive … aegis (25 to 31) | asked for |

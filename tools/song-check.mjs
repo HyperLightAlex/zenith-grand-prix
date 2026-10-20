@@ -124,19 +124,19 @@ console.log('\nwhat the song did (audio clock):');
 for (const e of log) console.log(`  ${e.at.toFixed(3).padStart(8)}  ${e.what}${e.bar >= 0 ? `, bar ${e.bar}` : ''}`);
 console.log('the race: ' + Object.entries(lapAt).map(([p, t]) => `lap phase ${p} at ${t.toFixed(2)}`).join(', ') + (finishAt ? `, over for the player at ${finishAt.toFixed(2)}` : ', not over'));
 
-// Each lap change heard at the bar line after it (and only just after).
+// Each lap's layers heard on the beat after the lap change (and only just after).
 const barMax = Math.max(...manifest.bars.slice(1).map((b, i) => b - manifest.bars[i]));
 for (const [p, t] of Object.entries(lapAt)) {
   const e = log.find((x) => x.what === `lap ${p}`);
-  // (A finale that waits for a phrase can take that many bars to come in.)
-  const wait = Number(p) === manifest.finale?.lap && manifest.finale?.phrase ? manifest.finale.phrase.bars : 1;
-  check(!!e && e.at >= t && e.at <= t + 0.3 + barMax * wait + 0.25, `lap ${p} comes in on a bar line within ${wait > 1 ? `a phrase (${wait} bars)` : 'a bar'} of the lap change (${e ? (e.at - t).toFixed(2) + ' s after' : 'never'})`);
+  // (Polled every 200 ms: allow for that.)
+  check(!!e && e.at >= t - 0.25 && e.at <= t + 0.05 + barMax / 4 + 0.25, `lap ${p} comes in on the beat as the lap changes (${e ? (e.at - t).toFixed(2) + ' s after' : 'never'})`);
 }
-// A song with a finale goes on to it with lap 3, on the same bar line.
+// A song with a finale jumps to it after lap 3's layers, on its bar line (a finale with a phrase: that phrase's first).
 if (manifest.finale && lapAt[3] !== undefined) {
   const l3 = log.find((x) => x.what === 'lap 3');
   const fi = log.find((x) => x.what === 'finale');
-  check(!!l3 && !!fi && Math.abs(fi.at - l3.at) < 1e-6, `lap 3 goes on to the finale on its bar line (${fi ? 'bar ' + fi.bar : 'never'})`);
+  const wait = manifest.finale.phrase ? manifest.finale.phrase.bars : 1;
+  check(!!l3 && !!fi && fi.at >= l3.at - 1e-6 && fi.at <= l3.at + 0.3 + barMax * wait + 0.05, `lap 3 goes on to the finale on the bar line after (${fi && l3 ? (fi.at - l3.at).toFixed(2) + ' s after, bar ' + fi.bar : 'never'})`);
 }
 if (finishAt) {
   const e = log.find((x) => x.what === 'ending');

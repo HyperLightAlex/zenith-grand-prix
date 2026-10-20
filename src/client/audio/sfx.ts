@@ -769,6 +769,18 @@ export interface SfxMeta {
 
 const m = (level: number, send = 0, prio = 1, vary = 0, gap = 0.03, duck?: [number, number]): SfxMeta => ({ level, send, prio, vary, gap, duck });
 
+/**
+ * The combat sounds' levels are set by loudness as heard in a race (the
+ * loudest tenth of a second, K-weighted, before the limiter, at the volume
+ * the game plays each at), by group, against the race music (which, with
+ * the engine and the wind, averages about -19, -15.5 and -13.5 on laps 1, 2
+ * and 3: the audio check's "mix" part): the light blows, the light block and
+ * the carbine at -12, over the music on every lap; the light swing and the
+ * bullet hit (heard in streams) a little under (-14, -15); the heavy blows,
+ * the heavy block and the scatter cannon at -9 (the heavy swing -11); the
+ * parry, the momentum hit, the ring-out and the guard break over those (-8,
+ * -9), and the knockout loudest (-6). The "recorded" part measures them.
+ */
 export const SFX_META: Record<SfxName, SfxMeta> = {
   ui_move: m(0.2, 0, 2),
   ui_select: m(0.3, 0.1, 2),
@@ -785,26 +797,26 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   lock: m(0.3, 0.05, 2),
   unlock: m(0.25, 0.05, 2),
   denied: m(0.35, 0, 2),
-  swing_light: m(1.0, 0.05, 1, 0.08),
-  swing_heavy: m(0.75, 0.08, 1, 0.06),
-  hit_light: m(0.4, 0.08, 1, 0.07),
-  hit_heavy: m(0.58, 0.12, 1, 0.05),
-  block: m(0.52, 0.1, 1, 0.05),
-  block_heavy: m(0.55, 0.12, 1, 0.05),
-  parry: m(0.4, 0.35, 2, 0.02),
+  swing_light: m(3.033, 0.05, 1, 0.08),
+  swing_heavy: m(1.706, 0.08, 1, 0.06),
+  hit_light: m(1.102, 0.08, 1, 0.07),
+  hit_heavy: m(0.867, 0.12, 1, 0.05),
+  block: m(0.787, 0.1, 1, 0.05),
+  block_heavy: m(0.832, 0.12, 1, 0.05),
+  parry: m(0.648, 0.35, 2, 0.02),
   // Bright sounds trimmed after play: they cut through far more than their peak suggests.
-  guard_break: m(0.3, 0.25, 2),
+  guard_break: m(0.807, 0.25, 2),
   tell: m(0.5, 0.05, 2, 0, 0.1),
   tell_dodge: m(0.26, 0.03, 2, 0, 0.1),
   momentum: m(0.75, 0.08, 1, 0.04),
-  momentum_hit: m(0.36, 0.12, 2, 0.04),
-  ringout: m(0.4, 0.2, 2, 0.03),
-  shot_carbine: m(0.35, 0.06, 1, 0.05),
-  shot_scatter: m(0.5, 0.12, 1, 0.04),
-  bullet_hit: m(0.2, 0.04, 0, 0.15, 0.08),
+  momentum_hit: m(0.719, 0.12, 2, 0.04),
+  ringout: m(0.546, 0.2, 2, 0.03),
+  shot_carbine: m(1.172, 0.06, 1, 0.05),
+  shot_scatter: m(1.094, 0.12, 1, 0.04),
+  bullet_hit: m(1.94, 0.04, 0, 0.15, 0.08),
   wall: m(0.38, 0.1, 1, 0.06),
   bump: m(0.45, 0.03, 1, 0.08),
-  ko: m(0.6, 0.3, 2, 0, 0.1, [0.3, 0.7]),
+  ko: m(0.673, 0.3, 2, 0, 0.1, [0.3, 0.7]),
   critical: m(0.36, 0.05, 2, 0, 0.5),
   takeoff: m(0.55, 0.08, 1, 0.06, 0.1),
   land: m(0.4, 0.08, 1, 0.06, 0.08),

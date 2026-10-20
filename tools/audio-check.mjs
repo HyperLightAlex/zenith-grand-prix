@@ -3,8 +3,9 @@
 //   node tools/audio-check.mjs [--quick] [--only <parts>] [--dump <dir>] [--url <page url>]
 //
 // --quick  skip the real-time pass (offline renders only, under a minute)
-// --only   run just some parts, comma separated: sfx, recorded, layers, speeds, music, song, title, results, hangar, styles, stack, race, realtime
+// --only   run just some parts, comma separated: sfx, recorded, mix, layers, speeds, music, song, title, results, hangar, styles, stack, race, realtime
 // --dump   write the offline renders to <dir> as WAV files, for listening
+// --mix    the circuit whose song the "mix" part fights over (default meridian)
 //
 // Uses the Vite dev server on http://localhost:5173 (or the local port in
 // --url) and starts one for the duration of the run if nothing is listening
@@ -26,8 +27,9 @@ const value = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : un
 const quick = flag('--quick');
 const only = value('--only');
 const dumpDir = value('--dump');
+const mix = value('--mix');
 const base = value('--url') ?? 'http://localhost:5173/tools/audio-check.html';
-const query = [quick ? 'quick=1' : '', only ? `only=${encodeURIComponent(only)}` : '', dumpDir ? 'dump=1' : ''].filter(Boolean).join('&');
+const query = [quick ? 'quick=1' : '', only ? `only=${encodeURIComponent(only)}` : '', dumpDir ? 'dump=1' : '', mix ? `mix=${encodeURIComponent(mix)}` : ''].filter(Boolean).join('&');
 const url = query ? `${base}?${query}` : base;
 
 async function reachable() {

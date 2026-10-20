@@ -61,7 +61,7 @@ round in the build, per sound, in sounds.json:
 | `lead` | start this many seconds before the take first comes within 6 dB of its loudest, rising into it, so a slow swell peaks when the game plays it (the blow lands about 0.1 s after the swing sound starts) | swings 0.03 to 0.05, hits 0.005 |
 | `max` | the longest it may run, seconds, the last third fading | 0.35 to 0.8 |
 | `speed` | play it this much faster, pitch and all, as a tape run fast: for a take that sounds slowed down | the scatter cannon, 1.12 |
-| `split` | `{take: [seconds, ...]}`: cut that take into one take per time listed, each running to the next: for a take that holds a run of the same sound, where the game plays them one at a time | the carbine's bursts, into single shots |
+| `split` | `{take: [seconds, ...]}`: cut that take into one take per time listed, each running to the next (or `max`): for a take that holds a run of the same sound, where the game plays them one at a time. Cutting each at the next one cuts it short; a run's last, with its tail, is whole | the carbine's bursts: each one's last shot |
 | `db` | lift or lower the sound in the mix, from where its recipe sat | |
 
 A take that is right to begin with keeps more of itself, so re-prompting
@@ -69,7 +69,13 @@ comes first; the shaping is for a take that is nearly there.
 
 ## Levels
 
-A recording comes into the mix where its recipe sat. The build measures
+A recording comes into the mix where its recipe sat, and the recipes'
+levels (SFX_META in sfx.ts) are set by loudness as heard in a race, by
+group, against the race music: the light blows level with the music or
+over it on every lap, the heavy ones over those, the knockout loudest (see
+the note on SFX_META). The audio check's "mix" part plays a fight over each
+lap of a race song, through the game's own engine, to hear it in context:
+`node tools/audio-check.mjs --quick --only mix --mix canyon --dump <dir>`. The build measures
 each take's loudness, as the loudest tenth of a second (K-weighted, as
 LUFS are: right for a short, sharp sound, where an average over its length
 would count the silence), and sets the sound's gain so that it matches the
