@@ -543,12 +543,22 @@ export class SynthAudio implements AudioEngine {
     if (!g || !this.track) return;
     this.track.fade(0, now, 0.05);
     this.dying.push({ track: this.track, at: now + 0.5 });
-    const t = createTrack('menu', g.ctx, g.white, now);
+    const t = this.menuTrack(now);
     t.dry.connect(g.musicIn);
     t.wet.connect(g.musicWetIn);
     t.fade(MUSIC_TRIM, now, 0.5);
     this.track = t;
     t.schedule(now, this.lapPhase, ahead);
+  }
+
+  /**
+   * The menus' music: the title theme where there is one (a recorded song,
+   * SCREEN_SONGS.title), else the synthesised menu music.
+   */
+  private menuTrack(now: number): MusicTrack {
+    const g = this.g!;
+    const song = this.screenSongs.get('title');
+    return song && song.state !== 'failed' ? new SongTrack(g.ctx, song, 'menu', 'menu') : createTrack('menu', g.ctx, g.white, now);
   }
 
   /**
@@ -593,11 +603,13 @@ export class SynthAudio implements AudioEngine {
       this.track = null;
     }
     if (this.want) {
-      const song = this.want === 'race' ? this.songs.get(style) : this.want === 'results' ? this.screenSongs.get(`results-${style}`) : undefined;
-      const t =
-        song && song.state !== 'failed'
-          ? new SongTrack(g.ctx, song, style, this.want === 'results' ? 'results' : null)
-          : createTrack(this.want === 'results' ? 'menu' : this.want, g.ctx, g.white, now, this.wantStyle);
+      let t: MusicTrack;
+      if (this.want === 'menu') t = this.menuTrack(now);
+      else {
+        // (The results only get here with a song: see the top.)
+        const song = this.want === 'race' ? this.songs.get(style) : this.screenSongs.get(`results-${style}`);
+        t = song && song.state !== 'failed' ? new SongTrack(g.ctx, song, style, this.want === 'results' ? 'results' : null) : createTrack('race', g.ctx, g.white, now, this.wantStyle);
+      }
       t.dry.connect(g.musicIn);
       t.wet.connect(g.musicWetIn);
       t.fade(MUSIC_TRIM, now, 0.2);

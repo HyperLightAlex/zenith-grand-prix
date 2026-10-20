@@ -1,9 +1,11 @@
-// Races to their results with ?music=suno, in headless Chromium: the win
-// theme if the player's team won the round, the loss theme if it lost (the
-// menu music while there is none); the other outcome, by turning the round
-// round; and off the results, the menu music again.
+// The screens' music with ?music=suno, in headless Chromium. The title
+// screen plays the title theme, and it carries on (not started again) into
+// the setup screens. Then races to their results: the win theme if the
+// player's team won the round, the loss theme if it lost (the menus' music
+// while there is none); the other outcome, by turning the round round; and
+// off the results, the menus' music again.
 //
-//   URL=http://127.0.0.1:8090/ node tools/results-check.mjs
+//   URL=http://127.0.0.1:8090/ node tools/screen-music-check.mjs
 //
 // Needs the game served (npm run build, then npm start).
 import { createRequire } from 'node:module';
@@ -14,6 +16,23 @@ const base = process.env.URL ?? 'http://127.0.0.1:8090/';
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const problems = [];
 const check = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (!ok) problems.push(what); };
+{
+  const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
+  page.on('console', (m) => { if (m.type() === 'error' || /\[audio\]/.test(m.text())) problems.push(`[${m.type()}] ${m.text()}`); });
+  page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}`));
+  await page.goto(`${base}?music=suno`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.game !== undefined, null, { timeout: 180000 });
+  await page.evaluate(() => { window.game.renderer.render = () => {}; window.game.audio.unlock(); });
+  const ok = await page.waitForFunction(() => window.game.audio.debugInfo().music?.song?.state === 'playing', null, { timeout: 30000 }).then(() => true, () => false);
+  const t = await page.evaluate(() => { const m = window.game.audio.debugInfo().music; return { name: m?.name, id: m?.song?.id, start: m?.startTime, screen: window.game.menus.screen }; });
+  check(ok && t.name === 'menu' && t.id === 'title', `the title screen (${t.screen}) plays the title theme (${t.name}, ${t.id})`);
+  // On into the setup screens: the same theme carries on.
+  await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); g.menus.push('setup'); });
+  await page.waitForTimeout(1500);
+  const s = await page.evaluate(() => { const m = window.game.audio.debugInfo().music; return { name: m?.name, id: m?.song?.id, start: m?.startTime, screen: window.game.menus.screen }; });
+  check(s.name === 'menu' && s.id === 'title' && s.start === t.start, `on to ${s.screen}, the theme carries on (not started again)`);
+  await page.close();
+}
 for (const seed of [7, 11]) {
   const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
   page.on('console', (m) => { if (m.type() === 'error' || /\[audio\]/.test(m.text())) problems.push(`[${m.type()}] ${m.text()}`); });

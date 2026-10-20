@@ -8,8 +8,9 @@ next one is made from what the last ones taught.
 
 What the game needs from every one of them: one steady tempo; the full
 sound early (a screen's music is heard from its first seconds); no long
-fade in or out; a stretch in the middle that can loop. Stems exported as
-WAVs, plus the full song if it can be (the build matches its mastering).
+fade in or out; a stretch in the middle that can loop (not the hangar's:
+see below). Stems exported as WAVs, plus the full song if it can be (the
+build matches its mastering).
 
 | For | Song | Key, tempo | Status |
 |---|---|---|---|
@@ -17,18 +18,17 @@ WAVs, plus the full song if it can be (the build matches its mastering).
 | Meridian race | 海空の速さ | A minor | in the game |
 | Canyon race | 紅砂のレース | E | in the game |
 | Helios race | 午間の雲上レース | E minor, ~145 BPM | in the game |
+| Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
-| Results, loss | (to make) | E minor, ~110 BPM | brief below |
-| Title theme | (to remake) | | brief below: the first try was all fanfare |
-| Hangar | (to remake) | | brief below: the first try was smooth jazz |
+| Results, loss | (to make) | E minor, ~88 BPM | brief below (second try: the first was too hopeful, not synth or anime enough) |
+| Hangar | (to make) | | a setlist of 80s songs: briefs below (one dedicated song was smooth jazz, then far too high energy) |
 
 ## Title theme
 
-It should sound like the opening: anime-opening J-rock, guitars and a synth
-lead, fast and hopeful, not a brass fanfare. The surest way there is a
-Cover of the opening itself with Instrumental Only on: it keeps the
-opening's melody, so the title screen plays the show's theme, as anime
-games do. Otherwise, from scratch:
+Made: Blue Night Sky. What it was asked for: it should sound like the
+opening, anime-opening J-rock with guitars and a synth lead, fast and
+hopeful, not a brass fanfare. (A Cover of the opening with Instrumental
+Only on is the other way there: it keeps the opening's melody.)
 
 Styles:
 
@@ -38,74 +38,86 @@ anime opening theme, instrumental J-rock, 150 BPM, driving palm-muted electric g
 
 Exclude: `brass fanfare, orchestral, marching snare`
 
-Lyrics (structure only):
+## Hangar: a setlist
+
+Not one song on repeat: a handful of 1980s-flavoured tracks, played one
+after another under the hangar, setup, briefing and lobby screens, that the
+player can skip through, like the pit crew's radio. Background music: mid
+to low energy, nothing that builds to a climax. Each plays through once,
+so it needs no loop, and a natural ending is fine (the next one follows).
+2:00 to 3:00 each. They share a base, and each adds its own flavour, so
+they belong together without sounding alike.
+
+Exclude for all of them: `saxophone, jazz, rock drums`
+
+1. City pop, night drive:
 
 ```
-[Intro: guitar riff and synth hook, full band from the first bar]
-[Verse: driving guitars, synth melody]
-[Pre-Chorus: build, drums lift]
-[Chorus: full band, soaring synth lead]
-[Verse]
-[Pre-Chorus]
-[Chorus]
-[Outro: the riff once more, hard stop]
+1980s Japanese city pop instrumental, background music, 108 BPM, slap bass, bright FM electric piano, clean funk guitar chords, gated reverb drums, glossy synth stabs, relaxed and cool, night drive along the bay
 ```
 
-## Hangar
-
-Background for the hangar, setup, briefing and lobby screens: the pit
-garage of a mech racing team. Mechanical and driven, but steady enough to
-sit under the menus for minutes.
-
-Styles:
+2. Synthwave, neon garage:
 
 ```
-mecha racing garage music, instrumental, 128 BPM, techno-rock, chugging palm-muted guitar riff, pulsing analog synth bass, tight electronic drums with metallic industrial percussion, arpeggiated synths, focused and confident, steady mid energy, futuristic pit lane, background loop for menus
+1980s synthwave instrumental, background music, 100 BPM, warm analog pads, arpeggiated synth bass, drum machine, soft lead synth melody, neon-lit garage at night, laid-back and steady
 ```
 
-Exclude: `jazz, saxophone, lounge`
-
-Lyrics (structure only):
+3. 80s mecha anime, workshop:
 
 ```
-[Intro: synth arpeggio and bass, drums in by bar 5]
-[Main Groove]
-[Variation: guitar riff takes the lead]
-[Main Groove]
-[Short Break: drums keep going]
-[Main Groove]
-[Outro: clean ending]
+1980s mecha anime background music, instrumental, 96 BPM, analog synth ostinato, FM bell melody, synth bass, electronic toms, calm focus, technicians tuning machines, understated
 ```
 
-One energy the whole way: no vocals, no big build or drop. 2:00 to 2:30.
+4. 80s anime ending, evening:
+
+```
+1980s anime ending theme, instrumental, 92 BPM, soft synth lead, DX7 electric piano, chorus-drenched clean guitar, gentle drum machine, wistful and warm, evening light over the track
+```
+
+5. Italo-tinged cruise (the liveliest; still background):
+
+```
+1980s italo disco instrumental, background music, 112 BPM, octave synth bass, drum machine, shimmering arpeggios, simple synth hook, cruising, light and steady, no build
+```
+
+Lyrics (structure only), for any of them:
+
+```
+[Intro]
+[Main Theme]
+[Variation]
+[Main Theme]
+[Outro: gentle ending]
+```
 
 ## Results, loss
 
 Plays on the results when the player's team loses the round, and on the
 Grand Prix award below first place. The other half of トロフィーセレモニー
-(G major, brass-led): E minor is its relative minor, and a horn keeps it in
-the same family. Disappointed, not crushed: a loss is common, and the next
-race is a button away.
+(G major): E minor is its relative minor. Synth-led and plainly 80s anime:
+the music under an episode's ending after a defeat. It stays sad; no lift
+into a hopeful major (the first try had one, and a horn, and too little
+synth).
 
 Title: 次のスタートライン (The Next Start Line)
 
 Styles:
 
 ```
-post-race results theme after a defeat, instrumental, 110 BPM, E minor, warm muted French horn melody over soft brass, felt piano, synth pads, steady light drums, round bass, bittersweet but resolute, regroup and come back stronger, each phrase lifts to a hopeful major chord, anime sports drama underscore
+1980s anime defeat theme, instrumental, synth-led, 88 BPM, E minor, analog synth pads, mournful lead synth melody with vibrato, DX7 electric piano, fretless synth bass, slow gated reverb drums, melancholic and heavy-hearted, rain on the pit lane at night, mecha anime episode ending after a loss, stays in minor to the end
 ```
 
-Exclude: `triumphant fanfare, jazz, saxophone`
+Exclude: `French horn, orchestral strings, major key`
 
 Lyrics (structure only):
 
 ```
-[Intro: piano and pads, the horn melody from the first bar]
+[Intro: synth pads, the lead melody from the first bar]
 [Theme]
 [Theme: drums and bass join]
-[Bridge: hopeful lift]
+[Bridge: darker]
 [Theme]
-[Outro: clean ending on a major chord]
+[Outro: ends on the minor chord]
 ```
 
 Straight in, no fade. 1:30 to 2:00.

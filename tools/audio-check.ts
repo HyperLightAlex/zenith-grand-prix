@@ -17,7 +17,7 @@ import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio'
 import { mtof } from '../src/client/audio/dsp';
 import { SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
-import { SCREEN_SONGS, SONGS, XFADE, type SongInfo, type SongManifest } from '../src/client/audio/song';
+import { SCREEN_SONGS, SONGS, XFADE, type SongInfo, type SongManifest, type SongSource } from '../src/client/audio/song';
 
 type Cell = string | number;
 type Row = Record<string, Cell>;
@@ -1470,6 +1470,97 @@ async function offlineSong(style: string): Promise<void> {
 }
 
 /**
+ * A one-layer screen song's render (the pre-limiter channels) against its
+ * file, at full level, over [t0, t1] where the file is at `pos0` at t0:
+ * the lag that lines them up (samples) and what is left (dB under the file).
+ */
+function matchFile(buf: AudioBuffer, src: SongSource, t0: number, t1: number, pos0: number): { lag: number; residual: number } {
+  const m = src.manifest!;
+  const scale = VOL.music * MUSIC_TRIM * 10 ** (m.level / 20) * 10 ** ((m.laps[m.layers[0].id][2] ?? 0) / 20);
+  const data = src.buffers[0].getChannelData(0);
+  const out = buf.getChannelData(2);
+  const n = Math.floor((t1 - t0) * SR);
+  const i0 = Math.round(t0 * SR);
+  const j0 = Math.round((pos0 + src.shift) * SR);
+  let best = 0;
+  let bestScore = -Infinity;
+  for (let lag = -240; lag <= 240; lag++) {
+    let s2 = 0;
+    for (let k = 0; k < n; k++) s2 += data[j0 + k] * (out[i0 + k + lag] ?? 0);
+    if (s2 > bestScore) {
+      bestScore = s2;
+      best = lag;
+    }
+  }
+  let res = 0;
+  let sig = 0;
+  for (let k = 0; k < n; k++) {
+    const want = data[j0 + k] * scale;
+    const d = out[i0 + k + best] - want;
+    res += d * d;
+    sig += want * want;
+  }
+  return { lag: best, residual: sig > 0 ? 10 * Math.log10(res / sig + 1e-12) : NaN };
+}
+
+/**
+ * The title theme (?music=suno) as the menus' music: from its top when the
+ * menus ask for music, round its loop (to the sample, against the file);
+ * then a race, and back to the menus, where it starts again from its top.
+ */
+async function offlineTitle(): Promise<void> {
+  log('--- offline: title theme ---');
+  const map = (await (await fetch('/' + SCREEN_SONGS.title + 'song.json')).json()) as SongManifest;
+  const T_MENU = 0.5;
+  const T_RACE = T_MENU + map.loop[1] + 3;
+  const T_BACK = T_RACE + 4;
+  const T_END = T_BACK + 4;
+  const cues: Cue[] = [
+    { t: T_MENU, run: (a) => a.setMusic('menu') },
+    { t: T_RACE, run: (a) => a.setMusic('race', 'meridian') },
+    { t: T_BACK, run: (a) => a.setMusic('menu') },
+  ];
+  let first: SongInfo | null = null;
+  let again: SongInfo | null = null;
+  let raceName = '';
+  const { buf, audio, warnings } = await render(T_END, cues, () => OFF, (t, a) => {
+    const music = a.debugInfo().music;
+    if (music?.name === 'menu' && music.song && t < T_RACE) first = music.song;
+    if (music?.name === 'menu' && music.song && t > T_BACK + 0.5) again = music.song;
+    if (t > T_RACE + 1 && t < T_BACK) raceName = music?.name ?? '';
+  }, undefined, true, undefined, { title: '/' + SCREEN_SONGS.title });
+  if (warnings) fail(`title: the engine swallowed ${warnings} Web Audio error(s)`);
+  const src = audio.debugScreenSongs().get('title');
+  const song = first as SongInfo | null;
+  const back = again as SongInfo | null;
+  if (!src || src.state !== 'ready' || !src.manifest || !song) {
+    fail(`title: the title theme did not play as the menus' music (${src?.state ?? 'no song'})`);
+    return;
+  }
+  const m = src.manifest;
+  for (const e of song.log) table('title theme: what it did (offline)').push({ at: r3(e.at), what: e.what, bar: e.bar });
+  const start = song.log.find((e) => /^start/.test(e.what))?.at ?? NaN;
+  const seam = song.log.find((e) => e.what === 'loop')?.at ?? NaN;
+  if (!(start >= T_MENU && start < T_MENU + 0.2)) fail(`title: the theme started at ${r3(start)}, not as asked (${T_MENU})`);
+  if (!(Math.abs(seam - (start + m.loop[1])) < 0.001)) fail(`title: the loop came at ${r3(seam)}, not at the loop's end (${r3(start + m.loop[1])})`);
+  const a = matchFile(buf, src, start + 1, start + 1.4, 1);
+  const b = Number.isFinite(seam) ? matchFile(buf, src, seam - 0.4, seam - XFADE - 0.002, m.loop[1] - 0.4) : { lag: NaN, residual: NaN };
+  const c = Number.isFinite(seam) ? matchFile(buf, src, seam + 0.03, seam + 0.4, m.loop[0] + 0.03) : { lag: NaN, residual: NaN };
+  table('title theme: against the file (offline)').push({ 'from the top: lag / residual': `${a.lag} / ${a.residual.toFixed(1)} dB`, 'into the loop': `${b.lag} / ${b.residual.toFixed(1)} dB`, 'out of it': `${c.lag} / ${c.residual.toFixed(1)} dB` });
+  for (const [what, x] of [['from the top', a], ['into the loop', b], ['out of the loop', c]] as const) {
+    if (!(Math.abs(x.lag) <= 1 && x.residual < -60)) fail(`title: ${what}, the render does not match the file (${x.lag} samples, ${x.residual.toFixed(1)} dB)`);
+  }
+  const st = analyse(buf, start + 2, seam - 1);
+  const lim = limiting(buf, start + 2, seam - 1, VOL.master);
+  table('title theme: level (offline, default volumes)').push({ 'rms dBFS': db(st.rms), peak: r3(st.peak), 'limiter: median / 95% (dB)': `${lim.median.toFixed(1)} / ${lim.p95.toFixed(1)}` });
+  if (st.peak >= CLIP) fail('title: the theme clips');
+  if (raceName !== 'race') fail(`title: a race did not take over from the theme (${raceName || 'nothing'})`);
+  // Back from the race: the theme again, from its top.
+  if (!back || !(back.pos >= 0 && back.pos < T_END - T_BACK)) fail(`title: back from the race, the theme did not start again from its top (${back ? back.pos.toFixed(2) : 'not playing'})`);
+  await dump('title', buf, 0, T_END);
+}
+
+/**
  * The results' music (?music=suno): from the menu music to the win theme,
  * which plays from its top and then round its loop (checked to the sample
  * against the file, either side of the join), then back to the menu music;
@@ -1513,34 +1604,7 @@ async function offlineResults(): Promise<void> {
   const seam = song.log.find((e) => e.what === 'loop')?.at ?? NaN;
   if (!(start >= T_WIN && start < T_WIN + 0.2)) fail(`results: the win theme started at ${r3(start)}, not as asked (${T_WIN})`);
   if (!(Math.abs(seam - (start + m.loop[1])) < 0.001)) fail(`results: the loop came at ${r3(seam)}, not at the loop's end (${r3(start + m.loop[1])})`);
-  // Either side of the join, the render against the file (one layer, at full level).
-  const scale = VOL.music * MUSIC_TRIM * 10 ** (m.level / 20) * 10 ** ((m.laps[m.layers[0].id][2] ?? 0) / 20);
-  const data = src.buffers[0].getChannelData(0);
-  const out = buf.getChannelData(2);
-  const side = (t0: number, t1: number, pos0: number) => {
-    const n = Math.floor((t1 - t0) * SR);
-    const i0 = Math.round(t0 * SR);
-    const j0 = Math.round((pos0 + src.shift) * SR);
-    let best = 0;
-    let bestScore = -Infinity;
-    for (let lag = -240; lag <= 240; lag++) {
-      let s2 = 0;
-      for (let k = 0; k < n; k++) s2 += data[j0 + k] * (out[i0 + k + lag] ?? 0);
-      if (s2 > bestScore) {
-        bestScore = s2;
-        best = lag;
-      }
-    }
-    let res = 0;
-    let sig = 0;
-    for (let k = 0; k < n; k++) {
-      const want = data[j0 + k] * scale;
-      const d = out[i0 + k + best] - want;
-      res += d * d;
-      sig += want * want;
-    }
-    return { lag: best, residual: sig > 0 ? 10 * Math.log10(res / sig + 1e-12) : NaN };
-  };
+  const side = (t0: number, t1: number, pos0: number) => matchFile(buf, src, t0, t1, pos0);
   if (Number.isFinite(seam)) {
     const a = side(seam - 0.4, seam - XFADE - 0.002, m.loop[1] - 0.4);
     const b = side(seam + 0.03, seam + 0.4, m.loop[0] + 0.03);
@@ -1797,6 +1861,7 @@ async function main(): Promise<void> {
     ['speeds', offlineSpeeds],
     ['music', offlineMusic],
     ['song', offlineSongs],
+    ['title', offlineTitle],
     ['results', offlineResults],
     ['styles', offlineStyles],
     ['stack', offlineStack],

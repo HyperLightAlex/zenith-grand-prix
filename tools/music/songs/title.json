@@ -1,0 +1,13 @@
+{
+  "id": "title",
+  "title": "Blue Night Sky",
+  "layers": {"all": ["Lead Vocals", "Drums", "Bass", "Guitar", "Keyboard", "Percussion", "Strings", "Synth", "Other", "Brass", "Woodwinds"]},
+  "laps": {"all": [0, 0, 0]},
+  "filter": null,
+  "loop": [12, 64],
+  "ending": 90,
+  "master": {"gain": -4.6, "lowShelf": [200, 3.0], "highShelf": [4000, 2.0]},
+  "loudness": -20.5,
+  "codec": "mp3",
+  "quality": 0
+}

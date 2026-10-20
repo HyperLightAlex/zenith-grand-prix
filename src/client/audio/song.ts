@@ -39,13 +39,15 @@ export const SONGS: Record<string, string> = {
 };
 
 /**
- * Songs for screens, by what they are for: the results when the player's
- * team has won ('results-win', also the Grand Prix award for first) or lost
- * ('results-loss'). They play whole, every layer in, from the top and then
+ * Songs for screens, by what they are for: the menus ('title', the title
+ * theme: the menus' music wherever there is no other), and the results when
+ * the player's team has won ('results-win', also the Grand Prix award for
+ * first) or lost ('results-loss'). They play whole, every layer in, from the top and then
  * round their loop for as long as the screen is up. Small (one layer), so
  * they are decoded once there is an audio context and kept.
  */
 export const SCREEN_SONGS: Record<string, string> = {
+  title: 'music/title/',
   'results-win': 'music/results-win/',
 };
 
@@ -459,7 +461,7 @@ interface Playing {
 /**
  * A recorded song as a music track (same interface as the synthesised
  * ones): the race music, built up lap by lap to its ending at the finish;
- * or, given a `screen`, the music of a screen (the results), every layer in
+ * or, given a `screen`, the music of a screen (the menus, the results), every layer in
  * and looping until the screen moves on.
  */
 export class SongTrack implements MusicTrack {

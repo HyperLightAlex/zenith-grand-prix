@@ -4,8 +4,9 @@ A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
 For now this is an experiment, heard only with `?music=suno` in the address.
 Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
-(紅砂のレース) and Helios Drop (午間の雲上レース). The results have one when
-the player's team wins (トロフィーセレモニー; see "Screens' music" below).
+(紅砂のレース) and Helios Drop (午間の雲上レース). The menus have a title
+theme (Blue Night Sky) and the results one for when the player's team wins
+(トロフィーセレモニー; see "Screens' music" below).
 What each song was asked for, and what is still to make, is in
 [prompts.md](prompts.md).
 
@@ -139,13 +140,19 @@ every layer in (it is built as one layer), from its top, then round its
 loop until the screen moves on, when the menu music comes back. Small, so
 it is decoded as soon as there is an audio context and kept.
 
+The menus play the title theme, Blue Night Sky (E major, 152 BPM, like the
+opening): on the title screen and every menu after it, and in the wait
+after a race song's ending. It starts from its top whenever the menus'
+music starts (after a race, say), carries on from screen to screen, and
+loops bars 12 to 64 (82 s; it skips the song's stop at bar 64 and its last
+section), at -20.5 LUFS.
+
 The results play the win theme, トロフィーセレモニー, when the player's team
 won the round (and the Grand Prix award, for first place). It goes
 straight in from its top and loops bars 22 to 48 (51 s; the first 95 s
 play through before it), at -19.5 LUFS: between the menu music (-24) and a
 race's first lap (-18.5). A loss has no song yet, so the menu music plays
-on, as before; a song at `results-loss` will be played for it. The title
-and the hangar can have theirs the same way.
+on, as before; a song at `results-loss` will be played for it.
 
 ## Making one
 
@@ -218,10 +225,12 @@ and the hangar can have theirs the same way.
      render matching the layers summed by hand to the sample on both sides,
      with no click at the joins, each lap's level, and the menu music
      coming in after the ending.
-   - `node tools/audio-check.mjs --only results` checks the results' music
-     the same way: in from the menu music, round its loop to the sample, and
-     back; `URL=http://127.0.0.1:8090/ node tools/results-check.mjs` races to
-     the results in a real browser and checks the music fits the outcome.
+   - `node tools/audio-check.mjs --only title,results` checks the screens'
+     songs the same way: from the top, round the loop to the sample, and
+     back; `URL=http://127.0.0.1:8090/ node tools/screen-music-check.mjs`
+     checks them in a real browser: the title theme on the title screen and
+     on into the menus, and races to the results to check the music fits
+     the outcome.
    - `URL=http://127.0.0.1:8090/ node tools/song-check.mjs` races in a real
      browser (after `npm run build` and `npm start`; `TRACK=canyon` for
      Canyon's) and checks what each

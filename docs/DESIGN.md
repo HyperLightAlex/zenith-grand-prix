@@ -298,7 +298,8 @@ when the player's team won the round (and the Grand Prix award for first):
 トロフィーセレモニー, looping until the screen is left; a loss keeps the
 menu music until it has a song of its own. See
 [tools/music](../tools/music/README.md), and its prompts.md for what each
-song was asked for.
+song was asked for. The menus' music is the title theme, Blue Night Sky,
+in the same J-rock as the opening.
 
 ### Free steering
 
