@@ -41,7 +41,7 @@ s in), which the build's `lead` takes care of; and a take can hold two
 sounds (the heavy swing's did), which split into two takes.
 
 **The second round** (hits redone, blocks, guns, parry, shield break,
-momentum hit, knockout, wall): asked for one shot, the carbine came back
+momentum hit, knockout, ring-out): asked for one shot, the carbine came back
 as bursts, several shots each with a falling zap, over a noise bed. The
 game plays one sound a shot (three shots 67 ms apart), so the build cuts
 each burst at its shots (sounds.json `split`, the times read off the
@@ -72,9 +72,8 @@ due for another look later.
 | Combat | block, block_heavy | in the game: one take each, a block for light blows and one for heavy (block_heavy was added for these) |
 | Combat | parry, guard_break, momentum_hit, ko | in the game |
 | Combat | shot_carbine, shot_scatter, bullet_hit | in the game (the carbine's takes, bursts, cut into eleven single shots; the scatter cannon's played 12% faster) |
-| Combat | ringout | asked for |
-| Movement and the circuit | wall | in the game |
-| Movement and the circuit | the rest (boost … recover, 14 to 24) | asked for |
+| Combat | ringout | in the game (two takes, sent as "wall_collision") |
+| Movement and the circuit | boost … recover (14 to 24) | asked for |
 | Abilities | overdrive … aegis (25 to 31) | asked for |
 
 ## 1. Combat

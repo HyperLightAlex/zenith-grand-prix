@@ -63,6 +63,13 @@
     "parry-3.mp3"
    ]
   },
+  "ringout": {
+   "gain": 6.47,
+   "files": [
+    "ringout-1.mp3",
+    "ringout-2.mp3"
+   ]
+  },
   "shot_carbine": {
    "gain": 0.22,
    "files": [
@@ -99,13 +106,6 @@
     "swing_light-1.mp3",
     "swing_light-2.mp3",
     "swing_light-3.mp3"
-   ]
-  },
-  "wall": {
-   "gain": 1.4,
-   "files": [
-    "wall-1.mp3",
-    "wall-2.mp3"
    ]
   }
  }

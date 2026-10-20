@@ -2,6 +2,7 @@
 """Turn Suno's sound-effect takes into the files the game plays.
 
     python3 tools/sfx/build.py <folder> [<folder> ...] [--out public/sfx]
+    python3 tools/sfx/build.py --drop <sound>[,<sound>...]
     python3 tools/sfx/build.py --reference <audio-check dump folder>
 
 <folder> holds the takes, each named after the sound it is for, as in
@@ -27,6 +28,10 @@ level sounds.json gives it), so a recording comes into the mix where the old
 sound sat. The loudness here is the loudest tenth of a second, K-weighted as
 LUFS are: right for a short, sharp sound, where an average over its length
 would count its silence.
+
+--drop takes sounds' recordings out (their files, and their place in the
+manifest), so they go back to their recipes: for takes built as the wrong
+sound, say.
 
 --reference measures the synthesised sounds, from what
 `node tools/audio-check.mjs --quick --only sfx --dump <dir>` renders (the
@@ -305,14 +310,33 @@ def build(folders, out):
         os.path.relpath(mpath, ROOT), len(manifest['sounds']), sum(len(s['files']) for s in manifest['sounds'].values()), total / 1024))
 
 
+def drop(names, out):
+    mpath = os.path.join(out, 'manifest.json')
+    manifest = json.load(open(mpath))
+    for name in names:
+        s = manifest['sounds'].pop(name, None)
+        if s is None:
+            print('  %s had no recordings' % name)
+            continue
+        for f in s['files']:
+            if os.path.exists(os.path.join(out, f)):
+                os.remove(os.path.join(out, f))
+        print('  %s: %d takes taken out; its recipe plays again' % (name, len(s['files'])))
+    json.dump(manifest, open(mpath, 'w'), indent=1)
+    open(mpath, 'a').write('\n')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('folders', nargs='*')
     ap.add_argument('--out', default=os.path.join(ROOT, 'public/sfx'))
     ap.add_argument('--reference', metavar='DUMP')
+    ap.add_argument('--drop', metavar='SOUNDS')
     a = ap.parse_args()
     if a.reference:
         reference(a.reference)
+    elif a.drop:
+        drop(a.drop.split(','), a.out)
     elif a.folders:
         build(a.folders, a.out)
     else:

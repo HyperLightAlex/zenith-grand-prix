@@ -31,7 +31,9 @@ audio context. They are small: a few seconds at most, tens of kilobytes a take.
 2. **Build them**: `python3 tools/sfx/build.py <folder>`. Each sound found
    replaces what that sound had before; the rest keep theirs. It prints each
    take: where the sound started in the file, its length, whether it stayed
-   stereo, its loudness and peak, and whether it was cut short.
+   stereo, its loudness and peak, and whether it was cut short. Takes built
+   as the wrong sound come out again with `--drop <sound>`, which puts its
+   recipe back.
 3. **Check them**: `node tools/audio-check.mjs --quick --only recorded`
    plays each one as the game does, next to its recipe, and fails on one
    that clips, starts late, or sits more than 1.5 dB from where the recipe
