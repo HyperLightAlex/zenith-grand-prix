@@ -8,7 +8,7 @@
  "loop": [44.88184,113.50432],
  "ending": 133.99152,
  "end": 144.57635,
- "laps": {"drums":[null,-3.62,0.0],"bass":[-2.0,-3.62,0.0],"melody":[-2.0,-3.62,0.0],"percussion":[null,null,0.0]},
+ "laps": {"drums":[null,1.88,0.0],"bass":[-2.0,1.88,0.0],"melody":[-2.0,1.88,0.0],"percussion":[null,null,0.0]},
  "filter": null,
  "lowShelf": {"layers":["drums","bass"],"hz":140,"db":[0,0,5]},
  "finale": {"lap":3,"cycle":4,"entry":[116.95583,118.65605,113.55431,115.25525],"loop":[113.55431,133.94152],"phrase":{"bars":4,"first":2}},
