@@ -379,6 +379,16 @@ const RECIPES: Record<SfxName, Recipe> = {
     v.noise({ d: 0.12, g: 2.2, ft: 'bandpass', ff: 520, fq: 12 });
     v.noise({ d: 0.015, g: 0.4, ft: 'highpass', ff: 3000 });
   },
+  // A heavy blow on a guard: the block's ring a fourth lower and longer,
+  // over a thump, the shield straining under it.
+  block_heavy: (v) => {
+    v.tone({ f: 405, f2: 370, d: 0.36, g: 0.8, a: 0.001 });
+    v.tone({ f: 1040, d: 0.2, g: 0.3 });
+    v.tone({ f: 130, f2: 60, d: 0.2, g: 0.7, a: 0.002 });
+    v.noise({ k: 'p', d: 0.18, g: 1.6, a: 0.001, ft: 'lowpass', ff: 1800, ff2: 300 });
+    v.noise({ d: 0.2, g: 1.8, ft: 'bandpass', ff: 390, fq: 10, am: 60 });
+    v.noise({ d: 0.02, g: 0.4, ft: 'highpass', ff: 3000 });
+  },
   parry: (v) => {
     v.noise({ d: 0.02, g: 0.5, ft: 'highpass', ff: 7000 });
     v.noise({ d: 0.16, g: 0.3, s: 'swell', a: 0.05, ft: 'bandpass', ff: 3000, ff2: 9000, fq: 3 });
@@ -761,6 +771,7 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   hit_light: m(0.4, 0.08, 1, 0.07),
   hit_heavy: m(0.58, 0.12, 1, 0.05),
   block: m(0.52, 0.1, 1, 0.05),
+  block_heavy: m(0.55, 0.12, 1, 0.05),
   parry: m(0.4, 0.35, 2, 0.02),
   // Bright sounds trimmed after play: they cut through far more than their peak suggests.
   guard_break: m(0.3, 0.25, 2),

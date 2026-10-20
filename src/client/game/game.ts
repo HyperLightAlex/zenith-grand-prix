@@ -1582,7 +1582,7 @@ export class Game {
         const h = this.heard(e.victim);
         if (h.volume > 0.02) {
           const melee = ATTACKS[e.attack].kind === 'melee';
-          const name = e.blocked ? 'block' : e.charged ? 'momentum_hit' : melee ? (e.heavy ? 'hit_heavy' : 'hit_light') : 'bullet_hit';
+          const name = e.blocked ? (e.heavy ? 'block_heavy' : 'block') : e.charged ? 'momentum_hit' : melee ? (e.heavy ? 'hit_heavy' : 'hit_light') : 'bullet_hit';
           A.play(name, { volume: h.volume * (melee ? 1 : 0.6) * quiet, pan: h.pan });
         }
         break;

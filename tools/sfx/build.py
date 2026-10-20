@@ -38,7 +38,8 @@ check then compares each recording with its recipe as the game plays them.
 import argparse, glob, json, os, re, subprocess, sys, tempfile
 import numpy as np
 import soundfile as sf
-from scipy.signal import butter, lfilter, sosfilt
+from fractions import Fraction
+from scipy.signal import butter, lfilter, resample_poly, sosfilt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -122,9 +123,11 @@ def high_shelf(x, sr, f0, gain_db):
     return lfilter(np.array(b) / a[0], np.array(a) / a[0], x, axis=0)
 
 
-def shape(x, sr, cfg):
+def shape(x, sr, cfg, split=False):
     """
     What sounds.json asks of a sound's takes, before they are cut:
+      speed   play it this much faster, pitch and all, as a tape run fast
+              (a take that sounds slowed down)
       hp      a high-pass (Hz), for low end the sound should not have: the
               game's music has the bass and the kick, and a boom under
               every blow would sit on them
@@ -136,11 +139,15 @@ def shape(x, sr, cfg):
               first strong moment, not its loudest: a hit's crack can come
               before a louder thud, and must not be cut off.)
     """
+    if cfg.get('speed'):
+        r = Fraction(1 / cfg['speed']).limit_denominator(200)
+        x = resample_poly(x, r.numerator, r.denominator, axis=0)
     if cfg.get('hp'):
         x = sosfilt(butter(4, cfg['hp'], 'highpass', fs=sr, output='sos'), x, axis=0)
     if cfg.get('bright'):
         x = high_shelf(x, sr, *cfg['bright'])
-    if cfg.get('lead') is not None:
+    # (A take to be split is cut at its listed times instead.)
+    if cfg.get('lead') is not None and not split:
         a = np.abs(x).max(axis=1)
         n = int(0.005 * sr)
         env = np.sqrt(np.convolve(a ** 2, np.ones(n) / n, mode='same'))
@@ -150,6 +157,28 @@ def shape(x, sr, cfg):
         if peak > s:
             x[:peak - s] *= (np.linspace(0, 1, peak - s, endpoint=False) ** 2)[:, None]
     return x.astype(np.float32)
+
+
+def split(x, sr, times, most):
+    """
+    One take into several, at `times` (seconds into the take as it came,
+    before any change of speed): each from just before its time to the next
+    (or `most` seconds on), the last part fading. For a take that holds a run
+    of the same sound, a burst of shots say, where the game plays them one at
+    a time.
+    """
+    pre = int(PRE_ROLL * sr)
+    out = []
+    for k, t in enumerate(times):
+        s = max(0, int(t * sr) - pre)
+        e = min(len(x), int(times[k + 1] * sr) - pre if k + 1 < len(times) else len(x), s + int(most * sr))
+        y = x[s:e].copy()
+        if pre:
+            y[:pre] *= np.linspace(0, 1, pre, endpoint=False)[:, None]
+        fade = max(int(0.015 * sr), int(len(y) * 0.35))
+        y[-fade:] *= (np.cos(np.linspace(0, np.pi, fade)) * 0.5 + 0.5)[:, None]
+        out.append(y)
+    return out
 
 
 def cut(x, sr, most):
@@ -230,7 +259,15 @@ def build(folders, out):
         most = cfg.get('max', max(2 * cfg.get('asked', 1.5), cfg.get('asked', 1.5) + 0.5))
         built = []
         for i, path in sorted(takes[name]):
-            x = shape(read(path), SR, cfg)
+            times = cfg.get('split', {}).get(os.path.splitext(os.path.basename(path))[0])
+            x = shape(read(path), SR, cfg, split=bool(times))
+            if times:
+                # (Times are into the take as it came; a change of speed moves them.)
+                parts = split(x, SR, [t / cfg.get('speed', 1) for t in times], most)
+                for y in parts:
+                    y, side = mono_or_stereo(y)
+                    built.append((i, path, y, 0.0, False, side, loudness(y, SR)))
+                continue
             y, at, capped = cut(x, SR, most)
             y, side = mono_or_stereo(y)
             built.append((i, path, y, at, capped, side, loudness(y, SR)))

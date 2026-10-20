@@ -40,6 +40,18 @@ the blow's. Listen before deciding what a take is for. Whooshes still build slow
 s in), which the build's `lead` takes care of; and a take can hold two
 sounds (the heavy swing's did), which split into two takes.
 
+**The second round** (hits redone, blocks, guns, parry, shield break,
+momentum hit, knockout, wall): asked for one shot, the carbine came back
+as bursts, several shots each with a falling zap, over a noise bed. The
+game plays one sound a shot (three shots 67 ms apart), so the build cuts
+each burst at its shots (sounds.json `split`, the times read off the
+spectrograms: the third burst's are 60 to 71 ms apart, close to the
+game's own) into single shots, eleven in all. The scatter cannon sounded
+slowed down; the build plays it 12% faster (`speed`). The blocks and
+some hits still carry deep low end (the light block's energy centres
+near 50 Hz: an electric buzz), which was kept, these having been chosen
+by ear; only what lies below about 30 to 80 Hz is cut.
+
 Name each file you keep after its sound, as in the table: `hit_heavy.wav`;
 a second take of the same sound `hit_heavy-2.wav`, and so on. Sounds heard
 over and over (marked "takes: 3") sound stamped out with one recording, so
@@ -56,9 +68,13 @@ due for another look later.
 | For | Sound | Status |
 |---|---|---|
 | Combat | swing_light, swing_heavy | in the game: anime takes (the heavy one take holding two swings, split) |
-| Combat | hit_light, block, hit_heavy | in the game: nine takes of the hit_light prompt, sorted by ear (below) |
-| Combat | parry … bullet_hit (6 to 13) | asked for |
-| Movement and the circuit | boost … recover (14 to 24) | asked for |
+| Combat | hit_light, hit_heavy | in the game: the anime prompts' takes, the second round |
+| Combat | block, block_heavy | in the game: one take each, a block for light blows and one for heavy (block_heavy was added for these) |
+| Combat | parry, guard_break, momentum_hit, ko | in the game |
+| Combat | shot_carbine, shot_scatter, bullet_hit | in the game (the carbine's takes, bursts, cut into eleven single shots; the scatter cannon's played 12% faster) |
+| Combat | ringout | asked for |
+| Movement and the circuit | wall | in the game |
+| Movement and the circuit | the rest (boost … recover, 14 to 24) | asked for |
 | Abilities | overdrive … aegis (25 to 31) | asked for |
 
 ## 1. Combat
@@ -96,6 +112,10 @@ What a fight sounds like: the blows and the guns. Heard most, so first.
 ```
 0.4 second anime shield block sound effect, hard bright energy clash with an electric zing, instant attack, dry, no bass, no reverb
 ```
+
+5b. **block_heavy**: a heavy blow stopped by a raised guard (the block
+    above is for the light ones). Made from a prompt of its own, not kept
+    here.
 
 6. **parry**: a guard raised at the last moment, turning the blow aside.
    The anime sword-clash ring. Takes: 2.

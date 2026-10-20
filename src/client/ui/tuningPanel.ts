@@ -32,6 +32,7 @@ const SOUND_TEST: Array<[SfxName, string]> = [
   ['hit_light', 'Light hit'],
   ['hit_heavy', 'Heavy hit'],
   ['block', 'Block'],
+  ['block_heavy', 'Block (heavy blow)'],
   ['parry', 'Parry'],
   ['tell', 'Wind-up: parry it'],
   ['tell_dodge', 'Wind-up: dodge it'],

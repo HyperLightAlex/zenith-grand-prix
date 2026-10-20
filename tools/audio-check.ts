@@ -15,7 +15,7 @@
 
 import type { AudioScene, SfxName, SfxOptions } from '../src/client/audio/audio';
 import { mtof } from '../src/client/audio/dsp';
-import { SFX_NAMES } from '../src/client/audio/sfx';
+import { SFX_META, SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
 import { GAP, SETLISTS, SKIP_FADE, type SetlistInfo, type SetlistManifest, type ShuffleBag } from '../src/client/audio/setlist';
 import { SCREEN_SONGS, SONGS, XFADE, type SongInfo, type SongManifest, type SongSource } from '../src/client/audio/song';
@@ -2106,8 +2106,9 @@ async function offlineRecorded(): Promise<void> {
     if (r.peak < SILENT) fail(`recorded ${name} is silent (peak ${r.peak.toFixed(4)})`);
     if (r.peak >= CLIP) fail(`recorded ${name} clips (peak ${r.peak.toFixed(3)})`);
     // Allow a little: a sound with a random spread of pitch varies from play
-    // to play, and played off its pitch, a recording loses some of its top.
-    if (Math.abs(lr - ls - trim) > 1.5) fail(`recorded ${name} is ${(lr - ls).toFixed(1)} dB from its recipe (trim ${trim} dB)`);
+    // to play (the recipe too: the bullet hit's ±15% moves it over a dB),
+    // and played off its pitch, a recording loses some of its top.
+    if (Math.abs(lr - ls - trim) > 1.5 + 8 * SFX_META[name].vary) fail(`recorded ${name} is ${(lr - ls).toFixed(1)} dB from its recipe (trim ${trim} dB)`);
     // As soon after its cue as the recipe: anything more is silence in front of it.
     const starts = startOf(rec.buf, at, at + SLOT);
     const recipeStarts = startOf(synth.buf, at, at + SLOT);

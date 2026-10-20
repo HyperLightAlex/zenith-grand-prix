@@ -4,9 +4,15 @@
  },
  "block": {
   "asked": 0.4,
-  "hp": 80,
+  "hp": 30,
   "lead": 0.005,
-  "max": 0.6
+  "max": 0.45
+ },
+ "block_heavy": {
+  "asked": 0.5,
+  "hp": 30,
+  "lead": 0.005,
+  "max": 0.5
  },
  "boost": {
   "asked": 0.8
@@ -15,7 +21,10 @@
   "asked": 0.6
  },
  "bullet_hit": {
-  "asked": 0.1
+  "asked": 0.1,
+  "hp": 150,
+  "lead": 0.003,
+  "max": 0.2
  },
  "bump": {
   "asked": 0.2
@@ -30,22 +39,28 @@
   "asked": 1.2
  },
  "guard_break": {
-  "asked": 0.8
+  "asked": 0.8,
+  "hp": 100,
+  "lead": 0.005,
+  "max": 1.0
  },
  "hit_heavy": {
   "asked": 0.6,
-  "hp": 200,
+  "hp": 50,
   "lead": 0.005,
-  "max": 0.5
+  "max": 0.6
  },
  "hit_light": {
   "asked": 0.3,
-  "hp": 200,
+  "hp": 80,
   "lead": 0.005,
-  "max": 0.3
+  "max": 0.35
  },
  "ko": {
-  "asked": 1.5
+  "asked": 1.5,
+  "hp": 40,
+  "lead": 0.005,
+  "max": 1.6
  },
  "land": {
   "asked": 0.5
@@ -54,7 +69,10 @@
   "asked": 1.2
  },
  "momentum_hit": {
-  "asked": 0.8
+  "asked": 0.8,
+  "hp": 40,
+  "lead": 0.005,
+  "max": 1.1
  },
  "overdrive": {
   "asked": 1.5
@@ -63,7 +81,10 @@
   "asked": 0.4
  },
  "parry": {
-  "asked": 1.0
+  "asked": 1.0,
+  "hp": 200,
+  "lead": 0.003,
+  "max": 1.2
  },
  "pulse": {
   "asked": 0.8
@@ -78,10 +99,35 @@
   "asked": 1.0
  },
  "shot_carbine": {
-  "asked": 0.2
+  "asked": 0.2,
+  "hp": 100,
+  "max": 0.12,
+  "split": {
+   "shot_carbine-1": [
+    0.028,
+    0.146,
+    0.207,
+    0.268
+   ],
+   "shot_carbine-2": [
+    0.062,
+    0.189,
+    0.309
+   ],
+   "shot_carbine-3": [
+    0.056,
+    0.119,
+    0.19,
+    0.25
+   ]
+  }
  },
  "shot_scatter": {
-  "asked": 0.5
+  "asked": 0.5,
+  "speed": 1.12,
+  "hp": 40,
+  "lead": 0.005,
+  "max": 0.9
  },
  "snare_shot": {
   "asked": 0.6
@@ -105,6 +151,9 @@
   "asked": 0.5
  },
  "wall": {
-  "asked": 0.4
+  "asked": 0.4,
+  "hp": 60,
+  "lead": 0.005,
+  "max": 0.6
  }
 }

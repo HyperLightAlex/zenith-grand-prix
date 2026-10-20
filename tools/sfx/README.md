@@ -35,7 +35,8 @@ audio context. They are small: a few seconds at most, tens of kilobytes a take.
 3. **Check them**: `node tools/audio-check.mjs --quick --only recorded`
    plays each one as the game does, next to its recipe, and fails on one
    that clips, starts late, or sits more than 1.5 dB from where the recipe
-   was. Add `--dump <dir>` to get WAVs to listen to.
+   was (more for a sound with a wide spread of pitch, which varies from
+   play to play). Add `--dump <dir>` to get WAVs to listen to.
 
 What the build does to a take: shapes it, where sounds.json asks (below);
 cuts it from just before the sound starts to where it has died away (or to
@@ -57,6 +58,8 @@ round in the build, per sound, in sounds.json:
 | `bright` | `[Hz, dB]`: a high shelf, for more edge | the heavy hit, +3 dB from 3 kHz |
 | `lead` | start this many seconds before the take first comes within 6 dB of its loudest, rising into it, so a slow swell peaks when the game plays it (the blow lands about 0.1 s after the swing sound starts) | swings 0.03 to 0.05, hits 0.005 |
 | `max` | the longest it may run, seconds, the last third fading | 0.35 to 0.8 |
+| `speed` | play it this much faster, pitch and all, as a tape run fast: for a take that sounds slowed down | the scatter cannon, 1.12 |
+| `split` | `{take: [seconds, ...]}`: cut that take into one take per time listed, each running to the next: for a take that holds a run of the same sound, where the game plays them one at a time | the carbine's bursts, into single shots |
 | `db` | lift or lower the sound in the mix, from where its recipe sat | |
 
 A take that is right to begin with keeps more of itself, so re-prompting

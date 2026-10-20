@@ -1,14 +1,32 @@
 {
  "sounds": {
   "block": {
-   "gain": -0.28,
+   "gain": -0.25,
    "files": [
-    "block-1.mp3",
-    "block-2.mp3"
+    "block-1.mp3"
+   ]
+  },
+  "block_heavy": {
+   "gain": 1.34,
+   "files": [
+    "block_heavy-1.mp3"
+   ]
+  },
+  "bullet_hit": {
+   "gain": -4.68,
+   "files": [
+    "bullet_hit-1.mp3",
+    "bullet_hit-2.mp3"
+   ]
+  },
+  "guard_break": {
+   "gain": 1.3,
+   "files": [
+    "guard_break-1.mp3"
    ]
   },
   "hit_heavy": {
-   "gain": 4.79,
+   "gain": 2.12,
    "files": [
     "hit_heavy-1.mp3",
     "hit_heavy-2.mp3",
@@ -16,12 +34,56 @@
    ]
   },
   "hit_light": {
-   "gain": -1.89,
+   "gain": -3.34,
    "files": [
     "hit_light-1.mp3",
     "hit_light-2.mp3",
-    "hit_light-3.mp3",
-    "hit_light-4.mp3"
+    "hit_light-3.mp3"
+   ]
+  },
+  "ko": {
+   "gain": 8.16,
+   "files": [
+    "ko-1.mp3",
+    "ko-2.mp3"
+   ]
+  },
+  "momentum_hit": {
+   "gain": 5.35,
+   "files": [
+    "momentum_hit-1.mp3",
+    "momentum_hit-2.mp3"
+   ]
+  },
+  "parry": {
+   "gain": 3.1,
+   "files": [
+    "parry-1.mp3",
+    "parry-2.mp3",
+    "parry-3.mp3"
+   ]
+  },
+  "shot_carbine": {
+   "gain": 0.22,
+   "files": [
+    "shot_carbine-1.mp3",
+    "shot_carbine-2.mp3",
+    "shot_carbine-3.mp3",
+    "shot_carbine-4.mp3",
+    "shot_carbine-5.mp3",
+    "shot_carbine-6.mp3",
+    "shot_carbine-7.mp3",
+    "shot_carbine-8.mp3",
+    "shot_carbine-9.mp3",
+    "shot_carbine-10.mp3",
+    "shot_carbine-11.mp3"
+   ]
+  },
+  "shot_scatter": {
+   "gain": -0.89,
+   "files": [
+    "shot_scatter-1.mp3",
+    "shot_scatter-2.mp3"
    ]
   },
   "swing_heavy": {
@@ -37,6 +99,13 @@
     "swing_light-1.mp3",
     "swing_light-2.mp3",
     "swing_light-3.mp3"
+   ]
+  },
+  "wall": {
+   "gain": 1.4,
+   "files": [
+    "wall-1.mp3",
+    "wall-2.mp3"
    ]
   }
  }

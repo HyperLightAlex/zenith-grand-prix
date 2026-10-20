@@ -11,7 +11,7 @@ export type SfxName =
   | 'count_beep' | 'count_go' | 'launch'
   | 'boost' | 'dash' | 'lock' | 'unlock' | 'denied'
   | 'carve_tier' | 'carve_burst'
-  | 'swing_light' | 'swing_heavy' | 'hit_light' | 'hit_heavy' | 'block' | 'parry' | 'guard_break'
+  | 'swing_light' | 'swing_heavy' | 'hit_light' | 'hit_heavy' | 'block' | 'block_heavy' | 'parry' | 'guard_break'
   | 'tell' | 'tell_dodge' | 'momentum' | 'momentum_hit' | 'ringout'
   | 'shot_carbine' | 'shot_scatter' | 'bullet_hit'
   | 'wall' | 'bump' | 'ko' | 'critical'
