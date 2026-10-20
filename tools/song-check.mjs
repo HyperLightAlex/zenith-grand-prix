@@ -1,7 +1,8 @@
 // A race with a circuit's recorded song (?music=suno), in headless Chromium:
 // checks that the song loads, comes in lap by lap on bar lines, loops, and
-// goes to its ending at the finish, and measures each layer's level on each
-// lap from the page's own audio graph.
+// goes to its ending at the finish, that the synthesised music's stingers
+// and jingles stay out of it, and measures each layer's level on each lap
+// from the page's own audio graph.
 //
 //   URL=http://127.0.0.1:8090/ node tools/song-check.mjs [skip seconds, default 70]
 //   TRACK=canyon ...   another circuit with a song (default meridian)
@@ -32,6 +33,16 @@ await page.waitForFunction(() => window.game !== undefined, null, { timeout: 180
 // Software rendering is slow: draw nothing, so the race runs at its own pace.
 await page.evaluate(() => { const r = window.game.renderer; r.render = () => {}; });
 await page.evaluate(() => window.game.audio.unlock());
+// Every sound the game asks for, to see which cues it leaves out over the song.
+await page.evaluate(() => {
+  const a = window.game.audio;
+  const play = a.play.bind(a);
+  window.__played = [];
+  a.play = (name, opts) => {
+    window.__played.push(name);
+    play(name, opts);
+  };
+});
 const t0 = Date.now();
 // (The race's song: the menus and the results can have songs of their own now.)
 await page.waitForFunction(() => { const m = window.game.audio.debugInfo().music; return m?.name === 'race' && m.song?.state === 'playing'; }, null, { timeout: 120000 });
@@ -141,6 +152,14 @@ if (finishAt) {
   // sees it on the frame, and can queue the ending 0.12 s on, before that.)
   check(!!e && e.at >= finishAt - 0.25 && e.at <= finishAt + 0.12 + barMax + 0.25, `the ending starts on a bar line within a bar of the finish (${e ? (e.at - finishAt).toFixed(2) + ' s after' : 'never'})`);
 }
+
+// Over a song, the synthesised music's stingers and jingles are left out
+// (the song marks those moments itself); the lap chime is not.
+const played = await page.evaluate(() => window.__played);
+const musical = played.filter((n) => ['lap_phase', 'final_lap', 'finish', 'win', 'lose'].includes(n));
+check(musical.length === 0, `no stingers or jingles over the song (${musical.join(', ') || 'none played'})`);
+const chimes = played.filter((n) => n === 'lap').length;
+check(chimes > 0, `the lap chime still plays as the player's laps count (${chimes})`);
 
 // Levels: each layer by lap, from the meters (mean power over each stretch, in dB).
 const dB = (p) => (p > 1e-12 ? (10 * Math.log10(p)).toFixed(1) : '  -  ');

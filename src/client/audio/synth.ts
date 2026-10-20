@@ -327,6 +327,10 @@ export class SynthAudio implements AudioEngine {
     return this.track instanceof SongTrack ? (this.track.stingers as Partial<Record<SfxName, number>> | null) : null;
   }
 
+  recordedMusic(): boolean {
+    return this.track instanceof SongTrack || this.track instanceof SetlistTrack;
+  }
+
   // ---- hooks for tools/audio-check ------------------------------------------
 
   /** The last node before the speakers. Tap an AnalyserNode here to measure. */

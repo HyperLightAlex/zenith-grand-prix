@@ -954,8 +954,9 @@ export class Game {
       if (kind === 'cup') gpStore.awardMedal(ev.cup, ev.difficulty, medal);
       else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
       this.menus.replace('award', { kind, place, medal });
-      this.audio.play(place === 1 ? 'win' : 'lose');
+      // (The music first: the jingle is only for the synthesised music.)
       this.music('results', place === 1 ? 'win' : 'loss');
+      this.resultJingle(place === 1);
     } else {
       this.menus.replace('briefing', { kind });
     }
@@ -1389,7 +1390,7 @@ export class Game {
     o.on('roundEnd', (msg) => {
       this.match = msg.match;
       const me = this.session instanceof NetSession && this.session.localId >= 0 ? this.session.race.mechs[this.session.localId] : null;
-      if (me && this.state === 'race') this.audio.play(msg.round.winner === me.team ? 'win' : 'lose');
+      if (me && this.state === 'race') this.resultJingle(msg.round.winner === me.team);
       if (this.menus.screen === 'results') this.menus.refresh();
       // (Should the room's word come after the results are up, their music follows it.)
       if (this.state === 'results' && this.menus.screen === 'results') this.resultsMusic();
@@ -1719,12 +1720,27 @@ export class Game {
     }
   }
 
-  /** A race stinger, moved into the key of this circuit's music. */
+  /**
+   * A race stinger, moved into the key of this circuit's music. Over a
+   * recorded song only the lap chime plays: the song marks the lap phases
+   * and the finish itself (see recordedMusic in audio.ts), and the chime is
+   * the player's word that their lap counted.
+   */
   private sting(name: SfxName): void {
+    if (name !== 'lap' && this.audio.recordedMusic?.()) return;
     // (A recorded song can have keys of its own for them.)
     const keys = this.audio.stingerKey?.() ?? STINGER_KEY[this.session.track.def.theme ?? 'meridian'];
     const semis = keys?.[name] ?? 0;
     this.audio.play(name, semis ? { pitch: 2 ** (semis / 12) } : undefined);
+  }
+
+  /**
+   * The jingle for a round or a Grand Prix won or lost, after the synthesised
+   * music. With a recorded song playing there is none: the race song plays
+   * its ending, and the results have songs of their own.
+   */
+  private resultJingle(won: boolean): void {
+    if (!this.audio.recordedMusic?.()) this.audio.play(won ? 'win' : 'lose');
   }
 
   /**
@@ -1760,7 +1776,7 @@ export class Game {
     if (this.mode !== 'online' && this.match && !this.roundScored) {
       this.roundScored = true;
       const round = recordRound(this.match, race);
-      this.audio.play(round.winner === race.mechs[this.session.localId].team ? 'win' : 'lose');
+      this.resultJingle(round.winner === race.mechs[this.session.localId].team);
     }
     this.view.cam.mode = 'orbit';
     this.view.cam.shiftX = 0;

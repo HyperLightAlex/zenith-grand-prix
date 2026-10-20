@@ -98,6 +98,15 @@ export interface AudioEngine {
    * of its own for them (a recorded song); null to use the circuit's.
    */
   stingerKey?(): Partial<Record<SfxName, number>> | null;
+  /**
+   * Whether the music playing now is a recording (a song, or the hangar's
+   * setlist). A song marks the race's moments itself: its drums come in on
+   * lap 2, it changes for the last lap, it plays its ending at the finish,
+   * and the results have songs of their own. So the stingers and jingles
+   * written for the synthesised music, which over a song would play in
+   * another sound and off its beat, are left out. Optional: false without.
+   */
+  recordedMusic?(): boolean;
   /** The hangar's setlist: what plays now (null when it is not, or between tracks). */
   nowPlaying?(): { id: string; title: string } | null;
   /** The hangar's setlist: on to the next track. */
