@@ -247,13 +247,16 @@ describe('updated Sunhawk production preparation', () => {
     rig.keepFeetOnRoad = true;
     for (const pose of [POSES.tuck, POSES.boost, POSES.carveRight, POSES.guard]) {
       const before = JSON.stringify(pose);
+      // The skates' orientation with the body upright: whatever the lean, they keep it.
+      rig.body.rotation.set(0, 0, 0);
+      rig.apply(pose); rig.root.updateMatrixWorld(true);
+      const level = [rig.joints.ankleL, rig.joints.ankleR].map(j => j.getWorldQuaternion(new THREE.Quaternion()));
       for (const bank of [-.45, 0, .45]) {
         rig.body.rotation.set(.06, .03, bank);
         rig.apply(pose); rig.root.updateMatrixWorld(true);
-        for (const [joint, foot] of [[rig.joints.ankleL,pose.footL],[rig.joints.ankleR,pose.footR]] as const) {
+        for (const [i, [joint, foot]] of ([[rig.joints.ankleL,pose.footL],[rig.joints.ankleR,pose.footR]] as const).entries()) {
           expect(joint.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(foot[0],dims.ankleY+foot[1],foot[2]))).toBeLessThan(.035);
-          const target = new THREE.Quaternion().setFromEuler(new THREE.Euler(foot[3],foot[4],0,'YXZ'));
-          expect(joint.getWorldQuaternion(new THREE.Quaternion()).angleTo(target)).toBeLessThan(.001);
+          expect(joint.getWorldQuaternion(new THREE.Quaternion()).angleTo(level[i])).toBeLessThan(.001);
         }
       }
       expect(JSON.stringify(pose)).toBe(before);

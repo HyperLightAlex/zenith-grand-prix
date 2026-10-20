@@ -49,7 +49,11 @@ export interface Pose {
   shR: V3;
   elR: V3;
   wrR: V3;
-  /** Feet in body space: x, lift above the road, z, pitch, yaw. */
+  /**
+   * Feet in body space: x, lift above the road, z, pitch, and yaw. The yaw
+   * turns the skate off straight on from its shin (positive toward +x), so
+   * 0 is a foot in line with its leg.
+   */
   footL: [number, number, number, number, number];
   footR: [number, number, number, number, number];
   wingL: V3;
@@ -70,8 +74,8 @@ export function makePose(p: Partial<Pose> = {}): Pose {
     shR: [0, 0, -0.12],
     elR: [-0.15, 0, 0],
     wrR: [0, 0, 0],
-    footL: [0.85, 0, 0, 0, -0.08],
-    footR: [-0.85, 0, 0, 0, 0.08],
+    footL: [0.85, 0, 0, 0, 0],
+    footR: [-0.85, 0, 0, 0, 0],
     wingL: [0, 0, 0],
     wingR: [0, 0, 0],
     ...p,
@@ -149,6 +153,7 @@ const basis = new THREE.Matrix4();
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 const qBodyInv = new THREE.Quaternion();
 const footTarget = new THREE.Vector3();
+const shinSide = new THREE.Vector3();
 const aimFrom = new THREE.Vector3();
 const aimTo = new THREE.Vector3();
 const qAim = new THREE.Quaternion();
@@ -305,17 +310,15 @@ export class MechRig {
     this.skirts.back.rotation.x = Math.max(0, -Math.min(this.swing.l, this.swing.r) - 0.08) * 0.9;
   }
 
-  private solveLeg(side: 1 | -1, foot: [number, number, number, number, number]): void {
+  /**
+   * The thigh's frame (kx, ky, kz, in hips space) with the ankle at `target`
+   * (body space). Returns the hip-to-ankle length, kept within reach.
+   */
+  private bendLeg(side: 1 | -1, target: THREE.Vector3): number {
     const d = this.dims;
-    const J = this.joints;
-    const hip = side === 1 ? J.hipL : J.hipR;
-    const knee = side === 1 ? J.kneeL : J.kneeR;
-    const ankle = side === 1 ? J.ankleL : J.ankleR;
     // Vector from the hip joint to the ankle target, in hips-local space.
-    v.set(side * d.hipX, -d.hipDrop, 0).applyQuaternion(qh).add(J.hips.position);
-    footTarget.set(foot[0], d.ankleY + foot[1], foot[2]);
-    if (this.keepFeetOnRoad) footTarget.applyQuaternion(qBodyInv);
-    v.subVectors(footTarget, v).applyQuaternion(qInv);
+    v.set(side * d.hipX, -d.hipDrop, 0).applyQuaternion(qh).add(this.joints.hips.position);
+    v.subVectors(target, v).applyQuaternion(qInv);
     const a = d.thigh;
     const b = d.shin;
     let len = v.length();
@@ -332,6 +335,39 @@ export class MechRig {
     ky.copy(u).multiplyScalar(-Math.cos(A)).addScaledVector(n, -Math.sin(A));
     kz.copy(n).multiplyScalar(Math.cos(A)).addScaledVector(u, -Math.sin(A));
     kx.crossVectors(ky, kz);
+    return len;
+  }
+
+  /**
+   * Which way the shin of the leg just bent points, seen from above, in the
+   * hips' parent's space: along the line the knee bends in (the bend plane's
+   * normal, crossed with up).
+   */
+  private shinHeading(): number {
+    shinSide.copy(kx).applyQuaternion(qh);
+    return Math.hypot(shinSide.x, shinSide.z) > 1e-3 ? Math.atan2(-shinSide.z, shinSide.x) : 0;
+  }
+
+  private solveLeg(side: 1 | -1, foot: [number, number, number, number, number]): void {
+    const d = this.dims;
+    const J = this.joints;
+    const hip = side === 1 ? J.hipL : J.hipR;
+    const knee = side === 1 ? J.kneeL : J.kneeR;
+    const ankle = side === 1 ? J.ankleL : J.ankleR;
+    footTarget.set(foot[0], d.ankleY + foot[1], foot[2]);
+    // The skate points straight on from the shin, keeping the asked pitch and
+    // turning the asked yaw off that line. Kept on the road, it takes the
+    // shin's line as the pose stands on the level: as the body banks over
+    // the skates in a turn, they hold their line on the road rather than
+    // swinging round with the knees.
+    let heading = 0;
+    if (this.keepFeetOnRoad) {
+      this.bendLeg(side, footTarget);
+      heading = this.shinHeading();
+      footTarget.applyQuaternion(qBodyInv);
+    }
+    const len = this.bendLeg(side, footTarget);
+    if (!this.keepFeetOnRoad) heading = this.shinHeading();
     basis.makeBasis(kx, ky, kz);
     qThigh.setFromRotationMatrix(basis);
     hip.quaternion.copy(qThigh);
@@ -339,12 +375,13 @@ export class MechRig {
     const sw = Math.atan2(-ky.z, ky.y);
     if (side === 1) this.swing.l = sw;
     else this.swing.r = sw;
+    const a = d.thigh;
+    const b = d.shin;
     const cosB = (a * a + b * b - len * len) / (2 * a * b);
     const B = Math.acos(Math.min(1, Math.max(-1, cosB)));
     qKnee.setFromAxisAngle(X_AXIS, Math.PI - B);
     knee.quaternion.copy(qKnee);
-    // Keep the skate at the asked pitch and yaw whatever the leg is doing.
-    eul.set(foot[3], foot[4], 0, 'YXZ');
+    eul.set(foot[3], heading + foot[4], 0, 'YXZ');
     qFoot.setFromEuler(eul);
     if (this.keepFeetOnRoad) qFoot.premultiply(qBodyInv);
     qTmp.copy(qh).multiply(qThigh).multiply(qKnee).invert().multiply(qFoot);

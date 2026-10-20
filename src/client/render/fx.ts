@@ -962,7 +962,7 @@ const shieldVertex = /* glsl */ `
 
 const shieldFragment = /* glsl */ `
   uniform vec3 uColor;
-  uniform float uPower, uTime;
+  uniform float uPower, uTime, uFill;
   varying vec3 vN;
   varying vec3 vV;
   varying vec3 vP;
@@ -973,16 +973,23 @@ const shieldFragment = /* glsl */ `
     float l = max(max(abs(sin(p.x * 2.0)), abs(sin(p.x + p.y * 1.73))), abs(sin(p.x - p.y * 1.73)));
     float grid = smoothstep(0.93, 1.0, l);
     float a = (0.05 + fres * 0.45 + grid * 0.4) * uPower;
-    gl_FragColor = vec4(uColor * a * 1.5, a);
+    // A body of colour across the face (uFill), so the field reads against a
+    // bright sky as well as a dark track: it covers what is behind it as
+    // tinted glass would, more so at the rim and along the lattice.
+    float cover = min(uFill * (1.0 + fres + grid * 0.7) * uPower, 0.78);
+    // Premultiplied: the tint stands in for what it covers, and the glow adds
+    // on top (with no fill, exactly the purely additive field it once was).
+    gl_FragColor = vec4(uColor * (cover + a * a * 1.5), cover);
   }`;
 
-function shieldMaterial(color: number): THREE.ShaderMaterial {
+/** `fill`: how much of what is behind the field's face it covers, at full power; 0 is a glow alone. */
+function shieldMaterial(color: number, fill: number): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(color) }, uPower: { value: 0 }, uTime: { value: 0 } },
+    uniforms: { uColor: { value: new THREE.Color(color) }, uPower: { value: 0 }, uTime: { value: 0 }, uFill: { value: fill } },
     vertexShader: shieldVertex,
     fragmentShader: shieldFragment,
     transparent: true,
-    blending: THREE.AdditiveBlending,
+    premultipliedAlpha: true,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -991,7 +998,8 @@ function shieldMaterial(color: number): THREE.ShaderMaterial {
 /** Curved energy shield shown while a mech guards (and, in amber, while it rams). */
 export function makeShield(color: number): THREE.Mesh {
   const geo = new THREE.SphereGeometry(4.2, 10, 8, Math.PI * 0.24, Math.PI * 0.52, Math.PI * 0.22, Math.PI * 0.5);
-  const mesh = new THREE.Mesh(geo, shieldMaterial(color));
+  // Solid enough to read at a glance from behind, past the mech holding it.
+  const mesh = new THREE.Mesh(geo, shieldMaterial(color, 0.42));
   mesh.position.set(0, 4.2, 0.6);
   mesh.visible = false;
   mesh.renderOrder = 7;
@@ -1000,7 +1008,8 @@ export function makeShield(color: number): THREE.Mesh {
 
 /** The Aegis: a full bubble around a shielded mech. */
 export function makeBubble(color: number, radius: number): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 18, 12), shieldMaterial(color));
+  // A glow alone: the camera often sits inside it, and the mech within must show.
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 18, 12), shieldMaterial(color, 0));
   mesh.position.set(0, radius * 0.78, 0);
   mesh.scale.set(1, 1.08, 1);
   mesh.visible = false;
