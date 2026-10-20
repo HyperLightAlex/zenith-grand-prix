@@ -129,10 +129,12 @@ def shape(x, sr, cfg):
               game's music has the bass and the kick, and a boom under
               every blow would sit on them
       bright  [Hz, dB]: a high shelf, for a sound that wants more edge
-      lead    start this many seconds before the take's loudest moment,
-              rising into it: a sound that builds slowly would otherwise
-              peak after the moment the game plays it for (a swing's
-              whoosh after the blow has landed)
+      lead    start this many seconds before the take first comes within
+              6 dB of its loudest, rising into it: a sound that builds
+              slowly would otherwise peak after the moment the game plays
+              it for (a swing's whoosh after the blow has landed). (Its
+              first strong moment, not its loudest: a hit's crack can come
+              before a louder thud, and must not be cut off.)
     """
     if cfg.get('hp'):
         x = sosfilt(butter(4, cfg['hp'], 'highpass', fs=sr, output='sos'), x, axis=0)
@@ -142,7 +144,7 @@ def shape(x, sr, cfg):
         a = np.abs(x).max(axis=1)
         n = int(0.005 * sr)
         env = np.sqrt(np.convolve(a ** 2, np.ones(n) / n, mode='same'))
-        peak = int(np.argmax(env))
+        peak = int(np.argmax(env >= env.max() * 10 ** (-6 / 20)))
         s = max(0, peak - int(cfg['lead'] * sr))
         x = x[s:].copy()
         if peak > s:
@@ -252,7 +254,7 @@ def build(folders, out):
             heard.append(loudness(e, esr))
             print('%-14s %-22s %7.3f %7.3f %6s %7.1f %6.1f  %s' % (
                 name, os.path.basename(path)[:22], at, len(y) / SR, 'wide' if y.shape[1] == 2 else 'mono', target, 20 * np.log10(np.abs(y).max()),
-                ('cut at %.1f s' % most) if capped else ''))
+                ('cut at %.2f s' % most) if capped else ''))
         # Where the synthesised sound sat, and any trim on top (sounds.json).
         gain = ref[name] - 10 * np.log10(np.mean(10 ** (np.array(heard) / 10))) + cfg.get('db', 0)
         manifest['sounds'][name] = {'gain': round(float(gain), 2), 'files': files}

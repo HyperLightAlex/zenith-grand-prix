@@ -1,28 +1,38 @@
 {
  "sounds": {
+  "block": {
+   "gain": 2.45,
+   "files": [
+    "block-1.mp3",
+    "block-2.mp3",
+    "block-3.mp3"
+   ]
+  },
   "hit_heavy": {
-   "gain": 4.54,
+   "gain": 2.06,
    "files": [
     "hit_heavy-1.mp3",
     "hit_heavy-2.mp3"
    ]
   },
   "hit_light": {
-   "gain": -2.41,
+   "gain": -1.89,
    "files": [
     "hit_light-1.mp3",
-    "hit_light-2.mp3"
+    "hit_light-2.mp3",
+    "hit_light-3.mp3",
+    "hit_light-4.mp3"
    ]
   },
   "swing_heavy": {
-   "gain": -4.85,
+   "gain": -3.17,
    "files": [
     "swing_heavy-1.mp3",
     "swing_heavy-2.mp3"
    ]
   },
   "swing_light": {
-   "gain": -11.46,
+   "gain": -9.48,
    "files": [
     "swing_light-1.mp3",
     "swing_light-2.mp3",

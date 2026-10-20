@@ -28,6 +28,15 @@ instant attack, and ends "dry, no bass, no boom, no reverb" (the big ones:
 see README.md), but a take that is right to begin with keeps more of
 itself.
 
+**The anime prompts worked.** The hit_light prompt's takes came back
+bright (centred at 3 to 5 kHz), short (gone in half a second) and dry,
+and nine of them were enough for three sounds: the single clean cracks
+for hit_light; the crackling, ringing ones (more electric, more energy)
+for block; and the two with a thud or a double crunch under the crack for
+hit_heavy. Whooshes still build slowly (the light swings peak 0.35 to 0.45
+s in), which the build's `lead` takes care of; and a take can hold two
+sounds (the heavy swing's did), which split into two takes.
+
 Name each file you keep after its sound, as in the table: `hit_heavy.wav`;
 a second take of the same sound `hit_heavy-2.wav`, and so on. Sounds heard
 over and over (marked "takes: 3") sound stamped out with one recording, so
@@ -43,8 +52,9 @@ due for another look later.
 
 | For | Sound | Status |
 |---|---|---|
-| Combat | swing_light, swing_heavy, hit_light, hit_heavy (1 to 4) | in the game from the first, cinematic takes, shaped in the build; asked for again, anime |
-| Combat | block … bullet_hit (5 to 13) | asked for |
+| Combat | swing_light, swing_heavy | in the game: anime takes (the heavy one take holding two swings, split) |
+| Combat | hit_light, block, hit_heavy | in the game: nine takes of the hit_light prompt, sorted by ear and by measure (below) |
+| Combat | parry … bullet_hit (6 to 13) | asked for |
 | Movement and the circuit | boost … recover (14 to 24) | asked for |
 | Abilities | overdrive … aegis (25 to 31) | asked for |
 
