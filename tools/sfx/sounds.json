@@ -81,7 +81,10 @@
   "max": 1.1
  },
  "overdrive": {
-  "asked": 1.5
+  "asked": 1.5,
+  "hp": 60,
+  "lead": 0.005,
+  "max": 3.0
  },
  "pad": {
   "asked": 0.4,

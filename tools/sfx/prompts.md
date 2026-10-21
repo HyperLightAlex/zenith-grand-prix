@@ -75,9 +75,11 @@ due for another look later.
 | Combat | parry, guard_break, momentum_hit, ko | in the game |
 | Combat | shot_carbine, shot_scatter, bullet_hit | in the game (the carbine's takes, bursts: the last shot of each, whole; the scatter cannon's played 12% faster) |
 | Combat | ringout | in the game (two takes, sent as "wall_collision") |
-| Movement and the circuit | boost, launch, pad, wall | in the game (boost cut to its first second: the afterburner layer carries a boost on) |
+| Movement and the circuit | launch, pad, wall | in the game |
+| Movement and the circuit | boost | its recipe, by choice: the take was tiring on a sound heard on every boost, so it went to Overdrive |
 | Movement and the circuit | dash, carve_burst, takeoff, land, bump, fall, recover | synthesised for now, by choice |
-| Abilities | overdrive … aegis (25 to 31) | asked for |
+| Abilities | overdrive | in the game: boost's take, whole (2.2 s of roar, its tail faded by 3 s) |
+| Abilities | breakaway … aegis (26 to 31) | asked for |
 
 ## 1. Combat
 
@@ -248,7 +250,9 @@ Each wants its own clear identity: a player should know what was just
 used from the sound alone.
 
 25. **overdrive**: the Forward's Overdrive firing, on the speed lap: a
-    few seconds far past top speed.
+    few seconds far past top speed. (Made: the take made for boost below,
+    which suits a sound heard once in a while better than one heard on
+    every boost.)
 
 ```
 1.5 second anime power-up sound effect, turbine spooling up into a bright roaring jet blast, quick rising whine, dry, no long rumble, no reverb

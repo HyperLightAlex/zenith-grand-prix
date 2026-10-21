@@ -12,12 +12,6 @@
     "block_heavy-1.mp3"
    ]
   },
-  "boost": {
-   "gain": 1.41,
-   "files": [
-    "boost-1.mp3"
-   ]
-  },
   "bullet_hit": {
    "gain": -4.68,
    "files": [
@@ -65,6 +59,12 @@
    "files": [
     "momentum_hit-1.mp3",
     "momentum_hit-2.mp3"
+   ]
+  },
+  "overdrive": {
+   "gain": 3.87,
+   "files": [
+    "overdrive-1.mp3"
    ]
   },
   "pad": {
