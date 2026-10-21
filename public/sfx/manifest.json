@@ -12,12 +12,6 @@
     "block_heavy-1.mp3"
    ]
   },
-  "boost": {
-   "gain": 1.55,
-   "files": [
-    "boost-1.mp3"
-   ]
-  },
   "bullet_hit": {
    "gain": -4.68,
    "files": [
@@ -29,6 +23,12 @@
    "gain": -3.1,
    "files": [
     "bump-1.mp3"
+   ]
+  },
+  "dash": {
+   "gain": -10.57,
+   "files": [
+    "dash-1.mp3"
    ]
   },
   "guard_break": {

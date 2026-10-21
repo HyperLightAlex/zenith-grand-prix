@@ -76,9 +76,9 @@ due for another look later.
 | Combat | shot_carbine, shot_scatter, bullet_hit | in the game (the carbine's takes, bursts: the last shot of each, whole; the scatter cannon's played 12% faster) |
 | Combat | ringout | in the game (two takes, sent as "wall_collision") |
 | Movement and the circuit | launch, pad, wall | in the game |
-| Movement and the circuit | boost | in the game: a second take, short (half a second, sent as "quick_boost"); the first, 2 s of roar, was tiring on a sound heard on every boost, so it went to Overdrive |
-| Movement and the circuit | bump | in the game (its take is a deep thud, nearly all of it near 55 Hz: on a phone's or a laptop's speakers, which give little below 150 to 250 Hz, it comes out about 15 dB under its recipe) |
-| Movement and the circuit | dash, carve_burst, takeoff, land, fall, recover | synthesised for now, by choice |
+| Movement and the circuit | boost | its recipe, by choice: the take was tiring on a sound heard on every boost, so it went to Overdrive |
+| Movement and the circuit | dash, bump | in the game (dash's take sent as "quick_boost"; bump's is a deep thud, nearly all of it near 55 Hz: on a phone's or a laptop's speakers, which give little below 150 to 250 Hz, it comes out about 15 dB under its recipe) |
+| Movement and the circuit | carve_burst, takeoff, land, fall, recover | synthesised for now, by choice |
 | Abilities | overdrive | in the game: boost's take, whole (2.2 s of roar, its tail faded by 3 s) |
 | Abilities | breakaway … aegis (26 to 31) | asked for |
 
