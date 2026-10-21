@@ -775,7 +775,8 @@ const m = (level: number, send = 0, prio = 1, vary = 0, gap = 0.03, duck?: [numb
  * the game plays each at), by group, against the race music (which, with
  * the engine and the wind, averages about -19, -15.5 and -13.5 on laps 1, 2
  * and 3: the audio check's "mix" part): the light blows, the light block and
- * the carbine at -12, over the music on every lap; the light swing and the
+ * a burst of the carbine at -12, over the music on every lap (the game fires
+ * it three shots at a time, overlapping, so a shot alone is about -16); the light swing and the
  * bullet hit (heard in streams) a little under (-14, -15); the heavy blows,
  * the heavy block and the scatter cannon at -9 (the heavy swing -11); the
  * parry, the momentum hit, the ring-out and the guard break over those (-8,
@@ -813,7 +814,7 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   momentum: m(0.75, 0.08, 1, 0.04),
   momentum_hit: m(0.719, 0.12, 2, 0.04),
   ringout: m(0.546, 0.2, 2, 0.03),
-  shot_carbine: m(1.172, 0.06, 1, 0.05),
+  shot_carbine: m(0.74, 0.06, 1, 0.05),
   shot_scatter: m(1.094, 0.12, 1, 0.04),
   bullet_hit: m(1.94, 0.04, 0, 0.15, 0.08),
   wall: m(0.699, 0.1, 1, 0.06),

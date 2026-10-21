@@ -4,6 +4,7 @@
   "layers": {"all": ["Lead Vocals", "Drums", "Bass", "Guitar", "Keyboard", "Percussion", "Strings", "Synth", "Other", "Brass", "Woodwinds"]},
   "laps": {"all": [0, 0, 0]},
   "filter": null,
+  "ride": {"stems": ["Keyboard", "Synth", "Lead Vocals"], "max": -16, "bars": [0, 90]},
   "loop": [12, 64],
   "ending": 90,
   "master": {"gain": -4.6, "lowShelf": [200, 3.0], "highShelf": [4000, 2.0]},

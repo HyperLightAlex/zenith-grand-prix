@@ -68,6 +68,36 @@ def shelf(x, sr, f0, gain_db, kind):
     return lfilter(np.array(b) / a[0], np.array(a) / a[0], x, axis=0)
 
 
+def ride(audio, names, top, sr, a, b, n):
+    """Turn the stems in `names` down together wherever their sum is louder
+    than `top` (LUFS over 400 ms, as momentary loudness is measured) between
+    samples a and b, by as much as it is over, and no more. Returns the gain
+    (dB) at every sample, for the report."""
+    meter = pyln.Meter(sr, block_size=0.4)
+    x = sum(audio[s][:n].astype(np.float64) for s in names)
+    hop, win = int(0.025 * sr), int(0.4 * sr)
+    starts = np.arange(a, max(a + 1, min(b, n) - win), hop)
+    over = np.zeros(len(starts))
+    for i, s0 in enumerate(starts):
+        v = meter.integrated_loudness(x[s0:s0 + win])
+        if np.isfinite(v) and v > top:
+            over[i] = top - v
+    # Each window over the line is turned down all through: a moment takes
+    # the deepest cut of every window it is in. Then eased in and out over
+    # about a tenth of a second, so it rides rather than switches.
+    k = win // hop
+    cut = np.array([over[max(0, j - k + 1):j + 1].min() for j in range(len(over))])
+    ease = np.hanning(7)[1:-1]
+    cut = np.convolve(cut, ease / ease.sum(), mode='same')
+    g = np.zeros(n)
+    g[starts[0]:starts[-1] + 1] = np.interp(np.arange(starts[0], starts[-1] + 1), starts, cut)
+    lin = 10 ** (g / 20)
+    for s in names:
+        audio[s] = audio[s].copy()
+        audio[s][:n] *= lin[:, None]
+    return g
+
+
 def db(x):
     return 20 * np.log10(np.sqrt(np.mean(np.square(x))) + 1e-12)
 
@@ -121,6 +151,15 @@ def main():
     def file_pos(t, piece):
         """Song time t (s), in cut piece `piece`, as a position in the files (s)."""
         return (offs[piece] + t * sr - cut[piece][0]) / sr
+    # A sound far louder than the rest where it comes in (`ride`): turned
+    # down there, all of its stems together, to `max`.
+    rd = cfg.get('ride')
+    if rd:
+        g = ride(audio, rd['stems'], rd['max'], sr, int(bars[rd['bars'][0]] * sr), int(bars[rd['bars'][1]] * sr), n)
+        worst = ['bar %d %.1f' % (i, g[int(bars[i] * sr):int(bars[i + 1] * sr)].min()) for i in range(len(bars) - 1)
+                 if bars[i + 1] * sr <= n and g[int(bars[i] * sr):int(bars[i + 1] * sr)].min() < -0.5]
+        print('ride: %s turned down (dB, the most in each bar): %s' % (', '.join(rd['stems']), ', '.join(worst) or 'nowhere'))
+
     m = cfg['master']
     layers = {}
     for lid, names in cfg['layers'].items():

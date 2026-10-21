@@ -1,7 +1,7 @@
 // Drives a rig from simulation state: blends the pose library by mode and
 // action, adds the skating stride and body lean, and sizes thruster flames.
 import type * as THREE from 'three';
-import { ACT, ATTACKS, MODE, PACE, REV_PERFECT, REV_RED, START, startGrade, type MechState } from '../../../sim/index';
+import { ACT, ATTACKS, BTN, CLASSES, MODE, PACE, REV_PERFECT, REV_RED, START, startGrade, type MechState } from '../../../sim/index';
 import { COLORS } from '../palette';
 import { setFlameTime } from './frames';
 import { CLIPS, POSES } from './poses';
@@ -15,6 +15,8 @@ const toward = (v: number, target: number, rate: number, dt: number) => v + (tar
 const staggerMirror = mirrorPose(POSES.stagger);
 /** Seconds the push off the line takes to settle into the tuck. */
 const PUSH_SECS = 0.45;
+/** Seconds a gun stays up after a burst with nothing more fired (and as long as its trigger is held). */
+const AIM_KEEP = 0.6;
 const carveLeft = mirrorPose(POSES.carveRight);
 
 export class MechAnimator {
@@ -60,6 +62,15 @@ export class MechAnimator {
   private stumbleW = 0;
   /** Standing still or nearly: the stance out of the tuck, eased. */
   private idleW = 0;
+  /**
+   * A gun kept up between bursts: the pose it was raised in (and its kick),
+   * how far up it is, and how long it stays up with nothing more fired.
+   */
+  private aimPose: Pose | null = null;
+  private aimKick: Pose | null = null;
+  private aimW = 0;
+  private aimKeep = 0;
+  private aimAttack = -1;
   /**
    * How far the gun arm should be turned onto its target this drawing (0 to
    * 1): up while a gun attack is raised. The view does the aiming, since it
@@ -210,6 +221,22 @@ export class MechAnimator {
     }
     const t = m.actT + alpha;
     this.aimWeight = 0;
+    // A gun fired in bursts (the Midfielder's carbine) is kept up between
+    // them, for as long as its trigger is held (it fires on its own while
+    // held) and a moment after the last, so a run of bursts is one raised
+    // arm, not a salute each time. Anything else the mech does but shoot
+    // drops it at once. A one-shot gun (the scatter cannon) still raises and
+    // lowers with its shot.
+    const atk = m.act === ACT.ATTACK ? ATTACKS[m.attack] : null;
+    const gunShot = !!atk && atk.kind === 'shot' && !!atk.shot;
+    const keeps = gunShot && atk!.shot!.count > 1;
+    if (keeps) this.aimKeep = AIM_KEEP;
+    else if (!gunShot && (m.act !== ACT.NONE || m.retired)) {
+      this.aimKeep = 0;
+      this.aimW = 0;
+      this.aimPose = null;
+    } else if (this.aimKeep > 0) this.aimKeep -= dt;
+    const trigger = !m.retired && (m.prevButtons & BTN.X) !== 0 && CLASSES[m.role].primary === this.aimAttack;
     if (m.act === ACT.ATTACK) {
       const a = ATTACKS[m.attack];
       const clip = CLIPS[m.attack];
@@ -217,17 +244,26 @@ export class MechAnimator {
       const wind = fromTuck ? clip.speedWind! : clip.wind;
       const hit = fromTuck ? clip.speedHit! : clip.hit;
       if (a.kind === 'shot' && a.shot) {
-        // Hold the aim; each shot kicks.
-        const up = ease(clamp01(t / Math.max(3, a.windup)));
-        const down = 1 - ease(clamp01((t - a.windup - a.active) / Math.max(1, a.recovery)));
-        blendPose(P, wind, Math.min(up, down));
-        this.aimWeight = Math.min(up, down);
+        // Raise the gun (or keep it up from the last burst) and hold the aim;
+        // each shot kicks. A gun kept up comes down after its burst, once
+        // nothing more is fired (below); a one-shot gun in its recovery.
+        const up = Math.max(ease(clamp01(t / Math.max(3, a.windup))), this.aimW);
+        const down = keeps || this.aimW > 0 ? 1 : 1 - ease(clamp01((t - a.windup - a.active) / Math.max(1, a.recovery)));
+        const w = Math.min(up, down);
+        blendPose(P, wind, w);
+        this.aimWeight = w;
+        if (keeps) {
+          this.aimW = w;
+          this.aimPose = wind;
+          this.aimKick = hit;
+          this.aimAttack = m.attack;
+        }
         const shotIdx = Math.floor((t - a.windup) / a.shot.interval);
         if (t >= a.windup && shotIdx < a.shot.count && shotIdx !== this.lastShotT) {
           this.lastShotT = shotIdx;
           this.recoil = 1;
         }
-        if (this.recoil > 0.01) blendPose(P, hit, this.recoil * Math.min(up, down));
+        if (this.recoil > 0.01) blendPose(P, hit, this.recoil * w);
       } else if (t < a.windup) {
         blendPose(P, wind, easeOut(clamp01(t / a.windup)));
       } else if (t < a.windup + a.active) {
@@ -249,6 +285,13 @@ export class MechAnimator {
     } else if (m.act === ACT.DASH) {
       const k = Math.sin(clamp01(t / m.actDur) * Math.PI);
       blendPose(P, POSES.dash, k * 0.9);
+    } else if (this.aimPose && this.aimW > 0.001) {
+      // Between bursts: kept up while the trigger is held or the moment lasts, then lowered.
+      this.aimW = this.aimKeep > 0 || trigger ? 1 : toward(this.aimW, 0, 9, dt);
+      blendPose(P, this.aimPose, ease(this.aimW));
+      if (this.recoil > 0.01 && this.aimKick) blendPose(P, this.aimKick, this.recoil * this.aimW);
+      this.aimWeight = ease(this.aimW);
+      if (this.aimW <= 0.001) this.aimPose = null;
     }
     this.recoil = toward(this.recoil, 0, 16, dt);
 

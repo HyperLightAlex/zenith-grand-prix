@@ -2132,6 +2132,27 @@ async function offlineRecorded(): Promise<void> {
       await dump(`recipepre-${name}`, synth.buf, at, at + Math.min(SLOT, r.onset + r.dur + 0.5), 2);
     }
   }
+  // The carbine as the game fires it: three shots 4 ticks apart, which
+  // overlap into one burst, louder than a shot; its level is set by the burst.
+  if (manifest.sounds.shot_carbine) {
+    const BURSTS = 3;
+    const bc: Cue[] = [];
+    for (let b = 0; b < BURSTS; b++) for (let k = 0; k < 3; k++) bc.push({ t: LEAD + b * 2 + (k * 4) / 60, run: (a) => a.play('shot_carbine') });
+    const len = LEAD + BURSTS * 2;
+    const rb = await render(len, bc, () => OFF, undefined, undefined, true, undefined, undefined, undefined, '/sfx/');
+    const sb = await render(len, bc, () => OFF);
+    for (let b = 0; b < BURSTS; b++) {
+      const at = LEAD + b * 2;
+      table('recorded sfx (offline, default volumes)').push({
+        name: `shot_carbine burst ${b + 1}`,
+        takes: manifest.sounds.shot_carbine.files.length,
+        'LUFS (100 ms)': Math.round(kLoudness(rb.buf, at, at + 2, 2) * 10) / 10,
+        'recipe LUFS': Math.round(kLoudness(sb.buf, at, at + 2, 2) * 10) / 10,
+        peak: r3(analyse(rb.buf, at, at + 2).peak),
+      });
+    }
+    await dump('recordedpre-shot_carbine-burst', rb.buf, LEAD, len, 2);
+  }
 }
 
 /**

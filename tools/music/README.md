@@ -234,6 +234,18 @@ browser (the setup plays it, the corner shows it, M and a tap go on).
      type (`highpass` or `lowpass`), cutoff, laps, and how it comes off:
      `cut` at the bar line, or `sweep` open up to it. Meridian has none
      now: a filtered layer turned up to the others' level sounds thin.
+   - `ride` (optional): a sound that comes in now and then far louder than
+     the rest, turned down where it is loud, and only there: `stems` (all
+     the stems it is carved across, together), `max` (the loudest it may
+     be, LUFS over 400 ms, measured on the stems before the master) and
+     `bars` (from, to: where). The build prints how far it turned each bar
+     down. Blue Night Sky's synth (in Keyboard, Synth and Lead Vocals: the
+     three agree 0.88 to 0.94 where it plays, so they are one sound) sits
+     at -17 to -20 under the band, but on its own in the break at bars 53
+     and 54 came in at -9, 5 dB over the whole song, and at -11.5 in bar 8;
+     ridden at -16, the break sits with the rest (7 to 8 dB down there,
+     4.4 in bar 8, 2.4 at most anywhere else), and the ending's last chord
+     is left alone (bars 0 to 90).
    - `loop` and `ending`: bar numbers from step 2. Meridian loops bars 49
      to 81 (32 bars, 54 s), the best match in the song, and ends from bar
      98; Canyon loops bars 26 to 66 (40 bars, 69 s, phrase to phrase)
