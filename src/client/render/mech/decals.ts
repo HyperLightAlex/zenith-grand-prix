@@ -16,7 +16,11 @@ const sheets = new Map<string, THREE.MeshToonMaterial>();
 
 const css = (c: number) => `#${new THREE.Color(c).getHexString()}`;
 
+/** The faction a sheet is for: its variants (light or dark armour, an emblem's colour) are named `<faction>:<variant>`. */
+const factionOf = (livery: Livery) => livery.id.split(':')[0];
+
 function drawSheet(livery: Livery): HTMLCanvasElement {
+  const faction = factionOf(livery);
   const c = document.createElement('canvas');
   c.width = CELL * 4;
   c.height = CELL * ROWS;
@@ -41,7 +45,7 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
     g.fillStyle = trim;
     g.strokeStyle = trim;
     g.lineWidth = 7;
-    if (livery.id === 'mirage') {
+    if (faction === 'mirage') {
       g.beginPath();
       g.arc(64, 64, 18, 0, Math.PI * 2);
       g.fill();
@@ -56,7 +60,7 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
           g.fill();
         }
       }
-    } else if (livery.id === 'aurora') {
+    } else if (faction === 'aurora') {
       // The sword, point up, through a halo.
       g.beginPath();
       g.moveTo(64, 10);
@@ -75,7 +79,7 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
       g.beginPath();
       g.arc(64, 80, 24, 0, Math.PI * 2);
       g.stroke();
-    } else if (livery.id === 'tempest') {
+    } else if (faction === 'tempest') {
       // Three curls of wind round the middle, a lightning bolt through them.
       g.lineWidth = 7;
       for (let k = 0; k < 3; k++) {
@@ -93,7 +97,7 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
       g.lineTo(64, 56);
       g.closePath();
       g.fill();
-    } else if (livery.id === 'vanta') {
+    } else if (faction === 'vanta') {
       g.beginPath();
       g.moveTo(14, 26);
       g.lineTo(64, 112);
@@ -290,7 +294,7 @@ function paintedSheet(livery: Livery): THREE.CanvasTexture {
   const ink = inkFor(livery);
   const trim = css(livery.trim);
   const cells: Record<DecalKind, [string, string | null, number, ('fill' | 'multiply')?]> = {
-    emblem: [emblemUrlFor(livery.id), null, 0.04],
+    emblem: [emblemUrlFor(factionOf(livery)), null, 0.04],
     caution: [MARKS.caution.url, null, 0.02],
     stencil: [MARKS.stencil.url, ink, 0.08],
     warning: [MARKS.warning.url, null, 0.08],
@@ -392,22 +396,46 @@ export function markingsMaterial(livery: Livery, dark: boolean): THREE.MeshToonM
   return sheetMaterial({ ...livery, id: `${livery.id}:${dark ? 'dark' : 'light'}`, darkArmour: dark });
 }
 
+/**
+ * The markings sheet for a team's emblem laid over armour of colour `under`
+ * (where a modelled insignia was): the emblem in the team's trim, as the
+ * other markings have it, unless the trim would not show on that armour;
+ * then in the team's main colour, its accent, or ink, whichever shows first.
+ */
+export function emblemMaterial(livery: Livery, dark: boolean, under: number): THREE.MeshToonMaterial {
+  const lum = (c: number) => {
+    const k = new THREE.Color(c);
+    return 0.2126 * k.r + 0.7152 * k.g + 0.0722 * k.b;
+  };
+  const shows = (c: number) => (Math.max(lum(c), lum(under)) + 0.05) / (Math.min(lum(c), lum(under)) + 0.05) >= 2.2;
+  const ink = lum(under) > 0.18 ? 0x151a26 : 0xf4f2ee;
+  const colour = [livery.trim, livery.primary, livery.secondary].find(shows) ?? ink;
+  if (colour === livery.trim) return markingsMaterial(livery, dark);
+  return sheetMaterial({ ...livery, id: `${livery.id}:${dark ? 'dark' : 'light'}:emblem-${colour.toString(16)}`, darkArmour: dark, trim: colour });
+}
+
 /** Whether a mesh is one of a team's markings (drawn from its sheet). */
 export function isMarking(o: THREE.Object3D, livery: Livery): o is THREE.Mesh {
   return o instanceof THREE.Mesh && o.material === sheetMaterial(livery);
 }
 
 export function decal(parent: THREE.Object3D, livery: Livery, kind: DecalKind, at: [number, number, number], rot: [number, number, number], w: number, h = w): THREE.Mesh {
-  const i = CELLS.indexOf(kind);
   const geo = new THREE.PlaneGeometry(w, h);
-  const uv = geo.attributes.uv as THREE.BufferAttribute;
-  const u0 = (i % 4) / 4;
-  const v0 = 1 - (Math.floor(i / 4) + 1) / ROWS;
-  for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) / 4, v0 + uv.getY(k) / ROWS);
+  toSheetCell(geo, kind);
   const mesh = new THREE.Mesh(geo, sheetMaterial(livery));
   mesh.position.set(at[0], at[1], at[2]);
   mesh.rotation.set(rot[0], rot[1], rot[2]);
   mesh.renderOrder = 2;
   parent.add(mesh);
   return mesh;
+}
+
+/** Map a decal's own uv (0 to 1 across it, upright) onto its kind's cell of the sheet. */
+export function toSheetCell(geo: THREE.BufferGeometry, kind: DecalKind): void {
+  const i = CELLS.indexOf(kind);
+  const uv = geo.getAttribute('uv') as THREE.BufferAttribute;
+  const u0 = (i % 4) / 4;
+  const v0 = 1 - (Math.floor(i / 4) + 1) / ROWS;
+  for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) / 4, v0 + uv.getY(k) / ROWS);
+  uv.needsUpdate = true;
 }

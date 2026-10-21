@@ -10,12 +10,13 @@
 import * as THREE from 'three';
 import { ROLE, type Role } from '../../../sim/config';
 import { FRAME_DESIGNS, METALS, PAINTS, PART_SLOTS, schemeFor, type Channel, type MechBuild, type PartSlot, type Scheme } from '../../../custom/mechBuild';
-import type { Livery } from '../palette';
+import { LIVERIES, type Livery } from '../palette';
 import { isMarking, markingsMaterial } from './decals';
 import { DIMS, designBuilder } from './frames';
 import { addArmour, finishRoster, fitRosterPose, rosterAnchors, type ArmourPiece } from './importedRoster';
 import { sunhawkFittings, sunhawkJoints } from './importedSunhawk';
 import type { InkLines } from './ink';
+import { insigniaEmblem } from './insignia';
 import { frameCtx } from './parts';
 import { MechRig, type FrameDims } from './rig';
 import { rosterAsset } from './rosterAsset';
@@ -264,19 +265,43 @@ export function buildCustomFrame(role: Role, team: Livery, b: MechBuild, number:
   for (const k of ['l', 'r', 'back'] as const) rig.skirts[k].position.copy(from('hips').rig.skirts[k].position);
   for (const d of donors.values()) dispose(d.rig.root);
 
+  // A part flown for another faction than its design's wears the team's
+  // insignia, not its own: its modelled badge is left off and the team's
+  // emblem put in its place (docs/CUSTOMIZATION.md, "Faction insignias").
+  const teamIndex = LIVERIES.findIndex((l) => l.id === team.id);
+  const foreign = (s: PartSlot) => FRAME_DESIGNS[role].indexOf(of[s]) !== teamIndex;
+  const keep = (x: { part?: PartSlot; insignia?: string }, id: string) => !!x.part && of[x.part] === id && !(x.insignia && foreign(x.part));
+
   // The armour, each part's from its design, in its paint.
   const levels = [0, 1, 2].map((level) => {
     const parts: ArmourPiece[] = [];
     const lines: InkLines[] = [];
     for (const id of ids) {
       const p = pieces(id, level);
-      parts.push(...p.parts.filter((x) => x.part && of[x.part] === id));
-      lines.push(...p.lines.filter((x) => x.part && of[x.part] === id));
+      parts.push(...p.parts.filter((x) => keep(x, id)));
+      lines.push(...p.lines.filter((x) => keep(x, id)));
     }
     return { parts, lines };
   });
   // The Sunhawk's painted details with the team's lettering (a part carries no faction's marks of its own).
   addArmour(rig, joints, levels, (p) => paints.get(p.part!)!, true, ids.includes('sunhawk') ? sunhawkDetailMaterial(team) : undefined);
+  const insignias: { kept: string[]; replaced: string[] } = { kept: [], replaced: [] };
+  for (const id of ids) {
+    if (id === 'sunhawk') continue;
+    for (const a of rosterAsset(id).insignias) {
+      if (of[a.part] !== id) continue;
+      if (!foreign(a.part)) {
+        insignias.kept.push(`${id}/${a.id}`);
+        continue;
+      }
+      const under = pieces(id, 0).parts.filter((x) => x.joint === a.joint && x.part === a.part && !x.insignia && !x.detail && x.slot !== 'G');
+      const emblem = insigniaEmblem(a, under, team, paints.get(a.part)!);
+      if (!emblem) continue;
+      joints[a.joint].add(emblem);
+      insignias.replaced.push(`${id}/${a.id}`);
+    }
+  }
+  rig.root.userData.insignias = insignias;
   finishRoster(rig);
   rig.fitPose = of.chest === 'sunhawk' ? fitSunhawkPose : (p) => fitRosterPose(p, role === ROLE.DF, of.backpack);
   rig.root.userData.modelId = 'custom';

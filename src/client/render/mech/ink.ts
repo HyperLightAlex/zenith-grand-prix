@@ -14,7 +14,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import type { MechRig } from './rig';
 
 /** A joint's authored ink strokes; `part`: the customization part they belong to (docs/CUSTOMIZATION.md), where the export says. */
-export interface InkLines<J extends string = string> { joint: J; part?: PartSlot; positions: Float32Array; kinds: Float32Array }
+export interface InkLines<J extends string = string> { joint: J; part?: PartSlot; insignia?: InsigniaId; positions: Float32Array; kinds: Float32Array }
 export const geometryMarks = new Float32Array(6);
 /** The shell's weight, as a share of Step 1's traced contour (look.mechOutline). */
 export const MECH_OUTLINE_DEFAULT = 1.2;
@@ -57,6 +57,17 @@ export function readInkLines<J extends string>(o: THREE.LineSegments, joints: re
     if (!(i%2)) { kinds[i/2]=type; previous.copy(v); }
   }
   return { joint, part: partTag(o.userData.part, o.name), positions, kinds };
+}
+
+/** The faction insignias modelled into some designs' armour (docs/CUSTOMIZATION.md, "Faction insignias"). */
+export const INSIGNIA_IDS = ['chest', 'shoulderL', 'shoulderR'] as const;
+export type InsigniaId = (typeof INSIGNIA_IDS)[number];
+
+/** A mesh's `insignia` tag: the badge it is part of, or none (ordinary armour). */
+export function insigniaTag(id: unknown, name: string): InsigniaId | undefined {
+  if (id === undefined) return undefined;
+  if (!(INSIGNIA_IDS as readonly unknown[]).includes(id)) throw new Error(`Invalid insignia ${String(id)} on ${name}`);
+  return id as InsigniaId;
 }
 
 /** A mesh's `part` tag (the customization parts): one of PART_SLOTS, or none (an export from before the tags). */

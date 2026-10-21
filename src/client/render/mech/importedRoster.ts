@@ -1,4 +1,4 @@
-import { MechInkBuilder, type InkLines } from './ink';
+import { MechInkBuilder, type InkLines, type InsigniaId } from './ink';
 import * as THREE from 'three';
 import { Kit, type Slot } from './kit';
 import { rosterAsset, type CalfThruster } from './rosterAsset';
@@ -123,7 +123,7 @@ export function rosterAnchors(rig: MechRig, id: string): void {
 }
 
 /** A piece of imported armour (a roster design's or the Sunhawk's). */
-export interface ArmourPiece { joint: string; part?: PartSlot; slot: Slot|'G'; geometry: THREE.BufferGeometry; detail?: boolean }
+export interface ArmourPiece { joint: string; part?: PartSlot; insignia?: InsigniaId; slot: Slot|'G'; geometry: THREE.BufferGeometry; detail?: boolean }
 
 /**
  * Hang imported armour on a rig, level of detail by level: each joint's

@@ -8,11 +8,14 @@
 //   &bg=e4e6ec         a flat background of that colour, no floor (to compare against a model sheet)
 //   &jets=0.7          hold jet power for angle checks; &look=plain checks the plain cone
 //   &sun=-0.5,0.6,0.6  where the light comes from
+//   &painted           the markings as the anime look paints them (the pictures), drawn as they load
 import * as THREE from 'three';
 import { ROLE } from '../sim/config';
 import { buildFrame, useOldSwift } from './render/mech/frames';
 import { buildCustomFrame } from './render/mech/customFrame';
+import { rosterAsset } from './render/mech/rosterAsset';
 import { sunhawkDetailMaterial } from './render/mech/sunhawkDetails';
+import { setPaintedMarkings } from './render/mech/decals';
 import { FRAME_DESIGNS, PART_SLOTS, decodeBuild, stockBuild, type PartSlot } from '../custom/mechBuild';
 import { LIVERIES, COLORS, SUN_DIR } from './render/palette';
 import { makePose, type MechRig } from './render/mech/rig';
@@ -176,6 +179,10 @@ export function runMechDebug(): void {
   new ResizeObserver(resize).observe(canvas);
   // Keep texture loading and the three-frame jet loop visible in this focused
   // effects check. Ordinary model-sheet views remain a single render.
+  if (q.has('painted')) {
+    setPaintedMarkings(true);
+    if (jetPower === null) renderer.setAnimationLoop(() => renderer.render(scene, cam));
+  }
   if (jetPower !== null) renderer.setAnimationLoop((now) => {
     DRAWN_FLAMES.uFrame.value = Math.floor(now * .012) % 3;
     renderer.render(scene, cam);
@@ -220,6 +227,21 @@ function customCheck(role: 0 | 1 | 2, bases = [0, 1, 2, 3, 4], slots: readonly P
           if (rig.flames.filter((f) => f.bank === 'leg').length !== 2) failed.push(`${label}: ${rig.flames.filter((f) => f.bank === 'leg').length} leg thrusters`);
           const gun = rig.muzzle.parent;
           if (gun !== rig.joints.wrR && gun !== rig.joints.elR) failed.push(`${label}: muzzle on ${gun?.name}`);
+          // Each part's modelled insignia: kept on its own faction's mech, the team's emblem in its place on another's.
+          const want: { kept: string[]; replaced: string[] } = { kept: [], replaced: [] };
+          for (const s of PART_SLOTS) {
+            const id = FRAME_DESIGNS[role][b.parts[s]];
+            if (id === 'sunhawk') continue;
+            for (const a of rosterAsset(id).insignias) if (a.part === s) (b.parts[s] === base ? want.kept : want.replaced).push(`${id}/${a.id}`);
+          }
+          const got = rig.root.userData.insignias as typeof want;
+          const same = (x: string[], y: string[]) => [...new Set(x)].sort().join() === [...new Set(y)].sort().join();
+          if (!same(got.kept, want.kept) || !same(got.replaced, want.replaced)) failed.push(`${label}: insignias ${JSON.stringify(got)}, wanted ${JSON.stringify(want)}`);
+          const emblems: THREE.Mesh[] = [];
+          rig.root.traverse((o) => {
+            if (o.userData.insignia && (o as THREE.Mesh).isMesh) emblems.push(o as THREE.Mesh);
+          });
+          if (emblems.length !== got.replaced.length || emblems.some((e) => e.geometry.getAttribute('position').count < 3)) failed.push(`${label}: ${emblems.length} emblems for ${got.replaced.length} insignias`);
           rig.root.traverse((o) => {
             const mesh = o as THREE.Mesh;
             mesh.geometry?.dispose();

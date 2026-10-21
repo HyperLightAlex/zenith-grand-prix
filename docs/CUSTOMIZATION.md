@@ -152,9 +152,16 @@ place (`insignia_json`: the joint, the part, the centre, the outward normal,
 the upright direction and the width, joint-local, in the game's axes). The
 stock models do not change.
 
-**The game**: a part flown by its own faction keeps its modelled insignia
-(a stock mech always does); on any other faction's mech it is left off,
-and the team's emblem is put where it was.
+**The game** (built): a part flown by its own faction keeps its modelled
+insignia (a stock mech always does); on any other faction's mech it is left
+off, armour and ink, and the team's emblem is put where it was
+(`render/mech/insignia.ts`). The emblem comes from the team's markings sheet
+(the drawn one, or the anime look's painted one), laid over the armour the
+badge sat on so it follows its shape (only armour facing out as the badge
+does, and nothing in front of the badge's face, takes it), in the team's trim,
+or its main colour or accent where the trim would not show on that armour.
+`node tools/custom-check.mjs` checks every build keeps or replaces each
+insignia as it should, with an emblem for each one replaced.
 
 ### The game's side
 

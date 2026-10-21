@@ -1,7 +1,9 @@
 // Custom mechs: every part of every design on every other design of its
 // frame, built in a browser (the mech viewer's window.customCheck), each
 // checked for armour on every joint at every level of detail, its ink, its
-// markings, its thrusters and the muzzle on the gun arm. Needs the game
+// markings, its thrusters, the muzzle on the gun arm, and each modelled
+// insignia kept (the part's own faction) or replaced by the team's emblem
+// (another faction's). Needs the game
 // served (npm start, or npm run dev with URL=http://localhost:5173/).
 //
 //   URL=http://127.0.0.1:8090/ node tools/custom-check.mjs
