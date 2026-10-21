@@ -7,9 +7,10 @@ faction's frames have the same stats), so none of it needs balancing.
 
 | Feature | Status |
 |---|---|
-| Swappable parts | the models' part tags are being added (below: "The export contract"); the game side follows |
-| Paint catalogue (each part paintable) | planned; two open questions (below) |
-| Pilot portraits | planned: a gallery, recolourable |
+| The pilot profile | begun: your callsign and portrait, worn by your seat everywhere, and the Pilot screen (below: "The pilot profile") |
+| Swappable parts | the models carry their part tags (all fifteen designs, every level of detail, the stock models unchanged); the game side is next |
+| Paint catalogue (each part paintable) | planned; one open question (below) |
+| Pilot portraits | the gallery is the fifteen faction pilots; more, and recolouring, to come |
 | Gameplay customization (tuning, loadouts) | not planned for now |
 
 ## Parts
@@ -138,20 +139,48 @@ trim, frame), and each part can take its own. Team colours stay on what
 tells the teams apart: the glow, the trails, the lock-on markers and the
 HUD.
 
-Open: free paint for everyone, or within the faction's family of colours;
-and whether the computer pilots on the player's team wear the player's paint.
+A custom mech keeps its paint on any team (the pilot profile follows the
+player from faction to faction, so a paint tied to one faction would mean
+repainting at every change of team); what tells the teams apart is the team
+colour on the glow, the trails, the markers, the HUD and the team's emblem
+decal.
+
+Open: whether the computer pilots on the player's team wear the player's
+paint.
 
 ## Pilot portraits
 
-A gallery of pilots (the fifteen there are, and more painted the same way,
-through `art/faction-sheets`), each painted for recolouring (hair, flight
-suit) as the effects are, with the player's callsign. Shown where the
-pilots are now: the comms cut-ins, the target panel, the results and the
-hangar.
+A gallery of pilots: the fifteen faction pilots now, and more painted the
+same way (through `art/faction-sheets`), each painted for recolouring (hair,
+flight suit) as the effects are. Until there are more, a player may wear
+the face of one of the computer pilots racing beside them.
 
-## The profile
+## The pilot profile
 
-One record per player: the paint, the parts per frame, the portrait and
-the callsign. Kept on the device until there are accounts. Online, sent
-with the seat (as the faction and frame are now); the server accepts only
-catalogue entries. The computer pilots keep their factions' stock mechs.
+Each player has one pilot, kept on the device until there are accounts:
+
+- **A callsign and a portrait**, worn by the player's seat everywhere it
+  shows, offline and online: the hangar's card, the radio, the target
+  panel, the results, the room's seats and the squad's bays. The computer
+  pilots keep their factions' names and faces (and a demo race keeps the
+  faction pilot on the player's seat, so captures repeat). The game makes
+  up a callsign and picks a portrait on the first run, so nobody is held
+  up before their first race; Online asks for a callsign the first time,
+  offering the made-up one.
+- **Up to three custom mechs, one per frame** (parts and paint), to come.
+  In the hangar, each frame offers the stock mech of the faction being
+  flown, or the player's custom mech of that frame. Custom mechs race in
+  every mode. A custom mech may be named; the pilot shown with it is
+  always the player's callsign.
+
+Online, the pilot goes with the seat (as the faction and frame do); the
+server accepts only a valid callsign and catalogue entries, and a room or
+squad hears a change at once (the `pilot` message), a race already begun
+keeping the old. Custom mechs will need an export/import code, so a pilot
+survives cleared browser data, until there are accounts.
+
+**Built so far**: the callsign and portrait (`net/identity.ts`, kept as
+`zgp.pilot` beside `zgp.callsign`); the Pilot screen off the hangar
+(`ui/screens/pilot.ts`); seats and mechs carry a `portrait` (an index into
+the gallery, `PORTRAITS` in protocol.ts, or -1 for the faction pilot); rooms
+and squads carry each person's portrait. See docs/ONLINE.md for the wire.
