@@ -202,8 +202,10 @@ every head hangs from the same point on the chest; but their chests' tops
 and their heads' necks differ (Razor's low head sinks deep into a chest cut
 away at the front for it; Seraph's chest is one tall plate that takes a head
 only a little way), so a head on another chest could vanish into it or stand
-clear of it. Each head is set down on the chest from above until it touches
-the chest's top, then sunk into it as far as the shallower of the two allows:
+clear of it. Each head is set down on the chest from above until its neck
+(what is under its pivot, 0.3 m across and along; not its sides, which may
+hang lower, like Anubis's headdress) touches the chest's top, then sunk into
+it as far as the shallower of the two allows:
 as far as the head sinks into its own chest, and as far as the chest's own
 head sinks into it. (A chest's top is its highest surface under the head
 below 0.6 m over the neck, so a cowl arching over the head is not its top.)

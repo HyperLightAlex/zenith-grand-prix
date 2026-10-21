@@ -8,8 +8,8 @@
 // tall chest plate takes a head only a little way), so a head on another
 // chest can vanish into it or stand clear of it.
 //
-// So each head is set down on the chest from above until it touches the
-// chest's top, and sunk into it as far as the shallower of the two allows:
+// So each head is set down on the chest from above until its neck touches
+// the chest's top, and sunk into it as far as the shallower of the two allows:
 // as far as the head sinks into its own chest, and as far as the chest's
 // own head sinks into it. On its own chest a head sits where it always has.
 // A chest's top is its highest surface under the head below a cap over the
@@ -30,6 +30,8 @@ const FRAMES = [
 const OUT = new URL('../src/client/render/mech/headSeats.ts', import.meta.url);
 /** A chest's top is below this far over the neck's pivot (what is higher arches over the head: Maul's hood). */
 const CAP = 0.6;
+/** The neck: how far across and along from under the head's pivot (metres). */
+const NECK = 0.3;
 
 interface Design {
   headY: number;
@@ -109,12 +111,27 @@ function heights(tris: Float32Array, up: boolean, dy: number, dz: number, cap = 
   return out;
 }
 
-/** How far a head, hung from a chest's neck, is sunk below where it would first touch the chest's top coming down. */
+/**
+ * How far a head, hung from a chest's neck, is sunk below where its neck would
+ * first touch the chest's top coming down. Only the neck counts (what is
+ * under the head's pivot, NECK across and along): a head's sides may hang
+ * lower (Anubis's headdress), and resting on them would hold its neck clear
+ * of the chest.
+ */
 function sunk(chest: Design, head: Design): number {
   const top = heights(chest.chest, true, 0, 0, chest.headY + CAP);
   const bottom = heights(head.head, false, chest.headY, chest.headZ);
   let most = -Infinity;
-  for (let i = 0; i < top.length; i++) if (!Number.isNaN(top[i]) && !Number.isNaN(bottom[i])) most = Math.max(most, top[i] - bottom[i]);
+  for (let j = 0; j < NZ; j++) {
+    const z = Z0 + (j + 0.5) * CELL;
+    if (Math.abs(z - chest.headZ) > NECK) continue;
+    for (let i = 0; i < NX; i++) {
+      const x = X0 + (i + 0.5) * CELL;
+      if (Math.abs(x) > NECK) continue;
+      const at = j * NX + i;
+      if (!Number.isNaN(top[at]) && !Number.isNaN(bottom[at])) most = Math.max(most, top[at] - bottom[at]);
+    }
+  }
   if (!Number.isFinite(most)) throw new Error('a head with no chest under it');
   return most;
 }
