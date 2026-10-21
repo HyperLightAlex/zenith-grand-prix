@@ -11,8 +11,9 @@ painted on one shared template head, in the same pose, place and light, by
 the same hand as the pilots. The game recolours skin, hair, eyes, the suit
 and the headset itself, so those are painted in fixed reference colours.
 
-Work in two stages. **Stage A** is a trial: the template and a few parts of
-each kind, to prove the parts fit together. Stop after it and report. **Stage
+Work in two stages. **Stage A** is a trial: the fifteen pilots keyed to the
+colour key (A0), the template (A1) and a few parts of each kind (A3), to
+prove the parts fit together. Stop where it says and report. **Stage
 B**, the full set, starts only once the trial has been checked in the game.
 
 ## Style
@@ -89,6 +90,39 @@ hair. Hair falling behind the collar is simply not painted where the collar
 hides it.
 
 ## Stage A: the trial
+
+### A0. The fifteen pilots, keyed
+
+So a pilot chosen by a player on another team can wear that team's colours,
+deliver each of the fifteen pilots with its background, suit and headset in
+the colour key, and everything else as it is.
+
+For each `src/client/ui/art/pilot-<name>.webp` (256 x 256): enlarge it to
+1024 x 1024 (smoothly), then repaint **only** the background, the suit and
+the headset:
+
+- The background: flat #00FF00, edge to edge, scan lines and all.
+- The suit and the headset: each panel in the key colour for its role, its
+  shadow tone in that key's shadow, keeping the suit's design, its panel
+  lines, folds and ink exactly. The roles, by faction:
+
+| Faction (pilots) | main #E03030 | accent #3050E0 | trim #F0C020 | under-suit #2A2A33 |
+|---|---|---|---|---|
+| Solstice (kite, lark, atlas) | white panels | blue panels | gold piping | the dark inner suit |
+| Vanta (shrike, moth, golem) | charcoal panels | red panels | pale grey piping | the black inner suit |
+| Mirage (sirocco, ibis, dune) | sand panels | rust-orange panels | gold piping, the gold collar and brooch | the dark inner suit |
+| Aurora (orion, vesper, bastion) | purple panels | white panels | lavender and silver piping | the dark inner suit |
+| Tempest (squall, gale, anvil) | green panels | black panels | gold piping, the gold brooch | the inner suit at the collar |
+
+  The headset takes the key of the colour each of its parts is painted in,
+  by the same table (a Solstice headset's white shell is main, its blue
+  panel accent).
+- Everything else exactly as it is: the face, skin, eyes, hair (also where it
+  falls over the suit), the mouth, goggles, visors, circlets, headbands,
+  scars, and every ink line.
+
+Deliver `keyed/pilot-<name>.png` (1024 x 1024), fifteen of them, with a
+contact sheet `keyed/contact.png` of all fifteen beside their originals.
 
 ### A1. The template (deliver these four, then stop and report)
 
@@ -250,8 +284,8 @@ left of the face as we see it, on the ear's side.
 
 ## Delivering
 
-- Into this folder on the branch `art/portraits`: Stage A in `trial/`,
-  Stage B in `parts/`. Commit and push there; do not merge it.
+- Into this folder on the branch `art/portraits`: the keyed pilots in
+  `keyed/`, Stage A in `trial/`, Stage B in `parts/`. Commit and push there; do not merge it.
 - With each stage, a contact sheet (`trial/contact.png`, `parts/contact.png`)
   of everything delivered, small, labelled with the file names.
 - Leave the game's code alone, and any changes on the branch you did not
