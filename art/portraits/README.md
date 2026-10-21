@@ -11,6 +11,9 @@ painted on one shared template head, in the same pose, place and light, by
 the same hand as the pilots. The game recolours skin, hair, eyes, the suit
 and the headset itself, so those are painted in fixed reference colours.
 
+The copy-paste prompts for painting them in ChatGPT (no repository needed)
+are in `PROMPTS.md`; this file is the specification they follow.
+
 Work in two stages. **Stage A** is a trial: the fifteen pilots keyed to the
 colour key (A0), the template (A1) and a few parts of each kind (A3), to
 prove the parts fit together. Stop where it says and report. **Stage
