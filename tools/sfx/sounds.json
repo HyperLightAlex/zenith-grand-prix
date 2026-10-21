@@ -39,10 +39,7 @@
   "asked": 0.5
  },
  "dash": {
-  "asked": 0.3,
-  "hp": 100,
-  "lead": 0.005,
-  "max": 0.45
+  "asked": 0.3
  },
  "fall": {
   "asked": 1.2
