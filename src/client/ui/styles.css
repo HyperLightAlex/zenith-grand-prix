@@ -240,6 +240,8 @@ html.crt-on .crt-layer {
 .hints { position: absolute; left: calc(21.5 * var(--ui-em, 1em)); right: calc(29.5 * var(--ui-em, 1em)); bottom: 1.2em; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.45em 1.3em; font-weight: 500; font-size: 1.02em; white-space: nowrap; text-shadow: 0 0.08em 0.1em rgba(15, 21, 36, 0.8); }
 .hints span { display: inline-flex; align-items: center; }
 .hints:empty, .hud .key:empty { display: none; }
+/* The special recharging: dimmed, a line under it filling as it comes back. */
+.hints .special.cooling { opacity: 0.55; background: linear-gradient(currentColor, currentColor) left bottom / var(--p, 0%) 0.12em no-repeat; }
 
 /* Carve meter, over the dash: three skewed segments filling cyan, gold, magenta. */
 .carve { position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: 0.7em; opacity: 0; transform: translate(0.6em, -50%); transition: opacity 0.18s, transform 0.18s; --tier: #d8ecff; }

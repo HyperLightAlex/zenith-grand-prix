@@ -1923,7 +1923,7 @@ export class Game {
       const out = me.retired || me.finished || !me.human;
       const ab = abilityShown(race, me);
       const escorting = battle && race.mechs[me.target].team === me.team;
-      this.touchPad.setState(out ? 'out' : battle ? 'battle' : 'race', { name: ab.name, icon: ab.icon, ready: ab.ready }, weaponsFree(race) && !out, escorting);
+      this.touchPad.setState(out ? 'out' : battle ? 'battle' : 'race', { name: ab.name, icon: ab.icon, ready: ab.ready }, weaponsFree(race) && !out, escorting, me.cdSecondary === 0);
       this.touchPad.countdown = race.phase === PHASE.COUNTDOWN;
     }
     // In full screen on a phone, the race holds the screen sideways.

@@ -26,6 +26,7 @@ import {
   TACTIC,
   TICK_RATE,
   abilityFor,
+  attackTotal,
   deltaS,
   limiterOf,
   pickTarget,
@@ -94,6 +95,8 @@ const ABILITY_ICON: IconName[] = ['overdrive', 'breakaway', 'snare', 'disruptor'
 const ROLE_ICON: IconName[] = ['forward', 'midfielder', 'defender'];
 const TACTIC_ICON: Array<IconName | null> = [null, 'blitz', 'run', 'shield', 'mark'];
 const TELL_ICON: Record<TellKind, IconName> = { parry: 'parry', dodge: 'dodge', block: 'guard' };
+/** The special's name on the hints (the secondary attack: the Y button). */
+const SPECIAL = 'Special';
 
 /**
  * The ability the ability button would use now (the free-steering one, or
@@ -191,6 +194,9 @@ export class Hud {
   private chipLink = h('span.chip.link', icon('escorting'), h('span', 'Linked'));
   private chipMomentum = h('span.chip.momentum', icon('momentum'), h('span', 'Momentum'));
   private hints = h('div.hints');
+  /** The special's hint, and how far back (percent) it was last shown to be. */
+  private specialHint: HTMLElement | null = null;
+  private specialShown = -1;
   private hintKey = '';
   // support points: what you and your teammates just earned
   private awardFeed = h('div.awards');
@@ -713,14 +719,26 @@ export class Hud {
       } else if (me.retired || me.finished) {
         items.push([k.lock, 'Next camera'], [k.pause, 'Pause']);
       } else if (battle) {
-        items.push([k.x, 'Attack'], [k.y, 'Special'], [k.guard, 'Guard'], [k.dash, 'Dash / boost'], [k.swing, 'Swing'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], escorting ? [k.ally, 'Back to the fight'] : [k.lock, 'Let go']);
+        items.push([k.x, 'Attack'], [k.y, SPECIAL], [k.guard, 'Guard'], [k.dash, 'Dash / boost'], [k.swing, 'Swing'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], escorting ? [k.ally, 'Back to the fight'] : [k.lock, 'Let go']);
         if (compact) items = [items[0], items[2], items[3], items[7]];
       } else {
         items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.carve, 'Carve'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);
         if (race.lapPhase >= 2) items.push([k.x, 'Attack'], [k.ability, ABILITIES[shown].name]);
         if (compact) items = race.lapPhase >= 2 ? [items[3], items[2], items[4], items[7]] : [items[3], items[2], items[4], items[5]];
       }
-      this.hints.replaceChildren(...items.map(([key, label]) => h('span', h('span.key', key), label)));
+      this.hints.replaceChildren(...items.map(([key, label]) => h('span' + (label === SPECIAL ? '.special' : ''), h('span.key', key), label)));
+      this.specialHint = this.hints.querySelector<HTMLElement>('.special');
+      this.specialShown = -1;
+    }
+    // The special while it recharges: dimmed, a line under it filling as it comes back.
+    if (this.specialHint) {
+      const special = ATTACKS[CLASSES[me.role].secondary];
+      const back = me.cdSecondary > 0 ? Math.round(100 * (1 - Math.min(1, me.cdSecondary / (attackTotal(special) + special.cooldown)))) : 100;
+      if (back !== this.specialShown) {
+        this.specialShown = back;
+        setClass(this.specialHint, 'cooling', back < 100);
+        this.specialHint.style.setProperty('--p', `${back}%`);
+      }
     }
 
     // Target panel and reticle.
@@ -1140,7 +1158,10 @@ export class Hud {
         break;
       case 'denied':
         if (e.mech === this.localId) {
-          const why = { weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 || race.rules.gateValueLater <= 0 ? 'No Cells. The gates only light on the formation lap' : 'No Cells. Thread a gold gate to earn one back', switch: 'No other target in reach', lap: 'Overdrive opens on the speed lap' }[e.reason];
+          const who = race.mechs[e.mech];
+          const special = ATTACKS[CLASSES[who.role].secondary];
+          const why = {
+            cooldown: `${special.name} recharging: ready in ${Math.max(0.1, who.cdSecondary * DT).toFixed(1)} s`, weapons: 'Weapons and abilities are locked until the battle lap', drive: 'Not enough Drive', target: 'No target in range', cells: race.rules.gateLaps <= 1 || race.rules.gateValueLater <= 0 ? 'No Cells. The gates only light on the formation lap' : 'No Cells. Thread a gold gate to earn one back', switch: 'No other target in reach', lap: 'Overdrive opens on the speed lap' }[e.reason];
           this.showNotice(why, e.reason === 'weapons');
         }
         break;

@@ -82,6 +82,7 @@ export class TouchControls {
   private abilityIcon: IconName | null = null;
   private abilityReady = false;
   private attackReady = false;
+  private specialReady = true;
   /** Locked on a team-mate: the lock button reads "Fight" (it goes back to the rival last fought). */
   private escorting = false;
   /** Button size, CSS pixels. */
@@ -160,7 +161,7 @@ export class TouchControls {
   }
 
   /** What the ability button says, and which buttons are live, for this frame. */
-  setState(mode: TouchMode, ability: { name: string; icon: IconName; ready: boolean }, attackReady: boolean, escorting = false): void {
+  setState(mode: TouchMode, ability: { name: string; icon: IconName; ready: boolean }, attackReady: boolean, escorting = false, specialReady = true): void {
     const fresh = mode !== this.builtMode;
     if (fresh) this.build(mode);
     this.mode = mode;
@@ -182,6 +183,10 @@ export class TouchControls {
     const atk = this.buttons.find((x) => x.bit === BTN.X);
     if (atk && (fresh || attackReady !== this.attackReady)) setClass(atk.el, 'dim', mode === 'race' && !attackReady);
     this.attackReady = attackReady;
+    // The special, dimmed while it recharges.
+    const sp = this.buttons.find((x) => x.bit === BTN.Y);
+    if (sp && (fresh || specialReady !== this.specialReady)) setClass(sp.el, 'dim', !specialReady);
+    this.specialReady = specialReady;
   }
 
   /** The buttons for a mode. */

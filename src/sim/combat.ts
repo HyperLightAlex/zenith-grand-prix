@@ -51,7 +51,7 @@ import { rngNext, wrapAngle } from './math';
 import { deltaS, hwAt, medianAt, type Track } from './track';
 import type { MechInput, MechState, RaceState } from './types';
 
-function deny(race: RaceState, m: MechState, reason: 'weapons' | 'drive' | 'target' | 'cells' | 'lap'): void {
+function deny(race: RaceState, m: MechState, reason: 'weapons' | 'drive' | 'target' | 'cells' | 'lap' | 'cooldown'): void {
   if (race.tick - m.deniedTick < 30) return;
   m.deniedTick = race.tick;
   race.events.push({ type: 'denied', mech: m.id, reason });
@@ -104,7 +104,12 @@ export function tryAttack(race: RaceState, track: Track, m: MechState, slot: num
     deny(race, m, 'weapons');
     return false;
   }
-  if ((slot === 0 ? m.cdPrimary : m.cdSecondary) > 0) return false;
+  if (slot === 0 && m.cdPrimary > 0) return false;
+  // The special recharging: said, so a press that does nothing is not a mystery.
+  if (slot === 1 && m.cdSecondary > 0) {
+    deny(race, m, 'cooldown');
+    return false;
+  }
   if (m.drive < a.driveCost) {
     deny(race, m, 'drive');
     return false;
@@ -658,24 +663,38 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
   }
 
   // The buffer: the latest press of X, Y or A (A only locked on, where it is
-  // the dash; free, it is the boost and is held) waits INPUT_BUFFER ticks.
+  // the dash; free, it is the boost and is held) waits INPUT_BUFFER ticks. A
+  // special pressed in the middle of a move of your own (a blow of a combo, a
+  // dash) waits for the move to end, however long it has to run: it is the
+  // next thing you meant to do, not a press to forget.
   const buffered = BTN.X | BTN.Y | (m.mode === MODE.BATTLE ? BTN.A : 0);
+  const waiting = (m.bufBtn & BTN.Y) !== 0 && (m.act === ACT.ATTACK || m.act === ACT.DASH);
   if (pressed & buffered) {
     m.bufBtn = pressed & buffered;
     m.bufT = INPUT_BUFFER;
-  } else if (m.bufT > 0 && --m.bufT === 0) {
+  } else if (m.bufT > 0 && !waiting && --m.bufT === 0) {
     m.bufBtn = 0;
   }
   const want = pressed | (m.bufT > 0 ? m.bufBtn : 0);
 
   switch (m.act) {
     case ACT.NONE: {
-      // A gun keeps firing while its trigger is held.
+      // A gun keeps firing while its trigger is held; a special pressed goes first.
       const autofire = (input.buttons & BTN.X) !== 0 && ATTACKS[c.primary].kind === 'shot' && m.cdPrimary === 0;
       let done = false;
-      if (want & BTN.X || autofire) done = tryAttack(race, track, m, 0);
-      else if (want & BTN.Y) done = tryAttack(race, track, m, 1);
-      else if (want & BTN.A && m.mode === MODE.BATTLE) done = tryDash(race, track, m, input);
+      let tried = false;
+      if (want & BTN.X) {
+        done = tryAttack(race, track, m, 0);
+        tried = true;
+      } else if (want & BTN.Y) {
+        done = tryAttack(race, track, m, 1);
+        tried = true;
+      }
+      if (!done && autofire && !(want & BTN.X)) {
+        done = tryAttack(race, track, m, 0);
+        tried = true;
+      }
+      if (!tried && want & BTN.A && m.mode === MODE.BATTLE) done = tryDash(race, track, m, input);
       if (done) m.bufBtn = m.bufT = 0;
       break;
     }

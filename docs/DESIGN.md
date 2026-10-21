@@ -514,7 +514,16 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 - **Presses are buffered.** An attack, a heavy or (locked on) a dash pressed
   while the mech cannot do it yet, still in another move, staggered or
   cooling down, is kept for 8 ticks and done the moment it can be, so a
-  press a beat early is not lost.
+  press a beat early is not lost. A heavy pressed during a move of the
+  mech's own (a blow of a combo, a dash) is kept until that move ends,
+  however long it has left, and then thrown; it does not cut the move
+  short. With a gun held down, a heavy pressed goes before the next round.
+  (A heavy pressed early in a light blow used to be dropped, and one
+  pressed with the carbine held was lost about half the time: the heavy
+  "didn't come out".) A heavy refused while it recharges says so ("Lance
+  Dash recharging: ready in 1.4 s"), and the hint for it dims, a line under
+  it filling as it comes back (the touch button dims); the gun between
+  rounds stays silent.
 - **Guns work at racing speed** without a lock. Melee needs a lock; pressing
   attack near an enemy takes one for you.
 - Four hits in a chain and the victim bursts free. A burst from a gun is one

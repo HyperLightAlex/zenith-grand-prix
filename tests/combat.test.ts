@@ -569,9 +569,12 @@ describe('drive costs and cooldowns', () => {
         vic.d = att.d;
         a.clearLog();
         expect(a.tap(mv.att, mv.btn)).toBe(end + offset);
-        // A cooldown is silent: it is not a "denied".
-        expect(a.events('denied').length).toBe(0);
-        return a.events('windup').length === 1;
+        // The special refused while it recharges says so (a press that did nothing was a
+        // mystery); the gun between rounds is silent (it is held down to fire).
+        const started = a.events('windup').length === 1;
+        const said = !started && mv.btn === BTN.Y;
+        expect(a.events('denied')).toEqual(said ? [expect.objectContaining({ mech: mv.att, reason: 'cooldown' })] : []);
+        return started;
       };
       expect(retry(1)).toBe(false);
       expect(retry(Math.floor(mv.cd / 2))).toBe(false);
@@ -1536,10 +1539,11 @@ describe('the input buffer', () => {
     expect(att.attack).toBe(ATK.FW_LANCE);
   });
 
-  it(`a press older than INPUT_BUFFER ticks is let go`, () => {
+  it(`a press older than INPUT_BUFFER ticks is let go (a dash; a special waits for the move, see "the special")`, () => {
     const { a, att } = duel(FW0, FW1, 11);
     a.tap(FW0, BTN.X);
-    a.tap(FW0, BTN.Y);
+    expect(att.mode).toBe(MODE.BATTLE);
+    a.tap(FW0, BTN.A);
     a.until(() => att.act !== ACT.ATTACK, 60);
     expect(att.act).toBe(ACT.NONE);
     a.step(2);
@@ -1558,5 +1562,79 @@ describe('the input buffer', () => {
     expect(att.act).toBe(ACT.ATTACK);
     a.step(30);
     expect(a.events('shot').length).toBe(6);
+  });
+});
+
+describe('the special: a press is never lost', () => {
+  const SPECIALS = [
+    [FW0, ATK.FW_LANCE],
+    [MF0, ATK.MF_KICK],
+    [DF0, ATK.DF_SCATTER],
+  ] as const;
+
+  /** Ticks until the attacker starts its special (or -1 within `within` ticks). */
+  function startsSpecial(a: Arena, att: MechState, idx: number, within = 120): number {
+    for (let t = 1; t <= within; t++) {
+      a.step(1);
+      if (att.act === ACT.ATTACK && att.attack === idx) return t;
+    }
+    return -1;
+  }
+
+  it('pressed in the middle of a blow of your own, it goes as the blow ends', () => {
+    for (const [id, idx] of SPECIALS) {
+      const light = ATTACKS[CLASSES[id === FW0 ? ROLE.FW : id === MF0 ? ROLE.MF : ROLE.DF].primary];
+      for (let k = 1; k < attackTotal(light); k++) {
+        const { a, att } = duel(id, FW1, 6);
+        a.tap(id, BTN.LOCK);
+        a.step(20);
+        a.tap(id, BTN.X);
+        expect(att.act).toBe(ACT.ATTACK);
+        a.step(k - 1);
+        a.tap(id, BTN.Y);
+        const started = startsSpecial(a, att, idx, 60);
+        expect(started, `${ATTACKS[idx].name}, pressed ${k} ticks into ${light.name}`).toBeGreaterThan(0);
+        // No sooner than the blow allows: the special does not cut it short.
+        expect(k + started).toBeGreaterThanOrEqual(attackTotal(light));
+      }
+    }
+  });
+
+  it('pressed with the gun held down, it goes before the next round', () => {
+    const gun = ATTACKS[CLASSES[ROLE.MF].primary];
+    expect(gun.kind).toBe('shot');
+    for (let k = 1; k <= 30; k++) {
+      const { a, att } = duel(MF0, FW1, 12);
+      a.tap(MF0, BTN.LOCK);
+      a.step(20);
+      a.hold(MF0, BTN.X).step(k);
+      a.tap(MF0, BTN.Y);
+      expect(startsSpecial(a, att, ATK.MF_KICK, attackTotal(gun) + 2), `pressed ${k} ticks into firing`).toBeGreaterThan(0);
+    }
+  });
+
+  it('pressed while it recharges, it says so, and costs nothing', () => {
+    const { a, att } = duel(FW0, FW1, 6);
+    a.tap(FW0, BTN.Y);
+    expect(att.attack).toBe(ATK.FW_LANCE);
+    a.until(() => att.act === ACT.NONE, 120);
+    expect(att.cdSecondary).toBeGreaterThan(0);
+    const drive = att.drive;
+    a.clearLog();
+    a.tap(FW0, BTN.Y);
+    a.step(INPUT_BUFFER + 2);
+    expect(att.act).toBe(ACT.NONE);
+    expect(a.events('denied')).toEqual([expect.objectContaining({ mech: FW0, reason: 'cooldown' })]);
+    expect(att.drive).toBeGreaterThanOrEqual(drive);
+  });
+
+  it('pressed while staggered, it is still forgotten (no special out of a hit)', () => {
+    const { a, vic } = duel(FW0, FW1, 6);
+    a.tap(FW0, BTN.X);
+    a.until(() => vic.act === ACT.STAGGER, 20);
+    a.tap(FW1, BTN.Y);
+    a.until(() => vic.act === ACT.NONE, 60);
+    a.step(INPUT_BUFFER + 2);
+    expect(vic.act === ACT.ATTACK && vic.attack === ATK.FW_LANCE).toBe(false);
   });
 });
