@@ -1,11 +1,12 @@
 {
   "model": "razor",
   "design": "Art-sheet tapered blade carrier with faceted shin armor and twin eye sensors",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 22916,
-      "bytes": 783968,
+      "bytes": 783988,
       "parts": 100,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 1785,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 11863,
-      "bytes": 472608,
+      "bytes": 472628,
       "parts": 100,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 217,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 5981,
-      "bytes": 287160,
+      "bytes": 287180,
       "parts": 100,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }

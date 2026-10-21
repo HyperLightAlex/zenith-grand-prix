@@ -1,0 +1,108 @@
+{
+  "model": "paladin",
+  "blender_version": "5.2.2 LTS",
+  "badge_pieces": [
+    {
+      "source": "chest / Aurora / sword sigil",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    },
+    {
+      "source": "chest / Aurora / sword guard",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    },
+    {
+      "source": "chest / Aurora / sigil feather",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    },
+    {
+      "source": "chest / Aurora / sigil feather [2]",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    },
+    {
+      "source": "chest / Aurora / sigil feather [3]",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    },
+    {
+      "source": "chest / Aurora / sigil feather [4]",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    },
+    {
+      "source": "chest / Aurora / sigil feather [5]",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    },
+    {
+      "source": "chest / Aurora / sigil feather [6]",
+      "insignia": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "insignia_anchor_method": "visible badge surface"
+    }
+  ],
+  "anchors": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        2.4064764147624373e-05,
+        0.5580735206604004,
+        1.2191455364227295
+      ],
+      "normal": [
+        0.00037700310349464417,
+        0.021408556029200554,
+        0.9997707009315491
+      ],
+      "up": [
+        -8.072942364378832e-06,
+        0.9997708201408386,
+        -0.021408554166555405
+      ],
+      "width": 0.8428252582139442,
+      "square_corners_world": [
+        [
+          -0.42138510942459106,
+          -1.2283263206481934,
+          6.6367573738098145
+        ],
+        [
+          0.4214400053024292,
+          -1.228008508682251,
+          6.6367573738098145
+        ],
+        [
+          0.4214332103729248,
+          -1.2099647521972656,
+          7.479389667510986
+        ],
+        [
+          -0.42139190435409546,
+          -1.210282564163208,
+          7.479389667510986
+        ]
+      ]
+    }
+  ],
+  "review_guide_lift": 0.018
+}

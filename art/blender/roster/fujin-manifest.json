@@ -1,11 +1,76 @@
 {
   "model": "fujin",
   "design": "Art-sheet wind samurai: sculpted wind ribbon, shoulder turbines, one storm rifle and retained snare",
+  "insignias": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        -2.022157423198223e-05,
+        0.8293305039405823,
+        1.0158238410949707
+      ],
+      "normal": [
+        -0.0013481638161465526,
+        -0.014900106936693192,
+        0.9998880624771118
+      ],
+      "up": [
+        -2.009001764236018e-05,
+        0.999889075756073,
+        0.014900093898177147
+      ],
+      "width": 0.9694799011818305
+    },
+    {
+      "id": "shoulderL",
+      "joint": "shL",
+      "part": "shoulders",
+      "center": [
+        2.7598715701709258e-18,
+        -0.04286854341626167,
+        0.5854621529579163
+      ],
+      "normal": [
+        5.203819372478454e-17,
+        -0.056674353778362274,
+        0.998392641544342
+      ],
+      "up": [
+        2.953979013483538e-18,
+        0.9983927607536316,
+        0.056674353778362274
+      ],
+      "width": 0.44023884035646915
+    },
+    {
+      "id": "shoulderR",
+      "joint": "shR",
+      "part": "shoulders",
+      "center": [
+        6.8996656905375136e-18,
+        -0.04286854341626167,
+        0.5854621529579163
+      ],
+      "normal": [
+        1.3009548596632257e-16,
+        -0.056674353778362274,
+        0.998392641544342
+      ],
+      "up": [
+        7.384947740503998e-18,
+        0.9983927607536316,
+        0.056674353778362274
+      ],
+      "width": 0.44023884035646915
+    }
+  ],
   "levels": [
     {
       "level": 0,
       "triangles": 33182,
-      "bytes": 1454016,
+      "bytes": 1455208,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -21,12 +86,13 @@
         "waist"
       ],
       "line_segments": 2326,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     },
     {
       "level": 1,
       "triangles": 17614,
-      "bytes": 957108,
+      "bytes": 958300,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -42,12 +108,13 @@
         "waist"
       ],
       "line_segments": 616,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     },
     {
       "level": 2,
       "triangles": 8708,
-      "bytes": 510380,
+      "bytes": 511572,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -63,7 +130,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     }
   ]
 }

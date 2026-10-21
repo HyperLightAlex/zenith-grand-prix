@@ -1,12 +1,77 @@
 {
   "model": "raijin",
   "design": "Art-sheet thunder defender: dark gold-edged cuirass, coiled gauntlets and retained drum halo",
+  "insignias": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        -1.4126067981123924e-05,
+        0.829733669757843,
+        1.2460792064666748
+      ],
+      "normal": [
+        -0.0010530594736337662,
+        -0.0044363634660840034,
+        0.9999896287918091
+      ],
+      "up": [
+        -4.67180097984965e-06,
+        0.9999902248382568,
+        0.004436361137777567
+      ],
+      "width": 1.0609445231046266
+    },
+    {
+      "id": "shoulderL",
+      "joint": "shL",
+      "part": "shoulders",
+      "center": [
+        -4.3514883145689964e-05,
+        -0.15970247983932495,
+        0.7962237596511841
+      ],
+      "normal": [
+        -0.0036394752096384764,
+        0.0156180988997221,
+        0.9998713731765747
+      ],
+      "up": [
+        5.684861389454454e-05,
+        0.9998780488967896,
+        -0.015617994591593742
+      ],
+      "width": 0.6633134270660821
+    },
+    {
+      "id": "shoulderR",
+      "joint": "shR",
+      "part": "shoulders",
+      "center": [
+        -4.3514883145689964e-05,
+        -0.15970247983932495,
+        0.7962237596511841
+      ],
+      "normal": [
+        -0.0036394752096384764,
+        0.0156180988997221,
+        0.9998713731765747
+      ],
+      "up": [
+        5.684861389454454e-05,
+        0.9998780488967896,
+        -0.015617994591593742
+      ],
+      "width": 0.6633134270660821
+    }
+  ],
   "levels": [
     {
       "level": 0,
       "triangles": 33962,
-      "bytes": 1494220,
-      "parts": 99,
+      "bytes": 1496648,
+      "parts": 101,
       "part_tags": [
         "armL",
         "armR",
@@ -21,13 +86,14 @@
         "waist"
       ],
       "line_segments": 3585,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     },
     {
       "level": 1,
       "triangles": 18290,
-      "bytes": 960524,
-      "parts": 99,
+      "bytes": 962948,
+      "parts": 101,
       "part_tags": [
         "armL",
         "armR",
@@ -42,13 +108,14 @@
         "waist"
       ],
       "line_segments": 745,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     },
     {
       "level": 2,
       "triangles": 9350,
-      "bytes": 514212,
-      "parts": 99,
+      "bytes": 516632,
+      "parts": 101,
       "part_tags": [
         "armL",
         "armR",
@@ -63,7 +130,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     }
   ]
 }

@@ -1,11 +1,12 @@
 {
   "model": "sobek",
   "design": "Art-sheet crocodile with broad bracers, shoulder medallions and layered boots",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 37351,
-      "bytes": 1287672,
+      "bytes": 1287692,
       "parts": 121,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 4422,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 19380,
-      "bytes": 709000,
+      "bytes": 709020,
       "parts": 121,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 540,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 9855,
-      "bytes": 418444,
+      "bytes": 418468,
       "parts": 121,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }

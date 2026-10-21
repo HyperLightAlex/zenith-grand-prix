@@ -1,11 +1,12 @@
 {
   "model": "anubis",
   "design": "Art-sheet jackal mask, gold-edged khopesh blades and sculpted greaves",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 24762,
-      "bytes": 879676,
+      "bytes": 879696,
       "parts": 97,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 2225,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 12866,
-      "bytes": 532320,
+      "bytes": 532344,
       "parts": 97,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 319,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 6532,
-      "bytes": 315748,
+      "bytes": 315768,
       "parts": 97,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }

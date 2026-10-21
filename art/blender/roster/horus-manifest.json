@@ -1,11 +1,12 @@
 {
   "model": "horus",
   "design": "Art-sheet falcon armor, gold knee shields and seated staff-blaster grip",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 31720,
-      "bytes": 1116888,
+      "bytes": 1116912,
       "parts": 109,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 3944,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 16496,
-      "bytes": 608436,
+      "bytes": 608456,
       "parts": 109,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 399,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 8412,
-      "bytes": 362796,
+      "bytes": 362816,
       "parts": 109,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }

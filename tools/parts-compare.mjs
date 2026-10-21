@@ -8,6 +8,9 @@
  *
  * node tools/parts-compare.mjs --baseline <commit> [--design daystar]
  *     [--report art/blender/roster/previews/parts/triangle-equivalence.json]
+ *     [--allow-root-extra insignia_json]
+ * The explicit root-extra option permits only adding insignia_json to a root
+ * that did not already have it; every pre-existing root field stays strict.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -21,6 +24,8 @@ function option(name,fallback) { const i=args.indexOf(name); return i<0?fallback
 const baseline=option('--baseline','e3acda26ca8c9c77f3d1fff6a3b8d2a773cbfa0a');
 const baselineCommit=execFileSync('git',['rev-parse',`${baseline}^{commit}`],{cwd:root,encoding:'utf8'}).trim();
 const designFilter=option('--design');
+const allowedRootExtra=option('--allow-root-extra');
+if(allowedRootExtra!==undefined&&allowedRootExtra!=='insignia_json') throw new Error('Only the intentional insignia_json root addition may be allowed');
 const reportPath=resolve(root,option('--report','art/blender/roster/previews/parts/triangle-equivalence.json'));
 const designs=['sunhawk','daystar','rampart','razor','stinger','maul','anubis','horus','sobek','seraph','longbow','paladin','kamaitachi','fujin','raijin'];
 if(designFilter&&!designs.includes(designFilter)) throw new Error(`Unknown design: ${designFilter}`);
@@ -143,9 +148,13 @@ for(const design of designs.filter(d=>!designFilter||d===designFilter)) {
       const old=before.buckets.get(joint)??{triangles:[],lines:[]},next=after.buckets.get(joint)??{triangles:[],lines:[]};
       joints.push({joint,triangles:compareRecords(old.triangles,next.triangles),inkSegments:compareRecords(old.lines,next.lines)});
     }
-    const rootContractEqual=JSON.stringify(before.rootContract)===JSON.stringify(after.rootContract);
+    const checkedRootContract={...after.rootContract},excludedRootExtras=[];
+    if(allowedRootExtra&&!Object.hasOwn(before.rootContract,allowedRootExtra)&&Object.hasOwn(checkedRootContract,allowedRootExtra)) {
+      delete checkedRootContract[allowedRootExtra];excludedRootExtras.push(allowedRootExtra);
+    }
+    const rootContractEqual=JSON.stringify(before.rootContract)===JSON.stringify(checkedRootContract);
     const exact=rootContractEqual&&joints.every(j=>j.triangles.exact&&j.inkSegments.exact);
-    lods.push({level:lod,path,exact,rootContractEqual,parts:after.presentParts,
+    lods.push({level:lod,path,exact,rootContractEqual,...(excludedRootExtras.length?{excludedRootExtras}:{}),parts:after.presentParts,
       hasBackpack:after.presentParts.includes('backpack'),beforeFileSha256:sha(oldBytes),afterFileSha256:sha(newBytes),joints});
     console.log(`${exact?'PASS':'FAIL'} ${design} LOD${lod}: ${joints.reduce((n,j)=>n+j.triangles.after,0)} triangles, ${joints.reduce((n,j)=>n+j.inkSegments.after,0)} ink segments`);
     if(!exact)for(const j of joints.filter(j=>!j.triangles.exact||!j.inkSegments.exact))console.log(`  ${j.joint}: triangles delta=${j.triangles.maximumAttributeDelta}, lines delta=${j.inkSegments.maximumAttributeDelta}`);
@@ -155,7 +164,7 @@ for(const design of designs.filter(d=>!designFilter||d===designFilter)) {
 const currentPath='src/client/render/mech/assets/sunhawk-current.glb';
 const currentBefore=sha(fromGit(currentPath)),currentAfter=sha(readFileSync(resolve(root,currentPath)));
 const currentSunhawk={path:currentPath,byteIdentical:currentBefore===currentAfter,beforeSha256:currentBefore,afterSha256:currentAfter};
-const report={schema:1,baselineCommit,method:'Exact expanded per-joint/per-paint-slot triangle and undirected ink-segment multisets, preserving multiplicity and triangle winding; POSITION, NORMAL, _OUTLINE_NORMAL, _INK_WIDTH, every other authored attribute and node transforms included. No tolerance accepted. Approximate position buckets are diagnostic only.',
+const report={schema:1,baselineCommit,...(allowedRootExtra?{allowedNewRootExtra:allowedRootExtra}:{}),method:'Exact expanded per-joint/per-paint-slot triangle and undirected ink-segment multisets, preserving multiplicity and triangle winding; POSITION, NORMAL, _OUTLINE_NORMAL, _INK_WIDTH, every other authored attribute and node transforms included. No tolerance accepted. Approximate position buckets are diagnostic only.',
   exact:results.every(r=>r.exact)&&currentSunhawk.byteIdentical,currentSunhawk,designs:results};
 mkdirSync(dirname(reportPath),{recursive:true});writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
 console.log(`Current Sunhawk byte-identical: ${currentSunhawk.byteIdentical}; report ${reportPath}`);

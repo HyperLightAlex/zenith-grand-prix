@@ -15,8 +15,12 @@ importlib.reload(ink_geometry)
 from ink_geometry import smooth_normals, outline_weight, set_outline_attributes, design_edges
 import part_tags
 importlib.reload(part_tags)
-from part_tags import classify, check_overrides, export_part_lines
+from part_tags import classify, check_overrides
 BASE=ROOT/'art/blender/roster'
+sys.path.insert(0,str(BASE))
+import insignia_tags
+importlib.reload(insignia_tags)
+from insignia_tags import tag_insignias, export_insignia_lines
 MODEL=globals().get('MODEL','daystar')
 data=json.loads((BASE/'source'/f'{MODEL}.json').read_text())
 role=data['role']; family=data['livery']['id']; dims=data['dims']
@@ -414,10 +418,12 @@ for ob in meshes:
     classify(MODEL,ob,ob['joint'],(center[0],center[2],-center[1]))
     set_outline_attributes(ob.data,smooth_normals(ob.data),[outline_weight(MODEL,ob)]*len(ob.data.vertices))
 check_overrides(MODEL,meshes)
+insignias=tag_insignias(MODEL,meshes)
+scene['insignia_json']=json.dumps(insignias)
 bpy.data.libraries.write(str(BASE/f'{MODEL}-production.blend'),{scene},fake_user=True,compress=True)
 
-# Consolidate by joint/part/paint slot. Retain the original joint/slot welding
-# representatives before splitting, including sub-micron coincident vertices.
+# Consolidate by joint/part/paint slot/insignia. Retain the original joint/slot
+# welding representatives before splitting, including sub-micron vertices.
 reports=[]
 for level,ratio in [(0,1),(1,.52),(2,.24 if family=='tempest' else .26)]:
     temp=bpy.data.scenes.new('ROSTER EXPORT');bpy.context.window.scene=scene
@@ -431,10 +437,11 @@ for level,ratio in [(0,1),(1,.52),(2,.24 if family=='tempest' else .26)]:
     bpy.context.view_layer.update();deps=bpy.context.evaluated_depsgraph_get()
     for ob in meshes:
         ev=ob.evaluated_get(deps);me=ev.to_mesh();me.calc_loop_triangles()
-        b=groups[(ob['joint'],ob['part'],ob['slot'])]
+        insignia=ob.get('insignia','')
+        b=groups[(ob['joint'],ob['part'],ob['slot'],insignia)]
         original=canonical[(ob['joint'],ob['slot'])]
         smooth=smooth_normals(me);weight=outline_weight(MODEL,ob)
-        if ob['slot']!='G':lines.extend((ob['joint'],ob['part'],a,c,kind) for a,c,kind in design_edges(MODEL,ob,Matrix.Identity(4),me,level))
+        if ob['slot']!='G':lines.extend((ob['joint'],ob['part'],insignia,a,c,kind) for a,c,kind in design_edges(MODEL,ob,Matrix.Identity(4),me,level))
         for tri in me.loop_triangles:
             face=[]
             for vi,li in zip(tri.vertices,tri.loops):
@@ -453,23 +460,27 @@ for level,ratio in [(0,1),(1,.52),(2,.24 if family=='tempest' else .26)]:
     root['roster_schema']=1;root['model']=MODEL;root['dims']=dims;root['level']=level
     root['calf_thrusters_json']=json.dumps(thrusters)
     root['ink_schema']=1
+    root['insignia_json']=scene['insignia_json']
     export_meshes=[]
-    for (joint,part,slot),g in groups.items():
+    for (joint,part,slot,insignia),g in groups.items():
+        if not g['faces']:continue
         name='/'.join((joint,part,slot))
+        if insignia:name+='/insignia-'+insignia
         me=bpy.data.meshes.new(name);me.from_pydata(g['vertices'],[],g['faces']);me.update()
         for face in me.polygons:face.use_smooth=True
         me.normals_split_custom_set_from_vertices(g['normals']);me.materials.append(mats[slot]);export_meshes.append(me)
         set_outline_attributes(me,g['outline'],g['width'])
         ob=bpy.data.objects.new(name,me);temp.collection.objects.link(ob);ob.parent=root;ob['joint']=joint;ob['part']=part;ob['slot']=slot
-    line_meshes,line_count=export_part_lines(temp,root,lines,mats['D']);export_meshes.extend(line_meshes)
+        if insignia:ob['insignia']=insignia
+    line_meshes,line_count=export_insignia_lines(temp,root,lines,mats['D']);export_meshes.extend(line_meshes)
     bpy.context.window.scene=temp
     out=ROOT/'src/client/render/mech/assets/roster'/f'{MODEL}{"-lod"+str(level) if level else ""}.glb'
     bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',use_active_scene=True,export_yup=True,export_normals=True,export_texcoords=False,export_extras=True,export_animations=False,export_skins=False,export_cameras=False,export_lights=False,export_materials='EXPORT',export_attributes=True,use_mesh_edges=True)
-    reports.append({'level':level,'triangles':sum(len(g['faces']) for g in groups.values()),'bytes':out.stat().st_size,'parts':len(groups),'part_tags':sorted({part for joint,part,slot in groups}),'line_segments':line_count,'ink_schema':1})
+    reports.append({'level':level,'triangles':sum(len(g['faces']) for g in groups.values()),'bytes':out.stat().st_size,'parts':sum(bool(g['faces']) for g in groups.values()),'part_tags':sorted({part for joint,part,slot,insignia in groups}),'line_segments':line_count,'ink_schema':1,'insignia_meshes':sum(bool(g['faces']) and bool(key[3]) for key,g in groups.items())})
     bpy.context.window.scene=scene
     for ob in list(temp.objects):bpy.data.objects.remove(ob,do_unlink=True)
     bpy.data.scenes.remove(temp)
     for me in export_meshes:bpy.data.meshes.remove(me)
-(BASE/f'{MODEL}-manifest.json').write_text(json.dumps({'model':MODEL,'design':design_note,'levels':reports},indent=2)+'\n')
+(BASE/f'{MODEL}-manifest.json').write_text(json.dumps({'model':MODEL,'design':design_note,'insignias':insignias,'levels':reports},indent=2)+'\n')
 bpy.context.window.scene=bpy.data.scenes.get(old_scene_name) or scene
 result={'model':MODEL,'source_parts':len(meshes),'levels':reports,'blend':str(BASE/f'{MODEL}-production.blend')}

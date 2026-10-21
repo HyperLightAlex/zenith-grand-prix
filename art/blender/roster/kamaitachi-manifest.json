@@ -1,11 +1,76 @@
 {
   "model": "kamaitachi",
   "design": "Art-sheet crescent samurai: swept gold blades, fitted lightning armor and mirrored skirt lames",
+  "insignias": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        -3.240280784666538e-05,
+        0.8294142484664917,
+        0.8456121683120728
+      ],
+      "normal": [
+        -0.0019561396911740303,
+        -0.015553963370621204,
+        0.9998770952224731
+      ],
+      "up": [
+        -3.0429406251641922e-05,
+        0.9998790621757507,
+        0.015553933568298817
+      ],
+      "width": 0.8878015871782463
+    },
+    {
+      "id": "shoulderL",
+      "joint": "shL",
+      "part": "shoulders",
+      "center": [
+        -6.279116496443748e-05,
+        -0.15994793176651,
+        0.619383692741394
+      ],
+      "normal": [
+        -0.004013781435787678,
+        0.00232026563026011,
+        0.9999892711639404
+      ],
+      "up": [
+        9.313064765592571e-06,
+        0.9999973773956299,
+        -0.0023202470038086176
+      ],
+      "width": 0.5610375648146889
+    },
+    {
+      "id": "shoulderR",
+      "joint": "shR",
+      "part": "shoulders",
+      "center": [
+        -6.279116496443748e-05,
+        -0.15994793176651,
+        0.619383692741394
+      ],
+      "normal": [
+        -0.004013781435787678,
+        0.00232026563026011,
+        0.9999892711639404
+      ],
+      "up": [
+        9.313064765592571e-06,
+        0.9999973773956299,
+        -0.0023202470038086176
+      ],
+      "width": 0.5610375648146889
+    }
+  ],
   "levels": [
     {
       "level": 0,
       "triangles": 31534,
-      "bytes": 1420164,
+      "bytes": 1421352,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -21,12 +86,13 @@
         "waist"
       ],
       "line_segments": 1898,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     },
     {
       "level": 1,
       "triangles": 16742,
-      "bytes": 974228,
+      "bytes": 975412,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -42,12 +108,13 @@
         "waist"
       ],
       "line_segments": 634,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     },
     {
       "level": 2,
       "triangles": 8256,
-      "bytes": 511208,
+      "bytes": 512392,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -63,7 +130,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 3
     }
   ]
 }

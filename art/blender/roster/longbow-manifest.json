@@ -1,12 +1,35 @@
 {
   "model": "longbow",
   "design": "Art-sheet knight archer: long surcoat, sculpted armor and one ranged rifle; no paired blades",
+  "insignias": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        1.3881683116778731e-05,
+        0.5556347966194153,
+        0.9778831005096436
+      ],
+      "normal": [
+        0.00022768691997043788,
+        0.008120855316519737,
+        0.9999669790267944
+      ],
+      "up": [
+        -1.8490735556042637e-06,
+        0.999967098236084,
+        -0.008120855316519737
+      ],
+      "width": 0.8021603682565384
+    }
+  ],
   "levels": [
     {
       "level": 0,
       "triangles": 42434,
-      "bytes": 1550504,
-      "parts": 119,
+      "bytes": 1553864,
+      "parts": 121,
       "part_tags": [
         "armL",
         "armR",
@@ -21,13 +44,14 @@
         "waist"
       ],
       "line_segments": 2656,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     },
     {
       "level": 1,
       "triangles": 22230,
-      "bytes": 944844,
-      "parts": 119,
+      "bytes": 947364,
+      "parts": 121,
       "part_tags": [
         "armL",
         "armR",
@@ -42,13 +66,14 @@
         "waist"
       ],
       "line_segments": 650,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     },
     {
       "level": 2,
       "triangles": 11416,
-      "bytes": 533152,
-      "parts": 119,
+      "bytes": 535656,
+      "parts": 121,
       "part_tags": [
         "armL",
         "armR",
@@ -63,7 +88,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     }
   ]
 }
