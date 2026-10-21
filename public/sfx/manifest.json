@@ -19,6 +19,18 @@
     "bullet_hit-2.mp3"
    ]
   },
+  "bump": {
+   "gain": -3.1,
+   "files": [
+    "bump-1.mp3"
+   ]
+  },
+  "dash": {
+   "gain": -10.57,
+   "files": [
+    "dash-1.mp3"
+   ]
+  },
   "guard_break": {
    "gain": 1.3,
    "files": [

@@ -77,7 +77,8 @@ due for another look later.
 | Combat | ringout | in the game (two takes, sent as "wall_collision") |
 | Movement and the circuit | launch, pad, wall | in the game |
 | Movement and the circuit | boost | its recipe, by choice: the take was tiring on a sound heard on every boost, so it went to Overdrive |
-| Movement and the circuit | dash, carve_burst, takeoff, land, bump, fall, recover | synthesised for now, by choice |
+| Movement and the circuit | dash, bump | in the game (dash's take sent as "quick_boost"; bump's is a deep thud, nearly all of it near 55 Hz: on a phone's or a laptop's speakers, which give little below 150 to 250 Hz, it comes out about 15 dB under its recipe) |
+| Movement and the circuit | carve_burst, takeoff, land, fall, recover | synthesised for now, by choice |
 | Abilities | overdrive | in the game: boost's take, whole (2.2 s of roar, its tail faded by 3 s) |
 | Abilities | breakaway … aegis (26 to 31) | asked for |
 
@@ -219,7 +220,9 @@ What a fight sounds like: the blows and the guns. Heard most, so first.
 0.4 second anime metal clang sound effect, robot glancing off a steel barrier, bright clang with a quick scrape, instant attack, dry, no bass, no reverb
 ```
 
-21. **bump**: two mechs bumping shoulders. Takes: 2.
+21. **bump**: two mechs bumping shoulders. Takes: 2. (The take in the game
+    is all sub-bass; for one that also carries on small speakers, add "with
+    a hard metal knock, no sub bass".)
 
 ```
 0.2 second anime bump sound effect, dull metal thud between two robots, instant attack, very short, dry, no reverb
