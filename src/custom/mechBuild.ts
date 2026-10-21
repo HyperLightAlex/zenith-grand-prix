@@ -15,7 +15,7 @@ export const PART_NAMES: Record<PartSlot, string> = {
   head: 'Head',
   shoulders: 'Shoulders',
   chest: 'Chest',
-  backpack: 'Backpack',
+  backpack: 'Back thrusters',
   waist: 'Waist',
   hips: 'Hips',
   armL: 'Left arm',
@@ -24,6 +24,9 @@ export const PART_NAMES: Record<PartSlot, string> = {
   shins: 'Shins',
   feet: 'Feet',
 };
+
+/** The parts named in the plural (a pair, or the back's thrusters): "the feet have", not "has". */
+export const PLURAL_PARTS: ReadonlySet<PartSlot> = new Set<PartSlot>(['shoulders', 'backpack', 'hips', 'thighs', 'shins', 'feet']);
 
 /**
  * Each frame's designs, one per faction in the factions' order (palette.ts

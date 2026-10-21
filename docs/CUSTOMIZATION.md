@@ -50,7 +50,7 @@ again as wide as a Swift's), and nothing would fit.
 | Head | `head` | `head` |
 | Shoulders (a pair) | `shoulders` | the shoulder armour on `shL` and `shR` (outboard of and above the shoulder joint), and the Sunhawk's `towerL`/`towerR` |
 | Chest | `chest` | `chest`, except what is on its back |
-| Backpack | `backpack` | `wingL`, `wingR`, and the pieces on the back of `chest` |
+| Back thrusters | `backpack` | `wingL`, `wingR`, and the pieces on the back of `chest` (the tag keeps its first name; the game calls it Back thrusters) |
 | Waist | `waist` | `spine` (it varies little within a frame: the game may fold it into Hips) |
 | Hips | `hips` | `hips`, and the Sunhawk's `skirtL`, `skirtR`, `skirtBack` |
 | Left arm | `armL` | the upper arm on `shL` (the shoulder bearing and the shell down to the elbow), `elL`, `wrL` |
@@ -188,12 +188,30 @@ as they always were; a custom one is assembled.
   and the hands from each arm, the muzzle from the right arm, the fins'
   roots from the backpack, the heels from the feet, the skirts' hinges
   from the hips, the Sunhawk's towers with its shoulders.
+- A head sits on another design's chest as the chest's top takes it
+  (below, "Heads on other chests").
 - The pose fitting follows the chest (the Sunhawk's, or the roster's with
   the backpack's fin spread).
 - Markings flip light or dark with each part's main paint, so they read on
   any colour; they stay in the team's colours, as the number does.
 - Built for the hangar in about a tenth of a second (more for a mech of
   many designs); a change rebuilds it once changes settle.
+
+**Heads on other chests**: the designs of a frame share its skeleton, so
+every head hangs from the same point on the chest; but their chests' tops
+and their heads' necks differ (Razor's low head sinks deep into a chest cut
+away at the front for it; Seraph's chest is one tall plate that takes a head
+only a little way), so a head on another chest could vanish into it or stand
+clear of it. Each head is set down on the chest from above until it touches
+the chest's top, then sunk into it as far as the shallower of the two allows:
+as far as the head sinks into its own chest, and as far as the chest's own
+head sinks into it. (A chest's top is its highest surface under the head
+below 0.6 m over the neck, so a cowl arching over the head is not its top.)
+On its own chest a head sits where it always has. `npx tsx
+tools/head-seats.ts` works this out from the models for every pair and
+writes `render/mech/headSeats.ts` (run it again when the models change;
+`--check` says whether the table is up to date); the mech viewer's
+`?debug=mechs&role=0&heads=3` shows a chest with each head of its frame.
 
 **The hangar**: the Mech row (your custom mech of the frame, or the stock
 one of the faction you fly for), Customize (made from the stock mech in

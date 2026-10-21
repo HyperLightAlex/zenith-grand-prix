@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
@@ -6,7 +8,9 @@ import {
   FRAME_DESIGNS,
   METALS,
   PAINTS,
+  PART_NAMES,
   PART_SLOTS,
+  PLURAL_PARTS,
   customName,
   decodeBuild,
   encodeBuild,
@@ -51,6 +55,21 @@ describe('the paint catalogue', () => {
 
   it('names each frame\'s designs in the factions\' order', () => {
     for (const role of [ROLE.FW, ROLE.MF, ROLE.DF]) expect(FRAME_DESIGNS[role]).toEqual(LIVERIES.map((l) => l.models[role].toLowerCase()));
+  });
+});
+
+describe('heads on other chests', () => {
+  it('sit as the models say: the table is what tools/head-seats.ts works out from them', () => {
+    const root = fileURLToPath(new URL('..', import.meta.url));
+    execFileSync(process.execPath, [`${root}node_modules/tsx/dist/cli.mjs`, 'tools/head-seats.ts', '--check'], { cwd: root, stdio: 'pipe' });
+  }, 120000);
+});
+
+describe('the parts\' names', () => {
+  it('call the backpack the back thrusters, and know which are plural', () => {
+    expect(PART_NAMES.backpack).toBe('Back thrusters');
+    for (const s of PLURAL_PARTS) expect(PART_NAMES[s].endsWith('s') || s === 'feet', s).toBe(true);
+    expect(PLURAL_PARTS.has('head')).toBe(false);
   });
 });
 

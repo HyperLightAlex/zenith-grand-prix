@@ -13,6 +13,7 @@ import { FRAME_DESIGNS, METALS, PAINTS, PART_SLOTS, schemeFor, type Channel, typ
 import { LIVERIES, type Livery } from '../palette';
 import { isMarking, markingsMaterial } from './decals';
 import { DIMS, designBuilder } from './frames';
+import { HEAD_SEATS } from './headSeats';
 import { addArmour, finishRoster, fitRosterPose, rosterAnchors, type ArmourPiece } from './importedRoster';
 import { sunhawkFittings, sunhawkJoints } from './importedSunhawk';
 import type { InkLines } from './ink';
@@ -204,7 +205,8 @@ export function customDims(role: Role, b: MechBuild): FrameDims {
     chestY,
     shoulderX: chest.shoulderX,
     shoulderY: chest.shoulderY,
-    headY: chest.headY,
+    // The neck's socket from the chest; the head up or down it, to sit on that chest as on its own.
+    headY: chest.headY + (HEAD_SEATS[of.chest]?.[of.head] ?? 0),
     headZ: chest.headZ,
     upperArm: d('armR').upperArm,
     foreArm: d('armR').foreArm,

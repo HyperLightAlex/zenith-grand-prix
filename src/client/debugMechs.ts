@@ -8,6 +8,7 @@
 //   &bg=e4e6ec         a flat background of that colour, no floor (to compare against a model sheet)
 //   &jets=0.7          hold jet power for angle checks; &look=plain checks the plain cone
 //   &sun=-0.5,0.6,0.6  where the light comes from
+//   &heads=3           design 3's custom mech of the frame with each design's head in turn (&turnTo=-0.5 turns them, &gap=6.5 spaces them)
 //   &painted           the markings as the anime look paints them (the pictures), drawn as they load
 import * as THREE from 'three';
 import { ROLE } from '../sim/config';
@@ -120,6 +121,8 @@ export function runMechDebug(): void {
   const custom = decodeBuild(q.get('custom'));
   const make = () => (custom ? buildCustomFrame(role, LIVERIES[team], custom, String(role + 1)) : buildFrame(role, LIVERIES[team], String(role + 1)));
   const compare = q.has('compare');
+  // &heads=<chest design>: that design's custom mech with each design's head in turn (how heads sit on its chest).
+  const heads = q.get('heads');
   let rigs: MechRig[];
   if (compare) {
     useOldSwift(false);
@@ -141,6 +144,12 @@ export function runMechDebug(): void {
       labels.append(el);
     }
     document.body.append(labels);
+  } else if (heads !== null) {
+    rigs = [0, 1, 2, 3, 4].map((h) => {
+      const b = stockBuild(Number(heads));
+      b.parts.head = h;
+      return place(buildCustomFrame(role, LIVERIES[team], b, String(role + 1)), (h - 2) * Number(q.get('gap') ?? 6.5), 0, Number(q.get('turnTo') ?? -0.5), poseName, 0.25);
+    });
   } else if (turn) {
     const yaws = [0, -0.7, -Math.PI / 2, Math.PI];
     rigs = yaws.map((yaw, i) => place(make(), (i - 1.5) * 7.5, 0, yaw, poseName, 0.25));

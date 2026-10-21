@@ -11,6 +11,7 @@ import {
   PAINTS,
   PART_NAMES,
   PART_SLOTS,
+  PLURAL_PARTS,
   customName,
   nameProblem,
   stockBuild,
@@ -81,6 +82,9 @@ function bayShade(g: Game): HTMLElement {
   el.addEventListener('pointercancel', end);
   return el;
 }
+
+/** "has" or "have", for a part's name. */
+const hasOrHave = (s: PartSlot) => (PLURAL_PARTS.has(s) ? 'have' : 'has');
 
 const listOf = (ch: Channel): readonly Paint[] => (ch === 'frame' ? METALS : PAINTS);
 
@@ -325,7 +329,7 @@ export function registerCustom(m: Menus, g: Game): void {
           const there = hs.has(ch);
           m.update(ch, {
             value: there ? valueText(ch) : 'None',
-            locked: there ? null : `The ${designName(d.role, b.parts[p!])}'s ${PART_NAMES[p!].toLowerCase()} has no ${CHANNEL_NAMES[ch].toLowerCase()} to paint.`,
+            locked: there ? null : `The ${designName(d.role, b.parts[p!])}'s ${PART_NAMES[p!].toLowerCase()} ${hasOrHave(p!)} no ${CHANNEL_NAMES[ch].toLowerCase()} to paint.`,
           });
         }
         m.update('follow', { label: p ? `Paint the ${PART_NAMES[p].toLowerCase()} as the mech` : '', hidden: !(p && b.own[p]) });
@@ -334,7 +338,7 @@ export function registerCustom(m: Menus, g: Game): void {
           note,
           p
             ? missing.length
-              ? `The ${designName(d.role, b.parts[p])}'s ${PART_NAMES[p].toLowerCase()} has no ${missing.join(' or ')} to paint.`
+              ? `The ${designName(d.role, b.parts[p])}'s ${PART_NAMES[p].toLowerCase()} ${hasOrHave(p)} no ${missing.join(' or ')} to paint.`
               : `Anything left as the mech's follows the whole mech's paint.`
             : "Main, accent and trim are paints; the frame is bare metal. The glow and the lenses stay your team's colour.",
         );
