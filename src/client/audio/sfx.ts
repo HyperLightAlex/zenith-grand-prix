@@ -779,7 +779,9 @@ const m = (level: number, send = 0, prio = 1, vary = 0, gap = 0.03, duck?: [numb
  * bullet hit (heard in streams) a little under (-14, -15); the heavy blows,
  * the heavy block and the scatter cannon at -9 (the heavy swing -11); the
  * parry, the momentum hit, the ring-out and the guard break over those (-8,
- * -9), and the knockout loudest (-6). The "recorded" part measures them.
+ * -9), and the knockout loudest (-6). Moving: the launch -9 (once a race),
+ * a boost lighting and a hard hit on the barrier -11 (the game plays a glancing
+ * one quieter), a speed pad -14. The "recorded" part measures them.
  */
 export const SFX_META: Record<SfxName, SfxMeta> = {
   ui_move: m(0.2, 0, 2),
@@ -787,10 +789,10 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   ui_back: m(0.19, 0.05, 2),
   count_beep: m(0.4, 0.05, 2),
   count_go: m(0.325, 0.2, 2, 0, 0.03, [0.25, 0.5]),
-  launch: m(0.6, 0.25, 2),
+  launch: m(0.8, 0.25, 2),
   rev_green: m(0.3, 0.05, 2),
   bog: m(0.5, 0.1, 2),
-  boost: m(0.3, 0.1, 1),
+  boost: m(0.687, 0.1, 1),
   carve_tier: m(0.22, 0.2, 2, 0, 0.05),
   carve_burst: m(0.36, 0.1, 1, 0.04),
   dash: m(0.77, 0.05, 1, 0.05),
@@ -814,7 +816,7 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   shot_carbine: m(1.172, 0.06, 1, 0.05),
   shot_scatter: m(1.094, 0.12, 1, 0.04),
   bullet_hit: m(1.94, 0.04, 0, 0.15, 0.08),
-  wall: m(0.38, 0.1, 1, 0.06),
+  wall: m(0.699, 0.1, 1, 0.06),
   bump: m(0.45, 0.03, 1, 0.08),
   ko: m(0.673, 0.3, 2, 0, 0.1, [0.3, 0.7]),
   critical: m(0.36, 0.05, 2, 0, 0.5),
@@ -822,7 +824,7 @@ export const SFX_META: Record<SfxName, SfxMeta> = {
   land: m(0.4, 0.08, 1, 0.06, 0.08),
   fall: m(0.6, 0.25, 2, 0.03, 0.2),
   recover: m(0.5, 0.15, 2, 0, 0.2),
-  pad: m(0.4, 0.06, 1, 0.04, 0.12),
+  pad: m(1.236, 0.06, 1, 0.04, 0.12),
   lap: m(0.45, 0.3, 2),
   lap_phase: m(0.4, 0.25, 2, 0, 0.5, [0.4, 1.1]),
   final_lap: m(0.3, 0.3, 2, 0, 0.5, [0.5, 1.3]),

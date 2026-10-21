@@ -75,7 +75,8 @@ due for another look later.
 | Combat | parry, guard_break, momentum_hit, ko | in the game |
 | Combat | shot_carbine, shot_scatter, bullet_hit | in the game (the carbine's takes, bursts: the last shot of each, whole; the scatter cannon's played 12% faster) |
 | Combat | ringout | in the game (two takes, sent as "wall_collision") |
-| Movement and the circuit | boost … recover (14 to 24) | asked for |
+| Movement and the circuit | boost, launch, pad, wall | in the game (boost cut to its first second: the afterburner layer carries a boost on) |
+| Movement and the circuit | dash, carve_burst, takeoff, land, bump, fall, recover | synthesised for now, by choice |
 | Abilities | overdrive … aegis (25 to 31) | asked for |
 
 ## 1. Combat

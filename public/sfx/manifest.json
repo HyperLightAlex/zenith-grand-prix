@@ -12,6 +12,12 @@
     "block_heavy-1.mp3"
    ]
   },
+  "boost": {
+   "gain": 1.41,
+   "files": [
+    "boost-1.mp3"
+   ]
+  },
   "bullet_hit": {
    "gain": -4.68,
    "files": [
@@ -48,11 +54,23 @@
     "ko-2.mp3"
    ]
   },
+  "launch": {
+   "gain": -0.86,
+   "files": [
+    "launch-1.mp3"
+   ]
+  },
   "momentum_hit": {
    "gain": 5.35,
    "files": [
     "momentum_hit-1.mp3",
     "momentum_hit-2.mp3"
+   ]
+  },
+  "pad": {
+   "gain": -9.52,
+   "files": [
+    "pad-1.mp3"
    ]
   },
   "parry": {
@@ -98,6 +116,13 @@
     "swing_light-1.mp3",
     "swing_light-2.mp3",
     "swing_light-3.mp3"
+   ]
+  },
+  "wall": {
+   "gain": 0.71,
+   "files": [
+    "wall-1.mp3",
+    "wall-2.mp3"
    ]
   }
  }
