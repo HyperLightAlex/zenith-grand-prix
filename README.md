@@ -339,11 +339,13 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 `&match=0..4` picks the match format,
 `&track=canyon` (or `helios`, `meridian`) picks the circuit, `&look=plain`
 (or `anime`) picks the look for that visit, `&tune=1` opens the tuning panel,
-`&mute=1` turns sound off, `&music=suno` plays a recorded song as the race
-music where a circuit has one (all three, built up lap by lap), a title
-theme in the menus, a setlist in the hangar (M for the next track) and win
-and loss themes on the results (see
-[tools/music](tools/music/README.md)), and `?debug=mechs` opens a model viewer.
+`&mute=1` turns sound off, `&music=synth` plays the synthesised music and
+sound effects in place of the recorded ones (the recorded songs: a race
+song on each circuit, built up lap by lap, a title theme in the menus, a
+setlist in the hangar, M for the next track, and win and loss themes on the
+results; see [tools/music](tools/music/README.md) and
+[tools/sfx](tools/sfx/README.md)), `&sfx=synth` the synthesised sound effects
+alone, and `?debug=mechs` opens a model viewer.
 Online: `?room=K7Q2X` and `?squad=K7Q2X` are invite links, `&server=URL` uses
 another game server, and `&player=2` gives the tab its own identity, so two
 tabs of one browser can be two players.
@@ -446,8 +448,9 @@ src/client/     Everything you see and hear.
   input/        Gamepad and keyboard
   ui/           HUD, the tuning panel and the menus (DOM + CSS); each menu
                 screen is in ui/screens/
-  audio/        Synthesised sound and music (Web Audio, no files); song.ts
-                plays a recorded song instead, with ?music=suno
+  audio/        The sound and music (Web Audio): recorded songs (song.ts,
+                setlist.ts) and sound effects (sfxBank.ts), and the
+                synthesised engine, effects and music (?music=synth)
 tests/          Simulation, Grand Prix, lobby, online and model tests (vitest)
 tools/          Headless race runner, bots, track plotter, screenshot, online
                 and audio checks; music/ builds a recorded song's layers

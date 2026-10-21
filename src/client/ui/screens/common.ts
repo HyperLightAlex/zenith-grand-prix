@@ -7,7 +7,7 @@ import { h } from '../dom';
 import { COVER, LOGO } from '../keyArt';
 import { art, type Menus } from '../menus';
 
-const RECORDED_MUSIC = typeof location !== 'undefined' && new URLSearchParams(location.search).get('music') === 'suno';
+const RECORDED_MUSIC = typeof location !== 'undefined' && new URLSearchParams(location.search).get('music') !== 'synth';
 
 const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
   [

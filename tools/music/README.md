@@ -2,7 +2,8 @@
 
 A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
-For now this is an experiment, heard only with `?music=suno` in the address.
+The game plays these by default; `?music=synth` in the address plays the
+synthesised music instead.
 Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
 (疾走の回路) and Helios Drop (午間の雲上レース). The menus have a title
 theme (Blue Night Sky), and the results one for when the player's team

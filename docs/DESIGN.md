@@ -283,7 +283,8 @@ E Phrygian, 128 BPM, a broken beat; Helios: D major, 145 BPM, trance). Each
 follows the same arrangement over the three laps, and the lap and phase
 stingers are moved into the circuit's key.
 
-An experiment, behind `?music=suno`: the race music as a recorded song
+The race music is a recorded song (`?music=synth` plays the synthesised
+music above instead)
 (made in Suno) that builds the same way. Its stems are mixed into four
 layers: lap 1 plays the melody (the stems that were carved out of one
 another, which have to come in together: see tools/music) and the bass, a
@@ -720,10 +721,13 @@ The teams swap sides of the grid from one round to the next.
   lines and effects, poses on twos, and cuts of its own for big moments.
   See [ART.md](ART.md), and [VISUAL-WORKFLOW.md](VISUAL-WORKFLOW.md) for
   how its art is made and checked.
-- **Sound.** Synthesised at run time: engine, wind, 55 effects, and music
-  that follows the lap phase, in a different style on each circuit. No audio
-  files (except the recorded songs of the `?music=suno` experiment, which
-  plays through the same engine and falls back to the synthesised music). Every continuous layer (engine, wind, afterburner, strip hum,
+- **Sound.** Recorded songs (made in Suno: a race song on each circuit,
+  built up lap by lap, and the menus', hangar's and results' music) and
+  recorded sound effects, played through the same engine as the
+  synthesised sound: engine, wind and the continuous layers, 55 effects (a
+  recording plays in place of a recipe where there is one), and music that
+  follows the lap phase, in a different style on each circuit, played with
+  `?music=synth` and wherever a song cannot load. Every continuous layer (engine, wind, afterburner, strip hum,
   slipstream, scrape, carve, alarm) has its own level on the tuning panel
   (the carve's edge hiss follows the scrape slider, its tier hum the strip
   one), and the panel can play any one-shot by name.

@@ -3,8 +3,8 @@
 The one-shot sound effects can be recordings (made in Suno's Sounds mode)
 instead of the synthesised recipes in `src/client/audio/sfx.ts`. They come
 in a few at a time: a sound with recordings plays one of them, and every
-other sound keeps its recipe. Heard with `?music=suno` in the address, with
-the recorded music; `&sfx=synth` keeps the recipes, to compare.
+other sound keeps its recipe. Heard by default, with the recorded music; `?sfx=synth` keeps the
+recipes, to compare (`?music=synth` the synthesised music and recipes both).
 
 What each sound was asked for, and what is still to make, is in
 [prompts.md](prompts.md).
