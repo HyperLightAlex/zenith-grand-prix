@@ -710,6 +710,20 @@ html.crt-on .crt-layer {
 .menu .kit.pilot-gallery .face.on { opacity: 1; outline: 0.16em solid var(--signal); outline-offset: 0.08em; }
 .menu.anime .kit.pilot-gallery .face { border: 1px solid var(--phos-dim); }
 .menu.anime .kit.pilot-gallery .face.on { outline-color: var(--phos); box-shadow: 0 0 0.8em var(--phos-dim); }
+/* A part's "as the mech" swatch: the mech's paint, ringed with a dashed line. */
+.menu .swatch.follow { position: relative; }
+.menu .swatch.follow::after { content: ''; position: absolute; inset: 0.2em; border: 0.12em dashed rgba(255, 255, 255, 0.9); border-radius: 0.15em; mix-blend-mode: difference; }
+.menu .swatches[hidden], .menu .paint-row[hidden], .menu .item[hidden] { display: none; }
+/* A grid with the highlight in it (the pad or the keys): the list waits, and the cell under the highlight stands out. */
+.menu.gridding .col .list { opacity: 0.5; }
+.menu.anime.gridding[data-screen='garage'] .item.sel > span:first-child::after { visibility: hidden; }
+.menu .grid-on { border-radius: 0.2em; background: rgba(255, 255, 255, 0.07); box-shadow: 0 0 0 0.35em rgba(255, 255, 255, 0.07); }
+.menu.anime .grid-on { background: var(--phos-faint); box-shadow: 0 0 0 0.35em var(--phos-faint); }
+.menu .swatches .swatch.cur, .menu .kit.pilot-gallery .face.cur { position: relative; z-index: 1; opacity: 1; transform: scale(1.14); outline: 0.2em solid var(--paper); outline-offset: 0.1em; transition: transform 0.08s ease-out; }
+.menu.anime .swatches .swatch.cur, .menu.anime .kit.pilot-gallery .face.cur { outline-color: var(--phos); box-shadow: 0 0 1em var(--phos); }
+/* The custom mech editor: a drag across the bay turns the mech. */
+.menu .shade.spin { cursor: grab; touch-action: none; }
+.menu .shade.spin:active { cursor: grabbing; }
 .match-blurb { font-size: 1.1em; font-weight: 500; opacity: 0.85; margin: -0.3em 0 0 0.4em; max-width: 30em; line-height: 1.2; }
 
 .footer-hints { position: absolute; left: 5.5em; bottom: 2em; display: flex; gap: 1.6em; font-size: 1.15em; font-weight: 500; }
@@ -803,6 +817,8 @@ html.crt-on .crt-layer {
   100% { transform: none; filter: none; }
 }
 .menu.anime .controls { animation-name: crt-on-centred; }
+/* A screen drawn again where it stands (a value changed, the device changed): its panels are already on. */
+.menu.still .col, .menu.still .kit, .menu.still .crew, .menu.still .controls, .menu.still .bay, .menu.still .ec-pause { animation: none !important; }
 @keyframes crt-on-centred {
   0% { transform: translateY(-50%) scale(0.7, 0.012); filter: brightness(4); }
   45% { transform: translateY(-50%) scale(1, 0.012); filter: brightness(3); }

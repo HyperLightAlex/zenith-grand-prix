@@ -149,6 +149,9 @@ const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse',
 const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'award', 'controls', 'video', 'dialog', 'pause']);
 /** Screens that open over others: the music is the one for the screen under them. */
 const OVER_SCREENS = new Set<ScreenId>(['controls', 'video', 'dialog', 'pause']);
+/** The custom mech editor's screens: the mech in the bay is turned by hand on them, not drifting round (naming it too). */
+const CUSTOM_SCREENS = new Set<ScreenId>(['custom', 'custom-parts', 'custom-paint']);
+const OVER_EDITOR = new Set<ScreenId>([...OVER_SCREENS, 'entry']);
 /**
  * Semitones to move the race stingers by on each circuit so they land in the
  * key its music is in (they are written for Meridian's A minor, B minor and
@@ -407,7 +410,7 @@ export class Game {
   /** Wear another portrait (an index into the gallery). */
   setPortrait(i: number): void {
     savePortrait(i);
-    this.tellPilot();
+    this.tellPilotSoon();
   }
 
   // ---- your custom mechs (docs/CUSTOMIZATION.md) ----------------------------
@@ -437,6 +440,13 @@ export class Game {
   }
 
   private tellTimer = 0;
+  /** How fast the right stick is turning the mech in the editor (radians a second, eased). */
+  private turnRate = 0;
+
+  /** A drag across the bay in the custom mech editor: `dx` pixels to the right turns the mech that way. */
+  turnHangar(dx: number): void {
+    this.view.cam.turn((dx / Math.max(320, innerWidth)) * Math.PI * 1.6);
+  }
 
   /** A room or squad hears of your mechs once the changes settle (not at every step through the paints). */
   private tellPilotSoon(): void {
@@ -1878,7 +1888,7 @@ export class Game {
     this.view.cam.mode = 'orbit';
     this.view.cam.shiftX = 0;
     this.view.cam.shiftY = 0;
-    this.view.cam.clock = 0;
+    this.view.cam.restartOrbit();
   }
 
   /**
@@ -1924,6 +1934,13 @@ export class Game {
     }
     // The right stick reads a menu's text.
     if (this.menus.screen && Math.abs(this.input.camY) > 0.05) this.menus.scrollBy(this.input.camY * dt * 900);
+    // The custom mech editor: the mech stands still in the bay, and the right stick (across) turns it.
+    const under = this.menus.under(OVER_EDITOR);
+    const turning = this.state === 'garage' && under !== null && CUSTOM_SCREENS.has(under);
+    this.view.cam.turntable = turning;
+    const want = Math.abs(this.input.camX) > 0.12 ? this.input.camX * 2.1 : 0;
+    this.turnRate = turning ? this.turnRate + (want - this.turnRate) * (1 - Math.exp(-12 * dt)) : 0;
+    if (Math.abs(this.turnRate) > 1e-3) this.view.cam.turn(this.turnRate * dt);
     // The hangar's mech, clear of the panels for the layout in use.
     if (this.state === 'garage' && this.view.cam.mode === 'orbit') {
       [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift();

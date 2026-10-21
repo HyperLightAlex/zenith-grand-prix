@@ -61,6 +61,14 @@ export class CameraRig {
    * origin facing +Z) instead of following the road, which may bend.
    */
   orbitFrame: THREE.Matrix4 | null = null;
+  /**
+   * In orbit, the drift held: the camera stays where it is unless turned by
+   * hand (turn: the custom mech editor's right stick, or a drag across the bay).
+   */
+  turntable = false;
+  /** Seconds the orbit has drifted, and how far it has been turned by hand (radians). */
+  private orbitT = 0;
+  private orbitTurn = 0;
   introLength = 4;
   private yaw = 0;
   private battleYaw = 0;
@@ -125,8 +133,23 @@ export class CameraRig {
   reset(): void {
     this.lurchAmt = 0;
     this.first = true;
-    this.clock = 0;
     this.trauma = 0;
+    this.restartOrbit();
+  }
+
+  /** The orbit (and the intro) from its start. */
+  restartOrbit(): void {
+    this.clock = 0;
+    this.orbitT = 0;
+    this.orbitTurn = 0;
+  }
+
+  /**
+   * Turn the orbit by hand: positive brings the near side of what it circles
+   * to the right, as looking right does, or dragging it to the right.
+   */
+  turn(rad: number): void {
+    this.orbitTurn += rad;
   }
 
   update(dt: number, sub: CameraSubject, panX: number, panY: number, lookBack: boolean): void {
@@ -139,6 +162,7 @@ export class CameraRig {
     // Follow a mech up into the air, and a little way down when it falls.
     this.hSmooth = toward(this.hSmooth, Math.max(-25, sub.h ?? 0), 7, dt > 0 ? dt : 1);
     this.clock += dt;
+    if (!(this.turntable && this.mode === 'orbit')) this.orbitT += dt;
     const F = this.feel;
     const speedFrac = Math.min(1.45, m.speed / FULL_SPEED);
     const inBattle = m.mode === MODE.BATTLE && sub.target !== null && !m.retired;
@@ -215,8 +239,8 @@ export class CameraRig {
       trackPoint(track, sub.s + e * ahead, sub.d, 3.4, look);
       fov = 50 + e * 12;
     } else if (this.mode === 'orbit') {
-      const ang = this.clock * 0.35 + 2.4;
-      const rise = 5 + Math.sin(this.clock * 0.3) * 1.5;
+      const ang = this.orbitT * 0.35 + 2.4 + this.orbitTurn;
+      const rise = 5 + Math.sin(this.orbitT * 0.3) * 1.5;
       if (this.orbitFrame) {
         // The frame's +X is the mech's left, the road's -d.
         pos.set(Math.sin(ang) * 17.5, rise, -Math.cos(ang) * 17.5).applyMatrix4(this.orbitFrame);

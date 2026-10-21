@@ -96,6 +96,28 @@ export interface ItemOpts {
   locked?: string | null;
 }
 
+/**
+ * Things to pick by sight, laid out as a grid (the portraits, the paints). A
+ * click or a tap on one picks it. On the pad or the keys, A on the item that
+ * opens the grid takes the highlight into it: the arrows move it up, down and
+ * across (each cell it lands on is put on, so the change shows as you go), A
+ * keeps the cell and B puts back the one that was on.
+ */
+export interface Grid {
+  cells: HTMLElement[];
+  /** The cell that is on now (-1 for none). */
+  on(): number;
+  /** Put a cell on. */
+  set(i: number): void;
+}
+
+/** The bottom bar while the highlight is in a grid. */
+const GRID_PROMPTS: Prompt[] = [
+  { pad: 'D-pad', keys: '← ↑ → ↓', label: 'Choose' },
+  { pad: 'A', keys: 'Enter', label: 'Keep', press: 'confirm' },
+  { pad: 'B', keys: 'Esc', label: 'Cancel', press: 'back' },
+];
+
 interface Item {
   el: HTMLElement;
   key: string;
@@ -112,6 +134,8 @@ export interface ScreenDef<D = unknown> {
   back?(m: Menus, data: D): void;
   /** The list goes left and right instead of up and down. */
   horizontal?: boolean;
+  /** The arrows move the highlight by where the items sit on screen, across and up and down (a keyboard's keys). */
+  spatial?: boolean;
   /** The item highlighted when the screen first opens (by key). */
   initialFocus?: string;
   /** The highlight moved to the item with this key (to describe it, say). */
@@ -150,6 +174,11 @@ export class Menus {
   device: Device = 'keys';
   private toastEl = h('div.toast');
   private toastTimer = 0;
+  /** The bottom bar on screen, and what it says (a grid says something else while the highlight is in it). */
+  private footerEl: HTMLElement | null = null;
+  private footerPrompts: Prompt[] = [];
+  /** The grid the highlight is in: its cell, and the one that was on when it went in. */
+  private gridding: { grid: Grid; at: number; start: number } | null = null;
 
   constructor(
     parent: HTMLElement,
@@ -157,6 +186,8 @@ export class Menus {
   ) {
     this.root.hidden = true;
     parent.append(this.root);
+    // A click anywhere but a cell takes the highlight out of a grid, keeping what is on.
+    this.root.addEventListener('click', () => this.leaveGrid());
   }
 
   register<D>(id: ScreenId, def: ScreenDef<D>): void {
@@ -262,18 +293,23 @@ export class Menus {
     const top = this.stack[this.stack.length - 1];
     if (!top) return;
     this.saveSel();
-    this.render(top);
+    this.render(top, true);
   }
 
-  private render(top: Entry): void {
+  /** `again`: the screen was already up, so its panels do not switch on again (the anime look's CRT). */
+  private render(top: Entry, again = false): void {
     const def = this.defs.get(top.id);
     const R = this.root;
     R.replaceChildren();
     R.onclick = null;
+    this.gridding = null;
+    setClass(R, 'gridding', false);
+    this.footerEl = null;
     // The styles lay each screen out by name.
     // The Pilot screen and the custom mech editor are the hangar computer's, styled as the hangar is.
     R.dataset.screen = HANGAR_COMPUTER.has(top.id) ? 'garage' : top.id;
     setClass(R, 'anime', this.host.lookOn());
+    setClass(R, 'still', again);
     this.items = [];
     def?.render(this, top.data as never);
     R.append(this.toastEl);
@@ -284,12 +320,24 @@ export class Menus {
       const at = this.items.findIndex((it) => it.key === stage.focus);
       if (at >= 0) {
         top.stage = stage.id;
+        // A new stage is a new page: it switches on.
+        setClass(R, 'still', false);
         return this.select(at, false);
       }
     }
     const byKey = top.key ? this.items.findIndex((it) => it.key === top.key) : def?.initialFocus ? this.items.findIndex((it) => it.key === def.initialFocus) : -1;
     const i = byKey >= 0 ? byKey : Math.min(top.sel, this.items.length - 1);
-    if (this.items.length) this.select(Math.max(0, i), false);
+    if (this.items.length) this.select(this.shownFrom(Math.max(0, i), 1), false);
+  }
+
+  /** The first item from `i` on (going `dir`) that is showing: `i` itself if none is. */
+  private shownFrom(i: number, dir: number): number {
+    const n = this.items.length;
+    for (let k = 0; k < n; k++) {
+      const j = (((i + dir * k) % n) + n) % n;
+      if (!this.items[j].el.hidden) return j;
+    }
+    return i;
   }
 
   // ---- building blocks ---------------------------------------------------------
@@ -317,6 +365,14 @@ export class Menus {
    */
   footer(...prompts: Prompt[]): HTMLElement {
     const bar = h('div.footer-hints');
+    this.footerEl = bar;
+    this.footerPrompts = prompts;
+    this.fillFooter(bar, prompts);
+    return bar;
+  }
+
+  private fillFooter(bar: HTMLElement, prompts: Prompt[]): void {
+    bar.replaceChildren();
     for (const p of prompts) {
       if (this.device === 'touch' && (!p.press || p.press === 'confirm')) continue;
       const el = h('span.prompt', this.key(p.pad, p.keys), p.label);
@@ -329,7 +385,6 @@ export class Menus {
       }
       bar.append(el);
     }
-    return bar;
   }
 
   addItem(list: HTMLElement, el: HTMLElement, activate?: () => void, change?: (dir: number) => void, opts: ItemOpts = {}): HTMLElement {
@@ -343,6 +398,7 @@ export class Menus {
     });
     el.addEventListener('click', (e) => {
       e.stopPropagation();
+      this.leaveGrid();
       this.select(index, false, false);
       this.activate(index);
     });
@@ -351,6 +407,7 @@ export class Menus {
       el.querySelectorAll<HTMLElement>('.arr').forEach((arr) => {
         arr.addEventListener('click', (e) => {
           e.stopPropagation();
+          this.leaveGrid();
           this.select(index, false, false);
           this.nudge(index, arr.classList.contains('l') ? -1 : 1);
         });
@@ -360,9 +417,110 @@ export class Menus {
     return el;
   }
 
-  /** An item that is a label and a value, changed with left and right. */
-  choice(list: HTMLElement, label: string, value: string, change: (dir: number) => void, opts: ItemOpts = {}): HTMLElement {
-    return this.addItem(list, h('div.item', h('span', label), h('span.choice', h('i.arr.l', '‹'), h('span.val', value), h('i.arr.r', '›'))), undefined, change, opts);
+  /**
+   * An item that is a label and a value, changed with left and right.
+   * `open`: what A (or a click on it) does instead of the next value (a grid to pick it from).
+   */
+  choice(list: HTMLElement, label: string, value: string, change: (dir: number) => void, opts: ItemOpts & { open?: () => void } = {}): HTMLElement {
+    return this.addItem(list, h('div.item', h('span', label), h('span.choice', h('i.arr.l', '‹'), h('span.val', value), h('i.arr.r', '›'))), opts.open, change, opts);
+  }
+
+  /**
+   * Change an item where it is, without drawing the screen again: its value
+   * (a choice's), its label, whether it is locked (and why), whether it shows.
+   */
+  update(key: string, c: { value?: string; label?: string; locked?: string | null; hidden?: boolean }): void {
+    const i = this.items.findIndex((it) => it.key === key);
+    const it = this.items[i];
+    if (!it) return;
+    if (c.value !== undefined) {
+      const v = it.el.querySelector('.val');
+      if (v && v.textContent !== c.value) v.textContent = c.value;
+    }
+    if (c.label !== undefined) {
+      const s = it.el.querySelector(':scope > span');
+      if (s && s.textContent !== c.label) s.textContent = c.label;
+    }
+    if (c.locked !== undefined) {
+      it.locked = c.locked;
+      setClass(it.el, 'locked', !!c.locked);
+    }
+    if (c.hidden !== undefined && it.el.hidden !== c.hidden) {
+      it.el.hidden = c.hidden;
+      // The highlight does not stay on what went.
+      if (c.hidden && i === this.sel) this.select(this.shownFrom(i, 1), false);
+    }
+  }
+
+  /**
+   * Make cells pickable by sight (see Grid): a click or a tap on one puts it
+   * on. Returns what takes the highlight into them (for A on the item that
+   * opens them).
+   */
+  grid(grid: Grid): () => void {
+    grid.cells.forEach((cell, i) => {
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.leaveGrid();
+        this.host.sound('ui_select');
+        grid.set(i);
+      });
+    });
+    return () => {
+      const at = grid.on();
+      const start = at >= 0 && at < grid.cells.length ? at : 0;
+      this.gridding = { grid, at: start, start: at };
+      setClass(this.root, 'gridding', true);
+      grid.cells[start].parentElement?.classList.add('grid-on');
+      this.gridCursor();
+      if (this.footerEl) this.fillFooter(this.footerEl, GRID_PROMPTS);
+    };
+  }
+
+  /** Whether the highlight is in a grid. */
+  get inGrid(): boolean {
+    return this.gridding !== null;
+  }
+
+  /** The grid's highlight on its cell, in view. */
+  private gridCursor(): void {
+    const g = this.gridding;
+    if (!g) return;
+    g.grid.cells.forEach((c, i) => setClass(c, 'cur', i === g.at));
+    const cell = g.grid.cells[g.at];
+    if (cell) this.bringIntoView(cell, g.grid.cells);
+  }
+
+  /** Take the highlight out of the grid it is in (`back`: put back the cell that was on when it went in). */
+  private leaveGrid(back = false): void {
+    const g = this.gridding;
+    if (!g) return;
+    this.gridding = null;
+    setClass(this.root, 'gridding', false);
+    for (const c of g.grid.cells) c.classList.remove('cur');
+    g.grid.cells[0]?.parentElement?.classList.remove('grid-on');
+    if (this.footerEl) this.fillFooter(this.footerEl, this.footerPrompts);
+    if (back && g.start >= 0 && g.grid.on() !== g.start) g.grid.set(g.start);
+  }
+
+  /** A press while the highlight is in a grid. */
+  private gridPress(p: MenuInput): void {
+    const g = this.gridding!;
+    if (p === 'confirm') {
+      this.host.sound('ui_select');
+      if (g.grid.on() !== g.at) g.grid.set(g.at);
+      this.leaveGrid();
+    } else if (p === 'back') {
+      this.host.sound('ui_back');
+      this.leaveGrid(true);
+    } else if (p === 'up' || p === 'down' || p === 'left' || p === 'right') {
+      const next = spatialStep(g.grid.cells, g.at, p);
+      if (next === g.at) return;
+      g.at = next;
+      this.host.sound('ui_move');
+      g.grid.set(next);
+      this.gridCursor();
+    }
   }
 
   /** An item that does something. `hint`: a line shown only while it is highlighted. */
@@ -429,19 +587,24 @@ export class Menus {
    */
   private reveal(index: number): void {
     const el = this.items[index]?.el;
-    if (!el || !el.isConnected) return;
+    if (el) this.bringIntoView(el, this.items.map((it) => it.el));
+  }
+
+  /** Scroll `el` into view, as reveal does: `among` are the things the highlight moves through (the first and last of a pane go to its ends). */
+  private bringIntoView(el: HTMLElement, among: HTMLElement[]): void {
+    if (!el.isConnected) return;
     const pane = scroller(el, this.root);
     if (!pane) return;
     // Pinned in place (the results' buttons): already showing.
     if (pinned(el, pane)) return;
-    const inPane = this.items.filter((it) => pane.contains(it.el) && !pinned(it.el, pane));
+    const inPane = among.filter((it) => pane.contains(it) && !pinned(it, pane));
     const p = pane.getBoundingClientRect();
     const r = el.getBoundingClientRect();
     const margin = Math.min(p.height * 0.18, r.height * 1.2);
     const max = pane.scrollHeight - pane.clientHeight;
     let to = pane.scrollTop;
-    if (inPane[0]?.el === el && r.bottom - p.top + pane.scrollTop <= pane.clientHeight) to = 0;
-    else if (inPane[inPane.length - 1]?.el === el && r.top - p.top + pane.scrollTop - max >= 0) to = max;
+    if (inPane[0] === el && r.bottom - p.top + pane.scrollTop <= pane.clientHeight) to = 0;
+    else if (inPane[inPane.length - 1] === el && r.top - p.top + pane.scrollTop - max >= 0) to = max;
     else if (r.top < p.top + margin) to = pane.scrollTop - (p.top + margin - r.top);
     else if (r.bottom > p.bottom - margin) to = pane.scrollTop + (r.bottom - (p.bottom - margin));
     to = Math.max(0, Math.min(max, to));
@@ -490,6 +653,11 @@ export class Menus {
       // Esc is both Back and Pause: once it has gone back a screen, it does not also resume.
       if (p === 'pause' && backed) continue;
       backed = p === 'back';
+      // In a grid, the arrows, A and B are the grid's; nothing else does anything until it is left.
+      if (this.gridding) {
+        this.gridPress(p);
+        continue;
+      }
       const def = this.defs.get(top.id);
       const horizontal = !!def?.horizontal;
       // Nothing to pick (the controls): up and down read the page.
@@ -497,13 +665,18 @@ export class Menus {
         this.scrollBy((p === 'up' ? -1 : 1) * Math.max(60, this.root.clientHeight * 0.3));
         continue;
       }
+      if (def?.spatial && (p === 'up' || p === 'down' || p === 'left' || p === 'right')) {
+        const next = spatialStep(this.items.map((it) => it.el), this.sel, p);
+        if (next !== this.sel) this.select(next);
+        continue;
+      }
       if (p === 'confirm') this.activate(this.sel);
       else if (p === 'back') {
         this.host.sound('ui_back');
         if (def?.back) def.back(this, top.data as never);
         else this.pop();
-      } else if (p === (horizontal ? 'left' : 'up')) this.select(this.sel - 1);
-      else if (p === (horizontal ? 'right' : 'down')) this.select(this.sel + 1);
+      } else if (p === (horizontal ? 'left' : 'up')) this.select(this.shownFrom(this.sel - 1, -1));
+      else if (p === (horizontal ? 'right' : 'down')) this.select(this.shownFrom(this.sel + 1, 1));
       else if (!horizontal && (p === 'left' || p === 'right')) {
         const it = this.items[this.sel];
         if (it?.change) this.nudge(this.sel, p === 'left' ? -1 : 1);
@@ -511,6 +684,41 @@ export class Menus {
       } else def?.press?.(this, p, top.data as never);
     }
   }
+}
+
+/**
+ * Where an arrow goes from `from` among elements laid out in rows (a grid of
+ * portraits, a keyboard's keys and the buttons under them), by where they sit
+ * on screen: left and right along its row, round to the row's other end; up
+ * and down to the row above or below, to the element nearest across, round
+ * to the far row. Elements not showing are passed over.
+ */
+export function spatialStep(els: readonly HTMLElement[], from: number, dir: 'up' | 'down' | 'left' | 'right'): number {
+  const r = els.map((e) => e.getBoundingClientRect());
+  const a = r[from];
+  if (!a || a.width === 0 || a.height === 0) return from;
+  const cx = (b: DOMRect) => b.left + b.width / 2;
+  const cy = (b: DOMRect) => b.top + b.height / 2;
+  const shown = r.map((b, i) => i).filter((i) => i !== from && r[i].width > 0 && r[i].height > 0);
+  const inRow = (b: DOMRect, y: number) => Math.abs(cy(b) - y) < Math.min(a.height, b.height) / 2;
+  const nearestAcross = (cands: number[]) => cands.reduce((best, i) => (Math.abs(cx(r[i]) - cx(a)) < Math.abs(cx(r[best]) - cx(a)) ? i : best), cands[0]);
+  if (dir === 'left' || dir === 'right') {
+    const s = dir === 'right' ? 1 : -1;
+    const row = shown.filter((i) => inRow(r[i], cy(a)));
+    if (!row.length) return from;
+    const ahead = row.filter((i) => (cx(r[i]) - cx(a)) * s > 0.5);
+    // The next along, or round to the far end of the row.
+    if (ahead.length) return ahead.reduce((best, i) => ((cx(r[i]) - cx(r[best])) * s < 0 ? i : best), ahead[0]);
+    return row.reduce((best, i) => ((cx(r[i]) - cx(r[best])) * s < 0 ? i : best), row[0]);
+  }
+  const s = dir === 'down' ? 1 : -1;
+  const off = shown.filter((i) => !inRow(r[i], cy(a)));
+  if (!off.length) return from;
+  const ahead = off.filter((i) => (cy(r[i]) - cy(a)) * s > 0);
+  // The nearest row that way, or round to the farthest the other way.
+  const pool = ahead.length ? ahead : off;
+  const rowY = cy(r[pool.reduce((best, i) => ((ahead.length ? 1 : -1) * (Math.abs(cy(r[i]) - cy(a)) - Math.abs(cy(r[best]) - cy(a))) < 0 ? i : best), pool[0])]);
+  return nearestAcross(pool.filter((i) => Math.abs(cy(r[i]) - rowY) < r[i].height / 2 + 0.5));
 }
 
 /** The nearest element between `el` and `root` that scrolls and has more than it shows. */

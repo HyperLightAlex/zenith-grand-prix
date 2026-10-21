@@ -194,6 +194,8 @@ export function registerCommon(m: Menus, g: Game): void {
   });
 
   m.register<EntryData & { error?: string; busy?: boolean; shift?: boolean }>('entry', {
+    // The keys are a keyboard: the arrows go across it and up and down it, to the buttons under it.
+    spatial: true,
     render(m, d) {
       const box = h('div.entry');
       box.dataset.scroll = '';
@@ -278,7 +280,8 @@ export function registerCommon(m: Menus, g: Game): void {
     press(m, key, d) {
       if (key === 'x') {
         d.value = (d.value ?? '').slice(0, -1);
-        m.refresh();
+        const field = m.root.querySelector<HTMLInputElement>('.entry input.field');
+        if (field) field.value = d.value;
         return true;
       }
       if (key === 'y') {

@@ -159,9 +159,16 @@ as they always were; a custom one is assembled.
 **The hangar**: the Mech row (your custom mech of the frame, or the stock
 one of the faction you fly for), Customize (made from the stock mech in
 view the first time) and the editor: Parts (each slot, both arms at once or
-each), Paint (the whole mech or any part; a part offers only the channels
-its design has; a swatch grid to pick by sight), the name, start again from
-stock, delete. Your custom mech races in every mode, offline and online:
+each), Paint (the whole mech or any part; a part's colours it does not have
+are locked; a swatch grid to pick by sight), the name, start again from
+stock, delete. In the editor the mech stands still in the bay and the right
+stick (across) or a drag over the bay turns it. A swatch grid, like the
+Pilot screen's portraits, is picked from by a click or a tap, or with A on
+its row: the arrows then move through the grid in both directions, each
+cell going on as they land on it, A keeps it and B puts back what was on
+(`Menus.grid`). A change shows in place: only the values it touches are
+redrawn, and a screen drawn again where it stands does not switch its panels
+on again. Your custom mech races in every mode, offline and online:
 a room is told the mech you fly in each frame, checks each, and seats you
 in it (docs/ONLINE.md).
 
