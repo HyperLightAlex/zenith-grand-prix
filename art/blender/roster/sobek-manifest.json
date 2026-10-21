@@ -5,24 +5,63 @@
     {
       "level": 0,
       "triangles": 37351,
-      "bytes": 1272884,
-      "parts": 111,
+      "bytes": 1287672,
+      "parts": 121,
+      "part_tags": [
+        "armL",
+        "armR",
+        "backpack",
+        "chest",
+        "feet",
+        "head",
+        "hips",
+        "shins",
+        "shoulders",
+        "thighs",
+        "waist"
+      ],
       "line_segments": 4422,
       "ink_schema": 1
     },
     {
       "level": 1,
       "triangles": 19380,
-      "bytes": 693992,
-      "parts": 111,
+      "bytes": 709000,
+      "parts": 121,
+      "part_tags": [
+        "armL",
+        "armR",
+        "backpack",
+        "chest",
+        "feet",
+        "head",
+        "hips",
+        "shins",
+        "shoulders",
+        "thighs",
+        "waist"
+      ],
       "line_segments": 540,
       "ink_schema": 1
     },
     {
       "level": 2,
       "triangles": 9855,
-      "bytes": 405676,
-      "parts": 111,
+      "bytes": 418444,
+      "parts": 121,
+      "part_tags": [
+        "armL",
+        "armR",
+        "backpack",
+        "chest",
+        "feet",
+        "head",
+        "hips",
+        "shins",
+        "shoulders",
+        "thighs",
+        "waist"
+      ],
       "line_segments": 0,
       "ink_schema": 1
     }

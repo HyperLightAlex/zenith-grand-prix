@@ -4,6 +4,19 @@ The production scene remains SUNHAWK • Art comparison. Variant B is the
 approved updated design; A is the preserved current comparison. The game
 uses the original rigid joint hierarchy, tower coupling and effect anchors.
 
+PART TAGS (Blender 5.2.2 LTS)
+Updated B source pieces use ../part_tags.py and ../roster/part-overrides.json.
+The roster README's PART TAGS section documents the eleven slots, split planes,
+review and exact geometry comparison. Towers are shoulders; skirts are hips.
+The main backpack shell and both porcelain rails have reviewed backpack
+overrides. All updated armour/ink nodes carry part extras and use
+joint_part_slot / joint_part_LINES names. UV detail=True overlays retain their
+separate UV format and Blender suffix where their paint slot matches armour;
+they also carry part tags. Current A keeps its original format byte-for-byte.
+Part-colour pictures and per-piece audit: ../roster/previews/parts/index.html.
+Only regrouping changed: all updated LODs pass the exact expanded triangle and
+ink-category comparison against e3acda26ca8c9c77f3d1fff6a3b8d2a773cbfa0a.
+
 Open sunhawk-production.blend in Blender, or append its named scene from a
 clean Blender session. Keep that scene active while running:
   from pathlib import Path
@@ -21,11 +34,11 @@ Updated B uses ../ink_geometry.py and ../ink-overrides.json. Those rules
 compute pre-bevel design edges, seat them on each evaluated LOD, and exclude
 Drawn/UV overlays, glows, hazards, race numbers and jet geometry. The baked
 _OUTLINE_NORMAL and _INK_WIDTH attributes are preserved through the export's
-joint/slot consolidation. Custom normal components are converted to glTF's
+joint/part/slot consolidation. Custom normal components are converted to glTF's
 Y-up axes explicitly. Width is zero on shallow details and reduced on thin
 fins/blades/horns. Edit scripted rules rather than the generated line meshes.
 
-JOINT/LINES loose-edge meshes export through use_mesh_edges=True, with
+JOINT_PART_LINES loose-edge meshes export through use_mesh_edges=True, with
 _LINE_KIND (crease/paint/rim) and joint metadata. LOD1 keeps longer and stronger
 lines; LOD2 omits inner lines. export_attributes=True is required. Runtime
 validates and batches these into a single line draw and shell draw per mech,

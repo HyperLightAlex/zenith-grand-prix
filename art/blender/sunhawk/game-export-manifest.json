@@ -40,9 +40,9 @@
     "detail_level": 0,
     "file": "sunhawk-updated.glb",
     "source_meshes": 241,
-    "joint_material_meshes": 97,
+    "joint_material_meshes": 102,
     "triangles": 25948,
-    "bytes": 3351036,
+    "bytes": 3353584,
     "line_segments": 1180,
     "ink_schema": 1,
     "joints": [
@@ -69,16 +69,30 @@
       "wingR",
       "wrL",
       "wrR"
-    ]
+    ],
+    "parts": [
+      "armL",
+      "armR",
+      "backpack",
+      "chest",
+      "feet",
+      "head",
+      "hips",
+      "shins",
+      "shoulders",
+      "thighs",
+      "waist"
+    ],
+    "part_material_meshes": 102
   },
   {
     "variant": "updated",
     "detail_level": 1,
     "file": "sunhawk-updated-lod1.glb",
     "source_meshes": 234,
-    "joint_material_meshes": 90,
+    "joint_material_meshes": 95,
     "triangles": 13918,
-    "bytes": 1838460,
+    "bytes": 1845928,
     "line_segments": 452,
     "ink_schema": 1,
     "joints": [
@@ -105,16 +119,30 @@
       "wingR",
       "wrL",
       "wrR"
-    ]
+    ],
+    "parts": [
+      "armL",
+      "armR",
+      "backpack",
+      "chest",
+      "feet",
+      "head",
+      "hips",
+      "shins",
+      "shoulders",
+      "thighs",
+      "waist"
+    ],
+    "part_material_meshes": 95
   },
   {
     "variant": "updated",
     "detail_level": 2,
     "file": "sunhawk-updated-lod2.glb",
     "source_meshes": 234,
-    "joint_material_meshes": 90,
+    "joint_material_meshes": 95,
     "triangles": 7328,
-    "bytes": 992256,
+    "bytes": 998136,
     "line_segments": 0,
     "ink_schema": 1,
     "joints": [
@@ -141,6 +169,20 @@
       "wingR",
       "wrL",
       "wrR"
-    ]
+    ],
+    "parts": [
+      "armL",
+      "armR",
+      "backpack",
+      "chest",
+      "feet",
+      "head",
+      "hips",
+      "shins",
+      "shoulders",
+      "thighs",
+      "waist"
+    ],
+    "part_material_meshes": 95
   }
 ]

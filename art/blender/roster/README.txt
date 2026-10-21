@@ -4,6 +4,76 @@ ZENITH GP — ROSTER PRODUCTION PASS
 Seraph, Longbow, Paladin, Kamaitachi, Fujin and Raijin.
 The attached Swift sheet describes Sunhawk, which already has its own assets.
 
+PART TAGS
+Exported with Blender 5.2.2 LTS (d13f752e3b9c, built 2026-09-15).
+The Parts section of docs/CUSTOMIZATION.md is the slot/export specification.
+The shared implementation is art/blender/part_tags.py; source pieces are tagged
+after all sheet_polish.py, aurora_polish.py and tempest_polish.py additions.
+Each source object's control-cage bounding-box centre is measured in its
+joint-local game axes (+Y up, +Z forward, +X left), before bevels or LODs:
+  chest: z < -0.75 -> backpack, otherwise chest;
+  shL/shR: abs(x) > 0.3 OR y > 0.1 -> shoulders, otherwise armL/armR.
+All other joints map directly to the eleven slots: head, shoulders, chest,
+backpack, waist, hips, armL, armR, thighs, shins, feet. Sunhawk's towers map to
+shoulders and its three skirt hinges to hips. Its separate UV detail format
+and the original/current Sunhawk comparison asset are preserved.
+
+The stable roster part_source identifier is "joint / requested source name",
+with [2], [3], ... only for repeated names within that joint. It is independent
+of Blender's global .001 suffixes or other loaded scenes. Sunhawk uses its
+existing, fixed "B / ..." source-library names. Source objects also retain
+part_rule, part_center_game and (when overridden) part_reason for inspection.
+part-overrides.json records all 34 reviewed exceptions with an explicit reason:
+  Anubis: two shoulder-cap stripes, pack housing and pack cap (4).
+  Horus: two shoulder-cap stripes (2).
+  Razor: rear power-pack housing (1).
+  Seraph: pack housing, cap and both wing-root bearings (4).
+  Kamaitachi: pack housing, cap, both crescent-root bearings; both shoulder
+    shields, their inset fields and their lightning emblems (10).
+  Fujin: both shoulder-turbine housings and their lightning marks (4).
+  Raijin: both shoulder shields, their inset fields and lightning emblems (6).
+  Sunhawk: rear power-pack shell and both porcelain borders (3).
+Every override follows the assembly a piece visibly attaches to. Neck guards,
+collars and actual upper-arm bands remain chest/arm even near a split plane.
+A rebuild fails on unknown joints, incompatible overrides or stale piece names.
+All fifteen designs have all eleven parts, including a backpack. No piece needs
+a slot outside the table. Full per-piece decisions are in part-overrides.json
+and previews/parts/*-pieces.json; boundary-review notes are in that gallery.
+
+Roster armour exports as joint/part/slot; ink as joint/part/LINES. Sunhawk uses
+underscores. Every such node has a part extra. Paint slots, root metadata,
+calf-thruster anchors, LOD ratios and geometry are unchanged. The original
+joint/paint vertex-weld representatives are retained before splitting groups.
+Ink deduplication also stays joint-wide, in original source order. Blender
+5.2.2's loose-edge exporter sorts FLOAT _LINE_KIND records separately from
+positions; the helper preserves the OLD effective category stream before
+partitioning it, rather than changing the existing on-screen strokes.
+
+Review/rebuild:
+  1. Run build_roster.py for each MODEL as documented below, and the Sunhawk
+     export_game.py in its production scene as documented in its own README.
+  2. Run Blender --background --python art/blender/roster/review_parts.py -- --all
+     (substitute the absolute Blender executable and script paths as needed).
+     This opens the source libraries read-only and does not save review colours.
+  3. Open previews/parts/index.html. Each of the fifteen designs has front,
+     back and three-quarter-rear PNGs with one flat colour per part, plus a
+     source-piece inventory. Inspect caps/bands, collars/pack plates, wing-root
+     bearings and the Tempest polish additions. Change only the source rules
+     or named JSON overrides, then rebuild and review again.
+  4. Run node tools/parts-compare.mjs --baseline e3acda26ca8c9c77f3d1fff6a3b8d2a773cbfa0a
+     to regenerate previews/parts/triangle-equivalence.json. The comparator
+     expands indexed triangles and ink segments by joint, ignores group order,
+     preserves multiplicity/winding/paint slots, and requires EXACT positions,
+     shaded normals, outline normals, widths, ink categories and other authored
+     attributes. It also checks root contracts and the unchanged current Sunhawk.
+  5. Run npm test and npm run build. Do not hand-edit generated GLBs or manifests.
+
+The comparison report is pinned to the pre-tag branch commit above, so future
+reviewers can repeat the no-geometry-change proof independently of Git HEAD.
+Final validation: all 45 updated GLBs and 885 joint/LOD comparisons pass with
+zero attribute delta; current Sunhawk is byte-identical. npm test passes all
+1,111 tests in 40 files; npm run build passes client/server builds and typechecks.
+
 Open review.html for the comparison gallery. Every card also links to the
 live comparison at localhost:4173. The dev server can serve the gallery at
 http://127.0.0.1:5173/art/blender/roster/review.html .
@@ -143,7 +213,7 @@ Regeneration replaces manual edits to that model's generated file: save a
 separate artist copy before hand editing, or transfer the edits to the script.
 
 Outputs: src/client/render/mech/assets/roster/MODEL.glb, -lod1.glb, -lod2.glb.
-Each GLB has joint/paint-slot metadata and authored normals. Per-model
+Each GLB has joint/part/paint-slot metadata and authored normals. Per-model
 manifests record actual triangles and byte counts. LOD1 is about half the
 triangles, LOD2 about one quarter; the game selects them by screen size.
 Sunhawk's outline/glow treatment and clean-panel option are reused.
@@ -184,7 +254,7 @@ Blender XYZ to glTF XZ-Y explicitly. Triangle positions and shaded normals
 are unchanged. The 45 updated GLBs were checked against clean-ink: zero
 position/normal changes in their expanded triangle streams.
 
-Loose edge meshes named JOINT/LINES have joint and ink_lines extras plus
+Loose edge meshes named JOINT/PART/LINES have joint, part and ink_lines extras plus
 _LINE_KIND (POINT float; matching endpoints). Blender's exporter needs
 use_mesh_edges=True and export_attributes=True. Root ink_schema=1 identifies
 the contract. LOD0 includes all selected edges; LOD1 drops short/weak edges;

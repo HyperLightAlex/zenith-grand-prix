@@ -1,0 +1,3139 @@
+{
+  "model": "rampart",
+  "blender_version": "5.2.2 LTS",
+  "strict_tags": true,
+  "pieces": [
+    {
+      "name": "rampart / head / K / 000",
+      "source_piece": "head / rampart / head / K / 000",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        -0.07999999821186066,
+        -0.050000011920928955
+      ]
+    },
+    {
+      "name": "rampart / head / P / 001",
+      "source_piece": "head / rampart / head / P / 001",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.4299999959766865,
+        -0.04000002145767212
+      ]
+    },
+    {
+      "name": "rampart / head / D / 002",
+      "source_piece": "head / rampart / head / D / 002",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.4400000125169754,
+        0.4699999839067459
+      ]
+    },
+    {
+      "name": "rampart / head / S / 003",
+      "source_piece": "head / rampart / head / S / 003",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.23000000417232513,
+        0.6150000095367432,
+        0.4399999976158142
+      ]
+    },
+    {
+      "name": "rampart / head / S / 004",
+      "source_piece": "head / rampart / head / S / 004",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.23000000417232513,
+        0.6150000095367432,
+        0.4399999976158142
+      ]
+    },
+    {
+      "name": "rampart / head / F / 005",
+      "source_piece": "head / rampart / head / F / 005",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        0.18000000156462193,
+        0.36000001430511475
+      ]
+    },
+    {
+      "name": "rampart / head / D / 006",
+      "source_piece": "head / rampart / head / D / 006",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.14999999850988388,
+        0.20000000298023224,
+        0.5399999916553497
+      ]
+    },
+    {
+      "name": "rampart / head / D / 007",
+      "source_piece": "head / rampart / head / D / 007",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.20000000298023224,
+        0.5399999916553497
+      ]
+    },
+    {
+      "name": "rampart / head / D / 008",
+      "source_piece": "head / rampart / head / D / 008",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.14999999850988388,
+        0.20000000298023224,
+        0.5399999916553497
+      ]
+    },
+    {
+      "name": "rampart / head / T / 009",
+      "source_piece": "head / rampart / head / T / 009",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        1.280000001192093,
+        -0.380000002682209
+      ]
+    },
+    {
+      "name": "rampart / head / T / 010",
+      "source_piece": "head / rampart / head / T / 010",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.23999999463558197,
+        1.1500000059604645,
+        -0.28999999910593033
+      ]
+    },
+    {
+      "name": "rampart / head / T / 011",
+      "source_piece": "head / rampart / head / T / 011",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.23999999463558197,
+        1.1500000059604645,
+        -0.28999999910593033
+      ]
+    },
+    {
+      "name": "rampart / head / T / 012",
+      "source_piece": "head / rampart / head / T / 012",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.6575402319431305,
+        0.5732018947601318,
+        -0.22999999299645424
+      ]
+    },
+    {
+      "name": "rampart / head / T / 013",
+      "source_piece": "head / rampart / head / T / 013",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.6575402319431305,
+        0.5732018947601318,
+        -0.22999999299645424
+      ]
+    },
+    {
+      "name": "rampart / head / G / 014",
+      "source_piece": "head / rampart / head / G / 014",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.1750000063329935,
+        0.45499999821186066,
+        0.5399999916553497
+      ]
+    },
+    {
+      "name": "rampart / head / G / 015",
+      "source_piece": "head / rampart / head / G / 015",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.1750000063329935,
+        0.45499999821186066,
+        0.5399999916553497
+      ]
+    },
+    {
+      "name": "rampart / elL / D / 024",
+      "source_piece": "elL / rampart / elL / D / 024",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / sculpted elL / 025",
+      "source_piece": "elL / rampart / sculpted elL / 025",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8999999880790712,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / elL / S / 026",
+      "source_piece": "elL / rampart / elL / S / 026",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.48000000417232513,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / elL / T / 027",
+      "source_piece": "elL / rampart / elL / T / 027",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -1.449999988079071,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / elL / T / 028",
+      "source_piece": "elL / rampart / elL / T / 028",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.6509999930858612,
+        -0.8500000238418579,
+        0.3199999928474426
+      ]
+    },
+    {
+      "name": "rampart / elL / G / 029",
+      "source_piece": "elL / rampart / elL / G / 029",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.6510000228881836,
+        -0.8750000298023224,
+        0.47999998927116394
+      ]
+    },
+    {
+      "name": "rampart / shL / K / 030",
+      "source_piece": "shL / rampart / shL / K / 030",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shL / K / 031",
+      "source_piece": "shL / rampart / shL / K / 031",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.825000025331974,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / sculpted shL / 032",
+      "source_piece": "shL / rampart / sculpted shL / 032",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.09999999403953552,
+        -0.8989999741315842,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shL / P / 033",
+      "source_piece": "shL / rampart / shL / P / 033",
+      "joint": "shL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        0.6199999712407589,
+        0.26000000536441803,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shL / S / 034",
+      "source_piece": "shL / rampart / shL / S / 034",
+      "joint": "shL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        0.6200000047683716,
+        0.12000000244006515,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shL / T / 035",
+      "source_piece": "shL / rampart / shL / T / 035",
+      "joint": "shL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        1.180559754371643,
+        0.8918605968356133,
+        -0.42500002682209015
+      ]
+    },
+    {
+      "name": "rampart / wingL / K / 036",
+      "source_piece": "wingL / rampart / wingL / K / 036",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / wingL / S / 037",
+      "source_piece": "wingL / rampart / wingL / S / 037",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.6500000059604645,
+        -1.0750000234693289
+      ]
+    },
+    {
+      "name": "rampart / wingL / T / 038",
+      "source_piece": "wingL / rampart / wingL / T / 038",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        3.725290298461914e-09,
+        1.324999988079071,
+        -1.2249999642372131
+      ]
+    },
+    {
+      "name": "rampart / wingL / G / 039",
+      "source_piece": "wingL / rampart / wingL / G / 039",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.22499999962747097,
+        -0.8499999940395355
+      ]
+    },
+    {
+      "name": "rampart / elR / D / 048",
+      "source_piece": "elR / rampart / elR / D / 048",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / sculpted elR / 049",
+      "source_piece": "elR / rampart / sculpted elR / 049",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8999999880790712,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / elR / S / 050",
+      "source_piece": "elR / rampart / elR / S / 050",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.48000000417232513,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / elR / T / 051",
+      "source_piece": "elR / rampart / elR / T / 051",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -1.449999988079071,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / elR / T / 052",
+      "source_piece": "elR / rampart / elR / T / 052",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.6509999930858612,
+        -0.8500000238418579,
+        0.3199999928474426
+      ]
+    },
+    {
+      "name": "rampart / elR / D / 053",
+      "source_piece": "elR / rampart / elR / D / 053",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.582749992609024,
+        -1.2000000178813934,
+        0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / elR / D / 054",
+      "source_piece": "elR / rampart / elR / D / 054",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -1.0552500486373901,
+        -1.2000000178813934,
+        0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / elR / D / 055",
+      "source_piece": "elR / rampart / elR / D / 055",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.8190000057220459,
+        -1.2000000178813934,
+        0.369999997317791
+      ]
+    },
+    {
+      "name": "rampart / elR / F / 056",
+      "source_piece": "elR / rampart / elR / F / 056",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.7874999940395355,
+        -0.5600000023841858,
+        0.14999999105930328
+      ]
+    },
+    {
+      "name": "rampart / elR / T / 057",
+      "source_piece": "elR / rampart / elR / T / 057",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.7875000089406967,
+        -0.25999999791383743,
+        0.15000000596046448
+      ]
+    },
+    {
+      "name": "rampart / elR / G / 058",
+      "source_piece": "elR / rampart / elR / G / 058",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.6510000228881836,
+        -0.8750000298023224,
+        0.47999998927116394
+      ]
+    },
+    {
+      "name": "rampart / elR / G / 059",
+      "source_piece": "elR / rampart / elR / G / 059",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.5827500224113464,
+        -1.9700000286102295,
+        0.09999999683350325
+      ]
+    },
+    {
+      "name": "rampart / elR / G / 060",
+      "source_piece": "elR / rampart / elR / G / 060",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -1.0552500188350677,
+        -1.9700000286102295,
+        0.09999999683350325
+      ]
+    },
+    {
+      "name": "rampart / elR / G / 061",
+      "source_piece": "elR / rampart / elR / G / 061",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.8189999759197235,
+        -1.9700000286102295,
+        0.3700000047683716
+      ]
+    },
+    {
+      "name": "rampart / shR / K / 062",
+      "source_piece": "shR / rampart / shR / K / 062",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shR / K / 063",
+      "source_piece": "shR / rampart / shR / K / 063",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.825000025331974,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / sculpted shR / 064",
+      "source_piece": "shR / rampart / sculpted shR / 064",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.09999999403953552,
+        -0.8989999741315842,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shR / P / 065",
+      "source_piece": "shR / rampart / shR / P / 065",
+      "joint": "shR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -0.6199999712407589,
+        0.26000000536441803,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shR / S / 066",
+      "source_piece": "shR / rampart / shR / S / 066",
+      "joint": "shR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -0.6200000047683716,
+        0.12000000244006515,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / shR / T / 067",
+      "source_piece": "shR / rampart / shR / T / 067",
+      "joint": "shR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -1.180559754371643,
+        0.8918605968356133,
+        -0.42500002682209015
+      ]
+    },
+    {
+      "name": "rampart / wingR / K / 068",
+      "source_piece": "wingR / rampart / wingR / K / 068",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / wingR / S / 069",
+      "source_piece": "wingR / rampart / wingR / S / 069",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.6500000059604645,
+        -1.0750000234693289
+      ]
+    },
+    {
+      "name": "rampart / wingR / T / 070",
+      "source_piece": "wingR / rampart / wingR / T / 070",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        3.725290298461914e-09,
+        1.324999988079071,
+        -1.2249999642372131
+      ]
+    },
+    {
+      "name": "rampart / wingR / G / 071",
+      "source_piece": "wingR / rampart / wingR / G / 071",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.22499999962747097,
+        -0.8499999940395355
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 072",
+      "source_piece": "chest / rampart / chest / K / 072",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.8200000263750553,
+        -0.10000002384185791
+      ]
+    },
+    {
+      "name": "rampart / chest / P / 073",
+      "source_piece": "chest / rampart / chest / P / 073",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.8950000051409006,
+        -0.07999995350837708
+      ]
+    },
+    {
+      "name": "rampart / chest / S / 074",
+      "source_piece": "chest / rampart / chest / S / 074",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.7999999821186066,
+        0.8799999952316284
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 075",
+      "source_piece": "chest / rampart / chest / F / 075",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5399999916553497,
+        1.0999999940395355,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 076",
+      "source_piece": "chest / rampart / chest / F / 076",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5399999916553497,
+        0.9749999940395355,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 077",
+      "source_piece": "chest / rampart / chest / F / 077",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.27000000327825546,
+        1.0599999725818634,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 078",
+      "source_piece": "chest / rampart / chest / F / 078",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.27000001072883606,
+        0.8350000083446503,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 079",
+      "source_piece": "chest / rampart / chest / F / 079",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.0199999809265137,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 080",
+      "source_piece": "chest / rampart / chest / F / 080",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.6949999928474426,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 081",
+      "source_piece": "chest / rampart / chest / F / 081",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.27000000327825546,
+        1.0599999725818634,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 082",
+      "source_piece": "chest / rampart / chest / F / 082",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.27000001072883606,
+        0.8350000083446503,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 083",
+      "source_piece": "chest / rampart / chest / F / 083",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5399999916553497,
+        1.0999999940395355,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 084",
+      "source_piece": "chest / rampart / chest / F / 084",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5399999916553497,
+        0.9749999940395355,
+        1.0600000023841858
+      ]
+    },
+    {
+      "name": "rampart / chest / T / 085",
+      "source_piece": "chest / rampart / chest / T / 085",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.4799999594688416,
+        0.8799999952316284
+      ]
+    },
+    {
+      "name": "rampart / chest / D / 086",
+      "source_piece": "chest / rampart / chest / D / 086",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.9100000262260437,
+        1.050000011920929,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / chest / D / 087",
+      "source_piece": "chest / rampart / chest / D / 087",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.399999976158142,
+        1.045000046491623,
+        0.8401904404163361
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 088",
+      "source_piece": "chest / rampart / chest / K / 088",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.399999976158142,
+        0.8574999868869781,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 089",
+      "source_piece": "chest / rampart / chest / K / 089",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.399999976158142,
+        0.9825000166893005,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 090",
+      "source_piece": "chest / rampart / chest / K / 090",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.399999976158142,
+        1.1075000762939453,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 091",
+      "source_piece": "chest / rampart / chest / K / 091",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.399999976158142,
+        1.2325000762939453,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / D / 092",
+      "source_piece": "chest / rampart / chest / D / 092",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.9100000262260437,
+        1.050000011920929,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / chest / D / 093",
+      "source_piece": "chest / rampart / chest / D / 093",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.399999976158142,
+        1.045000046491623,
+        0.8401904404163361
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 094",
+      "source_piece": "chest / rampart / chest / K / 094",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.399999976158142,
+        0.8574999868869781,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 095",
+      "source_piece": "chest / rampart / chest / K / 095",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.399999976158142,
+        0.9825000166893005,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 096",
+      "source_piece": "chest / rampart / chest / K / 096",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.399999976158142,
+        1.1075000762939453,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / K / 097",
+      "source_piece": "chest / rampart / chest / K / 097",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.399999976158142,
+        1.2325000762939453,
+        0.8751904368400574
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 098",
+      "source_piece": "chest / rampart / chest / F / 098",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.8199999928474426,
+        -0.10000000894069672
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 099",
+      "source_piece": "chest / rampart / chest / F / 099",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.9499999955296516,
+        -1.25
+      ]
+    },
+    {
+      "name": "rampart / chest / P / 100",
+      "source_piece": "chest / rampart / chest / P / 100",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        1.7799999713897705,
+        -1.2200000286102295
+      ]
+    },
+    {
+      "name": "rampart / chest / D / 101",
+      "source_piece": "chest / rampart / chest / D / 101",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.7200000137090683,
+        0.3967133769765496,
+        -2.063120722770691
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 102",
+      "source_piece": "chest / rampart / chest / F / 102",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.7199999839067459,
+        0.5763286501169205,
+        -1.6560518145561218
+      ]
+    },
+    {
+      "name": "rampart / chest / T / 103",
+      "source_piece": "chest / rampart / chest / T / 103",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.7800000011920929,
+        1.649999976158142,
+        -1.5
+      ]
+    },
+    {
+      "name": "rampart / chest / D / 104",
+      "source_piece": "chest / rampart / chest / D / 104",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.7200000137090683,
+        0.3967133769765496,
+        -2.063120722770691
+      ]
+    },
+    {
+      "name": "rampart / chest / F / 105",
+      "source_piece": "chest / rampart / chest / F / 105",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.7199999839067459,
+        0.5763286501169205,
+        -1.6560518145561218
+      ]
+    },
+    {
+      "name": "rampart / chest / T / 106",
+      "source_piece": "chest / rampart / chest / T / 106",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.7800000011920929,
+        1.649999976158142,
+        -1.5
+      ]
+    },
+    {
+      "name": "rampart / chest / G / 107",
+      "source_piece": "chest / rampart / chest / G / 107",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.8299999982118607,
+        1.0299999713897705
+      ]
+    },
+    {
+      "name": "rampart / chest / G / 108",
+      "source_piece": "chest / rampart / chest / G / 108",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.7199999988079071,
+        0.5110140293836594,
+        -1.9118446111679077
+      ]
+    },
+    {
+      "name": "rampart / chest / G / 109",
+      "source_piece": "chest / rampart / chest / G / 109",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.7199999988079071,
+        0.5110140293836594,
+        -1.9118446111679077
+      ]
+    },
+    {
+      "name": "rampart / spine / K / 110",
+      "source_piece": "spine / rampart / spine / K / 110",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.2749999910593033,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / spine / D / 111",
+      "source_piece": "spine / rampart / spine / D / 111",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.23999999463558197,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / spine / D / 112",
+      "source_piece": "spine / rampart / spine / D / 112",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.5999999940395355,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / spine / P / 113",
+      "source_piece": "spine / rampart / spine / P / 113",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.40999997593462467,
+        0.6199999749660492
+      ]
+    },
+    {
+      "name": "rampart / ankleL / K / 114",
+      "source_piece": "ankleL / rampart / ankleL / K / 114",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / ankleL / P / 115",
+      "source_piece": "ankleL / rampart / ankleL / P / 115",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        2.9802322387695312e-08,
+        -0.0299999937415123,
+        0.5249999761581421
+      ]
+    },
+    {
+      "name": "rampart / ankleL / S / 116",
+      "source_piece": "ankleL / rampart / ankleL / S / 116",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        0.13999999687075615,
+        0.949999988079071
+      ]
+    },
+    {
+      "name": "rampart / ankleL / T / 117",
+      "source_piece": "ankleL / rampart / ankleL / T / 117",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.15000000037252903,
+        -1.2300000190734863
+      ]
+    },
+    {
+      "name": "rampart / ankleL / K / 118",
+      "source_piece": "ankleL / rampart / ankleL / K / 118",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.30000000447034836,
+        0.5249999761581421
+      ]
+    },
+    {
+      "name": "rampart / ankleL / D / 119",
+      "source_piece": "ankleL / rampart / ankleL / D / 119",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33999998681247234,
+        -0.6000000089406967
+      ]
+    },
+    {
+      "name": "rampart / ankleL / D / 120",
+      "source_piece": "ankleL / rampart / ankleL / D / 120",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33999998681247234,
+        0.19999999552965164
+      ]
+    },
+    {
+      "name": "rampart / ankleL / D / 121",
+      "source_piece": "ankleL / rampart / ankleL / D / 121",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33999998681247234,
+        1.5499999523162842
+      ]
+    },
+    {
+      "name": "rampart / ankleL / G / 122",
+      "source_piece": "ankleL / rampart / ankleL / G / 122",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3399999961256981,
+        -0.6000000089406967
+      ]
+    },
+    {
+      "name": "rampart / ankleL / G / 123",
+      "source_piece": "ankleL / rampart / ankleL / G / 123",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3399999961256981,
+        0.1999999936670065
+      ]
+    },
+    {
+      "name": "rampart / ankleL / G / 124",
+      "source_piece": "ankleL / rampart / ankleL / G / 124",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3399999961256981,
+        1.550000011920929
+      ]
+    },
+    {
+      "name": "rampart / kneeL / D / 125",
+      "source_piece": "kneeL / rampart / kneeL / D / 125",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / kneeL / K / 128",
+      "source_piece": "kneeL / rampart / kneeL / K / 128",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.9999999701976776,
+        -0.08000001311302185
+      ]
+    },
+    {
+      "name": "rampart / sculpted kneeL / 129",
+      "source_piece": "kneeL / rampart / sculpted kneeL / 129",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0350000113248825,
+        -0.017985284328460693
+      ]
+    },
+    {
+      "name": "rampart / kneeL / P / 130",
+      "source_piece": "kneeL / rampart / kneeL / P / 130",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.5799999833106995,
+        0.06000000238418579
+      ]
+    },
+    {
+      "name": "rampart / kneeL / T / 131",
+      "source_piece": "kneeL / rampart / kneeL / T / 131",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.3399999737739563,
+        0.06000000238418579
+      ]
+    },
+    {
+      "name": "rampart / kneeL / D / 132",
+      "source_piece": "kneeL / rampart / kneeL / D / 132",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.5870999991893768,
+        -0.8999999761581421,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeL / K / 133",
+      "source_piece": "kneeL / rampart / kneeL / K / 133",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.6231499910354614,
+        -1.066666692495346,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeL / K / 134",
+      "source_piece": "kneeL / rampart / kneeL / K / 134",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.6231499910354614,
+        -0.8999999761581421,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeL / K / 135",
+      "source_piece": "kneeL / rampart / kneeL / K / 135",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.6231499910354614,
+        -0.7333333194255829,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeL / G / 138",
+      "source_piece": "kneeL / rampart / kneeL / G / 138",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.5768000185489655,
+        -0.9000000059604645,
+        -0.09999999776482582
+      ]
+    },
+    {
+      "name": "rampart / hipL / K / 140",
+      "source_piece": "hipL / rampart / hipL / K / 140",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.075000025331974,
+        -0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / sculpted hipL / 141",
+      "source_piece": "hipL / rampart / sculpted hipL / 141",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        5.960464477539063e-08,
+        -1.0550000220537186,
+        0.2547902539372444
+      ]
+    },
+    {
+      "name": "rampart / sculpted hipL / 142",
+      "source_piece": "hipL / rampart / sculpted hipL / 142",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        -2.9802322387695312e-08,
+        -1.1099999696016312,
+        -0.3499238044023514
+      ]
+    },
+    {
+      "name": "rampart / hipL / S / 143",
+      "source_piece": "hipL / rampart / hipL / S / 143",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.7750079929828644,
+        -1.0250000059604645,
+        0.03999999165534973
+      ]
+    },
+    {
+      "name": "rampart / ankleR / K / 144",
+      "source_piece": "ankleR / rampart / ankleR / K / 144",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / ankleR / P / 145",
+      "source_piece": "ankleR / rampart / ankleR / P / 145",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        2.9802322387695312e-08,
+        -0.0299999937415123,
+        0.5249999761581421
+      ]
+    },
+    {
+      "name": "rampart / ankleR / S / 146",
+      "source_piece": "ankleR / rampart / ankleR / S / 146",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        0.13999999687075615,
+        0.949999988079071
+      ]
+    },
+    {
+      "name": "rampart / ankleR / T / 147",
+      "source_piece": "ankleR / rampart / ankleR / T / 147",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.15000000037252903,
+        -1.2300000190734863
+      ]
+    },
+    {
+      "name": "rampart / ankleR / K / 148",
+      "source_piece": "ankleR / rampart / ankleR / K / 148",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.30000000447034836,
+        0.5249999761581421
+      ]
+    },
+    {
+      "name": "rampart / ankleR / D / 149",
+      "source_piece": "ankleR / rampart / ankleR / D / 149",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33999998681247234,
+        -0.6000000089406967
+      ]
+    },
+    {
+      "name": "rampart / ankleR / D / 150",
+      "source_piece": "ankleR / rampart / ankleR / D / 150",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33999998681247234,
+        0.19999999552965164
+      ]
+    },
+    {
+      "name": "rampart / ankleR / D / 151",
+      "source_piece": "ankleR / rampart / ankleR / D / 151",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33999998681247234,
+        1.5499999523162842
+      ]
+    },
+    {
+      "name": "rampart / ankleR / G / 152",
+      "source_piece": "ankleR / rampart / ankleR / G / 152",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3399999961256981,
+        -0.6000000089406967
+      ]
+    },
+    {
+      "name": "rampart / ankleR / G / 153",
+      "source_piece": "ankleR / rampart / ankleR / G / 153",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3399999961256981,
+        0.1999999936670065
+      ]
+    },
+    {
+      "name": "rampart / ankleR / G / 154",
+      "source_piece": "ankleR / rampart / ankleR / G / 154",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3399999961256981,
+        1.550000011920929
+      ]
+    },
+    {
+      "name": "rampart / kneeR / D / 155",
+      "source_piece": "kneeR / rampart / kneeR / D / 155",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / kneeR / K / 158",
+      "source_piece": "kneeR / rampart / kneeR / K / 158",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.9999999701976776,
+        -0.08000001311302185
+      ]
+    },
+    {
+      "name": "rampart / sculpted kneeR / 159",
+      "source_piece": "kneeR / rampart / sculpted kneeR / 159",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0350000113248825,
+        -0.017985284328460693
+      ]
+    },
+    {
+      "name": "rampart / kneeR / P / 160",
+      "source_piece": "kneeR / rampart / kneeR / P / 160",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.5799999833106995,
+        0.06000000238418579
+      ]
+    },
+    {
+      "name": "rampart / kneeR / T / 161",
+      "source_piece": "kneeR / rampart / kneeR / T / 161",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.3399999737739563,
+        0.06000000238418579
+      ]
+    },
+    {
+      "name": "rampart / kneeR / D / 162",
+      "source_piece": "kneeR / rampart / kneeR / D / 162",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.5870999991893768,
+        -0.8999999761581421,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeR / K / 163",
+      "source_piece": "kneeR / rampart / kneeR / K / 163",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.6231499910354614,
+        -1.066666692495346,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeR / K / 164",
+      "source_piece": "kneeR / rampart / kneeR / K / 164",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.6231499910354614,
+        -0.8999999761581421,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeR / K / 165",
+      "source_piece": "kneeR / rampart / kneeR / K / 165",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.6231499910354614,
+        -0.7333333194255829,
+        -0.10000000521540642
+      ]
+    },
+    {
+      "name": "rampart / kneeR / G / 168",
+      "source_piece": "kneeR / rampart / kneeR / G / 168",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.5768000185489655,
+        -0.9000000059604645,
+        -0.09999999776482582
+      ]
+    },
+    {
+      "name": "rampart / hipR / K / 170",
+      "source_piece": "hipR / rampart / hipR / K / 170",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.075000025331974,
+        -0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / sculpted hipR / 171",
+      "source_piece": "hipR / rampart / sculpted hipR / 171",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        5.960464477539063e-08,
+        -1.0550000220537186,
+        0.2547902539372444
+      ]
+    },
+    {
+      "name": "rampart / sculpted hipR / 172",
+      "source_piece": "hipR / rampart / sculpted hipR / 172",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        -2.9802322387695312e-08,
+        -1.1099999696016312,
+        -0.3499238044023514
+      ]
+    },
+    {
+      "name": "rampart / hipR / S / 173",
+      "source_piece": "hipR / rampart / hipR / S / 173",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        -0.7750079929828644,
+        -1.0250000059604645,
+        0.03999999165534973
+      ]
+    },
+    {
+      "name": "rampart / skirtL / K / 174",
+      "source_piece": "skirtL / rampart / skirtL / K / 174",
+      "joint": "skirtL",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / skirtL / P / 175",
+      "source_piece": "skirtL / rampart / skirtL / P / 175",
+      "joint": "skirtL",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.5857571121305227,
+        0.16954934876412153
+      ]
+    },
+    {
+      "name": "rampart / skirtL / S / 176",
+      "source_piece": "skirtL / rampart / skirtL / S / 176",
+      "joint": "skirtL",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.30777067691087723,
+        0.22700127959251404
+      ]
+    },
+    {
+      "name": "rampart / skirtR / K / 177",
+      "source_piece": "skirtR / rampart / skirtR / K / 177",
+      "joint": "skirtR",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / skirtR / P / 178",
+      "source_piece": "skirtR / rampart / skirtR / P / 178",
+      "joint": "skirtR",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.5857571121305227,
+        0.16954934876412153
+      ]
+    },
+    {
+      "name": "rampart / skirtR / S / 179",
+      "source_piece": "skirtR / rampart / skirtR / S / 179",
+      "joint": "skirtR",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.30777067691087723,
+        0.22700127959251404
+      ]
+    },
+    {
+      "name": "rampart / hips / K / 180",
+      "source_piece": "hips / rampart / hips / K / 180",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.02000001072883606,
+        -0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / hips / S / 181",
+      "source_piece": "hips / rampart / hips / S / 181",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.3799999952316284,
+        -0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / hips / K / 182",
+      "source_piece": "hips / rampart / hips / K / 182",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        1.0000000298023224,
+        -0.30000000447034836,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / hips / K / 183",
+      "source_piece": "hips / rampart / hips / K / 183",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        -1.0000000298023224,
+        -0.30000000447034836,
+        -0.0
+      ]
+    },
+    {
+      "name": "rampart / hips / T / 184",
+      "source_piece": "hips / rampart / hips / T / 184",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.01000000536441803,
+        0.7000000178813934
+      ]
+    },
+    {
+      "name": "rampart / hips / P / 185",
+      "source_piece": "hips / rampart / hips / P / 185",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        1.6200000047683716,
+        -0.20000000298023224,
+        0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / hips / T / 186",
+      "source_piece": "hips / rampart / hips / T / 186",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        1.7200000286102295,
+        0.24000000208616257,
+        0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / hips / P / 187",
+      "source_piece": "hips / rampart / hips / P / 187",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        -1.6200000047683716,
+        -0.20000000298023224,
+        0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / hips / T / 188",
+      "source_piece": "hips / rampart / hips / T / 188",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        -1.7200000286102295,
+        0.24000000208616257,
+        0.019999980926513672
+      ]
+    },
+    {
+      "name": "rampart / hips / G / 189",
+      "source_piece": "hips / rampart / hips / G / 189",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.13499999744817615,
+        0.8100000023841858
+      ]
+    },
+    {
+      "name": "Frame / continuous waist shaft",
+      "source_piece": "spine / Frame / continuous waist shaft",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.22499999403953552,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / pelvic swivel",
+      "source_piece": "spine / Frame / pelvic swivel",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / chest swivel",
+      "source_piece": "chest / Frame / chest swivel",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / chest socket",
+      "source_piece": "chest / Frame / chest socket",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.13000000175088644,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / neck seat",
+      "source_piece": "head / Frame / neck seat",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        -0.09999999403953552,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / shL internal shaft",
+      "source_piece": "shL / Frame / shL internal shaft",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7750000078231096,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elL internal shaft",
+      "source_piece": "elL / Frame / elL internal shaft",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7999999839812517,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipL internal shaft",
+      "source_piece": "hipL / Frame / hipL internal shaft",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0249999482184649,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeL internal shaft",
+      "source_piece": "kneeL / Frame / kneeL internal shaft",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.9999999720603228,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elL pivot seat",
+      "source_piece": "elL / Frame / elL pivot seat",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / wrL pivot seat",
+      "source_piece": "wrL / Frame / wrL pivot seat",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipL pivot seat",
+      "source_piece": "hipL / Frame / hipL pivot seat",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeL pivot seat",
+      "source_piece": "kneeL / Frame / kneeL pivot seat",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / ankleL pivot seat",
+      "source_piece": "ankleL / Frame / ankleL pivot seat",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / shR internal shaft",
+      "source_piece": "shR / Frame / shR internal shaft",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7750000078231096,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elR internal shaft",
+      "source_piece": "elR / Frame / elR internal shaft",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7999999839812517,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipR internal shaft",
+      "source_piece": "hipR / Frame / hipR internal shaft",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0249999482184649,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeR internal shaft",
+      "source_piece": "kneeR / Frame / kneeR internal shaft",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.9999999720603228,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elR pivot seat",
+      "source_piece": "elR / Frame / elR pivot seat",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / wrR pivot seat",
+      "source_piece": "wrR / Frame / wrR pivot seat",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipR pivot seat",
+      "source_piece": "hipR / Frame / hipR pivot seat",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeR pivot seat",
+      "source_piece": "kneeR / Frame / kneeR pivot seat",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / ankleR pivot seat",
+      "source_piece": "ankleR / Frame / ankleR pivot seat",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Sheet / knee socket",
+      "source_piece": "kneeL / Sheet / knee socket",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.09180000424385071,
+        0.6904999911785126
+      ]
+    },
+    {
+      "name": "Sheet / knee shield",
+      "source_piece": "kneeL / Sheet / knee shield",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.08500000834465027,
+        0.7680000066757202
+      ]
+    },
+    {
+      "name": "Sheet / blue shin inlay",
+      "source_piece": "kneeL / Sheet / blue shin inlay",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.9349999874830246,
+        0.6774596869945526
+      ]
+    },
+    {
+      "name": "Sheet / instep",
+      "source_piece": "ankleL / Sheet / instep",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.07999999448657036,
+        0.5219999849796295
+      ]
+    },
+    {
+      "name": "Sheet / knee socket.001",
+      "source_piece": "kneeR / Sheet / knee socket",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.09180000424385071,
+        0.6904999911785126
+      ]
+    },
+    {
+      "name": "Sheet / knee shield.001",
+      "source_piece": "kneeR / Sheet / knee shield",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.08500000834465027,
+        0.7680000066757202
+      ]
+    },
+    {
+      "name": "Sheet / blue shin inlay.001",
+      "source_piece": "kneeR / Sheet / blue shin inlay",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.9349999874830246,
+        0.6774596869945526
+      ]
+    },
+    {
+      "name": "Sheet / instep.001",
+      "source_piece": "ankleR / Sheet / instep",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.07999999448657036,
+        0.5219999849796295
+      ]
+    },
+    {
+      "name": "Rampart / white brow ridge",
+      "source_piece": "head / Rampart / white brow ridge",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.2399999937042594,
+        0.6349999904632568,
+        0.5302499979734421
+      ]
+    },
+    {
+      "name": "Rampart / white brow ridge.001",
+      "source_piece": "head / Rampart / white brow ridge [2]",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.2399999937042594,
+        0.6349999904632568,
+        0.5302499979734421
+      ]
+    },
+    {
+      "name": "Calf jet / embedded mounting shoe",
+      "source_piece": "kneeL / Calf jet / embedded mounting shoe",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0999999940395355,
+        -0.7813157439231873
+      ]
+    },
+    {
+      "name": "Calf jet / recessed bell",
+      "source_piece": "kneeL / Calf jet / recessed bell",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1430964469909668,
+        -1.0381418764591217
+      ]
+    },
+    {
+      "name": "Calf jet / outlet rim",
+      "source_piece": "kneeL / Calf jet / outlet rim",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1417942643165588,
+        -1.204002320766449
+      ]
+    },
+    {
+      "name": "Calf jet / luminous throat",
+      "source_piece": "kneeL / Calf jet / luminous throat",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1103432178497314,
+        -0.9520943760871887
+      ]
+    },
+    {
+      "name": "Calf jet / embedded mounting shoe.001",
+      "source_piece": "kneeR / Calf jet / embedded mounting shoe",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0999999940395355,
+        -0.7813157439231873
+      ]
+    },
+    {
+      "name": "Calf jet / recessed bell.001",
+      "source_piece": "kneeR / Calf jet / recessed bell",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1430964469909668,
+        -1.0381418764591217
+      ]
+    },
+    {
+      "name": "Calf jet / outlet rim.001",
+      "source_piece": "kneeR / Calf jet / outlet rim",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1417942643165588,
+        -1.204002320766449
+      ]
+    },
+    {
+      "name": "Calf jet / luminous throat.001",
+      "source_piece": "kneeR / Calf jet / luminous throat",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1103432178497314,
+        -0.9520943760871887
+      ]
+    },
+    {
+      "name": "Hand / palm",
+      "source_piece": "wrL / Hand / palm",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.30887999944388866,
+        -0.0
+      ]
+    },
+    {
+      "name": "Hand / dorsal armor",
+      "source_piece": "wrL / Hand / dorsal armor",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33263999968767166,
+        0.2969999983906746
+      ]
+    },
+    {
+      "name": "Finger 1 / knuckle",
+      "source_piece": "wrL / Finger 1 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.3066524937748909,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 1 / proximal",
+      "source_piece": "wrL / Finger 1 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.3066525086760521,
+        -0.6890400052070618,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 1 / curl",
+      "source_piece": "wrL / Finger 1 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.3066525012254715,
+        -0.83160001039505,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 1 / tip",
+      "source_piece": "wrL / Finger 1 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.3066524937748909,
+        -0.8078399896621704,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Finger 2 / knuckle",
+      "source_piece": "wrL / Finger 2 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.10221750009804964,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 2 / proximal",
+      "source_piece": "wrL / Finger 2 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.10221750289201736,
+        -0.7187400162220001,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 2 / curl",
+      "source_piece": "wrL / Finger 2 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.10221750196069479,
+        -0.8910000026226044,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 2 / tip",
+      "source_piece": "wrL / Finger 2 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.10221750102937222,
+        -0.8672400116920471,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Finger 3 / knuckle",
+      "source_piece": "wrL / Finger 3 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.10221750009804964,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 3 / proximal",
+      "source_piece": "wrL / Finger 3 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.10221750289201736,
+        -0.712799996137619,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 3 / curl",
+      "source_piece": "wrL / Finger 3 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.10221750196069479,
+        -0.8791199922561646,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 3 / tip",
+      "source_piece": "wrL / Finger 3 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.10221750102937222,
+        -0.8553600013256073,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Finger 4 / knuckle",
+      "source_piece": "wrL / Finger 4 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.3066524937748909,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 4 / proximal",
+      "source_piece": "wrL / Finger 4 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.3066525086760521,
+        -0.6771600246429443,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 4 / curl",
+      "source_piece": "wrL / Finger 4 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.3066525012254715,
+        -0.8078399896621704,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 4 / tip",
+      "source_piece": "wrL / Finger 4 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.3066524937748909,
+        -0.7840799987316132,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Thumb / inner metacarpal",
+      "source_piece": "wrL / Thumb / inner metacarpal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.49648497998714447,
+        -0.3445199951529503,
+        -0.06599999964237213
+      ]
+    },
+    {
+      "name": "Thumb / opposing tip",
+      "source_piece": "wrL / Thumb / opposing tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.389399990439415,
+        -0.4989600032567978,
+        -0.3134999945759773
+      ]
+    },
+    {
+      "name": "Hand / faction knuckle guard",
+      "source_piece": "wrL / Hand / faction knuckle guard",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.5108399987220764,
+        0.396000012755394
+      ]
+    },
+    {
+      "name": "Elbow / bearing cap",
+      "source_piece": "elL / Elbow / bearing cap",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.414000004529953,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / inset hub",
+      "source_piece": "elL / Elbow / inset hub",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.45900000631809235,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / axle",
+      "source_piece": "elL / Elbow / axle",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.4780000001192093,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / bearing cap",
+      "source_piece": "kneeL / Knee / bearing cap",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.431999996304512,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / inset hub",
+      "source_piece": "kneeL / Knee / inset hub",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.47699999809265137,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / axle",
+      "source_piece": "kneeL / Knee / axle",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.4959999918937683,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Hand / palm.001",
+      "source_piece": "wrR / Hand / palm",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.30887999944388866,
+        -0.0
+      ]
+    },
+    {
+      "name": "Hand / dorsal armor.001",
+      "source_piece": "wrR / Hand / dorsal armor",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.33263999968767166,
+        0.2969999983906746
+      ]
+    },
+    {
+      "name": "Finger 1 / knuckle.001",
+      "source_piece": "wrR / Finger 1 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.3066524937748909,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 1 / proximal.001",
+      "source_piece": "wrR / Finger 1 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.3066525086760521,
+        -0.6890400052070618,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 1 / curl.001",
+      "source_piece": "wrR / Finger 1 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.3066525012254715,
+        -0.83160001039505,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 1 / tip.001",
+      "source_piece": "wrR / Finger 1 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.3066524937748909,
+        -0.8078399896621704,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Finger 2 / knuckle.001",
+      "source_piece": "wrR / Finger 2 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.10221750009804964,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 2 / proximal.001",
+      "source_piece": "wrR / Finger 2 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.10221750289201736,
+        -0.7187400162220001,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 2 / curl.001",
+      "source_piece": "wrR / Finger 2 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.10221750196069479,
+        -0.8910000026226044,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 2 / tip.001",
+      "source_piece": "wrR / Finger 2 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.10221750102937222,
+        -0.8672400116920471,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Finger 3 / knuckle.001",
+      "source_piece": "wrR / Finger 3 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.10221750009804964,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 3 / proximal.001",
+      "source_piece": "wrR / Finger 3 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.10221750289201736,
+        -0.712799996137619,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 3 / curl.001",
+      "source_piece": "wrR / Finger 3 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.10221750196069479,
+        -0.8791199922561646,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 3 / tip.001",
+      "source_piece": "wrR / Finger 3 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.10221750102937222,
+        -0.8553600013256073,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Finger 4 / knuckle.001",
+      "source_piece": "wrR / Finger 4 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.3066524937748909,
+        -0.5346000045537949,
+        0.1484999991953373
+      ]
+    },
+    {
+      "name": "Finger 4 / proximal.001",
+      "source_piece": "wrR / Finger 4 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.3066525086760521,
+        -0.6771600246429443,
+        -0.016499999910593033
+      ]
+    },
+    {
+      "name": "Finger 4 / curl.001",
+      "source_piece": "wrR / Finger 4 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.3066525012254715,
+        -0.8078399896621704,
+        -0.18150000646710396
+      ]
+    },
+    {
+      "name": "Finger 4 / tip.001",
+      "source_piece": "wrR / Finger 4 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.3066524937748909,
+        -0.7840799987316132,
+        -0.32999999821186066
+      ]
+    },
+    {
+      "name": "Thumb / inner metacarpal.001",
+      "source_piece": "wrR / Thumb / inner metacarpal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.49648497998714447,
+        -0.3445199951529503,
+        -0.06599999964237213
+      ]
+    },
+    {
+      "name": "Thumb / opposing tip.001",
+      "source_piece": "wrR / Thumb / opposing tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.389399990439415,
+        -0.4989600032567978,
+        -0.3134999945759773
+      ]
+    },
+    {
+      "name": "Hand / faction knuckle guard.001",
+      "source_piece": "wrR / Hand / faction knuckle guard",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.5108399987220764,
+        0.396000012755394
+      ]
+    },
+    {
+      "name": "Elbow / bearing cap.001",
+      "source_piece": "elR / Elbow / bearing cap",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.414000004529953,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / inset hub.001",
+      "source_piece": "elR / Elbow / inset hub",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.45900000631809235,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / axle.001",
+      "source_piece": "elR / Elbow / axle",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.4780000001192093,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / bearing cap.001",
+      "source_piece": "kneeR / Knee / bearing cap",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.431999996304512,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / inset hub.001",
+      "source_piece": "kneeR / Knee / inset hub",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.47699999809265137,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / axle.001",
+      "source_piece": "kneeR / Knee / axle",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.4959999918937683,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Gauntlet / wrist gasket",
+      "source_piece": "elL / Gauntlet / wrist gasket",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -1.5699999928474426,
+        -0.0
+      ]
+    },
+    {
+      "name": "Gauntlet / wrist gasket.001",
+      "source_piece": "elR / Gauntlet / wrist gasket",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -1.5699999928474426,
+        -0.0
+      ]
+    }
+  ]
+}

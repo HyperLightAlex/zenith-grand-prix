@@ -1,0 +1,156 @@
+{
+  "models": {
+    "sunhawk": {
+      "B / Backpack main shell": {
+        "part": "backpack",
+        "reason": "Rear power-pack housing carries the nozzles and wing mounts; its shallow centre lies in front of the chest split plane."
+      },
+      "B / Backpack porcelain rail": {
+        "part": "backpack",
+        "reason": "Porcelain border is fixed to the rear power-pack housing, not the chest collar."
+      },
+      "B / Backpack porcelain rail.001": {
+        "part": "backpack",
+        "reason": "Mirrored porcelain border is fixed to the rear power-pack housing, not the chest collar."
+      }
+    },
+    "anubis": {
+      "shL / anubis / shL / T / 043": {
+        "part": "shoulders",
+        "reason": "The gold stripe wraps the shoulder cap between its upper and lower armour; it is not a band around the upper arm."
+      },
+      "shR / anubis / shR / T / 069": {
+        "part": "shoulders",
+        "reason": "The gold stripe wraps the shoulder cap between its upper and lower armour; it is not a band around the upper arm."
+      },
+      "chest / anubis / chest / F / 088": {
+        "part": "backpack",
+        "reason": "The rear rectangular housing carries the paired exhausts and sits behind the chest shell; it is the backpack body."
+      },
+      "chest / anubis / chest / T / 089": {
+        "part": "backpack",
+        "reason": "The horizontal cap is fixed to the top of the rear exhaust housing, so it travels with the backpack."
+      }
+    },
+    "horus": {
+      "shL / horus / shL / T / 062": {
+        "part": "shoulders",
+        "reason": "The gold stripe wraps the shoulder cap between its upper and lower armour; it is not a band around the upper arm."
+      },
+      "shR / horus / shR / T / 107": {
+        "part": "shoulders",
+        "reason": "The gold stripe wraps the shoulder cap between its upper and lower armour; it is not a band around the upper arm."
+      }
+    },
+    "razor": {
+      "chest / razor / chest / F / 085": {
+        "part": "backpack",
+        "reason": "The rear rectangular housing carries the paired exhausts and sits behind the chest shell; it is the backpack body."
+      }
+    },
+    "seraph": {
+      "chest / seraph / chest / F / 100": {
+        "part": "backpack",
+        "reason": "The rear rectangular housing carries the paired exhausts and sits behind the chest shell; it is the backpack body."
+      },
+      "chest / seraph / chest / T / 101": {
+        "part": "backpack",
+        "reason": "The horizontal cap is fixed to the top of the rear exhaust housing, so it travels with the backpack."
+      },
+      "chest / seraph / chest / K / 104": {
+        "part": "backpack",
+        "reason": "The round rear bearing seats the wing/crescent root beside the pack, so it belongs with the backpack assembly."
+      },
+      "chest / seraph / chest / K / 107": {
+        "part": "backpack",
+        "reason": "The round rear bearing seats the wing/crescent root beside the pack, so it belongs with the backpack assembly."
+      }
+    },
+    "kamaitachi": {
+      "chest / kamaitachi / chest / F / 107": {
+        "part": "backpack",
+        "reason": "The rear rectangular housing carries the paired exhausts and sits behind the chest shell; it is the backpack body."
+      },
+      "chest / kamaitachi / chest / S / 108": {
+        "part": "backpack",
+        "reason": "The horizontal cap is fixed to the top of the rear exhaust housing, so it travels with the backpack."
+      },
+      "chest / kamaitachi / chest / K / 111": {
+        "part": "backpack",
+        "reason": "The round rear bearing seats the wing/crescent root beside the pack, so it belongs with the backpack assembly."
+      },
+      "chest / kamaitachi / chest / K / 114": {
+        "part": "backpack",
+        "reason": "The round rear bearing seats the wing/crescent root beside the pack, so it belongs with the backpack assembly."
+      },
+      "shL / Tempest / shoulder gold shield": {
+        "part": "shoulders",
+        "reason": "The broad gold-edged shield covers the shoulder cap above the separate long upper-arm plate."
+      },
+      "shL / Tempest / shoulder storm field": {
+        "part": "shoulders",
+        "reason": "The inset green field is fixed inside the shoulder shield and must travel with it."
+      },
+      "shL / Tempest / centred shoulder bolt": {
+        "part": "shoulders",
+        "reason": "The lightning emblem is seated on the shoulder shield, not on the upper-arm shell."
+      },
+      "shR / Tempest / shoulder gold shield": {
+        "part": "shoulders",
+        "reason": "The broad gold-edged shield covers the shoulder cap above the separate long upper-arm plate."
+      },
+      "shR / Tempest / shoulder storm field": {
+        "part": "shoulders",
+        "reason": "The inset green field is fixed inside the shoulder shield and must travel with it."
+      },
+      "shR / Tempest / centred shoulder bolt": {
+        "part": "shoulders",
+        "reason": "The lightning emblem is seated on the shoulder shield, not on the upper-arm shell."
+      }
+    },
+    "raijin": {
+      "shL / Tempest / shoulder gold shield": {
+        "part": "shoulders",
+        "reason": "The broad gold-edged shield covers the shoulder cap above the separate long upper-arm plate."
+      },
+      "shL / Tempest / shoulder storm field": {
+        "part": "shoulders",
+        "reason": "The inset green field is fixed inside the shoulder shield and must travel with it."
+      },
+      "shL / Tempest / centred shoulder bolt": {
+        "part": "shoulders",
+        "reason": "The lightning emblem is seated on the shoulder shield, not on the upper-arm shell."
+      },
+      "shR / Tempest / shoulder gold shield": {
+        "part": "shoulders",
+        "reason": "The broad gold-edged shield covers the shoulder cap above the separate long upper-arm plate."
+      },
+      "shR / Tempest / shoulder storm field": {
+        "part": "shoulders",
+        "reason": "The inset green field is fixed inside the shoulder shield and must travel with it."
+      },
+      "shR / Tempest / centred shoulder bolt": {
+        "part": "shoulders",
+        "reason": "The lightning emblem is seated on the shoulder shield, not on the upper-arm shell."
+      }
+    },
+    "fujin": {
+      "shL / Fujin / rounded shoulder turbine armor": {
+        "part": "shoulders",
+        "reason": "The rounded cap is the inner housing of the shoulder turbine; the outer drum and vanes already belong to shoulders."
+      },
+      "shL / Fujin / shoulder lightning": {
+        "part": "shoulders",
+        "reason": "The lightning mark is fixed to the front of the rounded shoulder turbine housing."
+      },
+      "shR / Fujin / rounded shoulder turbine armor": {
+        "part": "shoulders",
+        "reason": "The rounded cap is the inner housing of the shoulder turbine; the outer drum and vanes already belong to shoulders."
+      },
+      "shR / Fujin / shoulder lightning": {
+        "part": "shoulders",
+        "reason": "The lightning mark is fixed to the front of the rounded shoulder turbine housing."
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 """Export production-prepared copies of both Sunhawks; preserve the art scene.
 
 Run in the saved comparison .blend. Evaluates bevels/custom normals, omits
-preview ink shells and drawn markings, consolidates by rigid joint/paint slot,
+preview ink shells and drawn markings, consolidates by rigid joint/part/paint slot,
 and introduces hip armor hinges. No source geometry is changed or deleted.
 """
 import bpy
@@ -17,6 +17,9 @@ sys.path.insert(0,str(PROJECT/'art/blender'))
 import ink_geometry, importlib
 importlib.reload(ink_geometry)
 from ink_geometry import smooth_normals, outline_weight, set_outline_attributes, design_edges, export_lines
+import part_tags
+importlib.reload(part_tags)
+from part_tags import classify, check_overrides, export_part_lines
 if not (PROJECT/'src/client/render/mech').is_dir():
     raise RuntimeError('Open art/blender/sunhawk/sunhawk-comparison.blend in the project first')
 OUT=PROJECT/'src/client/render/mech/assets'
@@ -71,13 +74,11 @@ try:
         root_inv=root.matrix_world.inverted()
         joints={JOINTS[o.name.split('JNT / ')[1]]:o for o in source.objects if o.name.startswith(prefix+'JNT / ')}
         groups=defaultdict(lambda:{'pos':[],'normal':[],'uv':[],'outline':[],'width':[]})
-        lines=defaultdict(list)
+        lines=[]
         source_count=0
         for ob in source.objects:
-            if ob.type!='MESH' or not ob.name.startswith(prefix) or any(key in ob.name for key in SKIP): continue
+            if ob.type!='MESH' or not ob.name.startswith(prefix): continue
             detail=bool(ob.get('surface_detail'))
-            if detail and level: continue
-            source_count+=1
             assert ob.parent in joints.values(), ob.name
             joint=JOINTS[ob.parent.name.split('JNT / ')[1]]
             local=ob.parent.matrix_world.inverted()@ob.matrix_world
@@ -97,19 +98,30 @@ try:
             elif 'Rear pelvis plate' in ob.name or 'Rear cobalt clasp' in ob.name:
                 joint='skirtBack'
                 local=Matrix.Translation(Vector((0,-.34,-5.50)))@root_inv@ob.matrix_world
+            part=None
+            if u:
+                # Classify the unmodified source box after its existing rigid
+                # attachment is resolved; LOD evaluation must not change tags.
+                corners=[local@vertex.co for vertex in ob.data.vertices]
+                center=[(min(p[i] for p in corners)+max(p[i] for p in corners))/2 for i in range(3)]
+                ob['part_source']=ob.name
+                part=classify('sunhawk',ob,joint,(center[0],center[2],-center[1]))
+                ob['part_joint']=joint
+            if any(key in ob.name for key in SKIP) or (detail and level): continue
+            source_count+=1
             normal_matrix=local.to_3x3().inverted().transposed()
             evaluated=ob.evaluated_get(deps)
             me=evaluated.to_mesh(preserve_all_data_layers=True,depsgraph=deps)
             me.calc_loop_triangles()
             smooth=smooth_normals(me);weight=outline_weight('sunhawk',ob)
             if u and not detail and all(SLOTS.get(m.name.split('Sunhawk / ')[-1].split('.')[0])!='G' for m in me.materials):
-                lines[joint].extend(design_edges('sunhawk',ob,local,me,level))
+                lines.extend((joint,part,a,b,kind) for a,b,kind in design_edges('sunhawk',ob,local,me,level))
             try:
                 for tri in me.loop_triangles:
                     material=me.materials[tri.material_index]
                     role=material.name.split('Sunhawk / ')[1].split('.')[0]
                     slot='D' if detail else SLOTS[role]
-                    bucket=groups[(joint,slot,detail)]
+                    bucket=groups[(joint,part,slot,detail)]
                     for vi,li in zip(tri.vertices,tri.loops):
                         p=local@me.vertices[vi].co
                         n=(normal_matrix@me.corner_normals[li].vector).normalized()
@@ -128,15 +140,16 @@ try:
             'spineY':.45,'chestY':.75,'shoulderX':1.44 if u else 1.36,'shoulderY':.88,
             'headY':1.47,'headZ':0.,'upperArm':1.31,'foreArm':1.47,'height':9.35}
         mats={}
-        for slot in sorted({slot for joint,slot,detail in groups}):
+        for slot in sorted({slot for joint,part,slot,detail in groups}):
             m=bpy.data.materials.new('Sunhawk_export_'+variant+'_'+slot); mats[slot]=m
             staging_materials.append(m)
             m.diffuse_color={'P':(.9,.92,.96,1),'S':(.02,.16,.8,1),'T':(1,.45,.02,1),
                 'F':(.04,.055,.09,1),'K':(.02,.03,.05,1),'D':(.01,.015,.025,1),'G':(.06,.8,1,1)}[slot]
             m.use_nodes=True
             m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value=m.diffuse_color
-        for (joint,slot,detail),data in sorted(groups.items()):
-            me=bpy.data.meshes.new('Sunhawk_export_'+variant+'_'+joint+'_'+slot)
+        for (joint,part,slot,detail),data in sorted(groups.items()):
+            name='_'.join((joint,part,slot)) if u else joint+'_'+slot
+            me=bpy.data.meshes.new('Sunhawk_export_'+variant+'_'+name)
             staging_meshes.append(me)
             vs=data['pos']; me.from_pydata(vs,[],[(i,i+1,i+2) for i in range(0,len(vs),3)])
             me.update()
@@ -146,13 +159,18 @@ try:
             if detail:
                 uv=me.uv_layers.new(name='SunhawkDetailAtlas')
                 for loop in me.loops: uv.data[loop.index].uv=data['uv'][loop.vertex_index]
-            ob=bpy.data.objects.new(joint+'_'+slot,me); scene.collection.objects.link(ob)
+            ob=bpy.data.objects.new(name,me); scene.collection.objects.link(ob)
             ob.parent=asset; ob['joint']=joint; ob['slot']=slot
+            if u: ob['part']=part
             if detail: ob['detail']=True
             # Joint-local geometry intentionally stays at the origin in this
             # transport scene; the game attaches it to the matching live pivot.
             me.materials.append(mats[slot])
-        line_meshes,line_count=export_lines(scene,asset,lines,mats['D']);staging_meshes.extend(line_meshes)
+        if u:
+            line_meshes,line_count=export_part_lines(scene,asset,lines,mats['D'],separator='_')
+        else:
+            line_meshes,line_count=export_lines(scene,asset,{},mats['D'])
+        staging_meshes.extend(line_meshes)
         filename='sunhawk-'+variant+('-lod'+str(level) if level else '')+'.glb'
         bpy.ops.export_scene.gltf(filepath=str(OUT/filename),export_format='GLB',
             use_active_scene=True,export_yup=True,export_normals=True,export_texcoords=True,
@@ -161,8 +179,13 @@ try:
         reports.append({'variant':variant,'detail_level':level,'file':filename,'source_meshes':source_count,'joint_material_meshes':len(groups),
             'triangles':sum(len(g['pos'])//3 for g in groups.values()),
             'bytes':(OUT/filename).stat().st_size,'line_segments':line_count,'ink_schema':1 if u else 0,
-            'joints':sorted({j for j,slot,detail in groups})})
+            'joints':sorted({j for j,part,slot,detail in groups}),
+            **({'parts':sorted({part for joint,part,slot,detail in groups}), 'part_material_meshes':len(groups)} if u else {})})
         bpy.context.window.scene=source
+        # Release each successful transport scene before the next LOD so
+        # Blender cannot append .001/.002 to the contracted object names.
+        for ob in list(scene.objects): bpy.data.objects.remove(ob,do_unlink=True)
+        bpy.data.scenes.remove(scene); staging.remove(scene)
 finally:
     bpy.context.window.scene=source
     for ob,mod in lod_mods: ob.modifiers.remove(mod)
@@ -178,6 +201,7 @@ finally:
     for mat in staging_materials: bpy.data.materials.remove(mat)
     bpy.context.view_layer.update()
 # Keep editable source attributes as well as evaluated export attributes.
+check_overrides('sunhawk',[ob for ob in source.objects if ob.type=='MESH' and ob.name.startswith('B / ')])
 for ob in source.objects:
     if ob.type=='MESH' and ob.name.startswith('B / ') and not ob.get('surface_detail'):
         set_outline_attributes(ob.data,smooth_normals(ob.data),[outline_weight('sunhawk',ob)]*len(ob.data.vertices))

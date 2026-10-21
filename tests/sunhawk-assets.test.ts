@@ -281,6 +281,19 @@ describe('updated Sunhawk production preparation', () => {
     expect(counts[1]).toBeLessThan(counts[0] * .60);
     expect(counts[2]).toBeLessThan(counts[0] * .32);
     expect(levels[0].parts.filter((p) => p.detail)).toHaveLength(7);
+    // A joint/paint slot can be split into several customization parts. Compare
+    // its combined bounds, preserving the original LOD silhouette check.
+    const bounds = (parts: typeof levels[number]['parts']) => {
+      const groups = new Map<string,THREE.Box3>();
+      for (const part of parts) {
+        const key = `${part.joint}/${part.slot}/${part.detail}`;
+        part.geometry.computeBoundingBox();
+        if (!groups.has(key)) groups.set(key,new THREE.Box3());
+        groups.get(key)!.union(part.geometry.boundingBox!);
+      }
+      return groups;
+    };
+    const originalBounds = bounds(levels[0].parts);
     for (const [level,asset] of levels.entries()) {
       expect(asset.dims).toEqual(levels[0].dims);
       for (const p of asset.parts) {
@@ -297,11 +310,12 @@ describe('updated Sunhawk production preparation', () => {
           expect(Math.min(...uv.array)).toBeGreaterThanOrEqual(0);
           expect(Math.max(...uv.array)).toBeLessThanOrEqual(1);
         }
-        p.geometry.computeBoundingBox();
-        const original = levels[0].parts.find((h) => h.joint === p.joint && h.slot === p.slot && h.detail === p.detail)!;
-        original.geometry.computeBoundingBox();
-        expect(p.geometry.boundingBox!.min.distanceTo(original.geometry.boundingBox!.min)).toBeLessThan(.12);
-        expect(p.geometry.boundingBox!.max.distanceTo(original.geometry.boundingBox!.max)).toBeLessThan(.12);
+      }
+      for (const [key,box] of bounds(asset.parts)) {
+        const original = originalBounds.get(key);
+        expect(original,`LOD${level} unexpected joint/paint/detail group ${key}`).toBeDefined();
+        expect(box.min.distanceTo(original!.min)).toBeLessThan(.12);
+        expect(box.max.distanceTo(original!.max)).toBeLessThan(.12);
       }
     }
   });

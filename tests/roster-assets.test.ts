@@ -260,9 +260,11 @@ it('centres Tempest chest lightning and seats it on the dark armor at every LOD'
   const mat=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
   for(const id of ['kamaitachi','fujin','raijin'])for(let lod=0;lod<3;lod++) {
     const a=await load(id,lod);
-    const glow=a.parts.find(p=>p.joint==='chest'&&p.slot==='G')!.geometry.getAttribute('position');
-    const bolt=Array.from({length:glow.count},(_,i)=>new THREE.Vector3(glow.getX(i),glow.getY(i),glow.getZ(i)))
-      .filter(v=>v.z>.3);
+    // Chest and backpack can share a joint/paint slot after part grouping.
+    const bolt=a.parts.filter(p=>p.joint==='chest'&&p.slot==='G').flatMap(part=>{
+      const glow=part.geometry.getAttribute('position');
+      return Array.from({length:glow.count},(_,i)=>new THREE.Vector3(glow.getX(i),glow.getY(i),glow.getZ(i)));
+    }).filter(v=>v.z>.3);
     expect(bolt.length).toBeGreaterThan(12);
     expect(Math.abs(Math.min(...bolt.map(v=>v.x))+Math.max(...bolt.map(v=>v.x)))).toBeLessThan(.001);
     const armor=a.parts.filter(p=>p.joint==='chest'&&p.slot==='S').map(p=>new THREE.Mesh(p.geometry,mat));
@@ -327,4 +329,78 @@ it('keeps tall and swept rear fins on their own side through boost and victory',
       }
     }
   }
+});
+
+
+// Inspect the authored GLB extras directly: the runtime deliberately ignores
+// the customization tag, and must continue accepting several meshes per joint.
+const PART_TAGS = ['head','shoulders','chest','backpack','waist','hips','armL','armR','thighs','shins','feet'] as const;
+const JOINT_PARTS: Record<string, readonly string[]> = {
+  head:['head'], chest:['chest','backpack'], spine:['waist'], hips:['hips'],
+  shL:['shoulders','armL'], shR:['shoulders','armR'],
+  elL:['armL'], wrL:['armL'], elR:['armR'], wrR:['armR'],
+  hipL:['thighs'], hipR:['thighs'], kneeL:['shins'], kneeR:['shins'],
+  ankleL:['feet'], ankleR:['feet'], wingL:['backpack'], wingR:['backpack'],
+  towerL:['shoulders'], towerR:['shoulders'], skirtL:['hips'], skirtR:['hips'], skirtBack:['hips'],
+};
+type TaggedGlb = {
+  nodes: {name: string; mesh?: number; extras?: {joint?: string; part?: string; slot?: string; ink_lines?: number; detail?: boolean}}[];
+  meshes: {primitives: {mode?: number; attributes: Record<string,number>; indices?: number}[]}[];
+  accessors: {count: number}[];
+};
+async function taggedGlb(id: string, level: number): Promise<TaggedGlb> {
+  const file=id==='sunhawk'?`sunhawk-updated${level?`-lod${level}`:''}.glb`:`roster/${id}${level?`-lod${level}`:''}.glb`;
+  const bytes=await readFile(new URL(`../src/client/render/mech/assets/${file}`,import.meta.url));
+  expect(bytes.readUInt32LE(0)).toBe(0x46546c67);
+  expect(bytes.readUInt32LE(16)).toBe(0x4e4f534a);
+  return JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString('utf8'));
+}
+
+for(const id of [...ROSTER_IDS,'sunhawk']) describe(`${id} customization part tags`,()=>{
+  it('tags every armour and ink group with its allowed joint part and exact export name',async()=>{
+    let armorContract: string[]|undefined;
+    for(let level=0;level<3;level++) {
+      const glb=await taggedGlb(id,level), armor=new Set<string>(), lines=new Set<string>(), present=new Set<string>();
+      for(const node of glb.nodes.filter(n=>n.mesh!==undefined)) {
+        const {joint,part,slot,ink_lines,detail}=node.extras??{};
+        const context=`${id} LOD${level} ${node.name}`;
+        expect(PART_TAGS,`${context}: invalid part`).toContain(part);
+        expect(JOINT_PARTS[joint??''],`${context}: invalid joint`).toBeDefined();
+        expect(JOINT_PARTS[joint!],`${context}: part not allowed on joint`).toContain(part);
+        const primitives=glb.meshes[node.mesh!].primitives;
+        expect(primitives.length,context).toBeGreaterThan(0);
+        const separator=id==='sunhawk'?'_':'/';
+        if(ink_lines===1) {
+          expect(node.name).toBe([joint,part,'LINES'].join(separator));
+          expect(lines.has(`${joint}/${part}`),`${context}: duplicate ink group`).toBe(false);
+          lines.add(`${joint}/${part}`);
+          for(const primitive of primitives) {
+            expect(primitive.mode).toBe(1);
+            expect(primitive.attributes._LINE_KIND,context).toBeDefined();
+            expect(glb.accessors[primitive.attributes.POSITION].count,context).toBeGreaterThan(0);
+          }
+        } else {
+          expect(['P','S','T','K','F','D','C','G'],`${context}: invalid paint slot`).toContain(slot);
+          if(!detail) expect(node.name).toBe([joint,part,slot].join(separator));
+          const key=`${joint}/${part}/${slot}`;
+          if(!detail) {
+            expect(armor.has(key),`${context}: duplicate armour group`).toBe(false);
+            armor.add(key);present.add(part!);
+          }
+          for(const primitive of primitives) {
+            expect(primitive.mode??4).toBe(4);
+            expect(glb.accessors[primitive.attributes.POSITION].count,context).toBeGreaterThan(0);
+            expect(primitive.indices,context).toBeDefined();
+            expect(glb.accessors[primitive.indices!].count,context).toBeGreaterThan(0);
+          }
+        }
+      }
+      expect(armor.size).toBeGreaterThan(0);
+      for(const part of PART_TAGS.filter(p=>p!=='backpack')) expect(present,`${id} LOD${level}: missing ${part}`).toContain(part);
+      for(const line of lines) expect([...armor].some(key=>key.startsWith(`${line}/`)),`${id}: ink without matching armour ${line}`).toBe(true);
+      if(level===2) expect(lines.size).toBe(0); else expect(lines.size).toBeGreaterThan(0);
+      const keys=[...armor].sort();
+      if(armorContract) expect(keys,`${id}: inconsistent part/paint groups across LODs`).toEqual(armorContract); else armorContract=keys;
+    }
+  });
 });

@@ -1,0 +1,2899 @@
+{
+  "model": "sunhawk",
+  "blender_version": "5.2.2 LTS",
+  "strict_tags": true,
+  "pieces": [
+    {
+      "name": "B / Pelvic chassis",
+      "source_piece": "B / Pelvic chassis",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.06999993324279785,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Pelvic central keel",
+      "source_piece": "B / Pelvic central keel",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.18999990820884705,
+        0.10500000417232513
+      ]
+    },
+    {
+      "name": "B / Hip brow",
+      "source_piece": "B / Hip brow",
+      "joint": "skirtR",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.005000084638595581,
+        -0.19000005722045898,
+        -0.21000000834465027
+      ]
+    },
+    {
+      "name": "B / Floating hip shield",
+      "source_piece": "B / Floating hip shield",
+      "joint": "skirtR",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        -0.36999988555908203,
+        -0.33500003814697266,
+        -0.42500001192092896
+      ]
+    },
+    {
+      "name": "B / Hip brow.001",
+      "source_piece": "B / Hip brow.001",
+      "joint": "skirtL",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.004999905824661255,
+        -0.19000005722045898,
+        -0.21000000834465027
+      ]
+    },
+    {
+      "name": "B / Floating hip shield.001",
+      "source_piece": "B / Floating hip shield.001",
+      "joint": "skirtL",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.36999988555908203,
+        -0.33500003814697266,
+        -0.42500001192092896
+      ]
+    },
+    {
+      "name": "B / Rear pelvis plate",
+      "source_piece": "B / Rear pelvis plate",
+      "joint": "skirtBack",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.36500000953674316,
+        -0.10500000417232513
+      ]
+    },
+    {
+      "name": "B / Rear cobalt clasp",
+      "source_piece": "B / Rear cobalt clasp",
+      "joint": "skirtBack",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.23000001907348633,
+        -0.22999998927116394
+      ]
+    },
+    {
+      "name": "B / Abdominal spine",
+      "source_piece": "B / Abdominal spine",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.21499991416931152,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Floating abdominal vertebra 00",
+      "source_piece": "B / Floating abdominal vertebra 00",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        -0.10000014305114746,
+        0.027500003576278687
+      ]
+    },
+    {
+      "name": "B / Floating abdominal vertebra 01",
+      "source_piece": "B / Floating abdominal vertebra 01",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.11499977111816406,
+        0.027500003576278687
+      ]
+    },
+    {
+      "name": "B / Floating abdominal vertebra 02",
+      "source_piece": "B / Floating abdominal vertebra 02",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.3299999237060547,
+        0.027500003576278687
+      ]
+    },
+    {
+      "name": "B / Floating abdominal vertebra 03",
+      "source_piece": "B / Floating abdominal vertebra 03",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.5449998378753662,
+        0.027500003576278687
+      ]
+    },
+    {
+      "name": "B / Thoracic chassis",
+      "source_piece": "B / Thoracic chassis",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.4999997615814209,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Cuirass porcelain face",
+      "source_piece": "B / Cuirass porcelain face",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.47499990463256836,
+        0.32250000536441803
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim",
+      "source_piece": "B / Cuirass fine gold trim",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.23999999463558197,
+        -0.16000032424926758,
+        0.6022999882698059
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.001",
+      "source_piece": "B / Cuirass fine gold trim.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.6872499883174896,
+        0.08499979972839355,
+        0.654229998588562
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.002",
+      "source_piece": "B / Cuirass fine gold trim.002",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.0647499859333038,
+        0.5399999618530273,
+        0.6513000130653381
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.003",
+      "source_piece": "B / Cuirass fine gold trim.003",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.0823000073432922,
+        0.9599997997283936,
+        0.6089999973773956
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.004",
+      "source_piece": "B / Cuirass fine gold trim.004",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.7848000228404999,
+        1.1399998664855957,
+        0.5537999868392944
+      ]
+    },
+    {
+      "name": "B / Cuirass collar trim",
+      "source_piece": "B / Cuirass collar trim",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.27000000863336027,
+        1.2100000381469727,
+        0.6436499953269958
+      ]
+    },
+    {
+      "name": "B / Cuirass pointed trim",
+      "source_piece": "B / Cuirass pointed trim",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.050000001676380634,
+        -0.2700002193450928,
+        0.6665199995040894
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.005",
+      "source_piece": "B / Cuirass fine gold trim.005",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.23999999463558197,
+        -0.16000032424926758,
+        0.6022999882698059
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.006",
+      "source_piece": "B / Cuirass fine gold trim.006",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.6872499883174896,
+        0.08499979972839355,
+        0.654229998588562
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.007",
+      "source_piece": "B / Cuirass fine gold trim.007",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.0647499859333038,
+        0.5399999618530273,
+        0.6513000130653381
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.008",
+      "source_piece": "B / Cuirass fine gold trim.008",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.0823000073432922,
+        0.9599997997283936,
+        0.6089999973773956
+      ]
+    },
+    {
+      "name": "B / Cuirass fine gold trim.009",
+      "source_piece": "B / Cuirass fine gold trim.009",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.7848000228404999,
+        1.1399998664855957,
+        0.5537999868392944
+      ]
+    },
+    {
+      "name": "B / Cuirass collar trim.001",
+      "source_piece": "B / Cuirass collar trim.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.27000000863336027,
+        1.2100000381469727,
+        0.6436499953269958
+      ]
+    },
+    {
+      "name": "B / Cuirass pointed trim.001",
+      "source_piece": "B / Cuirass pointed trim.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.050000001676380634,
+        -0.2700002193450928,
+        0.6665199995040894
+      ]
+    },
+    {
+      "name": "B / Diamond dark socket",
+      "source_piece": "B / Diamond dark socket",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.5449998378753662,
+        0.8925000131130219
+      ]
+    },
+    {
+      "name": "B / Diamond luminous insert",
+      "source_piece": "B / Diamond luminous insert",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.5399999618530273,
+        0.9350000023841858
+      ]
+    },
+    {
+      "name": "B / Diamond central glint",
+      "source_piece": "B / Diamond central glint",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.5399999618530273,
+        0.9589999914169312
+      ]
+    },
+    {
+      "name": "B / Recessed gill lip",
+      "source_piece": "B / Recessed gill lip",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5800000131130219,
+        0.7699997425079346,
+        0.8225000202655792
+      ]
+    },
+    {
+      "name": "B / Cobalt gill",
+      "source_piece": "B / Cobalt gill",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5800000131130219,
+        0.7674996852874756,
+        0.8425000011920929
+      ]
+    },
+    {
+      "name": "B / Recessed gill lip.001",
+      "source_piece": "B / Recessed gill lip.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5800000131130219,
+        0.5649998188018799,
+        0.8225000202655792
+      ]
+    },
+    {
+      "name": "B / Cobalt gill.001",
+      "source_piece": "B / Cobalt gill.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5800000131130219,
+        0.5624997615814209,
+        0.8425000011920929
+      ]
+    },
+    {
+      "name": "B / Recessed gill lip.002",
+      "source_piece": "B / Recessed gill lip.002",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5800000131130219,
+        0.3599998950958252,
+        0.8225000202655792
+      ]
+    },
+    {
+      "name": "B / Cobalt gill.002",
+      "source_piece": "B / Cobalt gill.002",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5800000131130219,
+        0.3574998378753662,
+        0.8425000011920929
+      ]
+    },
+    {
+      "name": "B / Raised collar",
+      "source_piece": "B / Raised collar",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.5149999856948853,
+        1.299999713897705,
+        -0.06000000238418579
+      ]
+    },
+    {
+      "name": "B / Shoulder axle",
+      "source_piece": "B / Shoulder axle",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.2200000286102295,
+        0.8999996185302734,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Lower rib armor",
+      "source_piece": "B / Lower rib armor",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.7300000041723251,
+        0.04499983787536621,
+        -0.06499999761581421
+      ]
+    },
+    {
+      "name": "B / Recessed gill lip.003",
+      "source_piece": "B / Recessed gill lip.003",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5800000131130219,
+        0.7699997425079346,
+        0.8225000202655792
+      ]
+    },
+    {
+      "name": "B / Cobalt gill.003",
+      "source_piece": "B / Cobalt gill.003",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5800000131130219,
+        0.7674996852874756,
+        0.8425000011920929
+      ]
+    },
+    {
+      "name": "B / Recessed gill lip.004",
+      "source_piece": "B / Recessed gill lip.004",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5800000131130219,
+        0.5649998188018799,
+        0.8225000202655792
+      ]
+    },
+    {
+      "name": "B / Cobalt gill.004",
+      "source_piece": "B / Cobalt gill.004",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5800000131130219,
+        0.5624997615814209,
+        0.8425000011920929
+      ]
+    },
+    {
+      "name": "B / Recessed gill lip.005",
+      "source_piece": "B / Recessed gill lip.005",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5800000131130219,
+        0.3599998950958252,
+        0.8225000202655792
+      ]
+    },
+    {
+      "name": "B / Cobalt gill.005",
+      "source_piece": "B / Cobalt gill.005",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5800000131130219,
+        0.3574998378753662,
+        0.8425000011920929
+      ]
+    },
+    {
+      "name": "B / Raised collar.001",
+      "source_piece": "B / Raised collar.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.5149999856948853,
+        1.299999713897705,
+        -0.06000000238418579
+      ]
+    },
+    {
+      "name": "B / Shoulder axle.001",
+      "source_piece": "B / Shoulder axle.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.2200000286102295,
+        0.8999996185302734,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Lower rib armor.001",
+      "source_piece": "B / Lower rib armor.001",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.7300000041723251,
+        0.04499983787536621,
+        -0.06499999761581421
+      ]
+    },
+    {
+      "name": "B / Lower cobalt latch",
+      "source_piece": "B / Lower cobalt latch",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        -0.2700002193450928,
+        0.6500000059604645
+      ]
+    },
+    {
+      "name": "B / Backpack main shell",
+      "source_piece": "B / Backpack main shell",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.5399997234344482,
+        -0.6699999868869781
+      ]
+    },
+    {
+      "name": "B / Backpack porcelain rail",
+      "source_piece": "B / Backpack porcelain rail",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.510000005364418,
+        0.5349998474121094,
+        -0.6099999994039536
+      ]
+    },
+    {
+      "name": "B / Main thruster housing",
+      "source_piece": "B / Main thruster housing",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.29999999701976776,
+        0.2799384593963623,
+        -0.8816922903060913
+      ]
+    },
+    {
+      "name": "B / Main thruster well",
+      "source_piece": "B / Main thruster well",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.30000001937150955,
+        0.21000003814697266,
+        -1.024999976158142
+      ]
+    },
+    {
+      "name": "B / Main thruster rim",
+      "source_piece": "B / Main thruster rim",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.30000001192092896,
+        0.21000003814697266,
+        -1.0499999523162842
+      ]
+    },
+    {
+      "name": "B / Main thruster cyan annulus",
+      "source_piece": "B / Main thruster cyan annulus",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.30000001192092896,
+        0.21000003814697266,
+        -1.065000057220459
+      ]
+    },
+    {
+      "name": "B / Main thruster core",
+      "source_piece": "B / Main thruster core",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.30000000447034836,
+        0.21000003814697266,
+        -1.0379999876022339
+      ]
+    },
+    {
+      "name": "B / Backpack porcelain rail.001",
+      "source_piece": "B / Backpack porcelain rail.001",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.510000005364418,
+        0.5349998474121094,
+        -0.6099999994039536
+      ]
+    },
+    {
+      "name": "B / Main thruster housing.001",
+      "source_piece": "B / Main thruster housing.001",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.29999999701976776,
+        0.2799384593963623,
+        -0.8816922903060913
+      ]
+    },
+    {
+      "name": "B / Main thruster well.001",
+      "source_piece": "B / Main thruster well.001",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.30000001937150955,
+        0.21000003814697266,
+        -1.024999976158142
+      ]
+    },
+    {
+      "name": "B / Main thruster rim.001",
+      "source_piece": "B / Main thruster rim.001",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.30000001192092896,
+        0.21000003814697266,
+        -1.0499999523162842
+      ]
+    },
+    {
+      "name": "B / Main thruster cyan annulus.001",
+      "source_piece": "B / Main thruster cyan annulus.001",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.30000001192092896,
+        0.21000003814697266,
+        -1.065000057220459
+      ]
+    },
+    {
+      "name": "B / Main thruster core.001",
+      "source_piece": "B / Main thruster core.001",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.30000000447034836,
+        0.21000003814697266,
+        -1.0379999876022339
+      ]
+    },
+    {
+      "name": "B / Stabilizer cobalt plane",
+      "source_piece": "B / Stabilizer cobalt plane",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.1975192427635193,
+        -0.30667972564697266,
+        -0.5499999821186066
+      ]
+    },
+    {
+      "name": "B / Stabilizer gold tip",
+      "source_piece": "B / Stabilizer gold tip",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.5811139941215515,
+        -1.148545503616333,
+        -1.4950000643730164
+      ]
+    },
+    {
+      "name": "B / Stabilizer cyan seam",
+      "source_piece": "B / Stabilizer cyan seam",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.20999997854232788,
+        -0.315000057220459,
+        -0.6079999804496765
+      ]
+    },
+    {
+      "name": "B / Stabilizer cobalt plane.001",
+      "source_piece": "B / Stabilizer cobalt plane.001",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.1975192427635193,
+        -0.30667972564697266,
+        -0.5499999821186066
+      ]
+    },
+    {
+      "name": "B / Stabilizer gold tip.001",
+      "source_piece": "B / Stabilizer gold tip.001",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.5811139941215515,
+        -1.148545503616333,
+        -1.4950000643730164
+      ]
+    },
+    {
+      "name": "B / Stabilizer cyan seam.001",
+      "source_piece": "B / Stabilizer cyan seam.001",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.20999997854232788,
+        -0.315000057220459,
+        -0.6079999804496765
+      ]
+    },
+    {
+      "name": "B / Neck stem",
+      "source_piece": "B / Neck stem",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        -0.040000200271606445,
+        0.04500000178813934
+      ]
+    },
+    {
+      "name": "B / Neck collar",
+      "source_piece": "B / Neck collar",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        -0.12000060081481934,
+        0.0650000050663948
+      ]
+    },
+    {
+      "name": "B / Neck collar.001",
+      "source_piece": "B / Neck collar.001",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.049999237060546875,
+        0.0650000050663948
+      ]
+    },
+    {
+      "name": "B / Avian helmet",
+      "source_piece": "B / Avian helmet",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.3149995803833008,
+        0.4349999874830246
+      ]
+    },
+    {
+      "name": "B / Visor side",
+      "source_piece": "B / Visor side",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.24499999731779099,
+        0.33499956130981445,
+        0.529999990016222
+      ]
+    },
+    {
+      "name": "B / Eye slit",
+      "source_piece": "B / Eye slit",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.2735000029206276,
+        0.3449993133544922,
+        0.4650000035762787
+      ]
+    },
+    {
+      "name": "B / Swept crown horn",
+      "source_piece": "B / Swept crown horn",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.29474345594644547,
+        0.7068853378295898,
+        -0.4611184922978282
+      ]
+    },
+    {
+      "name": "B / Temple hinge",
+      "source_piece": "B / Temple hinge",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.33500000834465027,
+        0.23999977111816406,
+        -0.12999999895691872
+      ]
+    },
+    {
+      "name": "B / Visor side.001",
+      "source_piece": "B / Visor side.001",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.24499999731779099,
+        0.33499956130981445,
+        0.529999990016222
+      ]
+    },
+    {
+      "name": "B / Eye slit.001",
+      "source_piece": "B / Eye slit.001",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.2735000029206276,
+        0.3449993133544922,
+        0.4650000035762787
+      ]
+    },
+    {
+      "name": "B / Swept crown horn.001",
+      "source_piece": "B / Swept crown horn.001",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.29474345594644547,
+        0.7068853378295898,
+        -0.4611184922978282
+      ]
+    },
+    {
+      "name": "B / Temple hinge.001",
+      "source_piece": "B / Temple hinge.001",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.33500000834465027,
+        0.23999977111816406,
+        -0.12999999895691872
+      ]
+    },
+    {
+      "name": "B / Separate lower beak",
+      "source_piece": "B / Separate lower beak",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.09499955177307129,
+        0.4449999965727329
+      ]
+    },
+    {
+      "name": "B / Crown cobalt crest",
+      "source_piece": "B / Crown cobalt crest",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.5999994277954102,
+        -0.09500000346451998
+      ]
+    },
+    {
+      "name": "B / Shoulder swivel",
+      "source_piece": "B / Shoulder swivel",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        5.960464477539063e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Shoulder rounded outer cap",
+      "source_piece": "B / Shoulder rounded outer cap",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.27999991178512573,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Upper arm underframe",
+      "source_piece": "B / Upper arm underframe",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.06499999761581421,
+        -0.6399998664855957,
+        0.007500000298023224
+      ]
+    },
+    {
+      "name": "B / Upper arm fitted shell",
+      "source_piece": "B / Upper arm fitted shell",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.030599936842918396,
+        -0.6249997615814209,
+        0.042500004172325134
+      ]
+    },
+    {
+      "name": "B / Pylon bracket",
+      "source_piece": "B / Pylon bracket",
+      "joint": "towerR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -0.18999993801116943,
+        0.10000014305114746,
+        -0.040000006556510925
+      ]
+    },
+    {
+      "name": "B / Tower cobalt foundation",
+      "source_piece": "B / Tower cobalt foundation",
+      "joint": "towerR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -0.18999993801116943,
+        0.38500022888183594,
+        0.012500002980232239
+      ]
+    },
+    {
+      "name": "B / Tower white taper",
+      "source_piece": "B / Tower white taper",
+      "joint": "towerR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -0.18999987840652466,
+        1.200000286102295,
+        0.0034999996423721313
+      ]
+    },
+    {
+      "name": "B / Tower gold crown",
+      "source_piece": "B / Tower gold crown",
+      "joint": "towerR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -0.18999993801116943,
+        1.8550004959106445,
+        0.00599999725818634
+      ]
+    },
+    {
+      "name": "B / Elbow drum",
+      "source_piece": "B / Elbow drum",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        5.960464477539063e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Forearm underframe",
+      "source_piece": "B / Forearm underframe",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.06499999761581421,
+        -0.7599999904632568,
+        0.009999997913837433
+      ]
+    },
+    {
+      "name": "B / Forearm sculpted gauntlet",
+      "source_piece": "B / Forearm sculpted gauntlet",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.12999993562698364,
+        -0.7599997520446777,
+        0.037500008940696716
+      ]
+    },
+    {
+      "name": "B / Gauntlet cobalt side channel",
+      "source_piece": "B / Gauntlet cobalt side channel",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.3899999260902405,
+        -0.7049999237060547,
+        0.32250000536441803
+      ]
+    },
+    {
+      "name": "B / Long solar arm blade",
+      "source_piece": "B / Long solar arm blade",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.45249998569488525,
+        -1.404999852180481,
+        0.05000000074505806
+      ]
+    },
+    {
+      "name": "B / Arm blade cyan cutting edge",
+      "source_piece": "B / Arm blade cyan cutting edge",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.5499999523162842,
+        -1.4549999237060547,
+        0.1509999930858612
+      ]
+    },
+    {
+      "name": "B / Wrist cuff",
+      "source_piece": "B / Wrist cuff",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Palm",
+      "source_piece": "B / Palm",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        5.960464477539063e-08,
+        -0.26999998092651367,
+        0.009999997913837433
+      ]
+    },
+    {
+      "name": "B / Back of hand plate",
+      "source_piece": "B / Back of hand plate",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        5.960464477539063e-08,
+        -0.24000000953674316,
+        0.17749999463558197
+      ]
+    },
+    {
+      "name": "B / Finger 1 phalanx 1",
+      "source_piece": "B / Finger 1 phalanx 1",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.1424999237060547,
+        -0.6125001907348633,
+        -0.042500002309679985
+      ]
+    },
+    {
+      "name": "B / Finger 1 phalanx 2",
+      "source_piece": "B / Finger 1 phalanx 2",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.1424999237060547,
+        -0.7725000381469727,
+        -0.1425000037997961
+      ]
+    },
+    {
+      "name": "B / Finger 1 phalanx 3",
+      "source_piece": "B / Finger 1 phalanx 3",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.1424999237060547,
+        -0.8174999952316284,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Finger 2 phalanx 1",
+      "source_piece": "B / Finger 2 phalanx 1",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.047499895095825195,
+        -0.5774999856948853,
+        -0.042500000447034836
+      ]
+    },
+    {
+      "name": "B / Finger 2 phalanx 2",
+      "source_piece": "B / Finger 2 phalanx 2",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.047499895095825195,
+        -0.7375000715255737,
+        -0.1425000000745058
+      ]
+    },
+    {
+      "name": "B / Finger 2 phalanx 3",
+      "source_piece": "B / Finger 2 phalanx 3",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.047499895095825195,
+        -0.782500147819519,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Finger 3 phalanx 1",
+      "source_piece": "B / Finger 3 phalanx 1",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.047500014305114746,
+        -0.5774999856948853,
+        -0.042500000447034836
+      ]
+    },
+    {
+      "name": "B / Finger 3 phalanx 2",
+      "source_piece": "B / Finger 3 phalanx 2",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.047500014305114746,
+        -0.7375000715255737,
+        -0.1425000000745058
+      ]
+    },
+    {
+      "name": "B / Finger 3 phalanx 3",
+      "source_piece": "B / Finger 3 phalanx 3",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.047500014305114746,
+        -0.782500147819519,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Finger 4 phalanx 1",
+      "source_piece": "B / Finger 4 phalanx 1",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.14250004291534424,
+        -0.6125001907348633,
+        -0.042500002309679985
+      ]
+    },
+    {
+      "name": "B / Finger 4 phalanx 2",
+      "source_piece": "B / Finger 4 phalanx 2",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.14250004291534424,
+        -0.7725000381469727,
+        -0.1425000037997961
+      ]
+    },
+    {
+      "name": "B / Finger 4 phalanx 3",
+      "source_piece": "B / Finger 4 phalanx 3",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.14250004291534424,
+        -0.8174999952316284,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Thumb base",
+      "source_piece": "B / Thumb base",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.2300000786781311,
+        -0.30500006675720215,
+        -0.05750000849366188
+      ]
+    },
+    {
+      "name": "B / Thumb tip",
+      "source_piece": "B / Thumb tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.2600000500679016,
+        -0.4500000476837158,
+        -0.17000000178813934
+      ]
+    },
+    {
+      "name": "B / Shoulder swivel.001",
+      "source_piece": "B / Shoulder swivel.001",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -5.960464477539063e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Shoulder rounded outer cap.001",
+      "source_piece": "B / Shoulder rounded outer cap.001",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.27999991178512573,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Upper arm underframe.001",
+      "source_piece": "B / Upper arm underframe.001",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.06499999761581421,
+        -0.6399998664855957,
+        0.007500000298023224
+      ]
+    },
+    {
+      "name": "B / Upper arm fitted shell.001",
+      "source_piece": "B / Upper arm fitted shell.001",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.030599936842918396,
+        -0.6249997615814209,
+        0.042500004172325134
+      ]
+    },
+    {
+      "name": "B / Pylon bracket.001",
+      "source_piece": "B / Pylon bracket.001",
+      "joint": "towerL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        0.18999993801116943,
+        0.10000014305114746,
+        -0.040000006556510925
+      ]
+    },
+    {
+      "name": "B / Tower cobalt foundation.001",
+      "source_piece": "B / Tower cobalt foundation.001",
+      "joint": "towerL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        0.18999993801116943,
+        0.38500022888183594,
+        0.012500002980232239
+      ]
+    },
+    {
+      "name": "B / Tower white taper.001",
+      "source_piece": "B / Tower white taper.001",
+      "joint": "towerL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        0.18999987840652466,
+        1.200000286102295,
+        0.0034999996423721313
+      ]
+    },
+    {
+      "name": "B / Tower gold crown.001",
+      "source_piece": "B / Tower gold crown.001",
+      "joint": "towerL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        0.18999993801116943,
+        1.8550004959106445,
+        0.00599999725818634
+      ]
+    },
+    {
+      "name": "B / Elbow drum.001",
+      "source_piece": "B / Elbow drum.001",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -5.960464477539063e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Forearm underframe.001",
+      "source_piece": "B / Forearm underframe.001",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.06499999761581421,
+        -0.7599999904632568,
+        0.009999997913837433
+      ]
+    },
+    {
+      "name": "B / Forearm sculpted gauntlet.001",
+      "source_piece": "B / Forearm sculpted gauntlet.001",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.12999993562698364,
+        -0.7599997520446777,
+        0.037500008940696716
+      ]
+    },
+    {
+      "name": "B / Gauntlet cobalt side channel.001",
+      "source_piece": "B / Gauntlet cobalt side channel.001",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.3899999260902405,
+        -0.7049999237060547,
+        0.32250000536441803
+      ]
+    },
+    {
+      "name": "B / Long solar arm blade.001",
+      "source_piece": "B / Long solar arm blade.001",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.45249998569488525,
+        -1.404999852180481,
+        0.05000000074505806
+      ]
+    },
+    {
+      "name": "B / Arm blade cyan cutting edge.001",
+      "source_piece": "B / Arm blade cyan cutting edge.001",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.5499999523162842,
+        -1.4549999237060547,
+        0.1509999930858612
+      ]
+    },
+    {
+      "name": "B / Wrist cuff.001",
+      "source_piece": "B / Wrist cuff.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Palm.001",
+      "source_piece": "B / Palm.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -5.960464477539063e-08,
+        -0.26999998092651367,
+        0.009999997913837433
+      ]
+    },
+    {
+      "name": "B / Back of hand plate.001",
+      "source_piece": "B / Back of hand plate.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -5.960464477539063e-08,
+        -0.24000000953674316,
+        0.17749999463558197
+      ]
+    },
+    {
+      "name": "B / Finger 1 phalanx 1.001",
+      "source_piece": "B / Finger 1 phalanx 1.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.14250004291534424,
+        -0.6125001907348633,
+        -0.042500002309679985
+      ]
+    },
+    {
+      "name": "B / Finger 1 phalanx 2.001",
+      "source_piece": "B / Finger 1 phalanx 2.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.14250004291534424,
+        -0.7725000381469727,
+        -0.1425000037997961
+      ]
+    },
+    {
+      "name": "B / Finger 1 phalanx 3.001",
+      "source_piece": "B / Finger 1 phalanx 3.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.14250004291534424,
+        -0.8174999952316284,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Finger 2 phalanx 1.001",
+      "source_piece": "B / Finger 2 phalanx 1.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.047500014305114746,
+        -0.5774999856948853,
+        -0.042500000447034836
+      ]
+    },
+    {
+      "name": "B / Finger 2 phalanx 2.001",
+      "source_piece": "B / Finger 2 phalanx 2.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.047500014305114746,
+        -0.7375000715255737,
+        -0.1425000000745058
+      ]
+    },
+    {
+      "name": "B / Finger 2 phalanx 3.001",
+      "source_piece": "B / Finger 2 phalanx 3.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.047500014305114746,
+        -0.782500147819519,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Finger 3 phalanx 1.001",
+      "source_piece": "B / Finger 3 phalanx 1.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.047499895095825195,
+        -0.5774999856948853,
+        -0.042500000447034836
+      ]
+    },
+    {
+      "name": "B / Finger 3 phalanx 2.001",
+      "source_piece": "B / Finger 3 phalanx 2.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.047499895095825195,
+        -0.7375000715255737,
+        -0.1425000000745058
+      ]
+    },
+    {
+      "name": "B / Finger 3 phalanx 3.001",
+      "source_piece": "B / Finger 3 phalanx 3.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.047499895095825195,
+        -0.782500147819519,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Finger 4 phalanx 1.001",
+      "source_piece": "B / Finger 4 phalanx 1.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.1424999237060547,
+        -0.6125001907348633,
+        -0.042500002309679985
+      ]
+    },
+    {
+      "name": "B / Finger 4 phalanx 2.001",
+      "source_piece": "B / Finger 4 phalanx 2.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.1424999237060547,
+        -0.7725000381469727,
+        -0.1425000037997961
+      ]
+    },
+    {
+      "name": "B / Finger 4 phalanx 3.001",
+      "source_piece": "B / Finger 4 phalanx 3.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.1424999237060547,
+        -0.8174999952316284,
+        -0.23250001668930054
+      ]
+    },
+    {
+      "name": "B / Thumb base.001",
+      "source_piece": "B / Thumb base.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.2300000786781311,
+        -0.30500006675720215,
+        -0.05750000849366188
+      ]
+    },
+    {
+      "name": "B / Thumb tip.001",
+      "source_piece": "B / Thumb tip.001",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.2600000500679016,
+        -0.4500000476837158,
+        -0.17000000178813934
+      ]
+    },
+    {
+      "name": "B / Hip bearing",
+      "source_piece": "B / Hip bearing",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Femur structure",
+      "source_piece": "B / Femur structure",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0049998760223389,
+        0.012499995529651642
+      ]
+    },
+    {
+      "name": "B / Thigh porcelain shell",
+      "source_piece": "B / Thigh porcelain shell",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8849998712539673,
+        0.07499998807907104
+      ]
+    },
+    {
+      "name": "B / Thigh cyan seam",
+      "source_piece": "B / Thigh cyan seam",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        -0.24999994039535522,
+        -1.1699998378753662,
+        0.12999999523162842
+      ]
+    },
+    {
+      "name": "B / Knee transverse bearing",
+      "source_piece": "B / Knee transverse bearing",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Knee shield",
+      "source_piece": "B / Knee shield",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        -0.007500141859054565,
+        0.32499999552965164
+      ]
+    },
+    {
+      "name": "B / Rear knee spur",
+      "source_piece": "B / Rear knee spur",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.20656657218933105,
+        -0.582097515463829
+      ]
+    },
+    {
+      "name": "B / Tibia structure",
+      "source_piece": "B / Tibia structure",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.165000081062317,
+        -0.04750000685453415
+      ]
+    },
+    {
+      "name": "B / Shin aerodynamic shell",
+      "source_piece": "B / Shin aerodynamic shell",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        -1.2225000485777855,
+        -0.03749997913837433
+      ]
+    },
+    {
+      "name": "B / Calf thruster housing",
+      "source_piece": "B / Calf thruster housing",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -1.4901161193847656e-08,
+        -1.1817232370376587,
+        -0.6173846274614334
+      ]
+    },
+    {
+      "name": "B / Calf thruster well",
+      "source_piece": "B / Calf thruster well",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2500000596046448,
+        -0.7599999904632568
+      ]
+    },
+    {
+      "name": "B / Calf thruster rim",
+      "source_piece": "B / Calf thruster rim",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -1.4901161193847656e-08,
+        -1.2500001192092896,
+        -0.7849999666213989
+      ]
+    },
+    {
+      "name": "B / Calf thruster cyan annulus",
+      "source_piece": "B / Calf thruster cyan annulus",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2500001192092896,
+        -0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Calf thruster core",
+      "source_piece": "B / Calf thruster core",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2500001192092896,
+        -0.7729999721050262
+      ]
+    },
+    {
+      "name": "B / Ankle bearing",
+      "source_piece": "B / Ankle bearing",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        2.9802322387695312e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Skate porcelain carapace",
+      "source_piece": "B / Skate porcelain carapace",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        -0.22999998927116394,
+        0.22999998927116394
+      ]
+    },
+    {
+      "name": "B / Skate rail",
+      "source_piece": "B / Skate rail",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.4899999648332596,
+        0.19999995827674866
+      ]
+    },
+    {
+      "name": "B / Inline tire 0",
+      "source_piece": "B / Inline tire 0",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        2.9802322387695312e-08,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel hub 0",
+      "source_piece": "B / Wheel hub 0",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.17499998211860657,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring",
+      "source_piece": "B / Cyan wheel ring",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18799996376037598,
+        -0.5599999874830246,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc",
+      "source_piece": "B / Wheel inner disc",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18950000405311584,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel hub 0.001",
+      "source_piece": "B / Wheel hub 0.001",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.17500001192092896,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.001",
+      "source_piece": "B / Cyan wheel ring.001",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18800002336502075,
+        -0.5599999874830246,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.001",
+      "source_piece": "B / Wheel inner disc.001",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18950000405311584,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Inline tire 1",
+      "source_piece": "B / Inline tire 1",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        2.9802322387695312e-08,
+        -0.5599999725818634,
+        0.1300000101327896
+      ]
+    },
+    {
+      "name": "B / Wheel hub 1",
+      "source_piece": "B / Wheel hub 1",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.17499998211860657,
+        -0.5599999725818634,
+        0.12999999709427357
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.002",
+      "source_piece": "B / Cyan wheel ring.002",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18799996376037598,
+        -0.5599999874830246,
+        0.13000001199543476
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.002",
+      "source_piece": "B / Wheel inner disc.002",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18950000405311584,
+        -0.5599999725818634,
+        0.13000000081956387
+      ]
+    },
+    {
+      "name": "B / Wheel hub 1.001",
+      "source_piece": "B / Wheel hub 1.001",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.17500001192092896,
+        -0.5599999725818634,
+        0.12999999709427357
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.003",
+      "source_piece": "B / Cyan wheel ring.003",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18800002336502075,
+        -0.5599999874830246,
+        0.13000001199543476
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.003",
+      "source_piece": "B / Wheel inner disc.003",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18950000405311584,
+        -0.5599999725818634,
+        0.13000000081956387
+      ]
+    },
+    {
+      "name": "B / Inline tire 2",
+      "source_piece": "B / Inline tire 2",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        2.9802322387695312e-08,
+        -0.5599999725818634,
+        -0.5400000065565109
+      ]
+    },
+    {
+      "name": "B / Wheel hub 2",
+      "source_piece": "B / Wheel hub 2",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.17499998211860657,
+        -0.5599999725818634,
+        -0.5399999916553497
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.004",
+      "source_piece": "B / Cyan wheel ring.004",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18799996376037598,
+        -0.5599999874830246,
+        -0.5400000065565109
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.004",
+      "source_piece": "B / Wheel inner disc.004",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18950000405311584,
+        -0.5599999725818634,
+        -0.5400000214576721
+      ]
+    },
+    {
+      "name": "B / Wheel hub 2.001",
+      "source_piece": "B / Wheel hub 2.001",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.17500001192092896,
+        -0.5599999725818634,
+        -0.5399999916553497
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.005",
+      "source_piece": "B / Cyan wheel ring.005",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18800002336502075,
+        -0.5599999874830246,
+        -0.5400000065565109
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.005",
+      "source_piece": "B / Wheel inner disc.005",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18950000405311584,
+        -0.5599999725818634,
+        -0.5400000214576721
+      ]
+    },
+    {
+      "name": "B / Gold toe claw",
+      "source_piece": "B / Gold toe claw",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.26239272952079773,
+        -0.4410272240638733,
+        1.1036981642246246
+      ]
+    },
+    {
+      "name": "B / Gold toe claw.001",
+      "source_piece": "B / Gold toe claw.001",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.43957510590553284,
+        1.1042095124721527
+      ]
+    },
+    {
+      "name": "B / Gold toe claw.002",
+      "source_piece": "B / Gold toe claw.002",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.2623927891254425,
+        -0.4410272538661957,
+        1.1036981642246246
+      ]
+    },
+    {
+      "name": "B / Gold heel spur",
+      "source_piece": "B / Gold heel spur",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.208870992064476,
+        -0.6724017560482025
+      ]
+    },
+    {
+      "name": "B / Hip bearing.001",
+      "source_piece": "B / Hip bearing.001",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        -1.4901161193847656e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Femur structure.001",
+      "source_piece": "B / Femur structure.001",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.0049998760223389,
+        0.012499995529651642
+      ]
+    },
+    {
+      "name": "B / Thigh porcelain shell.001",
+      "source_piece": "B / Thigh porcelain shell.001",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8849998712539673,
+        0.07499998807907104
+      ]
+    },
+    {
+      "name": "B / Thigh cyan seam.001",
+      "source_piece": "B / Thigh cyan seam.001",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.24999994039535522,
+        -1.1699998378753662,
+        0.12999999523162842
+      ]
+    },
+    {
+      "name": "B / Knee transverse bearing.001",
+      "source_piece": "B / Knee transverse bearing.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Knee shield.001",
+      "source_piece": "B / Knee shield.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -1.4901161193847656e-08,
+        -0.007500141859054565,
+        0.32499999552965164
+      ]
+    },
+    {
+      "name": "B / Rear knee spur.001",
+      "source_piece": "B / Rear knee spur.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.20656657218933105,
+        -0.582097515463829
+      ]
+    },
+    {
+      "name": "B / Tibia structure.001",
+      "source_piece": "B / Tibia structure.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.165000081062317,
+        -0.04750000685453415
+      ]
+    },
+    {
+      "name": "B / Shin aerodynamic shell.001",
+      "source_piece": "B / Shin aerodynamic shell.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -1.4901161193847656e-08,
+        -1.2225000485777855,
+        -0.03749997913837433
+      ]
+    },
+    {
+      "name": "B / Calf thruster housing.001",
+      "source_piece": "B / Calf thruster housing.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        -1.1817232370376587,
+        -0.6173846274614334
+      ]
+    },
+    {
+      "name": "B / Calf thruster well.001",
+      "source_piece": "B / Calf thruster well.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2500000596046448,
+        -0.7599999904632568
+      ]
+    },
+    {
+      "name": "B / Calf thruster rim.001",
+      "source_piece": "B / Calf thruster rim.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        -1.2500001192092896,
+        -0.7849999666213989
+      ]
+    },
+    {
+      "name": "B / Calf thruster cyan annulus.001",
+      "source_piece": "B / Calf thruster cyan annulus.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2500001192092896,
+        -0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Calf thruster core.001",
+      "source_piece": "B / Calf thruster core.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2500001192092896,
+        -0.7729999721050262
+      ]
+    },
+    {
+      "name": "B / Ankle bearing.001",
+      "source_piece": "B / Ankle bearing.001",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -2.9802322387695312e-08,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "B / Skate porcelain carapace.001",
+      "source_piece": "B / Skate porcelain carapace.001",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -1.4901161193847656e-08,
+        -0.22999998927116394,
+        0.22999998927116394
+      ]
+    },
+    {
+      "name": "B / Skate rail.001",
+      "source_piece": "B / Skate rail.001",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.4899999648332596,
+        0.19999995827674866
+      ]
+    },
+    {
+      "name": "B / Inline tire 0.001",
+      "source_piece": "B / Inline tire 0.001",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -2.9802322387695312e-08,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel hub 0.002",
+      "source_piece": "B / Wheel hub 0.002",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.17500001192092896,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.006",
+      "source_piece": "B / Cyan wheel ring.006",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18800002336502075,
+        -0.5599999874830246,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.006",
+      "source_piece": "B / Wheel inner disc.006",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18950000405311584,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel hub 0.003",
+      "source_piece": "B / Wheel hub 0.003",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.17499998211860657,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.007",
+      "source_piece": "B / Cyan wheel ring.007",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18799996376037598,
+        -0.5599999874830246,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.007",
+      "source_piece": "B / Wheel inner disc.007",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18950000405311584,
+        -0.5599999725818634,
+        0.7999999523162842
+      ]
+    },
+    {
+      "name": "B / Inline tire 1.001",
+      "source_piece": "B / Inline tire 1.001",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -2.9802322387695312e-08,
+        -0.5599999725818634,
+        0.1300000101327896
+      ]
+    },
+    {
+      "name": "B / Wheel hub 1.002",
+      "source_piece": "B / Wheel hub 1.002",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.17500001192092896,
+        -0.5599999725818634,
+        0.12999999709427357
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.008",
+      "source_piece": "B / Cyan wheel ring.008",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18800002336502075,
+        -0.5599999874830246,
+        0.13000001199543476
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.008",
+      "source_piece": "B / Wheel inner disc.008",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18950000405311584,
+        -0.5599999725818634,
+        0.13000000081956387
+      ]
+    },
+    {
+      "name": "B / Wheel hub 1.003",
+      "source_piece": "B / Wheel hub 1.003",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.17499998211860657,
+        -0.5599999725818634,
+        0.12999999709427357
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.009",
+      "source_piece": "B / Cyan wheel ring.009",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18799996376037598,
+        -0.5599999874830246,
+        0.13000001199543476
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.009",
+      "source_piece": "B / Wheel inner disc.009",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18950000405311584,
+        -0.5599999725818634,
+        0.13000000081956387
+      ]
+    },
+    {
+      "name": "B / Inline tire 2.001",
+      "source_piece": "B / Inline tire 2.001",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -2.9802322387695312e-08,
+        -0.5599999725818634,
+        -0.5400000065565109
+      ]
+    },
+    {
+      "name": "B / Wheel hub 2.002",
+      "source_piece": "B / Wheel hub 2.002",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.17500001192092896,
+        -0.5599999725818634,
+        -0.5399999916553497
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.010",
+      "source_piece": "B / Cyan wheel ring.010",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18800002336502075,
+        -0.5599999874830246,
+        -0.5400000065565109
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.010",
+      "source_piece": "B / Wheel inner disc.010",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.18950000405311584,
+        -0.5599999725818634,
+        -0.5400000214576721
+      ]
+    },
+    {
+      "name": "B / Wheel hub 2.003",
+      "source_piece": "B / Wheel hub 2.003",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.17499998211860657,
+        -0.5599999725818634,
+        -0.5399999916553497
+      ]
+    },
+    {
+      "name": "B / Cyan wheel ring.011",
+      "source_piece": "B / Cyan wheel ring.011",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18799996376037598,
+        -0.5599999874830246,
+        -0.5400000065565109
+      ]
+    },
+    {
+      "name": "B / Wheel inner disc.011",
+      "source_piece": "B / Wheel inner disc.011",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.18950000405311584,
+        -0.5599999725818634,
+        -0.5400000214576721
+      ]
+    },
+    {
+      "name": "B / Gold toe claw.003",
+      "source_piece": "B / Gold toe claw.003",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.2623927891254425,
+        -0.4410272538661957,
+        1.1036981642246246
+      ]
+    },
+    {
+      "name": "B / Gold toe claw.004",
+      "source_piece": "B / Gold toe claw.004",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.43957510590553284,
+        1.1042095124721527
+      ]
+    },
+    {
+      "name": "B / Gold toe claw.005",
+      "source_piece": "B / Gold toe claw.005",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.26239272952079773,
+        -0.4410272240638733,
+        1.1036981642246246
+      ]
+    },
+    {
+      "name": "B / Gold heel spur.001",
+      "source_piece": "B / Gold heel spur.001",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.208870992064476,
+        -0.6724017560482025
+      ]
+    },
+    {
+      "name": "B / Calf cyan tendon",
+      "source_piece": "B / Calf cyan tendon",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.16949999332427979,
+        -1.8950000405311584,
+        -0.357000008225441
+      ]
+    },
+    {
+      "name": "B / Calf cyan tendon.001",
+      "source_piece": "B / Calf cyan tendon.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.20499998331069946,
+        -1.3000001311302185,
+        -0.47199997305870056
+      ]
+    },
+    {
+      "name": "B / Calf cyan tendon.002",
+      "source_piece": "B / Calf cyan tendon.002",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.16949999332427979,
+        -1.8950000405311584,
+        -0.357000008225441
+      ]
+    },
+    {
+      "name": "B / Calf cyan tendon.003",
+      "source_piece": "B / Calf cyan tendon.003",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.20499998331069946,
+        -1.3000001311302185,
+        -0.47199997305870056
+      ]
+    },
+    {
+      "name": "B / UV details / Cuirass porcelain face",
+      "source_piece": "B / UV details / Cuirass porcelain face",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.47503504157066345,
+        0.7467848360538483
+      ]
+    },
+    {
+      "name": "B / UV details / Forearm sculpted gauntlet",
+      "source_piece": "B / UV details / Forearm sculpted gauntlet",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.12999994307756424,
+        -0.7588217109441757,
+        0.3174576386809349
+      ]
+    },
+    {
+      "name": "B / UV details / Forearm sculpted gauntlet.001",
+      "source_piece": "B / UV details / Forearm sculpted gauntlet.001",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.12999994307756424,
+        -0.7588217109441757,
+        0.3174576386809349
+      ]
+    },
+    {
+      "name": "B / UV details / Thigh porcelain shell",
+      "source_piece": "B / UV details / Thigh porcelain shell",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8853255733847618,
+        0.323254719376564
+      ]
+    },
+    {
+      "name": "B / UV details / Shin aerodynamic shell",
+      "source_piece": "B / UV details / Shin aerodynamic shell",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        1.4901161193847656e-08,
+        -1.2216807827353477,
+        0.33389952033758163
+      ]
+    },
+    {
+      "name": "B / UV details / Thigh porcelain shell.001",
+      "source_piece": "B / UV details / Thigh porcelain shell.001",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8853255733847618,
+        0.323254719376564
+      ]
+    },
+    {
+      "name": "B / UV details / Shin aerodynamic shell.001",
+      "source_piece": "B / UV details / Shin aerodynamic shell.001",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -1.4901161193847656e-08,
+        -1.2216807827353477,
+        0.33389952033758163
+      ]
+    }
+  ]
+}

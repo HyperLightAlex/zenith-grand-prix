@@ -1,0 +1,2863 @@
+{
+  "model": "anubis",
+  "blender_version": "5.2.2 LTS",
+  "strict_tags": true,
+  "pieces": [
+    {
+      "name": "anubis / head / K / 000",
+      "source_piece": "head / anubis / head / K / 000",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        -0.0689999982714653,
+        -0.0689999982714653
+      ]
+    },
+    {
+      "name": "anubis / head / P / 007",
+      "source_piece": "head / anubis / head / P / 007",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.23000001162290573,
+        1.0406135320663452,
+        -0.04138355329632759
+      ]
+    },
+    {
+      "name": "anubis / head / T / 008",
+      "source_piece": "head / anubis / head / T / 008",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.24530895054340363,
+        0.9324901700019836,
+        0.0402543731033802
+      ]
+    },
+    {
+      "name": "anubis / head / P / 009",
+      "source_piece": "head / anubis / head / P / 009",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.23000001162290573,
+        1.0433531403541565,
+        -0.04116543382406235
+      ]
+    },
+    {
+      "name": "anubis / head / T / 010",
+      "source_piece": "head / anubis / head / T / 010",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.2382601499557495,
+        0.9338600039482117,
+        0.04037737054750323
+      ]
+    },
+    {
+      "name": "anubis / head / T / 011",
+      "source_piece": "head / anubis / head / T / 011",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.36799998581409454,
+        0.2069999910891056,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / S / 012",
+      "source_piece": "head / anubis / head / S / 012",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.36799998581409454,
+        0.022999998182058334,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / T / 013",
+      "source_piece": "head / anubis / head / T / 013",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.36799998581409454,
+        -0.16100000217556953,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / S / 014",
+      "source_piece": "head / anubis / head / S / 014",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.36799998581409454,
+        -0.3449999913573265,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / T / 015",
+      "source_piece": "head / anubis / head / T / 015",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.36799998581409454,
+        -0.5290000140666962,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / T / 016",
+      "source_piece": "head / anubis / head / T / 016",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.36799998581409454,
+        0.2069999910891056,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / S / 017",
+      "source_piece": "head / anubis / head / S / 017",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.36799998581409454,
+        0.022999998182058334,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / T / 018",
+      "source_piece": "head / anubis / head / T / 018",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.36799998581409454,
+        -0.16100000217556953,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / S / 019",
+      "source_piece": "head / anubis / head / S / 019",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.36799998581409454,
+        -0.3449999913573265,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / head / T / 020",
+      "source_piece": "head / anubis / head / T / 020",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.36799998581409454,
+        -0.5290000140666962,
+        -0.2529999911785126
+      ]
+    },
+    {
+      "name": "anubis / elL / D / 033",
+      "source_piece": "elL / anubis / elL / D / 033",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / sculpted elL / 034",
+      "source_piece": "elL / anubis / sculpted elL / 034",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7449999712407589,
+        0.020000003278255463
+      ]
+    },
+    {
+      "name": "anubis / elL / T / 035",
+      "source_piece": "elL / anubis / elL / T / 035",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.28999999910593033,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / elL / T / 036",
+      "source_piece": "elL / anubis / elL / T / 036",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2325000166893005,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / elL / G / 038",
+      "source_piece": "elL / anubis / elL / G / 038",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.3659999966621399,
+        -1.2000000029802322,
+        0.2199999988079071
+      ]
+    },
+    {
+      "name": "anubis / shL / K / 039",
+      "source_piece": "shL / anubis / shL / K / 039",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / sculpted shL / 040",
+      "source_piece": "shL / anubis / sculpted shL / 040",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.799999974668026,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / shL / T / 041",
+      "source_piece": "shL / anubis / shL / T / 041",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -1.050000011920929,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / shL / P / 042",
+      "source_piece": "shL / anubis / shL / P / 042",
+      "joint": "shL",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        0.2199999988079071,
+        0.11099999397993088,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / shL / T / 043",
+      "source_piece": "shL / anubis / shL / T / 043",
+      "joint": "shL",
+      "part": "shoulders",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.2199999988079071,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / wingL / K / 044",
+      "source_piece": "wingL / anubis / wingL / K / 044",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / wingL / P / 045",
+      "source_piece": "wingL / anubis / wingL / P / 045",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.1041254997253418,
+        0.8181318044662476,
+        -0.5962623581290245
+      ]
+    },
+    {
+      "name": "anubis / wingL / S / 046",
+      "source_piece": "wingL / anubis / wingL / S / 046",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.03591366484761238,
+        0.20164939668029547,
+        -0.24093097448349
+      ]
+    },
+    {
+      "name": "anubis / wingL / T / 047",
+      "source_piece": "wingL / anubis / wingL / T / 047",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.2490013837814331,
+        1.8405914306640625,
+        -1.2385306358337402
+      ]
+    },
+    {
+      "name": "anubis / wingL / G / 048",
+      "source_piece": "wingL / anubis / wingL / G / 048",
+      "joint": "wingL",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.12569781579077244,
+        0.9305283278226852,
+        -0.47667284309864044
+      ]
+    },
+    {
+      "name": "anubis / elR / D / 059",
+      "source_piece": "elR / anubis / elR / D / 059",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / sculpted elR / 060",
+      "source_piece": "elR / anubis / sculpted elR / 060",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7449999712407589,
+        0.020000003278255463
+      ]
+    },
+    {
+      "name": "anubis / elR / T / 061",
+      "source_piece": "elR / anubis / elR / T / 061",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.28999999910593033,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / elR / T / 062",
+      "source_piece": "elR / anubis / elR / T / 062",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2325000166893005,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / elR / G / 064",
+      "source_piece": "elR / anubis / elR / G / 064",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.3659999966621399,
+        -1.2000000029802322,
+        0.2199999988079071
+      ]
+    },
+    {
+      "name": "anubis / shR / K / 065",
+      "source_piece": "shR / anubis / shR / K / 065",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / sculpted shR / 066",
+      "source_piece": "shR / anubis / sculpted shR / 066",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.799999974668026,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / shR / T / 067",
+      "source_piece": "shR / anubis / shR / T / 067",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -1.050000011920929,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / shR / P / 068",
+      "source_piece": "shR / anubis / shR / P / 068",
+      "joint": "shR",
+      "part": "shoulders",
+      "rule_part": "shoulders",
+      "joint_local_game_centre": [
+        -0.2199999988079071,
+        0.11099999397993088,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / shR / T / 069",
+      "source_piece": "shR / anubis / shR / T / 069",
+      "joint": "shR",
+      "part": "shoulders",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.2199999988079071,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / wingR / K / 070",
+      "source_piece": "wingR / anubis / wingR / K / 070",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / wingR / P / 071",
+      "source_piece": "wingR / anubis / wingR / P / 071",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.1041254997253418,
+        0.8181318044662476,
+        -0.5962623581290245
+      ]
+    },
+    {
+      "name": "anubis / wingR / S / 072",
+      "source_piece": "wingR / anubis / wingR / S / 072",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.03591366484761238,
+        0.20164939668029547,
+        -0.24093097448349
+      ]
+    },
+    {
+      "name": "anubis / wingR / T / 073",
+      "source_piece": "wingR / anubis / wingR / T / 073",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.2490013837814331,
+        1.8405914306640625,
+        -1.2385306358337402
+      ]
+    },
+    {
+      "name": "anubis / wingR / G / 074",
+      "source_piece": "wingR / anubis / wingR / G / 074",
+      "joint": "wingR",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.12569781579077244,
+        0.9305283278226852,
+        -0.47667284309864044
+      ]
+    },
+    {
+      "name": "anubis / chest / K / 075",
+      "source_piece": "chest / anubis / chest / K / 075",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.7800000160932541,
+        -0.07999999821186066
+      ]
+    },
+    {
+      "name": "anubis / chest / P / 076",
+      "source_piece": "chest / anubis / chest / P / 076",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.839999970048666,
+        -0.07999999821186066
+      ]
+    },
+    {
+      "name": "anubis / chest / S / 077",
+      "source_piece": "chest / anubis / chest / S / 077",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.5300000086426735,
+        0.4399999976158142
+      ]
+    },
+    {
+      "name": "anubis / chest / T / 078",
+      "source_piece": "chest / anubis / chest / T / 078",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.9359213709831238,
+        0.6627557873725891
+      ]
+    },
+    {
+      "name": "anubis / chest / S / 079",
+      "source_piece": "chest / anubis / chest / S / 079",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.0007044076919556,
+        0.6562060713768005
+      ]
+    },
+    {
+      "name": "anubis / chest / P / 080",
+      "source_piece": "chest / anubis / chest / P / 080",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.0799285769462585,
+        0.6455037593841553
+      ]
+    },
+    {
+      "name": "anubis / chest / T / 081",
+      "source_piece": "chest / anubis / chest / T / 081",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.1363464891910553,
+        0.6413594782352448
+      ]
+    },
+    {
+      "name": "anubis / chest / T / 082",
+      "source_piece": "chest / anubis / chest / T / 082",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.48680834472179413,
+        0.8121581077575684
+      ]
+    },
+    {
+      "name": "anubis / chest / K / 083",
+      "source_piece": "chest / anubis / chest / K / 083",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.0800000131130219,
+        0.9699999690055847,
+        -0.03999999165534973
+      ]
+    },
+    {
+      "name": "anubis / chest / D / 084",
+      "source_piece": "chest / anubis / chest / D / 084",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        1.300000011920929,
+        0.949999988079071,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / chest / K / 085",
+      "source_piece": "chest / anubis / chest / K / 085",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.0800000131130219,
+        0.9699999690055847,
+        -0.03999999165534973
+      ]
+    },
+    {
+      "name": "anubis / chest / D / 086",
+      "source_piece": "chest / anubis / chest / D / 086",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -1.300000011920929,
+        0.949999988079071,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / chest / F / 087",
+      "source_piece": "chest / anubis / chest / F / 087",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.5600000023841858,
+        -0.09999999403953552
+      ]
+    },
+    {
+      "name": "anubis / chest / F / 088",
+      "source_piece": "chest / anubis / chest / F / 088",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.7200000286102295,
+        -0.7200000286102295
+      ]
+    },
+    {
+      "name": "anubis / chest / T / 089",
+      "source_piece": "chest / anubis / chest / T / 089",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        1.0999999642372131,
+        -0.7199999988079071
+      ]
+    },
+    {
+      "name": "anubis / chest / D / 090",
+      "source_piece": "chest / anubis / chest / D / 090",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.25999999418854713,
+        0.26914866268634796,
+        -1.1433049142360687
+      ]
+    },
+    {
+      "name": "anubis / chest / F / 091",
+      "source_piece": "chest / anubis / chest / F / 091",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.25999999418854713,
+        0.39371591806411743,
+        -0.902425080537796
+      ]
+    },
+    {
+      "name": "anubis / chest / D / 092",
+      "source_piece": "chest / anubis / chest / D / 092",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.25999999418854713,
+        0.26914866268634796,
+        -1.1433049142360687
+      ]
+    },
+    {
+      "name": "anubis / chest / F / 093",
+      "source_piece": "chest / anubis / chest / F / 093",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.25999999418854713,
+        0.39371591806411743,
+        -0.902425080537796
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 094",
+      "source_piece": "chest / anubis / chest / G / 094",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.8233926296234131,
+        1.1414480805397034,
+        0.6551292836666107
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 095",
+      "source_piece": "chest / anubis / chest / G / 095",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.6229378879070282,
+        0.8762906491756439,
+        0.7313764691352844
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 096",
+      "source_piece": "chest / anubis / chest / G / 096",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        -0.3349933475255966,
+        0.7006720304489136,
+        0.7818763554096222
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 097",
+      "source_piece": "chest / anubis / chest / G / 097",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.6392573118209839,
+        0.7995364367961884
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 098",
+      "source_piece": "chest / anubis / chest / G / 098",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.3349933475255966,
+        0.7006720304489136,
+        0.7818763554096222
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 099",
+      "source_piece": "chest / anubis / chest / G / 099",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.6229378879070282,
+        0.8762906491756439,
+        0.7313764691352844
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 100",
+      "source_piece": "chest / anubis / chest / G / 100",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.8233926296234131,
+        1.1414480805397034,
+        0.6551292836666107
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 101",
+      "source_piece": "chest / anubis / chest / G / 101",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.5006261318922043,
+        0.8602108657360077
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 102",
+      "source_piece": "chest / anubis / chest / G / 102",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        0.26000000536441803,
+        0.33885225653648376,
+        -1.0527247190475464
+      ]
+    },
+    {
+      "name": "anubis / chest / G / 103",
+      "source_piece": "chest / anubis / chest / G / 103",
+      "joint": "chest",
+      "part": "backpack",
+      "rule_part": "backpack",
+      "joint_local_game_centre": [
+        -0.26000000536441803,
+        0.33885225653648376,
+        -1.0527247190475464
+      ]
+    },
+    {
+      "name": "anubis / spine / K / 104",
+      "source_piece": "spine / anubis / spine / K / 104",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.25,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / spine / T / 105",
+      "source_piece": "spine / anubis / spine / T / 105",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.14000000059604645,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / spine / T / 106",
+      "source_piece": "spine / anubis / spine / T / 106",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.4000000059604645,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / spine / T / 107",
+      "source_piece": "spine / anubis / spine / T / 107",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.6599999964237213,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / ankleL / K / 108",
+      "source_piece": "ankleL / anubis / ankleL / K / 108",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / ankleL / P / 109",
+      "source_piece": "ankleL / anubis / ankleL / P / 109",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        7.450580596923828e-09,
+        -0.0800000000745058,
+        0.31999996304512024
+      ]
+    },
+    {
+      "name": "anubis / ankleL / T / 110",
+      "source_piece": "ankleL / anubis / ankleL / T / 110",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.13000000268220901,
+        0.10000000055879354
+      ]
+    },
+    {
+      "name": "anubis / ankleL / T / 111",
+      "source_piece": "ankleL / anubis / ankleL / T / 111",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.019999999552965164,
+        0.5999999940395355
+      ]
+    },
+    {
+      "name": "anubis / ankleL / K / 112",
+      "source_piece": "ankleL / anubis / ankleL / K / 112",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.25999999791383743,
+        0.3500000238418579
+      ]
+    },
+    {
+      "name": "anubis / ankleL / D / 113",
+      "source_piece": "ankleL / anubis / ankleL / D / 113",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3200000114738941,
+        -0.4999999850988388
+      ]
+    },
+    {
+      "name": "anubis / ankleL / D / 114",
+      "source_piece": "ankleL / anubis / ankleL / D / 114",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3200000114738941,
+        0.3499999977648258
+      ]
+    },
+    {
+      "name": "anubis / ankleL / D / 115",
+      "source_piece": "ankleL / anubis / ankleL / D / 115",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3200000114738941,
+        1.2000000178813934
+      ]
+    },
+    {
+      "name": "anubis / ankleL / G / 116",
+      "source_piece": "ankleL / anubis / ankleL / G / 116",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3199999928474426,
+        -0.5000000149011612
+      ]
+    },
+    {
+      "name": "anubis / ankleL / G / 117",
+      "source_piece": "ankleL / anubis / ankleL / G / 117",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3199999928474426,
+        0.3499999940395355
+      ]
+    },
+    {
+      "name": "anubis / ankleL / G / 118",
+      "source_piece": "ankleL / anubis / ankleL / G / 118",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3199999928474426,
+        1.199999988079071
+      ]
+    },
+    {
+      "name": "anubis / kneeL / D / 119",
+      "source_piece": "kneeL / anubis / kneeL / D / 119",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / sculpted kneeL / 121",
+      "source_piece": "kneeL / anubis / sculpted kneeL / 121",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1300000585615635,
+        -0.02000001072883606
+      ]
+    },
+    {
+      "name": "anubis / sculpted hipL / 127",
+      "source_piece": "hipL / anubis / sculpted hipL / 127",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.224999949336052,
+        0.02000001072883606
+      ]
+    },
+    {
+      "name": "anubis / hipL / S / 128",
+      "source_piece": "hipL / anubis / hipL / S / 128",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.3132000118494034,
+        -1.2925000190734863,
+        0.06000000238418579
+      ]
+    },
+    {
+      "name": "anubis / ankleR / K / 129",
+      "source_piece": "ankleR / anubis / ankleR / K / 129",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / ankleR / P / 130",
+      "source_piece": "ankleR / anubis / ankleR / P / 130",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        7.450580596923828e-09,
+        -0.0800000000745058,
+        0.31999996304512024
+      ]
+    },
+    {
+      "name": "anubis / ankleR / T / 131",
+      "source_piece": "ankleR / anubis / ankleR / T / 131",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.13000000268220901,
+        0.10000000055879354
+      ]
+    },
+    {
+      "name": "anubis / ankleR / T / 132",
+      "source_piece": "ankleR / anubis / ankleR / T / 132",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.019999999552965164,
+        0.5999999940395355
+      ]
+    },
+    {
+      "name": "anubis / ankleR / K / 133",
+      "source_piece": "ankleR / anubis / ankleR / K / 133",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.25999999791383743,
+        0.3500000238418579
+      ]
+    },
+    {
+      "name": "anubis / ankleR / D / 134",
+      "source_piece": "ankleR / anubis / ankleR / D / 134",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3200000114738941,
+        -0.4999999850988388
+      ]
+    },
+    {
+      "name": "anubis / ankleR / D / 135",
+      "source_piece": "ankleR / anubis / ankleR / D / 135",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3200000114738941,
+        0.3499999977648258
+      ]
+    },
+    {
+      "name": "anubis / ankleR / D / 136",
+      "source_piece": "ankleR / anubis / ankleR / D / 136",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3200000114738941,
+        1.2000000178813934
+      ]
+    },
+    {
+      "name": "anubis / ankleR / G / 137",
+      "source_piece": "ankleR / anubis / ankleR / G / 137",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3199999928474426,
+        -0.5000000149011612
+      ]
+    },
+    {
+      "name": "anubis / ankleR / G / 138",
+      "source_piece": "ankleR / anubis / ankleR / G / 138",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3199999928474426,
+        0.3499999940395355
+      ]
+    },
+    {
+      "name": "anubis / ankleR / G / 139",
+      "source_piece": "ankleR / anubis / ankleR / G / 139",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3199999928474426,
+        1.199999988079071
+      ]
+    },
+    {
+      "name": "anubis / kneeR / D / 140",
+      "source_piece": "kneeR / anubis / kneeR / D / 140",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / sculpted kneeR / 142",
+      "source_piece": "kneeR / anubis / sculpted kneeR / 142",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1300000585615635,
+        -0.02000001072883606
+      ]
+    },
+    {
+      "name": "anubis / sculpted hipR / 148",
+      "source_piece": "hipR / anubis / sculpted hipR / 148",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.224999949336052,
+        0.02000001072883606
+      ]
+    },
+    {
+      "name": "anubis / hipR / S / 149",
+      "source_piece": "hipR / anubis / hipR / S / 149",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        -0.3132000118494034,
+        -1.2925000190734863,
+        0.06000000238418579
+      ]
+    },
+    {
+      "name": "anubis / hips / K / 150",
+      "source_piece": "hips / anubis / hips / K / 150",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.02000001072883606,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / hips / T / 151",
+      "source_piece": "hips / anubis / hips / T / 151",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.30000000447034836,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / hips / K / 152",
+      "source_piece": "hips / anubis / hips / K / 152",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.7199999839067459,
+        -0.25,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / hips / K / 153",
+      "source_piece": "hips / anubis / hips / K / 153",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        -0.7199999839067459,
+        -0.25,
+        -0.0
+      ]
+    },
+    {
+      "name": "anubis / hips / P / 154",
+      "source_piece": "hips / anubis / hips / P / 154",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        -0.3750000149011612,
+        0.3800000101327896
+      ]
+    },
+    {
+      "name": "anubis / hips / T / 155",
+      "source_piece": "hips / anubis / hips / T / 155",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        -0.16499999910593033,
+        -0.3150000013411045,
+        0.4400000125169754
+      ]
+    },
+    {
+      "name": "anubis / hips / T / 156",
+      "source_piece": "hips / anubis / hips / T / 156",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        -0.05500000063329935,
+        -0.3150000013411045,
+        0.4400000125169754
+      ]
+    },
+    {
+      "name": "anubis / hips / T / 157",
+      "source_piece": "hips / anubis / hips / T / 157",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.05500000063329935,
+        -0.3150000013411045,
+        0.4400000125169754
+      ]
+    },
+    {
+      "name": "anubis / hips / T / 158",
+      "source_piece": "hips / anubis / hips / T / 158",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.16499999910593033,
+        -0.3150000013411045,
+        0.4400000125169754
+      ]
+    },
+    {
+      "name": "anubis / hips / S / 159",
+      "source_piece": "hips / anubis / hips / S / 159",
+      "joint": "hips",
+      "part": "hips",
+      "rule_part": "hips",
+      "joint_local_game_centre": [
+        0.0,
+        0.14999999850988388,
+        0.39000000059604645
+      ]
+    },
+    {
+      "name": "Frame / continuous waist shaft",
+      "source_piece": "spine / Frame / continuous waist shaft",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.20000001788139343,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / pelvic swivel",
+      "source_piece": "spine / Frame / pelvic swivel",
+      "joint": "spine",
+      "part": "waist",
+      "rule_part": "waist",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / chest swivel",
+      "source_piece": "chest / Frame / chest swivel",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / chest socket",
+      "source_piece": "chest / Frame / chest socket",
+      "joint": "chest",
+      "part": "chest",
+      "rule_part": "chest",
+      "joint_local_game_centre": [
+        0.0,
+        0.13000000175088644,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / neck seat",
+      "source_piece": "head / Frame / neck seat",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        -0.10000000149011612,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / shL internal shaft",
+      "source_piece": "shL / Frame / shL internal shaft",
+      "joint": "shL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7499999720603228,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elL internal shaft",
+      "source_piece": "elL / Frame / elL internal shaft",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7249999959021807,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipL internal shaft",
+      "source_piece": "hipL / Frame / hipL internal shaft",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1750000435858965,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeL internal shaft",
+      "source_piece": "kneeL / Frame / kneeL internal shaft",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1499999482184649,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elL pivot seat",
+      "source_piece": "elL / Frame / elL pivot seat",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / wrL pivot seat",
+      "source_piece": "wrL / Frame / wrL pivot seat",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipL pivot seat",
+      "source_piece": "hipL / Frame / hipL pivot seat",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeL pivot seat",
+      "source_piece": "kneeL / Frame / kneeL pivot seat",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / ankleL pivot seat",
+      "source_piece": "ankleL / Frame / ankleL pivot seat",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / shR internal shaft",
+      "source_piece": "shR / Frame / shR internal shaft",
+      "joint": "shR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7499999720603228,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elR internal shaft",
+      "source_piece": "elR / Frame / elR internal shaft",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7249999959021807,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipR internal shaft",
+      "source_piece": "hipR / Frame / hipR internal shaft",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1750000435858965,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeR internal shaft",
+      "source_piece": "kneeR / Frame / kneeR internal shaft",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.1499999482184649,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / elR pivot seat",
+      "source_piece": "elR / Frame / elR pivot seat",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / wrR pivot seat",
+      "source_piece": "wrR / Frame / wrR pivot seat",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / hipR pivot seat",
+      "source_piece": "hipR / Frame / hipR pivot seat",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / kneeR pivot seat",
+      "source_piece": "kneeR / Frame / kneeR pivot seat",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Frame / ankleR pivot seat",
+      "source_piece": "ankleR / Frame / ankleR pivot seat",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Sheet / knee socket",
+      "source_piece": "kneeL / Sheet / knee socket",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.09180000424385071,
+        0.260500006377697
+      ]
+    },
+    {
+      "name": "Sheet / knee shield",
+      "source_piece": "kneeL / Sheet / knee shield",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.08500000834465027,
+        0.33800000697374344
+      ]
+    },
+    {
+      "name": "Anubis / khopesh gold edge",
+      "source_piece": "elL / Anubis / khopesh gold edge",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.35999999940395355,
+        -1.785000003874302,
+        0.24500000849366188
+      ]
+    },
+    {
+      "name": "Anubis / khopesh copper face",
+      "source_piece": "elL / Anubis / khopesh copper face",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.4259999990463257,
+        -1.6300000101327896,
+        0.27000000327825546
+      ]
+    },
+    {
+      "name": "Anubis / blade energy seam",
+      "source_piece": "elL / Anubis / blade energy seam",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.4299999922513962,
+        -1.4599999785423279,
+        0.47999998927116394
+      ]
+    },
+    {
+      "name": "Anubis / calf copper fin",
+      "source_piece": "kneeL / Anubis / calf copper fin",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.35999999940395355,
+        -1.0450000166893005,
+        -0.4749999865889549
+      ]
+    },
+    {
+      "name": "Anubis / calf gold rim",
+      "source_piece": "kneeL / Anubis / calf gold rim",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.35999999940395355,
+        -0.9649999737739563,
+        -0.7049999833106995
+      ]
+    },
+    {
+      "name": "Anubis / toe claw",
+      "source_piece": "ankleL / Anubis / toe claw",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.2199999988079071,
+        -0.2549999915063381,
+        0.8950000107288361
+      ]
+    },
+    {
+      "name": "Anubis / toe claw.001",
+      "source_piece": "ankleL / Anubis / toe claw [2]",
+      "joint": "ankleL",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.2199999988079071,
+        -0.2549999915063381,
+        0.8950000107288361
+      ]
+    },
+    {
+      "name": "Sheet / knee socket.001",
+      "source_piece": "kneeR / Sheet / knee socket",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.09180000424385071,
+        0.260500006377697
+      ]
+    },
+    {
+      "name": "Sheet / knee shield.001",
+      "source_piece": "kneeR / Sheet / knee shield",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -0.08500000834465027,
+        0.33800000697374344
+      ]
+    },
+    {
+      "name": "Anubis / khopesh gold edge.001",
+      "source_piece": "elR / Anubis / khopesh gold edge",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.35999999940395355,
+        -1.785000003874302,
+        0.24500000849366188
+      ]
+    },
+    {
+      "name": "Anubis / khopesh copper face.001",
+      "source_piece": "elR / Anubis / khopesh copper face",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.4259999990463257,
+        -1.6300000101327896,
+        0.27000000327825546
+      ]
+    },
+    {
+      "name": "Anubis / blade energy seam.001",
+      "source_piece": "elR / Anubis / blade energy seam",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.4299999922513962,
+        -1.4599999785423279,
+        0.47999998927116394
+      ]
+    },
+    {
+      "name": "Anubis / calf copper fin.001",
+      "source_piece": "kneeR / Anubis / calf copper fin",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.35999999940395355,
+        -1.0450000166893005,
+        -0.4749999865889549
+      ]
+    },
+    {
+      "name": "Anubis / calf gold rim.001",
+      "source_piece": "kneeR / Anubis / calf gold rim",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.35999999940395355,
+        -0.9649999737739563,
+        -0.7049999833106995
+      ]
+    },
+    {
+      "name": "Anubis / toe claw.002",
+      "source_piece": "ankleR / Anubis / toe claw",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        -0.2199999988079071,
+        -0.2549999915063381,
+        0.8950000107288361
+      ]
+    },
+    {
+      "name": "Anubis / toe claw.003",
+      "source_piece": "ankleR / Anubis / toe claw [2]",
+      "joint": "ankleR",
+      "part": "feet",
+      "rule_part": "feet",
+      "joint_local_game_centre": [
+        0.2199999988079071,
+        -0.2549999915063381,
+        0.8950000107288361
+      ]
+    },
+    {
+      "name": "Anubis / jackal skull",
+      "source_piece": "head / Anubis / jackal skull",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.29499998688697815,
+        0.06000000238418579
+      ]
+    },
+    {
+      "name": "Anubis / tapered muzzle",
+      "source_piece": "head / Anubis / tapered muzzle",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.20750000327825546,
+        0.7000000029802322
+      ]
+    },
+    {
+      "name": "Anubis / jaw line",
+      "source_piece": "head / Anubis / jaw line",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.054999998304992914,
+        0.6949999779462814
+      ]
+    },
+    {
+      "name": "Anubis / black nose",
+      "source_piece": "head / Anubis / black nose",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.16999999806284904,
+        1.115750014781952
+      ]
+    },
+    {
+      "name": "Anubis / eye surround",
+      "source_piece": "head / Anubis / eye surround",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.19499999657273293,
+        0.39499999582767487,
+        0.4699999988079071
+      ]
+    },
+    {
+      "name": "Anubis / gold eye",
+      "source_piece": "head / Anubis / gold eye",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.20499999821186066,
+        0.39399999380111694,
+        0.4950000047683716
+      ]
+    },
+    {
+      "name": "Anubis / cheek plane",
+      "source_piece": "head / Anubis / cheek plane",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        -0.27000000327825546,
+        0.1450000060722232,
+        0.2825000062584877
+      ]
+    },
+    {
+      "name": "Anubis / eye surround.001",
+      "source_piece": "head / Anubis / eye surround [2]",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.19499999657273293,
+        0.39499999582767487,
+        0.4699999988079071
+      ]
+    },
+    {
+      "name": "Anubis / gold eye.001",
+      "source_piece": "head / Anubis / gold eye [2]",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.20499999821186066,
+        0.39399999380111694,
+        0.4950000047683716
+      ]
+    },
+    {
+      "name": "Anubis / cheek plane.001",
+      "source_piece": "head / Anubis / cheek plane [2]",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.27000000327825546,
+        0.1450000060722232,
+        0.2825000062584877
+      ]
+    },
+    {
+      "name": "Anubis / crown seal",
+      "source_piece": "head / Anubis / crown seal",
+      "joint": "head",
+      "part": "head",
+      "rule_part": "head",
+      "joint_local_game_centre": [
+        0.0,
+        0.5299999862909317,
+        0.22749999910593033
+      ]
+    },
+    {
+      "name": "Calf jet / embedded mounting shoe",
+      "source_piece": "kneeL / Calf jet / embedded mounting shoe",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.300000011920929,
+        -0.3147714287042618
+      ]
+    },
+    {
+      "name": "Calf jet / recessed bell",
+      "source_piece": "kneeL / Calf jet / recessed bell",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.328730821609497,
+        -0.5097665041685104
+      ]
+    },
+    {
+      "name": "Calf jet / outlet rim",
+      "source_piece": "kneeL / Calf jet / outlet rim",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.3269819617271423,
+        -0.6182671189308167
+      ]
+    },
+    {
+      "name": "Calf jet / luminous throat",
+      "source_piece": "kneeL / Calf jet / luminous throat",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.30689537525177,
+        -0.4569571912288666
+      ]
+    },
+    {
+      "name": "Calf jet / embedded mounting shoe.001",
+      "source_piece": "kneeR / Calf jet / embedded mounting shoe",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.300000011920929,
+        -0.3147714287042618
+      ]
+    },
+    {
+      "name": "Calf jet / recessed bell.001",
+      "source_piece": "kneeR / Calf jet / recessed bell",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.328730821609497,
+        -0.5097665041685104
+      ]
+    },
+    {
+      "name": "Calf jet / outlet rim.001",
+      "source_piece": "kneeR / Calf jet / outlet rim",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.3269819617271423,
+        -0.6182671189308167
+      ]
+    },
+    {
+      "name": "Calf jet / luminous throat.001",
+      "source_piece": "kneeR / Calf jet / luminous throat",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.0,
+        -1.30689537525177,
+        -0.4569571912288666
+      ]
+    },
+    {
+      "name": "Hand / palm",
+      "source_piece": "wrL / Hand / palm",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.24699999392032623,
+        -0.0
+      ]
+    },
+    {
+      "name": "Hand / dorsal armor",
+      "source_piece": "wrL / Hand / dorsal armor",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.26600000262260437,
+        0.17100000381469727
+      ]
+    },
+    {
+      "name": "Finger 1 / knuckle",
+      "source_piece": "wrL / Finger 1 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.1496250033378601,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 1 / proximal",
+      "source_piece": "wrL / Finger 1 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.1496249958872795,
+        -0.5510000139474869,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 1 / curl",
+      "source_piece": "wrL / Finger 1 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.1496249996125698,
+        -0.6649999916553497,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 1 / tip",
+      "source_piece": "wrL / Finger 1 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.1496250033378601,
+        -0.6459999978542328,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Finger 2 / knuckle",
+      "source_piece": "wrL / Finger 2 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.04987500095739961,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 2 / proximal",
+      "source_piece": "wrL / Finger 2 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.04987500188872218,
+        -0.5747499912977219,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 2 / curl",
+      "source_piece": "wrL / Finger 2 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.04987500002607703,
+        -0.7125000059604645,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 2 / tip",
+      "source_piece": "wrL / Finger 2 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.049875001423060894,
+        -0.6935000121593475,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Finger 3 / knuckle",
+      "source_piece": "wrL / Finger 3 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.04987500095739961,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 3 / proximal",
+      "source_piece": "wrL / Finger 3 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.04987500188872218,
+        -0.5700000077486038,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 3 / curl",
+      "source_piece": "wrL / Finger 3 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.04987500002607703,
+        -0.7029999792575836,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 3 / tip",
+      "source_piece": "wrL / Finger 3 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.049875001423060894,
+        -0.6839999854564667,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Finger 4 / knuckle",
+      "source_piece": "wrL / Finger 4 / knuckle",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.1496250033378601,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 4 / proximal",
+      "source_piece": "wrL / Finger 4 / proximal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.1496249958872795,
+        -0.541499987244606,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 4 / curl",
+      "source_piece": "wrL / Finger 4 / curl",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.1496249996125698,
+        -0.6459999978542328,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 4 / tip",
+      "source_piece": "wrL / Finger 4 / tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.1496250033378601,
+        -0.6270000040531158,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Thumb / inner metacarpal",
+      "source_piece": "wrL / Thumb / inner metacarpal",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.2422500029206276,
+        -0.27550000697374344,
+        -0.03800000064074993
+      ]
+    },
+    {
+      "name": "Thumb / opposing tip",
+      "source_piece": "wrL / Thumb / opposing tip",
+      "joint": "wrL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        -0.1899999976158142,
+        -0.39900000393390656,
+        -0.18049999698996544
+      ]
+    },
+    {
+      "name": "Elbow / bearing cap",
+      "source_piece": "elL / Elbow / bearing cap",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.2645000070333481,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / inset hub",
+      "source_piece": "elL / Elbow / inset hub",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.30949999392032623,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / axle",
+      "source_piece": "elL / Elbow / axle",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.32850000262260437,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / bearing cap",
+      "source_piece": "kneeL / Knee / bearing cap",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.2760000079870224,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / inset hub",
+      "source_piece": "kneeL / Knee / inset hub",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.32099999487400055,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / axle",
+      "source_piece": "kneeL / Knee / axle",
+      "joint": "kneeL",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        0.3399999886751175,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Hand / palm.001",
+      "source_piece": "wrR / Hand / palm",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.24699999392032623,
+        -0.0
+      ]
+    },
+    {
+      "name": "Hand / dorsal armor.001",
+      "source_piece": "wrR / Hand / dorsal armor",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.26600000262260437,
+        0.17100000381469727
+      ]
+    },
+    {
+      "name": "Finger 1 / knuckle.001",
+      "source_piece": "wrR / Finger 1 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.1496250033378601,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 1 / proximal.001",
+      "source_piece": "wrR / Finger 1 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.1496249958872795,
+        -0.5510000139474869,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 1 / curl.001",
+      "source_piece": "wrR / Finger 1 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.1496249996125698,
+        -0.6649999916553497,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 1 / tip.001",
+      "source_piece": "wrR / Finger 1 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.1496250033378601,
+        -0.6459999978542328,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Finger 2 / knuckle.001",
+      "source_piece": "wrR / Finger 2 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.04987500095739961,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 2 / proximal.001",
+      "source_piece": "wrR / Finger 2 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.04987500188872218,
+        -0.5747499912977219,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 2 / curl.001",
+      "source_piece": "wrR / Finger 2 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.04987500002607703,
+        -0.7125000059604645,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 2 / tip.001",
+      "source_piece": "wrR / Finger 2 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.049875001423060894,
+        -0.6935000121593475,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Finger 3 / knuckle.001",
+      "source_piece": "wrR / Finger 3 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.04987500095739961,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 3 / proximal.001",
+      "source_piece": "wrR / Finger 3 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.04987500188872218,
+        -0.5700000077486038,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 3 / curl.001",
+      "source_piece": "wrR / Finger 3 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.04987500002607703,
+        -0.7029999792575836,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 3 / tip.001",
+      "source_piece": "wrR / Finger 3 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.049875001423060894,
+        -0.6839999854564667,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Finger 4 / knuckle.001",
+      "source_piece": "wrR / Finger 4 / knuckle",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.1496250033378601,
+        -0.42749999463558197,
+        0.08549999725073576
+      ]
+    },
+    {
+      "name": "Finger 4 / proximal.001",
+      "source_piece": "wrR / Finger 4 / proximal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.1496249958872795,
+        -0.541499987244606,
+        -0.00950000062584877
+      ]
+    },
+    {
+      "name": "Finger 4 / curl.001",
+      "source_piece": "wrR / Finger 4 / curl",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.1496249996125698,
+        -0.6459999978542328,
+        -0.1044999985024333
+      ]
+    },
+    {
+      "name": "Finger 4 / tip.001",
+      "source_piece": "wrR / Finger 4 / tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.1496250033378601,
+        -0.6270000040531158,
+        -0.1899999976158142
+      ]
+    },
+    {
+      "name": "Thumb / inner metacarpal.001",
+      "source_piece": "wrR / Thumb / inner metacarpal",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.2422500029206276,
+        -0.27550000697374344,
+        -0.03800000064074993
+      ]
+    },
+    {
+      "name": "Thumb / opposing tip.001",
+      "source_piece": "wrR / Thumb / opposing tip",
+      "joint": "wrR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.1899999976158142,
+        -0.39900000393390656,
+        -0.18049999698996544
+      ]
+    },
+    {
+      "name": "Elbow / bearing cap.001",
+      "source_piece": "elR / Elbow / bearing cap",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.2645000070333481,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / inset hub.001",
+      "source_piece": "elR / Elbow / inset hub",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.30949999392032623,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Elbow / axle.001",
+      "source_piece": "elR / Elbow / axle",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        -0.32850000262260437,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / bearing cap.001",
+      "source_piece": "kneeR / Knee / bearing cap",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.2760000079870224,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / inset hub.001",
+      "source_piece": "kneeR / Knee / inset hub",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.32099999487400055,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Knee / axle.001",
+      "source_piece": "kneeR / Knee / axle",
+      "joint": "kneeR",
+      "part": "shins",
+      "rule_part": "shins",
+      "joint_local_game_centre": [
+        -0.3399999886751175,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "Thigh / rear split armor",
+      "source_piece": "hipL / Thigh / rear split armor",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2449999451637268,
+        -0.35999999940395355
+      ]
+    },
+    {
+      "name": "Thigh / rear service recess",
+      "source_piece": "hipL / Thigh / rear service recess",
+      "joint": "hipL",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2924999594688416,
+        -0.4150000065565109
+      ]
+    },
+    {
+      "name": "Bracer / inset back shell",
+      "source_piece": "elL / Bracer / inset back shell",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7900000140070915,
+        -0.28999999165534973
+      ]
+    },
+    {
+      "name": "Bracer / service line",
+      "source_piece": "elL / Bracer / service line",
+      "joint": "elL",
+      "part": "armL",
+      "rule_part": "armL",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8699999749660492,
+        -0.3349999934434891
+      ]
+    },
+    {
+      "name": "Thigh / rear split armor.001",
+      "source_piece": "hipR / Thigh / rear split armor",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2449999451637268,
+        -0.35999999940395355
+      ]
+    },
+    {
+      "name": "Thigh / rear service recess.001",
+      "source_piece": "hipR / Thigh / rear service recess",
+      "joint": "hipR",
+      "part": "thighs",
+      "rule_part": "thighs",
+      "joint_local_game_centre": [
+        0.0,
+        -1.2924999594688416,
+        -0.4150000065565109
+      ]
+    },
+    {
+      "name": "Bracer / inset back shell.001",
+      "source_piece": "elR / Bracer / inset back shell",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.7900000140070915,
+        -0.28999999165534973
+      ]
+    },
+    {
+      "name": "Bracer / service line.001",
+      "source_piece": "elR / Bracer / service line",
+      "joint": "elR",
+      "part": "armR",
+      "rule_part": "armR",
+      "joint_local_game_centre": [
+        0.0,
+        -0.8699999749660492,
+        -0.3349999934434891
+      ]
+    }
+  ]
+}
