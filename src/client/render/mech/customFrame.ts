@@ -20,6 +20,7 @@ import { frameCtx } from './parts';
 import { MechRig, type FrameDims } from './rig';
 import { rosterAsset } from './rosterAsset';
 import { sunhawkAsset } from './sunhawkAsset';
+import { sunhawkDetailMaterial } from './sunhawkDetails';
 import { attachSunhawkTowers, fitSunhawkPose } from './sunhawkMotion';
 
 /** The part a joint's pieces belong to; the shoulders' and the chest's carry two (see partAt). */
@@ -274,7 +275,8 @@ export function buildCustomFrame(role: Role, team: Livery, b: MechBuild, number:
     }
     return { parts, lines };
   });
-  addArmour(rig, joints, levels, (p) => paints.get(p.part!)!, true);
+  // The Sunhawk's painted details with the team's lettering (a part carries no faction's marks of its own).
+  addArmour(rig, joints, levels, (p) => paints.get(p.part!)!, true, ids.includes('sunhawk') ? sunhawkDetailMaterial(team) : undefined);
   finishRoster(rig);
   rig.fitPose = of.chest === 'sunhawk' ? fitSunhawkPose : (p) => fitRosterPose(p, role === ROLE.DF, of.backpack);
   rig.root.userData.modelId = 'custom';

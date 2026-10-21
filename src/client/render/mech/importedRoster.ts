@@ -131,7 +131,7 @@ export interface ArmourPiece { joint: string; part?: PartSlot; slot: Slot|'G'; g
  * a custom mech's parts each their own), the Sunhawk's painted details on
  * their own material, and the authored ink over all of it.
  */
-export function addArmour(rig: MechRig, joints: Record<string,THREE.Object3D>, levels: Array<{parts: readonly ArmourPiece[]; lines: readonly InkLines[]}>, paintFor: (p: ArmourPiece)=>Livery, ink: boolean): void {
+export function addArmour(rig: MechRig, joints: Record<string,THREE.Object3D>, levels: Array<{parts: readonly ArmourPiece[]; lines: readonly InkLines[]}>, paintFor: (p: ArmourPiece)=>Livery, ink: boolean, details?: THREE.Material): void {
   const inker=ink ? new MechInkBuilder(rig,joints) : null;
   for(const {parts,lines} of levels) {
     const kits=new Map<string,{joint:string;kit:Kit}>();
@@ -139,7 +139,7 @@ export function addArmour(rig: MechRig, joints: Record<string,THREE.Object3D>, l
     const paints=new Map<Livery,number>();
     for(const p of parts) {
       if(p.detail) {
-        const mesh=new THREE.Mesh(p.geometry.clone(),sunhawkDetailMaterial());
+        const mesh=new THREE.Mesh(p.geometry.clone(),details ?? sunhawkDetailMaterial());
         mesh.name=`Sunhawk details / ${p.joint}`;
         mesh.renderOrder=2;
         joints[p.joint].add(mesh);groups.push(mesh);

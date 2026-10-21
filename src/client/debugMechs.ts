@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { ROLE } from '../sim/config';
 import { buildFrame, useOldSwift } from './render/mech/frames';
 import { buildCustomFrame } from './render/mech/customFrame';
+import { sunhawkDetailMaterial } from './render/mech/sunhawkDetails';
 import { FRAME_DESIGNS, PART_SLOTS, decodeBuild, stockBuild, type PartSlot } from '../custom/mechBuild';
 import { LIVERIES, COLORS, SUN_DIR } from './render/palette';
 import { makePose, type MechRig } from './render/mech/rig';
@@ -105,7 +106,12 @@ export function runMechDebug(): void {
   };
   // &customCheck: window.customCheck(role) builds every part of every design on every
   // other design of the frame and reports what is missing (tools/custom-check.mjs).
-  if (q.has('customCheck')) (window as unknown as { customCheck: typeof customCheck }).customCheck = customCheck;
+  if (q.has('customCheck')) {
+    (window as unknown as { customCheck: typeof customCheck }).customCheck = customCheck;
+    // The Sunhawk's painted details as a team's custom mech wears them (its lettering redrawn), as a PNG.
+    (window as unknown as { sunhawkLettering: (team: number) => string }).sunhawkLettering = (team) =>
+      ((sunhawkDetailMaterial(LIVERIES[team]).map!.image as HTMLCanvasElement).toDataURL?.() ?? '');
+  }
   const turn = q.has('turn');
   // &custom=<a build, as text>: that custom mech (for the team's glow and markings) in place of the stock one.
   const custom = decodeBuild(q.get('custom'));
