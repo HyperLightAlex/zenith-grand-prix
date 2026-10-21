@@ -1,12 +1,35 @@
 {
   "model": "paladin",
   "design": "Art-sheet crowned defender: broad pearl breastplate, shield shoulders and heavy greaves",
+  "insignias": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        2.4064764147624373e-05,
+        0.5580735206604004,
+        1.2191455364227295
+      ],
+      "normal": [
+        0.00037700310349464417,
+        0.021408556029200554,
+        0.9997707009315491
+      ],
+      "up": [
+        -8.072942364378832e-06,
+        0.9997708201408386,
+        -0.021408554166555405
+      ],
+      "width": 0.8428252582139442
+    }
+  ],
   "levels": [
     {
       "level": 0,
       "triangles": 48018,
-      "bytes": 1703424,
-      "parts": 124,
+      "bytes": 1706776,
+      "parts": 126,
       "part_tags": [
         "armL",
         "armR",
@@ -21,13 +44,14 @@
         "waist"
       ],
       "line_segments": 3584,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     },
     {
       "level": 1,
       "triangles": 24987,
-      "bytes": 1016680,
-      "parts": 124,
+      "bytes": 1019180,
+      "parts": 126,
       "part_tags": [
         "armL",
         "armR",
@@ -42,13 +66,14 @@
         "waist"
       ],
       "line_segments": 728,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     },
     {
       "level": 2,
       "triangles": 12658,
-      "bytes": 568436,
-      "parts": 124,
+      "bytes": 570640,
+      "parts": 126,
       "part_tags": [
         "armL",
         "armR",
@@ -63,7 +88,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     }
   ]
 }

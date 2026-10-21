@@ -344,7 +344,7 @@ const JOINT_PARTS: Record<string, readonly string[]> = {
   towerL:['shoulders'], towerR:['shoulders'], skirtL:['hips'], skirtR:['hips'], skirtBack:['hips'],
 };
 type TaggedGlb = {
-  nodes: {name: string; mesh?: number; extras?: {joint?: string; part?: string; slot?: string; ink_lines?: number; detail?: boolean}}[];
+  nodes: {name: string; mesh?: number; extras?: {joint?: string; part?: string; slot?: string; ink_lines?: number; detail?: boolean; insignia?: string; insignia_json?: string; roster_schema?: number; model?: string}}[];
   meshes: {primitives: {mode?: number; attributes: Record<string,number>; indices?: number}[]}[];
   accessors: {count: number}[];
 };
@@ -360,20 +360,26 @@ for(const id of [...ROSTER_IDS,'sunhawk']) describe(`${id} customization part ta
   it('tags every armour and ink group with its allowed joint part and exact export name',async()=>{
     let armorContract: string[]|undefined;
     for(let level=0;level<3;level++) {
-      const glb=await taggedGlb(id,level), armor=new Set<string>(), lines=new Set<string>(), present=new Set<string>();
+      const glb=await taggedGlb(id,level), armor=new Set<string>(), lines=new Set<string>(), present=new Set<string>(), armorAttachments=new Set<string>();
       for(const node of glb.nodes.filter(n=>n.mesh!==undefined)) {
-        const {joint,part,slot,ink_lines,detail}=node.extras??{};
+        const {joint,part,slot,ink_lines,detail,insignia}=node.extras??{};
         const context=`${id} LOD${level} ${node.name}`;
         expect(PART_TAGS,`${context}: invalid part`).toContain(part);
         expect(JOINT_PARTS[joint??''],`${context}: invalid joint`).toBeDefined();
         expect(JOINT_PARTS[joint!],`${context}: part not allowed on joint`).toContain(part);
         const primitives=glb.meshes[node.mesh!].primitives;
         expect(primitives.length,context).toBeGreaterThan(0);
-        const separator=id==='sunhawk'?'_':'/';
+        const separator=id==='sunhawk'?'_':'/', suffix=insignia===undefined?[]:[`insignia-${insignia}`];
+        const attachment=`${joint}/${part}/${insignia??''}`;
+        if(insignia!==undefined) {
+          expect(id,`${context}: Sunhawk format must stay unchanged`).not.toBe('sunhawk');
+          expect(['chest','shoulderL','shoulderR'],context).toContain(insignia);
+        }
         if(ink_lines===1) {
-          expect(node.name).toBe([joint,part,'LINES'].join(separator));
-          expect(lines.has(`${joint}/${part}`),`${context}: duplicate ink group`).toBe(false);
-          lines.add(`${joint}/${part}`);
+          expect(node.name).toBe([joint,part,'LINES',...suffix].join(separator));
+          if(insignia!==undefined) expect(slot,`${context}: insignia ink paint slot`).toBe('D');
+          expect(lines.has(attachment),`${context}: duplicate ink group`).toBe(false);
+          lines.add(attachment);
           for(const primitive of primitives) {
             expect(primitive.mode).toBe(1);
             expect(primitive.attributes._LINE_KIND,context).toBeDefined();
@@ -381,11 +387,11 @@ for(const id of [...ROSTER_IDS,'sunhawk']) describe(`${id} customization part ta
           }
         } else {
           expect(['P','S','T','K','F','D','C','G'],`${context}: invalid paint slot`).toContain(slot);
-          if(!detail) expect(node.name).toBe([joint,part,slot].join(separator));
-          const key=`${joint}/${part}/${slot}`;
+          if(!detail) expect(node.name).toBe([joint,part,slot,...suffix].join(separator));
+          const key=[joint,part,slot,...suffix].join('/');
           if(!detail) {
             expect(armor.has(key),`${context}: duplicate armour group`).toBe(false);
-            armor.add(key);present.add(part!);
+            armor.add(key);armorAttachments.add(attachment);present.add(part!);
           }
           for(const primitive of primitives) {
             expect(primitive.mode??4).toBe(4);
@@ -397,10 +403,114 @@ for(const id of [...ROSTER_IDS,'sunhawk']) describe(`${id} customization part ta
       }
       expect(armor.size).toBeGreaterThan(0);
       for(const part of PART_TAGS.filter(p=>p!=='backpack')) expect(present,`${id} LOD${level}: missing ${part}`).toContain(part);
-      for(const line of lines) expect([...armor].some(key=>key.startsWith(`${line}/`)),`${id}: ink without matching armour ${line}`).toBe(true);
+      for(const line of lines) expect(armorAttachments.has(line),`${id}: ink without matching armour ${line}`).toBe(true);
       if(level===2) expect(lines.size).toBe(0); else expect(lines.size).toBeGreaterThan(0);
-      const keys=[...armor].sort();
+      // Tiny insignias may disappear at LOD2; ordinary armour stays complete.
+      const keys=[...armor].filter(key=>key.split('/').length===3).sort();
       if(armorContract) expect(keys,`${id}: inconsistent part/paint groups across LODs`).toEqual(armorContract); else armorContract=keys;
+    }
+  });
+});
+
+
+const INSIGNIA_BADGES: Record<string, readonly {id:string; joint:string; part:string}[]> = {
+  seraph:[{id:'chest',joint:'chest',part:'chest'}],
+  longbow:[{id:'chest',joint:'chest',part:'chest'}],
+  paladin:[{id:'chest',joint:'chest',part:'chest'}],
+  kamaitachi:[{id:'chest',joint:'chest',part:'chest'},{id:'shoulderL',joint:'shL',part:'shoulders'},{id:'shoulderR',joint:'shR',part:'shoulders'}],
+  fujin:[{id:'chest',joint:'chest',part:'chest'},{id:'shoulderL',joint:'shL',part:'shoulders'},{id:'shoulderR',joint:'shR',part:'shoulders'}],
+  raijin:[{id:'chest',joint:'chest',part:'chest'},{id:'shoulderL',joint:'shL',part:'shoulders'},{id:'shoulderR',joint:'shR',part:'shoulders'}],
+};
+type InsigniaAnchor = {id:string; joint:string; part:string; center:number[]; normal:number[]; up:number[]; width:number};
+
+async function insigniaVertices(id:string): Promise<Map<string,THREE.Vector3[]>> {
+  const bytes=await readFile(new URL(`../src/client/render/mech/assets/roster/${id}.glb`,import.meta.url));
+  const {scene}=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+  scene.updateMatrixWorld(true);
+  const vertices=new Map<string,THREE.Vector3[]>();
+  scene.traverse(object=>{
+    if(!(object instanceof THREE.Mesh)||typeof object.userData.insignia!=='string') return;
+    const id=object.userData.insignia;
+    if(!vertices.has(id)) vertices.set(id,[]);
+    const position=object.geometry.getAttribute('position');
+    for(let i=0;i<position.count;i++) vertices.get(id)!.push(new THREE.Vector3().fromBufferAttribute(position,i).applyMatrix4(object.matrixWorld));
+  });
+  return vertices;
+}
+
+for(const id of ROSTER_IDS) describe(`${id} faction insignias`,()=>{
+  it('isolates exactly the modelled badges and retains finite, stable replacement anchors at every LOD',async()=>{
+    const expected=INSIGNIA_BADGES[id]??[],expectedIds=expected.map(b=>b.id).sort();
+    const vertices=expected.length?await insigniaVertices(id):new Map<string,THREE.Vector3[]>();
+    let originalJson:string|undefined;
+    for(let level=0;level<3;level++) {
+      const glb=await taggedGlb(id,level);
+      const root=glb.nodes.find(n=>n.extras?.roster_schema===1&&n.extras.model===id);
+      expect(root,`${id} LOD${level}: missing root`).toBeDefined();
+      const json=root!.extras!.insignia_json;
+      expect(typeof json,`${id} LOD${level}: missing insignia_json`).toBe('string');
+      const anchors:InsigniaAnchor[]=JSON.parse(json!);
+      expect(Array.isArray(anchors)).toBe(true);
+      expect(anchors.map(a=>a.id).sort()).toEqual(expectedIds);
+      if(originalJson!==undefined) expect(json,`${id}: anchors changed with LOD`).toBe(originalJson); else originalJson=json;
+      const tagged=glb.nodes.filter(n=>n.mesh!==undefined&&n.extras?.insignia!==undefined);
+      const armour=tagged.filter(n=>n.extras?.ink_lines!==1);
+      const armourIds=[...new Set(armour.map(n=>n.extras!.insignia!))].sort();
+      if(level<2) {
+        expect(armourIds,`${id} LOD${level}: missing badge armour`).toEqual(expectedIds);
+        const aurora=['seraph','longbow','paladin'].includes(id);
+        for(const badge of expected) {
+          const slots=[...new Set(armour.filter(n=>n.extras!.insignia===badge.id).map(n=>n.extras!.slot))].sort();
+          // Aurora's sword guard is a separate trim mesh; retaining only the
+          // primary sword/feathers is not a complete isolated insignia.
+          expect(slots,`${id} LOD${level} ${badge.id}: incomplete badge paint groups`).toEqual(aurora?['P','T']:['G']);
+          if(aurora&&level===0) {
+            const ink=tagged.filter(n=>n.extras!.ink_lines===1&&n.extras!.insignia===badge.id);
+            expect(ink,`${id}: missing authored badge ink`).toHaveLength(1);
+            for(const primitive of glb.meshes[ink[0].mesh!].primitives) {
+              const count=glb.accessors[primitive.indices??primitive.attributes.POSITION].count;
+              expect(count,`${id}: empty badge ink`).toBeGreaterThan(0);
+            }
+          }
+        }
+      }
+      for(const node of tagged) {
+        const badge=expected.find(b=>b.id===node.extras!.insignia);
+        expect(badge,`${id}: unexpected tagged design motif ${node.name}`).toBeDefined();
+        expect(node.extras!.joint).toBe(badge!.joint);
+        expect(node.extras!.part).toBe(badge!.part);
+      }
+      for(const anchor of anchors) {
+        const badge=expected.find(b=>b.id===anchor.id)!;
+        expect(anchor.joint).toBe(badge.joint);expect(anchor.part).toBe(badge.part);
+        for(const vector of [anchor.center,anchor.normal,anchor.up]) {
+          expect(Array.isArray(vector)).toBe(true);expect(vector).toHaveLength(3);
+          expect(vector.every(Number.isFinite)).toBe(true);
+        }
+        const normal=new THREE.Vector3().fromArray(anchor.normal),up=new THREE.Vector3().fromArray(anchor.up);
+        expect(normal.length()).toBeCloseTo(1,5);expect(up.length()).toBeCloseTo(1,5);
+        expect(normal.dot(up)).toBeCloseTo(0,5);
+        expect(normal.z,`${id} ${anchor.id}: badge normal must face outward`).toBeGreaterThan(0);
+        expect(up.y,`${id} ${anchor.id}: emblem must be upright`).toBeGreaterThan(.5);
+        expect(Number.isFinite(anchor.width)).toBe(true);expect(anchor.width).toBeGreaterThan(0);
+        if(level===0) {
+          // Measure the actual exported badge, independently of source object
+          // names or the anchor builder. The replacement must cover it and be
+          // centred in its tangent plane, including shoulder turbine tilt.
+          const points=vertices.get(anchor.id)!;
+          expect(points?.length,`${id} ${anchor.id}: no badge geometry`).toBeGreaterThan(0);
+          const center=new THREE.Vector3().fromArray(anchor.center),right=new THREE.Vector3().crossVectors(up,normal);
+          const projections=points.map(point=>{const delta=point.clone().sub(center);return [delta.dot(right),delta.dot(up)];});
+          let span=0;
+          for(const axis of [0,1]) {
+            const values=projections.map(p=>p[axis]),min=Math.min(...values),max=Math.max(...values);
+            expect(Math.abs((min+max)/2),`${id} ${anchor.id}: off-centre replacement`).toBeLessThan(1e-4);
+            expect(Math.max(Math.abs(min),Math.abs(max)),`${id} ${anchor.id}: replacement does not cover badge`).toBeLessThanOrEqual(anchor.width/2+1e-5);
+            span=Math.max(span,max-min);
+          }
+          expect(anchor.width,`${id} ${anchor.id}: oversized replacement`).toBeLessThan(span*1.1);
+        }
+      }
     }
   });
 });

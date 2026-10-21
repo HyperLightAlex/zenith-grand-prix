@@ -1,11 +1,12 @@
 {
   "model": "rampart",
   "design": "Art-sheet heavy greaves, angular knee shields and reinforced gauntlets",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 25962,
-      "bytes": 922396,
+      "bytes": 922416,
       "parts": 110,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 2634,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 13464,
-      "bytes": 534772,
+      "bytes": 534792,
       "parts": 110,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 309,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 6824,
-      "bytes": 323648,
+      "bytes": 323672,
       "parts": 110,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }

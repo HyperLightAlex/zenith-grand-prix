@@ -1,11 +1,12 @@
 {
   "model": "maul",
   "design": "Art-sheet heavy brawler with layered gauntlets, jaw guard and broad boots",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 26906,
-      "bytes": 920204,
+      "bytes": 920228,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 2658,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 13888,
-      "bytes": 527236,
+      "bytes": 527256,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 287,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 6980,
-      "bytes": 319076,
+      "bytes": 319096,
       "parts": 108,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }

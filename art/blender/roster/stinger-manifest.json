@@ -1,11 +1,12 @@
 {
   "model": "stinger",
   "design": "Art-sheet angular mask, paired visor sensors and consistent rifle grip",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 24369,
-      "bytes": 897972,
+      "bytes": 897996,
       "parts": 101,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 1966,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 12605,
-      "bytes": 537480,
+      "bytes": 537500,
       "parts": 101,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 300,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 6393,
-      "bytes": 319144,
+      "bytes": 319164,
       "parts": 101,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }

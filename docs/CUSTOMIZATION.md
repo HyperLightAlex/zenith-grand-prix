@@ -124,6 +124,38 @@ looks part of, with nothing floating.
 - every design has every slot, except that a design may have no backpack
   (say which).
 
+### Faction insignias
+
+A part never carries a faction's insignia of its own: the insignia a mech
+wears is the faction it flies for. Most designs already wear theirs as a
+marking (the team emblem decal on a shoulder, an arm or a thigh, drawn from
+the team's markings sheet), which follows the team wherever the part goes.
+A few have it modelled into the armour:
+
+| Design | Insignia | Part |
+|---|---|---|
+| Seraph, Longbow, Paladin | Aurora's sigil: `sword sigil`, `sword guard`, the six `sigil feather`s | chest |
+| Kamaitachi, Fujin, Raijin | Tempest's bolt: `centred chest bolt` | chest |
+| Kamaitachi, Raijin | `centred shoulder bolt`, each side | shoulders |
+| Fujin | `shoulder lightning`, each side | shoulders |
+| Sunhawk | the lettering "SOLSTICE" and "SOL / S1" in its painted details | (the game redraws it for the team) |
+
+These are design, not insignia, and stay: the dark storm shield behind
+Tempest's bolt (the plate the badge sits on), Tempest's lightning veins on
+the greaves and Fujin's along its sash, Mirage's sun discs, collars and
+medallions, Vanta's chevrons, Solstice's diamond and gold crests.
+
+**The export**: each modelled insignia is its own mesh (and its own ink),
+tagged `insignia` (an id for the badge: `chest`, `shoulderL`, `shoulderR`),
+and the model's root lists, for each, where a team's emblem goes in its
+place (`insignia_json`: the joint, the part, the centre, the outward normal,
+the upright direction and the width, joint-local, in the game's axes). The
+stock models do not change.
+
+**The game**: a part flown by its own faction keeps its modelled insignia
+(a stock mech always does); on any other faction's mech it is left off,
+and the team's emblem is put where it was.
+
 ### The game's side
 
 **A build** (`src/custom/mechBuild.ts`, shared with the server): a design

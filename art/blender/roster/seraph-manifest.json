@@ -1,12 +1,35 @@
 {
   "model": "seraph",
   "design": "Art-sheet winged duellist: pearl cuirass, five-feather fans and paired rapier bracers",
+  "insignias": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        1.4337157597912105e-17,
+        0.821972131729126,
+        0.842284083366394
+      ],
+      "normal": [
+        4.997449390175049e-17,
+        -0.0008577668340876698,
+        0.9999996423721313
+      ],
+      "up": [
+        4.2866480052324046e-20,
+        0.9999996423721313,
+        0.0008577668340876698
+      ],
+      "width": 0.705347269376507
+    }
+  ],
   "levels": [
     {
       "level": 0,
       "triangles": 36836,
-      "bytes": 1461944,
-      "parts": 114,
+      "bytes": 1465284,
+      "parts": 116,
       "part_tags": [
         "armL",
         "armR",
@@ -21,13 +44,14 @@
         "waist"
       ],
       "line_segments": 2300,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     },
     {
       "level": 1,
       "triangles": 19252,
-      "bytes": 949336,
-      "parts": 114,
+      "bytes": 951836,
+      "parts": 116,
       "part_tags": [
         "armL",
         "armR",
@@ -42,13 +66,14 @@
         "waist"
       ],
       "line_segments": 763,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     },
     {
       "level": 2,
       "triangles": 9838,
-      "bytes": 526776,
-      "parts": 114,
+      "bytes": 529280,
+      "parts": 116,
       "part_tags": [
         "armL",
         "armR",
@@ -63,7 +88,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 2
     }
   ]
 }

@@ -4,6 +4,82 @@ ZENITH GP — ROSTER PRODUCTION PASS
 Seraph, Longbow, Paladin, Kamaitachi, Fujin and Raijin.
 The attached Swift sheet describes Sunhawk, which already has its own assets.
 
+INSIGNIA
+Exported with Blender 5.2.2 LTS (d13f752e3b9c, built 2026-09-15).
+docs/CUSTOMIZATION.md, "Faction insignias", is the specification.
+insignia_tags.py runs after every polish script and the part classifier. It
+matches exact stable part_source names, never Blender's global .001 suffixes:
+  Seraph / Longbow / Paladin: Aurora / sword sigil, Aurora / sword guard,
+    and Aurora / sigil feather [1..6] -> one chest insignia (8 pieces each;
+    the first feather has no numeric suffix in its actual part_source).
+  Kamaitachi / Fujin / Raijin: Tempest / centred chest bolt -> chest.
+  Kamaitachi / Raijin: Tempest / centred shoulder bolt on shL/shR ->
+    shoulderL/shoulderR. Fujin uses Fujin / shoulder lightning instead.
+There are 33 named source pieces forming 12 badges on six designs. Missing,
+duplicate or incompatible source matches fail a rebuild. The other eight
+roster designs export an empty anchor list. Sunhawk is not rebuilt or edited:
+its painted lettering remains the game's responsibility.
+
+Ordinary armour and ink retain joint/part/slot and joint/part/LINES names.
+An insignia is partitioned again by paint slot, with these names and extras:
+  joint/part/slot/insignia-ID: joint, part, slot, insignia.
+  joint/part/LINES/insignia-ID: joint, part, slot=D, insignia, ink_lines=1.
+The existing line_kinds and _LINE_KIND attributes are retained. A badge with
+no authored ink has no line mesh; LOD2 has no ink anywhere. Insignia grouping
+never adds or removes strokes. In particular, Tempest's glow bolts retain
+their existing ink exclusion. Original joint/paint weld representatives and
+joint-wide first-occurrence ink deduplication/effective categories are kept
+BEFORE the new partition, so regrouping cannot alter the rendered streams.
+
+Every roster root carries insignia_json, a JSON list of entries with id,
+joint, part, center, normal, up and width. Coordinates and vectors are in
+joint-local game axes (+Y up, +Z forward, +X the mech's left); width is the
+side of a square covering the badge. Anchors are computed once from the
+full-detail seated geometry, then copied unchanged to all three LODs and the
+manifest. The production Blender scene keeps the same JSON for review.
+The helper fits the supporting armour's front surface using a symmetric 5x5
+sample, avoiding a chiral lightning bolt biasing its own mounting normal.
+It projects game +Y into that tangent plane for up, centres the evaluated
+LOD0 badge bounds in the plane, and intersects the visible badge relief for
+the final surface centre. Width is the larger projected span plus 2% margin.
+All twelve centres hit their visible badge surfaces; no negative-space
+fallback was needed. Source insignia_anchor_method records this decision.
+
+The dark Tempest shield, greave/sash lightning, Mirage discs/collars/medallions,
+Vanta chevrons and Solstice diamonds/crests stay in ordinary armour groups.
+No gameplay source or Sunhawk file is part of this pass.
+
+Review/rebuild (from the repository root):
+  1. Rebuild the fourteen roster models with build_roster.py as documented
+     below. Do not run Sunhawk's exporter for this pass.
+  2. Run Blender --background --python art/blender/roster/review_insignia.py -- --all
+     using the absolute installed Blender/script paths as needed.
+  3. Open previews/insignia/index.html. Front and three-quarter pictures
+     highlight source badges and show the square footprint, centre cross,
+     outward normal and upright arrow. Inspect their attachment, orientation,
+     coverage and the untagged design motifs. Review colours/guides are never
+     saved into production files. Per-model JSON records all source names and
+     exact anchors; audit.md records the visual decisions.
+  4. Run:
+     node tools/parts-compare.mjs --baseline aee1fbd558c49ee644814d9e12ff232724e4fc45 --allow-root-extra insignia_json --report art/blender/roster/previews/insignia/triangle-equivalence.json
+     This is the same expanded triangle/ink comparison as the parts pass.
+     It permits only the newly added insignia_json root extra; every existing
+     root contract and every triangle/ink attribute must remain EXACT.
+  5. Run npm test and npm run build. Change scripts to correct a decision;
+     never hand-edit generated GLBs, manifests or production libraries.
+
+Insignia-pass validation: all 42 roster GLBs and the three unchanged updated
+Sunhawk GLBs pass 885 joint/LOD comparisons with zero attribute delta. Every
+tracked Sunhawk source/export file is byte-identical. All 12 badges retain
+armour at every LOD; Aurora's 12 authored badge ink segments per design occur
+at LOD0, while LOD1/2 and Tempest badges have no authored badge ink. The tests
+also check independent exported-badge coverage/centering, paint-slot groups,
+required badge ink and exact anchor equality across LODs. npm test passes
+1,148 tests in 42 files; npm run build passes typechecks and both builds.
+The review gallery has 28 whole-model views and 12 anchor closeups, plus
+per-design source/anchor inventories. No specified badge is missing and no
+design motif needed an insignia override. See previews/insignia/audit.md.
+
 PART TAGS
 Exported with Blender 5.2.2 LTS (d13f752e3b9c, built 2026-09-15).
 The Parts section of docs/CUSTOMIZATION.md is the slot/export specification.

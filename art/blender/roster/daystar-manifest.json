@@ -1,11 +1,12 @@
 {
   "model": "daystar",
   "design": "Art-sheet racing armor, paired swept fins, layered knees and seated carbine",
+  "insignias": [],
   "levels": [
     {
       "level": 0,
       "triangles": 24156,
-      "bytes": 868752,
+      "bytes": 868772,
       "parts": 105,
       "part_tags": [
         "armL",
@@ -21,12 +22,13 @@
         "waist"
       ],
       "line_segments": 2055,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 1,
       "triangles": 12520,
-      "bytes": 520852,
+      "bytes": 520876,
       "parts": 105,
       "part_tags": [
         "armL",
@@ -42,12 +44,13 @@
         "waist"
       ],
       "line_segments": 371,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     },
     {
       "level": 2,
       "triangles": 6349,
-      "bytes": 310948,
+      "bytes": 310968,
       "parts": 105,
       "part_tags": [
         "armL",
@@ -63,7 +66,8 @@
         "waist"
       ],
       "line_segments": 0,
-      "ink_schema": 1
+      "ink_schema": 1,
+      "insignia_meshes": 0
     }
   ]
 }
