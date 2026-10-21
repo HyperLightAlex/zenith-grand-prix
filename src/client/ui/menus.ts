@@ -20,11 +20,17 @@ import type { MatchConfig, Role } from '../../sim/index';
 import type { Device, MenuInput } from '../input/input';
 import { h, setClass } from './dom';
 
+/** The screens on the hangar computer: styled as the hangar is (data-screen 'garage'). */
+const HANGAR_COMPUTER = new Set<string>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint']);
+
 export type ScreenId =
   | 'title'
   | 'modes'
   | 'hangar'
   | 'pilot'
+  | 'custom'
+  | 'custom-parts'
+  | 'custom-paint'
   | 'setup'
   | 'gp'
   | 'briefing'
@@ -265,8 +271,8 @@ export class Menus {
     R.replaceChildren();
     R.onclick = null;
     // The styles lay each screen out by name.
-    // The Pilot screen is one of the hangar computer's, styled as the hangar is.
-    R.dataset.screen = top.id === 'hangar' || top.id === 'pilot' ? 'garage' : top.id;
+    // The Pilot screen and the custom mech editor are the hangar computer's, styled as the hangar is.
+    R.dataset.screen = HANGAR_COMPUTER.has(top.id) ? 'garage' : top.id;
     setClass(R, 'anime', this.host.lookOn());
     this.items = [];
     def?.render(this, top.data as never);

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { decal } from './decals';
 import { Kit } from './kit';
 import { numberDecal, type FrameCtx } from './parts';
+import type { MechRig } from './rig';
 import { sunhawkAsset, type AssetJoint } from './sunhawkAsset';
 import { getSunhawkPanels, type SunhawkAssetVariant } from './sunhawkSelection';
 import { attachSunhawkTowers, fitSunhawkPose } from './sunhawkMotion';
@@ -14,22 +15,8 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
   const { rig, livery } = c;
   const u = variant === 'updated';
   const paint = u ? { ...livery, primary: 0xeaf0f9, shades: { ...livery.shades, primary: 0x9ba8c9, trim: 0xc88024, frame: 0x1c263d } } : livery;
-  const J = rig.joints;
-  if (variant === 'updated') {
-    rig.fitPose = fitSunhawkPose;
-    rig.keepFeetOnRoad = true;
-  }
-  const towers = attachSunhawkTowers(rig);
-  const joints = { ...J, ...towers, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back };
-  rig.skirts.l.position.set(.65,.11,.36);
-  rig.skirts.r.position.set(-.65,.11,.36);
-  rig.skirts.back.position.set(0,.15,-.34);
-  for (const s of [1,-1]) {
-    // Preserve the artwork's gentle outward arm rake and swept fin attachment.
-    (s === 1 ? J.elL : J.elR).position.x = s*.13;
-    (s === 1 ? J.wrL : J.wrR).position.x = s*.13;
-    (s === 1 ? J.wingL : J.wingR).position.set(s*.62,.99,-.65);
-  }
+  const towers = sunhawkJoints(rig, u);
+  const joints = { ...rig.joints, ...towers, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back };
   const ink=u && sunhawkAsset(variant).ink ? new MechInkBuilder(rig,joints) : null;
   for (let level = 0; level < (u ? 3 : 1); level++) {
     const groups: THREE.Object3D[] = [];
@@ -58,6 +45,44 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
     rig.detailLevels.push(groups);
   }
   setMechDetail(rig, 0);
+  sunhawkFittings(c, number, u, towers);
+  if (u) for (const f of rig.flames) {
+    // Head-on: a visible circular jet. Off-axis: the painted exhaust. Reducing
+    // only the circle made the unchanged flame dominate the chase view.
+    if (f.burner) (f.burner.material as THREE.ShaderMaterial).uniforms.uSize.value = .72;
+    if (f.drawn) (f.drawn.material as THREE.ShaderMaterial).uniforms.uEndOnFade.value = 1;
+  }
+  rig.root.userData.sunhawkModel=variant;
+}
+
+/**
+ * The Sunhawk's skeleton, as its artwork has it: the shoulder towers, the
+ * hip skirts' hinges, the arms' outward rake and the fins' swept roots (and,
+ * updated, its own pose fitting and skates kept on the road).
+ */
+export function sunhawkJoints(rig: MechRig, u: boolean): { towerL: THREE.Group; towerR: THREE.Group } {
+  const J = rig.joints;
+  if (u) {
+    rig.fitPose = fitSunhawkPose;
+    rig.keepFeetOnRoad = true;
+  }
+  const towers = attachSunhawkTowers(rig);
+  rig.skirts.l.position.set(.65,.11,.36);
+  rig.skirts.r.position.set(-.65,.11,.36);
+  rig.skirts.back.position.set(0,.15,-.34);
+  for (const s of [1,-1]) {
+    // Preserve the artwork's gentle outward arm rake and swept fin attachment.
+    (s === 1 ? J.elL : J.elR).position.x = s*.13;
+    (s === 1 ? J.wrL : J.wrR).position.x = s*.13;
+    (s === 1 ? J.wingL : J.wingR).position.set(s*.62,.99,-.65);
+  }
+  return towers;
+}
+
+/** The Sunhawk's fittings: its markings and number, its thrusters, the hands, heels and muzzle. */
+export function sunhawkFittings(c: FrameCtx, number: string, u: boolean, towers: { towerL: THREE.Group; towerR: THREE.Group }): void {
+  const { rig, livery } = c;
+  const J = rig.joints;
   for (const s of [1,-1]) {
     const towerX = s*(u ? 1.63 : 1.83);
     decal(s === 1 ? towers.towerL : towers.towerR,livery,s === -1 ? 'emblem' : 'warning',
@@ -74,11 +99,4 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
   num.scale.setScalar(.48); num.position.set(0,.79,-.96); num.rotation.y=Math.PI;
   num.renderOrder = 3; // Draw over the transparent roundel (order 2).
   J.chest.add(num);
-  if (u) for (const f of rig.flames) {
-    // Head-on: a visible circular jet. Off-axis: the painted exhaust. Reducing
-    // only the circle made the unchanged flame dominate the chase view.
-    if (f.burner) (f.burner.material as THREE.ShaderMaterial).uniforms.uSize.value = .72;
-    if (f.drawn) (f.drawn.material as THREE.ShaderMaterial).uniforms.uEndOnFade.value = 1;
-  }
-  rig.root.userData.sunhawkModel=variant;
 }

@@ -77,6 +77,11 @@ two players.
   (the `pilot` message, checked as a join is) and a race already begun
   keeps the old. The portrait is an index into the gallery (`PORTRAITS` in
   protocol.ts), or -1 for a seat's faction pilot (the computer pilots').
+- **Your mechs.** The mech you fly in each frame, your custom one as text
+  or '' for the stock one (docs/CUSTOMIZATION.md), goes with every join and
+  `pilot` message (`looks`). The server keeps only ones that read back
+  exactly (`cleanLooks`) and seats you in the one for your frame, so
+  everyone's copy of the race draws it.
 - **Room.** Two teams of three places, with the host's settings (circuit,
   format, computer pilots' skill), Ready, Invite, and Leave. Each team shows
   its three frames: who has locked each in, who has picked it, or the

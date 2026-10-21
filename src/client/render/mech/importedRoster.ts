@@ -1,11 +1,13 @@
-import { MechInkBuilder } from './ink';
+import { MechInkBuilder, type InkLines } from './ink';
 import * as THREE from 'three';
-import { Kit } from './kit';
-import { rosterAsset, type RosterJoint, type CalfThruster } from './rosterAsset';
+import { Kit, type Slot } from './kit';
+import { rosterAsset, type CalfThruster } from './rosterAsset';
 import type { Livery } from '../palette';
 import type { MechRig, Pose } from './rig';
 import { getSunhawkPanels } from './sunhawkSelection';
 import { setMechDetail } from './detail';
+import { sunhawkDetailMaterial } from './sunhawkDetails';
+import type { PartSlot } from '../../../custom/mechBuild';
 
 /** Match the source Blender silhouette gains, including the attached markings. */
 export const ROSTER_GAINS: Record<string,readonly [number,number,number]> = {
@@ -52,6 +54,24 @@ export function attachRosterCalfJets(rig: MechRig, thrusters: readonly CalfThrus
 
 /** Retain the original effect/weapon/number anchors; only replace rigid armor. */
 export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, heavy: boolean): void {
+  rosterAnchors(rig,id);
+  // Cooler, restrained shadow paint; each faction keeps its actual palette.
+  const paint={...livery,shades:{...livery.shades,frame:0x182236}};
+  const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
+  addArmour(rig,joints,[0,1,2].map(level=>({parts:rosterAsset(id,level).parts,lines:rosterAsset(id,level).lines})),()=>paint,rosterAsset(id).ink);
+  finishRoster(rig);
+  rig.fitPose=p=>fitRosterPose(p,heavy,id);
+  rig.root.userData.rosterModel='updated';rig.root.userData.modelId=id;
+}
+
+/**
+ * A design's fittings on a rig built for it, without its armour: the calf
+ * jets on its authored nozzles, the weapon, number and marking anchors
+ * seated for its thicker limbs, its own moved markings, and the wrists'
+ * hands and muzzle turned to its palms. (The design's code builder, run
+ * without geometry, has put them there first.)
+ */
+export function rosterAnchors(rig: MechRig, id: string): void {
   attachRosterCalfJets(rig,rosterAsset(id).calfThrusters);
   const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
   const gains=ROSTER_GAINS[id];
@@ -100,30 +120,55 @@ export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, he
       else if(child===rig.handL || child===rig.handR)child.position.z*=-1;
     }
   }
-  // Cooler, restrained shadow paint; each faction keeps its actual palette.
-  const paint={...livery,shades:{...livery.shades,frame:0x182236}};
-  const ink=rosterAsset(id).ink ? new MechInkBuilder(rig,joints) : null;
-  for(let level=0;level<3;level++) {
-    const kits=new Map<RosterJoint,Kit>();
+}
+
+/** A piece of imported armour (a roster design's or the Sunhawk's). */
+export interface ArmourPiece { joint: string; part?: PartSlot; slot: Slot|'G'; geometry: THREE.BufferGeometry; detail?: boolean }
+
+/**
+ * Hang imported armour on a rig, level of detail by level: each joint's
+ * pieces merged by the paint they wear (`paintFor`: a whole design wears one;
+ * a custom mech's parts each their own), the Sunhawk's painted details on
+ * their own material, and the authored ink over all of it.
+ */
+export function addArmour(rig: MechRig, joints: Record<string,THREE.Object3D>, levels: Array<{parts: readonly ArmourPiece[]; lines: readonly InkLines[]}>, paintFor: (p: ArmourPiece)=>Livery, ink: boolean): void {
+  const inker=ink ? new MechInkBuilder(rig,joints) : null;
+  for(const {parts,lines} of levels) {
+    const kits=new Map<string,{joint:string;kit:Kit}>();
     const groups: THREE.Object3D[]=[];
-    for(const p of rosterAsset(id,level).parts) {
-      let k=kits.get(p.joint);
-      if(!k)kits.set(p.joint,k=new Kit(paint,.018,1.15,true));
-      k.geometry(p.slot,p.geometry,getSunhawkPanels()?undefined:-1);
+    const paints=new Map<Livery,number>();
+    for(const p of parts) {
+      if(p.detail) {
+        const mesh=new THREE.Mesh(p.geometry.clone(),sunhawkDetailMaterial());
+        mesh.name=`Sunhawk details / ${p.joint}`;
+        mesh.renderOrder=2;
+        joints[p.joint].add(mesh);groups.push(mesh);
+        continue;
+      }
+      const paint=paintFor(p);
+      let n=paints.get(paint);
+      if(n===undefined)paints.set(paint,n=paints.size);
+      const key=`${p.joint}|${n}`;
+      let k=kits.get(key);
+      if(!k)kits.set(key,k={joint:p.joint,kit:new Kit(paint,.018,1.15,true)});
+      k.kit.geometry(p.slot,p.geometry,getSunhawkPanels()?undefined:-1);
     }
-    for(const [joint,k] of kits) {
-      const built=k.build(/^(el|wr|hip[LR]|knee|ankle)/.test(joint));
+    for(const {joint,kit} of kits.values()) {
+      const built=kit.build(/^(el|wr|hip[LR]|knee|ankle)/.test(joint));
       joints[joint].add(built.group);groups.push(built.group);
       if(built.glow)rig.glowMeshes.push(built.glow);
     }
-    ink?.addLevel(rosterAsset(id,level).parts,rosterAsset(id,level).lines,groups);
+    inker?.addLevel(parts.filter(p=>!p.detail),lines,groups);
     rig.detailLevels.push(groups);
   }
+}
+
+/** The last of an imported design: nearest detail showing, skates on the road, its flames' end-on burners. */
+export function finishRoster(rig: MechRig): void {
   setMechDetail(rig,0);
-  rig.keepFeetOnRoad=true;rig.fitPose=p=>fitRosterPose(p,heavy,id);
+  rig.keepFeetOnRoad=true;
   for(const f of rig.flames) {
     if(f.burner)(f.burner.material as THREE.ShaderMaterial).uniforms.uSize.value=.72;
     if(f.drawn)(f.drawn.material as THREE.ShaderMaterial).uniforms.uEndOnFade.value=1;
   }
-  rig.root.userData.rosterModel='updated';rig.root.userData.modelId=id;
 }

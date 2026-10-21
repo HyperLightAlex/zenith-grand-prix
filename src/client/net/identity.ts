@@ -7,6 +7,8 @@
 // one browser can be two players when testing.
 
 import { PORTRAITS, callsignProblem, cleanCallsign, cleanPortrait } from '../../net/protocol';
+import { decodeBuild, encodeBuild, type MechBuild } from '../../custom/mechBuild';
+import type { Role } from '../../sim/config';
 
 const q = new URLSearchParams(location.search);
 const suffix = (q.get('player') ?? '').replace(/[^A-Za-z0-9]/g, '').slice(0, 8);
@@ -71,6 +73,10 @@ interface PilotRecord {
   portrait: number;
   /** Worn until a callsign is chosen. */
   made: string;
+  /** Your custom mech of each frame (forward, midfielder, defender), as text (custom/mechBuild.ts), or ''. */
+  mechs: [string, string, string];
+  /** Which frames you fly your custom mech in (the stock mech of the faction you fly for otherwise). */
+  fly: [boolean, boolean, boolean];
 }
 
 /**
@@ -92,7 +98,10 @@ function pilotRecord(): PilotRecord {
     if (raw && raw.v === 1) {
       const portrait = cleanPortrait(raw.portrait);
       const made = typeof raw.made === 'string' && !callsignProblem(raw.made) ? raw.made : '';
-      if (portrait >= 0 && made) rec = { v: 1, portrait, made };
+      // Custom mechs came later: a record from before has none.
+      const mechs = [0, 1, 2].map((i) => (Array.isArray(raw.mechs) && decodeBuild(raw.mechs[i]) ? (raw.mechs[i] as string) : '')) as PilotRecord['mechs'];
+      const fly = [0, 1, 2].map((i) => Array.isArray(raw.fly) && raw.fly[i] === true && mechs[i] !== '') as PilotRecord['fly'];
+      if (portrait >= 0 && made) rec = { v: 1, portrait, made, mechs, fly };
     }
   } catch {
     /* made again below */
@@ -100,7 +109,7 @@ function pilotRecord(): PilotRecord {
   if (!rec) {
     const pick = new Uint32Array(2);
     crypto.getRandomValues(pick);
-    rec = { v: 1, portrait: pick[0] % PORTRAITS, made: MADE_CALLSIGNS[pick[1] % MADE_CALLSIGNS.length] };
+    rec = { v: 1, portrait: pick[0] % PORTRAITS, made: MADE_CALLSIGNS[pick[1] % MADE_CALLSIGNS.length], mechs: ['', '', ''], fly: [false, false, false] };
     savePilot(rec);
   }
   return rec;
@@ -131,6 +140,39 @@ export function setPortrait(i: number): void {
   const p = cleanPortrait(i);
   if (p < 0) return;
   savePilot({ ...pilotRecord(), portrait: p });
+}
+
+/** Your custom mech of a frame, or null if you have not made one. */
+export function customMech(role: Role): MechBuild | null {
+  return decodeBuild(pilotRecord().mechs[role]);
+}
+
+/** Keep a custom mech for a frame (null: delete it, and fly the stock mech). */
+export function setCustomMech(role: Role, b: MechBuild | null): void {
+  const rec = pilotRecord();
+  const mechs = [...rec.mechs] as PilotRecord['mechs'];
+  const fly = [...rec.fly] as PilotRecord['fly'];
+  mechs[role] = b ? encodeBuild(b) : '';
+  if (!b) fly[role] = false;
+  savePilot({ ...rec, mechs, fly });
+}
+
+/** Whether you fly your custom mech in a frame (you have one, and chose it). */
+export function fliesCustom(role: Role): boolean {
+  const rec = pilotRecord();
+  return rec.fly[role] && rec.mechs[role] !== '';
+}
+
+export function setFliesCustom(role: Role, on: boolean): void {
+  const rec = pilotRecord();
+  const fly = [...rec.fly] as PilotRecord['fly'];
+  fly[role] = on && rec.mechs[role] !== '';
+  savePilot({ ...rec, fly });
+}
+
+/** What your seat flies in a frame, as a seat carries it: your custom mech as text, or '' for stock. */
+export function seatLook(role: Role): string {
+  return fliesCustom(role) ? pilotRecord().mechs[role] : '';
 }
 
 /** Per tab: the room and squad to go back to after a reload. */

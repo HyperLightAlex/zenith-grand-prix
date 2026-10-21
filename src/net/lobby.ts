@@ -29,6 +29,7 @@ import {
   type LobbyPlayer,
   type LobbyView,
   type Loadout,
+  type Looks,
   type RoomPhase,
   type RoomSettings,
   type SideView,
@@ -47,6 +48,8 @@ export interface Member extends LobbyPlayer {
   /** When the connection dropped (ms), or -1. */
   droppedAt: number;
   loadout: Loadout;
+  /** The mech they fly in each frame (checked: see protocol cleanLooks). Shown to everyone in the race, not in the lobby. */
+  looks: Looks;
 }
 
 /** A place on a team kept for a squad member on their way in. */
@@ -85,6 +88,8 @@ export interface JoinInfo {
   callsign: string;
   /** Their portrait (protocol PORTRAITS), or -1. */
   portrait?: number;
+  /** Their mechs (checked). */
+  looks?: Looks;
   loadout: Loadout;
   squad?: SquadTicket;
 }
@@ -252,6 +257,7 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
     joinedAt: ++lobby.arrivals,
     droppedAt: -1,
     loadout,
+    looks: info.looks ?? ['', '', ''],
   };
   lobby.members.push(m);
   if (!lobby.host) lobby.host = m.pid;

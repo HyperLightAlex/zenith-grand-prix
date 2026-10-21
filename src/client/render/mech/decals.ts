@@ -382,6 +382,21 @@ function sheetMaterial(livery: Livery): THREE.MeshToonMaterial {
  * Stick a decal on `parent`. The plane faces +z before `rot`; `size` is its
  * width and height in metres (height defaults to the width).
  */
+/**
+ * The markings sheet for a team on armour of either darkness: its white
+ * markings dark on light armour, light on dark (a custom mech's parts each
+ * have their own paint, so their markings follow each part's).
+ */
+export function markingsMaterial(livery: Livery, dark: boolean): THREE.MeshToonMaterial {
+  if (dark === livery.darkArmour) return sheetMaterial(livery);
+  return sheetMaterial({ ...livery, id: `${livery.id}:${dark ? 'dark' : 'light'}`, darkArmour: dark });
+}
+
+/** Whether a mesh is one of a team's markings (drawn from its sheet). */
+export function isMarking(o: THREE.Object3D, livery: Livery): o is THREE.Mesh {
+  return o instanceof THREE.Mesh && o.material === sheetMaterial(livery);
+}
+
 export function decal(parent: THREE.Object3D, livery: Livery, kind: DecalKind, at: [number, number, number], rot: [number, number, number], w: number, h = w): THREE.Mesh {
   const i = CELLS.indexOf(kind);
   const geo = new THREE.PlaneGeometry(w, h);

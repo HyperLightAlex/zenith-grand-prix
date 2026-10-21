@@ -82,6 +82,7 @@ import { MATCH_OPTIONS, Menus, type GarageChoice, type ScreenId } from '../ui/me
 import { confirmDialog, messageDialog, registerCommon, type DialogData, type EntryData } from '../ui/screens/common';
 import { registerGarage, type HangarData } from '../ui/screens/garage';
 import { registerPilot } from '../ui/screens/pilot';
+import { registerCustom } from '../ui/screens/custom';
 import { registerGrandPrix } from '../ui/screens/grandPrix';
 import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { gpBlocked, registerOnlineGp } from '../ui/screens/onlineGp';
@@ -91,7 +92,8 @@ import { applyFrame, frame, onFrame, RESOLUTIONS, saveVideo, video, type VideoSe
 import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
-import { callsign as savedCallsign, pilotName, portrait as pilotPortrait, setCallsign, setPortrait as savePortrait } from '../net/identity';
+import { callsign as savedCallsign, customMech, fliesCustom, pilotName, portrait as pilotPortrait, seatLook, setCallsign, setCustomMech, setFliesCustom, setPortrait as savePortrait } from '../net/identity';
+import type { MechBuild } from '../../custom/mechBuild';
 import { Online, failure } from '../net/online';
 import { inKnockout } from './moments';
 import { NetSession } from './netSession';
@@ -116,7 +118,7 @@ function garageShift(): [number, number] {
   return [GARAGE_SHIFT, 0];
 }
 /** Screens shown over the hangar, with your mech in its bay. */
-const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room']);
+const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room']);
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -291,6 +293,7 @@ export class Game {
     registerCommon(this.menus, this);
     registerGarage(this.menus, this);
     registerPilot(this.menus, this);
+    registerCustom(this.menus, this);
     registerGrandPrix(this.menus, this);
     registerOnline(this.menus, this);
     registerOnlineGp(this.menus, this);
@@ -407,10 +410,62 @@ export class Game {
     this.tellPilot();
   }
 
+  // ---- your custom mechs (docs/CUSTOMIZATION.md) ----------------------------
+
+  /** Your custom mech of a frame, or null if you have not made one. */
+  customMech(role: Role): MechBuild | null {
+    return customMech(role);
+  }
+
+  /** Whether you fly your custom mech in a frame (rather than your faction's stock one). */
+  fliesCustom(role: Role): boolean {
+    return fliesCustom(role);
+  }
+
+  /** Keep your custom mech of a frame (null deletes it); the hangar shows it at once. */
+  setCustomMech(role: Role, b: MechBuild | null): void {
+    setCustomMech(role, b);
+    this.refreshPreviewMech();
+    this.tellPilotSoon();
+  }
+
+  /** Fly your custom mech in a frame, or the stock one. */
+  setFliesCustom(role: Role, on: boolean): void {
+    setFliesCustom(role, on);
+    this.refreshPreviewMech();
+    this.tellPilotSoon();
+  }
+
+  private tellTimer = 0;
+
+  /** A room or squad hears of your mechs once the changes settle (not at every step through the paints). */
+  private tellPilotSoon(): void {
+    clearTimeout(this.tellTimer);
+    this.tellTimer = window.setTimeout(() => this.tellPilot(), 600);
+  }
+
+  private previewTimer = 0;
+
+  /**
+   * The hangar's mech again, as you fly it now (stock or custom, as last
+   * changed). Changes in quick succession (left and right through the paints)
+   * rebuild it once they settle.
+   */
+  refreshPreviewMech(): void {
+    clearTimeout(this.previewTimer);
+    this.previewTimer = window.setTimeout(() => {
+      if (this.state !== 'garage' || !this.session) return;
+      const m = this.session.race.mechs[this.session.localId];
+      if (!m) return;
+      m.look = seatLook(m.role);
+      this.view?.refreshMechModels('all');
+    }, 200);
+  }
+
   /** A room or squad you are in hears of a change to your pilot (it shows from the next race). */
   private tellPilot(): void {
     if (!this.callsign) return;
-    const msg = { callsign: this.callsign, portrait: this.portrait };
+    const msg = { callsign: this.callsign, portrait: this.portrait, looks: [seatLook(0), seatLook(1), seatLook(2)] };
     this.online.sendRoom('pilot', msg);
     this.online.sendSquad('pilot', msg);
   }
@@ -447,7 +502,7 @@ export class Game {
         if (human) localId = seats.length;
         const yours = human && !this.opts.demo;
         const name = yours ? pilotName() : (LIVERIES[this.raceFactions[team]] ?? LIVERIES[team]).pilots[role];
-        seats.push({ team, role, human, name, portrait: yours ? pilotPortrait() : -1, skill: setup === null ? 0.6 : team === 1 ? setup.rivalSkill : setup.teamSkill });
+        seats.push({ team, role, human, name, portrait: yours ? pilotPortrait() : -1, look: yours ? seatLook(role) : '', skill: setup === null ? 0.6 : team === 1 ? setup.rivalSkill : setup.teamSkill });
       }
     }
     return { seats, localId };

@@ -1,7 +1,8 @@
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PILOT_NAMES } from '../src/net/factions';
-import { PORTRAITS, READY_COUNTDOWN, cleanPortrait, pilotChange, type SquadServerMessages } from '../src/net/protocol';
+import { PORTRAITS, READY_COUNTDOWN, cleanLooks, cleanPortrait, pilotChange, type SquadServerMessages } from '../src/net/protocol';
+import { encodeBuild, stockBuild } from '../src/custom/mechBuild';
 import { SquadCore } from '../src/net/squadCore';
 import { ROLE } from '../src/sim/index';
 import { TestNet } from './netHarness';
@@ -14,8 +15,8 @@ describe('a pilot on the wire', () => {
   });
 
   it('checks a pilot change as a join is checked', () => {
-    expect(pilotChange({ callsign: '  Comet  ', portrait: 4 })).toEqual({ ok: true, callsign: 'Comet', portrait: 4 });
-    expect(pilotChange({ callsign: 'Comet', portrait: 99 })).toEqual({ ok: true, callsign: 'Comet', portrait: -1 });
+    expect(pilotChange({ callsign: '  Comet  ', portrait: 4 })).toEqual({ ok: true, callsign: 'Comet', portrait: 4, looks: ['', '', ''] });
+    expect(pilotChange({ callsign: 'Comet', portrait: 99 })).toEqual({ ok: true, callsign: 'Comet', portrait: -1, looks: ['', '', ''] });
     expect(pilotChange({ callsign: 'ab', portrait: 1 }).ok).toBe(false);
     expect(pilotChange({ portrait: 1 }).ok).toBe(false);
   });
@@ -51,6 +52,33 @@ describe('a pilot in a room', () => {
     // And the mechs carry it, as everyone's copy of the race does.
     expect(a.predictor!.confirmed.mechs[a.start!.seat].portrait).toBe(3);
     expect(b.predictor!.confirmed.mechs[a.start!.seat].portrait).toBe(3);
+  });
+
+  it('races each person in the custom mech they fly in their frame, and drops one that does not read', () => {
+    const mine = encodeBuild({ ...stockBuild(2), name: 'Storm Kite' });
+    const net = new TestNet({ laps: 1 });
+    const a = net.join('a', { loadout: { faction: 0, role: ROLE.MF }, looks: cleanLooks(['', mine, '']) });
+    const b = net.join('b', { loadout: { faction: 1, role: ROLE.FW }, looks: cleanLooks(['c1/not-a-mech', '', '']) });
+    net.run(200);
+    net.core.message('a', 'settings', { match: 0 });
+    for (const c of [a, b]) c.send('ready', { ready: true });
+    net.run((READY_COUNTDOWN + 1) * 1000, () => net.core.phase === 'race');
+    net.run(300);
+    const seats = a.start!.seats;
+    expect(seats[a.start!.seat].look).toBe(mine);
+    expect(seats[b.start!.seat].look).toBe('');
+    for (const s of seats.filter((x) => !x.human)) expect(s.look).toBe('');
+    expect(b.predictor!.confirmed.mechs[a.start!.seat].look).toBe(mine);
+  });
+
+  it('takes new custom mechs with a pilot change, for the next race', () => {
+    const net = new TestNet();
+    net.join('a', { loadout: { faction: 0, role: ROLE.DF } });
+    const mine = encodeBuild(stockBuild(4));
+    net.core.message('a', 'pilot', { callsign: 'Comet', portrait: 1, looks: ['', '', mine] });
+    expect(net.core.lobby.members[0].looks).toEqual(['', '', mine]);
+    net.core.message('a', 'pilot', { callsign: 'Comet', portrait: 1, looks: 'nonsense' as unknown as string[] });
+    expect(net.core.lobby.members[0].looks).toEqual(['', '', '']);
   });
 
   it('refuses a pilot change with a callsign a join would refuse, and says why', () => {

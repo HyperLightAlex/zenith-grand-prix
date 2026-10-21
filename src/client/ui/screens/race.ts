@@ -1,6 +1,7 @@
 // Over the race: pause (offline it stops the race; online the race runs on
 // and your seat's computer pilot flies until you resume) and the results.
 
+import { mechName } from '../../../custom/mechBuild';
 import { AWARD_NAMES, ROLE_NAMES, roundsToWin } from '../../../sim/index';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
@@ -152,7 +153,7 @@ export function registerRace(m: Menus, g: Game): void {
           h<'td'>('td', String(x.place)),
           h<'td'>('td.face', faceEl),
           h<'td'>('td', x.name + (x.id === me.id && g.resultsLocal >= 0 ? ' (you)' : '')),
-          h<'td'>('td', `${sides[x.team].models[x.role]}, ${ROLE_NAMES[x.role].toLowerCase()}`),
+          h<'td'>('td', `${mechName(x, sides[x.team].models[x.role])}, ${ROLE_NAMES[x.role].toLowerCase()}`),
           h<'td'>('td.num', time),
           h<'td'>('td.num', String(Math.round(x.dmgDealt))),
           h<'td'>('td.num', String(x.kos)),

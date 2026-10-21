@@ -11,6 +11,8 @@
 import * as THREE from 'three';
 import { ROLE } from '../sim/config';
 import { buildFrame, useOldSwift } from './render/mech/frames';
+import { buildCustomFrame } from './render/mech/customFrame';
+import { FRAME_DESIGNS, PART_SLOTS, decodeBuild, stockBuild, type PartSlot } from '../custom/mechBuild';
 import { LIVERIES, COLORS, SUN_DIR } from './render/palette';
 import { makePose, type MechRig } from './render/mech/rig';
 import { POSES } from './render/mech/poses';
@@ -101,7 +103,13 @@ export function runMechDebug(): void {
     scene.add(rig.root);
     return rig;
   };
+  // &customCheck: window.customCheck(role) builds every part of every design on every
+  // other design of the frame and reports what is missing (tools/custom-check.mjs).
+  if (q.has('customCheck')) (window as unknown as { customCheck: typeof customCheck }).customCheck = customCheck;
   const turn = q.has('turn');
+  // &custom=<a build, as text>: that custom mech (for the team's glow and markings) in place of the stock one.
+  const custom = decodeBuild(q.get('custom'));
+  const make = () => (custom ? buildCustomFrame(role, LIVERIES[team], custom, String(role + 1)) : buildFrame(role, LIVERIES[team], String(role + 1)));
   const compare = q.has('compare');
   let rigs: MechRig[];
   if (compare) {
@@ -126,9 +134,9 @@ export function runMechDebug(): void {
     document.body.append(labels);
   } else if (turn) {
     const yaws = [0, -0.7, -Math.PI / 2, Math.PI];
-    rigs = yaws.map((yaw, i) => place(buildFrame(role, LIVERIES[team], String(role + 1)), (i - 1.5) * 7.5, 0, yaw, poseName, 0.25));
+    rigs = yaws.map((yaw, i) => place(make(), (i - 1.5) * 7.5, 0, yaw, poseName, 0.25));
   } else if (poseList.length) {
-    rigs = poseList.map((name, i) => place(buildFrame(role, LIVERIES[team], String(role + 1)), (i - (poseList.length - 1) / 2) * 9, 0, 0, name, name === 'tuck' || name === 'boost' ? 0.7 : 0.15));
+    rigs = poseList.map((name, i) => place(make(), (i - (poseList.length - 1) / 2) * 9, 0, 0, name, name === 'tuck' || name === 'boost' ? 0.7 : 0.15));
   } else {
     rigs = [ROLE.FW, ROLE.MF, ROLE.DF].flatMap((r, i) => LIVERIES.map((liv, t) => place(buildFrame(r, liv, String(i + 1)), (i - 1) * 8, -11 * t, 0, poseName, 0.3)));
   }
@@ -167,4 +175,60 @@ export function runMechDebug(): void {
     renderer.render(scene, cam);
   });
   (window as unknown as { __info: unknown }).__info = { rigs: rigs.length, pose: poseName };
+}
+
+/**
+ * Every part of every design on every other design of a frame (each design
+ * with one part swapped for each other design's): each builds, and has armour
+ * on every joint at every level of detail, its ink, its markings, its main
+ * and leg thrusters, and a muzzle on the gun arm. Returns what failed.
+ */
+function customCheck(role: 0 | 1 | 2, bases = [0, 1, 2, 3, 4], slots: readonly PartSlot[] = PART_SLOTS): { built: number; failed: string[]; ms: number } {
+  const failed: string[] = [];
+  let built = 0;
+  const t0 = performance.now();
+  for (const base of bases) {
+    for (const slot of slots) {
+      for (let v = 0; v < 5; v++) {
+        const b = stockBuild(base);
+        b.parts[slot] = v;
+        const label = `${FRAME_DESIGNS[role][base]} with the ${FRAME_DESIGNS[role][v]}'s ${slot}`;
+        try {
+          const rig = buildCustomFrame(role, LIVERIES[base], b, '1');
+          built++;
+          rig.root.updateMatrixWorld(true);
+          rig.detailLevels.forEach((groups, level) => {
+            for (const j of ['head', 'chest', 'spine', 'hips', 'shL', 'shR', 'elL', 'elR', 'wrL', 'wrR', 'hipL', 'hipR', 'kneeL', 'kneeR', 'ankleL', 'ankleR'] as const) {
+              if (!groups.some((g) => g.parent === rig.joints[j])) failed.push(`${label}: no armour on ${j} at level ${level}`);
+            }
+          });
+          let ink = 0;
+          let marks = 0;
+          rig.root.traverse((o) => {
+            if (o.name === 'Batched ink hull') ink++;
+            if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).geometry?.type === 'PlaneGeometry') marks++;
+          });
+          if (ink !== 3) failed.push(`${label}: ink at ${ink} levels`);
+          if (!marks) failed.push(`${label}: no markings`);
+          if (!rig.flames.some((f) => f.bank === 'main')) failed.push(`${label}: no main thruster`);
+          if (rig.flames.filter((f) => f.bank === 'leg').length !== 2) failed.push(`${label}: ${rig.flames.filter((f) => f.bank === 'leg').length} leg thrusters`);
+          const gun = rig.muzzle.parent;
+          if (gun !== rig.joints.wrR && gun !== rig.joints.elR) failed.push(`${label}: muzzle on ${gun?.name}`);
+          rig.root.traverse((o) => {
+            const mesh = o as THREE.Mesh;
+            mesh.geometry?.dispose();
+            if (mesh.userData?.ownMaterial) {
+              const mat = mesh.material as THREE.ShaderMaterial & { map?: THREE.Texture };
+              mat.map?.dispose();
+              for (const u of Object.values(mat.uniforms ?? {})) (u.value as THREE.Texture)?.isTexture && (u.value as THREE.Texture).dispose();
+              mat.dispose();
+            }
+          });
+        } catch (e) {
+          failed.push(`${label}: ${(e as Error).message}`);
+        }
+      }
+    }
+  }
+  return { built, failed, ms: Math.round(performance.now() - t0) };
 }

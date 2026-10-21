@@ -1,4 +1,5 @@
-import { readInkLines, validateOutline, type InkLines } from './ink';
+import { partTag, readInkLines, validateOutline, type InkLines } from './ink';
+import type { PartSlot } from '../../../custom/mechBuild';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import currentUrl from './assets/sunhawk-current.glb?url';
@@ -12,7 +13,7 @@ import type { SunhawkAssetVariant } from './sunhawkSelection';
 import { prepareAssetGeometry } from './assetGeometry';
 
 export type AssetJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack' | 'towerL' | 'towerR';
-export interface SunhawkPart { joint: AssetJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry; detail: boolean }
+export interface SunhawkPart { joint: AssetJoint; part?: PartSlot; slot: Slot | 'G'; geometry: THREE.BufferGeometry; detail: boolean }
 export interface SunhawkAsset { dims: FrameDims; parts: SunhawkPart[]; lines: InkLines<AssetJoint>[]; ink: boolean }
 const assets = new Map<string, SunhawkAsset>();
 const dimensions: Array<keyof FrameDims> = ['hipY','hipX','hipDrop','thigh','shin','ankleY','spineY','chestY','shoulderX','shoulderY','headY','headZ','upperArm','foreArm','height'];
@@ -41,7 +42,7 @@ export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVarian
     const detail = o.userData.detail === true;
     const geometry = prepareAssetGeometry(o.geometry, o.matrixWorld, detail);
     if (detail && !geometry.hasAttribute('uv')) throw new Error(`Missing detail UVs on ${o.name}`);
-    parts.push({ joint, slot, geometry, detail });
+    parts.push({ joint, part: partTag(o.userData.part, o.name), slot, geometry, detail });
   });
   if (!dims || jointNames.some((j) => !parts.some((p) => p.joint === j))) throw new Error(`Incomplete ${variant} Sunhawk export`);
   if(ink)parts.filter(p=>p.slot!=='G'&&!p.detail).forEach(p=>validateOutline(p.geometry));

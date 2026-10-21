@@ -4,7 +4,7 @@
 import crypto from 'node:crypto';
 import { Room, ServerError, type Client } from '@colyseus/core';
 import { RoomCore } from '../src/net/roomCore';
-import { NET_PROTOCOL, RECONNECT_SECONDS, callsignProblem, cleanCallsign, cleanPortrait, versionText, type ClientMessages, type GpRequest, type JoinOptions } from '../src/net/protocol';
+import { NET_PROTOCOL, RECONNECT_SECONDS, callsignProblem, cleanCallsign, cleanLooks, cleanPortrait, versionText, type ClientMessages, type GpRequest, type JoinOptions } from '../src/net/protocol';
 import { claimCode, releaseCode } from './codes';
 import { log } from './log';
 import { TEST_LAPS } from './config';
@@ -101,6 +101,7 @@ export class RaceRoom extends Room {
       deviceId: options.deviceId,
       callsign: cleanCallsign(options.callsign),
       portrait: cleanPortrait(options.portrait),
+      looks: cleanLooks(options.looks),
       loadout: options.loadout,
       squad: options.squad && typeof options.squad.id === 'string' ? { id: options.squad.id.slice(0, 8), size: Math.max(1, Math.min(3, Number(options.squad.size) | 0)), follow: options.squad.follow === true } : undefined,
     });

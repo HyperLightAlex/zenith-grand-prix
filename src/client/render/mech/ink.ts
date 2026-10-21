@@ -5,6 +5,7 @@
 // uniform array indexed per vertex: some handheld GPUs fetched the wrong
 // matrix from the array for some joints, and the ink on the legs, hips and
 // towers was drawn somewhere else entirely.
+import { PART_SLOTS, type PartSlot } from '../../../custom/mechBuild';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
@@ -12,7 +13,8 @@ import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import type { MechRig } from './rig';
 
-export interface InkLines<J extends string = string> { joint: J; positions: Float32Array; kinds: Float32Array }
+/** A joint's authored ink strokes; `part`: the customization part they belong to (docs/CUSTOMIZATION.md), where the export says. */
+export interface InkLines<J extends string = string> { joint: J; part?: PartSlot; positions: Float32Array; kinds: Float32Array }
 export const geometryMarks = new Float32Array(6);
 /** The shell's weight, as a share of Step 1's traced contour (look.mechOutline). */
 export const MECH_OUTLINE_DEFAULT = 1.2;
@@ -54,7 +56,14 @@ export function readInkLines<J extends string>(o: THREE.LineSegments, joints: re
     if (![0,1,2].includes(type) || (i%2 && kinds[(i-1)/2]!==type)) throw new Error(`Invalid ink kind ${o.name}`);
     if (!(i%2)) { kinds[i/2]=type; previous.copy(v); }
   }
-  return { joint, positions, kinds };
+  return { joint, part: partTag(o.userData.part, o.name), positions, kinds };
+}
+
+/** A mesh's `part` tag (the customization parts): one of PART_SLOTS, or none (an export from before the tags). */
+export function partTag(part: unknown, name: string): PartSlot | undefined {
+  if (part === undefined) return undefined;
+  if (!(PART_SLOTS as readonly unknown[]).includes(part)) throw new Error(`Invalid part ${String(part)} on ${name}`);
+  return part as PartSlot;
 }
 
 export function validateOutline(g: THREE.BufferGeometry): void {

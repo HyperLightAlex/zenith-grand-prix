@@ -69,6 +69,8 @@ export interface MechState {
   name: string;
   /** The pilot's portrait: an index into the gallery, or -1 for the faction's own pilot for the seat. Shown only. */
   portrait: number;
+  /** A custom mech (custom/mechBuild.ts, as text), or '' for the faction's stock mech. Shown only. */
+  look: string;
   /** AI skill 0..1. */
   skill: number;
 
@@ -380,6 +382,8 @@ export interface SeatConfig {
   name: string;
   /** The pilot's portrait (see MechState.portrait); -1 if left out. */
   portrait?: number;
+  /** A custom mech (see MechState.look); stock if left out. */
+  look?: string;
   skill: number;
 }
 

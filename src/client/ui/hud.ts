@@ -1,5 +1,6 @@
 // The race HUD: place, running order, team score, map, gauges, speed,
 // tactics, radio, target and banners. Plain DOM over the canvas.
+import { mechName } from '../../custom/mechBuild';
 import {
   ABILITIES,
   ABILITY,
@@ -731,7 +732,7 @@ export class Hud {
       this.target.hidden = false;
       setClass(this.target, 'ally', ally);
       setText(this.targetName, t.name);
-      setText(this.targetRole, `${liveryOf(t.team).models[t.role]}, ${factionName(liveryOf(t.team))}`);
+      setText(this.targetRole, `${mechName(t, liveryOf(t.team).models[t.role])}, ${factionName(liveryOf(t.team))}`);
       setIcon(this.targetRoleIco, ROLE_ICON[t.role]);
       const portrait = `url(${pilotOf(t)})`;
       if (this.targetPilot.style.backgroundImage !== portrait) this.targetPilot.style.backgroundImage = portrait;

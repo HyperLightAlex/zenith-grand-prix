@@ -1,11 +1,12 @@
-import { readInkLines, validateOutline, type InkLines } from './ink';
+import { partTag, readInkLines, validateOutline, type InkLines } from './ink';
+import type { PartSlot } from '../../../custom/mechBuild';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { JOINTS, type FrameDims, type JointName } from './rig';
 import type { Slot } from './kit';
 import { prepareAssetGeometry } from './assetGeometry';
 export type RosterJoint = JointName | 'skirtL' | 'skirtR' | 'skirtBack';
-export interface RosterPart { joint: RosterJoint; slot: Slot | 'G'; geometry: THREE.BufferGeometry }
+export interface RosterPart { joint: RosterJoint; part?: PartSlot; slot: Slot | 'G'; geometry: THREE.BufferGeometry }
 export interface CalfThruster {
   joint: 'kneeL' | 'kneeR';
   surface: [number,number,number];
@@ -38,7 +39,7 @@ export function readRosterAsset(scene: THREE.Group, id: string): RosterAsset {
     const {joint,slot}=o.userData;
     if(![...JOINTS,'skirtL','skirtR','skirtBack'].includes(joint) || !['P','S','T','F','K','D','C','G'].includes(slot)) throw new Error(`Invalid ${id} part ${o.name}`);
     if(!o.geometry.hasAttribute('normal')) throw new Error(`Missing ${id} normals`);
-    parts.push({joint,slot,geometry:prepareAssetGeometry(o.geometry,o.matrixWorld)});
+    parts.push({joint,part:partTag(o.userData.part,o.name),slot,geometry:prepareAssetGeometry(o.geometry,o.matrixWorld)});
   });
   const required=JOINTS.filter(j=>j!=='wingL' && j!=='wingR');
   if(!dims || DIM_KEYS.some(k=>!Number.isFinite(dims![k]) || dims![k]<=0) || required.some(j=>!parts.some(p=>p.joint===j))) throw new Error(`Incomplete ${id} export`);

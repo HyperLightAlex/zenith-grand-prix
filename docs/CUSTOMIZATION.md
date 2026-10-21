@@ -8,8 +8,8 @@ faction's frames have the same stats), so none of it needs balancing.
 | Feature | Status |
 |---|---|
 | The pilot profile | begun: your callsign and portrait, worn by your seat everywhere, and the Pilot screen (below: "The pilot profile") |
-| Swappable parts | the models carry their part tags (all fifteen designs, every level of detail, the stock models unchanged); the game side is next |
-| Paint catalogue (each part paintable) | planned; one open question (below) |
+| Swappable parts | built: the hangar's editor, your custom mech raced in every mode, offline and online (below: "The game's side") |
+| Paint catalogue (each part paintable) | built: 33 paints and 9 metals, the whole mech and any part; one open question (below) |
 | Pilot portraits | the gallery is the fifteen faction pilots; more, and recolouring, to come |
 | Gameplay customization (tuning, loadouts) | not planned for now |
 
@@ -17,11 +17,25 @@ faction's frames have the same stats), so none of it needs balancing.
 
 Parts swap only between designs of the same frame: Swift with Swift,
 Vector with Vector, Bulwark with Bulwark. That is where swapping works:
-within a frame, every design has exactly the same skeleton (every bone
-length and joint position is equal across the five designs), so a part from
-one design lands on another's joints exactly, with no fitting or scaling.
-Across frames the skeletons differ (a Bulwark's shoulders are half again as
-wide as a Swift's), and nothing would fit.
+within a frame, the roster's designs share one skeleton (every bone length
+and joint position is equal across them), so a part from one lands on
+another's joints exactly, with no fitting or scaling. The Sunhawk is the
+exception: it was built on a skeleton of its own (shorter thighs, longer
+ankles, narrower shoulders, shorter upper arms, taller overall). So a custom
+mech stands on a skeleton made from its parts: each length comes from the
+part whose armour spans it (the thighs' length from the thighs, the
+shoulders' and neck's sockets from the chest, each arm's from that arm), and
+the Sunhawk's parts mix with the other Swifts' as they do with each other.
+Across frames the skeletons differ far more (a Bulwark's shoulders are half
+again as wide as a Swift's), and nothing would fit.
+
+| A length | Comes from |
+|---|---|
+| thigh, shin, ankle (and so the hips' height) | thighs, shins, feet |
+| the hips' width and drop | hips |
+| the waist (spine and chest heights) | waist |
+| the shoulders' and the neck's sockets | chest |
+| upper arm and forearm | each arm |
 
 | Frame | Designs |
 |---|---|
@@ -110,32 +124,67 @@ looks part of, with nothing floating.
 - every design has every slot, except that a design may have no backpack
   (say which).
 
-### The game's side (after the tags)
+### The game's side
 
-- Build a mech from a choice per slot (a design id per slot, within the
-  frame). A stock build is today's model exactly.
-- The per-design touches move from the design to the part:
-  - limb thickness (`ROSTER_GAINS`: elbows with the arms, hips with the
-    thighs, knees with the shins), which places the muzzle and markings;
-  - the fin spread (`fitRosterPose`) with the backpack;
-  - the moved markings (Kamaitachi, Fujin and Raijin) with their parts;
-  - the calf thrusters with the shins.
-- The Sunhawk joins the Swifts (its towers, skirts and detail meshes).
-- Tests: every slot of every design on every other design of its frame, at
-  every level of detail, with valid ink and weapon anchors.
-- A review of mixed builds in both looks, from in front and behind: where
-  two designs meet (the joint housings cover most seams).
-- The hangar: a parts screen (the slot list, the preview turning to the
-  slot being edited, reset to stock); the build saved per frame in the
-  profile; sent with the seat online and checked by the server.
+**A build** (`src/custom/mechBuild.ts`, shared with the server): a design
+for each slot (its place in the frame's list, which is its faction), the
+mech's paint scheme, any part's own paint, and a name. It travels and is
+kept as a short line of text (`c1/<parts>/<paint>/<own>/<name>`), which
+reads back only if it is exactly as written. A seat carries one as
+`look` ('' for the stock mech), as it does a portrait.
+
+**Building one** (`render/mech/customFrame.ts`): the stock mechs are built
+as they always were; a custom one is assembled.
+
+- Each part's armour and ink come from its design's model (the part tags),
+  each in its own paint.
+- Each part's fittings (markings, thrusters, the race number, the calf jets
+  on their nozzles, the hands, the muzzle) come from its design, built as
+  usual without its armour, and are moved across: the design's code
+  builder and the roster's own touches (`rosterAnchors`: the limbs'
+  thickness, the moved markings) put them where that design has them. A
+  fitting on a joint that carries two parts goes with the part it sits on
+  (the nearest).
+- The rig's own pieces follow their parts: the elbows' and wrists' places
+  and the hands from each arm, the muzzle from the right arm, the fins'
+  roots from the backpack, the heels from the feet, the skirts' hinges
+  from the hips, the Sunhawk's towers with its shoulders.
+- The pose fitting follows the chest (the Sunhawk's, or the roster's with
+  the backpack's fin spread).
+- Markings flip light or dark with each part's main paint, so they read on
+  any colour; they stay in the team's colours, as the number does.
+- Built for the hangar in about a tenth of a second (more for a mech of
+  many designs); a change rebuilds it once changes settle.
+
+**The hangar**: the Mech row (your custom mech of the frame, or the stock
+one of the faction you fly for), Customize (made from the stock mech in
+view the first time) and the editor: Parts (each slot, both arms at once or
+each), Paint (the whole mech or any part; a part offers only the channels
+its design has; a swatch grid to pick by sight), the name, start again from
+stock, delete. Your custom mech races in every mode, offline and online:
+a room is told the mech you fly in each frame, checks each, and seats you
+in it (docs/ONLINE.md).
+
+**Checks**: `tests/custom-mech.test.ts` (the catalogue, the text, the
+profile); `node tools/custom-check.mjs` builds every part of every design on
+every other design of its frame in a browser and checks each for armour on
+every joint at every level of detail, its ink, markings, thrusters and
+muzzle.
+
+**Next**: the parts screen turning the camera to the part being edited.
 
 ## Paint
 
-A catalogue of paints, each with its own shadow colour (the anime look
+A catalogue of 33 paints and 9 metals (`PAINTS`, `METALS` in
+`custom/mechBuild.ts`), each with its own shadow colour (the anime look
 shades each paint with a colour mixed for it, not the paint darkened:
-`Livery.shades` in `palette.ts`), about 24 to 36 of them, picked from a
-swatch page in both looks. A mech takes four paints (primary, secondary,
-trim, frame), and each part can take its own. Team colours stay on what
+`Livery.shades` in `palette.ts`). The factions' own come first, exactly as
+their liveries have them; the rest were mixed by the same rule (about two
+thirds the lightness, the hue turned up to 22 degrees toward violet, the
+light ones greyed more) and set by eye. A mech takes three paints (main,
+accent, trim) and a metal for its frame (bare metal is shaded as metal; a
+paint there reads as plastic), which the inner frame and the dark parts
+follow; each part can take its own. Team colours stay on what
 tells the teams apart: the glow, the trails, the lock-on markers and the
 HUD.
 
@@ -167,9 +216,9 @@ Each player has one pilot, kept on the device until there are accounts:
   up a callsign and picks a portrait on the first run, so nobody is held
   up before their first race; Online asks for a callsign the first time,
   offering the made-up one.
-- **Up to three custom mechs, one per frame** (parts and paint), to come.
-  In the hangar, each frame offers the stock mech of the faction being
-  flown, or the player's custom mech of that frame. Custom mechs race in
+- **Up to three custom mechs, one per frame** (parts and paint). In the
+  hangar, each frame offers the stock mech of the faction being flown, or
+  the player's custom mech of that frame. Custom mechs race in
   every mode. A custom mech may be named; the pilot shown with it is
   always the player's callsign.
 
@@ -180,7 +229,9 @@ keeping the old. Custom mechs will need an export/import code, so a pilot
 survives cleared browser data, until there are accounts.
 
 **Built so far**: the callsign and portrait (`net/identity.ts`, kept as
-`zgp.pilot` beside `zgp.callsign`); the Pilot screen off the hangar
-(`ui/screens/pilot.ts`); seats and mechs carry a `portrait` (an index into
-the gallery, `PORTRAITS` in protocol.ts, or -1 for the faction pilot); rooms
-and squads carry each person's portrait. See docs/ONLINE.md for the wire.
+`zgp.pilot` beside `zgp.callsign`, with the custom mechs: each frame's as
+text, and whether it is flown); the Pilot screen off the hangar
+(`ui/screens/pilot.ts`) and the editor (`ui/screens/custom.ts`); seats and
+mechs carry a `portrait` (an index into the gallery, `PORTRAITS` in
+protocol.ts, or -1 for the faction pilot) and a `look`; rooms and squads
+carry each person's portrait. See docs/ONLINE.md for the wire.

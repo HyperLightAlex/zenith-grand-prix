@@ -29,6 +29,8 @@ import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareR
 import { DEPTH, MUZZLE_EDGE, RAM_TIP, WALL_EDGE, wide } from './sprites';
 import { MechAnimator } from './mech/animate';
 import { buildFrame } from './mech/frames';
+import { buildCustomFrame } from './mech/customFrame';
+import { decodeBuild } from '../../custom/mechBuild';
 import { drawClock, drawingStep, look, markCharacter } from './look';
 import type { MechRig } from './mech/rig';
 import { CARVE_COLORS, COLORS, LIVERIES, SUN_DIR, type Livery } from './palette';
@@ -148,6 +150,12 @@ function lerpAngle(a: number, b: number, t: number): number {
 
 const DUST: Record<string, number> = { meridian: 0x9aa2b0, canyon: 0xc98a5a, helios: 0xe8eef8 };
 
+/** A seat's mech: its custom mech if it flies one, its faction's stock mech otherwise. */
+function frameFor(m: MechState, livery: Livery): MechRig {
+  const custom = m.look ? decodeBuild(m.look) : null;
+  return custom ? buildCustomFrame(m.role, livery, custom, String(m.role + 1)) : buildFrame(m.role, livery, String(m.role + 1));
+}
+
 export class RaceView {
   /** Which gates were dark last frame, to flash them as they relight. */
   private gateDark: boolean[] = [];
@@ -208,7 +216,7 @@ export class RaceView {
     for (const id of this.mechIds) {
       const m = race.mechs[id];
       const livery = this.liveries[m.team];
-      const rig = buildFrame(m.role, livery, String(m.role + 1));
+      const rig = frameFor(m, livery);
       rig.root.matrixAutoUpdate = false;
       // Inked and shaded as a cel character in the anime look; and left sharp
       // by the speed stretch, since it travels with the camera.
@@ -269,10 +277,10 @@ export class RaceView {
     for (const id of this.mechIds) {
       const m = this.session.race.mechs[id];
       const v = this.mechs[m.id];
-      const sunhawk=m.role===ROLE.FW && v.livery.id==='solstice';
+      const sunhawk=m.role===ROLE.FW && v.livery.id==='solstice' && !m.look;
       if ((scope==='sunhawk' && !sunhawk) || (scope==='roster' && sunhawk)) continue;
       const old = v.rig;
-      const rig = buildFrame(m.role,v.livery,String(m.role+1));
+      const rig = frameFor(m,v.livery);
       rig.root.matrixAutoUpdate = false;
       rig.root.matrix.copy(old.root.matrix);
       rig.root.visible = old.root.visible;

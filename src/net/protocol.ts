@@ -11,9 +11,10 @@
 
 import type { MatchConfig, MatchState, MechInput, RaceState, Role, RoundResult, SeatConfig } from '../sim/index';
 import type { GpEvent, GpKind } from '../gp/grandPrix';
+import { decodeBuild } from '../custom/mechBuild';
 
-/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits.) */
-export const NET_PROTOCOL = 3;
+/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits; 4: custom mechs.) */
+export const NET_PROTOCOL = 4;
 
 /** The server sends the inputs it used every this many ticks (30 packets a second). */
 export const TICKS_PER_PACKET = 2;
@@ -113,12 +114,21 @@ export function cleanPortrait(p: unknown): number {
   return typeof p === 'number' && Number.isInteger(p) && p >= 0 && p < PORTRAITS ? p : -1;
 }
 
-/** A `pilot` message checked: the callsign as on joining, the portrait as above. */
-export function pilotChange(msg: Record<string, unknown>): { ok: true; callsign: string; portrait: number } | { ok: false; text: string } {
+/** A `pilot` message checked: the callsign as on joining, the portrait and the mechs as below. */
+export function pilotChange(msg: Record<string, unknown>): { ok: true; callsign: string; portrait: number; looks: Looks } | { ok: false; text: string } {
   const callsign = cleanCallsign(String(msg.callsign ?? ''));
   const problem = callsignProblem(callsign);
   if (problem) return { ok: false, text: `Callsign: ${problem}` };
-  return { ok: true, callsign, portrait: cleanPortrait(msg.portrait) };
+  return { ok: true, callsign, portrait: cleanPortrait(msg.portrait), looks: cleanLooks(msg.looks) };
+}
+
+/** A pilot's mech in each frame: a custom mech as text, or '' for the stock one. */
+export type Looks = [string, string, string];
+
+/** Mechs as sent: each one a custom mech that reads back (custom/mechBuild.ts), or '' (stock). */
+export function cleanLooks(looks: unknown): Looks {
+  const list = Array.isArray(looks) ? looks : [];
+  return [0, 1, 2].map((i) => (decodeBuild(list[i]) ? (list[i] as string) : '')) as Looks;
 }
 
 // ---- inputs on the wire ---------------------------------------------------------
@@ -177,6 +187,8 @@ export interface JoinOptions {
   callsign: string;
   /** The pilot's portrait (see PORTRAITS). */
   portrait?: number;
+  /** The mech the pilot flies in each frame (forward, midfielder, defender): a custom mech as text (custom/mechBuild.ts), or '' for the stock one. */
+  looks?: string[];
   deviceId: string;
   loadout: Loadout;
   /** Coming as a squad (the leader), or following one (a member). */
@@ -277,8 +289,8 @@ export interface LobbyView {
 export interface ClientMessages {
   /** Pick a frame on your team (any frame: Ready locks it in). */
   pick: { role: Role };
-  /** Your pilot changed: the callsign (checked as on joining) and the portrait. A race already begun keeps the old. */
-  pilot: { callsign: string; portrait: number };
+  /** Your pilot changed: the callsign (checked as on joining), the portrait and the mechs (see JoinOptions). A race already begun keeps the old. */
+  pilot: { callsign: string; portrait: number; looks?: string[] };
   /** Move to a team with a free place, picking a frame there. */
   team: { side: number; role?: Role };
   /** A team's faction (`side`: whose; your own if left out). */

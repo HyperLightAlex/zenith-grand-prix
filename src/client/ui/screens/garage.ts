@@ -9,6 +9,7 @@ import { emblemUrl, faceUrl } from '../factionArt';
 import { STAT_LABELS, frameStats } from '../frameStats';
 import { MATCH_OPTIONS, RIVALS, TRACK_BLURBS, type Menus } from '../menus';
 import { BACK, CHANGE, SELECT } from './common';
+import { customName, openCustom } from './custom';
 
 const KIT_TEXT: Record<number, [string, string]> = {
   0: ['Three quick blade strikes. Light, fast, hard to interrupt you out of.', 'An armoured lunge that closes a 30 m gap. Costs Drive.'],
@@ -60,7 +61,8 @@ export interface HangarData {
 function frameCard(m: Menus, g: Game, team: number, role: Role): { head: HTMLElement; info: HTMLElement; kit: HTMLElement; blurb: HTMLElement; bay: HTMLElement } {
   const c = CLASSES[role];
   const livery = LIVERIES[team] ?? LIVERIES[0];
-  const model = livery.models[c.role];
+  // Your custom mech of the frame, if you fly it; the faction's stock one otherwise.
+  const model = g.fliesCustom(role) ? customName(role, g.customMech(role)) : livery.models[c.role];
   const emblem = h('i');
   emblem.style.backgroundImage = `url(${emblemUrl(team)})`;
   const pilot = h('i');
@@ -146,7 +148,7 @@ export function registerGarage(m: Menus, g: Game): void {
         },
         { key: 'team', locked: factionLock },
       );
-      const frameLabel = (r: Role) => `${LIVERIES[team].models[r]} (${CLASSES[r].frame})`;
+      const frameLabel = (r: Role) => `${g.fliesCustom(r) ? customName(r, g.customMech(r)) : LIVERIES[team].models[r]} (${CLASSES[r].frame})`;
       m.choice(
         list,
         'Frame',
@@ -154,6 +156,18 @@ export function registerGarage(m: Menus, g: Game): void {
         (dir) => set(team, ((((role + dir) % 3) + 3) % 3) as Role),
         { key: 'frame', locked: d.crew?.frameLock?.() ?? null },
       );
+      // Your custom mech of this frame, or the stock one; and the editor.
+      const mine = g.customMech(role);
+      if (mine) {
+        m.choice(list, 'Mech', g.fliesCustom(role) ? customName(role, mine) : `Stock ${LIVERIES[team].models[role]}`, () => {
+          g.setFliesCustom(role, !g.fliesCustom(role));
+          m.refresh();
+        }, { key: 'mech' });
+      }
+      m.button(list, mine ? `Edit ${customName(role, mine)}` : `Customize a ${CLASSES[role].frame}`, () => openCustom(m, g, role, team), {
+        key: 'custom',
+        hint: mine ? undefined : `Start from this ${LIVERIES[team].models[role]}: swap its parts for other teams' and paint it`,
+      });
       m.button(list, `Pilot: ${g.pilotName}`, () => m.push('pilot'), { key: 'pilot' });
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });

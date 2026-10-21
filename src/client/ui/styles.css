@@ -689,6 +689,20 @@ html.crt-on .crt-layer {
 .menu .kit .cellkit .key { background: var(--cell); }
 .menu .kit i { opacity: 0.75; }
 .menu .kit .note { margin-top: 0.6em; font-size: 0.9em; opacity: 0.7; }
+/* The custom mech editor: what it is made of, and the paints, each over its shadow colour. */
+.menu .custom-sheet .part-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1.2em; row-gap: 0.12em; }
+.menu .custom-sheet .part-list div { display: flex; justify-content: space-between; gap: 0.6em; }
+.menu .custom-sheet .part-list span { opacity: 0.75; }
+.menu .custom-sheet h2 + .part-list { margin-bottom: 0.6em; }
+.menu .custom-sheet .paint-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35em 1em; }
+.menu .custom-sheet .paint-row div { display: flex; align-items: center; gap: 0.5em; }
+.menu .custom-sheet .paint-row .swatch { width: 1.6em; flex: none; }
+.menu .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.1em, 1fr)); gap: 0.35em; max-width: 24em; margin-bottom: 0.5em; }
+.menu .swatch { display: block; aspect-ratio: 1; border-radius: 0.25em; background: linear-gradient(135deg, var(--c) 0 58%, var(--s) 58% 100%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); opacity: 1; }
+.menu .swatches .swatch { cursor: pointer; }
+.menu .swatches .swatch.on { outline: 0.16em solid var(--signal); outline-offset: 0.1em; }
+.menu.anime .swatches .swatch.on { outline-color: var(--phos); box-shadow: 0 0 0.8em var(--phos-dim); }
+.menu .kit .swatch { opacity: 1; }
 /* The Pilot screen's gallery: every portrait, the one you wear lit. */
 .menu .pilot-gallery .faces { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.45em; max-width: 24em; }
 .menu .kit.pilot-gallery .face { display: block; width: auto; height: auto; aspect-ratio: 1; opacity: 0.7; cursor: pointer; }
