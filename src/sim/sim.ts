@@ -181,6 +181,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       role: seat.role,
       human: seat.human,
       name: seat.name,
+      portrait: seat.portrait ?? -1,
       skill: seat.skill,
       s,
       d,

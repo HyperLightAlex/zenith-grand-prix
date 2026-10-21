@@ -6,7 +6,7 @@
 // sockets (server/squadRoom.ts wraps it).
 
 import { ROLE, type Role } from '../sim/index';
-import { RECONNECT_SECONDS, SQUAD_SIZE, type Loadout, type SquadServerMessages, type SquadView } from './protocol';
+import { RECONNECT_SECONDS, SQUAD_SIZE, pilotChange, type Loadout, type SquadServerMessages, type SquadView } from './protocol';
 
 export interface SquadIO {
   send<K extends keyof SquadServerMessages>(pid: string, type: K, msg: SquadServerMessages[K]): void;
@@ -19,6 +19,7 @@ export interface SquadIO {
 interface Person {
   pid: string;
   callsign: string;
+  portrait: number;
   loadout: Loadout;
   connected: boolean;
   joinedAt: number;
@@ -43,12 +44,14 @@ export class SquadCore {
     private io: SquadIO,
   ) {}
 
-  join(pid: string, callsign: string, loadout: Loadout): { ok: true } | { ok: false; text: string } {
+  /** An empty callsign, or no portrait, keeps what a known member had (a reconnect). */
+  join(pid: string, callsign: string, loadout: Loadout, portrait?: number): { ok: true } | { ok: false; text: string } {
     const known = this.members.find((m) => m.pid === pid);
     if (known) {
       known.connected = true;
       known.droppedAt = -1;
       known.callsign = callsign || known.callsign;
+      if (portrait !== undefined) known.portrait = portrait;
       this.io.send(pid, 'welcome', { pid, code: this.code });
       this.dirty = true;
       return { ok: true };
@@ -56,7 +59,7 @@ export class SquadCore {
     if (this.members.length >= SQUAD_SIZE) return { ok: false, text: 'That squad is full' };
     const role = ROLES.includes(loadout?.role) ? loadout.role : ROLE.FW;
     const faction = Number.isInteger(loadout?.faction) && loadout.faction >= 0 && loadout.faction < 5 ? loadout.faction : 0;
-    this.members.push({ pid, callsign, loadout: { faction, role }, connected: true, joinedAt: ++this.arrivals, droppedAt: -1 });
+    this.members.push({ pid, callsign, portrait: portrait ?? -1, loadout: { faction, role }, connected: true, joinedAt: ++this.arrivals, droppedAt: -1 });
     if (!this.leader) this.leader = pid;
     else if (this.room) this.toFollow.add(pid);
     this.io.send(pid, 'welcome', { pid, code: this.code });
@@ -95,6 +98,14 @@ export class SquadCore {
     if (!me) return;
     const lead = this.leader === pid;
     switch (type) {
+      case 'pilot': {
+        const p = pilotChange(msg);
+        if (!p.ok) return void this.io.send(pid, 'notice', { text: p.text });
+        me.callsign = p.callsign;
+        me.portrait = p.portrait;
+        this.dirty = true;
+        return;
+      }
       case 'loadout': {
         const r = Number(msg.role) as Role;
         const f = Number(msg.faction);
@@ -148,7 +159,7 @@ export class SquadCore {
       code: this.code,
       leader: this.leader,
       faction: leader?.loadout.faction ?? 0,
-      members: [...this.members].sort((a, b) => a.joinedAt - b.joinedAt).map((m) => ({ pid: m.pid, callsign: m.callsign, role: m.loadout.role, connected: m.connected })),
+      members: [...this.members].sort((a, b) => a.joinedAt - b.joinedAt).map((m) => ({ pid: m.pid, callsign: m.callsign, portrait: m.portrait, role: m.loadout.role, connected: m.connected })),
     };
   }
 

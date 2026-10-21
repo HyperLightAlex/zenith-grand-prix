@@ -136,7 +136,7 @@ const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
 function mechSum(m: MechState): number {
   const ai = m.ai;
   return (
-    m.id + m.team + m.role + m.skill +
+    m.id + m.team + m.role + m.skill + m.portrait +
     m.s + m.d + m.vs + m.vd + m.speed + m.heading + m.facing + m.steer + m.h + m.vh + m.fallT + m.padT +
     m.mode + m.target + m.outOfRange + m.lastFoe +
     m.hp + m.guard + m.drive +

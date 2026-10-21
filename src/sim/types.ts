@@ -67,6 +67,8 @@ export interface MechState {
   /** True when a person holds this seat. AI flies it otherwise. */
   human: boolean;
   name: string;
+  /** The pilot's portrait: an index into the gallery, or -1 for the faction's own pilot for the seat. Shown only. */
+  portrait: number;
   /** AI skill 0..1. */
   skill: number;
 
@@ -376,6 +378,8 @@ export interface SeatConfig {
   role: Role;
   human: boolean;
   name: string;
+  /** The pilot's portrait (see MechState.portrait); -1 if left out. */
+  portrait?: number;
   skill: number;
 }
 

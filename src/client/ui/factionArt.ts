@@ -94,7 +94,15 @@ export function emblemUrlFor(id: string): string {
   return emblemUrl(Math.max(0, LIVERIES.findIndex((l) => l.id === id)));
 }
 
-/** A pilot's portrait, as an image URL: painted, or the faction's badge on a dark card. */
+/**
+ * A seat's portrait: the person's own (`portrait`, an index into the
+ * gallery) or, at -1, the faction's pilot for the seat.
+ */
+export function faceUrl(f: number, role: number, portrait = -1): string {
+  return (portrait >= 0 && PILOTS[portrait]) || pilotUrl(f, role);
+}
+
+/** A faction pilot's portrait, as an image URL: painted, or the faction's badge on a dark card. */
 export function pilotUrl(f: number, role: number): string {
   if (PILOTS[f * 3 + role]) return PILOTS[f * 3 + role];
   const key = `pilot-${f}`;

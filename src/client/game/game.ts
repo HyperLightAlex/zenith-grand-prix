@@ -81,6 +81,7 @@ import { Hud, abilityShown } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, type GarageChoice, type ScreenId } from '../ui/menus';
 import { confirmDialog, messageDialog, registerCommon, type DialogData, type EntryData } from '../ui/screens/common';
 import { registerGarage, type HangarData } from '../ui/screens/garage';
+import { registerPilot } from '../ui/screens/pilot';
 import { registerGrandPrix } from '../ui/screens/grandPrix';
 import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { gpBlocked, registerOnlineGp } from '../ui/screens/onlineGp';
@@ -90,7 +91,7 @@ import { applyFrame, frame, onFrame, RESOLUTIONS, saveVideo, video, type VideoSe
 import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
-import { callsign as savedCallsign, setCallsign } from '../net/identity';
+import { callsign as savedCallsign, pilotName, portrait as pilotPortrait, setCallsign, setPortrait as savePortrait } from '../net/identity';
 import { Online, failure } from '../net/online';
 import { inKnockout } from './moments';
 import { NetSession } from './netSession';
@@ -115,7 +116,7 @@ function garageShift(): [number, number] {
   return [GARAGE_SHIFT, 0];
 }
 /** Screens shown over the hangar, with your mech in its bay. */
-const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room']);
+const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room']);
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -289,6 +290,7 @@ export class Game {
     });
     registerCommon(this.menus, this);
     registerGarage(this.menus, this);
+    registerPilot(this.menus, this);
     registerGrandPrix(this.menus, this);
     registerOnline(this.menus, this);
     registerOnlineGp(this.menus, this);
@@ -384,8 +386,33 @@ export class Game {
   }
   private raceFactions: [number, number] = [0, 1];
 
+  /** The callsign you chose ('' until you have: online asks for one). */
   get callsign(): string {
     return savedCallsign();
+  }
+
+  /** The name your seat wears: your callsign, or the one made up for you until you choose. */
+  get pilotName(): string {
+    return pilotName();
+  }
+
+  /** Your portrait (an index into the gallery). */
+  get portrait(): number {
+    return pilotPortrait();
+  }
+
+  /** Wear another portrait (an index into the gallery). */
+  setPortrait(i: number): void {
+    savePortrait(i);
+    this.tellPilot();
+  }
+
+  /** A room or squad you are in hears of a change to your pilot (it shows from the next race). */
+  private tellPilot(): void {
+    if (!this.callsign) return;
+    const msg = { callsign: this.callsign, portrait: this.portrait };
+    this.online.sendRoom('pilot', msg);
+    this.online.sendSquad('pilot', msg);
   }
 
   setLoadout(l: { team: number; role: Role }): void {
@@ -407,7 +434,9 @@ export class Game {
 
   /**
    * The grid offline. You are always race team 0, flying for your faction;
-   * race team 1 is the rival faction. Each seat is named for its faction's pilot.
+   * race team 1 is the rival faction. Your seat wears your pilot (callsign
+   * and portrait); each other seat its faction's pilot, as yours does in a
+   * demo (the captures stay the same from run to run).
    */
   private seats(setup: RoundSetup | null): { seats: SeatConfig[]; localId: number } {
     const seats: SeatConfig[] = [];
@@ -416,8 +445,9 @@ export class Game {
       for (let team = 0; team < 2; team++) {
         const human = setup !== null && team === 0 && setup.role === role;
         if (human) localId = seats.length;
-        const name = (LIVERIES[this.raceFactions[team]] ?? LIVERIES[team]).pilots[role];
-        seats.push({ team, role, human, name, skill: setup === null ? 0.6 : team === 1 ? setup.rivalSkill : setup.teamSkill });
+        const yours = human && !this.opts.demo;
+        const name = yours ? pilotName() : (LIVERIES[this.raceFactions[team]] ?? LIVERIES[team]).pilots[role];
+        seats.push({ team, role, human, name, portrait: yours ? pilotPortrait() : -1, skill: setup === null ? 0.6 : team === 1 ? setup.rivalSkill : setup.teamSkill });
       }
     }
     return { seats, localId };
@@ -1034,10 +1064,12 @@ export class Game {
       title: 'Callsign',
       hint,
       kind: 'callsign',
-      value: this.callsign,
+      // Until you choose, the one made up for you: Done keeps it.
+      value: this.callsign || this.pilotName,
       submit: (v) => {
         const problem = setCallsign(v);
         if (problem) return problem;
+        this.tellPilot();
         if (then) then();
         else this.menus.pop();
         return null;
@@ -1159,7 +1191,7 @@ export class Game {
         at: (r) => {
           const sv = o.squadView;
           const people = sv ? sv.members.filter((x) => (x.pid === o.squadPid ? this.loadout.role : x.role) === r).map((x) => ({ name: x.callsign, you: x.pid === o.squadPid, locked: false })) : [];
-          if (!sv && r === this.loadout.role) people.push({ name: this.callsign || 'You', you: true, locked: false });
+          if (!sv && r === this.loadout.role) people.push({ name: this.pilotName, you: true, locked: false });
           return { people };
         },
       },

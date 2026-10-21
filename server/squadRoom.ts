@@ -3,7 +3,7 @@
 import crypto from 'node:crypto';
 import { Room, ServerError, type Client } from '@colyseus/core';
 import { SquadCore } from '../src/net/squadCore';
-import { RECONNECT_SECONDS, cleanCallsign, type JoinOptions } from '../src/net/protocol';
+import { RECONNECT_SECONDS, cleanCallsign, cleanPortrait, type JoinOptions } from '../src/net/protocol';
 import { claimCode, releaseCode } from './codes';
 import { ERR, checkOptions } from './raceRoom';
 import { log } from './log';
@@ -58,7 +58,7 @@ export class SquadRoom extends Room {
       old.leave(4000, 'You opened your squad somewhere else.');
     }
     this.holder.set(pid, client);
-    const res = this.core.join(pid, cleanCallsign(options.callsign), options.loadout);
+    const res = this.core.join(pid, cleanCallsign(options.callsign), options.loadout, cleanPortrait(options.portrait));
     if (!res.ok) {
       this.holder.delete(pid);
       throw new ServerError(ERR.REFUSED, res.text);

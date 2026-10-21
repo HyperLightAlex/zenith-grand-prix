@@ -42,7 +42,7 @@ import { TELL_LABEL, tellOf, type TellKind } from '../game/tells';
 import { CARVE_COLORS, LIVERIES, factionName } from '../render/palette';
 import type { Plate } from '../render/raceView';
 import { h, setClass, setText } from './dom';
-import { emblemUrl, pilotUrl } from './factionArt';
+import { emblemUrl, faceUrl } from './factionArt';
 import { COUNT, ICONS, type IconName } from './hudArt';
 import { Dash } from './dash';
 import type { Device } from '../input/input';
@@ -127,9 +127,9 @@ let teamFactions: [number, number] = [0, 1];
 /** A race team's livery. */
 const liveryOf = (team: number) => LIVERIES[teamFactions[team]] ?? LIVERIES[0];
 
-/** A pilot's portrait, by faction and role. */
+/** A seat's portrait: its person's own, or its faction's pilot. */
 function pilotOf(m: MechState): string {
-  return pilotUrl(teamFactions[m.team] ?? 0, m.role);
+  return faceUrl(teamFactions[m.team] ?? 0, m.role, m.portrait);
 }
 
 function pick(list: string[], seed: number): string {

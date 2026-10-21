@@ -67,8 +67,16 @@ two players.
 - **Online hub.** Your squad's three positions, with Create room, Join
   room, Grand Prix, Invite to squad, Join a squad and your callsign. Entering Online
   makes you the leader of a squad of one.
-- **Callsign.** Asked for once, 3 to 16 characters, passed through a short
-  word filter, and changeable on the hub.
+- **Your pilot.** A callsign and a portrait, worn by your seat everywhere it
+  shows (the room's seats, the squad's bays, the radio, the target panel,
+  the results), offline too. The game makes up a callsign and picks a
+  portrait on the first run; Online asks you to choose a callsign (3 to 16
+  characters, passed through a short word filter) the first time, offered
+  the made-up one. Both change on the hangar's Pilot screen (the callsign
+  on the hub as well); a room or squad you are in hears of it at once
+  (the `pilot` message, checked as a join is) and a race already begun
+  keeps the old. The portrait is an index into the gallery (`PORTRAITS` in
+  protocol.ts), or -1 for a seat's faction pilot (the computer pilots').
 - **Room.** Two teams of three places, with the host's settings (circuit,
   format, computer pilots' skill), Ready, Invite, and Leave. Each team shows
   its three frames: who has locked each in, who has picked it, or the
@@ -226,8 +234,9 @@ back to that room.
 
 **Trust model.** The server decides everything that happens in the race; a
 modified client can only send inputs, and those are clamped. Names are only
-ever shown as text. There are no accounts, so a callsign is not unique and
-proves nothing.
+ever shown as text, and a portrait is only a number into the game's own
+gallery. There are no accounts, so a callsign is not unique and proves
+nothing.
 
 ## Measured
 

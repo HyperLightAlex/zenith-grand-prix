@@ -82,6 +82,7 @@ import {
   STANDINGS_SECONDS,
   TICKS_PER_PACKET,
   packInput,
+  pilotChange,
   unpackInput,
   type ClientMessages,
   type GpRequest,
@@ -207,6 +208,7 @@ export class RoomCore {
     const known = this.lobby.members.find((m) => m.deviceId === info.deviceId);
     if (known) {
       known.callsign = info.callsign || known.callsign;
+      if (info.portrait !== undefined) known.portrait = info.portrait;
       this.reconnect(known.pid);
       return { ok: true, member: known, resumed: true };
     }
@@ -395,6 +397,14 @@ export class RoomCore {
         if (r === ROLE.FW || r === ROLE.MF || r === ROLE.DF) m.loadout.role = r;
         return;
       }
+      case 'pilot': {
+        const p = pilotChange(body);
+        if (!p.ok) return void this.io.send(pid, 'notice', { text: p.text });
+        m.callsign = p.callsign;
+        m.portrait = p.portrait;
+        this.dirty = true;
+        return;
+      }
       default:
         return;
     }
@@ -520,7 +530,7 @@ export class RoomCore {
     for (const role of ROLES) {
       for (let team = 0; team < 2; team++) {
         const who = this.lobby.members.find((m) => m.side === team && m.role === role);
-        seats.push({ team, role, human: !!who, name: who ? who.callsign : PILOT_NAMES[this.factions[team]][role], skill: who ? 0.6 : skill });
+        seats.push({ team, role, human: !!who, name: who ? who.callsign : PILOT_NAMES[this.factions[team]][role], portrait: who ? who.portrait : -1, skill: who ? 0.6 : skill });
         this.seatPid.push(who ? who.pid : null);
       }
     }

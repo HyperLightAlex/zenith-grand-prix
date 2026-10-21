@@ -24,6 +24,7 @@ export type ScreenId =
   | 'title'
   | 'modes'
   | 'hangar'
+  | 'pilot'
   | 'setup'
   | 'gp'
   | 'briefing'
@@ -264,7 +265,8 @@ export class Menus {
     R.replaceChildren();
     R.onclick = null;
     // The styles lay each screen out by name.
-    R.dataset.screen = top.id === 'hangar' ? 'garage' : top.id;
+    // The Pilot screen is one of the hangar computer's, styled as the hangar is.
+    R.dataset.screen = top.id === 'hangar' || top.id === 'pilot' ? 'garage' : top.id;
     setClass(R, 'anime', this.host.lookOn());
     this.items = [];
     def?.render(this, top.data as never);

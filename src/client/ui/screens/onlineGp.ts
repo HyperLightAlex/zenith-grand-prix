@@ -100,7 +100,7 @@ export function renderGpRoom(m: Menus, g: Game, v: LobbyView): void {
       const row = h(
         'div.seat' + (mine ? '.mine' : '') + (here.length ? '' : '.cpu') + (clash ? '.clash' : ''),
         h('span.role', SHORT[role]),
-        face(ev.faction, role),
+        face(ev.faction, role, (locked ?? here[0])?.portrait ?? -1),
         h('span.who', h('b', here.length ? here.map((p) => p.callsign).join(', ') : LIVERIES[ev.faction].pilots[role]), badges, h('small', `${LIVERIES[ev.faction].models[role]}${here.length ? '' : ', computer teammate'}`)),
         h('span.state' + (locked ? '.ready' : ''), status),
       );

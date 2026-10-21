@@ -6,7 +6,7 @@ import { MATCH_FORMATS, SKILL_NAMES, type LobbyPlayer, type LobbyView } from '..
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h } from '../dom';
-import { emblemUrl, pilotUrl } from '../factionArt';
+import { emblemUrl, faceUrl } from '../factionArt';
 import type { Menus } from '../menus';
 import { BACK, SELECT, confirmDialog, type DialogData } from './common';
 import { gpBlocked, renderGpRoom } from './onlineGp';
@@ -14,9 +14,10 @@ import { gpBlocked, renderGpRoom } from './onlineGp';
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 const SHORT = ['FW', 'MF', 'DF'];
 
-export function face(f: number, role: Role): HTMLElement {
+/** A seat's face: a person's own portrait, or (at -1) the faction's pilot for the seat. */
+export function face(f: number, role: Role, portrait = -1): HTMLElement {
   const el = h('i.face');
-  el.style.backgroundImage = `url(${pilotUrl(f, role)})`;
+  el.style.backgroundImage = `url(${faceUrl(f, role, portrait)})`;
   return el;
 }
 
@@ -87,7 +88,7 @@ export function registerOnline(m: Menus, g: Game): void {
       // Each of the squad, with the frame they picked. Two of a frame is
       // shown, not refused: Ready sorts it out in a room.
       const bays = h('div.bays');
-      const people = sq ? members : [{ pid: '', callsign: g.callsign || 'You', role: g.loadout.role, connected: true }];
+      const people = sq ? members : [{ pid: '', callsign: g.pilotName, portrait: g.portrait, role: g.loadout.role, connected: true }];
       for (let i = 0; i < 3; i++) {
         const mem = people[i];
         const tag = h('span.tag', `Bay ${i + 1}`);
@@ -103,7 +104,7 @@ export function registerOnline(m: Menus, g: Game): void {
           h(
             'div.bay-card' + (me ? '.me' : '') + (same.length ? '.clash' : ''),
             tag,
-            face(faction, role),
+            face(faction, role, mem.portrait),
             h('b', mem.callsign),
             h('small', `${LIVERIES[faction].models[role]}, ${ROLE_NAMES[role].toLowerCase()}`),
             same.length ? h('em.clash', `Same frame as ${same.join(' and ')}`) : tags ? h('em', tags) : '',
@@ -200,7 +201,7 @@ export function registerOnline(m: Menus, g: Game): void {
           const row = h(
             'div.seat' + (mine ? '.mine' : '') + (here.length ? '' : '.cpu') + (clash ? '.clash' : ''),
             h('span.role', SHORT[role]),
-            face(s.faction, role),
+            face(s.faction, role, (locked ?? here[0])?.portrait ?? -1),
             h('span.who', h('b', names), badges, h('small', `${LIVERIES[s.faction].models[role]}${here.length ? (ping ? `, ${ping}` : '') : `, ${SKILL_NAMES[v.settings.skill]} computer pilot`}`)),
             h('span.state' + (locked ? '.ready' : ''), status),
           );

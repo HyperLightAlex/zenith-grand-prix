@@ -5,7 +5,7 @@ import { ABILITIES, ATTACKS, CLASSES, ROLE_NAMES, TRACKS, type Role } from '../.
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h } from '../dom';
-import { emblemUrl, pilotUrl } from '../factionArt';
+import { emblemUrl, faceUrl } from '../factionArt';
 import { STAT_LABELS, frameStats } from '../frameStats';
 import { MATCH_OPTIONS, RIVALS, TRACK_BLURBS, type Menus } from '../menus';
 import { BACK, CHANGE, SELECT } from './common';
@@ -56,20 +56,20 @@ export interface HangarData {
   onChange?: (team: number, role: Role) => void;
 }
 
-/** The hangar computer's card and the frame's panels, for whichever faction and frame. */
-function frameCard(m: Menus, team: number, role: Role): { head: HTMLElement; info: HTMLElement; kit: HTMLElement; blurb: HTMLElement; bay: HTMLElement } {
+/** The hangar computer's card and the frame's panels, for whichever faction and frame, with you as its pilot. */
+function frameCard(m: Menus, g: Game, team: number, role: Role): { head: HTMLElement; info: HTMLElement; kit: HTMLElement; blurb: HTMLElement; bay: HTMLElement } {
   const c = CLASSES[role];
   const livery = LIVERIES[team] ?? LIVERIES[0];
   const model = livery.models[c.role];
   const emblem = h('i');
   emblem.style.backgroundImage = `url(${emblemUrl(team)})`;
   const pilot = h('i');
-  pilot.style.backgroundImage = `url(${pilotUrl(team, c.role)})`;
+  pilot.style.backgroundImage = `url(${faceUrl(team, c.role, g.portrait)})`;
   const name = h('b', model);
   const head = h(
     'div.hh',
     h('div.hh-bar', h('span', `${livery.name.replace('Team ', '')} hangar`), h('span', 'Frame setup')),
-    h('div.hh-name', emblem, name, h('span', `${c.frame} class, ${ROLE_NAMES[c.role].toLowerCase()}`), h('div.hh-pilot', pilot, h('span', livery.pilots[c.role]))),
+    h('div.hh-name', emblem, name, h('span', `${c.frame} class, ${ROLE_NAMES[c.role].toLowerCase()}`), h('div.hh-pilot', pilot, h('span', g.pilotName))),
   );
   const fit = () => {
     name.style.fontSize = '';
@@ -129,7 +129,7 @@ export function registerGarage(m: Menus, g: Game): void {
         g.preview({ team: t, role: r });
         m.refresh();
       };
-      const card = frameCard(m, team, role);
+      const card = frameCard(m, g, team, role);
       const col = h('div.col');
       const list = h('div.list');
       const n = LIVERIES.length;
@@ -154,6 +154,7 @@ export function registerGarage(m: Menus, g: Game): void {
         (dir) => set(team, ((((role + dir) % 3) + 3) % 3) as Role),
         { key: 'frame', locked: d.crew?.frameLock?.() ?? null },
       );
+      m.button(list, `Pilot: ${g.pilotName}`, () => m.push('pilot'), { key: 'pilot' });
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
       const strip = h('div.context', now(d.context));

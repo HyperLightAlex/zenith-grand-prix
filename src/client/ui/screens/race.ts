@@ -5,7 +5,7 @@ import { AWARD_NAMES, ROLE_NAMES, roundsToWin } from '../../../sim/index';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h } from '../dom';
-import { emblemUrl, pilotUrl } from '../factionArt';
+import { emblemUrl, faceUrl } from '../factionArt';
 import { LOGO } from '../keyArt';
 import { art, type Menus } from '../menus';
 import { DEV_TOOLS } from '../../devTools';
@@ -146,7 +146,7 @@ export function registerRace(m: Menus, g: Game): void {
           else time = fmt(x.finishTime - 4);
         }
         const faceEl = h('i');
-        faceEl.style.backgroundImage = `url(${pilotUrl(factions[x.team], x.role)})`;
+        faceEl.style.backgroundImage = `url(${faceUrl(factions[x.team], x.role, x.portrait)})`;
         tr.append(
           h<'td'>('td.flag'),
           h<'td'>('td', String(x.place)),

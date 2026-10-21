@@ -443,7 +443,7 @@ src/client/     Everything you see and hear.
   game/         Game shell and modes, the Session layer (LocalSession,
                 NetSession), the tuning store
   gp/           Grand Prix saves and the background-race worker
-  net/          The connection to the server, identity (callsign, device key)
+  net/          The connection to the server, identity (your pilot: callsign and portrait; the device key)
   render/       Three.js: circuit, gates, world, mechs, effects, camera
   input/        Gamepad and keyboard
   ui/           HUD, the tuning panel and the menus (DOM + CSS); each menu

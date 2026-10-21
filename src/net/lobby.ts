@@ -83,6 +83,8 @@ export interface JoinInfo {
   pid: string;
   deviceId: string;
   callsign: string;
+  /** Their portrait (protocol PORTRAITS), or -1. */
+  portrait?: number;
   loadout: Loadout;
   squad?: SquadTicket;
 }
@@ -238,6 +240,7 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
     pid: info.pid,
     deviceId: info.deviceId,
     callsign: info.callsign,
+    portrait: info.portrait ?? -1,
     side,
     role,
     ready: false,
@@ -441,7 +444,7 @@ export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: 
   ) as [SideView, SideView];
   const players: LobbyPlayer[] = [...lobby.members]
     .sort((a, b) => a.joinedAt - b.joinedAt)
-    .map(({ pid, callsign, side, role, ready, connected, ping, squad, nextRound, autopilot }) => ({ pid, callsign, side, role, ready, connected, ping, squad, nextRound, autopilot }));
+    .map(({ pid, callsign, portrait, side, role, ready, connected, ping, squad, nextRound, autopilot }) => ({ pid, callsign, portrait, side, role, ready, connected, ping, squad, nextRound, autopilot }));
   return {
     code: lobby.code,
     version: lobby.version,

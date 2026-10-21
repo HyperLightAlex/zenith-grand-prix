@@ -12,8 +12,8 @@
 import type { MatchConfig, MatchState, MechInput, RaceState, Role, RoundResult, SeatConfig } from '../sim/index';
 import type { GpEvent, GpKind } from '../gp/grandPrix';
 
-/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix.) */
-export const NET_PROTOCOL = 2;
+/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits.) */
+export const NET_PROTOCOL = 3;
 
 /** The server sends the inputs it used every this many ticks (30 packets a second). */
 export const TICKS_PER_PACKET = 2;
@@ -99,6 +99,28 @@ export function cleanCallsign(name: string): string {
   return name.trim().replace(/\s+/g, ' ').slice(0, CALLSIGN_MAX);
 }
 
+// ---- portraits -------------------------------------------------------------------
+
+/**
+ * How many portraits a pilot may wear: the gallery (hudArt.ts PILOTS, the
+ * factions' pilots for now). A seat's portrait is an index into it, or -1
+ * for the seat's own faction pilot (a computer pilot's, or nobody chosen).
+ */
+export const PORTRAITS = 15;
+
+/** A portrait index as sent (anything else is -1: the faction's own pilot). */
+export function cleanPortrait(p: unknown): number {
+  return typeof p === 'number' && Number.isInteger(p) && p >= 0 && p < PORTRAITS ? p : -1;
+}
+
+/** A `pilot` message checked: the callsign as on joining, the portrait as above. */
+export function pilotChange(msg: Record<string, unknown>): { ok: true; callsign: string; portrait: number } | { ok: false; text: string } {
+  const callsign = cleanCallsign(String(msg.callsign ?? ''));
+  const problem = callsignProblem(callsign);
+  if (problem) return { ok: false, text: `Callsign: ${problem}` };
+  return { ok: true, callsign, portrait: cleanPortrait(msg.portrait) };
+}
+
 // ---- inputs on the wire ---------------------------------------------------------
 
 /**
@@ -153,6 +175,8 @@ export interface JoinOptions {
   version: string;
   protocol: number;
   callsign: string;
+  /** The pilot's portrait (see PORTRAITS). */
+  portrait?: number;
   deviceId: string;
   loadout: Loadout;
   /** Coming as a squad (the leader), or following one (a member). */
@@ -200,6 +224,8 @@ export const TEAMMATE_SKILL = 0.6;
 export interface LobbyPlayer {
   pid: string;
   callsign: string;
+  /** Their portrait (see PORTRAITS), or -1. */
+  portrait: number;
   /** 0 or 1, the team; -1 while waiting for a place. */
   side: number;
   /** The frame they picked; locked in while they are ready. */
@@ -251,6 +277,8 @@ export interface LobbyView {
 export interface ClientMessages {
   /** Pick a frame on your team (any frame: Ready locks it in). */
   pick: { role: Role };
+  /** Your pilot changed: the callsign (checked as on joining) and the portrait. A race already begun keeps the old. */
+  pilot: { callsign: string; portrait: number };
   /** Move to a team with a free place, picking a frame there. */
   team: { side: number; role?: Role };
   /** A team's faction (`side`: whose; your own if left out). */
@@ -350,6 +378,8 @@ export function versionText(room: string, mine: string): string {
 export interface SquadMember {
   pid: string;
   callsign: string;
+  /** Their portrait (see PORTRAITS), or -1. */
+  portrait: number;
   role: Role;
   connected: boolean;
 }
