@@ -30,6 +30,8 @@ import type { AttackDef } from './config';
 import type { MechInput, MechState, RaceState } from './types';
 
 const INTENT = { RACE: 0, ENGAGE: 1, ESCORT: 2 } as const;
+/** In a Sprint, how far down the road a pilot will go after the leader (metres): out of reach of a lock, it runs them down. */
+const HUNT_RANGE = 450;
 
 /** Set a button only on a tick where it was up before, so the sim sees a press. */
 function press(out: MechInput, m: MechState, bit: number): void {
@@ -92,31 +94,40 @@ function think(race: RaceState, track: Track, m: MechState): void {
     if (e.team === m.team || !inPlay(e)) continue;
     const ds = deltaS(track, e.s, m.s);
     const dist = Math.hypot(ds, e.d - m.d);
-    if (dist > maxRange) continue;
+    // In a Sprint whoever leads is the one to beat: they are run down from
+    // much further off than anyone else is gone after.
+    const hunt = race.sprint && e.place === 1 && m.place > 1;
+    if (dist > (hunt && !lap3 ? HUNT_RANGE : maxRange)) continue;
     if (lap3) {
       // The speed lap is for racing. Support pilots may pounce on a forward
-      // as it comes through; anyone may answer an attacker on top of them.
-      const pounce = m.role !== ROLE.FW && e.role === ROLE.FW && ds < 8 && dist < 45 && tactic !== TACTIC.RUN;
+      // as it comes through (in a Sprint, anyone on the leader); anyone may
+      // answer an attacker on top of them.
+      const pounce = ((m.role !== ROLE.FW && e.role === ROLE.FW) || hunt) && ds < 8 && dist < 45 && tactic !== TACTIC.RUN;
       const answer = e.target === m.id && dist < 14 && e.mode === MODE.BATTLE;
       if (!pounce && !answer) continue;
     } else if (resting && !(e.target === m.id && dist < 16)) {
       continue;
     }
-    let sc = 46 - dist * 0.3;
+    let sc = 46 - Math.min(dist, 150) * 0.3 - Math.max(0, dist - 150) * 0.05;
     const onMe = e.target === m.id && dist < 30;
     const onFw = fw !== null && fw !== m && (e.target === fw.id || distance(track, e, fw) < 28);
     const onAlly = e.target >= 0 && race.mechs[e.target].team === m.team && e.target !== m.id;
     // Role doctrine: forwards race, midfielders back up whoever is in a
     // fight, defenders peel attackers off their own forward. In a Sprint
-    // every pilot is for themselves: fight whoever is near on the road, the
-    // racer just ahead most of all, and not one others are already on (so
-    // the field does not pile onto one pilot, a person least of all).
+    // every pilot is out to win: the leader is the one to catch and bring
+    // down (whoever it is as the lead changes hands), the racer just ahead
+    // the one in the way; the rest of the field is left to itself unless it
+    // starts something. Several may go after the leader, but the field does
+    // not pile onto anyone else.
     if (race.sprint) {
-      sc += e.place === m.place - 1 ? 12 : e.place < m.place ? 4 : -6;
+      if (hunt) sc += 50;
+      else if (e.place === m.place - 1) sc += 8;
+      else sc += e.place < m.place ? -4 : -14;
       if (onMe) sc += 32;
       let others = 0;
       for (const o of race.mechs) if (o !== m && o !== e && o.target === e.id && inPlay(o)) others++;
-      sc -= others * 24;
+      // A second on the leader is welcome; a third has to be given a reason (they are on it).
+      sc -= hunt ? (others > 0 ? 10 + (others - 1) * 40 : 0) : others * 24;
     } else if (m.role === ROLE.FW) {
       // A forward's job is the finish line: it fights when it is picked on,
       // or when the team calls for it.
@@ -237,7 +248,11 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // Someone on the other route of a fork cannot be chased down.
   const chase = chase0 && !splitApart(track, m.s, m.d, chase0.s, chase0.d) ? chase0 : null;
   const hot = tick < ai.hotUntil;
-  if (chase && inPlay(chase)) {
+  // Running someone down from far off (a Sprint's leader): race the line,
+  // gates and strips as usual, and boost to close the gap.
+  const far = !!chase && inPlay(chase) && !hot && Math.abs(deltaS(track, chase.s, m.s)) >= 160;
+  if (far) wantBoost = wantBoost || m.drive > 30;
+  if (chase && inPlay(chase) && !far) {
     const ds = deltaS(track, chase.s, m.s);
     if (hot) {
       // Run up on the infield side, so the blow throws them at their barrier.

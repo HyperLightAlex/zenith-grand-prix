@@ -702,10 +702,13 @@ what changes is who is on whose side.
   Sunhawk, Shrike in a Razor, and so on).
 - **The grid**: two by two, drawn by lot for the first race, then the
   standings reversed, so whoever leads starts at the back (`sprintGrid`).
-- **Computer pilots** fight whoever is near on the road, the racer just
-  ahead most of all and anyone already on them; they leave alone a pilot
-  others are already on, so the field does not pile onto one (a person least
-  of all).
+- **Computer pilots** are out to win: whoever leads is the one to catch.
+  They run the leader down from up to 450 m back (boosting to close the
+  gap, still taking gates and strips on the way), and go after them again as
+  the lead changes hands; on the speed lap they pounce on the leader as it
+  comes past. The racer just ahead is the one in the way; the rest of the
+  field they leave alone unless it starts something. Two may go after the
+  leader together, a third only rarely, and nobody else draws a crowd.
 
 A Sprint's formats (`src/sim/match.ts`, each pilot a side):
 

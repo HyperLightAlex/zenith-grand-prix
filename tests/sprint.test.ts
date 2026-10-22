@@ -225,8 +225,10 @@ describe("a Sprint's grid", () => {
 });
 
 describe('Sprint computer pilots', () => {
-  it('race to the flag, fight, and do not gang up on one pilot', () => {
+  it('race to the flag, go after the leader, and do not gang up on one pilot', () => {
     let pile = 0;
+    let pileLeader = 0;
+    let onLeader = 0;
     let battle = 0;
     let hits = 0;
     const winners = new Set<number>();
@@ -238,9 +240,11 @@ describe('Sprint computer pilots', () => {
         if (bad) throw new Error(bad);
         if (r.lapPhase !== 2) return;
         battle++;
+        const leader = r.mechs.find((m) => m.place === 1)!;
         const on = new Map<number, number>();
         for (const m of r.mechs) if (m.target >= 0) on.set(m.target, (on.get(m.target) ?? 0) + 1);
-        for (const n of on.values()) if (n >= 3) pile++;
+        for (const [id, n] of on) if (n >= 3) id === leader.id ? pileLeader++ : pile++;
+        if (r.mechs.some((m) => m !== leader && (m.target === leader.id || m.ai.intentTarget === leader.id))) onLeader++;
       });
       expect(ok).toBe(true);
       expect(race.phase).toBe(PHASE.FINISHED);
@@ -248,6 +252,10 @@ describe('Sprint computer pilots', () => {
       expect(race.mechs.every((m) => m.support === 0)).toBe(true);
     }
     expect(hits).toBeGreaterThan(200);
+    console.log(`3+ on the leader ${(100 * pileLeader / battle).toFixed(1)}%, on anyone else ${(100 * pile / battle).toFixed(1)}%, leader hunted ${(100 * onLeader / battle).toFixed(0)}%`);
+    // Somebody is after whoever leads nearly all the battle lap; a third on them is rare, and on anyone else rarer.
+    expect(onLeader / battle).toBeGreaterThan(0.8);
+    expect(pileLeader / battle).toBeLessThan(0.12);
     expect(pile / battle).toBeLessThan(0.03);
     expect(winners.size).toBeGreaterThan(1);
   }, 240000);
