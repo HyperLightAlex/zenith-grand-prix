@@ -218,6 +218,14 @@ export class Renderer {
     this.composer.addPass(this.inkPass);
     this.bloomThreshold = hdr ? 1.0 : 0.9;
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.42, 0.55, this.bloomThreshold);
+    // A stray NaN or infinity in the frame (a shader dividing by zero, say)
+    // would be blurred by the bloom over most of the picture and turn it
+    // black: the bloom takes it as black instead, so at worst it is a dot.
+    const highPass = this.bloom.materialHighPassFilter;
+    const texel = 'vec4 texel = texture2D( tDiffuse, vUv );';
+    if (highPass.fragmentShader.includes(texel)) {
+      highPass.fragmentShader = highPass.fragmentShader.replace(texel, `${texel}\n\t\t\tif ( any( isnan( texel ) ) || any( isinf( texel ) ) ) texel = vec4( 0.0 );`);
+    } else console.warn('bloom: could not guard the high pass against NaN');
     this.composer.addPass(this.bloom);
     // The anime look cuts the glow into flat rings, the way it was painted on the cel.
     const comp = this.bloom.compositeMaterial;

@@ -1408,8 +1408,14 @@ varying float vAlong;
 varying vec3 vN;
 varying vec3 vV;
 void main() {
-  float face = abs(dot(normalize(vN), normalize(vV)));
-  float a = pow(vAlong, 1.8) * face * face * uStrength;
+  // Clamped: with multisampling a pixel at the beam's edge is shaded at its
+  // centre, which can lie just outside the cone, where vAlong is a little
+  // below zero; pow() of that is NaN, and one NaN pixel is enough for the
+  // bloom to black out most of the frame.
+  float along = clamp(vAlong, 0.0, 1.0);
+  float nl = length(vN);
+  float face = nl > 1e-5 ? abs(dot(vN / nl, normalize(vV))) : 0.0;
+  float a = pow(along, 1.8) * face * face * uStrength;
   gl_FragColor = vec4(uColor * a, 1.0);
 }`;
 
