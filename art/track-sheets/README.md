@@ -1,7 +1,7 @@
 # Track sheets
 
 The painted track kit for the anime look: everything bolted to the circuit
-that the game draws as plain colour today. It is one kit, shared by all three
+that the game draws as plain colour today. It is one kit, shared by all the
 circuits (the light and fog of each circuit tint it). It is made by an image
 model from the prompt below and checked one sheet at a time, like the
 background sheets in `art/bg-sheets`.
@@ -11,6 +11,7 @@ background sheets in `art/bg-sheets`.
 | T1 Surfaces | Six tiling squares, 512 px, in a 3x2 grid, evenly lit | Under the road's markings, on the barriers, the slab and pylons, the gantries and the grandstand seating |
 | T2 Sponsor boards | Six trackside boards on green, one per cell of a 3x2 grid | In place of the plain lettered boards along the track |
 | T3 Circuit boards and banner | Three boards of the circuits' names on green, and the start banner | The circuit's own board along its track, and the banner over the line |
+| T4 Neon Crucible | Its board on green, in T3's design, and the neon sign over the way into the pit | Its board along its track (it keeps the plain one until then), and the sign hung from the gantry |
 
 What stays as the game draws it: the lane lines, edge lines, kerbs, chevrons,
 the start line and grid boxes, the charge strips, speed pads, cell gates,
@@ -25,6 +26,7 @@ stay crisp and bright, so the paintings go underneath them, never over them.
 | T1 Surfaces | track-t1-surfaces.png | in the game. The grid sits a pixel or two off the 512 lines (the joins are at 511 and 1022 across, 510 down), so each square is cut inside its own edges. Road, steel, gantry steel and concrete repeat once cut to their best length. The armour has a panel seam at both side edges and two panels stacked; it repeats along the barrier only, the face taking its full height. The crowd's rows repeat every 85 px or so, so it is cut on whole rows. The road's scuffs would show a grid repeated panel after panel, so each 24-unit panel of road takes the texture from its own place in it |
 | T2 Sponsor boards | track-t2-boards.png | in the game. All six spelt right; each cut cleanly by its outline, a clean rectangle about 2.9:1, a little taller than the plain look's 3.2:1 boards, so the painted boards stand in frames of their own shape |
 | T3 Circuit boards and banner | track-t3-circuits.png | in the game. All spelt right, each emblem as asked; cut cleanly. The boards came out 2.25:1 and the banner 9.9:1 (not 3.2:1 and 14.7:1), so they too stand in frames of their own shape: the banner over the line a little deeper than the plain one |
+| T4 Neon Crucible | track-t4-crucible.png | to make, with T3 attached so its board matches the other three |
 
 ## The prompt
 
@@ -73,4 +75,22 @@ SHEET T3: CIRCUIT BOARDS AND THE START BANNER (on green)
   - top middle: CORKSCREW CANYON, the emblem a twisting road over a flat-topped mesa.
   - top right: HELIOS DROP, the emblem a golden ring over a sea of cloud.
 - Bottom half: the banner over the start line, one long board exactly 1440 px wide and 98 px tall, centred left to right and with its middle 768 px from the top: dark #10141F, ZENITH GRAND PRIX in large off-white #F4F6FB bold italic capitals at the middle, chequered flag blocks of black and white at both ends, a warning-orange #FF7A1A stripe along its top and bottom edges.
+```
+
+T4, made later than the others for the fourth circuit, with sheet T3
+attached:
+
+```
+ZENITH GP: TRACK KIT. SHEET T4: NEON CRUCIBLE (attach sheet T3; one sheet, on green)
+
+The same kit and style as the attached sheet, for a fourth circuit: Neon Crucible, raced at night in and over an open-pit mine lit with neon, molten metal on its floor.
+
+- Art from a 1980s Japanese TV mecha anime: signs painted as clean, flat graphic design, the way background artists painted signage and lit neon into a scene.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, blur, film grain or noise (the game adds its own grain and glow).
+- 1536x1024, landscape. Paint it on perfectly flat pure green, #00FF00: no shading, texture, gradient, glow or shadow on the green. Nothing in the art itself may be green or close to it. Crisp edges against the green, with no soft halo.
+- Every board is seen straight-on, flat, a perfect rectangle with square corners, evenly lit, with no frame, posts, stand, reflections or perspective (the game builds the frames).
+- Lettering: spell every word exactly as given, in capitals, and nothing else.
+
+- Top half: one board in the middle 512x512 cell of the top row, exactly 480 px wide and 150 px tall, centred in its cell, in exactly the design of the three circuit boards on the attached sheet: deep teal board #103B3F, pale cyan #E9FBFF lettering, an electric-cyan #35F0FF stripe, and a small flat emblem of the circuit at the left. NEON CRUCIBLE, the emblem a road spiralling down into a glowing orange pit. Nothing in the other two cells of the top row.
+- Bottom half: the sign hung over the road where the start straight goes out over the pit, one board exactly 960 px wide and 300 px tall, centred left to right with its middle 768 px from the top: a dark backing board #14101E with NEON CRUCIBLE across it in one line of bold capitals in lit magenta #FF2FA8 neon tube, and a cyan #26E6FF neon tube running round the board just inside its edge. Painted the way a background artist painted lit neon at night: each tube a bright flat colour with a white-hot line down its middle, its glow one or two flat bands of the same colour hugging the tube on the dark board, never spilling past the board's edges.
 ```

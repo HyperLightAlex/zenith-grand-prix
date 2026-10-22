@@ -2,7 +2,8 @@
 
 Painted backgrounds for the anime look, one set per circuit, made by an image
 model from the prompts below and checked one sheet at a time, like the effect
-sheets in `art/fx-sheets`. Each circuit has four sheets:
+sheets in `art/fx-sheets`. Each circuit has four sheets (Neon Crucible's
+differ a little: see its section):
 
 | Sheet | What | How the game uses it |
 |---|---|---|
@@ -23,7 +24,9 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-All three circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
+Meridian's, Canyon's and Helios's sheets are in the game
+(`tools/bg/build_backgrounds.py`). Neon Crucible's are still to make: until
+they are, it keeps its plain scenery in the anime look too.
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -213,4 +216,95 @@ SHEET H4: SURFACES (six tiling squares, full bleed)
 - 4, bottom left: whitewashed stone walls, with small arched windows and doorways in cool blue shadow.
 - 5, bottom middle: a snowfield with exposed blue-grey rock, for the peaks.
 - 6, bottom right: polished gold metal panels engraved with fine lines radiating like sun rays, highlights painted as flat bands, for the great golden ring and the white-and-gold spire.
+```
+
+## Neon Crucible
+
+Night over an open-pit mine, so its set is not quite the others'. Sheet 3
+is smoke and steam, not clouds: the circuit has no cumulus, and the game
+stands the plumes on the smokestacks round the rim and over the pit's
+molten floor. Its surfaces are the pit's wall (twice: high up, and scorched
+low down by the melt), the molten floor, the yard round the rim, the
+city's facades at night (the game takes the lit windows from the painting
+for their glow) and the rusted steel of the stacks, the crane, the ladle
+and the gantry. A fifth sheet paints the neon signs on the towers' roofs,
+which the game draws as plain lettering today. The moon is drawn by the
+game over the painted sky, as the other circuits' suns are, 25 degrees up.
+Its board along the track and the sign over the way into the pit are on
+track sheet T4 (`art/track-sheets`).
+
+| Sheet | File |
+|---|---|
+| N1 Sky, facing the moon | bg-n1-sky.png |
+| N1B Sky, facing away | bg-n1b-sky.png |
+| N2 Horizon | bg-n2-horizon.png |
+| N3 Smoke and steam | bg-n3-smoke.png |
+| N4 Surfaces | bg-n4-surfaces.png |
+| N5 Neon signs | bg-n5-signs.png |
+
+```
+ZENITH GP: CIRCUIT BACKGROUNDS. NEON CRUCIBLE (six sheets; make them one at a time, in order N1, N2, N3, N4, N5, then N1B with N1 attached, each as its own image)
+
+The setting: a racing circuit at night in and over an enormous open-pit mine, the road spiralling down its terraced rock wall to a floor of molten metal and climbing back up, a city of lit towers and smoking foundries all round its rim, under a cold moon and a violet sky with the city's neon glowing along the horizon. The game draws the road, the mechs, the pit and the nearby buildings; these sheets are the painted world around them.
+
+STYLE, ALL SHEETS
+- Background art from a 1980s Japanese TV mecha anime, painted by hand the way the background department did it: poster colour (gouache) on illustration board, skies airbrushed in smooth gradients, everything else painted in a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture. Night painted the way those backgrounds painted it: deep blues and violets rather than black, lights as flat dabs of bright colour.
+- No ink outlines anywhere; background paintings had none.
+- Distance shown by atmospheric perspective: the further away, the more it sinks into the violet haze and the city's magenta glow.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, depth-of-field blur, film grain or noise (the game adds its own grain and glow).
+- Nothing but scenery: no people, mechs, vehicles, aircraft, birds, text, numbers, labels, logos, borders, signatures or watermarks. The signs on sheet N5 are the only lettering, and only the words it gives.
+- Palette: near-black navy #04061A high in the sky, deep violet #1B1250, magenta haze #7A2A74 at the horizon, night haze #3A1C4C, distant mountains #1C1432, moonlight cold blue-white #C8D2FF, the city's glow magenta #FF3FBF and amber #FFA040, neon magenta #FF2FA8, cyan #26E6FF, amber #FFA020 and violet #A05CFF, molten metal from deep red #B8542A through orange #FF7A3C to yellow-white #FFD27A, rock violet-grey #6A5E86 and #4C4466 with rust #8A5040, yard concrete #2A2634.
+- Every sheet is 1536x1024, landscape.
+
+SHEETS 2, 3 AND 5 ARE CUT OUT BY THE GAME
+- Paint them on perfectly flat pure green, #00FF00: no shading, texture, gradient, glow or shadow on the green.
+- Nothing in the art itself may be green or close to it: no green lights and no green neon.
+- Crisp edges against the green, with no soft halo: a light's glow is painted inside the shape it comes from, never out onto the green.
+
+SHEET N1: SKY, THE HALF FACING THE MOON (full bleed, no green)
+- Half the sky around the viewer, the half facing the moon, unrolled into one painting from the horizon at the bottom to straight overhead at the top edge. Its left edge should also continue seamlessly into its right edge.
+- The horizon is a perfectly straight, level line exactly three quarters of the way down (768 px from the top). Below it, only flat night haze (#3A1C4C); paint nothing there.
+- The moon is at the middle of the image, about 25 degrees up: its centre about 210 px above the horizon line. Paint its cold halo, a soft round glow of pale blue-white fading into the sky, but not the moon's disc itself (the game draws it).
+- An airbrushed gradient from near-black navy at the top through deep violet to a band of magenta haze along the horizon: the glow of a neon city below it, even all the way across, with a touch of amber just above the horizon line.
+- Stars: small, single dots and a few tiny four-point twinkles, thick near the top and thinning out into the glow near the horizon, few near the moon.
+- Clouds: a few long, thin bands of cloud low over the horizon, lit from below by the city, their undersides magenta and amber, their tops dark violet; higher up near the moon, a few thin wisps with their edges silvered by moonlight. No big billowing clouds.
+- The top edge is plain near-black navy, even across the full width.
+
+SHEET N2: HORIZON (three strips on green)
+- Three separate horizontal strips stacked top to bottom with green between them. Each runs the full width of the image and is about 260 px tall.
+- Each strip's bottom edge is a perfectly straight, level line (it stands on the horizon), with the strip filled solid down to it. Each strip repeats: its left end must continue seamlessly into its right end.
+- Top strip, farthest: a long range of mountains in dark blue-violet silhouette (#1C1432), low contrast, only the highest ridgelines catching a thin edge of cold moonlight, the highest peaks reaching about two thirds of the strip's height.
+- Middle strip: the far side of the city: a long, dense skyline of towers and spires of varied heights in deep violet-blue, speckled with tiny lit windows (mostly warm amber, some cool white), a few tower crowns banded with neon in magenta, cyan or violet, and tiny red beacons on the tallest masts.
+- Bottom strip, nearest: the foundry district: smelter stacks, a blast furnace, cooling towers, gantry cranes, conveyors and pipe racks in near-black blue-violet silhouette, the furnace mouths and stack tops glowing orange, and squat clouds of steam over the cooling towers lit orange from below, painted as solid shapes with crisp edges.
+
+SHEET N3: SMOKE AND STEAM (six cards on green)
+- Six separate plumes, one in each cell of an invisible 3x2 grid (cells 512x512), each centred in its cell and filling about 80% of it without touching the cell's edges or another plume. Each rises from a narrow, flat base at the bottom of its shape (the game stands it on a smokestack or over the pit).
+- Lit from below by fire and molten metal and from one side by the moon: bases and undersides glowing orange #FF7A3C and amber, bodies dusky violet-grey, the moonlit edges cold blue-white #C8D2FF, tops fading to dark violet. Painted the way a cel background painter painted smoke: defined, billowing shapes in three or four flat tones, separated crisply, with only a little soft blending inside each tone; no wispy, see-through or blurred edges.
+- Six different shapes: a tall column of smoke leaning with the wind; a thin ribbon of smoke bending over at the top; a squat, rounded billow of white steam; a wide, low pall of smoke drifting sideways; a burst of steam boiling up from a narrow base; a column breaking up into separate puffs at the top, with sky showing through the gaps (paint those gaps green).
+
+SHEET N4: SURFACES (six tiling squares, full bleed)
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge must continue into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon) and evenly lit, with no cast shadows across it, no glow and no vignette: the game adds the light, the moonlight and the molten glow. Keep the detail even, with no single feature that would stand out when it repeats.
+- 1, top left: the pit wall: a sheer face of dark violet-grey rock cut by blasting, in horizontal strata of different thicknesses with a few rust-red bands of iron ore, and the vertical half-pipe grooves of drill holes running down it from top to bottom.
+- 2, top middle: the pit wall low down, near the molten floor: the same rock scorched by the heat, black and glassy in places, with orange-brown oxidised streaks and spatters of cooled slag.
+- 3, top right: the molten floor seen from straight above: a black-red crust broken into irregular plates, with bright seams of molten metal between them, deep red at the edges of the seams to orange and yellow-white in their middles, and a few small open pools.
+- 4, bottom left: the yard round the pit's rim seen from straight above: dark grey-violet concrete slabs with straight joints, oil stains, grit and tyre scuffs. No painted lines, arrows, numbers or markings.
+- 5, bottom middle: a city tower's facade at night: a regular grid of windows in dark blue-violet glass between dark concrete floor bands and mullions, about one window in six lit warm amber, a few lit cool white and fewer still magenta; every lit window a flat bright rectangle, every unlit one dark.
+- 6, bottom right: rusted, sooty steel for the smokestacks, the crane, the ladle and the gantry over the pit: dark brown-black plates with riveted seams, rust streaks running down, scorch marks and a few chipped edges of old orange paint.
+
+SHEET N5: NEON SIGNS (six signs on green)
+- Six signs, one in each cell of an invisible 3x2 grid (cells 512x512), each exactly 480 px wide and 150 px tall, centred in its cell, not touching the cell's edges or another sign. They stand on the roofs of the towers round the pit.
+- Every sign is seen straight-on, flat, a perfect rectangle with square corners: a dark backing board #14101E with its lettering and a small emblem in lit neon tube, painted the way a background artist painted lit neon at night: each tube a bright flat colour with a white-hot line down its middle, its glow one or two flat bands of the same colour hugging the tube on the dark board, never spilling past the board's edges. No frame, posts, stand, reflections or perspective.
+- Lettering: spell every word exactly as given, in capitals, and nothing else: no slogans, small print, other numbers or web addresses.
+- 1, top left: KESTREL, in cyan #26E6FF, with a small kestrel in flight.
+- 2, top middle: AOKI HEAVY, in amber #FFA020, with a small gear.
+- 3, top right: NOVA, in magenta #FF2FA8, with a four-point star in place of the O.
+- 4, bottom left: HALCYON, in violet #A05CFF, with a swooping bird.
+- 5, bottom middle: FOUNDRY 7, in orange-red #FF5A3A, with a small crucible tipping out a stream.
+- 6, bottom right: ZGP, in white, with a cyan #26E6FF speed stripe beneath it.
+
+SHEET N1B: SKY, THE HALF FACING AWAY (make it after N1, with N1 attached)
+- Same size, style and palette as N1, the horizon at exactly the same height, the same flat night haze below it and the same plain near-black navy along the top edge.
+- The other half of the sky, behind the viewer, facing away from the moon. Its left edge must continue seamlessly from N1's right edge, and its right edge seamlessly into N1's left edge, so the two side by side make the whole sky round.
+- No moon halo here: a deeper, darker sky with more stars, and the city's magenta and amber glow along the horizon just as strong as on N1 (the city surrounds the circuit). The low bands of cloud carry on across it, lit from below by the city, magenta and amber underneath, dark violet on top.
 ```
