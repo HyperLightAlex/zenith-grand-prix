@@ -114,6 +114,28 @@ export function cleanPortrait(p: unknown): number {
   return typeof p === 'number' && Number.isInteger(p) && p >= 0 && p < PORTRAITS ? p : -1;
 }
 
+// ---- pilot colours ---------------------------------------------------------------
+
+/**
+ * The pilot colours (RGB): what a pilot flying for no faction (a person in a
+ * Sprint) wears on their mech's lights, their name plate and their seat. A
+ * pilot's colour is an index into them. The first five are the factions'
+ * colours, the portraits' backgrounds: until a pilot picks one, theirs is
+ * their portrait's (portraitColour).
+ */
+export const PILOT_COLOURS: readonly number[] = [0x3d8bff, 0xff3d5a, 0xff8f2e, 0xa66bff, 0x3ddc84, 0x45e8ff, 0xffc93a, 0xff5fc8, 0xb4f03a, 0xe8eef8];
+export const PILOT_COLOUR_NAMES: readonly string[] = ['Blue', 'Red', 'Orange', 'Violet', 'Green', 'Cyan', 'Gold', 'Pink', 'Lime', 'White'];
+
+/** A pilot colour as sent (anything else is -1: none). */
+export function cleanColour(c: unknown): number {
+  return typeof c === 'number' && Number.isInteger(c) && c >= 0 && c < PILOT_COLOURS.length ? c : -1;
+}
+
+/** The colour of a portrait's background (its faction's: the gallery is five factions' pilots, three each). */
+export function portraitColour(portrait: number): number {
+  return portrait >= 0 ? Math.floor(portrait / 3) % 5 : 0;
+}
+
 /** A `pilot` message checked: the callsign as on joining, the portrait and the mechs as below. */
 export function pilotChange(msg: Record<string, unknown>): { ok: true; callsign: string; portrait: number; looks: Looks } | { ok: false; text: string } {
   const callsign = cleanCallsign(String(msg.callsign ?? ''));

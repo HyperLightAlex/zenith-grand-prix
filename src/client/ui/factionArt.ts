@@ -73,11 +73,59 @@ function paintEmblem(g: CanvasRenderingContext2D, f: number): void {
 
 function drawEmblem(f: number): string {
   const [c, g] = canvas(192);
-  paintEmblem(g, f);
+  if (f < 0) paintLeagueBadge(g, '#2a2f3c', '#e4e8f0', '#ffc93a');
+  else paintEmblem(g, f);
   return c.toDataURL('image/png');
 }
 
-/** A faction's emblem, as an image URL. */
+/**
+ * The Zenith GP league's badge, worn by a pilot flying for no faction (a
+ * person in a Sprint): a ring, and in it a chevron climbing to a star at its
+ * zenith. Drawn 192 px square: `disc` behind (null for none), the ring and
+ * chevron in `ink`, the star in `star`.
+ */
+export function paintLeagueBadge(g: CanvasRenderingContext2D, disc: string | null, ink: string, star: string): void {
+  g.save();
+  g.lineJoin = 'round';
+  if (disc) {
+    g.beginPath();
+    g.arc(96, 96, 86, 0, Math.PI * 2);
+    g.fillStyle = disc;
+    g.fill();
+  }
+  g.strokeStyle = ink;
+  g.lineWidth = 10;
+  g.beginPath();
+  g.arc(96, 96, 74, 0, Math.PI * 2);
+  g.stroke();
+  // The chevron: an apex climbing out of the lower half.
+  g.fillStyle = ink;
+  g.beginPath();
+  g.moveTo(40, 146);
+  g.lineTo(96, 86);
+  g.lineTo(152, 146);
+  g.lineTo(126, 146);
+  g.lineTo(96, 114);
+  g.lineTo(66, 146);
+  g.closePath();
+  g.fill();
+  // The star at its zenith: four points.
+  g.fillStyle = star;
+  g.beginPath();
+  const cx = 96;
+  const cy = 56;
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2 - Math.PI / 2;
+    const r = k % 2 ? 7 : 22;
+    if (k === 0) g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    else g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+  }
+  g.closePath();
+  g.fill();
+  g.restore();
+}
+
+/** A faction's emblem, as an image URL; for -1 (no faction), the league's badge. */
 export function emblemUrl(f: number): string {
   if (EMBLEMS[f]) return EMBLEMS[f];
   const key = `emblem-${f}`;
@@ -91,6 +139,7 @@ export function emblemUrl(f: number): string {
 
 /** A faction's emblem by its id (for the mechs' markings, which know the livery). */
 export function emblemUrlFor(id: string): string {
+  if (id === 'league') return emblemUrl(-1);
   return emblemUrl(Math.max(0, LIVERIES.findIndex((l) => l.id === id)));
 }
 
@@ -99,7 +148,7 @@ export function emblemUrlFor(id: string): string {
  * gallery) or, at -1, the faction's pilot for the seat.
  */
 export function faceUrl(f: number, role: number, portrait = -1): string {
-  return (portrait >= 0 && PILOTS[portrait]) || pilotUrl(f, role);
+  return (portrait >= 0 && PILOTS[portrait]) || pilotUrl(Math.max(0, f), role);
 }
 
 /** A faction pilot's portrait, as an image URL: painted, or the faction's badge on a dark card. */

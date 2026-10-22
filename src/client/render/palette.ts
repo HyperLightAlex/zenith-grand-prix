@@ -148,6 +148,44 @@ export const LIVERIES: Livery[] = [
   },
 ];
 
+/** What a pilot flying for no faction is called where a faction would be named. */
+export const INDEPENDENT = 'Independent';
+
+const leagues = new Map<number, Livery>();
+
+/**
+ * The league's livery, lit in a pilot's colour: worn by a pilot who flies for
+ * no faction (a person in a Sprint). Their mech is their own custom one in
+ * its own paint, so what this gives it is the light (eyes, thrusters, trails)
+ * in their colour, and the Zenith GP league's badge and lettering where a
+ * faction's would be, in neutral silver on graphite.
+ */
+export function leagueLivery(glow: number): Livery {
+  let l = leagues.get(glow);
+  if (!l) {
+    const c = new THREE.Color(glow);
+    const css = '#' + c.getHexString();
+    l = {
+      id: 'league',
+      name: 'Zenith GP',
+      short: 'ZGP',
+      primary: 0x3a4050,
+      secondary: 0xd8dde8,
+      frame: 0x22262f,
+      trim: 0xe4e8f0,
+      glow,
+      shades: { primary: 0x23263a, secondary: 0x8f93ad, frame: 0x12131e, trim: 0x9a9cb4 },
+      css,
+      cssDim: '#' + c.clone().multiplyScalar(0.38).getHexString(),
+      darkArmour: true,
+      pilots: ['', '', ''],
+      models: ['Swift', 'Vector', 'Bulwark'],
+    };
+    leagues.set(glow, l);
+  }
+  return l;
+}
+
 let gradient: THREE.DataTexture | null = null;
 
 /** Three-step ramp for cel shading. */

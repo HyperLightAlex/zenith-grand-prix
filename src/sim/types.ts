@@ -71,7 +71,11 @@ export interface MechState {
   portrait: number;
   /** A custom mech (custom/mechBuild.ts, as text), or '' for the faction's stock mech. Shown only. */
   look: string;
-  /** The pilot's colour (an RGB number): a Sprint pilot flying for no faction wears it. -1 for none. Shown only. */
+  /**
+   * The pilot's colour, an index into the pilot colours (net/protocol
+   * PILOT_COLOURS): a pilot flying for no faction (a person in a Sprint)
+   * wears it. -1 for none. Shown only: the race never reads it.
+   */
   colour: number;
   /** AI skill 0..1. */
   skill: number;

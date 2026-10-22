@@ -18,6 +18,8 @@ import {
   pointsFor,
   recordRound,
   scoreRound,
+  sprintGrid,
+  standings,
   stepRace,
   updatePlaces,
 } from '../src/sim/index';
@@ -194,6 +196,31 @@ describe('Sprint formats', () => {
     // 2, 2, 2 wins: 0 has 10+8+8+10+8+8+4 = 56, 1 8+10+6+8+10+6+6 = 54, 2 6+6+10+6+6+10+8 = 52.
     expect(m.totals.slice(0, 3)).toEqual([56, 54, 52]);
     expect(m.winner).toBe(0);
+  });
+});
+
+describe("a Sprint's grid", () => {
+  it('is drawn by lot for the first race: every pilot once, and not always the same', () => {
+    const grids = new Set<string>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const g = sprintGrid(null, 6, seed);
+      expect([...g].sort()).toEqual([0, 1, 2, 3, 4, 5]);
+      expect(sprintGrid(createMatch({ mode: 'races' }, 6), 6, seed)).toEqual(g);
+      grids.add(g.join());
+    }
+    expect(grids.size).toBeGreaterThan(10);
+  });
+
+  it('is the standings reversed after that: the leader starts at the back', () => {
+    const m = play(createMatch({ mode: 'races', races: 3 }, 6), [3, 1, 0, 2, 4, 5]);
+    expect(standings(m)).toEqual([3, 1, 0, 2, 4, 5]);
+    expect(sprintGrid(m, 6, 1)).toEqual([5, 4, 2, 0, 1, 3]);
+    // First to N wins ranks by wins first (5 has as many points, but none), then points, then the last race.
+    const w = play(createMatch({ mode: 'wins', wins: 3 }, 6), [0, 5, 1, 2, 3, 4], [1, 5, 0, 2, 3, 4]);
+    expect(w.totals.slice(0, 2)).toEqual([16, 16]);
+    expect(w.totals[5]).toBe(16);
+    expect(standings(w).slice(0, 3)).toEqual([1, 0, 5]);
+    expect(sprintGrid(w, 6, 1).slice(-3)).toEqual([5, 0, 1]);
   });
 });
 

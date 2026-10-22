@@ -33,7 +33,8 @@ import { buildCustomFrame } from './mech/customFrame';
 import { decodeBuild } from '../../custom/mechBuild';
 import { drawClock, drawingStep, look, markCharacter } from './look';
 import type { MechRig } from './mech/rig';
-import { CARVE_COLORS, COLORS, LIVERIES, SUN_DIR, type Livery } from './palette';
+import { CARVE_COLORS, COLORS, SUN_DIR, type Livery } from './palette';
+import { teamLooks } from '../ui/sides';
 import { markTraveller, type Renderer } from './renderer';
 import type { TrackVisual } from './trackMesh';
 import { trackDir, trackMatrix, trackPoint, worldDirToTrackAngle } from './trackSpace';
@@ -190,7 +191,7 @@ export class RaceView {
   /** Colour of the dust a landing kicks up: red sand in the canyon, cloud white up high. */
   private readonly dust: number;
 
-  /** Each race team's livery: the factions racing. */
+  /** Each race team's livery: the factions racing (in a Sprint, a pilot flying for none wears the league's in their colour). */
   readonly liveries: Livery[];
 
   constructor(
@@ -198,12 +199,12 @@ export class RaceView {
     private session: Session,
     private trackVis: TrackVisual,
     private feel: Feel,
-    /** Which faction each race team is (an index into LIVERIES). */
-    factions: [number, number] = [0, 1],
+    /** Which faction each race team is (an index into LIVERIES; -1 for none). */
+    factions: readonly number[] = [0, 1],
     private readonly previewOnly = false,
   ) {
     const race = session.race;
-    this.liveries = factions.map((f) => LIVERIES[f] ?? LIVERIES[0]);
+    this.liveries = teamLooks(race, factions).map((t) => t.livery);
     this.dust = DUST[session.track.def.theme ?? 'meridian'] ?? DUST.meridian;
     this.focusId = session.localId >= 0 ? session.localId : 0;
     this.mechIds = previewOnly ? [this.focusId] : race.mechs.map((m) => m.id);

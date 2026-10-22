@@ -21,6 +21,7 @@ import { installFrame, video } from './video';
 //   &rival=2        race against Mirage          &oldswift=1 Solstice's first Swift design
 //   &mute=1         no sound                      ?debug=mechs  model viewer
 //   &match=0..4     match format                  &tune=1   tuning panel open
+//   ?sprint=0..4    jump straight into a Sprint in this format (single race, 3 races, 5 races, first to 2 wins, first to 3)
 //   &track=canyon   circuit: meridian, canyon or helios
 //   &music=suno     race music from a recorded song where a circuit has one
 //                   (Meridian), built up lap by lap: see src/client/audio/song.ts
@@ -114,6 +115,7 @@ async function boot(): Promise<void> {
     rival: q.has('rival') ? Number(q.get('rival')) : undefined,
     rivals: q.has('rivals') ? Number(q.get('rivals')) : undefined,
     match: q.has('match') ? Number(q.get('match')) : undefined,
+    sprint: q.has('sprint') ? Number(q.get('sprint')) : undefined,
     tune: q.has('tune'),
     track: q.get('track') ?? undefined,
     room: q.get('room') ?? undefined,

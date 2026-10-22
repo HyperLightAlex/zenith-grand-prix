@@ -1,7 +1,7 @@
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PILOT_NAMES } from '../src/net/factions';
-import { PORTRAITS, READY_COUNTDOWN, cleanLooks, cleanPortrait, pilotChange, type SquadServerMessages } from '../src/net/protocol';
+import { PILOT_COLOURS, PILOT_COLOUR_NAMES, PORTRAITS, READY_COUNTDOWN, cleanColour, cleanLooks, cleanPortrait, pilotChange, portraitColour, type SquadServerMessages } from '../src/net/protocol';
 import { encodeBuild, stockBuild } from '../src/custom/mechBuild';
 import { SquadCore } from '../src/net/squadCore';
 import { ROLE } from '../src/sim/index';
@@ -19,6 +19,17 @@ describe('a pilot on the wire', () => {
     expect(pilotChange({ callsign: 'Comet', portrait: 99 })).toEqual({ ok: true, callsign: 'Comet', portrait: -1, looks: ['', '', ''] });
     expect(pilotChange({ callsign: 'ab', portrait: 1 }).ok).toBe(false);
     expect(pilotChange({ portrait: 1 }).ok).toBe(false);
+  });
+
+  it('takes a colour only as a whole number among the pilot colours, and none otherwise', () => {
+    expect(PILOT_COLOUR_NAMES.length).toBe(PILOT_COLOURS.length);
+    expect(cleanColour(0)).toBe(0);
+    expect(cleanColour(PILOT_COLOURS.length - 1)).toBe(PILOT_COLOURS.length - 1);
+    for (const bad of [PILOT_COLOURS.length, -1, 2.5, '3', null, undefined, NaN, {}]) expect(cleanColour(bad)).toBe(-1);
+  });
+
+  it("gives each portrait its background's colour: its faction's", () => {
+    for (let p = 0; p < PORTRAITS; p++) expect(portraitColour(p)).toBe(Math.floor(p / 3));
   });
 
   it('has a portrait painted for every place in the gallery', () => {
@@ -164,6 +175,39 @@ describe('your pilot on this device', () => {
     id.setPortrait(PORTRAITS + 3); // not a portrait: ignored
     expect(id.portrait()).toBe(12);
     expect((await fresh(store)).id.portrait()).toBe(12);
+  });
+
+  it("wears its portrait's colour until you pick one, and the one you pick after", async () => {
+    const { id, store } = await fresh();
+    id.setPortrait(10);
+    expect(id.colourFromPortrait()).toBe(true);
+    expect(id.pilotColour()).toBe(portraitColour(10));
+    id.setPortrait(1);
+    expect(id.pilotColour()).toBe(portraitColour(1));
+    id.setPilotColour(7);
+    expect(id.colourFromPortrait()).toBe(false);
+    id.setPortrait(13);
+    expect(id.pilotColour()).toBe(7);
+    expect((await fresh(store)).id.pilotColour()).toBe(7);
+    id.setPilotColour(-1);
+    expect(id.pilotColour()).toBe(portraitColour(13));
+    id.setPilotColour(99);
+    expect(id.colourFromPortrait()).toBe(true);
+    // A record from before colours: the portrait's.
+    const old = new Map([['zgp.pilot', JSON.stringify({ v: 1, portrait: 4, made: 'Comet', mechs: ['', '', ''], fly: [false, false, false] })]]);
+    const before = (await fresh(old)).id;
+    expect(before.pilotName()).toBe('Comet');
+    expect(before.pilotColour()).toBe(portraitColour(4));
+  });
+
+  it('keeps your custom Forward for a Sprint whether or not you fly it', async () => {
+    const { id } = await fresh();
+    expect(id.customLook(ROLE.FW)).toBe('');
+    const b = { ...stockBuild(3), name: 'Halo' };
+    id.setCustomMech(ROLE.FW, b);
+    expect(id.fliesCustom(ROLE.FW)).toBe(false);
+    expect(id.seatLook(ROLE.FW)).toBe('');
+    expect(id.customLook(ROLE.FW)).toBe(encodeBuild(b));
   });
 
   it('makes no made-up callsign that is a faction pilot\'s', async () => {

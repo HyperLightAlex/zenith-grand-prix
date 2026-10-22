@@ -178,8 +178,8 @@ html.crt-on .crt-layer {
   transform: translateY(calc(var(--i, 0) * 2.1em));
 }
 .tower .row .pos { font-weight: 800; text-align: center; }
-.tower .row .flag { height: 1.25em; background: var(--team0); transform: skewX(-18deg); }
-.tower .row.t1 .flag { background: var(--team1); }
+.tower .row .flag { height: 1.25em; background: var(--tc, var(--team0)); transform: skewX(-18deg); }
+.tower .row.t1 .flag { background: var(--tc, var(--team1)); }
 .tower .row .who { white-space: nowrap; overflow: hidden; }
 .tower .row .who small { font-size: 0.78em; opacity: 0.65; margin-left: 0.4em; font-weight: 500; }
 .tower .row .hp { height: 0.36em; }
@@ -210,6 +210,8 @@ html.crt-on .crt-layer {
 .score .side .pts { font-size: 2.3em; font-weight: 800; min-width: 1.3em; text-align: center; font-variant-numeric: tabular-nums; }
 .score .side.a { box-shadow: inset 0.35em 0 0 var(--team0); }
 .score .side.b { box-shadow: inset -0.35em 0 0 var(--team1); }
+/* A Sprint: one side, yours (the points your place is worth), and no team plays. */
+.hud.sprint .score .side.b, .hud.sprint .tactics { display: none; }
 .score .mid { display: flex; align-items: center; padding: 0 0.7em; background: var(--paper); color: var(--ink); font-size: 1.05em; font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* One line under the score: the round, and how the match stands. */
@@ -372,7 +374,8 @@ html.crt-on .crt-layer {
 .comms { position: absolute; left: 2.2em; bottom: 11.4em; width: 22em; display: flex; flex-direction: column; gap: 0.3em; }
 .comms .msg { padding: 0.32em 0.9em 0.36em 0.8em; background: var(--ink-soft); border-left: 0.3em solid var(--team0); font-weight: 500; font-size: 1.08em; line-height: 1.15; animation: msg-in 0.18s ease-out; }
 .comms .msg b { font-weight: 800; margin-right: 0.45em; }
-.comms .msg.t1 { border-left-color: var(--team1); }
+.comms .msg { border-left-color: var(--tc, var(--team0)); }
+.comms .msg.t1 { border-left-color: var(--tc, var(--team1)); }
 .comms .msg.ctl { border-left-color: var(--hazard); }
 .comms .msg.fade { opacity: 0; transition: opacity 0.5s; }
 @keyframes msg-in { from { transform: translateX(-1em); opacity: 0; } }
@@ -380,8 +383,8 @@ html.crt-on .crt-layer {
 /* ---- HUD: target and name plates ---------------------------------------- */
 
 .plate { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); text-align: center; font-size: 0.95em; white-space: nowrap; text-shadow: 0 0.08em 0.12em rgba(15, 21, 36, 0.9); will-change: transform; }
-.plate .tag { display: inline-block; padding: 0.08em 0.55em 0.1em; background: var(--team0); color: #fff; clip-path: polygon(0.3em 0, 100% 0, calc(100% - 0.3em) 100%, 0 100%); }
-.plate.t1 .tag { background: var(--team1); }
+.plate .tag { display: inline-block; padding: 0.08em 0.55em 0.1em; background: var(--tc, var(--team0)); color: #fff; clip-path: polygon(0.3em 0, 100% 0, calc(100% - 0.3em) 100%, 0 100%); }
+.plate.t1 .tag { background: var(--tc, var(--team1)); }
 .plate .bar { width: 4.6em; height: 0.3em; margin: 0.18em auto 0; }
 .plate[hidden] { display: none; }
 .plate .cue { display: inline-block; margin-right: 0.3em; color: var(--paper); font-style: normal; }
@@ -579,13 +582,14 @@ html.crt-on .crt-layer {
 .hud.anime .score .emblem { display: block; flex: none; width: 2.3em; height: 2.3em; background: var(--emblem0) center / contain no-repeat; }
 .hud.anime .score .emblem.e1 { background-image: var(--emblem1); }
 .hud.anime .tower .row { grid-template-columns: 1.5em 1.3em 1fr 2.4em 3.6em; }
-.hud.anime .tower .row .flag { height: 1.55em; background: var(--emblem0) center / contain no-repeat; transform: none; }
-.hud.anime .tower .row.t1 .flag { background-image: var(--emblem1); }
+.hud.anime .tower .row .flag { height: 1.55em; background: var(--te, var(--emblem0)) center / contain no-repeat; transform: none; }
+.hud.anime .tower .row.t1 .flag { background-image: var(--te, var(--emblem1)); }
 
 /* The radio as a comms screen: the pilot's face cut in beside the line. */
 .hud.anime .comms .msg { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 0.65em; padding: 0.3em 0.9em 0.3em 0.35em; }
 .hud.anime .comms .msg .pilot { display: block; width: 3.6em; height: 3.6em; background: center / cover; border: 0.13em solid var(--team0); }
-.hud.anime .comms .msg.t1 .pilot { border-color: var(--team1); }
+.hud.anime .comms .msg .pilot { border-color: var(--tc, var(--team0)); }
+.hud.anime .comms .msg.t1 .pilot { border-color: var(--tc, var(--team1)); }
 
 /* The target: their face, turned toward the middle of the screen. */
 .hud.anime .target { grid-template-columns: 5.4em 1fr; column-gap: 0.85em; align-items: center; width: 20.5em; padding-left: 0.6em; }
@@ -760,8 +764,19 @@ html.crt-on .crt-layer {
 .results td.num, .results th.num { text-align: right; }
 .results tr.me td { background: var(--paper); color: var(--ink); }
 .results tr.out td { opacity: 0.6; }
-.results td.flag { width: 0.5em; padding: 0; background: var(--team0); }
-.results tr.t1 td.flag { background: var(--team1); }
+.results td.flag { width: 0.5em; padding: 0; background: var(--tc, var(--team0)); }
+.results tr.t1 td.flag { background: var(--tc, var(--team1)); }
+/* A Sprint's standings: every pilot, in their colour. */
+.results .sprintstand { display: grid; grid-template-columns: 1.6em 0.45em minmax(8em, 14em) 4em 4.6em; gap: 0.18em 0; max-width: 30em; margin-top: 0.9em; font-size: 1.2em; }
+.results .sprintstand > div { display: contents; }
+.results .sprintstand .sh span { font-size: 0.75em; font-weight: 500; opacity: 0.7; padding: 0 0.6em 0.1em; }
+.results .sprintstand .sr span { padding: 0.22em 0.6em 0.26em; background: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.results .sprintstand .sr .flag { padding: 0; background: var(--tc); }
+.results .sprintstand .sr .who { font-weight: 700; }
+.results .sprintstand .num { text-align: right; }
+.results .sprintstand .pts { font-weight: 800; }
+.results .sprintstand .sr.me span { background: var(--paper); color: var(--ink); }
+.results .sprintstand .sr.me .flag { background: var(--tc); }
 .results td.pts { font-weight: 800; font-size: 1.15em; }
 .results .suphead { margin-top: 0.9em; font-size: 1.05em; font-weight: 500; opacity: 0.7; }
 .results .supportlist { display: grid; gap: 0.2em; max-width: 62em; margin-top: 0.25em; font-size: 1.05em; }
@@ -969,10 +984,10 @@ html.crt-on .crt-layer {
 }
 .menu.anime .results td.pts { font-size: 1.35em; }
 .menu.anime .results th.face, .menu.anime .results td.face { display: table-cell; width: 2.6em; padding: 0.12em 0.25em; }
-.menu.anime .results td.face i { display: block; width: 2.1em; height: 2.1em; background: center / cover; border: 0.12em solid var(--team0); }
-.menu.anime .results tr.t1 td.face i { border-color: var(--team1); }
-.menu.anime .results td.flag { width: 2.2em; background: var(--emblem0) center / 1.6em no-repeat, var(--ink-soft); }
-.menu.anime .results tr.t1 td.flag { background: var(--emblem1) center / 1.6em no-repeat, var(--ink-soft); }
+.menu.anime .results td.face i { display: block; width: 2.1em; height: 2.1em; background: center / cover; border: 0.12em solid var(--tc, var(--team0)); }
+.menu.anime .results tr.t1 td.face i { border-color: var(--tc, var(--team1)); }
+.menu.anime .results td.flag { width: 2.2em; background: var(--te, var(--emblem0)) center / 1.6em no-repeat, var(--ink-soft); }
+.menu.anime .results tr.t1 td.flag { background: var(--te, var(--emblem1)) center / 1.6em no-repeat, var(--ink-soft); }
 .menu.anime .results tr.me td.flag { background-color: var(--paper); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1373,6 +1388,10 @@ html.portrait .menu .results th:nth-child(5), html.portrait .menu .results td:nt
 html.portrait .menu .results th:nth-child(6), html.portrait .menu .results td:nth-child(6),
 html.portrait .menu .results th:nth-child(7), html.portrait .menu .results td:nth-child(7),
 html.portrait .menu .results th:nth-child(9), html.portrait .menu .results td:nth-child(9) { display: none; }
+/* A Sprint's table has no support column: its ninth is the points (the knockouts go instead). */
+html.portrait .menu .results table.sprint th:nth-child(9), html.portrait .menu .results table.sprint td:nth-child(9) { display: table-cell; }
+html.portrait .menu .results table.sprint th:nth-child(8), html.portrait .menu .results table.sprint td:nth-child(8) { display: none; }
+html.portrait .menu .results .sprintstand { font-size: 1.05em; }
 
 /* ---- the menus: type and spacing for a small screen ---------------------- */
 

@@ -2,7 +2,7 @@
 // caution stripes, stencils and warning marks) and stuck on the armour as
 // little planes, lit like the armour so they sit in its shadows.
 import * as THREE from 'three';
-import { emblemUrlFor } from '../../ui/factionArt';
+import { emblemUrlFor, paintLeagueBadge } from '../../ui/factionArt';
 import { toonGradient, type Livery } from '../palette';
 import { MARKS, type MarkName } from './mechArt';
 
@@ -40,12 +40,16 @@ function drawSheet(livery: Livery): HTMLCanvasElement {
   };
   // Team emblem: Solstice a rising sun, Vanta a split chevron, Mirage a
   // winged sun disc, Aurora a sword through a halo, Tempest a lightning bolt
-  // through a swirl of wind.
+  // through a swirl of wind; the league (no faction) its badge.
   cell(0, () => {
     g.fillStyle = trim;
     g.strokeStyle = trim;
     g.lineWidth = 7;
-    if (faction === 'mirage') {
+    if (faction === 'league') {
+      // The league's badge (a pilot flying for no faction), all in the trim.
+      g.scale(128 / 192, 128 / 192);
+      paintLeagueBadge(g, null, trim, trim);
+    } else if (faction === 'mirage') {
       g.beginPath();
       g.arc(64, 64, 18, 0, Math.PI * 2);
       g.fill();

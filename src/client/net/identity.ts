@@ -6,7 +6,7 @@
 // ?player=2 (any word) on the URL keeps a separate identity, so two tabs of
 // one browser can be two players when testing.
 
-import { PORTRAITS, callsignProblem, cleanCallsign, cleanPortrait } from '../../net/protocol';
+import { PORTRAITS, callsignProblem, cleanCallsign, cleanColour, cleanPortrait, portraitColour } from '../../net/protocol';
 import { decodeBuild, encodeBuild, type MechBuild } from '../../custom/mechBuild';
 import type { Role } from '../../sim/config';
 
@@ -77,6 +77,8 @@ interface PilotRecord {
   mechs: [string, string, string];
   /** Which frames you fly your custom mech in (the stock mech of the faction you fly for otherwise). */
   fly: [boolean, boolean, boolean];
+  /** Your colour (protocol PILOT_COLOURS), worn when you fly for no faction (a Sprint); -1 for your portrait's. */
+  colour: number;
 }
 
 /**
@@ -101,7 +103,9 @@ function pilotRecord(): PilotRecord {
       // Custom mechs came later: a record from before has none.
       const mechs = [0, 1, 2].map((i) => (Array.isArray(raw.mechs) && decodeBuild(raw.mechs[i]) ? (raw.mechs[i] as string) : '')) as PilotRecord['mechs'];
       const fly = [0, 1, 2].map((i) => Array.isArray(raw.fly) && raw.fly[i] === true && mechs[i] !== '') as PilotRecord['fly'];
-      if (portrait >= 0 && made) rec = { v: 1, portrait, made, mechs, fly };
+      // (So did the colour.)
+      const colour = cleanColour(raw.colour);
+      if (portrait >= 0 && made) rec = { v: 1, portrait, made, mechs, fly, colour };
     }
   } catch {
     /* made again below */
@@ -109,7 +113,7 @@ function pilotRecord(): PilotRecord {
   if (!rec) {
     const pick = new Uint32Array(2);
     crypto.getRandomValues(pick);
-    rec = { v: 1, portrait: pick[0] % PORTRAITS, made: MADE_CALLSIGNS[pick[1] % MADE_CALLSIGNS.length], mechs: ['', '', ''], fly: [false, false, false] };
+    rec = { v: 1, portrait: pick[0] % PORTRAITS, made: MADE_CALLSIGNS[pick[1] % MADE_CALLSIGNS.length], mechs: ['', '', ''], fly: [false, false, false], colour: -1 };
     savePilot(rec);
   }
   return rec;
@@ -142,6 +146,22 @@ export function setPortrait(i: number): void {
   savePilot({ ...pilotRecord(), portrait: p });
 }
 
+/** Your colour (an index into protocol PILOT_COLOURS): the one you picked, or your portrait's. */
+export function pilotColour(): number {
+  const rec = pilotRecord();
+  return rec.colour >= 0 ? rec.colour : portraitColour(rec.portrait);
+}
+
+/** Whether your colour follows your portrait (you have not picked one). */
+export function colourFromPortrait(): boolean {
+  return pilotRecord().colour < 0;
+}
+
+/** Pick your colour (-1: your portrait's). */
+export function setPilotColour(c: number): void {
+  savePilot({ ...pilotRecord(), colour: cleanColour(c) });
+}
+
 /** Your custom mech of a frame, or null if you have not made one. */
 export function customMech(role: Role): MechBuild | null {
   return decodeBuild(pilotRecord().mechs[role]);
@@ -168,6 +188,14 @@ export function setFliesCustom(role: Role, on: boolean): void {
   const fly = [...rec.fly] as PilotRecord['fly'];
   fly[role] = on && rec.mechs[role] !== '';
   savePilot({ ...rec, fly });
+}
+
+/**
+ * Your custom mech of a frame as text, whether or not you fly it ('' if you
+ * have none): a Sprint is always raced in your own Forward.
+ */
+export function customLook(role: Role): string {
+  return pilotRecord().mechs[role];
 }
 
 /** What your seat flies in a frame, as a seat carries it: your custom mech as text, or '' for stock. */

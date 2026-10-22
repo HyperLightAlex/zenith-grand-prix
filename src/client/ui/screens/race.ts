@@ -2,15 +2,105 @@
 // and your seat's computer pilot flies until you resume) and the results.
 
 import { mechName } from '../../../custom/mechBuild';
-import { AWARD_NAMES, ROLE_NAMES, roundsToWin } from '../../../sim/index';
+import { AWARD_NAMES, ROLE_NAMES, roundsToWin, standings, type MatchState, type RaceState } from '../../../sim/index';
 import type { Game } from '../../game/game';
-import { LIVERIES, factionName } from '../../render/palette';
+import { factionName } from '../../render/palette';
 import { h } from '../dom';
 import { emblemUrl, faceUrl } from '../factionArt';
 import { LOGO } from '../keyArt';
 import { art, type Menus } from '../menus';
 import { DEV_TOOLS } from '../../devTools';
 import { SELECT, confirmDialog } from './common';
+import { teamLooks, type TeamLook } from '../sides';
+
+const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+const fmtTime = (t: number) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+
+/** A race's time column: the winner's time, the others' gaps to it, or why there is none. */
+function timeOf(race: RaceState, x: RaceState['mechs'][number]): string {
+  if (x.retired) return 'Retired';
+  if (x.finishTime > 1e6) return 'Flagged';
+  const winner = race.mechs.find((o) => o.place === 1);
+  if (winner && x !== winner && winner.finishTime < 1e6) return `+${(x.finishTime - winner.finishTime).toFixed(2)}`;
+  return fmtTime(x.finishTime - 4);
+}
+
+/** Colour a row for its team (or a Sprint's pilot): its colour and emblem. */
+function sideStyle(el: HTMLElement, t: TeamLook): HTMLElement {
+  el.style.setProperty('--tc', t.css);
+  el.style.setProperty('--te', `url(${t.emblem})`);
+  return el;
+}
+
+/**
+ * A Sprint's results: who won the race (and the Sprint, once decided),
+ * your finish, the race's order, and over several races the standings.
+ */
+function sprintResults(g: Game, race: RaceState, match: MatchState | null, box: HTMLElement): void {
+  const looks = teamLooks(race, g.factions);
+  const youId = g.resultsLocal;
+  const me = youId >= 0 ? race.mechs[youId] : null;
+  const pilot = (team: number) => race.mechs.find((x) => x.team === team);
+  const round = match && match.rounds.length ? match.rounds[match.rounds.length - 1] : null;
+  const raceWinner = round ? round.winner : (race.mechs.find((x) => x.place === 1)?.team ?? 0);
+  const several = !!match && (match.cfg.mode === 'wins' || (match.cfg.races ?? 1) > 1);
+  const over = !match || match.winner >= 0;
+  const emblem = (team: number) => {
+    const el = h('i.emb');
+    el.style.backgroundImage = `url(${looks[team].emblem})`;
+    return el;
+  };
+  const named = (team: number, verb: string) => (me && me.team === team ? `You ${verb}` : `${pilot(team)?.name ?? '?'} ${verb}s`);
+  if (several && over && match) box.append(h('div.headline', emblem(match.winner), `${named(match.winner, 'win')} the Sprint`));
+  else if (several && match) box.append(h('div.headline', emblem(raceWinner), `${named(raceWinner, 'take')} race ${round ? round.round : 1}`));
+  else box.append(h('div.headline', emblem(raceWinner), `${named(raceWinner, 'win')}`));
+  const lines: string[] = [];
+  if (me) {
+    lines.push(me.retired ? 'You were knocked out and scored nothing.' : `You finished ${ORD[me.place - 1]} for ${me.points} point${me.points === 1 ? '' : 's'}.`);
+  }
+  if (several && match) {
+    const order = standings(match);
+    const left = match.cfg.mode === 'wins' ? `First to ${match.cfg.wins} wins (at most ${match.cfg.races} races)` : `${match.cfg.races} races, most points`;
+    lines.push(over ? `${left}: decided after ${match.rounds.length}.` : `${left}: race ${match.rounds.length + 1} next. Whoever leads starts at the back.`);
+    box.append(h('div.subline', lines.join(' ')));
+    const stand = h('div.sprintstand', h('div.sh', h('span', ''), h('span', ''), h('span', 'Standings'), h('span.num', 'Wins'), h('span.num', 'Points')));
+    order.forEach((team, i) => {
+      const x = pilot(team);
+      if (!x) return;
+      const row = h('div.sr' + (me && me.team === team ? '.me' : ''), h('span.pos', String(i + 1)), h('span.flag'), h('span.who', x.name), h('span.num', String(match.wins[team] ?? 0)), h('span.num.pts', String(match.totals[team] ?? 0)));
+      stand.append(sideStyle(row, looks[team]));
+    });
+    box.append(stand);
+  } else box.append(h('div.subline', lines.join(' ')));
+  const table = h<'table'>('table');
+  const head = h<'tr'>('tr');
+  for (const [label, num] of [['', false], ['', false], ['', false], ['Pilot', false], ['Mech', false], ['Time', true], ['Damage dealt', true], ['Knockouts', true], ['Points', true]] as const) {
+    const th = h<'th'>('th' + (num ? '.num' : ''), label);
+    if (head.children.length === 2) th.className = 'face';
+    head.append(th);
+  }
+  table.append(head);
+  for (const x of [...race.mechs].sort((a, b) => a.place - b.place)) {
+    const t = looks[x.team];
+    const tr = h<'tr'>('tr' + (me && x.id === me.id ? '.me' : '') + (x.retired ? '.out' : ''));
+    const faceEl = h('i');
+    faceEl.style.backgroundImage = `url(${faceUrl(t.faction, x.role, x.portrait)})`;
+    tr.append(
+      h<'td'>('td.flag'),
+      h<'td'>('td', String(x.place)),
+      h<'td'>('td.face', faceEl),
+      h<'td'>('td', x.name + (me && x.id === me.id ? ' (you)' : '')),
+      h<'td'>('td', `${mechName(x, t.livery.models[x.role])}, ${t.name}`),
+      h<'td'>('td.num', timeOf(race, x)),
+      h<'td'>('td.num', String(Math.round(x.dmgDealt))),
+      h<'td'>('td.num', String(x.kos)),
+      h<'td'>('td.num.pts', h('span', String(x.points))),
+    );
+    table.append(sideStyle(tr, t));
+  }
+  table.classList.add('sprint');
+  box.append(table);
+}
 
 export function registerRace(m: Menus, g: Game): void {
   m.register('pause', {
@@ -61,17 +151,24 @@ export function registerRace(m: Menus, g: Game): void {
       const local = Math.max(0, g.resultsLocal);
       const me = race.mechs[local];
       const match = g.match;
+      const box = h('div.results');
+      if (race.sprint) {
+        sprintResults(g, race, match, box);
+        resultButtons(m, g, box, !match || match.winner >= 0, !match || (match.cfg.mode === 'races' && (match.cfg.races ?? 1) <= 1), true);
+        m.root.append(h('div.shade.full'), m.panes(box));
+        return;
+      }
       const round = match && match.rounds.length ? match.rounds[match.rounds.length - 1] : null;
       const pts = round ? round.points : [0, 0];
       if (!round) for (const mm of race.mechs) pts[mm.team] += mm.points;
       const mine = pts[me.team];
       const theirs = pts[1 - me.team];
       const factions = g.factions;
-      const sides = factions.map((f) => LIVERIES[f] ?? LIVERIES[0]);
+      const looks = teamLooks(race, factions);
+      const sides = looks.map((t) => t.livery);
       const names = sides.map(factionName);
       m.root.style.setProperty('--team0', sides[0].css);
       m.root.style.setProperty('--team1', sides[1].css);
-      const box = h('div.results');
       const emblem = (team: number) => {
         const el = h('i.emb');
         el.style.backgroundImage = `url(${emblemUrl(factions[team])})`;
@@ -139,7 +236,7 @@ export function registerRace(m: Menus, g: Game): void {
       const winner = race.mechs.find((x) => x.place === 1);
       const fmt = (t: number) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
       for (const x of [...race.mechs].sort((a, b) => a.place - b.place)) {
-        const tr = h<'tr'>('tr' + (x.team ? '.t1' : '') + (x.id === me.id && g.resultsLocal >= 0 ? '.me' : '') + (x.retired ? '.out' : ''));
+        const tr = sideStyle(h<'tr'>('tr' + (x.team ? '.t1' : '') + (x.id === me.id && g.resultsLocal >= 0 ? '.me' : '') + (x.retired ? '.out' : '')), looks[x.team]);
         let time = 'Retired';
         if (!x.retired) {
           if (x.finishTime > 1e6) time = 'Flagged';
@@ -176,29 +273,35 @@ export function registerRace(m: Menus, g: Game): void {
         }
         box.append(h('div.suphead', 'Support points'), sup);
       }
-      const list = h('div.list');
-      if (g.mode === 'online') {
-        const v = g.online.lobby;
-        const done = v?.continued.includes(g.online.pid);
-        const racers = v ? v.players.filter((p) => p.side >= 0 && p.connected && !p.nextRound).length : 0;
-        const n = v?.continued.length ?? 0;
-        const final = v?.phase === 'final';
-        const t = Math.max(0, v?.timer ?? 0);
-        const gp = !!v?.gp;
-        const note = final ? (gp ? `The standings in ${t}` : `Back to the lobby in ${t}`) : `Next round in ${t}: ${n} of ${racers} ready`;
-        m.button(list, done ? (final ? 'Waiting…' : 'Ready for the next round') : final ? (gp ? 'The standings' : 'Back to the room') : 'Continue', () => g.online.sendRoom('continue', { at: v?.phase }), { key: 'next', go: !done, note });
-        m.button(list, gp ? 'Leave the Grand Prix' : 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
-      } else if (g.mode === 'gp') {
-        m.button(list, over ? 'Continue' : 'Next round', () => g.next(), { key: 'next', go: true });
-        m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
-      } else {
-        m.button(list, over ? (single ? 'Race again' : 'New match') : 'Next round', () => g.next(), { key: 'next', go: true });
-        m.button(list, 'Change setup', () => g.toSetup(), { key: 'setup' });
-        m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
-      }
-      box.append(list);
+      resultButtons(m, g, box, over, single);
       m.root.append(h('div.shade.full'), m.panes(box));
     },
     back() {},
   });
+}
+
+/** What to do next, under the results: on to the next race or match, or back. */
+function resultButtons(m: Menus, g: Game, box: HTMLElement, over: boolean, single: boolean, sprint = false): void {
+  const list = h('div.list');
+  const next = sprint ? 'race' : 'round';
+  if (g.mode === 'online') {
+    const v = g.online.lobby;
+    const done = v?.continued.includes(g.online.pid);
+    const racers = v ? v.players.filter((p) => p.side >= 0 && p.connected && !p.nextRound).length : 0;
+    const n = v?.continued.length ?? 0;
+    const final = v?.phase === 'final';
+    const t = Math.max(0, v?.timer ?? 0);
+    const gp = !!v?.gp;
+    const note = final ? (gp ? `The standings in ${t}` : `Back to the lobby in ${t}`) : `Next ${next} in ${t}: ${n} of ${racers} ready`;
+    m.button(list, done ? (final ? 'Waiting…' : `Ready for the next ${next}`) : final ? (gp ? 'The standings' : 'Back to the room') : 'Continue', () => g.online.sendRoom('continue', { at: v?.phase }), { key: 'next', go: !done, note });
+    m.button(list, gp ? 'Leave the Grand Prix' : 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
+  } else if (g.mode === 'gp') {
+    m.button(list, over ? 'Continue' : 'Next round', () => g.next(), { key: 'next', go: true });
+    m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
+  } else {
+    m.button(list, over ? (single ? 'Race again' : sprint ? 'New Sprint' : 'New match') : sprint ? 'Next race' : 'Next round', () => g.next(), { key: 'next', go: true });
+    m.button(list, 'Change setup', () => g.toSetup(), { key: 'setup' });
+    m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
+  }
+  box.append(list);
 }

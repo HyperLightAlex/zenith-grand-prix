@@ -32,6 +32,7 @@ import {
   pickTarget,
   wrapAngle,
   packBonus,
+  pointsFor,
   teamPoints,
   weaponsFree,
   wrapS,
@@ -41,10 +42,11 @@ import {
   type Track,
 } from '../../sim/index';
 import { TELL_LABEL, tellOf, type TellKind } from '../game/tells';
-import { CARVE_COLORS, LIVERIES, factionName } from '../render/palette';
+import { CARVE_COLORS } from '../render/palette';
 import type { Plate } from '../render/raceView';
 import { h, setClass, setText } from './dom';
-import { emblemUrl, faceUrl } from './factionArt';
+import { faceUrl } from './factionArt';
+import { factionLook, teamLooks, type TeamLook } from './sides';
 import { COUNT, ICONS, type IconName } from './hudArt';
 import { Dash } from './dash';
 import type { Device } from '../input/input';
@@ -125,15 +127,22 @@ function setIcon(el: HTMLElement, name: IconName): void {
   el.style.setProperty('--ico', `url(${ICONS[name]})`);
 }
 
-/** Which faction each race team is, for the race on now (set by `begin`). */
-let teamFactions: [number, number] = [0, 1];
+/** How each race team looks, for the race on now (set by `begin`). */
+let looks: TeamLook[] = [];
 
-/** A race team's livery. */
-const liveryOf = (team: number) => LIVERIES[teamFactions[team]] ?? LIVERIES[0];
+/** A race team's look: its faction's, or (no faction) the league's in its pilot's colour. */
+const lookOf = (team: number) => looks[team] ?? factionLook(team);
 
 /** A seat's portrait: its person's own, or its faction's pilot. */
 function pilotOf(m: MechState): string {
-  return faceUrl(teamFactions[m.team] ?? 0, m.role, m.portrait);
+  return faceUrl(lookOf(m.team).faction, m.role, m.portrait);
+}
+
+/** Colour an element (a running order row, a name plate, a radio line) for a team: its colour and emblem. */
+function teamStyle(el: HTMLElement, team: number): void {
+  const t = lookOf(team);
+  el.style.setProperty('--tc', t.css);
+  el.style.setProperty('--te', `url(${t.emblem})`);
 }
 
 function pick(list: string[], seed: number): string {
@@ -364,21 +373,25 @@ export class Hud {
     set(TACTIC.MARK, k.left);
   }
 
-  /** Set up for a new race between `factions` (which faction each race team is). */
-  begin(race: RaceState, track: Track, localId: number, factions: [number, number] = [0, 1]): void {
-    teamFactions = factions;
+  /** Set up for a new race between `factions` (which faction each race team is; -1 for none). */
+  begin(race: RaceState, track: Track, localId: number, factions: readonly number[] = [0, 1]): void {
+    looks = teamLooks(race, factions);
     this.track = track;
     this.localId = localId;
     this.names = race.mechs.map((m) => m.name);
     this.lastHp = race.mechs.map((m) => m.hp);
     this.spoke = race.mechs.map(() => -9999);
     this.root.hidden = false;
-    this.root.style.setProperty('--team0', liveryOf(0).css);
-    this.root.style.setProperty('--team1', liveryOf(1).css);
-    this.root.style.setProperty('--emblem0', `url(${emblemUrl(factions[0])})`);
-    this.root.style.setProperty('--emblem1', `url(${emblemUrl(factions[1])})`);
-    setText(this.nameA, factionName(liveryOf(0)));
-    setText(this.nameB, factionName(liveryOf(1)));
+    // A Sprint: every pilot for themselves. The score is yours (the points
+    // your place is worth), in your colours; and there are no team plays.
+    setClass(this.root, 'sprint', race.sprint);
+    const a = race.sprint ? (race.mechs[localId]?.team ?? 0) : 0;
+    this.root.style.setProperty('--team0', lookOf(a).css);
+    this.root.style.setProperty('--team1', lookOf(1).css);
+    this.root.style.setProperty('--emblem0', `url(${lookOf(a).emblem})`);
+    this.root.style.setProperty('--emblem1', `url(${lookOf(1).emblem})`);
+    setText(this.nameA, race.sprint ? 'Points' : lookOf(0).name);
+    setText(this.nameB, lookOf(1).name);
 
     this.tower.replaceChildren();
     this.rows = [];
@@ -392,6 +405,7 @@ export class Hud {
       const hp = h('i');
       const gap = h('span.gap', '');
       const el = h('div.row' + (m.team ? '.t1' : '') + (m.id === localId ? '.me' : ''), pos, h('span.flag'), h('span.who', m.name, h('small', h('span.rolekey', ROLE_KEYS[m.role]), icon(ROLE_ICON[m.role]))), h('div.bar.hp', hp), gap);
+      teamStyle(el, m.team);
       this.tower.append(el);
       this.rows.push({ el, pos, hp, gap, place: -1 });
       const php = h('i');
@@ -401,6 +415,7 @@ export class Hud {
       const warn = h('div.warn', warnIco, warnText);
       warn.hidden = true;
       const plate = h('div.plate' + (m.team ? '.t1' : ''), warn, cue, h('span.tag', icon(ROLE_ICON[m.role]), m.name, h('span.rolekey', ` ${ROLE_KEYS[m.role]}`)), h('div.bar', php));
+      teamStyle(plate, m.team);
       plate.hidden = true;
       // Under the panels, so a name never covers the running order.
       this.root.prepend(plate);
@@ -556,7 +571,7 @@ export class Hud {
       const r = size * (me ? 0.05 : 0.036);
       g.beginPath();
       g.arc(x * size, y * size, r, 0, Math.PI * 2);
-      g.fillStyle = m.retired ? '#5b6272' : liveryOf(m.team).css;
+      g.fillStyle = m.retired ? '#5b6272' : lookOf(m.team).css;
       g.fill();
       g.lineWidth = size * (me ? 0.02 : 0.012);
       g.strokeStyle = me ? '#ffffff' : 'rgba(15,21,36,0.9)';
@@ -580,9 +595,9 @@ export class Hud {
     setText(this.phase, PHASE_NAMES[race.lapPhase]);
     this.phase.className = 'phase p' + race.lapPhase;
 
-    // Score and clock.
-    setText(this.ptsA, String(teamPoints(race, 0)));
-    setText(this.ptsB, String(teamPoints(race, 1)));
+    // Score and clock (a Sprint: the points your place is worth now).
+    setText(this.ptsA, String(race.sprint ? pointsFor(me, true) : teamPoints(race, 0)));
+    if (!race.sprint) setText(this.ptsB, String(teamPoints(race, 1)));
     const secs = Math.max(0, race.tick * DT - 4);
     setText(this.clock, `${Math.floor(secs / 60)}:${(secs % 60).toFixed(1).padStart(4, '0')}`);
 
@@ -722,9 +737,12 @@ export class Hud {
         items.push([k.x, 'Attack'], [k.y, SPECIAL], [k.guard, 'Guard'], [k.dash, 'Dash / boost'], [k.swing, 'Swing'], [k.ability, ABILITIES[shown].name], [k.swap, 'Switch target'], escorting ? [k.ally, 'Back to the fight'] : [k.lock, 'Let go']);
         if (compact) items = [items[0], items[2], items[3], items[7]];
       } else {
-        items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.carve, 'Carve'], [k.boost, 'Boost'], [k.lock, 'Lock on'], [k.ally, 'Escort']);
+        items.push([k.accel, 'Accelerate'], [k.brake, 'Brake'], [k.carve, 'Carve'], [k.boost, 'Boost'], [k.lock, 'Lock on']);
+        // (Nobody to escort in a Sprint.)
+        if (!race.sprint) items.push([k.ally, 'Escort']);
         if (race.lapPhase >= 2) items.push([k.x, 'Attack'], [k.ability, ABILITIES[shown].name]);
-        if (compact) items = race.lapPhase >= 2 ? [items[3], items[2], items[4], items[7]] : [items[3], items[2], items[4], items[5]];
+        // Compact: boost, carve, lock on, and the ability once weapons are free (else escort, if there is anyone to).
+        if (compact) items = [items[3], items[2], items[4], ...(race.lapPhase >= 2 ? [items[items.length - 1]] : items.slice(5, 6))];
       }
       this.hints.replaceChildren(...items.map(([key, label]) => h('span' + (label === SPECIAL ? '.special' : ''), h('span.key', key), label)));
       this.specialHint = this.hints.querySelector<HTMLElement>('.special');
@@ -750,7 +768,7 @@ export class Hud {
       this.target.hidden = false;
       setClass(this.target, 'ally', ally);
       setText(this.targetName, t.name);
-      setText(this.targetRole, `${mechName(t, liveryOf(t.team).models[t.role])}, ${factionName(liveryOf(t.team))}`);
+      setText(this.targetRole, `${mechName(t, lookOf(t.team).livery.models[t.role])}, ${lookOf(t.team).name}`);
       setIcon(this.targetRoleIco, ROLE_ICON[t.role]);
       const portrait = `url(${pilotOf(t)})`;
       if (this.targetPilot.style.backgroundImage !== portrait) this.targetPilot.style.backgroundImage = portrait;
@@ -922,7 +940,7 @@ export class Hud {
       setText(this.retired.firstElementChild as HTMLElement, me.retired ? 'Retired' : `Finished ${me.place}${ORD[me.place - 1]}`);
       (this.retired.firstElementChild as HTMLElement).style.background = me.retired ? '' : 'var(--charge)';
       (this.retired.firstElementChild as HTMLElement).style.color = me.retired ? '' : 'var(--ink)';
-      setText(this.retiredSmall, me.retired ? `Watching ${focus.name}. You can still call team plays.` : `Watching ${focus.name}.`);
+      setText(this.retiredSmall, me.retired && !race.sprint ? `Watching ${focus.name}. You can still call team plays.` : `Watching ${focus.name}.`);
     }
 
     // Radio lines that depend on thresholds rather than events.
@@ -1027,6 +1045,7 @@ export class Hud {
     const face = from ? h('i.pilot') : null;
     if (face && from) face.style.backgroundImage = `url(${pilotOf(from)})`;
     const el = h('div.msg' + (from ? (from.team ? '.t1' : '') : '.ctl'), face, h('span.line', h('b', from ? from.name : 'Race control'), text));
+    if (from) teamStyle(el, from.team);
     this.comms.append(el);
     this.onRadio();
     while (this.comms.children.length > 3) this.comms.firstElementChild!.remove();
@@ -1190,7 +1209,7 @@ export class Hud {
         } else if (victim.team === me.team) {
           this.say(victim, pick(LINES.out, this.seq++));
         } else if (by && by.id === this.localId) {
-          this.showBanner('Knockout', race.rules.koPoints > 0 ? `${victim.name} is out · +${race.rules.koPoints} points` : `${victim.name} is out`, '', 2.4);
+          this.showBanner('Knockout', race.rules.koPoints > 0 && !race.sprint ? `${victim.name} is out · +${race.rules.koPoints} points` : `${victim.name} is out`, '', 2.4);
           if (mates[0]) this.say(mates[0], pick(LINES.praise, this.seq++).replace('{t}', victim.name));
         } else if (by && by.team === me.team) {
           this.say(by, pick(LINES.kill, this.seq++).replace('{t}', victim.name));

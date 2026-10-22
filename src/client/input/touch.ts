@@ -85,6 +85,8 @@ export class TouchControls {
   private specialReady = true;
   /** Locked on a team-mate: the lock button reads "Fight" (it goes back to the rival last fought). */
   private escorting = false;
+  /** No team (a Sprint): no Escort button and no team plays. */
+  private solo = false;
   /** Button size, CSS pixels. */
   private u = 52;
   /** Something on the layer was touched: the input switches to touch. */
@@ -161,8 +163,9 @@ export class TouchControls {
   }
 
   /** What the ability button says, and which buttons are live, for this frame. */
-  setState(mode: TouchMode, ability: { name: string; icon: IconName; ready: boolean }, attackReady: boolean, escorting = false, specialReady = true): void {
-    const fresh = mode !== this.builtMode;
+  setState(mode: TouchMode, ability: { name: string; icon: IconName; ready: boolean }, attackReady: boolean, escorting = false, specialReady = true, solo = false): void {
+    const fresh = mode !== this.builtMode || solo !== this.solo;
+    this.solo = solo;
     if (fresh) this.build(mode);
     this.mode = mode;
     if (fresh || escorting !== this.escorting) {
@@ -216,8 +219,10 @@ export class TouchControls {
       add('a2', 'Lock on', BTN.LOCK, 'lockedOn');
       add('a3', this.abilityText || 'Ability', BTN.ABILITY, this.abilityIcon);
       add('o1', 'Attack', BTN.X, null);
-      add('o2', 'Escort', BTN.ALLY, 'escorting');
-      add('o3', 'Team', 0, 'blitz', { action: team });
+      if (!this.solo) {
+        add('o2', 'Escort', BTN.ALLY, 'escorting');
+        add('o3', 'Team', 0, 'blitz', { action: team });
+      }
     } else if (mode === 'battle') {
       add('primary', 'Attack', BTN.X, null);
       add('a1', 'Guard', BTN.GUARD, 'guard');
@@ -226,11 +231,11 @@ export class TouchControls {
       add('o1', this.abilityText || 'Ability', BTN.ABILITY, this.abilityIcon);
       add('o2', 'Switch', BTN.TNEXT, null);
       add('o3', 'Let go', BTN.LOCK, null);
-      add('o4', 'Team', 0, 'blitz', { action: team });
+      if (!this.solo) add('o4', 'Team', 0, 'blitz', { action: team });
     } else {
       // Out of the race: the lock button changes whose camera you ride; plays still go out.
       add('primary', 'Next camera', BTN.LOCK, null);
-      add('o3', 'Team', 0, 'blitz', { action: team });
+      if (!this.solo) add('o3', 'Team', 0, 'blitz', { action: team });
     }
     this.layout();
   }

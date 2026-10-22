@@ -117,6 +117,59 @@ export function scoreRound(race: RaceState, round = 1): RoundResult {
   return { round, points, place, ko, support, rank, first, tied, winner };
 }
 
+/** The measures a format ranks sides by, in turn (each: higher is better). */
+function measures(match: MatchState): Array<(i: number) => number> {
+  const last = match.rounds[match.rounds.length - 1];
+  const lastFinish = (i: number) => -(last?.rank[i] ?? 99);
+  const totals = (i: number) => match.totals[i] ?? 0;
+  const wins = (i: number) => match.wins[i] ?? 0;
+  switch (match.cfg.mode) {
+    case 'races':
+      return [totals, wins, lastFinish];
+    case 'wins':
+      return [wins, totals, lastFinish];
+    case 'points':
+      return [totals, wins];
+    default:
+      return [wins, totals];
+  }
+}
+
+/** The sides as the match stands, best first (by its format's own measures; level sides by number). */
+export function standings(match: MatchState): number[] {
+  const by = measures(match);
+  const order = match.totals.map((_, i) => i);
+  order.sort((a, b) => {
+    for (const f of by) {
+      const d = f(b) - f(a);
+      if (d !== 0) return d;
+    }
+    return a - b;
+  });
+  return order;
+}
+
+/**
+ * A Sprint's grid for its next race, as mech ids from pole (each pilot its
+ * own side): drawn by lot (from `seed`) for the first race, then the
+ * standings reversed, so whoever leads starts at the back.
+ */
+export function sprintGrid(match: MatchState | null, pilots: number, seed: number): number[] {
+  if (match && match.rounds.length > 0) {
+    const order = standings(match).filter((i) => i < pilots);
+    for (let i = 0; i < pilots; i++) if (!order.includes(i)) order.push(i);
+    return order.reverse();
+  }
+  const grid = Array.from({ length: pilots }, (_, i) => i);
+  let r = seed | 0 || 1;
+  for (let i = grid.length - 1; i > 0; i--) {
+    r = (Math.imul(r ^ (r >>> 15), 0x2c1b3c6d) + 0x6d2b79f5) | 0;
+    const j = (r >>> 0) % (i + 1);
+    [grid[i], grid[j]] = [grid[j], grid[i]];
+  }
+  return grid;
+}
+
 /** The side ahead by these measures in turn (each: higher is better), or -1 for none. */
 function ahead(sides: number, ...by: Array<(i: number) => number>): number {
   let best = -1;

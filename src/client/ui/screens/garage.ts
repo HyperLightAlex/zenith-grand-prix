@@ -1,13 +1,14 @@
 // The hangar (who you race as: faction and frame, shared by every mode) and
 // Free Play's match setup (what you play).
 
-import { ABILITIES, ATTACKS, CLASSES, ROLE_NAMES, TRACKS, type Role } from '../../../sim/index';
+import { ABILITIES, ATTACKS, CLASSES, ROLE, ROLE_NAMES, TRACKS, type Role } from '../../../sim/index';
+import { PILOT_COLOUR_NAMES } from '../../../net/protocol';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h } from '../dom';
 import { emblemUrl, faceUrl } from '../factionArt';
 import { STAT_LABELS, frameStats } from '../frameStats';
-import { MATCH_OPTIONS, RIVALS, TRACK_BLURBS, type Menus } from '../menus';
+import { MATCH_OPTIONS, MODE_NAMES, RIVALS, SPRINT_OPTIONS, SPRINT_TAGLINE, TRACK_BLURBS, type Menus } from '../menus';
 import { BACK, CHANGE, SELECT } from './common';
 import { customName, openCustom } from './custom';
 
@@ -203,35 +204,50 @@ export function registerGarage(m: Menus, g: Game): void {
       const list = h('div.list');
       const circuit = TRACKS.find((t) => t.id === c.track) ?? TRACKS[0];
       g.circuitAhead(circuit.id);
-      const opt = MATCH_OPTIONS[c.match] ?? MATCH_OPTIONS[0];
+      const sprint = c.mode === 'sprint';
+      const opt = sprint ? (SPRINT_OPTIONS[c.sprint] ?? SPRINT_OPTIONS[0]) : (MATCH_OPTIONS[c.match] ?? MATCH_OPTIONS[0]);
       const save = () => {
         g.saveFree();
         m.refresh();
       };
+      // Team race or Sprint (six Forwards, every pilot for themselves).
+      m.choice(list, 'Mode', MODE_NAMES[c.mode], () => {
+        c.mode = sprint ? 'teams' : 'sprint';
+        g.saveFree();
+        // A Sprint is raced in your own Forward: the bay shows it (made from your faction's if you have none).
+        g.previewSetup();
+        m.refresh();
+      }, { key: 'mode' });
       m.choice(list, 'Circuit', circuit.name, (dir) => {
         const i = Math.max(0, TRACKS.findIndex((t) => t.id === c.track));
         c.track = TRACKS[(i + dir + TRACKS.length) % TRACKS.length].id;
         save();
       }, { key: 'track' });
-      m.choice(list, 'Rival team', c.rival >= 0 ? factionName(LIVERIES[c.rival]) : 'Random', (dir) => {
-        const options = [-1, ...LIVERIES.map((_, f) => f).filter((f) => f !== g.loadout.team)];
-        const i = Math.max(0, options.indexOf(c.rival));
-        c.rival = options[(i + dir + options.length) % options.length];
-        save();
-      }, { key: 'rival' });
-      m.choice(list, 'Rival pilots', RIVALS[c.rivals], (dir) => {
+      if (!sprint) {
+        m.choice(list, 'Rival team', c.rival >= 0 ? factionName(LIVERIES[c.rival]) : 'Random', (dir) => {
+          const options = [-1, ...LIVERIES.map((_, f) => f).filter((f) => f !== g.loadout.team)];
+          const i = Math.max(0, options.indexOf(c.rival));
+          c.rival = options[(i + dir + options.length) % options.length];
+          save();
+        }, { key: 'rival' });
+      }
+      m.choice(list, sprint ? 'Computer pilots' : 'Rival pilots', RIVALS[c.rivals], (dir) => {
         c.rivals = (c.rivals + dir + 3) % 3;
         save();
       }, { key: 'rivals' });
       m.choice(list, 'Match', opt.label, (dir) => {
-        const n = MATCH_OPTIONS.length;
-        c.match = (c.match + dir + n) % n;
+        if (sprint) c.sprint = (c.sprint + dir + SPRINT_OPTIONS.length) % SPRINT_OPTIONS.length;
+        else c.match = (c.match + dir + MATCH_OPTIONS.length) % MATCH_OPTIONS.length;
         save();
       }, { key: 'match' });
+      // Your mech in a Sprint: your own Forward, whatever you fly in a team race.
+      const mine = sprint ? customName(ROLE.FW, g.customMech(ROLE.FW)) : '';
+      if (sprint) m.button(list, `Edit ${mine}`, () => openCustom(m, g, ROLE.FW, g.loadout.team), { key: 'custom', hint: 'A Sprint is raced in your own Forward' });
       m.button(list, 'Start', () => g.startFree(), { key: 'start', go: true });
       const livery = LIVERIES[g.loadout.team];
-      const you = h('div.context', `Free Play · ${factionName(livery)}, ${livery.models[g.loadout.role]}`);
-      col.append(you, h('h1', 'Match setup'), list, h('div.match-blurb', `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`));
+      const you = h('div.context', sprint ? `Free Play · Sprint · ${mine}, in ${PILOT_COLOUR_NAMES[g.pilotColour].toLowerCase()}` : `Free Play · ${factionName(livery)}, ${livery.models[g.loadout.role]}`);
+      const blurb = sprint ? `${SPRINT_TAGLINE} You in your own Forward against a computer pilot from each faction. ${opt.blurb}` : `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`;
+      col.append(you, h('h1', sprint ? 'Sprint setup' : 'Match setup'), list, h('div.match-blurb', blurb));
       m.root.append(h('div.shade'), m.panes(col), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
     },
     press(m, key) {

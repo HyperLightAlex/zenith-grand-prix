@@ -61,6 +61,10 @@ export interface GarageChoice {
   match: number;
   /** Circuit id. */
   track: string;
+  /** Team race (two teams of three), or Sprint (six Forwards, every pilot for themselves). */
+  mode: 'teams' | 'sprint';
+  /** Sprint: index into SPRINT_OPTIONS. */
+  sprint: number;
 }
 
 /** What the setup screens say about each circuit. */
@@ -77,6 +81,19 @@ export const MATCH_OPTIONS: Array<{ label: string; blurb: string; cfg: MatchConf
   { label: 'Series, best of 5', blurb: 'Win three rounds. A round level on points goes to whoever came home first.', cfg: { mode: 'series', bestOf: 5, target: 50 } },
   { label: 'Points race to 50', blurb: 'Points carry over. First team to 50 at the end of a round wins.', cfg: { mode: 'points', bestOf: 3, target: 50 } },
   { label: 'Points race to 80', blurb: 'Points carry over. First team to 80 at the end of a round wins.', cfg: { mode: 'points', bestOf: 3, target: 80 } },
+];
+
+/** The game modes, as the setup screens name them. */
+export const MODE_NAMES = { teams: 'Team race', sprint: 'Sprint' } as const;
+export const SPRINT_TAGLINE = 'Six Forwards. Every pilot for themselves.';
+
+/** A Sprint's formats. Points by place: 10, 8, 6, 4, 2, 1. */
+export const SPRINT_OPTIONS: Array<{ label: string; blurb: string; cfg: MatchConfig }> = [
+  { label: 'Single race', blurb: 'One race. Whoever wins it wins.', cfg: { mode: 'races', bestOf: 1, target: 0, races: 1 } },
+  { label: '3 races, most points', blurb: 'Points by place: 10, 8, 6, 4, 2, 1. Level on points, the more wins, then the better finish in the last race.', cfg: { mode: 'races', bestOf: 1, target: 0, races: 3 } },
+  { label: '5 races, most points', blurb: 'Points by place: 10, 8, 6, 4, 2, 1. Level on points, the more wins, then the better finish in the last race.', cfg: { mode: 'races', bestOf: 1, target: 0, races: 5 } },
+  { label: 'First to 2 wins', blurb: 'At most 5 races. If nobody has 2 wins by then, the most wins takes it, then the most points.', cfg: { mode: 'wins', bestOf: 1, target: 0, wins: 2 } },
+  { label: 'First to 3 wins', blurb: 'At most 7 races. If nobody has 3 wins by then, the most wins takes it, then the most points.', cfg: { mode: 'wins', bestOf: 1, target: 0, wins: 3 } },
 ];
 
 export const RIVALS = ['Rookie', 'Pro', 'Ace'];
