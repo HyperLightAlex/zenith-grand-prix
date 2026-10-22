@@ -55,6 +55,17 @@ export function makeSeats(humans: readonly number[] | 'all' = [], skill: number 
   return out;
 }
 
+/** A Sprint's six Forwards, each its own team; `humans` lists the seat ids a person holds. */
+export function makeSprintSeats(humans: readonly number[] = [], skill = 0.6): SeatConfig[] {
+  const names = ['Kite', 'Shrike', 'Sirocco', 'Orion', 'Squall', 'Lark'];
+  return names.map((name, id) => ({ team: id, role: ROLE.FW, human: humans.includes(id), name, skill }));
+}
+
+/** A Sprint race: six Forwards, every pilot for themselves (`grid`: mech ids from pole). */
+export function newSprint(seed: number, opts: { humans?: readonly number[]; skill?: number; laps?: number; rules?: Partial<Rules>; grid?: number[] } = {}): RaceState {
+  return createRace(TRACK, { seed, seats: makeSprintSeats(opts.humans ?? [], opts.skill ?? 0.6), laps: opts.laps, rules: opts.rules, mode: 'sprint', grid: opts.grid });
+}
+
 export interface RaceOpts {
   humans?: readonly number[] | 'all';
   skill?: number | readonly [number, number];
@@ -136,7 +147,7 @@ const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
 function mechSum(m: MechState): number {
   const ai = m.ai;
   return (
-    m.id + m.team + m.role + m.skill + m.portrait +
+    m.id + m.team + m.role + m.skill + m.portrait + m.colour +
     m.s + m.d + m.vs + m.vd + m.speed + m.heading + m.facing + m.steer + m.h + m.vh + m.fallT + m.padT +
     m.mode + m.target + m.outOfRange + m.lastFoe +
     m.hp + m.guard + m.drive +

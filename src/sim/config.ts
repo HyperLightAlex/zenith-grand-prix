@@ -7,6 +7,11 @@ export const DT = 1 / TICK_RATE;
 export const LAPS = 3;
 /** Points by finishing position. A retired mech scores nothing. */
 export const POINTS = [15, 7, 5, 3, 2, 1];
+/**
+ * Placing points in a Sprint, by place: flatter than POINTS, so a set of
+ * races rewards finishing well every time, not one win.
+ */
+export const SPRINT_POINTS = [10, 8, 6, 4, 2, 1];
 
 /**
  * Support actions that score for the team (awards.ts). Each pilot's total is

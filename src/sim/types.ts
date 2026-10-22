@@ -71,6 +71,8 @@ export interface MechState {
   portrait: number;
   /** A custom mech (custom/mechBuild.ts, as text), or '' for the faction's stock mech. Shown only. */
   look: string;
+  /** The pilot's colour (an RGB number): a Sprint pilot flying for no faction wears it. -1 for none. Shown only. */
+  colour: number;
   /** AI skill 0..1. */
   skill: number;
 
@@ -355,6 +357,8 @@ export type SimEvent =
 export interface RaceState {
   tick: number;
   phase: Phase;
+  /** Sprint (RaceConfig.mode): every pilot its own team, no team play, placing points only. */
+  sprint: boolean;
   rng: number;
   /** Tunable rules for this race. Plain numbers, part of the state. */
   rules: Rules;
@@ -384,6 +388,8 @@ export interface SeatConfig {
   portrait?: number;
   /** A custom mech (see MechState.look); stock if left out. */
   look?: string;
+  /** The pilot's colour (see MechState.colour); none if left out. */
+  colour?: number;
   skill: number;
 }
 
@@ -395,4 +401,12 @@ export interface RaceConfig {
   rules?: Partial<Rules>;
   /** Swap the two teams' sides of the grid (alternated round by round). */
   gridFlip?: boolean;
+  /**
+   * 'teams' (the default): two teams of three. 'sprint': every pilot for
+   * themselves, each seat its own team (seat.team its own number), all
+   * Forwards; no team play, and placing points only (SPRINT_POINTS).
+   */
+  mode?: 'teams' | 'sprint';
+  /** Sprint: the grid, mech ids from pole back (by seat order if left out). */
+  grid?: number[];
 }

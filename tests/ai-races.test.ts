@@ -355,7 +355,7 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
   }
   const round = scoreRound(race);
   sum.winner = round.winner;
-  sum.roundPoints = round.points;
+  sum.roundPoints = [round.points[0], round.points[1]];
   return sum;
 }
 

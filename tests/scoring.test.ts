@@ -382,7 +382,7 @@ describe('the round the designer cares about', () => {
     expect(teamPoints(a.race, 1)).toBeGreaterThan(teamPoints(a.race, 0));
     expect(a.race.mechs.map((m) => m.points)).toEqual([15, 7, 0, 5 + 3, 0, 3 + 3]);
     const round = scoreRound(a.race);
-    expect(round).toEqual({ round: 1, points: [15, 21], place: [15, 15], ko: [0, 6], support: [0, 0], first: 0, tied: false, winner: 1 });
+    expect(round).toEqual({ round: 1, points: [15, 21], place: [15, 15], ko: [0, 6], support: [0, 0], rank: [1, 2], first: 0, tied: false, winner: 1 });
   });
 
   it('one knock-out is already enough to turn it', () => {

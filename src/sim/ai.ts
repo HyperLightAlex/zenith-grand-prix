@@ -107,8 +107,17 @@ function think(race: RaceState, track: Track, m: MechState): void {
     const onFw = fw !== null && fw !== m && (e.target === fw.id || distance(track, e, fw) < 28);
     const onAlly = e.target >= 0 && race.mechs[e.target].team === m.team && e.target !== m.id;
     // Role doctrine: forwards race, midfielders back up whoever is in a
-    // fight, defenders peel attackers off their own forward.
-    if (m.role === ROLE.FW) {
+    // fight, defenders peel attackers off their own forward. In a Sprint
+    // every pilot is for themselves: fight whoever is near on the road, the
+    // racer just ahead most of all, and not one others are already on (so
+    // the field does not pile onto one pilot, a person least of all).
+    if (race.sprint) {
+      sc += e.place === m.place - 1 ? 12 : e.place < m.place ? 4 : -6;
+      if (onMe) sc += 32;
+      let others = 0;
+      for (const o of race.mechs) if (o !== m && o !== e && o.target === e.id && inPlay(o)) others++;
+      sc -= others * 24;
+    } else if (m.role === ROLE.FW) {
       // A forward's job is the finish line: it fights when it is picked on,
       // or when the team calls for it.
       sc += e.role === ROLE.FW ? -20 : e.role === ROLE.DF ? -34 : -26;

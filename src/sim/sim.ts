@@ -59,6 +59,7 @@ import {
   START,
   PHASE,
   POINTS,
+  SPRINT_POINTS,
   RAM_ARC,
   RAM_CHARGE,
   RAM_MASS,
@@ -143,9 +144,13 @@ import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceS
 export { packBonus, speedCap } from './core';
 
 export function createRace(track: Track, cfg: RaceConfig): RaceState {
+  const sprint = cfg.mode === 'sprint';
+  // A team per side; in a Sprint, a team per pilot.
+  const teamCount = Math.max(2, ...cfg.seats.map((seat) => seat.team + 1));
   const race: RaceState = {
     tick: 0,
     phase: PHASE.COUNTDOWN,
+    sprint,
     rng: cfg.seed | 0,
     rules: makeRules(cfg.rules),
     laps: cfg.laps ?? LAPS,
@@ -154,10 +159,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
     mechs: [],
     projectiles: [],
     nextProjId: 1,
-    teams: [
-      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1, caller: CALLER.ANY },
-      { tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1, caller: CALLER.ANY },
-    ],
+    teams: Array.from({ length: teamCount }, () => ({ tactic: TACTIC.FREE, mark: -1, captainAt: 0, captainPhase: 1, caller: CALLER.ANY })),
     firstFinishTick: -1,
     endTick: -1,
     events: [],
@@ -168,8 +170,14 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
     // Grid: forwards on the front row, defenders at the back. The teams swap
     // sides row by row so neither owns the inside line into turn one, and a
     // match flips the whole grid from one round to the next.
-    const s = -(10 + seat.role * 12);
-    const d = ((seat.team === 0) !== (seat.role === 1) ? -9 : 9) * (cfg.gridFlip ? -1 : 1);
+    let s = -(10 + seat.role * 12);
+    let d = ((seat.team === 0) !== (seat.role === 1) ? -9 : 9) * (cfg.gridFlip ? -1 : 1);
+    if (sprint) {
+      // A Sprint's grid: two by two from pole, in the order given.
+      const slot = cfg.grid ? Math.max(0, cfg.grid.indexOf(id)) : id;
+      s = -(10 + Math.floor(slot / 2) * 12);
+      d = slot % 2 ? 9 : -9;
+    }
     // Which gates an AI pilot will bother with: the better the pilot, the more.
     let gates = 0;
     for (let g = 0; g < track.gates.length; g++) {
@@ -183,6 +191,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       name: seat.name,
       portrait: seat.portrait ?? -1,
       look: seat.look ?? '',
+      colour: seat.colour ?? -1,
       skill: seat.skill,
       s,
       d,
@@ -971,6 +980,8 @@ export function setTactic(race: RaceState, team: number, tactic: Tactic, by: num
 
 /** Whether this person's tactic calls count for their team (see TeamState.caller). */
 export function mayCall(race: RaceState, m: MechState): boolean {
+  // A Sprint has no team to call plays for.
+  if (race.sprint) return false;
   const caller = race.teams[m.team].caller;
   return caller === CALLER.ANY || caller === m.id;
 }
@@ -1019,19 +1030,19 @@ export function updatePlaces(race: RaceState): void {
   for (let i = 0; i < order.length; i++) order[i].place = i + 1;
 }
 
-/** Placing points a mech would bank if the race ended in the current order. */
-export function pointsFor(m: MechState): number {
-  return m.retired ? 0 : (POINTS[m.place - 1] ?? 0);
+/** Placing points a mech would bank if the race ended in the current order (`sprint`: a Sprint's). */
+export function pointsFor(m: MechState, sprint = false): number {
+  return m.retired ? 0 : ((sprint ? SPRINT_POINTS : POINTS)[m.place - 1] ?? 0);
 }
 
-/** Points a mech has earned for its team by knocking rivals out. They survive its own retirement. */
+/** Points a mech has earned for its team by knocking rivals out. They survive its own retirement. None in a Sprint. */
 export function koBonus(race: RaceState, m: MechState): number {
-  return m.kos * race.rules.koPoints;
+  return race.sprint ? 0 : m.kos * race.rules.koPoints;
 }
 
 export function teamPoints(race: RaceState, team: number): number {
   let sum = 0;
-  for (const m of race.mechs) if (m.team === team) sum += pointsFor(m) + koBonus(race, m) + m.support;
+  for (const m of race.mechs) if (m.team === team) sum += pointsFor(m, race.sprint) + koBonus(race, m) + m.support;
   return sum;
 }
 
@@ -1052,7 +1063,7 @@ function finalize(race: RaceState): void {
     }
   }
   updatePlaces(race);
-  for (const m of race.mechs) m.points = pointsFor(m) + koBonus(race, m) + m.support;
+  for (const m of race.mechs) m.points = pointsFor(m, race.sprint) + koBonus(race, m) + m.support;
   race.phase = PHASE.FINISHED;
   race.projectiles.length = 0;
   race.events.push({ type: 'raceEnd' });
@@ -1169,7 +1180,8 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     }
   }
   if (race.phase === PHASE.RACING) {
-    for (let team = 0; team < 2; team++) aiCaptain(race, track, team);
+    // (A Sprint has no team play to call.)
+    if (!race.sprint) for (let team = 0; team < 2; team++) aiCaptain(race, track, team);
   }
 
   // 2. Locks, commands and actions. The order flips every tick so neither

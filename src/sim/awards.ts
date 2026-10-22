@@ -32,7 +32,8 @@ export function freshHurtBy(): number[] {
  * (the cap may cut them, to nothing).
  */
 export function award(race: RaceState, m: MechState, kind: Award, victim = -1, points: number = AWARD_POINTS[kind], cooldown = true): number {
-  if (m.retired) return 0;
+  // A Sprint scores the finish alone: no support points.
+  if (m.retired || race.sprint) return 0;
   const rules = race.rules;
   if (cooldown && victim >= 0 && victim < AWARD_SLOTS) {
     const k = kind * AWARD_SLOTS + victim;

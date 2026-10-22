@@ -146,11 +146,11 @@ describe('createMatch', () => {
 
 describe('scoreRound', () => {
   it('adds up placing points and knock-out points per team', () => {
-    expect(scoreRound(win0())).toEqual({ round: 1, points: [22, 11], place: [22, 11], ko: [0, 0], support: [0, 0], first: 0, tied: false, winner: 0 });
-    expect(scoreRound(win1())).toEqual({ round: 1, points: [11, 22], place: [11, 22], ko: [0, 0], support: [0, 0], first: 1, tied: false, winner: 1 });
+    expect(scoreRound(win0())).toEqual({ round: 1, points: [22, 11], place: [22, 11], ko: [0, 0], support: [0, 0], rank: [1, 2], first: 0, tied: false, winner: 0 });
+    expect(scoreRound(win1())).toEqual({ round: 1, points: [11, 22], place: [11, 22], ko: [0, 0], support: [0, 0], rank: [2, 1], first: 1, tied: false, winner: 1 });
     expect(scoreRound(sweep1())).toMatchObject({ points: [6, 27], first: 1, winner: 1 });
     const fight = result([FW0, FW1, MF1, DF1], [[MF0, MF1], [DF0, DF1]]);
-    expect(scoreRound(fight)).toEqual({ round: 1, points: [15, 21], place: [15, 15], ko: [0, 6], support: [0, 0], first: 0, tied: false, winner: 1 });
+    expect(scoreRound(fight)).toEqual({ round: 1, points: [15, 21], place: [15, 15], ko: [0, 6], support: [0, 0], rank: [1, 2], first: 0, tied: false, winner: 1 });
   });
 
   it('agrees with teamPoints and with the points the race banked', () => {
@@ -173,8 +173,8 @@ describe('scoreRound', () => {
   });
 
   it('level on points, the round goes to the team whose mech was classified first', () => {
-    expect(scoreRound(level0())).toEqual({ round: 1, points: [15, 15], place: [15, 15], ko: [0, 0], support: [0, 0], first: 0, tied: true, winner: 0 });
-    expect(scoreRound(level1())).toEqual({ round: 1, points: [15, 15], place: [15, 15], ko: [0, 0], support: [0, 0], first: 1, tied: true, winner: 1 });
+    expect(scoreRound(level0())).toEqual({ round: 1, points: [15, 15], place: [15, 15], ko: [0, 0], support: [0, 0], rank: [1, 2], first: 0, tied: true, winner: 0 });
+    expect(scoreRound(level1())).toEqual({ round: 1, points: [15, 15], place: [15, 15], ko: [0, 0], support: [0, 0], rank: [2, 1], first: 1, tied: true, winner: 1 });
     // Level through knock-out points: 15 + 3 against 7 + 5 + 3 + 3.
     const viaKo = result([FW0, FW1, MF1, DF1], [[MF0, MF1], [DF0, FW0]]);
     expect(scoreRound(viaKo)).toMatchObject({ points: [18, 18], ko: [3, 3], tied: true, first: 0, winner: 0 });
@@ -184,7 +184,7 @@ describe('scoreRound', () => {
     // Everyone knocked out: the wrecks are ranked most recent first.
     const race = result([], [[MF1, -1], [FW0, -1], [FW1, -1], [MF0, -1], [DF0, -1], [DF1, -1]]);
     expect(race.mechs[MF1].place).toBe(1);
-    expect(scoreRound(race)).toEqual({ round: 1, points: [0, 0], place: [0, 0], ko: [0, 0], support: [0, 0], first: 1, tied: true, winner: 1 });
+    expect(scoreRound(race)).toEqual({ round: 1, points: [0, 0], place: [0, 0], ko: [0, 0], support: [0, 0], rank: [2, 1], first: 1, tied: true, winner: 1 });
     // The same, but team 0 scored a knock-out on the way: that settles it.
     const ko = result([], [[MF1, -1], [FW0, -1], [FW1, FW0], [MF0, -1], [DF0, -1], [DF1, -1]]);
     expect(scoreRound(ko)).toMatchObject({ points: [3, 0], tied: false, winner: 0, first: 1 });
