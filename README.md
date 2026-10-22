@@ -10,7 +10,7 @@ is about getting your forward home first and stopping theirs.
 title lives in `index.html` and `src/client/ui/menus.ts` if you want to change
 it.
 
-This is version 0.5: three circuits and three ways to play.
+This is version 0.5: four circuits and three ways to play.
 
 - **Grand Prix**, offline: a **cup** of three races, each against a different
   faction, for gold, silver or bronze; or a **season**, a best of 3 against
@@ -174,6 +174,16 @@ race music.
   the Skyline crest, and Split Decision: a fork with a speed pad and a second
   jump on one side (take the pad and you clear it easily) and the Drive strip
   and a gate on the other.
+- **Neon Crucible.** Down and back up, at night in an open-pit mine lit with
+  neon. Out over the pit on the start straight to the Leap, a jump across
+  its middle, straight into the Hook: three quarters of a loop that lets go
+  pointing straight down, so you fall through the Plunge, the gap you have
+  just flown over. The road picks you up still going down: the Drill, two
+  barrel rolls down to the molten floor. Then the Coil, the mine's haul road,
+  climbs back up round the drop, four and a quarter turns cut into the pit
+  wall, each wider than the last, with no barrier on the inside for one turn
+  half way up: knocked that way, you fall into the pit. Hold a carve up the
+  Coil for the biggest burst on any circuit.
 
 What the new circuits add:
 
@@ -188,6 +198,9 @@ What the new circuits add:
   fight, and each route has something the other does not.
 - **Loops and corkscrews.** The skates hold you to the road all the way round
   at any speed.
+- **A straight drop.** The Crucible's Plunge points straight down with no
+  road under it: you are carried down its line, not dropped, onto the road
+  waiting below.
 - **Banked turns** grip harder the steeper they are banked.
 - **Speed pads** (magenta chevrons) lift your top speed for a second.
 - **Crests** throw you into the air if you take them fast.
@@ -320,7 +333,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |
-| `npm run sim -- 100 1 track=canyon` | The same on another circuit (`meridian`, `canyon`, `helios`) |
+| `npm run sim -- 100 1 track=canyon` | The same on another circuit (`meridian`, `canyon`, `helios`, `crucible`) |
 | `npx tsx tools/circuit-plot.ts canyon` | Plan, height and features of a circuit, as numbers and an SVG |
 
 The browser-driving helpers in `tools/` (`shot.mjs`, `screens.mjs`,
@@ -337,7 +350,7 @@ seconds in, `&seed=7` repeats a race exactly, `&team=1` puts you on Vanta,
 `&rivals=0..2` sets rival skill, `&rival=2` picks the rival team,
 `&oldswift=1` flies Solstice's first Swift design in place of the Sunhawk,
 `&match=0..4` picks the match format,
-`&track=canyon` (or `helios`, `meridian`) picks the circuit, `&look=plain`
+`&track=canyon` (or `helios`, `crucible`, `meridian`) picks the circuit, `&look=plain`
 (or `anime`) picks the look for that visit, `&tune=1` opens the tuning panel,
 `&mute=1` turns sound off, `&music=synth` plays the synthesised music and
 sound effects in place of the recorded ones (the recorded songs: a race
@@ -428,7 +441,7 @@ src/sim/        The race itself: track, physics, combat, AI, scoring. No DOM,
   config.ts     Frame data: classes, attacks, timings
   track.ts      Built track: samples, frames and lookups (road, lanes, forks)
   circuit.ts    Builder for 3D circuits from pieces (turns, climbs, loops...)
-  tracks/       The circuits: meridian.ts, canyon.ts, helios.ts
+  tracks/       The circuits: meridian.ts, canyon.ts, helios.ts, crucible.ts
   match.ts      Series and points-race scoring across rounds
   snapshot.ts   Copying a race and putting it back, and its checksum
 src/gp/         Grand Prix: cups and seasons, standings, the background races
@@ -461,9 +474,9 @@ play/           Prebuilt single-file game
 
 Rules live in `src/sim/rules.ts`, frame data in `src/sim/config.ts`, and the
 circuits in `src/sim/tracks/`. Meridian is a flat plan of straights and arcs;
-Canyon and Helios are lists of pieces (`straight`, `turn`, `climb`, `pitch`,
-`loop`, `roll`, plus `jump()`), each with optional width, banking, a gap, an
-open edge or a fork. The builder lengthens the two `closeWith` straights and
+Canyon, Helios and the Crucible are lists of pieces (`straight`, `turn`,
+`climb`, `pitch`, `loop`, `roll`, `spiral`, plus `jump()` and `spiralRun()`),
+each with optional width, banking, a gap, an open edge or a fork. The builder lengthens the two `closeWith` straights and
 sets the `settle` climb so the lap closes. Change a number, run
 `npm run sim -- 100 1 track=canyon`, and read the summary. Each circuit's
 scenery is in `src/client/render/world.ts` and `themes.ts`, its music in

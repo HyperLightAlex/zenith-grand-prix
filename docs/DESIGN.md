@@ -122,11 +122,12 @@ coordinated team play online.
   Held from the start the revs reach the green in about a second: the time
   to press is around the "1", and the throttle can be feathered to stay in
   the green. The computer revs up too, aiming by skill.
-- Three laps of one of three circuits, picked in the garage. On Meridian
+- Three laps of one of four circuits, picked in the garage. On Meridian
   Skyway (8,640 units round) the leader's laps take about 80, 70 and 52
   seconds (the first counted from the start of the countdown) and the winner
   finishes in about 3:22; on Corkscrew Canyon (8,074) in about 3:07, on Helios
-  Drop (9,430) in about 3:40. See "Circuits" below.
+  Drop (9,430) in about 3:40, on Neon Crucible (9,283) in about 3:45. See
+  "Circuits" below.
 - The lap phase follows the race leader:
 
 | Lap | Name | Weapons and abilities | Speed |
@@ -186,10 +187,13 @@ time as well.
 ### Circuits
 
 Meridian Skyway is the flat test course: a plan of straights and arcs with
-barriers all the way round, and elevation and banking only for show. The two
+barriers all the way round, and elevation and banking only for show. The
 3D circuits are built from pieces (`src/sim/circuit.ts`): straights, turns,
-climbs, pitches (crests and dips), loops and rolls, each of which can set the
-road's width and banking, cut a gap, leave an edge open or split the road.
+climbs, pitches (crests and dips), loops, rolls and spirals (a turn that
+climbs, widening as it goes: `spiralRun` cuts one into several pieces that
+climb at one steady grade, so a stretch of it can have an open edge), each
+of which can set the road's width and banking, cut a gap, leave an edge open
+or split the road.
 The builder drives a frame (forward, right, up) through the pieces, lengthens
 two straights and sets one climb so the lap closes, then resamples every 4
 units. Every sample carries its own width, wall flags, a middle wall's half
@@ -208,7 +212,13 @@ and whether it holds mechs on.
   at the formation-lap limiter (110) a mech lands about 57 units past the
   gap, on the battle lap about 155, and below about 103 it falls in. The
   Split Decision jump (92 units) needs about 97 u/s; the pad just before it
-  gives most mechs 130. The Hop on Canyon is a short gap built for 78.
+  gives most mechs 130. The Hop on Canyon is a short gap built for 78. The
+  Crucible's Leap is a 70-unit gap built for 100: cleared from about 80.
+- **Straight down.** Where the road is pitched more than 60 degrees up or
+  down, a gap is no fall: a mech crossing it is
+  carried along the road's line and picked up by the road beyond. The
+  Crucible's Plunge is the one there is: off the end of the Hook pointing
+  straight down, through the Leap's gap, onto the Drill.
 - **Falls.** Below the road with no road under it, a mech has fallen: 70
   armour, out of play for 96 ticks (nobody can lock it, hit it or draft it),
   then the drone sets it down on its own side 12 units past the next road, at
@@ -264,12 +274,18 @@ hairpin gets a carve held loosely to the third.
 - **Helios**: the Switchback, a left-right flick (140, 70 degrees each way)
   on the way down from the Drop, and a tighter Overlook (170) and Homecoming
   (140). 9,430 round.
+- **Crucible**: the Hearth hairpin (45, 90 degrees) on the pit's floor, the
+  Coil (four and a quarter turns climbing 362 units at a steady 5.75%, its
+  radius widening from 135 to 360: the longest carve on any circuit, and a
+  third-tier burst out of it on most laps) and the Gantry turn (120, 165
+  degrees) onto the line. 9,283 round.
 
 | Circuit | Lap 1 | Winner's time | KOs a race | Falls a race | Take-offs a race | Carve bursts a race (tiers 1 / 2 / 3) |
 |---|---|---|---|---|---|---|
 | Meridian Skyway | 80.0 s | 3:22 | 0.5 | 0 | 0 | 49 / 14 / 6 |
 | Corkscrew Canyon | 74.9 s | 3:07 | 0.1 to 0.55 | 0.2 to 0.5 | 25 | 41 / 28 / 0.5 |
 | Helios Drop | 87.6 s | 3:40 | 0.4 to 0.8 | 0.05 to 0.1 | 40 | 23 / 9 / 0 |
+| Neon Crucible | 84.8 s | 3:45 | 0.95 | 1.15 | 40 | 23 / 12 / 23 |
 
 (Twenty races each, equal computer pilots of middling skill. Computer
 pilots carve by the line they want, so they rarely hold a carve tight: a
@@ -278,10 +294,18 @@ person who does will reach the higher tiers far more often.)
 Each circuit has its own setting (Meridian: golden hour over the sea and a
 city; Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
 Sky Bridge; Helios: noon above a sea of cloud, floating islands, the Sun Gate
-over the Drop) and its own race music (Meridian: A minor, 138 BPM; Canyon:
-E Phrygian, 128 BPM, a broken beat; Helios: D major, 145 BPM, trance). Each
-follows the same arrangement over the three laps, and the lap and phase
-stingers are moved into the circuit's key.
+over the Drop; the Crucible: night over an open-pit mine, the Coil cut into
+its wall as benches with a line of neon along each, shading from magenta at
+the bottom to cyan at the rim, molten metal on the floor and a ladle pouring
+more into it, floodlights, a city round the rim and a gantry across the pit
+carrying the start straight) and its own race music (Meridian: A minor, 138
+BPM; Canyon: E Phrygian, 128 BPM, a broken beat; Helios: D major, 145 BPM,
+trance; the Crucible has only its song, and plays Helios's synthesised music
+without it). Each follows the same arrangement over the three laps, and the
+lap and phase stingers are moved into the circuit's key. The Crucible's pit
+is worked out from the circuit (`src/client/render/pit.ts`): the scenery
+and the road's supports both ask it where the ground is, and no support
+pylon comes down on or through another stretch of road.
 
 The race music is a recorded song (`?music=synth` plays the synthesised
 music above instead)
@@ -289,8 +313,8 @@ music above instead)
 layers: lap 1 plays the melody (the stems that were carved out of one
 another, which have to come in together: see tools/music) and the bass, a
 little quieter; lap 2 brings in the drums; lap 3 the rest (Meridian's
-brass, percussion and effects; Canyon's and Helios's percussion and
-effects), the full song at full volume, with the kick and bass lifted; the
+brass, percussion and effects; the others' percussion and effects), the
+full song at full volume, with the kick and bass lifted; the
 finish goes to the song's ending, then the menu music (what the results
 play) so there is no silence while the others finish. The build is in what
 comes in, more than in how loud it gets. Each change waits for the next bar
@@ -300,9 +324,12 @@ it jumps to the build into the drop, at the same place in its 16-bar
 chord cycle, so only the energy changes, and loops the drop to the
 finish. Canyon's (疾走の回路) lifts a key for its last chorus: the lap
 change waits for the next 4-bar phrase (a key change lands as meant only
-on one) and goes into it. All three circuits have one; only the circuit
-coming up has its song decoded. While a song plays the stingers can take
-keys of its own (Helios's E minor, Canyon's G minor rising to A minor).
+on one) and goes into it. The Crucible's, Neon Fire (D minor, about 193
+BPM), loops 50 bars (62 s) from after its first chorus through its second. All
+four circuits have one; only the circuit coming up has its song decoded.
+While a song plays the stingers can take keys of its own (Helios's E minor,
+Canyon's G minor rising to A minor, the Crucible's D minor ending in D
+major).
 The results have a song for each outcome of the round (and the Grand Prix
 award, first place or not): トロフィーセレモニー when the player's team
 won, Minor Theme when it lost, each looping until the screen is left. The
