@@ -677,6 +677,17 @@ function stepAir(race: RaceState, track: Track, m: MechState): void {
       return;
     }
   }
+  // A gap in road that drops away near vertically (the Crucible's Plunge) is
+  // a fall down along the road, not off it: the mech keeps to the line of
+  // the road through it, however it came in (still flying from a crest, or
+  // pulled toward the rail of a loop), and comes down where the road
+  // resumes.
+  if (!on && Math.abs(upYAt(track, m.s)) < 0.5) {
+    m.vh = 0;
+    m.h = Math.max(0, m.h);
+    m.airT++;
+    return;
+  }
   // Over a loop or a corkscrew the skates' grip on the rail pulls a mech in
   // whichever way up the road is; elsewhere it is gravity and the road's curve.
   const pull = magAt(track, m.s) ? -MAG_PULL : -GRAVITY * upYAt(track, m.s) - kvAt(track, m.s) * m.vs * m.vs;

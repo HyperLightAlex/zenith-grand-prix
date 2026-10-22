@@ -1,8 +1,9 @@
 // Circuits in three dimensions.
 //
 // A CircuitDef is driven like a turtle: a run of pieces, each a straight, a
-// level turn, a climb, a pitch (the parts of a jump), a loop or a corkscrew
-// roll, starting at the start line facing -z. The builder carries a full
+// level turn, a climb, a pitch (the parts of a jump), a loop, a corkscrew
+// roll or a spiral (a turn that climbs, widening or tightening as it goes),
+// starting at the start line facing -z. The builder carries a full
 // frame (forward, right, up) through every piece, so a loop really turns the
 // road over and a corkscrew really rolls it, then samples the result every
 // four units into the same Track a flat plan produces.
@@ -62,7 +63,22 @@ export type Piece = PieceProps &
     | { loop: [radius: number, shift: number] }
     /** A corkscrew: this length of straight rolled through the angle, positive rolling right. */
     | { roll: [length: number, degrees: number] }
+    /**
+     * A spiral: a turn about the vertical that climbs `height` (negative to
+     * descend) as it goes round `degrees` (positive to the right), its
+     * radius going from `r0` to `r1`. The climb eases in and out (SPIRAL_EASE
+     * of the way at each end), so it starts and ends on level road; `ease`
+     * says which ends ease ('both', the default), so a run of spirals can
+     * climb at one steady grade from piece to piece (see spiralRun). Banks as
+     * a turn does.
+     */
+    | { spiral: [r0: number, r1: number, degrees: number, height: number, ease?: SpiralEase] }
   );
+
+export type SpiralEase = 'both' | 'in' | 'out' | 'none';
+
+/** The share of a spiral's way round over which its climb eases in, and out. */
+const SPIRAL_EASE = 0.15;
 
 export interface PadDef {
   at: number;
@@ -153,7 +169,42 @@ interface Fine {
 }
 
 function kindOf(pc: Piece): string {
-  return 'straight' in pc ? 'straight' : 'turn' in pc ? 'turn' : 'climb' in pc ? 'climb' : 'pitch' in pc ? 'pitch' : 'loop' in pc ? 'loop' : 'roll';
+  return 'straight' in pc ? 'straight' : 'turn' in pc ? 'turn' : 'climb' in pc ? 'climb' : 'pitch' in pc ? 'pitch' : 'loop' in pc ? 'loop' : 'spiral' in pc ? 'spiral' : 'roll';
+}
+
+/** A spiral's grade (rise over run) a share `f` of the way round: level at an end that eases, steady between. */
+function spiralGrade(f: number, peak: number, ease: SpiralEase): number {
+  const a = ease === 'both' || ease === 'in' ? f / SPIRAL_EASE : 1;
+  const b = ease === 'both' || ease === 'out' ? (1 - f) / SPIRAL_EASE : 1;
+  return peak * clamp(Math.min(a, b), 0, 1);
+}
+
+/** The share of a spiral's run its climb is spread over, given the ends that ease. */
+function spiralSpread(ease: SpiralEase): number {
+  return 1 - (ease === 'both' ? SPIRAL_EASE : ease === 'none' ? 0 : SPIRAL_EASE / 2);
+}
+
+/**
+ * A spiral in several pieces that climbs at one steady grade throughout,
+ * easing in at the first piece's start and out at the last one's end: so a
+ * stretch of it can carry its own properties (an open edge, a width). Its
+ * radius goes from `r0` to `r1` evenly over `degrees`; `cuts` are the
+ * degrees (from its start) where one piece ends and the next begins, each
+ * piece taking the props of the same index (and `props` all of them).
+ * `grade` is the steady rise over run.
+ */
+export function spiralRun(o: { r0: number; r1: number; degrees: number; grade: number; cuts: number[]; parts?: PieceProps[]; props?: PieceProps }): Piece[] {
+  const edges = [0, ...o.cuts, o.degrees];
+  const radius = (deg: number) => o.r0 + ((o.r1 - o.r0) * deg) / o.degrees;
+  const out: Piece[] = [];
+  for (let k = 0; k + 1 < edges.length; k++) {
+    const a = edges[k];
+    const b = edges[k + 1];
+    const ease: SpiralEase = edges.length === 2 ? 'both' : k === 0 ? 'in' : k === edges.length - 2 ? 'out' : 'none';
+    const run = (Math.abs(((b - a) * Math.PI) / 180) * (radius(a) + radius(b))) / 2;
+    out.push({ ...o.props, ...(o.parts?.[k] ?? {}), spiral: [radius(a), radius(b), b - a, o.grade * run * spiralSpread(ease), ease] });
+  }
+  return out;
 }
 
 /** Drive the pieces. Returns the fine steps, where each piece begins, and the final frame. */
@@ -229,6 +280,40 @@ function walk(def: CircuitDef, pieces: Piece[]): { steps: Fine[]; starts: number
       }
     } else if ('pitch' in pc) {
       pitchArc(i, pc.pitch[0], pc.pitch[1]);
+    } else if ('spiral' in pc) {
+      // (Off level road, or on from the piece before in a run of them.)
+      if (Math.abs(T.r[1]) > 1e-4) throw new Error(`circuit ${def.id}: piece ${i} spirals off a road that is banked or rolled`);
+      const [r0, r1, deg, H, ease = 'both'] = pc.spiral;
+      const a = (deg * Math.PI) / 180;
+      const sgn = Math.sign(a);
+      // Round the way at the radius each step is at; the climb's grade is
+      // steady between the eases (which take SPIRAL_EASE of the way each).
+      const run = (Math.abs(a) * (r0 + r1)) / 2;
+      const n = Math.max(1, Math.ceil(run / STEP));
+      const peak = H / (run * spiralSpread(ease));
+      const Y: V3 = [0, 1, 0];
+      let h: V3 = norm([T.t[0], 0, T.t[2]]);
+      for (let k = 0; k < n; k++) {
+        const fm = (k + 0.5) / n;
+        const r = r0 + (r1 - r0) * fm;
+        const dphi = a / n;
+        const dh = r * Math.abs(dphi);
+        const g = spiralGrade(fm, peak, ease);
+        const hm = rot(h, Y, -dphi / 2);
+        T.t = norm([hm[0] + g * Y[0], g, hm[2]]);
+        T.r = norm(cross(T.t, Y));
+        T.u = norm(cross(T.r, T.t));
+        // The pitch's rate of change along the road (toward up: positive as the climb steepens).
+        const dg = (spiralGrade((k + 1) / n, peak, ease) - spiralGrade(k / n, peak, ease)) / (dh * Math.sqrt(1 + g * g));
+        push(i, sgn / r, dg / (1 + g * g));
+        T.p = [T.p[0] + hm[0] * dh, T.p[1] + g * dh, T.p[2] + hm[2] * dh];
+        h = rot(h, Y, -dphi);
+      }
+      // Leaving level (an end that eases), or still climbing into the next piece of the run.
+      const gEnd = spiralGrade(1, peak, ease);
+      T.t = norm([h[0], gEnd, h[2]]);
+      T.r = norm(cross(T.t, [0, 1, 0]));
+      T.u = norm(cross(T.r, T.t));
     } else if ('loop' in pc) {
       const [R, shift] = pc.loop;
       const L = 2 * Math.PI * R;
@@ -365,8 +450,8 @@ export function buildCircuit(def: CircuitDef): Track {
   const bankRaw = new Float32Array(n);
   for (let k = 0; k < n; k++) {
     const pc = pieces[pieceOf[k]];
-    if ('turn' in pc) {
-      const dir = Math.sign(pc.turn[1]);
+    if ('turn' in pc || 'spiral' in pc) {
+      const dir = Math.sign('turn' in pc ? pc.turn[1] : pc.spiral[2]);
       bankRaw[k] = pc.bank !== undefined ? (dir * pc.bank * Math.PI) / 180 : clamp(khRaw[k] * def.bankGain, -def.maxBank, def.maxBank);
     }
   }
@@ -396,8 +481,6 @@ export function buildCircuit(def: CircuitDef): Track {
     upY[k] = uy[k];
     const inward = Math.abs(kappa[k]) > 1e-5 && Math.sign(kappa[k]) === Math.sign(bank[k]);
     grip[k] = 1 + (inward ? BANK_GRIP * Math.sin(Math.abs(bank[k])) : 0);
-    const kind = kindOf(pieces[pieceOf[k]]);
-    mag[k] = kind === 'loop' || kind === 'roll' || upY[k] < 0.5 ? 1 : 0;
   }
 
   // Width, gaps, open edges.
@@ -413,6 +496,11 @@ export function buildCircuit(def: CircuitDef): Track {
     roadR[k] = pc.gap === true || pc.gap === 'right' ? 0 : 1;
     wallL[k] = roadL[k] && pc.open !== 'left' && pc.open !== 'both' ? 1 : 0;
     wallR[k] = roadR[k] && pc.open !== 'right' && pc.open !== 'both' ? 1 : 0;
+    // The skates grip the rail through loops, corkscrews and anything
+    // steeper than about 60 degrees; where there is no road there is no rail
+    // (a gap in road going straight down is a fall along it, not off it).
+    const kind = kindOf(pc);
+    mag[k] = (kind === 'loop' || kind === 'roll' || upY[k] < 0.5) && roadL[k] && roadR[k] ? 1 : 0;
   }
   const hw = smoothRing(hwRaw, 6, 2);
 

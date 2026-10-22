@@ -1,6 +1,7 @@
-// The 3D circuits: Corkscrew Canyon and Helios Drop. Their geometry, and the
-// things only they have: jumps and falls, open edges, forks with a wall down
-// the middle, speed pads, loops and corkscrews.
+// The 3D circuits: Corkscrew Canyon, Helios Drop and Neon Crucible. Their
+// geometry, and the things only they have: jumps and falls, open edges, forks
+// with a wall down the middle, speed pads, loops and corkscrews, a straight
+// drop and a spiral climb.
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -10,6 +11,7 @@ import {
   CARVE_TIERS,
   CLASSES,
   COUNTDOWN_TICKS,
+  CRUCIBLE,
   FALL_DAMAGE,
   FALL_TICKS,
   HARD_LANDING,
@@ -31,15 +33,19 @@ import {
   onPad,
   pieceStarts,
   roadAt,
+  spiralRun,
   splitApart,
   stepRace,
   trackById,
   wrapS,
 } from '../src/sim/index';
 import type { CircuitDef, MechInput, RaceState, SimEvent, Track } from '../src/sim/index';
+import { pitOf } from '../src/client/render/pit';
 import { findNonFinite, hash, makeSeats, snapshot } from './helpers';
 
-const CIRCUITS: CircuitDef[] = [CANYON, HELIOS];
+const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE];
+/** The circuits with a fork. */
+const FORKED: CircuitDef[] = [CANYON, HELIOS];
 const BUILT = new Map<string, Track>(CIRCUITS.map((d) => [d.id, buildTrack(d)]));
 const track = (def: CircuitDef) => BUILT.get(def.id)!;
 
@@ -59,8 +65,8 @@ const gaps = (t: Track) => runs(t, (i) => !t.roadL[i] && !t.roadR[i]);
 const openRuns = (t: Track) => runs(t, (i) => !t.wallL[i] && !t.wallR[i] && t.roadL[i] === 1 && t.roadR[i] === 1);
 
 describe('the circuit list', () => {
-  it('has Meridian first, then the two new circuits, each found by id', () => {
-    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios']);
+  it('has Meridian first, then the 3D circuits, each found by id', () => {
+    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible']);
     for (const d of TRACKS) expect(trackById(d.id)).toBe(d);
     // An unknown id falls back to Meridian rather than failing.
     expect(trackById('nowhere')).toBe(MERIDIAN);
@@ -149,7 +155,7 @@ describe.each(CIRCUITS)('$name: geometry', (def) => {
   it('has the features it was designed with', () => {
     expect(t.air).toBe(true);
     expect(gaps(t).length).toBeGreaterThanOrEqual(1);
-    expect(t.forks.length).toBe(1);
+    expect(t.forks.length).toBe(FORKED.includes(def) ? 1 : 0);
     expect(t.pads.length).toBeGreaterThanOrEqual(2);
     // Loops and corkscrews hold mechs on, and somewhere the road is upside down.
     let mag = 0;
@@ -181,28 +187,6 @@ describe.each(CIRCUITS)('$name: geometry', (def) => {
     }
   });
 
-  it('opens the fork gradually and closes it again', () => {
-    const f = t.forks[0];
-    expect(f.s1).toBeGreaterThan(f.s0 + 200);
-    const mid = (f.s0 + f.s1) / 2;
-    expect(forkAt(t, mid)).toBe(f);
-    expect(forkAt(t, wrapS(t, f.s1 + 200))).toBeNull();
-    expect(medianAt(t, mid)).toBeCloseTo(f.median, 1);
-    expect(medianAt(t, wrapS(t, f.s0 - 50))).toBe(0);
-    // The wall grows from nothing rather than appearing at full width.
-    expect(medianAt(t, f.s0 + 10)).toBeLessThan(f.median);
-    // In the middle each side is a lane of its own.
-    const r = CLASSES[0].radius;
-    const [lo, hi] = laneAt(t, mid, -1, r);
-    expect(hi).toBeLessThanOrEqual(-(f.median + r) + 1e-6);
-    expect(lo).toBeLessThan(hi);
-    const [lo2, hi2] = laneAt(t, mid, 1, r);
-    expect(lo2).toBeGreaterThanOrEqual(f.median + r - 1e-6);
-    expect(hi2).toBeGreaterThan(lo2);
-    expect(splitApart(t, mid, -15, mid + 5, 15)).toBe(true);
-    expect(splitApart(t, mid, -15, mid + 5, -20)).toBe(false);
-    expect(splitApart(t, wrapS(t, f.s0 - 100), -15, wrapS(t, f.s0 - 100), 15)).toBe(false);
-  });
 });
 
 // ---- the physics on the new circuits ------------------------------------------------
@@ -438,10 +422,31 @@ describe('open edges', () => {
 });
 
 describe('forks', () => {
-  for (const def of CIRCUITS) {
+  for (const def of FORKED) {
     const t = track(def);
     const f = t.forks[0];
     const mid = (f.s0 + f.s1) / 2;
+
+    it(`${def.name}: opens the fork gradually and closes it again`, () => {
+      expect(f.s1).toBeGreaterThan(f.s0 + 200);
+      expect(forkAt(t, mid)).toBe(f);
+      expect(forkAt(t, wrapS(t, f.s1 + 200))).toBeNull();
+      expect(medianAt(t, mid)).toBeCloseTo(f.median, 1);
+      expect(medianAt(t, wrapS(t, f.s0 - 50))).toBe(0);
+      // The wall grows from nothing rather than appearing at full width.
+      expect(medianAt(t, f.s0 + 10)).toBeLessThan(f.median);
+      // In the middle each side is a lane of its own.
+      const r = CLASSES[0].radius;
+      const [lo, hi] = laneAt(t, mid, -1, r);
+      expect(hi).toBeLessThanOrEqual(-(f.median + r) + 1e-6);
+      expect(lo).toBeLessThan(hi);
+      const [lo2, hi2] = laneAt(t, mid, 1, r);
+      expect(lo2).toBeGreaterThanOrEqual(f.median + r - 1e-6);
+      expect(hi2).toBeGreaterThan(lo2);
+      expect(splitApart(t, mid, -15, mid + 5, 15)).toBe(true);
+      expect(splitApart(t, mid, -15, mid + 5, -20)).toBe(false);
+      expect(splitApart(t, wrapS(t, f.s0 - 100), -15, wrapS(t, f.s0 - 100), 15)).toBe(false);
+    });
 
     it(`${def.name}: no lock-on, blow or shot across the wall down the middle`, () => {
       const { race, inputs } = quietRace(def);
@@ -485,6 +490,141 @@ describe('forks', () => {
       }
     });
   }
+});
+
+describe('Neon Crucible', () => {
+  const def = CRUCIBLE;
+  const t = track(def);
+  const starts = pieceStarts(def);
+  const piece = (name: string): [number, number] => {
+    const i = def.pieces.findIndex((p) => p.name === name);
+    if (i < 0) throw new Error(`no piece ${name}`);
+    return [starts[i], i + 1 < starts.length ? starts[i + 1] : t.length];
+  };
+  const at = (s: number) => Math.floor(wrapS(t, s) / t.ds) % t.n;
+  const gapOver = (r: [number, number]) => gaps(t).find(([a, b]) => a < r[1] && b > r[0])!;
+  const TAU = Math.PI * 2;
+
+  it('drops the field straight down through the gap the Leap has just flown over', () => {
+    const [l0, l1] = gapOver(piece('gap'));
+    const [p0, p1] = piece('the Plunge');
+    expect(gapOver([p0, p1])).toBeDefined();
+    // The Plunge: no road, pointing straight down.
+    const mid = at((p0 + p1) / 2);
+    expect(t.roadL[mid] + t.roadR[mid]).toBe(0);
+    expect(t.ty[mid]).toBeLessThan(-0.97);
+    // Through the Leap's gap: inside its span and its width, from above it to below.
+    const g = at((l0 + l1) / 2);
+    const a = at(l0);
+    const l = Math.hypot(t.tx[g], t.tz[g]);
+    const along = ((t.px[mid] - t.px[a]) * t.tx[g] + (t.pz[mid] - t.pz[a]) * t.tz[g]) / l;
+    expect(along).toBeGreaterThan(0);
+    expect(along).toBeLessThan(l1 - l0);
+    expect(Math.abs((t.px[mid] - t.px[g]) * t.rx[g] + (t.pz[mid] - t.pz[g]) * t.rz[g])).toBeLessThan(t.hw[g]);
+    expect(t.py[at(p0)]).toBeGreaterThan(t.py[g] + 20);
+    expect(t.py[at(p1)]).toBeLessThan(t.py[g] - 20);
+  });
+
+  it('carries a mech down the Plunge along the road\'s line onto the Drill: no fall', () => {
+    const { race, inputs } = quietRace(def);
+    const [p0, p1] = piece('the Plunge');
+    place(race, t, 0, p0 + 10, 0, 100);
+    // In the air off the Hook, pulled toward the road as the hold lets go.
+    const m = race.mechs[0];
+    m.air = true;
+    m.h = 4;
+    m.vh = -40;
+    inputs[0].throttle = 1;
+    const ev = stepFor(race, t, inputs, 120);
+    expect(ev.some((e) => e.type === 'fall' && e.mech === 0)).toBe(false);
+    expect(m.fallT).toBe(0);
+    expect(m.s).toBeGreaterThan(p1);
+  });
+
+  it('clears the Leap at the formation-lap limiter; well short of it, it drops into the pit', () => {
+    const [g0, g1] = gapOver(piece('gap'));
+    const run = (limiter: number) => {
+      const race = createRace(t, { seed: 1, seats: makeSeats('all'), rules: { limiter1: limiter } });
+      const inputs = race.mechs.map(() => emptyInput());
+      while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
+      // Off the speed pad, so the jump alone is tried.
+      place(race, t, 0, g0 - 160, 13, limiter);
+      race.mechs.forEach((o, k) => {
+        if (k) o.s = wrapS(t, g0 - 1500 - k * 30);
+      });
+      inputs[0].throttle = 1;
+      let landed = -1;
+      let fell = false;
+      for (let i = 0; i < 400 && landed < 0 && !fell; i++) {
+        stepRace(race, t, inputs);
+        for (const e of race.events) {
+          if (e.type === 'land' && e.mech === 0 && race.mechs[0].s > g0) landed = race.mechs[0].s;
+          if (e.type === 'fall' && e.mech === 0) fell = true;
+        }
+      }
+      return { landed, fell };
+    };
+    const lap1 = run(110);
+    expect(lap1.fell).toBe(false);
+    expect(lap1.landed).toBeGreaterThan(g1);
+    expect(run(70).fell).toBe(true);
+  });
+
+  it('climbs the Coil round the drop: four and a quarter turns, each outside and well above the one below', () => {
+    const pit = pitOf(t)!;
+    expect(pit).not.toBeNull();
+    expect((pit.total * 180) / Math.PI).toBeGreaterThan(1500);
+    expect(t.py[pit.idx[0]]).toBeLessThan(60);
+    expect(t.py[pit.idx[pit.idx.length - 1]]).toBeGreaterThan(400);
+    for (let q = 1; q < pit.idx.length; q++) expect(t.py[pit.idx[q]]).toBeGreaterThanOrEqual(t.py[pit.idx[q - 1]] - 1e-6);
+    // Like a parking garage's ramp: no turn roofs the road of the one below.
+    let checked = 0;
+    for (let q = 0; q < pit.idx.length; q++) {
+      if (pit.phi[q] < TAU) continue;
+      const i = pit.idx[q];
+      const j = pit.idx[Math.round(pit.at(pit.phi[q] - TAU))];
+      const inner = Math.hypot(t.px[i] + t.rx[i] * t.hw[i] - pit.cx, t.pz[i] + t.rz[i] * t.hw[i] - pit.cz);
+      const outer = Math.hypot(t.px[j] - t.rx[j] * t.hw[j] - pit.cx, t.pz[j] - t.rz[j] * t.hw[j] - pit.cz);
+      if (inner - outer < 0.5) throw new Error(`turn over turn at s ${(i * t.ds).toFixed(0)}: ${(inner - outer).toFixed(2)}`);
+      if (t.py[i] - t.py[j] < 40) throw new Error(`turns ${(t.py[i] - t.py[j]).toFixed(1)} apart at s ${(i * t.ds).toFixed(0)}`);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  it('climbs at one steady grade across the cuts between its pieces', () => {
+    const run = spiralRun({ r0: 135, r1: 360, degrees: 1545, grade: 0.0575, cuts: [450, 900] });
+    const sp = run.map((p) => (p as { spiral: [number, number, number, number, string] }).spiral);
+    expect(sp.reduce((a, x) => a + x[2], 0)).toBeCloseTo(1545, 9);
+    expect(sp[0][1]).toBeCloseTo(sp[1][0], 9);
+    expect(sp[1][1]).toBeCloseTo(sp[2][0], 9);
+    expect(sp.map((x) => x[4])).toEqual(['in', 'none', 'out']);
+    for (const name of ['the Coil, open turn', 'the Coil, top turns']) {
+      const [s0] = piece(name);
+      for (const ds of [-24, 0, 24]) {
+        const i = at(s0 + ds);
+        expect(t.ty[i] / Math.hypot(t.tx[i], t.tz[i]), `${name} ${ds}`).toBeCloseTo(0.0575, 2);
+      }
+    }
+  });
+
+  it('has no barrier inside its open turn: a knock that way is a fall; on the turns either side, the barrier', () => {
+    const [o0, o1] = piece('the Coil, open turn');
+    for (let s = o0 + 8; s < o1 - 8; s += 4) {
+      expect(t.wallR[at(s)]).toBe(0);
+      expect(t.wallL[at(s)]).toBe(1);
+    }
+    const knocked = (s: number) => {
+      const { race, inputs } = quietRace(def);
+      place(race, t, 0, s, 0, 100);
+      race.mechs[0].d = hwAt(t, s) - 3;
+      inputs[0].mx = 1;
+      return stepFor(race, t, inputs, 60).some((e) => e.type === 'fall' && e.mech === 0);
+    };
+    expect(knocked((o0 + o1) / 2)).toBe(true);
+    expect(knocked(piece('the Coil, bottom turns')[0] + 400)).toBe(false);
+    expect(knocked(piece('the Coil, top turns')[0] + 600)).toBe(false);
+  });
 });
 
 describe('speed pads', () => {

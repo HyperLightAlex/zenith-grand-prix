@@ -138,7 +138,7 @@ export function newCup(cupId: string, faction: number, difficulty: number, seed:
   return { v: 1, kind: 'cup', cup: cup.id, difficulty: clampDifficulty(difficulty), faction, rounds, current: 0 };
 }
 
-/** The circuits a season visits, matchday by matchday (one hosts twice while there are only three). */
+/** The circuits a season visits, matchday by matchday (the first hosts twice: five matchdays, four circuits). */
 export function seasonCircuits(): string[] {
   const ids = TRACKS.map((t) => t.id);
   return Array.from({ length: FACTIONS }, (_, i) => ids[i % ids.length]);
