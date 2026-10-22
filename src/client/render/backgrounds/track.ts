@@ -15,13 +15,16 @@ import zenithBoard from './track/board-zenith.webp';
 import meridianBoard from './track/board-meridian.webp';
 import canyonBoard from './track/board-canyon.webp';
 import heliosBoard from './track/board-helios.webp';
+import crucibleBoard from './track/board-crucible.webp';
 import bannerBoard from './track/board-banner.webp';
+import crucibleSignBoard from './track/board-crucibleSign.webp';
 
 const kit: PaintedTrack = {
   surfaces: { road, armour, steel, concrete, gantry, crowd },
   crowdAspect: 1.0579,
   boards: [{ url: kestrelBoard, aspect: 2.9317 }, { url: novaBoard, aspect: 2.9312 }, { url: aokiBoard, aspect: 2.95 }, { url: halcyonBoard, aspect: 2.9438 }, { url: zgpLiveBoard, aspect: 2.913 }, { url: zenithBoard, aspect: 2.9438 }],
-  circuits: { meridian: { url: meridianBoard, aspect: 2.2864 }, canyon: { url: canyonBoard, aspect: 2.2754 }, helios: { url: heliosBoard, aspect: 2.2754 } },
+  circuits: { meridian: { url: meridianBoard, aspect: 2.2864 }, canyon: { url: canyonBoard, aspect: 2.2754 }, helios: { url: heliosBoard, aspect: 2.2754 }, crucible: { url: crucibleBoard, aspect: 3.2603 } },
   banner: { url: bannerBoard, aspect: 10.1338 },
+  circuitSigns: { crucible: { url: crucibleSignBoard, aspect: 3.2297 } },
 };
 export default kit;

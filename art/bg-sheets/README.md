@@ -24,10 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-Meridian's, Canyon's and Helios's sheets are in the game
-(`tools/bg/build_backgrounds.py`). Neon Crucible's six are made (N1 to N5)
-but not yet cut and put in the game: until they are, it keeps its plain
-scenery in the anime look too.
+All four circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -45,6 +42,12 @@ scenery in the anime look too.
 | H2 Horizon | bg-h2-horizon.png | three strips (far peaks, nearer peaks, cloud tops), bottoms level, ends within a few pixels |
 | H3 Clouds | bg-h3-clouds.png | six clouds; the last is a cluster of small ones, kept together as one card. The white edges against green leave a faint teal fringe, clamped when cut |
 | H4 Surfaces | bg-h4-surfaces.png | cut and blended like M4; the gold panels and the white wall have a regular rhythm, so they are cut on whole panels and courses |
+| N1 Sky | bg-n1-sky.png | horizon at 767 px; the moon's halo where asked, at the middle and 25 degrees up, but fainter than the city's glow along the horizon, so its column is given by hand (the cutter would take the glow for it) and the game draws the moon's disc there |
+| N1B Sky | bg-n1b-sky.png | horizon at 767 px; its edges match N1's closely, the joins blended as usual |
+| N2 Horizon | bg-n2-horizon.png | three strips (mountains, the far city, the foundry district), bottoms level, ends matching; the foundry's steam is crisp enough to cut cleanly |
+| N3 Smoke and steam | bg-n3-smoke.png | six plumes, cut cleanly; a few greenish dabs painted inside the smoke, put back to its lavender when cut. Each plume's foot is found from its bottom rows (`base`), and the game stands that on its stack |
+| N4 Surfaces | bg-n4-surfaces.png | cut and blended like M4. The facade also gives a map of its lit windows alone (`facadeLit`), for their glow; the game draws it half as large again as painted, so the windows stay windows at a distance |
+| N5 Neon signs | bg-n5-signs.png | all six spelt right, each cut by its outline like the track kit's boards, 3.26:1 |
 
 ## Meridian Skyway
 

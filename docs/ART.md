@@ -160,15 +160,19 @@ to one brief per circuit and checked one at a time.
   overhead, uses one half twice). Turned so the glow is round the sun, which
   is still drawn as a hard disc on top: where the light comes from at
   Meridian, on the horizon at Canyon (its sky is painted with the sun
-  setting; the disc sinks behind the far mesas), high overhead at Helios.
+  setting; the disc sinks behind the far mesas), high overhead at Helios;
+  at the Crucible it is the moon, cold white, where its halo is painted.
 - **The horizon**: three painted strips, each on a ring round the circuit at
   its own distance (Meridian: far mountains, the coast, a city across the
   water; Canyon: mesas, buttes and spires, hoodoos; Helios: far snowy peaks,
-  nearer peaks, a wall of cumulus), standing on the ground and repeating
+  nearer peaks, a wall of cumulus; the Crucible: mountains, the far side of
+  the city, the foundry district), standing on the ground and repeating
   round the circle. They move against each other a little as the circuit
   turns, as layered paintings would.
 - **Clouds**: painted cumulus cards in place of the modelled ones, turning to
-  face the camera but staying upright.
+  face the camera but staying upright. The Crucible has smoke and steam
+  instead, on the smokestacks round its rim and where the pour lands, each
+  plume standing on its own foot.
 - **Surfaces**, as repeating painted textures:
   - Meridian: the sea, three kinds of tower facade (glass offices, hotels,
     dark glass), the platforms the towers stand on, and white panels on the
@@ -180,6 +184,15 @@ to one brief per circuit and checked one at a time.
   - Helios: the cloud sea (drifting, at two sizes), layered rock under the
     islands and meadow on top, whitewashed buildings, and engraved gold on
     the Sun Gate and the spire's collar.
+  - The Crucible: the pit wall (its blasted rock running on unbroken round
+    the spiral, laid along it rather than by world position, turning to
+    scorched rock near the melt, lit from below by the melt's glow and a
+    little by the floodlights), the molten floor (drifting, its seams glowing
+    past the bloom), the yard round the rim, the city's facades at night
+    (their lit windows, taken from the painting, for the glow), and rusted
+    steel on the stacks, the crane, the ladle and the gantry. Its rooftop
+    neon signs are painted too (sheet N5), as is the sign over the way into
+    the pit (track sheet T4).
   The rock's texture coordinates come from the world position and each
   face's facing (`paintedRock` in `world.ts`): the strata stay level all the
   way round a mesa and dip gently across the desert, so no two mesas band
@@ -202,7 +215,7 @@ it first (`unTone` in `painted.ts`) and come out as painted.
 ## The painted track kit
 
 Everything bolted to the circuit is painted too, from one kit shared by all
-three circuits (`art/track-sheets`; `tools/bg/build_track.py` builds it into
+the circuits (`art/track-sheets`; `tools/bg/build_track.py` builds it into
 `src/client/render/backgrounds/track.ts`, and `trackMesh.ts` switches it with
 the look):
 

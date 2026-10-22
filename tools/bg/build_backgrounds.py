@@ -17,7 +17,10 @@ What it does to the sheets:
 - Clouds: each cloud cut out by its own outline (grouped by the cell of the
   sheet its middle falls in) and packed into an atlas.
 - Surfaces: each square cut to the length that wraps best both ways, its
-  seams blended, so it repeats.
+  seams blended, so it repeats. A surface can also give a map of its lights
+  alone (Neon Crucible's facades: the lit windows, for their glow).
+- Signs (Neon Crucible's neon signs): each cut out of the green by its
+  outline, as the track kit's boards are.
 """
 import json
 import os
@@ -64,6 +67,25 @@ CIRCUITS = {
         clamp_teal=True,
         surfaces='bg-h4-surfaces.png',
         tiles=['cloudsea', 'islandrock', 'meadow', 'whitewall', 'snow', 'gold'],
+    ),
+    'crucible': dict(
+        sky=['bg-n1-sky.png', 'bg-n1b-sky.png'],
+        # The moon's halo is fainter than the city's glow along the horizon,
+        # so the brightest place is not it: its column on N1, by hand.
+        sun_col=768,
+        horizon='bg-n2-horizon.png',
+        # Smoke and steam, in place of clouds.
+        clouds='bg-n3-smoke.png',
+        # A few greenish dabs painted inside the smoke: nothing in it is green,
+        # so where it is not orange or yellow, green goes back under red and blue.
+        no_green=True,
+        # Each plume's foot, to stand it on its stack.
+        bases=True,
+        surfaces='bg-n4-surfaces.png',
+        tiles=['pitwall', 'scorched', 'melt', 'yard', 'facade', 'rust'],
+        # The facades' lit windows alone, for their glow.
+        lit={'facade': 'facadeLit'},
+        signs='bg-n5-signs.png',
     ),
 }
 
@@ -144,7 +166,7 @@ def soften_seams(p, xs, r=10):
 def build_sky(spec):
     halves = [load(n) for n in spec['sky']]
     a, hz = sky_half(halves[0], SKY_W // 2)
-    sun = sun_column(halves[0], hz) / halves[0].shape[1] * 0.5
+    sun = (spec['sun_col'] if 'sun_col' in spec else sun_column(halves[0], hz)) / halves[0].shape[1] * 0.5
     if len(halves) > 1:
         b, _ = sky_half(halves[1], SKY_W // 2)
         b = match_joins(a, b, spec.get('join_band', 320))
@@ -261,6 +283,8 @@ def build_clouds(spec):
         rgba[..., 3] *= np.clip((rgba[..., 0] - rgba[..., 1] - 0.02) / 0.05, 0, 1)
     if spec.get('clamp_teal'):
         rgba[..., 1] = np.minimum(rgba[..., 1], (rgba[..., 0] + rgba[..., 2]) / 2 + 0.03)
+    if spec.get('no_green'):
+        rgba[..., 1] = np.where(rgba[..., 0] < 0.8, np.minimum(rgba[..., 1], (rgba[..., 0] + rgba[..., 2]) / 2 + 0.02), rgba[..., 1])
     lab, n = ndimage.label(rgba[..., 3] > 0.5)
     sizes = ndimage.sum(np.ones(lab.shape), lab, range(1, n + 1))
     cents = ndimage.center_of_mass(np.ones(lab.shape), lab, range(1, n + 1))
@@ -295,7 +319,12 @@ def build_clouds(spec):
         oy = r * 512 + (512 - h) // 2
         atlas[oy:oy + h, ox:ox + w] = card
         # Texture coordinates run up from the bottom.
-        cards.append(dict(u0=ox / 1536, v0=1 - (oy + h) / 1024, u1=(ox + w) / 1536, v1=1 - oy / 1024, aspect=round(w / h, 4)))
+        cd = dict(u0=ox / 1536, v0=1 - (oy + h) / 1024, u1=(ox + w) / 1536, v1=1 - oy / 1024, aspect=round(w / h, 4))
+        if spec.get('bases'):
+            # Where along its bottom the plume rises from (0..1 across), for standing it on a stack.
+            foot = card[-max(3, h // 16):, :, 3]
+            cd['base'] = round(float((foot.sum(0) * np.arange(w)).sum() / max(foot.sum(), 1e-6) / w), 4)
+        cards.append(cd)
     # Fill the colour under the empty atlas with its neighbours', for clean filtering.
     _, (iy, ix) = ndimage.distance_transform_edt(atlas[..., 3] < 0.02, return_indices=True)
     atlas[..., :3] = np.where(atlas[..., 3:] >= 0.02, atlas[..., :3], atlas[iy, ix, :3])
@@ -325,12 +354,37 @@ def seamless(t):
     return np.asarray(im).astype(np.float32) / 255
 
 
+def lights(t):
+    """A surface's lights alone (its brightest colours, and the glow round them), black elsewhere."""
+    m = np.clip((t.max(-1) - 0.5) / 0.3, 0, 1)[..., None]
+    return t * m
+
+
 def build_surfaces(spec):
     sheet = load(spec['surfaces'])
     out = {}
     for i, name in enumerate(spec['tiles']):
         r, c = divmod(i, 3)
         out[name] = seamless(sheet[r * 512:(r + 1) * 512, c * 512:(c + 1) * 512])
+    for name, lit in spec.get('lit', {}).items():
+        out[lit] = lights(out[name])
+    return out
+
+
+# ---- signs -----------------------------------------------------------------------
+
+def cut_boards(rgb, min_size=5000):
+    """Each board or sign on a sheet, cut by its outline, in reading order (rows, then left to right)."""
+    k = keyed(rgb)
+    lab, n = ndimage.label(k[..., 3] > 0.5)
+    sizes = ndimage.sum(np.ones(lab.shape), lab, range(1, n + 1))
+    objs = [o for i, o in enumerate(ndimage.find_objects(lab)) if sizes[i] >= min_size]
+    objs.sort(key=lambda o: (round(o[0].start / 200), o[1].start))
+    out = []
+    for o in objs:
+        # A pixel or two inside the edge, where the board meets the green.
+        y0, y1, x0, x1 = o[0].start + 2, o[0].stop - 2, o[1].start + 2, o[1].stop - 2
+        out.append(k[y0:y1, x0:x1, :3])
     return out
 
 
@@ -357,6 +411,9 @@ def main():
         surfaces = build_surfaces(spec)
         for k, t in surfaces.items():
             files[k] = save(t, os.path.join(d, f'{k}.webp'), 84)
+        signs = cut_boards(load(spec['signs'])) if 'signs' in spec else []
+        for i, b in enumerate(signs):
+            files[f'sign{i}'] = save(b, os.path.join(d, f'sign{i}.webp'), 90)
         lines = [
             f'// Generated by tools/bg/build_backgrounds.py from art/bg-sheets. Do not edit by hand.',
             "import type { PaintedSet } from '../painted';",
@@ -367,6 +424,8 @@ def main():
             lines.append(f"import horizon{i} from './{name}/horizon{i}.webp';")
         for k in surfaces:
             lines.append(f"import {ident(k)} from './{name}/{k}.webp';")
+        for i in range(len(signs)):
+            lines.append(f"import sign{i} from './{name}/sign{i}.webp';")
         strip_list = ', '.join(f'{{ url: horizon{i}, aspect: {round(s.shape[1] / s.shape[0], 4)} }}' for i, s in enumerate(strips))
         surf = ', '.join(f'{json.dumps(k)}: {ident(k)}' for k in surfaces)
         lines += [
@@ -378,6 +437,7 @@ def main():
             f'  horizon: [{strip_list}],',
             f'  clouds: {{ url: clouds, cards: {json.dumps(cards)} }},',
             f'  surfaces: {{ {surf} }},',
+        ] + ([f"  signs: [{', '.join(f'{{ url: sign{i}, aspect: {round(b.shape[1] / b.shape[0], 4)} }}' for i, b in enumerate(signs))}],"] if signs else []) + [
             '};',
             'export default set;',
             '',

@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { toonMaterial } from './palette';
 import canyon from './backgrounds/canyon';
+import crucible from './backgrounds/crucible';
 import helios from './backgrounds/helios';
 import meridian from './backgrounds/meridian';
 import trackKit from './backgrounds/track';
@@ -23,6 +24,8 @@ export interface PaintedCard {
   v1: number;
   /** Width over height. */
   aspect: number;
+  /** Smoke and steam: where along the bottom the plume rises from (0..1 across). */
+  base?: number;
 }
 
 export interface PaintedSet {
@@ -38,6 +41,8 @@ export interface PaintedSet {
   clouds: { url: string; cards: PaintedCard[] };
   /** Repeating surface textures, by name. */
   surfaces: Record<string, string>;
+  /** Signs on the scenery (Neon Crucible's neon signs), in the sheet's order. */
+  signs?: PaintedSign[];
 }
 
 /** A painted sign: its picture and its width over its height. */
@@ -58,6 +63,8 @@ export interface PaintedTrack {
   circuits: Record<string, PaintedSign>;
   /** The banner over the start line. */
   banner: PaintedSign;
+  /** A circuit's own sign over its road, by setting (Neon Crucible's, over the way into the pit). */
+  circuitSigns: Record<string, PaintedSign>;
 }
 
 export const paintedTrack: PaintedTrack = trackKit;
@@ -74,7 +81,7 @@ export interface PaintedHangar {
 
 export const paintedHangar: PaintedHangar = hangarKit;
 
-const SETS: Record<string, PaintedSet> = { meridian, canyon, helios };
+const SETS: Record<string, PaintedSet> = { meridian, canyon, helios, crucible };
 
 /** The painted background for a circuit's setting, if it has one. */
 export function paintedSet(themeId: string): PaintedSet | null {
@@ -106,17 +113,26 @@ export const HORIZON_RINGS: Record<string, Array<{ radius: number; degrees: numb
     { radius: 11000, degrees: 3.8, repeats: 11 },
     { radius: 8500, degrees: 2.6, repeats: 15 },
   ],
+  // Mountains, the far city, then the foundry district: towers and stacks
+  // stand upright, so drawn about as wide as painted.
+  crucible: [
+    { radius: 14000, degrees: 3.0, repeats: 11 },
+    { radius: 11000, degrees: 2.4, repeats: 17 },
+    { radius: 8500, degrees: 2.8, repeats: 18 },
+  ],
 };
 
 /**
  * Where the sun's disc is drawn over a painted sky, if not where the light
  * comes from (degrees of the disc's centre above the horizon): Canyon's sky
  * is painted with the sun on the horizon, its disc a deeper sunset orange;
- * Helios's with the sun high overhead.
+ * Helios's with the sun high overhead; the Crucible's moon where its halo is.
  */
 export const SUN_DISC: Record<string, { elevation: number; color: [number, number, number] }> = {
   canyon: { elevation: 1.6, color: [2.1, 1.25, 0.55] },
   helios: { elevation: 64, color: [1.9, 1.85, 1.7] },
+  // The moon, where its halo is painted, cold white.
+  crucible: { elevation: 25.3, color: [1.55, 1.65, 1.9] },
 };
 
 /**

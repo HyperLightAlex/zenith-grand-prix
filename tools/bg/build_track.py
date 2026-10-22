@@ -16,6 +16,8 @@ What it does to the sheets:
   along only; the crowd is cut on whole rows of seats.
 - Boards and the banner: each cut out of the green by its outline (they are
   plain rectangles), trimmed a pixel inside its edge, kept at its own shape.
+- T4, Neon Crucible's: its board (in with the others) and the neon sign over
+  the way into its pit.
 """
 import json
 import os
@@ -24,7 +26,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-from build_backgrounds import fade, best_len, keyed, load, save
+from build_backgrounds import best_len, cut_boards, fade, load, save
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 SHEETS = os.path.join(ROOT, 'art', 'track-sheets')
@@ -90,17 +92,7 @@ def build_surfaces():
 
 def cut_out(rgb, min_size=5000):
     """Each board on a sheet, cut by its outline, in reading order (rows, then left to right)."""
-    k = keyed(rgb)
-    lab, n = ndimage.label(k[..., 3] > 0.5)
-    sizes = ndimage.sum(np.ones(lab.shape), lab, range(1, n + 1))
-    objs = [o for i, o in enumerate(ndimage.find_objects(lab)) if sizes[i] >= min_size]
-    objs.sort(key=lambda o: (round(o[0].start / 200), o[1].start))
-    out = []
-    for o in objs:
-        # A pixel or two inside the edge, where the board meets the green.
-        y0, y1, x0, x1 = o[0].start + 2, o[0].stop - 2, o[1].start + 2, o[1].stop - 2
-        out.append(k[y0:y1, x0:x1, :3])
-    return out
+    return cut_boards(rgb, min_size)
 
 
 def main():
@@ -114,7 +106,9 @@ def main():
     assert len(boards) == len(BOARDS), f'{len(boards)} boards on T2'
     circuit = cut_out(sheet('track-t3-circuits.png'))
     assert len(circuit) == len(CIRCUITS) + 1, f'{len(circuit)} boards on T3'
-    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('banner', circuit[3])]
+    crucible = cut_out(sheet('track-t4-crucible.png'))
+    assert len(crucible) == 2, f'{len(crucible)} boards on T4'
+    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('crucible', crucible[0]), ('banner', circuit[3]), ('crucibleSign', crucible[1])]
     aspect = {}
     for name, b in signs:
         files[name] = save(b, os.path.join(d, f'board-{name}.webp'), 90)
@@ -134,8 +128,9 @@ def main():
         f"  surfaces: {{ {', '.join(surfaces)} }},",
         f"  crowdAspect: {round(surfaces['crowd'].shape[1] / surfaces['crowd'].shape[0], 4)},",
         f"  boards: [{', '.join(sign(n) for n in BOARDS)}],",
-        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS)} }},",
+        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS + ['crucible'])} }},",
         f"  banner: {sign('banner')},",
+        f"  circuitSigns: {{ crucible: {sign('crucibleSign')} }},",
         '};',
         'export default kit;',
         '',

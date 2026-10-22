@@ -14,7 +14,7 @@ import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, hwAt, makeFrame, type Track } from '../../sim/track';
 import { look } from './look';
 import { pitOf } from './pit';
-import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paintedSurfaceMaterial as paintedRock, paintedTexture, whiteTexture, type PaintedSet } from './painted';
+import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paintedSurfaceMaterial as paintedRock, paintedTexture, paintedTrack, whiteTexture, type PaintedSet } from './painted';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
 import { trackMatrix } from './trackSpace';
@@ -1338,13 +1338,30 @@ function buildHelios(ctx: Ctx): void {
 /** The pit's floor: a crust broken up over churning melt, molten in the seams. */
 const moltenFragment = /* glsl */ `
 uniform float uTime;
+uniform float uPainted;
+uniform sampler2D uMeltMap;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE}
+${UNTONE}
 void main() {
   vec2 p = vWorld.xz;
   vec2 warp = vec2(fbm(p * 0.012 + vec2(uTime * 0.02, 0.0)), fbm(p * 0.012 + vec2(4.7, uTime * 0.017)));
+  if (uPainted > 0.5) {
+    // The painted melt, its crust drifting and churning a little; the seams
+    // glow brighter than painted, past the look's bloom.
+    vec2 q = p / 64.0 + (warp - 0.5) * 0.3 + vec2(uTime * 0.004, uTime * 0.0025);
+    vec3 t = texture2D(uMeltMap, q).rgb;
+    float hot = smoothstep(0.6, 0.95, t.r) * smoothstep(0.2, 0.55, t.g);
+    float flick = 0.85 + 0.15 * noise(p * 0.15 + vec2(uTime * 0.7, -uTime * 0.5));
+    vec3 c = mix(unTone(t), t * vec3(2.3, 1.35, 0.7), hot * flick);
+    gl_FragColor = vec4(c, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+    return;
+  }
   float n = fbm(p * 0.03 + warp * 1.8);
   float seam = 1.0 - smoothstep(0.015, 0.07, abs(n - 0.5));
   float open = smoothstep(0.42, 0.3, n);
@@ -1366,16 +1383,25 @@ uniform vec3 uSeam;
 uniform vec2 uCentre;
 uniform float uEdge;
 uniform float uTime;
+uniform float uPainted;
+uniform sampler2D uYardMap;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE}
+${UNTONE}
 void main() {
   vec2 p = vWorld.xz;
-  float n = fbm(p * 0.003) * 0.6 + noise(p * 0.04) * 0.4;
-  vec3 col = uBase * (0.7 + 0.6 * n);
-  vec2 g = abs(fract(p / 40.0) - 0.5) * 40.0;
-  col = mix(col, uSeam, (1.0 - smoothstep(0.3, 0.9, min(g.x, g.y))) * 0.6);
+  vec3 col;
+  if (uPainted > 0.5) {
+    // The painted yard, at night: darker than painted, with broad light and shade.
+    col = unTone(texture2D(uYardMap, p / 48.0).rgb) * 0.62 * (0.8 + 0.4 * fbm(p * 0.003 + 5.3));
+  } else {
+    float n = fbm(p * 0.003) * 0.6 + noise(p * 0.04) * 0.4;
+    col = uBase * (0.7 + 0.6 * n);
+    vec2 g = abs(fract(p / 40.0) - 0.5) * 40.0;
+    col = mix(col, uSeam, (1.0 - smoothstep(0.3, 0.9, min(g.x, g.y))) * 0.6);
+  }
   vec2 cell = floor(p / 150.0);
   vec2 lp = (cell + 0.5 + (vec2(hash(cell), hash(cell + 7.1)) - 0.5) * 0.5) * 150.0;
   float pool = 1.0 - smoothstep(2.0, 20.0, length(p - lp));
@@ -1440,6 +1466,49 @@ void main() {
 }`;
 
 const UP = new THREE.Vector3(0, 1, 0);
+
+/**
+ * The pit wall in the painted look: the painted rock laid along the wall
+ * (`aWallUv`: metres along it and up it, so it runs on unbroken round the
+ * spiral), turning to the scorched rock below `lowTo` and all of it by
+ * `lowFrom`, lit by the light and by the melt's glow (`glow`, on `uv`).
+ */
+function paintedWallMaterial(rock: THREE.Texture, low: THREE.Texture, size: number, lowFrom: number, lowTo: number, glow: THREE.Texture, glowK: number): THREE.MeshLambertMaterial {
+  const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: glowK });
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uRock = { value: rock };
+    sh.uniforms.uLow = { value: low };
+    sh.uniforms.uSize = { value: size };
+    sh.uniforms.uLowFrom = { value: lowFrom };
+    sh.uniforms.uLowTo = { value: lowTo };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec2 aWallUv;\nvarying vec2 vWallUv;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWallUv = aWallUv;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform sampler2D uRock;
+uniform sampler2D uLow;
+uniform float uSize;
+uniform float uLowFrom;
+uniform float uLowTo;
+varying vec2 vWallUv;
+${NOISE}`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        `vec2 wuv = vWallUv / uSize;
+float wallLow = smoothstep(uLowFrom, uLowTo, vWallUv.y + (noise(vWallUv * vec2(0.02, 0.06)) - 0.5) * 40.0);
+vec3 wallPaint = mix(texture2D(uLow, wuv + 0.31).rgb, texture2D(uRock, wuv).rgb, wallLow) * (0.9 + 0.2 * noise(vWallUv * 0.01 + 9.0));
+diffuseColor.rgb *= wallPaint;`,
+      )
+      // The floodlights catch the rock a little, so the painting reads at night.
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += wallPaint * 0.18;');
+  };
+  mat.customProgramCacheKey = () => 'crucibleWall';
+  return mat;
+}
 
 /** A box from `a` to `b`, `w` across and `h` deep. */
 function beam(a: THREE.Vector3, b: THREE.Vector3, w: number, h = w): THREE.BufferGeometry {
@@ -1519,7 +1588,7 @@ function neonSign(words: string, color: string): THREE.CanvasTexture {
 }
 
 /** Stars over the night, following the camera like the sky. */
-function stars(ctx: Ctx): void {
+function stars(ctx: Ctx): THREE.Object3D {
   const rnd = mulberry(1717);
   const make = (count: number, size: number, bright: number) => {
     const pos: number[] = [];
@@ -1547,12 +1616,20 @@ function stars(ctx: Ctx): void {
   sky.add(make(1400, 1.4, 0.9), make(140, 2.4, 1.3));
   ctx.group.add(sky);
   ctx.updates.push((_time, camera) => sky.position.copy(camera.position));
+  return sky;
 }
 
 function buildCrucible(ctx: Ctx): void {
   const { track, group, theme } = ctx;
   const TAU = Math.PI * 2;
-  stars(ctx);
+  // The painted background (anime look): the painted sky has its stars, the
+  // horizon strips its mountains; the pit, the yard, the melt, the city's
+  // facades and the steel take painted textures, the rooftop signs painted
+  // neon, and smoke and steam rise off the stacks and the pour.
+  const surf = ctx.painted?.surfaces;
+  const tex = (name: string) => (surf?.[name] ? paintedTexture(surf[name], { repeat: true }) : null);
+  const starField = stars(ctx);
+  if (ctx.painted) ctx.plainOnly.push(starField);
 
   // ---- far mountains, dark against the city's glow ----------------------------
   {
@@ -1570,11 +1647,12 @@ function buildCrucible(ctx: Ctx): void {
     const ridge = new THREE.Mesh(mergeGeometries(parts)!, new THREE.MeshBasicMaterial({ color: theme.ridge }));
     ridge.frustumCulled = false;
     group.add(ridge);
+    if (ctx.painted) ctx.plainOnly.push(ridge);
   }
 
   const pit = pitOf(track);
   if (!pit) {
-    groundPlane(ctx, plateauFragment, { uBase: { value: new THREE.Color(theme.groundLight2) }, uSeam: { value: new THREE.Color(theme.groundDeep) }, uCentre: { value: new THREE.Vector2(ctx.cx, ctx.cz) }, uEdge: { value: -1000 } }, theme.groundY);
+    groundPlane(ctx, plateauFragment, { uBase: { value: new THREE.Color(theme.groundLight2) }, uSeam: { value: new THREE.Color(theme.groundDeep) }, uCentre: { value: new THREE.Vector2(ctx.cx, ctx.cz) }, uEdge: { value: -1000 }, uPainted: { value: 0 }, uYardMap: { value: null } }, theme.groundY);
     return;
   }
   const { cx, cz, rim, floor, idx, phi, total } = pit;
@@ -1638,6 +1716,10 @@ function buildCrucible(ctx: Ctx): void {
     const faces = (cols: Column[], seed: number): THREE.BufferGeometry => {
       const pos: number[] = [];
       const col: number[] = [];
+      // Metres along the wall at each column, for the painted rock.
+      const along = [0];
+      for (let q = 1; q < cols.length; q++) along.push(along[q - 1] + Math.hypot(cols[q].x - cols[q - 1].x, cols[q].z - cols[q - 1].z));
+      const wuv: number[] = [];
       // Each column's points, pushed back into the rock (never out of it) by a smooth amount.
       const P = (q: number, r: number): [number, number, number] => {
         const c = cols[q];
@@ -1662,6 +1744,9 @@ function buildCrucible(ctx: Ctx): void {
             const c = rockAt((p0[1] + p1[1] + p2[1]) / 3);
             col.push(c.r, c.g, c.b, c.r, c.g, c.b, c.r, c.g, c.b);
           }
+          const ua = along[q];
+          const ub = along[q + 1];
+          wuv.push(ua, a0[1], ub, b0[1], ua, a1[1], ua, a1[1], ub, b0[1], ub, b1[1]);
         }
       }
       const g = new THREE.BufferGeometry();
@@ -1671,6 +1756,7 @@ function buildCrucible(ctx: Ctx): void {
       const uv: number[] = [];
       for (let k = 1; k < pos.length; k += 3) uv.push(0.5, (pos[k] - floor) / (rim - floor));
       g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.setAttribute('aWallUv', new THREE.Float32BufferAttribute(wuv, 2));
       g.computeVertexNormals();
       return g;
     };
@@ -1694,6 +1780,9 @@ function buildCrucible(ctx: Ctx): void {
     );
     wall.frustumCulled = false;
     group.add(wall);
+    const rockTex = tex('pitwall');
+    const scorchedTex = tex('scorched');
+    if (rockTex && scorchedTex) swapMaterial(ctx, wall, paintedWallMaterial(rockTex, scorchedTex, 44, floor + 30, floor + 130, glowMap, 0.5));
 
     // Neon along every bench: one line just under the turn above, one above
     // the barrier, shading from magenta at the melt to cyan at the rim.
@@ -1731,7 +1820,13 @@ function buildCrucible(ctx: Ctx): void {
 
   // ---- the molten floor -------------------------------------------------------
   {
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(floorR + 6, 96), groundMaterial(ctx, moltenFragment, {}));
+    const meltMat = groundMaterial(ctx, moltenFragment, { uPainted: { value: 0 }, uMeltMap: { value: null } });
+    const meltTex = tex('melt');
+    if (meltTex) {
+      meltMat.uniforms.uMeltMap.value = meltTex;
+      ctx.swaps.push((on) => (meltMat.uniforms.uPainted.value = on ? 1 : 0));
+    }
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(floorR + 6, 96), meltMat);
     disc.rotation.x = -Math.PI / 2;
     disc.position.set(cx, floor, cz);
     disc.frustumCulled = false;
@@ -1763,12 +1858,19 @@ function buildCrucible(ctx: Ctx): void {
         uSeam: { value: new THREE.Color(theme.groundDeep) },
         uCentre: { value: new THREE.Vector2(cx, cz) },
         uEdge: { value: edgeR },
+        uPainted: { value: 0 },
+        uYardMap: { value: null },
       },
       THREE.DoubleSide,
     );
     const plateau = new THREE.Mesh(g, mat);
     plateau.frustumCulled = false;
     group.add(plateau);
+    const yardTex = tex('yard');
+    if (yardTex) {
+      mat.uniforms.uYardMap.value = yardTex;
+      ctx.swaps.push((on) => (mat.uniforms.uPainted.value = on ? 1 : 0));
+    }
   }
 
   // Places taken on the plateau (plan circles), so nothing stands in anything else.
@@ -1786,6 +1888,8 @@ function buildCrucible(ctx: Ctx): void {
   const glowParts: THREE.BufferGeometry[] = [];
   const white = new THREE.Color(0xffffff);
   const neonCol = (hex: number, k = 1.7) => new THREE.Color(hex).multiplyScalar(k);
+  // Where smoke and steam rise in the painted look: the stacks' mouths and the pour.
+  const plumeSpots: Plume[] = [];
 
   // ---- the Gantry: a truss across the pit over the start straight -----------------
   const f0 = makeFrame();
@@ -1870,6 +1974,13 @@ function buildCrucible(ctx: Ctx): void {
     sign.position.copy(sp);
     sign.lookAt(sp.clone().sub(T));
     group.add(sign);
+    // Painted (track sheet T4), glowing as the neon does.
+    const own = paintedTrack.circuitSigns[theme.id];
+    if (own) {
+      const m = new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide, toneMapped: false });
+      m.color.setScalar(1.3);
+      swapMaterial(ctx, sign, m);
+    }
     for (const side of [-1, 1]) steelParts.push(beam(along(tA, side * 52, sy + 132 / 3.2 - 1), along(tA, side * 46, yb), 0.5));
   }
   const nearGantry = (x: number, z: number, r: number) => {
@@ -1969,6 +2080,7 @@ function buildCrucible(ctx: Ctx): void {
         splash.rotation.x = -Math.PI / 2;
         splash.position.set(px, floor + 0.4, pz);
         group.add(splash);
+        plumeSpots.push({ x: px, y: floor, z: pz, width: [70, 90], cards: [4] });
         const sm = stream.material as THREE.ShaderMaterial;
         ctx.updates.push((time) => {
           sm.uniforms.uTime.value = time;
@@ -2051,6 +2163,7 @@ function buildCrucible(ctx: Ctx): void {
       group.add(flame);
       flames.push(flame);
       beacons.push(new THREE.Vector3(x, rim + h + 1, z));
+      plumeSpots.push({ x, y: rim + h - 1, z, width: [95, 150], cards: [0, 1, 3, 5] });
     }
   }
 
@@ -2073,6 +2186,16 @@ function buildCrucible(ctx: Ctx): void {
       m.color.setScalar(1.5);
       return m;
     });
+    // The painted neon (sheet N5: Kestrel, Aoki Heavy, Nova, Halcyon, Foundry 7, ZGP), in the same order as these.
+    const painted = ctx.painted?.signs ?? [];
+    const paintedSignMats =
+      painted.length >= 6
+        ? [0, 1, 2, 3, 5, 4].map((k) => {
+            const m = new THREE.MeshBasicMaterial({ map: paintedTexture(painted[k].url), side: THREE.DoubleSide, toneMapped: false });
+            m.color.setScalar(1.3);
+            return m;
+          })
+        : null;
     let signsUp = 0;
     let placed = 0;
     for (let tries = 0; tries < 2400 && placed < 260; tries++) {
@@ -2121,6 +2244,7 @@ function buildCrucible(ctx: Ctx): void {
         sign.position.set(x, rim + h + (w * 1.1) / 6.4 + 2, z);
         sign.lookAt(cx, sign.position.y, cz);
         group.add(sign);
+        if (paintedSignMats) swapMaterial(ctx, sign, paintedSignMats[signsUp % paintedSignMats.length]);
         signsUp++;
       }
       if (crown > 160) beacons.push(new THREE.Vector3(x, rim + crown + 2, z));
@@ -2131,6 +2255,20 @@ function buildCrucible(ctx: Ctx): void {
     const city = new THREE.Mesh(mergeGeometries(parts)!, cityMat);
     city.frustumCulled = false;
     group.add(city);
+    // Painted: the facades, and their lit windows alone for the glow.
+    const pf = tex('facade');
+    const pl = tex('facadeLit');
+    if (pf && pl) {
+      // Drawn half as large again as painted: fewer, bigger windows, which
+      // stay windows at a distance instead of breaking into speckle.
+      pf.repeat.setScalar(0.66);
+      pl.repeat.setScalar(0.66);
+      ctx.swaps.push((on) => {
+        cityMat.map = on ? pf : facade;
+        cityMat.emissiveMap = on ? pl : lit;
+        cityMat.emissiveIntensity = on ? 0.9 : 1.25;
+      });
+    }
   }
 
   // ---- the steel and the neon, all of it ------------------------------------------
@@ -2145,6 +2283,8 @@ function buildCrucible(ctx: Ctx): void {
     const mesh = new THREE.Mesh(steelGeo, steel);
     mesh.frustumCulled = false;
     group.add(mesh);
+    const rustTex = tex('rust');
+    if (rustTex) swapMaterial(ctx, mesh, paintedRock(rustTex, rustTex, 10, 10, THREE.FrontSide, { toon: true, dip: 0 }));
     for (const g of glowParts) {
       if (g.attributes.uv) g.deleteAttribute('uv');
       if (g.attributes.normal) g.deleteAttribute('normal');
@@ -2173,4 +2313,49 @@ function buildCrucible(ctx: Ctx): void {
       }
     });
   }
+
+  if (ctx.painted) paintedPlumes(ctx, plumeSpots, 77);
+}
+
+/** A place smoke or steam rises from: its foot, how wide its card may be, and which cards. */
+interface Plume {
+  x: number;
+  y: number;
+  z: number;
+  width: [number, number];
+  cards: number[];
+}
+
+/**
+ * Painted smoke and steam (the anime look): a card for each, its foot (the
+ * plume's base, wherever it is across the painting) on the spot, turning
+ * about the upright to face the camera as the painted clouds do.
+ */
+function paintedPlumes(ctx: Ctx, spots: Plume[], seed: number): void {
+  const { cards, url } = ctx.painted!.clouds;
+  if (cards.length === 0 || spots.length === 0) return;
+  const map = paintedTexture(url);
+  const rnd = mulberry(seed);
+  const mats = cards.map((c) => paintedCardMaterial(map, [c.u0, c.v0, c.u1 - c.u0, c.v1 - c.v0], 1, THREE.DoubleSide));
+  const geos = cards.map((c) => new THREE.PlaneGeometry(1, 1).translate(0.5 - (c.base ?? 0.5), 0.5, 0));
+  const group = new THREE.Group();
+  const meshes: THREE.Mesh[] = [];
+  for (const sp of spots) {
+    const k = sp.cards[Math.floor(rnd() * sp.cards.length)] % cards.length;
+    const w = sp.width[0] + rnd() * (sp.width[1] - sp.width[0]);
+    const m = new THREE.Mesh(geos[k], mats[k]);
+    m.scale.set(rnd() < 0.5 ? -w : w, w / cards[k].aspect, 1);
+    m.position.set(sp.x, sp.y, sp.z);
+    m.frustumCulled = false;
+    group.add(m);
+    meshes.push(m);
+  }
+  ctx.group.add(group);
+  ctx.paintedOnly.push(group);
+  const cam = new THREE.Vector3();
+  ctx.updates.push((_time, camera) => {
+    if (!group.visible) return;
+    camera.getWorldPosition(cam);
+    for (const m of meshes) m.rotation.y = Math.atan2(cam.x - m.position.x, cam.z - m.position.z);
+  });
 }
