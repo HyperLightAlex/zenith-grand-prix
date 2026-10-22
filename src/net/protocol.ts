@@ -13,8 +13,8 @@ import type { MatchConfig, MatchState, MechInput, RaceState, Role, RoundResult, 
 import type { GpEvent, GpKind } from '../gp/grandPrix';
 import { decodeBuild } from '../custom/mechBuild';
 
-/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits; 4: custom mechs.) */
-export const NET_PROTOCOL = 4;
+/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits; 4: custom mechs; 5: Sprint, and pilots' colours.) */
+export const NET_PROTOCOL = 5;
 
 /** The server sends the inputs it used every this many ticks (30 packets a second). */
 export const TICKS_PER_PACKET = 2;
@@ -136,12 +136,17 @@ export function portraitColour(portrait: number): number {
   return portrait >= 0 ? Math.floor(portrait / 3) % 5 : 0;
 }
 
-/** A `pilot` message checked: the callsign as on joining, the portrait and the mechs as below. */
-export function pilotChange(msg: Record<string, unknown>): { ok: true; callsign: string; portrait: number; looks: Looks } | { ok: false; text: string } {
+/** A `pilot` message checked: the callsign as on joining, the portrait, the mechs and the colour as below. */
+export function pilotChange(msg: Record<string, unknown>): { ok: true; callsign: string; portrait: number; looks: Looks; colour: number; sprint: string } | { ok: false; text: string } {
   const callsign = cleanCallsign(String(msg.callsign ?? ''));
   const problem = callsignProblem(callsign);
   if (problem) return { ok: false, text: `Callsign: ${problem}` };
-  return { ok: true, callsign, portrait: cleanPortrait(msg.portrait), looks: cleanLooks(msg.looks) };
+  return { ok: true, callsign, portrait: cleanPortrait(msg.portrait), looks: cleanLooks(msg.looks), colour: cleanColour(msg.colour), sprint: cleanLook(msg.sprint) };
+}
+
+/** A custom mech as sent, if it reads back (custom/mechBuild.ts); '' otherwise. */
+export function cleanLook(look: unknown): string {
+  return decodeBuild(look) ? (look as string) : '';
 }
 
 /** A pilot's mech in each frame: a custom mech as text, or '' for the stock one. */
@@ -211,6 +216,10 @@ export interface JoinOptions {
   portrait?: number;
   /** The mech the pilot flies in each frame (forward, midfielder, defender): a custom mech as text (custom/mechBuild.ts), or '' for the stock one. */
   looks?: string[];
+  /** The pilot's colour (see PILOT_COLOURS): worn in a Sprint. */
+  colour?: number;
+  /** The pilot's own Forward (a custom mech as text), which they race a Sprint in, whatever they fly in a team race. */
+  sprint?: string;
   deviceId: string;
   loadout: Loadout;
   /** Coming as a squad (the leader), or following one (a member). */
@@ -240,6 +249,10 @@ export interface RoomSettings {
   match: number;
   /** Computer pilots' skill: 0 rookie, 1 pro, 2 ace. */
   skill: number;
+  /** Team race (two teams of three) or Sprint (six Forwards, every pilot for themselves). */
+  mode: 'teams' | 'sprint';
+  /** A Sprint's format: an index into SPRINT_FORMATS. */
+  sprint: number;
 }
 
 /** The match formats a room offers (the same as Free Play's). */
@@ -249,6 +262,14 @@ export const MATCH_FORMATS: Array<{ label: string; cfg: MatchConfig }> = [
   { label: 'Series, best of 5', cfg: { mode: 'series', bestOf: 5, target: 50 } },
   { label: 'Points race to 50', cfg: { mode: 'points', bestOf: 3, target: 50 } },
   { label: 'Points race to 80', cfg: { mode: 'points', bestOf: 3, target: 80 } },
+];
+/** A Sprint's formats (the same as Free Play's). Points by place: 10, 8, 6, 4, 2, 1. */
+export const SPRINT_FORMATS: Array<{ label: string; cfg: MatchConfig }> = [
+  { label: 'Single race', cfg: { mode: 'races', bestOf: 1, target: 0, races: 1 } },
+  { label: '3 races, most points', cfg: { mode: 'races', bestOf: 1, target: 0, races: 3 } },
+  { label: '5 races, most points', cfg: { mode: 'races', bestOf: 1, target: 0, races: 5 } },
+  { label: 'First to 2 wins', cfg: { mode: 'wins', bestOf: 1, target: 0, wins: 2 } },
+  { label: 'First to 3 wins', cfg: { mode: 'wins', bestOf: 1, target: 0, wins: 3 } },
 ];
 export const SKILL_NAMES = ['Rookie', 'Pro', 'Ace'] as const;
 export const SKILL_VALUES = [0.28, 0.55, 0.82] as const;
@@ -260,7 +281,9 @@ export interface LobbyPlayer {
   callsign: string;
   /** Their portrait (see PORTRAITS), or -1. */
   portrait: number;
-  /** 0 or 1, the team; -1 while waiting for a place. */
+  /** Their colour (see PILOT_COLOURS), or -1: worn in a Sprint. */
+  colour: number;
+  /** 0 or 1, the team; -1 while waiting for a place. (A Sprint has no teams, but people keep their places for the next team race.) */
   side: number;
   /** The frame they picked; locked in while they are ready. */
   role: Role;
@@ -303,6 +326,8 @@ export interface LobbyView {
   continued: string[];
   /** A squad's Grand Prix: the event as it stands (schedule, results), or null in an ordinary room. */
   gp: GpEvent | null;
+  /** A Sprint under way: who is in each of its places (the match's sides), by name, or null. */
+  sprint: string[] | null;
 }
 
 // ---- messages -------------------------------------------------------------------
@@ -311,8 +336,8 @@ export interface LobbyView {
 export interface ClientMessages {
   /** Pick a frame on your team (any frame: Ready locks it in). */
   pick: { role: Role };
-  /** Your pilot changed: the callsign (checked as on joining), the portrait and the mechs (see JoinOptions). A race already begun keeps the old. */
-  pilot: { callsign: string; portrait: number; looks?: string[] };
+  /** Your pilot changed: the callsign (checked as on joining), the portrait, the mechs and the colour (see JoinOptions). A race already begun keeps the old. */
+  pilot: { callsign: string; portrait: number; looks?: string[]; colour?: number; sprint?: string };
   /** Move to a team with a free place, picking a frame there. */
   team: { side: number; role?: Role };
   /** A team's faction (`side`: whose; your own if left out). */
@@ -340,9 +365,12 @@ export interface MatchStartMsg {
   seed: number;
   track: string;
   seats: SeatConfig[];
-  /** Which faction each race team is. */
-  factions: [number, number];
+  /** Which faction each race team is (-1 for none: a person in a Sprint). */
+  factions: number[];
   gridFlip: boolean;
+  /** A Sprint: every seat its own team (RaceConfig.mode), on this grid. */
+  mode?: 'teams' | 'sprint';
+  grid?: number[];
   /** Laps, when not the usual (tests run short races). */
   laps?: number;
   /** Your seat (mech id) in this race, or -1 if you are watching. */

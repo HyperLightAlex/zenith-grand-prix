@@ -96,6 +96,22 @@ two players.
   first), or by the host, who can set both teams', including a team of
   computer pilots. When everyone connected is ready, a 5-second countdown
   starts; any change cancels it. The host can start early.
+- **Sprint.** The host can set the room's Mode to Sprint (see DESIGN.md,
+  "Sprint"): six Forwards, every pilot for themselves, with the Sprint's
+  formats. The room shows its six places in one column: each person with
+  their portrait, callsign and colour, flying their own Forward, and a
+  computer pilot in each place left. There are no teams, factions or frames
+  to pick (people keep their places on the teams for the next team race),
+  so Ready just means ready; Y opens your pilot (portrait and colour). When
+  the Sprint starts its places are fixed for the match: the people in the
+  room in the order they came, then computer pilots from factions drawn by
+  lot (`startSprint` in roomCore.ts). Someone who leaves keeps their place
+  for the rest of the match, flown by the computer under their name and in
+  their mech; someone who arrives during it races in the next one. Your
+  colour and your Forward go with every join and `pilot` message (`colour`,
+  `sprint`); a room without them uses your portrait's colour and your
+  faction's stock Forward. `matchStart` carries the mode and the grid, and
+  `factions` has a team each (-1 for a person).
 - **Shot caller.** On a team of two people and one computer pilot, one of the
   two gives the computer pilot its orders. It starts with the team's captain
   (or the squad leader) and can be passed on or asked for. Alone with two

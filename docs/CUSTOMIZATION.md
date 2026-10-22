@@ -286,7 +286,13 @@ Each player has one pilot, kept on the device until there are accounts:
   hangar, each frame offers the stock mech of the faction being flown, or
   the player's custom mech of that frame. Custom mechs race in
   every mode. A custom mech may be named; the pilot shown with it is
-  always the player's callsign.
+  always the player's callsign. A Sprint (DESIGN.md, "Sprint") is always
+  raced in the custom Forward, flown or not, made from the faction's stock
+  Forward the first time it is needed; its setup has Edit for it.
+- **A colour**, worn where the pilot flies for no faction (a Sprint): the
+  mech's lights, the name plate, the running order and standings, the
+  room's seat. One of ten (`PILOT_COLOURS` in protocol.ts), picked on the
+  Pilot screen; until then the portrait's background's (`portraitColour`).
 
 Online, the pilot goes with the seat (as the faction and frame do); the
 server accepts only a valid callsign and catalogue entries, and a room or

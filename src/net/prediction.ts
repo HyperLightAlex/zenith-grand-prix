@@ -60,7 +60,7 @@ export class Predictor {
     if (start.key) {
       this.confirmed = copyData(start.key);
     } else {
-      this.confirmed = createRace(this.track, { seed: start.seed, seats: start.seats, gridFlip: start.gridFlip, laps: start.laps });
+      this.confirmed = createRace(this.track, { seed: start.seed, seats: start.seats, gridFlip: start.gridFlip, laps: start.laps, mode: start.mode, grid: start.grid });
       this.confirmed.teams[0].caller = start.callers[0];
       this.confirmed.teams[1].caller = start.callers[1];
     }

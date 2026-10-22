@@ -87,7 +87,7 @@ describe("a squad's Grand Prix online", () => {
     // The event's round: its circuit, a single race, its rival, at its skill.
     expect(v.sides[0].faction).toBe(2);
     expect(v.sides[1].faction).toBe(ev.rounds[0].you!.b);
-    expect(v.settings).toEqual({ track: ev.rounds[0].circuit, match: 0, skill: 0 });
+    expect(v.settings).toEqual({ track: ev.rounds[0].circuit, match: 0, skill: 0, mode: 'teams', sprint: 1 });
     // None of it can be changed by hand, nobody moves to the rivals' team, and a match is not ended early.
     lead.send('settings', { track: 'helios' });
     lead.send('faction', { faction: 3 });

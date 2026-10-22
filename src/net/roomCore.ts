@@ -3,6 +3,12 @@
 // it joins, drops and messages and gives it a way to send, and the tests
 // drive it the same way with no network at all.
 //
+// A room can be set to a Sprint: six Forwards, every pilot for themselves.
+// Its places are fixed for the whole match when it starts (the people in
+// the room, then computer pilots, a faction's each, in the rest), so the
+// standings follow each pilot; someone who arrives during one races in the
+// next.
+//
 // A room can also be a squad's Grand Prix: a cup or a season as offline,
 // the squad on team 1 and every rival a computer pilot. The room keeps the
 // event, sets each round up from it (its circuit, format and rival), races
@@ -21,6 +27,7 @@ import {
   emptyInput,
   raceChecksum,
   recordRound,
+  sprintGrid,
   stepRace,
   trackById,
   type MatchState,
@@ -30,6 +37,7 @@ import {
   type Track,
 } from '../sim/index';
 import { PILOT_NAMES } from './factions';
+import { encodeBuild, stockBuild } from '../custom/mechBuild';
 import {
   FixtureSim,
   GP_SKILL,
@@ -58,6 +66,8 @@ import {
   pickFrame,
   nextHost,
   removeMember,
+  isSprint,
+  seated,
   settleFrames,
   switchTeam,
   setFaction,
@@ -78,11 +88,15 @@ import {
   READY_COUNTDOWN,
   RECONNECT_SECONDS,
   RESULTS_SECONDS,
+  ROOM_SIZE,
   SKILL_VALUES,
+  SPRINT_FORMATS,
   STANDINGS_SECONDS,
+  TEAMMATE_SKILL,
   TICKS_PER_PACKET,
   packInput,
   pilotChange,
+  portraitColour,
   unpackInput,
   type ClientMessages,
   type GpRequest,
@@ -117,6 +131,17 @@ interface Queued {
   wire: WireInput;
 }
 
+/** A place in a Sprint, for the whole match: a person's (as they last were), or a computer pilot's in its faction's. */
+interface SprintPlace {
+  pid: string | null;
+  /** -1 for a person: they fly for no faction. */
+  faction: number;
+  name: string;
+  portrait: number;
+  look: string;
+  colour: number;
+}
+
 /** A squad's Grand Prix, kept by its room. */
 interface GpState {
   event: GpEvent;
@@ -136,7 +161,10 @@ export class RoomCore {
   track: Track | null = null;
   /** The pid in each race seat (null for a computer pilot), for the round being run. */
   seatPid: Array<string | null> = [];
-  private factions: [number, number] = [0, 1];
+  /** Which faction each race team is (-1 for none: a person in a Sprint). */
+  private factions: number[] = [0, 1];
+  /** A Sprint under way: its places, fixed for the match. */
+  private sprint: SprintPlace[] | null = null;
   private queue: Queued[][] = [];
   private last: WireInput[] = [];
   private acks: number[] = [];
@@ -188,7 +216,7 @@ export class RoomCore {
     if (!ev || !r?.you) return;
     const cfg = matchFormat(ev);
     const fmt = MATCH_FORMATS.findIndex((f) => f.cfg.mode === cfg.mode && f.cfg.bestOf === cfg.bestOf && f.cfg.target === cfg.target);
-    this.lobby.settings = { track: r.circuit, match: Math.max(0, fmt), skill: ev.difficulty };
+    this.lobby.settings = { track: r.circuit, match: Math.max(0, fmt), skill: ev.difficulty, mode: 'teams', sprint: 1 };
     this.lobby.factions = [ev.faction, r.you.b];
   }
 
@@ -210,6 +238,8 @@ export class RoomCore {
       known.callsign = info.callsign || known.callsign;
       if (info.portrait !== undefined) known.portrait = info.portrait;
       if (info.looks !== undefined) known.looks = info.looks;
+      if (info.colour !== undefined) known.colour = info.colour;
+      if (info.sprint !== undefined) known.sprint = info.sprint;
       this.reconnect(known.pid);
       return { ok: true, member: known, resumed: true };
     }
@@ -404,6 +434,8 @@ export class RoomCore {
         m.callsign = p.callsign;
         m.portrait = p.portrait;
         m.looks = p.looks;
+        m.colour = p.colour;
+        m.sprint = p.sprint;
         this.dirty = true;
         return;
       }
@@ -505,7 +537,7 @@ export class RoomCore {
 
   sendLobby(): void {
     const timer = this.timerEnd > 0 ? Math.max(0, Math.ceil((this.timerEnd - this.now()) / 1000)) : -1;
-    this.io.broadcast('lobby', lobbyView(this.lobby, this.phase, timer, this.match, [...this.continued], this.gp?.event ?? null));
+    this.io.broadcast('lobby', lobbyView(this.lobby, this.phase, timer, this.match, [...this.continued], this.gp?.event ?? null, this.sprint?.map((p) => p.name) ?? null));
     this.dirty = false;
     this.dirtyPing = false;
     this.lastLobbySend = this.now();
@@ -514,6 +546,8 @@ export class RoomCore {
   // ---- the match --------------------------------------------------------------------
 
   private startMatch(): void {
+    if (isSprint(this.lobby) && !this.gp) return this.startSprint();
+    this.sprint = null;
     this.match = createMatch((MATCH_FORMATS[this.lobby.settings.match] ?? MATCH_FORMATS[0]).cfg);
     this.factions = [this.lobby.factions[0], this.lobby.factions[1]];
     // Frames as locked in (and anyone who had not locked in, around them).
@@ -522,8 +556,51 @@ export class RoomCore {
     this.startRound();
   }
 
+  /**
+   * A Sprint: its places for the whole match. The people in the room, in
+   * the order they came, each in their own Forward in their colour; then a
+   * computer pilot in each place left, from factions drawn by lot.
+   */
+  private startSprint(): void {
+    this.match = createMatch((SPRINT_FORMATS[this.lobby.settings.sprint] ?? SPRINT_FORMATS[0]).cfg, ROOM_SIZE);
+    clearReady(this.lobby);
+    const people = seated(this.lobby).sort((a, b) => a.joinedAt - b.joinedAt).slice(0, ROOM_SIZE);
+    const factions = [0, 1, 2, 3, 4];
+    for (let i = factions.length - 1; i > 0; i--) {
+      const j = Math.floor(this.io.random() * (i + 1)) % (i + 1);
+      [factions[i], factions[j]] = [factions[j], factions[i]];
+    }
+    const places: SprintPlace[] = people.map((m) => ({ pid: m.pid, faction: -1, name: m.callsign, portrait: m.portrait, look: '', colour: -1 }));
+    for (let k = 0; places.length < ROOM_SIZE; k++) {
+      const f = factions[k % factions.length];
+      places.push({ pid: null, faction: f, name: PILOT_NAMES[f][ROLE.FW], portrait: -1, look: '', colour: -1 });
+    }
+    this.sprint = places;
+    this.factions = places.map((p) => p.faction);
+    this.startRound();
+  }
+
+  /** A Sprint's grid for the next race: its places, each person as they are now (or as they last were, flown by the computer). */
+  private sprintSeats(): SeatConfig[] {
+    const skill = SKILL_VALUES[this.lobby.settings.skill] ?? SKILL_VALUES[1];
+    this.seatPid = [];
+    return this.sprint!.map((p, team): SeatConfig => {
+      const who = p.pid ? member(this.lobby, p.pid) : undefined;
+      if (who) {
+        p.name = who.callsign;
+        p.portrait = who.portrait;
+        p.colour = who.colour >= 0 ? who.colour : portraitColour(who.portrait);
+        // Their own Forward; one made from their faction's stock one if they sent none.
+        p.look = who.sprint || encodeBuild(stockBuild(who.loadout.faction));
+      }
+      this.seatPid.push(who ? who.pid : null);
+      return { team, role: ROLE.FW, human: !!who, name: p.name, portrait: p.portrait, look: p.look, colour: p.colour, skill: who ? TEAMMATE_SKILL : skill };
+    });
+  }
+
   /** The grid for the next round: everyone in their frame, computer pilots in the rest. */
   private buildSeats(): SeatConfig[] {
+    if (this.sprint) return this.sprintSeats();
     const skill = SKILL_VALUES[this.lobby.settings.skill] ?? SKILL_VALUES[1];
     const seats: SeatConfig[] = [];
     this.seatPid = [];
@@ -541,13 +618,18 @@ export class RoomCore {
 
   private startRound(): void {
     if (!this.match) return;
-    for (const m of this.lobby.members) m.nextRound = false;
+    // (In a Sprint, whoever has no place in it races in the next one.)
+    const places = this.sprint;
+    for (const m of this.lobby.members) m.nextRound = !!places && !places.some((p) => p.pid === m.pid);
     const round = this.match.rounds.length;
     const def = trackById(this.lobby.settings.track) ?? TRACKS[0];
     this.track = sharedTrack(def);
     const seats = this.buildSeats();
     const seed = Math.floor(this.io.random() * 1e9);
-    this.race = createRace(this.track, { seed, seats, gridFlip: round % 2 === 1, laps: this.opts.laps });
+    // A Sprint's grid: drawn by lot for its first race, then the standings reversed.
+    const grid = places ? sprintGrid(this.match, seats.length, seed) : undefined;
+    const mode = places ? 'sprint' : 'teams';
+    this.race = createRace(this.track, { seed, seats, gridFlip: round % 2 === 1, laps: this.opts.laps, mode, grid });
     this.queue = seats.map(() => []);
     this.acks = seats.map(() => 0);
     this.starved = seats.map(() => 0);
@@ -562,12 +644,12 @@ export class RoomCore {
     this.recomputeCallers(false, true);
     this.phase = 'race';
     this.timerEnd = -1;
-    this.roundStart = { seed, seats, gridFlip: round % 2 === 1, round };
+    this.roundStart = { seed, seats, gridFlip: round % 2 === 1, round, mode, grid };
     this.io.log?.('round', round + 1, 'start', seats.filter((x) => x.human).length, 'people');
     for (const m of this.lobby.members) if (m.connected) this.sendMatchStart(m.pid, false);
     this.dirty = true;
   }
-  private roundStart: { seed: number; seats: SeatConfig[]; gridFlip: boolean; round: number } | null = null;
+  private roundStart: { seed: number; seats: SeatConfig[]; gridFlip: boolean; round: number; mode: 'teams' | 'sprint'; grid?: number[] } | null = null;
 
   private sendMatchStart(pid: string, withKey: boolean): void {
     if (!this.race || !this.match || !this.roundStart) return;
@@ -577,8 +659,10 @@ export class RoomCore {
       seed: rs.seed,
       track: this.lobby.settings.track,
       seats: rs.seats,
-      factions: [this.factions[0], this.factions[1]],
+      factions: [...this.factions],
       gridFlip: rs.gridFlip,
+      mode: rs.mode,
+      grid: rs.grid,
       laps: this.opts.laps,
       seat: this.seatPid.indexOf(pid),
       callers: [this.race.teams[0].caller, this.race.teams[1].caller],
@@ -598,6 +682,8 @@ export class RoomCore {
       if (!atStart) return;
     }
     if (!race) return;
+    // (A Sprint has no team plays to call.)
+    if (race.sprint) return;
     for (let team = 0; team < 2; team++) {
       const seatsOfTeam = race.mechs.filter((m) => m.team === team && m.human).map((m) => m.id);
       const present = seatsOfTeam.filter((id) => member(this.lobby, this.seatPid[id])?.connected);
@@ -713,6 +799,7 @@ export class RoomCore {
     this.race = null;
     this.track = null;
     this.match = null;
+    this.sprint = null;
     this.seatPid = [];
     this.timerEnd = -1;
     this.continued.clear();

@@ -4,7 +4,7 @@
 
 import { Client, type Room } from '@colyseus/sdk';
 import { JOIN_TIMEOUT_SECONDS, NET_PROTOCOL, VIEW_RETRY_SECONDS, type GpRequest, type JoinOptions, type LobbyView, type Loadout, type ServerMessages, type SquadServerMessages, type SquadTicket, type SquadView } from '../../net/protocol';
-import { callsign, deviceId, portrait, readResume, seatLook, writeResume } from './identity';
+import { callsign, customLook, deviceId, pilotColour, portrait, readResume, seatLook, writeResume } from './identity';
 
 export interface OnlineEvents {
   lobby: LobbyView;
@@ -117,7 +117,7 @@ export class Online {
   }
 
   private options(loadout: Loadout, squad?: SquadTicket): JoinOptions {
-    return { version: typeof __BUILD__ === 'string' ? __BUILD__ : 'dev', protocol: NET_PROTOCOL, callsign: callsign(), portrait: portrait(), looks: [seatLook(0), seatLook(1), seatLook(2)], deviceId: deviceId(), loadout, squad };
+    return { version: typeof __BUILD__ === 'string' ? __BUILD__ : 'dev', protocol: NET_PROTOCOL, callsign: callsign(), portrait: portrait(), looks: [seatLook(0), seatLook(1), seatLook(2)], colour: pilotColour(), sprint: customLook(0), deviceId: deviceId(), loadout, squad };
   }
 
   // ---- rooms -------------------------------------------------------------------

@@ -15,8 +15,10 @@ describe('a pilot on the wire', () => {
   });
 
   it('checks a pilot change as a join is checked', () => {
-    expect(pilotChange({ callsign: '  Comet  ', portrait: 4 })).toEqual({ ok: true, callsign: 'Comet', portrait: 4, looks: ['', '', ''] });
-    expect(pilotChange({ callsign: 'Comet', portrait: 99 })).toEqual({ ok: true, callsign: 'Comet', portrait: -1, looks: ['', '', ''] });
+    expect(pilotChange({ callsign: '  Comet  ', portrait: 4 })).toEqual({ ok: true, callsign: 'Comet', portrait: 4, looks: ['', '', ''], colour: -1, sprint: '' });
+    expect(pilotChange({ callsign: 'Comet', portrait: 99, colour: 3, sprint: 'nonsense' })).toEqual({ ok: true, callsign: 'Comet', portrait: -1, looks: ['', '', ''], colour: 3, sprint: '' });
+    const halo = encodeBuild({ ...stockBuild(1), name: 'Halo' });
+    expect(pilotChange({ callsign: 'Comet', colour: 99, sprint: halo })).toMatchObject({ ok: true, colour: -1, sprint: halo });
     expect(pilotChange({ callsign: 'ab', portrait: 1 }).ok).toBe(false);
     expect(pilotChange({ portrait: 1 }).ok).toBe(false);
   });

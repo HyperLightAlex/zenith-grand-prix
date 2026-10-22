@@ -675,6 +675,51 @@ A match is one or more races between the same two teams (`src/sim/match.ts`):
 
 The teams swap sides of the grid from one round to the next.
 
+### Sprint
+
+The other mode, picked where a match is set up (Free Play's setup, a room's
+settings): **six Forwards, every pilot for themselves.** The race itself is
+the same (laps, phases, gates, the limiter, weapons free on the battle lap);
+what changes is who is on whose side.
+
+- **No teams.** Each pilot is a team of their own (`RaceConfig.mode =
+  'sprint'`: seat `n` is team `n`), so everything that tells rivals from
+  allies works unchanged and everyone is everyone's rival. What is a team's
+  is off: no team plays (`mayCall` is false, no computer captain), no
+  escorts, no teammate radio, no support points (`award` gives none) and no
+  knockout points.
+- **Points by place**: 10 / 8 / 6 / 4 / 2 / 1 (`SPRINT_POINTS`). A
+  knocked-out pilot scores none. A race is won by whoever wins it.
+- **People fly for no faction.** Each person races their own Forward, their
+  custom one (made from their faction's stock Forward if they have none; a
+  Sprint uses it whether or not they fly it in a team race), lit in their
+  **pilot colour** (eyes, thrusters, trails), with the Zenith GP league's
+  badge where a faction's emblem goes, and their name plate, running-order
+  flag, standings line and room seat in the same colour. The colour is
+  picked on the Pilot screen; until then it is their portrait's background's
+  (the first five colours are the factions'). Computer pilots fill the
+  places nobody has: each a faction's stock Forward in its livery (Kite in a
+  Sunhawk, Shrike in a Razor, and so on).
+- **The grid**: two by two, drawn by lot for the first race, then the
+  standings reversed, so whoever leads starts at the back (`sprintGrid`).
+- **Computer pilots** fight whoever is near on the road, the racer just
+  ahead most of all and anyone already on them; they leave alone a pilot
+  others are already on, so the field does not pile onto one (a person least
+  of all).
+
+A Sprint's formats (`src/sim/match.ts`, each pilot a side):
+
+- **Single race.** Its winner wins.
+- **3 or 5 races, most points.** Level on points: the more race wins, then
+  the better finish in the last race.
+- **First to 2 or 3 wins**, at most 5 or 7 races (six pilots could trade
+  wins a long time). At the cap: the most wins, then the most points, then
+  the better finish in the last race.
+
+Online, the host sets a room to a Sprint (see [ONLINE.md](ONLINE.md)): its
+places are fixed for the match when it starts, so the standings follow
+each pilot. The Grand Prix stays a team event.
+
 ## 3. How it is built
 
 ```

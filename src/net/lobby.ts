@@ -19,12 +19,18 @@
 //   Grand Prix A squad's cup or season (`fixed`): the event sets the factions,
 //              circuit, format and skill, and the other team is computer
 //              pilots only, so people sit on team 1 (side 0) alone.
+//   Sprint     The host's other mode: six Forwards, every pilot for
+//              themselves, so no teams, factions or frames to pick (people
+//              keep their places on the teams for the next team race, and
+//              Ready locks in nothing). Everyone flies their own Forward in
+//              their colour; computer pilots in their factions' fill the rest.
 
 import { ROLE, TRACKS, type Role } from '../sim/index';
 import {
   MATCH_FORMATS,
   ROOM_SIZE,
   SKILL_NAMES,
+  SPRINT_FORMATS,
   SQUAD_HOLD_SECONDS,
   type LobbyPlayer,
   type LobbyView,
@@ -50,6 +56,8 @@ export interface Member extends LobbyPlayer {
   loadout: Loadout;
   /** The mech they fly in each frame (checked: see protocol cleanLooks). Shown to everyone in the race, not in the lobby. */
   looks: Looks;
+  /** Their own Forward, raced in a Sprint (checked), or '' (then their faction's stock one). */
+  sprint: string;
 }
 
 /** A place on a team kept for a squad member on their way in. */
@@ -90,6 +98,9 @@ export interface JoinInfo {
   portrait?: number;
   /** Their mechs (checked). */
   looks?: Looks;
+  /** Their colour (protocol PILOT_COLOURS), or -1, and their Sprint mech (checked), or ''. */
+  colour?: number;
+  sprint?: string;
   loadout: Loadout;
   squad?: SquadTicket;
 }
@@ -97,7 +108,12 @@ export interface JoinInfo {
 export type JoinResult = { ok: true; member: Member } | { ok: false; code: 'full' | 'squad' | 'kicked' | 'gp'; text: string };
 
 export function defaultSettings(): RoomSettings {
-  return { track: TRACKS[0].id, match: 1, skill: 1 };
+  return { track: TRACKS[0].id, match: 1, skill: 1, mode: 'teams', sprint: 1 };
+}
+
+/** Whether the room is set to a Sprint (every pilot for themselves) rather than a team race. */
+export function isSprint(lobby: Lobby): boolean {
+  return lobby.settings.mode === 'sprint';
 }
 
 export function createLobby(code: string, version: string, firstFaction = 0): Lobby {
@@ -246,6 +262,7 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
     deviceId: info.deviceId,
     callsign: info.callsign,
     portrait: info.portrait ?? -1,
+    colour: info.colour ?? -1,
     side,
     role,
     ready: false,
@@ -258,6 +275,7 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
     droppedAt: -1,
     loadout,
     looks: info.looks ?? ['', '', ''],
+    sprint: info.sprint ?? '',
   };
   lobby.members.push(m);
   if (!lobby.host) lobby.host = m.pid;
@@ -363,7 +381,16 @@ export function setSettings(lobby: Lobby, pid: string, s: Partial<RoomSettings>)
     if (!Number.isInteger(s.skill) || s.skill < 0 || s.skill >= SKILL_NAMES.length) return no('No such skill');
     next.skill = s.skill;
   }
-  if (next.track === lobby.settings.track && next.match === lobby.settings.match && next.skill === lobby.settings.skill) return yes();
+  if (s.mode !== undefined) {
+    if (s.mode !== 'teams' && s.mode !== 'sprint') return no('No such mode');
+    next.mode = s.mode;
+  }
+  if (s.sprint !== undefined) {
+    if (!Number.isInteger(s.sprint) || s.sprint < 0 || s.sprint >= SPRINT_FORMATS.length) return no('No such format');
+    next.sprint = s.sprint;
+  }
+  const was = lobby.settings;
+  if (next.track === was.track && next.match === was.match && next.skill === was.skill && next.mode === was.mode && next.sprint === was.sprint) return yes();
   lobby.settings = next;
   clearReady(lobby);
   return yes();
@@ -373,7 +400,8 @@ export function setSettings(lobby: Lobby, pid: string, s: Partial<RoomSettings>)
 export function setReady(lobby: Lobby, pid: string, ready: boolean): Outcome {
   const m = member(lobby, pid);
   if (!m || m.side < 0) return no('You have no place on a team');
-  if (ready && !m.ready) {
+  // (A Sprint has no frames to lock in: everyone flies a Forward.)
+  if (ready && !m.ready && !isSprint(lobby)) {
     const holder = lockedBy(lobby, m.side, m.role);
     if (holder && holder !== m) return no(`${holder.callsign} has locked in that frame: pick another`);
   }
@@ -439,7 +467,7 @@ export function kick(lobby: Lobby, pid: string, target: string): Outcome {
 }
 
 /** What every client is shown. */
-export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: MatchState | null, continued: string[], gp: GpEvent | null = null): LobbyView {
+export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: MatchState | null, continued: string[], gp: GpEvent | null = null, sprint: string[] | null = null): LobbyView {
   const sides = [0, 1].map(
     (side): SideView => ({
       faction: lobby.factions[side],
@@ -450,7 +478,7 @@ export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: 
   ) as [SideView, SideView];
   const players: LobbyPlayer[] = [...lobby.members]
     .sort((a, b) => a.joinedAt - b.joinedAt)
-    .map(({ pid, callsign, portrait, side, role, ready, connected, ping, squad, nextRound, autopilot }) => ({ pid, callsign, portrait, side, role, ready, connected, ping, squad, nextRound, autopilot }));
+    .map(({ pid, callsign, portrait, colour, side, role, ready, connected, ping, squad, nextRound, autopilot }) => ({ pid, callsign, portrait, colour, side, role, ready, connected, ping, squad, nextRound, autopilot }));
   return {
     code: lobby.code,
     version: lobby.version,
@@ -464,5 +492,6 @@ export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: 
     callerAsks: [...lobby.callerAsks] as [string | null, string | null],
     continued: [...continued],
     gp,
+    sprint: sprint ? [...sprint] : null,
   };
 }

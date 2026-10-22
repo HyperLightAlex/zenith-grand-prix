@@ -265,7 +265,7 @@ export class Game {
   private worldTime = 0;
   private ownLock = -1;
   private ownLockAt = 0;
-  private garageShown: { team: number; role: Role; sprint: boolean } | null = null;
+  private garageShown: { team: number; role: Role; sprint: boolean; colour: number } | null = null;
   /** The race behind the title is on screen. */
   private attracting = false;
   /** The player's revs on the grid, by band (0 below the green, 2 in it, 3 past it), for the tick into the green. */
@@ -518,7 +518,7 @@ export class Game {
   /** A room or squad you are in hears of a change to your pilot (it shows from the next race). */
   private tellPilot(): void {
     if (!this.callsign) return;
-    const msg = { callsign: this.callsign, portrait: this.portrait, looks: [seatLook(0), seatLook(1), seatLook(2)] };
+    const msg = { callsign: this.callsign, portrait: this.portrait, looks: [seatLook(0), seatLook(1), seatLook(2)], colour: pilotColour(), sprint: customLook(ROLE.FW) };
     this.online.sendRoom('pilot', msg);
     this.online.sendSquad('pilot', msg);
   }
@@ -760,6 +760,16 @@ export class Game {
 
   /** Whose mech the hangar shows for a screen. */
   private previewLoadout(id: ScreenId): { team: number; role: Role; sprint?: boolean } {
+    // A Sprint (Free Play's setup, or a room set to one): your own Forward, in your colour.
+    const room = this.online.lobby;
+    const sprintRoom = this.menus.has('room') && !!room && !room.gp && room.settings.mode === 'sprint';
+    const sprintSetup = this.menus.has('setup') && this.free.mode === 'sprint' && this.mode === 'free';
+    // The editor: the mech being edited (from a Sprint, lit as it races there).
+    if (CUSTOM_SCREENS.has(id)) {
+      const d = this.menus.data as { role?: Role; team?: number } | undefined;
+      if (d?.role !== undefined) return { team: d.team ?? this.loadout.team, role: d.role, sprint: (sprintSetup || sprintRoom) && d.role === ROLE.FW };
+    }
+    if (sprintRoom) return { team: this.loadout.team, role: ROLE.FW, sprint: true };
     if (id === 'room' || this.menus.has('room')) {
       const v = this.online.lobby;
       const me = v?.players.find((p) => p.pid === this.online.pid);
@@ -772,14 +782,7 @@ export class Game {
     if ((id === 'online' || this.menus.has('online')) && this.online.squadView && this.online.squadSize > 1) {
       return { team: this.online.squadView.faction, role: this.loadout.role };
     }
-    // Free Play's Sprint setup: your own Forward.
-    const sprintSetup = this.menus.has('setup') && this.free.mode === 'sprint' && this.mode === 'free';
     if (id === 'setup' && sprintSetup) return { team: this.loadout.team, role: ROLE.FW, sprint: true };
-    // The editor: the mech being edited (from a Sprint's setup, lit as it races there).
-    if (CUSTOM_SCREENS.has(id)) {
-      const d = this.menus.data as { role?: Role; team?: number } | undefined;
-      if (d?.role !== undefined) return { team: d.team ?? this.loadout.team, role: d.role, sprint: sprintSetup && d.role === ROLE.FW };
-    }
     return this.loadout;
   }
 
@@ -800,14 +803,17 @@ export class Game {
     // A change of circuit, rival or match changes nothing on screen: only a
     // new team or frame (or your Sprint mech for the stock one) rebuilds the scene.
     const sprint = !!l.sprint;
-    if (this.state === 'garage' && this.garageShown && this.garageShown.team === l.team && this.garageShown.role === l.role && this.garageShown.sprint === sprint) return;
+    // (A Sprint's mech is lit in your colour: a new colour shows it again.)
+    const colour = sprint ? pilotColour() : -1;
+    const shown = this.garageShown;
+    if (this.state === 'garage' && shown && shown.team === l.team && shown.role === l.role && shown.sprint === sprint && shown.colour === colour) return;
     this.state = 'garage';
     this.hud.hide();
     // The grid, stationary, with your mech in front of the camera, on whichever circuit is built.
     // (A Sprint's mech flies for no faction: lit in your colour.)
     const setup: RoundSetup = { factions: [sprint ? -1 : l.team, (l.team + 1) % LIVERIES.length], role: l.role, rivalSkill: 0.55, teamSkill: 0.6, track: this.trackId, cfg: MATCH_OPTIONS[0].cfg, look: sprint ? this.sprintMech() : undefined };
     this.setSession(setup, 1, false, true);
-    this.garageShown = { team: l.team, role: l.role, sprint };
+    this.garageShown = { team: l.team, role: l.role, sprint, colour };
     this.view.cam.mode = 'orbit';
     [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift();
     this.view.cam.reset();
@@ -1578,6 +1584,11 @@ export class Game {
       // while the connection was down): back to the room with everyone else.
       const racing = this.state === 'race' || this.state === 'paused' || this.state === 'results';
       if (this.mode === 'online' && racing && v.phase !== 'race' && v.phase !== 'results' && v.phase !== 'final') return this.roomAgain(null);
+      // A room set to a Sprint: it is raced in your own Forward, made now from your faction's if you have none.
+      if (v.settings.mode === 'sprint' && !v.gp && !customMech(ROLE.FW)) {
+        this.sprintMech();
+        this.tellPilot();
+      }
       const s = this.menus.screen;
       if (s === 'room') {
         this.menus.refresh();
@@ -1667,7 +1678,7 @@ export class Game {
   private startNetRound(msg: MatchStartMsg): void {
     if (msg.seat < 0) return;
     this.mode = 'online';
-    this.raceFactions = [msg.factions[0], msg.factions[1]];
+    this.raceFactions = [...msg.factions];
     this.useTrack(msg.track);
     const session = new NetSession(
       msg,

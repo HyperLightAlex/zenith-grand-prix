@@ -1,14 +1,19 @@
 // Online: the hub (your squad in the hangar's bays, rooms by code) and the
-// room's lobby (two teams of three seats, the host's settings, ready marks).
+// room's lobby (two teams of three seats, the host's settings, ready marks;
+// or set to a Sprint, the six places in one column, every pilot for
+// themselves).
 
-import { ROLE, ROLE_NAMES, TRACKS, type Role } from '../../../sim/index';
-import { MATCH_FORMATS, SKILL_NAMES, type LobbyPlayer, type LobbyView } from '../../../net/protocol';
+import { ROLE, ROLE_NAMES, TRACKS, standings, type Role } from '../../../sim/index';
+import { MATCH_FORMATS, PILOT_COLOUR_NAMES, ROOM_SIZE, SKILL_NAMES, SPRINT_FORMATS, portraitColour, type LobbyPlayer, type LobbyView } from '../../../net/protocol';
+import { customName } from '../../../custom/mechBuild';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h } from '../dom';
 import { emblemUrl, faceUrl } from '../factionArt';
-import type { Menus } from '../menus';
+import { MODE_NAMES, SPRINT_TAGLINE, type Menus } from '../menus';
+import { colourCss } from '../sides';
 import { BACK, SELECT, confirmDialog, type DialogData } from './common';
+import { openCustom } from './custom';
 import { gpBlocked, renderGpRoom } from './onlineGp';
 
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
@@ -143,6 +148,7 @@ export function registerOnline(m: Menus, g: Game): void {
         return;
       }
       if (v.gp) return renderGpRoom(m, g, v);
+      if (v.settings.mode === 'sprint') return renderSprintRoom(m, g, v);
       const me = v.players.find((p) => p.pid === o.pid);
       const byPid = new Map(v.players.map((p) => [p.pid, p] as [string, LobbyPlayer]));
       const host = v.host === o.pid;
@@ -236,6 +242,7 @@ export function registerOnline(m: Menus, g: Game): void {
       const lockSet = host ? null : 'Only the host changes the settings';
       const ti = Math.max(0, TRACKS.findIndex((t) => t.id === v.settings.track));
       g.circuitAhead(TRACKS[ti].id);
+      modeChoice(m, g, v, settings, lockSet ?? (inMatch ? 'Not during a match' : null));
       m.choice(settings, 'Circuit', TRACKS[ti].name, (dir) => o.sendRoom('settings', { track: TRACKS[(ti + dir + TRACKS.length) % TRACKS.length].id }), { key: 'track', locked: lockSet ?? (inMatch ? 'Not during a match' : null) });
       m.choice(settings, 'Format', MATCH_FORMATS[v.settings.match]?.label ?? '', (dir) => o.sendRoom('settings', { match: (v.settings.match + dir + MATCH_FORMATS.length) % MATCH_FORMATS.length }), { key: 'match', locked: lockSet ?? (inMatch ? 'Not during a match' : null) });
       m.choice(settings, 'Computer pilots', SKILL_NAMES[v.settings.skill], (dir) => o.sendRoom('settings', { skill: (v.settings.skill + dir + 3) % 3 }), { key: 'skill', locked: lockSet ?? (inMatch ? 'Not during a match' : null) });
@@ -281,6 +288,12 @@ export function registerOnline(m: Menus, g: Game): void {
       const o = g.online;
       const v = o.lobby;
       const me = v?.players.find((p) => p.pid === o.pid);
+      if (v?.settings.mode === 'sprint' && !v.gp) {
+        if (key === 'x' && me) m.focus(`pilot-${me.pid}`);
+        else if (key === 'y') m.push('pilot');
+        else return false;
+        return true;
+      }
       if (key === 'x' && me && me.side >= 0) {
         m.focus(`seat-${me.side}-${me.role}`);
         return true;
@@ -302,9 +315,9 @@ export function registerOnline(m: Menus, g: Game): void {
   });
 }
 
-function statusOf(v: LobbyView, p: LobbyPlayer): string {
+function statusOf(v: LobbyView, p: LobbyPlayer, sprint = false): string {
   if (!p.connected) return 'Reconnecting';
-  if (p.nextRound) return 'Next round';
+  if (p.nextRound) return sprint ? 'Next Sprint' : 'Next round';
   if (v.phase === 'race' && p.autopilot) return 'Paused';
   if (v.phase === 'results' || v.phase === 'final') return v.continued.includes(p.pid) ? 'Continued' : '';
   if (v.phase === 'race') return 'Racing';
@@ -318,7 +331,7 @@ function phaseText(v: LobbyView, me: LobbyPlayer | undefined): string {
     case 'race':
       return 'Race under way';
     case 'results':
-      return `Next round in ${Math.max(0, v.timer)}`;
+      return `Next ${v.settings.mode === 'sprint' ? 'race' : 'round'} in ${Math.max(0, v.timer)}`;
     case 'final':
       return `Back to the lobby in ${Math.max(0, v.timer)}`;
     default: {
@@ -327,4 +340,94 @@ function phaseText(v: LobbyView, me: LobbyPlayer | undefined): string {
       return waiting ? `Waiting for ${waiting} to ready up` : 'Starting…';
     }
   }
+}
+
+/** The room's mode (team race or Sprint): the host's to change, between matches. */
+function modeChoice(m: Menus, g: Game, v: LobbyView, list: HTMLElement, locked: string | null): void {
+  const sprint = v.settings.mode === 'sprint';
+  m.choice(list, 'Mode', MODE_NAMES[v.settings.mode], () => g.online.sendRoom('settings', { mode: sprint ? 'teams' : 'sprint' }), { key: 'mode', locked });
+}
+
+/**
+ * A room set to a Sprint: six Forwards, every pilot for themselves. Its six
+ * places in one column: each person in their colour, flying their own
+ * Forward, and a computer pilot in each place left. No teams, factions or
+ * frames to pick; Ready is just ready.
+ */
+function renderSprintRoom(m: Menus, g: Game, v: LobbyView): void {
+  const o = g.online;
+  const me = v.players.find((p) => p.pid === o.pid);
+  const byPid = new Map(v.players.map((p) => [p.pid, p] as [string, LobbyPlayer]));
+  const host = v.host === o.pid;
+  const inMatch = v.phase === 'race' || v.phase === 'results' || v.phase === 'final';
+  const top = h('div.roombar', h('b', `Room ${v.code}`), h('span', phaseText(v, me)), h('span', `Host: ${byPid.get(v.host ?? '')?.callsign ?? '–'}`));
+  const seats = h('div.seats');
+  const col = h('div.side.sprint', h('div.side-head', h('b', 'Sprint'), h('span', SPRINT_TAGLINE)), seats);
+  const people = v.players.filter((p) => p.side >= 0);
+  for (const p of people) {
+    const mine = p.pid === o.pid;
+    const colour = p.colour >= 0 ? p.colour : portraitColour(p.portrait);
+    const badges = h('span.badges');
+    if (v.host === p.pid) badges.append(h('span.badge', 'Host'));
+    if (mine) badges.append(h('span.badge.you', 'You'));
+    const status = inMatch ? statusOf(v, p, true) : p.ready ? 'Ready' : p.connected ? 'Not ready' : 'Reconnecting';
+    const ping = p.ping ? `, ${p.ping} ms` : '';
+    const mech = mine ? customName(ROLE.FW, g.customMech(ROLE.FW)) : 'Their own Forward';
+    const row = h(
+      'div.seat' + (mine ? '.mine' : ''),
+      h('span.tint'),
+      face(0, ROLE.FW, p.portrait),
+      h('span.who', h('b', p.callsign), badges, h('small', `${mech}, in ${PILOT_COLOUR_NAMES[colour]?.toLowerCase() ?? 'colour'}${ping}`)),
+      h('span.state' + (p.ready && !inMatch ? '.ready' : ''), status),
+    );
+    row.style.setProperty('--tc', colourCss(colour));
+    m.addItem(seats, row, () => {
+      if (mine) return m.toast('Everyone flies their own Forward: change yours and your colour with Your pilot');
+      if (!host) return;
+      confirmDialog(m, `Remove ${p.callsign}?`, 'They cannot come back to this room.', 'Remove', () => o.sendRoom('kick', { pid: p.pid }));
+    }, undefined, { key: `pilot-${p.pid}` });
+  }
+  // The places nobody has: a computer pilot each, from a faction drawn by lot when the Sprint starts.
+  for (let i = people.length; i < ROOM_SIZE; i++) {
+    const row = h('div.seat.cpu', h('span.tint'), h('i.face'), h('span.who', h('b', 'Computer pilot'), h('small', `A faction's Forward, ${SKILL_NAMES[v.settings.skill]}`)), h('span.state', ''));
+    m.addItem(seats, row, () => m.toast('A computer pilot races here unless a friend joins'), undefined, { key: `cpu-${i}` });
+  }
+  // The settings: the host changes them, everyone sees them.
+  const settings = h('div.list.settings');
+  const lockSet = host ? null : 'Only the host changes the settings';
+  const not = lockSet ?? (inMatch ? 'Not during a match' : null);
+  const ti = Math.max(0, TRACKS.findIndex((t) => t.id === v.settings.track));
+  g.circuitAhead(TRACKS[ti].id);
+  modeChoice(m, g, v, settings, not);
+  m.choice(settings, 'Circuit', TRACKS[ti].name, (dir) => o.sendRoom('settings', { track: TRACKS[(ti + dir + TRACKS.length) % TRACKS.length].id }), { key: 'track', locked: not });
+  const n = SPRINT_FORMATS.length;
+  m.choice(settings, 'Format', SPRINT_FORMATS[v.settings.sprint]?.label ?? '', (dir) => o.sendRoom('settings', { sprint: (v.settings.sprint + dir + n) % n }), { key: 'match', locked: not });
+  m.choice(settings, 'Computer pilots', SKILL_NAMES[v.settings.skill], (dir) => o.sendRoom('settings', { skill: (v.settings.skill + dir + 3) % 3 }), { key: 'skill', locked: not });
+  // Actions.
+  const list = h('div.list.actions');
+  if (!inMatch && me && me.side >= 0) {
+    m.button(list, me.ready ? 'Not ready' : 'Ready', () => o.sendRoom('ready', { ready: !me.ready }), { key: 'ready', go: !me.ready });
+    const everyone = people.filter((p) => p.connected);
+    if (host && everyone.length > 0 && everyone.every((p) => p.ready)) m.button(list, 'Start now', () => o.sendRoom('start'), { key: 'start', go: true });
+    m.button(list, `Edit ${customName(ROLE.FW, g.customMech(ROLE.FW))}`, () => openCustom(m, g, ROLE.FW, g.loadout.team), { key: 'custom', note: 'Your own Forward' });
+  }
+  m.button(list, 'Invite', () => inviteDialog(m, g, 'room', v.code), { key: 'invite' });
+  if (host && inMatch) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the lobby.', 'End match', () => o.sendRoom('endMatch')), { key: 'end' });
+  m.button(list, 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
+  const panel = h('div.panel.settings-panel', h('h2', host ? 'Room settings: yours to change' : 'Room settings, changed by the host'), settings);
+  const extra: HTMLElement[] = [];
+  if (inMatch) {
+    const mt = v.match;
+    const names = v.sprint ?? [];
+    let line = '';
+    if (mt && mt.rounds.length) {
+      const lead = standings(mt)[0];
+      line = mt.cfg.mode === 'wins' ? `${names[lead] ?? '?'} leads, ${mt.wins[lead]} win${mt.wins[lead] === 1 ? '' : 's'}` : `${names[lead] ?? '?'} leads, ${mt.totals[lead]} points`;
+    }
+    extra.push(h('div.matchcard', h('b', `Sprint under way${mt ? `: race ${mt.rounds.length + (v.phase === 'race' ? 1 : 0)}` : ''}`), h('span', line), h('small', me?.nextRound ? 'You race in the next Sprint.' : 'Back in a moment.')));
+  } else {
+    extra.push(h('div.room-hint', `Six Forwards, every pilot for themselves: each person in their own Forward and their colour, computer pilots in the rest. ${SPRINT_FORMATS[v.settings.sprint]?.label ?? ''}.`));
+  }
+  const room = h('div.room', top, h('div.sides.sprint', col), ...extra, h('div.bottom', panel, h('div.panel.actions-panel', list)));
+  m.root.append(h('div.shade.full'), m.panes(room), m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your place', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Your pilot', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
 }
