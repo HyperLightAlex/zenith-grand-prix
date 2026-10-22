@@ -18,6 +18,7 @@ build matches its mastering).
 | Meridian race | 海空の速さ | A minor | in the game |
 | Canyon race | 疾走の回路 | G minor (A minor last chorus), ~140 BPM | in the game (replaced 紅砂のレース, E, which did not fit the vibe) |
 | Helios race | 午間の雲上レース | E minor, ~145 BPM | in the game |
+| Neon Crucible race | Neon Fire | D minor (ends in D major), ~193 BPM | in the game (stems only; the brief was not kept) |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
 | Results, loss (and the Grand Prix award below first) | Minor Theme | E minor, 100 BPM | in the game (from the second brief below: the first was too hopeful, not synth or anime enough) |

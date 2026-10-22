@@ -40,6 +40,7 @@ export const SONGS: Record<string, string> = {
   meridian: 'music/meridian/',
   canyon: 'music/canyon/',
   helios: 'music/helios/',
+  crucible: 'music/crucible/',
 };
 
 /**

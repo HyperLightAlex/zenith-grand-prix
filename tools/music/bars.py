@@ -128,7 +128,15 @@ def main():
     S = np.abs(librosa.stft(y, n_fft=2048, hop_length=HOP)); f = librosa.fft_frequencies(sr=SR, n_fft=2048)
     bi = np.clip((beats * FR).astype(int), 0, S.shape[1] - 1)
     kick = S[f < 150].sum(axis=0)[bi]
-    mix, _ = librosa.load(song, sr=SR, mono=True) if os.path.exists(song) else (y, SR)
+    if os.path.exists(song):
+        mix, _ = librosa.load(song, sr=SR, mono=True)
+    else:
+        # Stems only: the harmony from the stems that carry it (the drums'
+        # "chroma" would find loops and downbeats in the noise of the kit).
+        pitched = [f for n, f in stems.items() if not any(k in n.lower() for k in ('drum', 'percussion', 'other'))]
+        print('no song.wav: the harmony from', ', '.join(os.path.basename(f) for f in pitched))
+        parts = [librosa.load(f, sr=SR, mono=True)[0] for f in pitched] or [y]
+        mix = np.sum([p[:min(len(q) for q in parts)] for p in parts], axis=0)
     C = librosa.feature.chroma_cqt(y=librosa.effects.harmonic(mix), sr=SR, hop_length=512)
     cb = librosa.util.sync(C, librosa.time_to_frames(beats, sr=SR, hop_length=512), aggregate=np.mean)[:, 1:]
     change = np.r_[0, np.linalg.norm(np.diff(cb, axis=1), axis=0)][:len(beats)]

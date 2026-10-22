@@ -165,6 +165,8 @@ const STINGER_KEY: Record<string, Partial<Record<SfxName, number>>> = {
   meridian: {},
   canyon: { lap: 1, lap_phase: -5, final_lap: -6, finish: -1 },
   helios: { lap_phase: 2, final_lap: 5, finish: 2 },
+  // Its synthesised music is Helios's (its song has its own: see tools/music/songs/crucible.json).
+  crucible: { lap_phase: 2, final_lap: 5, finish: 2 },
 };
 /** Semitones above the gate chime's home note for each gate banked: steps of A minor. */
 const GATE_STEPS = [0, 2, 3, 5, 7];

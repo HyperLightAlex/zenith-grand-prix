@@ -89,7 +89,7 @@ export interface AudioEngine {
   play(name: SfxName, opts?: SfxOptions): void;
   /**
    * 'menu' is calm, 'race' builds with the lap phase, null fades out.
-   * `style` picks the race music: the circuit's theme ('meridian', 'canyon', 'helios').
+   * `style` picks the race music: the circuit's theme ('meridian', 'canyon', 'helios', 'crucible').
    * 'results' is the results screen's, with `style` 'win' or 'loss' (the
    * player's team's): a recorded song where there is one, else the menu music.
    * 'hangar' is the hangar screens' setlist where there is one, else the same.
