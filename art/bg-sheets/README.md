@@ -25,8 +25,9 @@ of the edge pixels; nothing painted on these sheets is green.
 ## Status
 
 Meridian's, Canyon's and Helios's sheets are in the game
-(`tools/bg/build_backgrounds.py`). Neon Crucible's are still to make: until
-they are, it keeps its plain scenery in the anime look too.
+(`tools/bg/build_backgrounds.py`). Neon Crucible's six are made (N1 to N5)
+but not yet cut and put in the game: until they are, it keeps its plain
+scenery in the anime look too.
 
 | Sheet | File | Notes |
 |---|---|---|
