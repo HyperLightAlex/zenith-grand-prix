@@ -84,6 +84,7 @@ describe('the default rules', () => {
       gateLaps: 3,
       gateRelight: 4,
       gateShare: 0.5,
+      gateTrail: 0.5,
       overdriveMult: 1.3,
       overdriveSecs: 4,
       overdriveLap: 3,

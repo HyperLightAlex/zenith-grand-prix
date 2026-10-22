@@ -1289,8 +1289,12 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
       const worth = m.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
       // (Room for all of it, or for a full tank of a gate worth more than that.)
       if (!inPlay(m) || m.lap >= race.rules.gateLaps || worth <= 0 || race.rules.cellMax <= 0 || m.cells > race.rules.cellMax - Math.min(worth, race.rules.cellMax)) continue;
+      // A Sprint has no teammates to share a gate with: one dark when you get
+      // there still pays a share of it (rules.gateTrail), so the field is not
+      // starved by whoever is in front.
+      const trail = race.sprint ? race.rules.gateTrail : 0;
       let skip = m.gateMask;
-      for (let g = 0; g < track.gates.length; g++) if (race.gateDark[g] > tick) skip |= 1 << g;
+      if (trail <= 0) for (let g = 0; g < track.gates.length; g++) if (race.gateDark[g] > tick) skip |= 1 << g;
       // The line has to be behind the mech when the tick ends. The opening is
       // judged on where it ended up, or on where it was when it crossed under
       // its own power, so contact cannot take a gate away.
@@ -1298,8 +1302,10 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
       if (g < 0) g = gateCrossed(track, startS[m.id], Math.min(movedS[m.id], m.s), movedD[m.id], skip);
       if (g < 0) continue;
       m.gateMask |= 1 << g;
-      m.cells = Math.min(race.rules.cellMax, m.cells + worth);
-      if (race.rules.gateRelight > 0) race.gateDark[g] = tick + ticks(race.rules.gateRelight);
+      const dark = race.gateDark[g] > tick;
+      m.cells = Math.min(race.rules.cellMax, m.cells + (dark ? worth * trail : worth));
+      // (Following someone through does not keep it dark any longer.)
+      if (!dark && race.rules.gateRelight > 0) race.gateDark[g] = tick + ticks(race.rules.gateRelight);
       race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
       // (With no share it is the old rule: each mech scores each gate once a lap.)
       const share = worth * race.rules.gateShare;

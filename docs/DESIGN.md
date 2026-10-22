@@ -690,6 +690,16 @@ what changes is who is on whose side.
   knockout points.
 - **Points by place**: 10 / 8 / 6 / 4 / 2 / 1 (`SPRINT_POINTS`). A
   knocked-out pilot scores none. A race is won by whoever wins it.
+- **Cells.** With no teammates there is no share of a teammate's gate, and
+  six pilots contest gates that go dark for 4 seconds once taken, so most
+  of the field came up short: about 2.3 Cells banked a race, against 4 to 5
+  for a team race's forward, with a third of the field into lap 2 with
+  none. In a Sprint a gate taken and still dark pays whoever follows
+  through it **half a Cell** (`rules.gateTrail`; the first through still
+  takes it whole and darkens it, and following does not keep it dark any
+  longer). Now about 3.3 to 4.3 banked, a tenth of the field into lap 2
+  with none, and abilities used as often as a team race's forward uses
+  them. Team races are unchanged.
 - **People fly for no faction.** Each person races their own Forward, their
   custom one (made from their faction's stock Forward if they have none; a
   Sprint uses it whether or not they fly it in a team race), lit in their

@@ -309,8 +309,9 @@ export class Arena {
    * test of how it works can stage it on any lap; the lap rule has tests of
    * its own (abilities.test.ts), with the default.
    */
-  constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1, rules?: Partial<Rules>) {
-    this.race = createRace(TRACK, { seed, seats: makeSeats('all'), rules: { momentumSecs: 0, lap1Trickle: 0, drivePass: 0, overdriveLap: 2, ...rules } });
+  constructor(lapPhase: 1 | 2 | 3 = 2, seed = 1, rules?: Partial<Rules>, mode: 'teams' | 'sprint' = 'teams') {
+    const seats = mode === 'sprint' ? makeSprintSeats([0, 1, 2, 3, 4, 5]) : makeSeats('all');
+    this.race = createRace(TRACK, { seed, seats, mode, rules: { momentumSecs: 0, lap1Trickle: 0, drivePass: 0, overdriveLap: 2, ...rules } });
     this.inputs = this.race.mechs.map(() => emptyInput());
     runCountdown(this.race, this.inputs);
     this.base = (lapPhase - 1) * TRACK.length;

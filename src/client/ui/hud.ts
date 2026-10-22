@@ -1098,7 +1098,9 @@ export class Hud {
             const laps = race.rules.gateValueLater > 0 ? Math.min(race.rules.gateLaps, race.laps) : 1;
             const worth = race.rules.gateValue === 0.5 ? 'half a Cell' : race.rules.gateValue === 1 ? 'a Cell' : `${race.rules.gateValue} of a Cell`;
             const when = laps <= 1 ? 'this lap only' : laps >= race.laps ? 'on every lap' : `for ${laps} laps`;
-            const dark = race.rules.gateRelight > 0 ? ` Take one and it goes dark for everyone for ${race.rules.gateRelight} s.` : '';
+            const trail = race.sprint ? race.rules.gateTrail : 0;
+            const trailWorth = trail === 0.5 ? 'half a Cell' : `${Math.round(trail * 100) / 100} of a Cell`;
+            const dark = race.rules.gateRelight <= 0 ? '' : trail > 0 ? ` The first through takes it and it goes dark for ${race.rules.gateRelight} s: through it while it is dark, ${trailWorth}.` : ` Take one and it goes dark for everyone for ${race.rules.gateRelight} s.`;
             const text = `Gates are lit ${when}. Gold arches, ${worth} each.${dark}`;
             window.setTimeout(() => this.say(null, text), 1400);
           }

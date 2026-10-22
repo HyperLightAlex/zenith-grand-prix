@@ -202,6 +202,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('gateLaps', 'Laps the gates are lit', 1, 3, 1, 'int'),
       rule('gateRelight', 'Gate relights after', 0, 15, 0.5, 'sec', 'A gate goes dark for everyone when someone takes it. 0: never dark.'),
       rule('gateShare', 'Gate share to teammates', 0, 1, 0.05, 'x', 'Each teammate still racing gets this much of a gate one of them takes, and the gate pays each team once a lap. 0: only the mech through it, each mech once a lap.'),
+      rule('gateTrail', 'Sprint: dark gate pays', 0, 1, 0.05, 'x', 'A Sprint has no teammates to share a gate with: threading one someone has just taken (still dark) pays this much of it. The first through still takes it whole. 0: nothing, as in a team race.'),
     ],
   },
   {

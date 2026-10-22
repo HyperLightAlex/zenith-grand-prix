@@ -96,6 +96,13 @@ export interface Rules {
    * takes one (0: only the mech through it).
    */
   gateShare: number;
+  /**
+   * A Sprint (no teammates to share with): what threading a gate while it is
+   * dark pays, as a share of its Cells. The first through still takes it
+   * whole and darkens it; whoever follows through gets this much (0: nothing,
+   * as in a team race).
+   */
+  gateTrail: number;
 
   // --- abilities (each costs one cell)
   overdriveMult: number;
@@ -179,6 +186,7 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   gateLaps: 3,
   gateRelight: 4,
   gateShare: 0.5,
+  gateTrail: 0.5,
 
   overdriveMult: 1.3,
   overdriveSecs: 4,
@@ -256,6 +264,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   gateLaps: [0, 99],
   gateRelight: [0, 120],
   gateShare: [0, 1],
+  gateTrail: [0, 1],
 
   overdriveMult: [1, 3],
   overdriveSecs: [0, 60],

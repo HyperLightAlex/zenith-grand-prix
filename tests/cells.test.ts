@@ -384,6 +384,42 @@ describe('threading a gate', () => {
   });
 });
 
+describe('gates in a Sprint (no teammates to share with)', () => {
+  const dark = () => Math.round(DEFAULT_RULES.gateRelight * 60);
+
+  it('the first through takes a whole Cell and darkens it; whoever follows through while it is dark gets rules.gateTrail of it', () => {
+    const a = new Arena(1, 1, {}, 'sprint');
+    const first = approach(a, 0, 0);
+    const next = a.put(1, G0.s - 30, G0.d);
+    a.step(40);
+    expect(first.cells).toBe(1);
+    expect(next.cells).toBe(DEFAULT_RULES.gateTrail);
+    expect(DEFAULT_RULES.gateTrail).toBe(0.5);
+    expect(a.events('gate').map((e) => [e.mech, e.cells])).toEqual([[0, 1], [1, 0.5]]);
+    // Following it through does not keep it dark any longer, and scores it for this lap.
+    expect(a.race.gateDark[0]).toBe(a.events('gate')[0].tick + dark());
+    expect(next.gateMask & 1).toBe(1);
+    // Once it has relit, a third pilot gets it whole.
+    a.until(() => a.race.tick >= a.events('gate')[0].tick + dark(), 400);
+    const late = a.put(2, G0.s - 3, G0.d);
+    a.until(() => late.s - a.base > G0.s, 30);
+    expect(late.cells).toBe(1);
+  });
+
+  it('pays nothing for a dark gate with the share off, and nothing in a team race', () => {
+    const off = new Arena(1, 1, { gateTrail: 0 }, 'sprint');
+    approach(off, 0, 0);
+    const n1 = off.put(1, G0.s - 30, G0.d);
+    off.step(40);
+    expect(n1.cells).toBe(0);
+    const team = new SoloArena(1, 1, { gateTrail: 1 });
+    approach(team, FW0, 0);
+    const n2 = team.put(FW1, G0.s - 30, G0.d);
+    team.step(40);
+    expect(n2.cells).toBe(0);
+  });
+});
+
 describe('contested gates', () => {
   const dark = () => Math.round(DEFAULT_RULES.gateRelight * 60);
 

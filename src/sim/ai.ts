@@ -289,7 +289,8 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
         let ahead = track.gates[g].s - ws;
         if (ahead < -4) ahead += track.length;
         // Someone has just taken it: only worth lining up if it will be lit again by the time we get there.
-        if (race.gateDark[g] > tick + (Math.max(0, ahead) / Math.max(m.speed, 50)) * 60) continue;
+        // (In a Sprint a dark gate still pays a share: worth taking all the same.)
+        if (!(race.sprint && rules.gateTrail > 0) && race.gateDark[g] > tick + (Math.max(0, ahead) / Math.max(m.speed, 50)) * 60) continue;
         if (ahead < nearest) {
           nearest = ahead;
           dWant = track.gates[g].d;
