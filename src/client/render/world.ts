@@ -1355,7 +1355,7 @@ void main() {
     vec3 t = texture2D(uMeltMap, q).rgb;
     float hot = smoothstep(0.6, 0.95, t.r) * smoothstep(0.2, 0.55, t.g);
     float flick = 0.85 + 0.15 * noise(p * 0.15 + vec2(uTime * 0.7, -uTime * 0.5));
-    vec3 c = mix(unTone(t), t * vec3(2.3, 1.35, 0.7), hot * flick);
+    vec3 c = mix(unTone(t), t * vec3(1.6, 1.05, 0.6), hot * flick);
     gl_FragColor = vec4(c, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -1368,8 +1368,10 @@ void main() {
   float heat = max(seam, open);
   float flick = 0.8 + 0.2 * noise(p * 0.15 + vec2(uTime * 0.7, -uTime * 0.5));
   vec3 crust = mix(vec3(0.035, 0.012, 0.02), vec3(0.12, 0.035, 0.03), fbm(p * 0.09 + 3.0));
-  vec3 melt = mix(vec3(1.5, 0.32, 0.04), vec3(2.6, 1.45, 0.42), smoothstep(0.55, 1.0, heat) * flick);
-  vec3 col = mix(crust, melt * flick, heat);
+  // Open melt red-orange, orange in the seams, yellow only down their middles.
+  vec3 melt = mix(vec3(0.7, 0.05, 0.01), vec3(1.1, 0.2, 0.02), smoothstep(0.3, 0.8, heat) * flick);
+  melt = mix(melt, vec3(1.45, 0.62, 0.12), smoothstep(0.75, 1.0, seam) * flick);
+  vec3 col = mix(crust, melt, heat);
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -1441,25 +1443,40 @@ void main() {
   float along = clamp(vAlong, 0.0, 1.0);
   float nl = length(vN);
   float face = nl > 1e-5 ? abs(dot(vN / nl, normalize(vV))) : 0.0;
-  float a = pow(along, 1.8) * face * face * uStrength;
+  // Painted light, as a background painter laid a beam over the scene: a
+  // flat wedge with a soft edge, a brighter core near the lamp, fading out
+  // over the far half rather than glowing like fog.
+  float body = smoothstep(0.1, 0.4, face);
+  float core = step(0.82, face) * step(0.6, along) * 0.7;
+  float a = (body + core) * smoothstep(0.0, 0.55, along) * uStrength;
   gl_FragColor = vec4(uColor * a, 1.0);
 }`;
 
-/** The pour: molten metal falling, its surface streaming down. */
+/**
+ * The pour: molten metal falling, drawn as a cel painter drew it, in flat
+ * bands across it (a dark red rim, an orange body, a yellow-white core) with
+ * brighter streaks sliding down; bright enough for a thin glow, no more.
+ */
 const pourVertex = /* glsl */ `
 varying vec2 vUv;
+varying float vFacing;
 void main() {
   vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vFacing = abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz)));
+  gl_Position = projectionMatrix * mv;
 }`;
 
 const pourFragment = /* glsl */ `
 uniform float uTime;
 varying vec2 vUv;
+varying float vFacing;
 ${NOISE}
 void main() {
-  float flow = noise(vec2(vUv.x * 14.0, vUv.y * 60.0 + uTime * 9.0));
-  vec3 col = mix(vec3(1.7, 0.42, 0.06), vec3(2.8, 1.7, 0.5), smoothstep(0.3, 0.8, flow));
+  float f = vFacing;
+  vec3 col = f > 0.74 ? vec3(1.15, 0.72, 0.28) : f > 0.36 ? vec3(1.0, 0.24, 0.03) : vec3(0.45, 0.04, 0.01);
+  float streak = step(0.7, noise(vec2(vUv.x * 7.0, vUv.y * 46.0 + uTime * 8.0)));
+  col = mix(col, vec3(1.2, 0.85, 0.42), streak * step(0.36, f) * 0.85);
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -1796,8 +1813,8 @@ function buildCrucible(ctx: Ctx): void {
       };
       const [ax, az] = off(a);
       const [bx, bz] = off(b);
-      const ca = nc.setHSL(0.93 - a.up * 0.43, 1, 0.56).multiplyScalar(1.7).clone();
-      const cb = nc.setHSL(0.93 - b.up * 0.43, 1, 0.56).multiplyScalar(1.7).clone();
+      const ca = nc.setHSL(0.93 - a.up * 0.43, 1, 0.56).multiplyScalar(1.3).clone();
+      const cb = nc.setHSL(0.93 - b.up * 0.43, 1, 0.56).multiplyScalar(1.3).clone();
       pos.push(ax, ya, az, bx, yb, bz, ax, ya + h, az, ax, ya + h, az, bx, yb, bz, bx, yb + h, bz);
       for (const c of [ca, cb, ca, ca, cb, cb]) col.push(c.r, c.g, c.b);
     };
@@ -1887,7 +1904,7 @@ function buildCrucible(ctx: Ctx): void {
   const steelParts: THREE.BufferGeometry[] = [];
   const glowParts: THREE.BufferGeometry[] = [];
   const white = new THREE.Color(0xffffff);
-  const neonCol = (hex: number, k = 1.7) => new THREE.Color(hex).multiplyScalar(k);
+  const neonCol = (hex: number, k = 1.3) => new THREE.Color(hex).multiplyScalar(k);
   // Where smoke and steam rise in the painted look: the stacks' mouths and the pour.
   const plumeSpots: Plume[] = [];
 
@@ -1967,7 +1984,7 @@ function buildCrucible(ctx: Ctx): void {
     if (land) hang((land[0] + land[1]) / 2);
     // The circuit's name over the way in, hung from the near legs' beam.
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(132, 132 / 3.2), new THREE.MeshBasicMaterial({ map: neonSign('NEON CRUCIBLE', '#ff3fbf'), transparent: true, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
-    (sign.material as THREE.MeshBasicMaterial).color.setScalar(1.6);
+    (sign.material as THREE.MeshBasicMaterial).color.setScalar(1.25);
     frameAt(track, tA, f0);
     const sy = f0.py + 52;
     const sp = along(tA, 0, sy + 132 / 6.4);
@@ -1978,7 +1995,7 @@ function buildCrucible(ctx: Ctx): void {
     const own = paintedTrack.circuitSigns[theme.id];
     if (own) {
       const m = new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide, toneMapped: false });
-      m.color.setScalar(1.3);
+      m.color.setScalar(1.15);
       swapMaterial(ctx, sign, m);
     }
     for (const side of [-1, 1]) steelParts.push(beam(along(tA, side * 52, sy + 132 / 3.2 - 1), along(tA, side * 46, yb), 0.5));
@@ -2060,7 +2077,7 @@ function buildCrucible(ctx: Ctx): void {
         const ladleY = yb - 30;
         for (const s2 of [-4, 4]) steelParts.push(beam(tip.clone().addScaledVector(side, s2), new THREE.Vector3(px, ladleY + 16, pz).addScaledVector(back, 12).addScaledVector(side, s2), 0.4));
         const ladle = new THREE.Mesh(new THREE.CylinderGeometry(15, 11, 24, 18, 1, true), new THREE.MeshLambertMaterial({ color: 0x3a3238, side: THREE.DoubleSide }));
-        const melt = new THREE.Mesh(new THREE.CircleGeometry(14, 18), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.1, 0.25), toneMapped: false }));
+        const melt = new THREE.Mesh(new THREE.CircleGeometry(14, 18), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.15, 0.72, 0.28), toneMapped: false }));
         melt.rotation.x = -Math.PI / 2;
         melt.position.y = 9;
         ladle.add(melt);
@@ -2076,15 +2093,42 @@ function buildCrucible(ctx: Ctx): void {
         );
         stream.position.set(px, floor + fall / 2, pz);
         group.add(stream);
-        const splash = new THREE.Mesh(new THREE.CircleGeometry(16, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 1.4, 0.35), transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false }));
-        splash.rotation.x = -Math.PI / 2;
-        splash.position.set(px, floor + 0.4, pz);
+        // The splash, in flat tones: a ring spreading on the melt, a low crown
+        // thrown up round the stream, and sparks flicked out of it in arcs.
+        const flat = (r: number, g: number, b: number, side: THREE.Side = THREE.FrontSide) => new THREE.MeshBasicMaterial({ color: new THREE.Color(r, g, b), toneMapped: false, side });
+        const splash = new THREE.Group();
+        const ring = new THREE.Mesh(new THREE.RingGeometry(4.5, 12, 32), flat(1.0, 0.24, 0.03));
+        ring.rotation.x = -Math.PI / 2;
+        const pool = new THREE.Mesh(new THREE.CircleGeometry(4.5, 24), flat(1.15, 0.72, 0.28));
+        pool.rotation.x = -Math.PI / 2;
+        pool.position.y = 0.05;
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(7, 4, 6, 16, 1, true).translate(0, 3, 0), flat(1.0, 0.24, 0.03, THREE.DoubleSide));
+        splash.add(ring, pool, crown);
+        splash.position.set(px, floor + 0.3, pz);
         group.add(splash);
+        const SPARKS = 28;
+        const sparkPos = new Float32Array(SPARKS * 3);
+        const sparkGeo = new THREE.BufferGeometry();
+        sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+        const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ color: new THREE.Color(1.15, 0.6, 0.16), size: 1.6, toneMapped: false }));
+        sparks.frustumCulled = false;
+        group.add(sparks);
+        const sparkRnd = mulberry(4040);
+        const sparkDir = Array.from({ length: SPARKS }, () => [sparkRnd() * TAU, 6 + sparkRnd() * 10, 14 + sparkRnd() * 14, sparkRnd()]);
         plumeSpots.push({ x: px, y: floor, z: pz, width: [70, 90], cards: [4] });
         const sm = stream.material as THREE.ShaderMaterial;
         ctx.updates.push((time) => {
           sm.uniforms.uTime.value = time;
-          splash.scale.setScalar(0.85 + 0.15 * Math.sin(time * 7.3) * Math.sin(time * 3.1));
+          ring.scale.setScalar(0.9 + 0.12 * Math.sin(time * 5.1));
+          crown.scale.set(1, 0.8 + 0.25 * Math.sin(time * 9.3) * Math.sin(time * 3.7), 1);
+          for (let k = 0; k < SPARKS; k++) {
+            const [a, out, up, ph] = sparkDir[k];
+            const t = (time * 0.9 + ph) % 1;
+            sparkPos[k * 3] = px + Math.cos(a) * out * t;
+            sparkPos[k * 3 + 1] = floor + 1 + up * t - 30 * t * t;
+            sparkPos[k * 3 + 2] = pz + Math.sin(a) * out * t;
+          }
+          sparkGeo.attributes.position.needsUpdate = true;
         });
       }
     }
@@ -2095,7 +2139,7 @@ function buildCrucible(ctx: Ctx): void {
     const beamMat = new THREE.ShaderMaterial({
       vertexShader: beamVertex,
       fragmentShader: beamFragment,
-      uniforms: { uColor: { value: new THREE.Color(0.75, 0.85, 1.0) }, uStrength: { value: 0.16 } },
+      uniforms: { uColor: { value: new THREE.Color(0.75, 0.85, 1.0) }, uStrength: { value: 0.055 } },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -2115,7 +2159,7 @@ function buildCrucible(ctx: Ctx): void {
       steelParts.push(beam(new THREE.Vector3(x, rim, z), new THREE.Vector3(x, top, z), 3));
       const head = new THREE.Vector3(x, top + 4, z);
       steelParts.push(beam(head.clone().add(new THREE.Vector3(-8 * Math.sin(a), 0, 8 * Math.cos(a))), head.clone().add(new THREE.Vector3(8 * Math.sin(a), 0, -8 * Math.cos(a))), 2.4, 4));
-      glowParts.push(tint(beam(head.clone().add(new THREE.Vector3(-7 * Math.sin(a) - Math.cos(a) * 1.4, -1.2, 7 * Math.cos(a) - Math.sin(a) * 1.4)), head.clone().add(new THREE.Vector3(7 * Math.sin(a) - Math.cos(a) * 1.4, -1.2, -7 * Math.cos(a) - Math.sin(a) * 1.4)), 2.6, 2.4), new THREE.Color(2.2, 2.3, 2.5)));
+      glowParts.push(tint(beam(head.clone().add(new THREE.Vector3(-7 * Math.sin(a) - Math.cos(a) * 1.4, -1.2, 7 * Math.cos(a) - Math.sin(a) * 1.4)), head.clone().add(new THREE.Vector3(7 * Math.sin(a) - Math.cos(a) * 1.4, -1.2, -7 * Math.cos(a) - Math.sin(a) * 1.4)), 2.6, 2.4), new THREE.Color(1.25, 1.3, 1.4)));
       for (const spread of [-0.35, 0.35]) {
         const ta = a + Math.PI + spread;
         const target = new THREE.Vector3(x + Math.cos(ta) * 240, rim - 210 - Math.abs(spread) * 60, z + Math.sin(ta) * 240);
@@ -2141,7 +2185,7 @@ function buildCrucible(ctx: Ctx): void {
   const beacons: THREE.Vector3[] = [];
   {
     const rnd = mulberry(5150);
-    const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 0.9, 0.2), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 0.24, 0.04), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
     let placed = 0;
     for (let k = 0; k < 300 && placed < 6; k++) {
       const a = rnd() * TAU;
@@ -2155,8 +2199,8 @@ function buildCrucible(ctx: Ctx): void {
       const stack = new THREE.CylinderGeometry(9, 15, h, 14, 1).toNonIndexed();
       stack.translate(x, rim + h / 2, z);
       steelParts.push(stack);
-      for (const yy of [0.35, 0.7]) glowParts.push(tint(new THREE.CylinderGeometry(9 + 6 * (1 - yy) + 0.4, 9 + 6 * (1 - yy) + 0.4, 1.4, 14, 1, true).toNonIndexed().translate(x, rim + h * yy, z), neonCol(0xff3020, 1.4)));
-      glowParts.push(tint(new THREE.CylinderGeometry(9.6, 9.6, 3, 14, 1, true).toNonIndexed().translate(x, rim + h - 2, z), neonCol(0xff8a20, 2)));
+      for (const yy of [0.35, 0.7]) glowParts.push(tint(new THREE.CylinderGeometry(9 + 6 * (1 - yy) + 0.4, 9 + 6 * (1 - yy) + 0.4, 1.4, 14, 1, true).toNonIndexed().translate(x, rim + h * yy, z), neonCol(0xff3020, 1.1)));
+      glowParts.push(tint(new THREE.CylinderGeometry(9.6, 9.6, 3, 14, 1, true).toNonIndexed().translate(x, rim + h - 2, z), neonCol(0xff8a20, 1.3)));
       const flame = new THREE.Mesh(new THREE.ConeGeometry(7, 30, 10, 1, true), flameMat);
       flame.geometry.translate(0, 15, 0);
       flame.position.set(x, rim + h, z);
@@ -2183,7 +2227,7 @@ function buildCrucible(ctx: Ctx): void {
     ];
     const signMats = signs.map(([w, c]) => {
       const m = new THREE.MeshBasicMaterial({ map: neonSign(w, c), transparent: true, side: THREE.DoubleSide, toneMapped: false, depthWrite: false });
-      m.color.setScalar(1.5);
+      m.color.setScalar(1.2);
       return m;
     });
     // The painted neon (sheet N5: Kestrel, Aoki Heavy, Nova, Halcyon, Foundry 7, ZGP), in the same order as these.
@@ -2192,7 +2236,7 @@ function buildCrucible(ctx: Ctx): void {
       painted.length >= 6
         ? [0, 1, 2, 3, 5, 4].map((k) => {
             const m = new THREE.MeshBasicMaterial({ map: paintedTexture(painted[k].url), side: THREE.DoubleSide, toneMapped: false });
-            m.color.setScalar(1.3);
+            m.color.setScalar(1.15);
             return m;
           })
         : null;
@@ -2297,7 +2341,7 @@ function buildCrucible(ctx: Ctx): void {
   // ---- red beacons on everything tall, blinking ------------------------------------
   {
     const geo = new THREE.SphereGeometry(1.6, 8, 6);
-    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 0.15, 0.1), toneMapped: false });
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 0.12, 0.08), toneMapped: false });
     const inst = new THREE.InstancedMesh(geo, mat, Math.max(1, beacons.length));
     const m = new THREE.Matrix4();
     beacons.forEach((p, k) => inst.setMatrixAt(k, m.makeTranslation(p.x, p.y, p.z)));
