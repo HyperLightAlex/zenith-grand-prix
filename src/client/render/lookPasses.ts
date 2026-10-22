@@ -463,6 +463,8 @@ export const LOOK_PALETTES: Record<string, LookPalette> = {
   canyon: { ink: 0x24101a, shadowGrade: [0.99, 0.92, 1.02], lightGrade: [1.05, 0.99, 0.9], lift: [0.008, 0.004, 0.007] },
   // Noon above cloud: blue-black ink, cool shadows, clean light.
   helios: { ink: 0x0f1630, shadowGrade: [0.95, 0.97, 1.04], lightGrade: [1.03, 1.01, 0.96], lift: [0.003, 0.005, 0.009] },
+  // Night in the mine: violet-black ink, deep violet shadows, the melt's warmth in the light.
+  crucible: { ink: 0x12081e, shadowGrade: [0.95, 0.92, 1.07], lightGrade: [1.05, 0.99, 0.95], lift: [0.006, 0.003, 0.012] },
 };
 
 /**

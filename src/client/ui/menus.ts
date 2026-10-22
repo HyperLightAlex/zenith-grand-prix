@@ -72,6 +72,7 @@ export const TRACK_BLURBS: Record<string, string> = {
   meridian: 'The original. An elevated loop over the sea at golden hour: sweepers, a hairpin and long straights.',
   canyon: 'Built for fighting. The Narrows, a corkscrew, a bowl you can take flat out, a fork whose routes cross, and a sky bridge with no barriers.',
   helios: 'Built for speed and air, above the clouds. The Drop, a full loop, the Carousel, and Split Decision: a jump or the safe way round.',
+  crucible: 'Down and back up, at night in an open-pit mine. The Leap, the Hook, a straight drop into the Drill, and the Coil up the pit wall, one turn of it with nothing on the inside.',
 };
 
 /** The match formats on offer. A single race is a series of one. */

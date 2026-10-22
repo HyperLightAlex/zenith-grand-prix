@@ -5,6 +5,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { look } from './look';
 import { paintedSignMaterial, paintedSurfaceMaterial, paintedTexture, paintedTrack, type PaintedSign } from './painted';
+import { pitOf } from './pit';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
@@ -789,15 +790,37 @@ export function buildTrackVisual(
 
   // ---- support pylons ------------------------------------------------------
   // Down to the ground under level road. (Loops, corkscrews and forks stand
-  // on their own.)
+  // on their own.) Not where one would come down on, or through, another
+  // stretch of road; not where the road already sits on the ground.
   const plain = (i: number) => {
     const j = ((i % n) + n) % n;
     return track.roadL[j] === 1 && track.roadR[j] === 1 && track.mag[j] === 0 && track.median[j] < 0.1 && track.upY[j] > 0.85 && Math.abs(track.ty[j]) < 0.35;
   };
+  const pit = pitOf(track);
+  const groundAt = (x: number, z: number) => (pit ? pit.groundAt(x, z) : theme.groundY);
   {
     const spacing = 30; // samples
-    const spots: number[] = [];
-    for (let i = 0; i < n; i += spacing) if (plain(i)) spots.push(i);
+    const spots: Array<[number, number]> = [];
+    const away = Math.ceil(80 / track.ds);
+    const blocked = (i: number, x: number, z: number, top: number, bottom: number) => {
+      for (let j = 0; j < n; j += 2) {
+        const gap = Math.abs(j - i);
+        if (Math.min(gap, n - gap) < away) continue;
+        const y = track.py[j];
+        if (y > top || y < bottom - 8) continue;
+        if ((track.px[j] - x) ** 2 + (track.pz[j] - z) ** 2 < (track.hw[j] + 6) ** 2) return true;
+      }
+      return false;
+    };
+    for (let i = 0; i < n; i += spacing) {
+      if (!plain(i)) continue;
+      const x = track.px[i] - track.ux[i] * 5.5;
+      const y = track.py[i] - track.uy[i] * 5.5;
+      const z = track.pz[i] - track.uz[i] * 5.5;
+      const g = groundAt(x, z);
+      if (y - g < 2 || blocked(i, x, z, y, g)) continue;
+      spots.push([i, g]);
+    }
     const geo = new THREE.CylinderGeometry(3.2, 4.6, 1, 6, 1, false);
     geo.translate(0, -0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0x6f7b8f });
@@ -806,10 +829,10 @@ export function buildTrackVisual(
     const q = new THREE.Quaternion();
     const p = new THREE.Vector3();
     const sc = new THREE.Vector3();
-    spots.forEach((i, k) => {
+    spots.forEach(([i, g], k) => {
       frameAt(track, i * track.ds, f);
       p.set(f.px - f.ux * 5.5, f.py - f.uy * 5.5, f.pz - f.uz * 5.5);
-      sc.set(1, Math.max(1, p.y - theme.groundY), 1);
+      sc.set(1, Math.max(1, p.y - g), 1);
       m.compose(p, q, sc);
       inst.setMatrixAt(k, m);
     });
@@ -927,10 +950,12 @@ export function buildTrackVisual(
     const mats = ads.map((a) => new THREE.MeshBasicMaterial({ map: boardTexture(...a), toneMapped: true }));
     const plane = new THREE.PlaneGeometry(30, 9.4);
     const backMat = new THREE.MeshLambertMaterial({ color: 0x2c3442 });
-    // The painted boards, in the same order (the circuit's own fifth), and the race's own board as well.
-    const own = kit.circuits[theme.id ?? ''] ?? kit.circuits.meridian;
-    const signs: PaintedSign[] = [kit.boards[0], kit.boards[1], kit.boards[2], kit.boards[3], own, kit.boards[4], kit.boards[5]];
-    const signMats = signs.map((sg) => paintedSignMaterial(paintedTexture(sg.url)));
+    // The painted boards, in the same order (the circuit's own fifth), and the
+    // race's own board as well. A circuit with no painted board of its own
+    // keeps its plain one in both looks.
+    const own: PaintedSign | null = kit.circuits[theme.id ?? ''] ?? null;
+    const signs: Array<PaintedSign | null> = [kit.boards[0], kit.boards[1], kit.boards[2], kit.boards[3], own, kit.boards[4], kit.boards[5]];
+    const signMats = signs.map((sg) => (sg ? paintedSignMaterial(paintedTexture(sg.url)) : mats[4]));
     const m = new THREE.Matrix4();
     let k = 0;
     for (let s = 150; s < track.length - 100; s += 170) {
@@ -964,7 +989,7 @@ export function buildTrackVisual(
       };
       plainOnly.push(stand(30, mats[k % mats.length]));
       const sg = signs[k % signs.length];
-      paintedOnly.push(stand(9.4 * sg.aspect, signMats[k % signs.length]));
+      paintedOnly.push(stand(sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
       k++;
     }
 
@@ -1000,9 +1025,17 @@ export function buildTrackVisual(
     crowdPainted.repeat.set(120 / (18 * kit.crowdAspect), 26 / 18);
     swaps.push((on) => (standMat.map = on ? crowdPainted : crowdTex));
     const baseMat = paintedSurfaceMaterial(tex('concrete'), tex('concrete'), 8, 8, THREE.FrontSide, { dip: 0 });
+    // None hanging out over a pit.
+    const overPit = (s: number, d: number) =>
+      pit !== null &&
+      [-60, 0, 60].some((ds) => {
+        frameAt(track, s + ds, f);
+        return pit.groundAt(f.px + f.rx * d, f.pz + f.rz * d) < pit.rim - 1;
+      });
     for (const side of [-1, 1]) {
       for (let seg = 0; seg < 4; seg++) {
         const s = -260 + seg * 130;
+        if (overPit(s, side * (hw + 20))) continue;
         const stand = new THREE.Mesh(new THREE.PlaneGeometry(120, 26), standMat);
         // Tilted back like raked seating.
         const tilt = new THREE.Matrix4().makeRotationX(-0.65);

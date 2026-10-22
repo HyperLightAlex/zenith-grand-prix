@@ -17,13 +17,16 @@ export interface Theme {
   skyMid: number;
   skyHorizon: number;
   halo: [number, number, number];
+  /** The disc in the plain sky (the sun, or a night's moon) and the wash round it (linear RGB); the sun's when absent. */
+  disc?: [number, number, number];
+  discGlow?: [number, number, number];
   /** High cloud: its lit colour (linear RGB) and how much of it there is (0..1). */
   cirrus: [number, number, number];
   cirrusAmount: number;
   fog: number;
   fogDensity: number;
   /** What the circuit stands on, and how far down it is. */
-  ground: 'sea' | 'desert' | 'clouds';
+  ground: 'sea' | 'desert' | 'clouds' | 'pit';
   groundY: number;
   groundDeep: number;
   groundLight2: number;
@@ -106,6 +109,34 @@ export const THEMES: Record<string, Theme> = {
     ridge: 0xb4c6e6,
     cloudShade: 0x8d9fd0,
     clouds: 46,
+  },
+  // Night over an open-pit mine: a cold moon, a violet sky with the city's
+  // neon glowing magenta along the horizon, molten metal lighting the pit
+  // from below. groundY is the plateau round the pit (see pit.ts).
+  crucible: {
+    id: 'crucible',
+    sunLight: 0x9aa2c8,
+    sunIntensity: 1.6,
+    skyLight: 0x4c4290,
+    groundLight: 0xff7a3c,
+    hemiIntensity: 1.0,
+    skyZenith: 0x04061a,
+    skyMid: 0x1b1250,
+    skyHorizon: 0x7a2a74,
+    halo: [0.45, 0.55, 1.0],
+    disc: [1.55, 1.65, 1.9],
+    discGlow: [0.55, 0.62, 1.0],
+    cirrus: [0.42, 0.26, 0.55],
+    cirrusAmount: 0.35,
+    fog: 0x3a1c4c,
+    fogDensity: 0.00017,
+    ground: 'pit',
+    groundY: 406,
+    groundDeep: 0x14121c,
+    groundLight2: 0x2a2634,
+    ridge: 0x1c1432,
+    cloudShade: 0x2a1a40,
+    clouds: 0,
   },
 };
 

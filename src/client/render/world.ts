@@ -3,14 +3,17 @@
 // city inside the loop. Corkscrew Canyon: dusk over red desert, mesas, the
 // rock cut the Narrows runs through and the gorge under the Sky Bridge.
 // Helios Drop: high noon above a sea of cloud, floating islands, the Sun
-// Gate over the Drop and the Helios spire. All procedural in the plain look;
+// Gate over the Drop and the Helios spire. Neon Crucible: night over an
+// open-pit mine, its benches the Coil, molten metal on its floor, a city
+// round its rim and a gantry across it. All procedural in the plain look;
 // in the anime look a circuit with a painted background (painted.ts) has its
 // sky, far hills, clouds and surfaces painted instead.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
-import { frameAt, makeFrame, type Track } from '../../sim/track';
+import { frameAt, hwAt, makeFrame, type Track } from '../../sim/track';
 import { look } from './look';
+import { pitOf } from './pit';
 import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paintedSurfaceMaterial as paintedRock, paintedTexture, whiteTexture, type PaintedSet } from './painted';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
@@ -54,6 +57,8 @@ uniform float uPanoHorizon;
 uniform float uSunAz;
 uniform vec3 uDiscDir;
 uniform vec3 uDiscColor;
+uniform vec3 uDiscPlain;
+uniform vec3 uGlowPlain;
 varying vec3 vDir;
 ${NOISE}
 ${UNTONE}
@@ -92,11 +97,11 @@ void main() {
   }
   vec3 col = mix(uHorizon, uMid, t1);
   col = mix(col, uZenith, t2);
-  // Sun: hard anime disc, soft halo, wide warm wash.
+  // Sun (or moon): hard anime disc, soft halo, wide wash.
   float sd = max(dot(dir, uSunDir), 0.0);
   col += uHalo * pow(sd, 9.0) * 0.22;
-  col += vec3(1.0, 0.86, 0.62) * pow(sd, 120.0) * 0.5;
-  col = mix(col, vec3(1.9, 1.75, 1.45), smoothstep(0.9990, 0.9993, sd));
+  col += uGlowPlain * pow(sd, 120.0) * 0.5;
+  col = mix(col, uDiscPlain, smoothstep(0.9990, 0.9993, sd));
   // High cirrus, painted in two flat tones.
   if (h > 0.0) {
     vec2 uv = dir.xz / (h + 0.18);
@@ -505,6 +510,8 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uSunAz: { value: Math.atan2(SUN_DIR.z, SUN_DIR.x) },
       uDiscDir: { value: discDir(theme.id) },
       uDiscColor: { value: new THREE.Vector3(...(SUN_DISC[theme.id]?.color ?? [1.9, 1.75, 1.45])) },
+      uDiscPlain: { value: new THREE.Vector3(...(theme.disc ?? [1.9, 1.75, 1.45])) },
+      uGlowPlain: { value: new THREE.Vector3(...(theme.discGlow ?? [1.0, 0.86, 0.62])) },
     },
     side: THREE.BackSide,
     depthWrite: false,
@@ -527,6 +534,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
 
   if (theme.ground === 'desert') buildCanyon(ctx);
   else if (theme.ground === 'clouds') buildHelios(ctx);
+  else if (theme.ground === 'pit') buildCrucible(ctx);
   else buildMeridian(ctx);
   if (painted) horizonRings(ctx);
 
@@ -590,22 +598,29 @@ function horizonRings(ctx: Ctx): void {
   });
 }
 
-/** A ground plane far wider than the view, drawn with one of the ground shaders. */
-function groundPlane(ctx: Ctx, fragment: string, uniforms: Record<string, THREE.IUniform>, y: number): THREE.ShaderMaterial {
+/** One of the ground shaders, fogged, its clock kept running. */
+function groundMaterial(ctx: Ctx, fragment: string, uniforms: Record<string, THREE.IUniform>, side: THREE.Side = THREE.FrontSide): THREE.ShaderMaterial {
   const mat = new THREE.ShaderMaterial({
     vertexShader: groundVertex,
     fragmentShader: fragment,
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 }, uSunDir: { value: SUN_DIR.clone() }, ...uniforms }]),
     fog: true,
+    side,
   });
+  ctx.updates.push((time) => {
+    mat.uniforms.uTime.value = time;
+  });
+  return mat;
+}
+
+/** A ground plane far wider than the view, drawn with one of the ground shaders. */
+function groundPlane(ctx: Ctx, fragment: string, uniforms: Record<string, THREE.IUniform>, y: number): THREE.ShaderMaterial {
+  const mat = groundMaterial(ctx, fragment, uniforms);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000, 1, 1), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(ctx.cx, y, ctx.cz);
   mesh.frustumCulled = false;
   ctx.group.add(mesh);
-  ctx.updates.push((time) => {
-    mat.uniforms.uTime.value = time;
-  });
   return mat;
 }
 
@@ -1315,5 +1330,841 @@ function buildHelios(ctx: Ctx): void {
         halo.rotation.x = Math.PI / 2 + Math.sin(time * 0.3) * 0.3;
       });
     }
+  }
+}
+
+// ---- Neon Crucible ----------------------------------------------------------
+
+/** The pit's floor: a crust broken up over churning melt, molten in the seams. */
+const moltenFragment = /* glsl */ `
+uniform float uTime;
+varying vec3 vWorld;
+#include <common>
+#include <fog_pars_fragment>
+${NOISE}
+void main() {
+  vec2 p = vWorld.xz;
+  vec2 warp = vec2(fbm(p * 0.012 + vec2(uTime * 0.02, 0.0)), fbm(p * 0.012 + vec2(4.7, uTime * 0.017)));
+  float n = fbm(p * 0.03 + warp * 1.8);
+  float seam = 1.0 - smoothstep(0.015, 0.07, abs(n - 0.5));
+  float open = smoothstep(0.42, 0.3, n);
+  float heat = max(seam, open);
+  float flick = 0.8 + 0.2 * noise(p * 0.15 + vec2(uTime * 0.7, -uTime * 0.5));
+  vec3 crust = mix(vec3(0.035, 0.012, 0.02), vec3(0.12, 0.035, 0.03), fbm(p * 0.09 + 3.0));
+  vec3 melt = mix(vec3(1.5, 0.32, 0.04), vec3(2.6, 1.45, 0.42), smoothstep(0.55, 1.0, heat) * flick);
+  vec3 col = mix(crust, melt * flick, heat);
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}`;
+
+/** The plateau round the pit: dark yard slabs, pools of lamplight, the melt's glow near the edge. */
+const plateauFragment = /* glsl */ `
+uniform vec3 uBase;
+uniform vec3 uSeam;
+uniform vec2 uCentre;
+uniform float uEdge;
+uniform float uTime;
+varying vec3 vWorld;
+#include <common>
+#include <fog_pars_fragment>
+${NOISE}
+void main() {
+  vec2 p = vWorld.xz;
+  float n = fbm(p * 0.003) * 0.6 + noise(p * 0.04) * 0.4;
+  vec3 col = uBase * (0.7 + 0.6 * n);
+  vec2 g = abs(fract(p / 40.0) - 0.5) * 40.0;
+  col = mix(col, uSeam, (1.0 - smoothstep(0.3, 0.9, min(g.x, g.y))) * 0.6);
+  vec2 cell = floor(p / 150.0);
+  vec2 lp = (cell + 0.5 + (vec2(hash(cell), hash(cell + 7.1)) - 0.5) * 0.5) * 150.0;
+  float pool = 1.0 - smoothstep(2.0, 20.0, length(p - lp));
+  col += vec3(1.0, 0.5, 0.16) * pool * pool * 0.18 * step(0.5, hash(cell + 1.7));
+  float r = length(p - uCentre);
+  col += vec3(0.55, 0.14, 0.05) * (1.0 - smoothstep(uEdge - 10.0, uEdge + 110.0, r)) * 0.22;
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}`;
+
+/** A floodlight's beam: brightest at the lamp, fading along it and toward its edges. */
+const beamVertex = /* glsl */ `
+varying float vAlong;
+varying vec3 vN;
+varying vec3 vV;
+void main() {
+  vAlong = uv.y;
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vN = normalize(normalMatrix * normal);
+  vV = normalize(-mv.xyz);
+  gl_Position = projectionMatrix * mv;
+}`;
+
+const beamFragment = /* glsl */ `
+uniform vec3 uColor;
+uniform float uStrength;
+varying float vAlong;
+varying vec3 vN;
+varying vec3 vV;
+void main() {
+  float face = abs(dot(normalize(vN), normalize(vV)));
+  float a = pow(vAlong, 1.8) * face * face * uStrength;
+  gl_FragColor = vec4(uColor * a, 1.0);
+}`;
+
+/** The pour: molten metal falling, its surface streaming down. */
+const pourVertex = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+const pourFragment = /* glsl */ `
+uniform float uTime;
+varying vec2 vUv;
+${NOISE}
+void main() {
+  float flow = noise(vec2(vUv.x * 14.0, vUv.y * 60.0 + uTime * 9.0));
+  vec3 col = mix(vec3(1.7, 0.42, 0.06), vec3(2.8, 1.7, 0.5), smoothstep(0.3, 0.8, flow));
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`;
+
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** A box from `a` to `b`, `w` across and `h` deep. */
+function beam(a: THREE.Vector3, b: THREE.Vector3, w: number, h = w): THREE.BufferGeometry {
+  const len = a.distanceTo(b);
+  const g = new THREE.BoxGeometry(w, h, Math.max(len, 0.01)).toNonIndexed();
+  g.deleteAttribute('uv');
+  const dir = b.clone().sub(a).normalize();
+  const up = Math.abs(dir.y) > 0.98 ? new THREE.Vector3(1, 0, 0) : UP;
+  const m = new THREE.Matrix4().lookAt(a, b, up);
+  m.setPosition(a.clone().add(b).multiplyScalar(0.5));
+  g.applyMatrix4(m);
+  return g;
+}
+
+/** One colour on every vertex of a geometry (non-indexed). */
+function tint(g: THREE.BufferGeometry, c: THREE.Color): THREE.BufferGeometry {
+  return paint(g, () => c);
+}
+
+/** Night facades: dark walls and windows, and the windows lit (for the emissive map): mostly warm, a few cold. */
+function nightWindows(lit: boolean): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const g = c.getContext('2d')!;
+  g.fillStyle = lit ? '#000000' : '#161925';
+  g.fillRect(0, 0, 64, 64);
+  const rnd = mulberry(29);
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 4; x++) {
+      const r = rnd();
+      const on = r < 0.13 ? '#ffc477' : r < 0.18 ? '#cfe6ff' : r < 0.2 ? '#ff8fd8' : null;
+      g.fillStyle = on ? (lit ? on : '#2c2c38') : lit ? '#000000' : '#202434';
+      g.fillRect(x * 16 + 2, y * 8 + 2, 12, 5);
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.magFilter = THREE.NearestFilter;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** A neon sign: the words in a glowing tube of `color`, framed, on nothing. */
+function neonSign(words: string, color: string): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 160;
+  const g = c.getContext('2d')!;
+  g.clearRect(0, 0, 512, 160);
+  g.lineJoin = 'round';
+  g.shadowColor = color;
+  g.shadowBlur = 22;
+  g.strokeStyle = color;
+  g.lineWidth = 6;
+  g.strokeRect(14, 14, 484, 132);
+  g.font = 'bold 84px "Arial Black", Impact, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  let size = 84;
+  while (g.measureText(words).width > 440 && size > 30) {
+    size -= 4;
+    g.font = `bold ${size}px "Arial Black", Impact, sans-serif`;
+  }
+  for (let k = 0; k < 3; k++) {
+    g.fillStyle = k < 2 ? color : '#ffffff';
+    g.shadowBlur = k < 2 ? 26 : 6;
+    g.globalAlpha = k < 2 ? 1 : 0.75;
+    g.fillText(words, 256, 84);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Stars over the night, following the camera like the sky. */
+function stars(ctx: Ctx): void {
+  const rnd = mulberry(1717);
+  const make = (count: number, size: number, bright: number) => {
+    const pos: number[] = [];
+    const col: number[] = [];
+    const c = new THREE.Color();
+    for (let i = 0; i < count; i++) {
+      const y = 0.03 + Math.pow(rnd(), 0.8) * 0.97;
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(1 - y * y);
+      pos.push(Math.cos(a) * r * 30000, y * 30000, Math.sin(a) * r * 30000);
+      const t = rnd();
+      c.setRGB(...((t < 0.12 ? [1.0, 0.82, 0.7] : t < 0.4 ? [0.75, 0.85, 1.0] : [1, 1, 1]) as [number, number, number]));
+      c.multiplyScalar(bright * (0.45 + rnd() * 0.55) * Math.min(1, y * 4));
+      col.push(c.r, c.g, c.b);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const p = new THREE.Points(g, new THREE.PointsMaterial({ size, sizeAttenuation: false, vertexColors: true, fog: false, depthWrite: false, toneMapped: false }));
+    p.frustumCulled = false;
+    p.renderOrder = -9;
+    return p;
+  };
+  const sky = new THREE.Group();
+  sky.add(make(1400, 1.4, 0.9), make(140, 2.4, 1.3));
+  ctx.group.add(sky);
+  ctx.updates.push((_time, camera) => sky.position.copy(camera.position));
+}
+
+function buildCrucible(ctx: Ctx): void {
+  const { track, group, theme } = ctx;
+  const TAU = Math.PI * 2;
+  stars(ctx);
+
+  // ---- far mountains, dark against the city's glow ----------------------------
+  {
+    const rnd = mulberry(80);
+    const parts: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 44; i++) {
+      const a = (i / 44) * TAU + rnd() * 0.08;
+      const r = 9500 + rnd() * 3500;
+      const h = 600 + rnd() * 1500;
+      const g = new THREE.ConeGeometry(900 + rnd() * 1300, h, 5, 1).toNonIndexed();
+      g.rotateY(rnd() * 3);
+      g.translate(ctx.cx + Math.cos(a) * r, theme.groundY + h / 2 - 60, ctx.cz + Math.sin(a) * r);
+      parts.push(g);
+    }
+    const ridge = new THREE.Mesh(mergeGeometries(parts)!, new THREE.MeshBasicMaterial({ color: theme.ridge }));
+    ridge.frustumCulled = false;
+    group.add(ridge);
+  }
+
+  const pit = pitOf(track);
+  if (!pit) {
+    groundPlane(ctx, plateauFragment, { uBase: { value: new THREE.Color(theme.groundLight2) }, uSeam: { value: new THREE.Color(theme.groundDeep) }, uCentre: { value: new THREE.Vector2(ctx.cx, ctx.cz) }, uEdge: { value: -1000 } }, theme.groundY);
+    return;
+  }
+  const { cx, cz, rim, floor, idx, phi, total } = pit;
+  const N = idx.length;
+  const pt = (i: number, d: number, h: number, out: THREE.Vector3) =>
+    out.set(track.px[i] + track.rx[i] * d + track.ux[i] * h, track.py[i] + track.ry[i] * d + track.uy[i] * h, track.pz[i] + track.rz[i] * d + track.uz[i] * h);
+  const v = new THREE.Vector3();
+
+  // ---- the pit wall -------------------------------------------------------------
+  // A sheer face rises from behind each turn's outer barrier to the underside
+  // of the turn above (the plateau, above the top turn); below the first
+  // turn, its inner edge drops to the floor.
+  interface Column {
+    x: number;
+    z: number;
+    y0: number;
+    y1: number;
+    /** How far up the Coil, 0..1. */
+    up: number;
+  }
+  const outer: Column[] = [];
+  const inner: Column[] = [];
+  const edge: THREE.Vector3[] = [];
+  let edgeR = 0;
+  let floorR = 0;
+  for (let q = 0; q < N; q++) {
+    const i = idx[q];
+    const w = track.hw[i];
+    pt(i, -(w + 2.3), -1.6, v);
+    const above = phi[q] + TAU <= total ? pit.at(phi[q] + TAU) : -1;
+    let top = rim;
+    if (above >= 0) {
+      const j = idx[Math.round(above)];
+      top = track.py[j] + track.ry[j] * track.hw[j] - track.uy[j] * 1.5;
+    }
+    outer.push({ x: v.x, z: v.z, y0: Math.min(v.y, top), y1: Math.max(v.y, top), up: phi[q] / total });
+    if (above < 0) {
+      edge.push(new THREE.Vector3(v.x, rim, v.z));
+      edgeR = Math.max(edgeR, Math.hypot(v.x - cx, v.z - cz));
+    }
+    if (phi[q] < TAU) {
+      pt(i, w + 2.3, -1.6, v);
+      inner.push({ x: v.x, z: v.z, y0: floor - 2, y1: v.y, up: phi[q] / total });
+      floorR = Math.max(floorR, Math.hypot(v.x - cx, v.z - cz));
+    }
+  }
+  {
+    const basalt = new THREE.Color(0x6a5e86);
+    const dark = new THREE.Color(0x4c4466);
+    const rust = new THREE.Color(0x8a5040);
+    const hot = new THREE.Color(0xb8542a);
+    const bands = [1.0, 0.84, 1.1, 0.9, 0.78, 1.04, 0.95];
+    const rc = new THREE.Color();
+    const rockAt = (y: number) => {
+      const b = Math.floor((y + 1000) / 7);
+      rc.copy(b % 13 === 4 ? rust : b % 2 ? basalt : dark).multiplyScalar(bands[b % bands.length]);
+      const heat = Math.max(0, 1 - (y - floor) / 120);
+      return rc.lerp(hot, heat * heat * 0.75);
+    };
+    const ROWS = 12;
+    const faces = (cols: Column[], seed: number): THREE.BufferGeometry => {
+      const pos: number[] = [];
+      const col: number[] = [];
+      // Each column's points, pushed back into the rock (never out of it) by a smooth amount.
+      const P = (q: number, r: number): [number, number, number] => {
+        const c = cols[q];
+        const y = c.y0 + ((c.y1 - c.y0) * r) / ROWS;
+        if (r === 0 || r === ROWS) return [c.x, y, c.z];
+        const l = Math.hypot(c.x - cx, c.z - cz) || 1;
+        const j = (0.5 + 0.5 * Math.sin(q * 0.31 + r * 2.1 + seed) * Math.cos(q * 0.097 + r * 1.3 + seed * 0.7)) * 2.6;
+        return [c.x + ((c.x - cx) / l) * j, y, c.z + ((c.z - cz) / l) * j];
+      };
+      for (let q = 0; q + 1 < cols.length; q++) {
+        if (Math.hypot(cols[q].x - cols[q + 1].x, cols[q].z - cols[q + 1].z) > 30) continue;
+        for (let r = 0; r < ROWS; r++) {
+          const a0 = P(q, r);
+          const a1 = P(q, r + 1);
+          const b0 = P(q + 1, r);
+          const b1 = P(q + 1, r + 1);
+          for (const [p0, p1, p2] of [
+            [a0, b0, a1],
+            [a1, b0, b1],
+          ]) {
+            pos.push(...p0, ...p1, ...p2);
+            const c = rockAt((p0[1] + p1[1] + p2[1]) / 3);
+            col.push(c.r, c.g, c.b, c.r, c.g, c.b, c.r, c.g, c.b);
+          }
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      // How far up the pit, for the melt's glow.
+      const uv: number[] = [];
+      for (let k = 1; k < pos.length; k += 3) uv.push(0.5, (pos[k] - floor) / (rim - floor));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.computeVertexNormals();
+      return g;
+    };
+    // The melt lights the walls from below: warm at the floor, gone two thirds of the way up.
+    const glowCanvas = document.createElement('canvas');
+    glowCanvas.width = 1;
+    glowCanvas.height = 64;
+    const gc = glowCanvas.getContext('2d')!;
+    const grad = gc.createLinearGradient(0, 64, 0, 0);
+    grad.addColorStop(0, 'rgb(255,120,48)');
+    grad.addColorStop(0.18, 'rgb(150,52,26)');
+    grad.addColorStop(0.45, 'rgb(46,16,18)');
+    grad.addColorStop(0.7, 'rgb(0,0,0)');
+    gc.fillStyle = grad;
+    gc.fillRect(0, 0, 1, 64);
+    const glowMap = new THREE.CanvasTexture(glowCanvas);
+    glowMap.colorSpace = THREE.SRGBColorSpace;
+    const wall = new THREE.Mesh(
+      mergeGeometries([faces(outer, 1), faces(inner, 5)])!,
+      new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: glowMap, emissiveIntensity: 0.55 }),
+    );
+    wall.frustumCulled = false;
+    group.add(wall);
+
+    // Neon along every bench: one line just under the turn above, one above
+    // the barrier, shading from magenta at the melt to cyan at the rim.
+    const pos: number[] = [];
+    const col: number[] = [];
+    const nc = new THREE.Color();
+    const band = (a: Column, b: Column, ya: number, yb: number, h: number) => {
+      const off = (c: Column): [number, number] => {
+        const l = Math.hypot(c.x - cx, c.z - cz) || 1;
+        return [c.x - ((c.x - cx) / l) * 0.5, c.z - ((c.z - cz) / l) * 0.5];
+      };
+      const [ax, az] = off(a);
+      const [bx, bz] = off(b);
+      const ca = nc.setHSL(0.93 - a.up * 0.43, 1, 0.56).multiplyScalar(1.7).clone();
+      const cb = nc.setHSL(0.93 - b.up * 0.43, 1, 0.56).multiplyScalar(1.7).clone();
+      pos.push(ax, ya, az, bx, yb, bz, ax, ya + h, az, ax, ya + h, az, bx, yb, bz, bx, yb + h, bz);
+      for (const c of [ca, cb, ca, ca, cb, cb]) col.push(c.r, c.g, c.b);
+    };
+    for (let q = 0; q + 1 < outer.length; q++) {
+      const a = outer[q];
+      const b = outer[q + 1];
+      if (Math.hypot(a.x - b.x, a.z - b.z) > 30) continue;
+      // A skirt down from road above the plateau: no lines.
+      if (a.y0 === rim && a.y1 > rim) continue;
+      band(a, b, a.y1 - 3.6, b.y1 - 3.6, 1.2);
+      if (a.y1 - a.y0 > 16 && b.y1 - b.y0 > 16) band(a, b, a.y0 + 7.4, b.y0 + 7.4, 0.9);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const neon = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, toneMapped: false }));
+    neon.frustumCulled = false;
+    group.add(neon);
+  }
+
+  // ---- the molten floor -------------------------------------------------------
+  {
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(floorR + 6, 96), groundMaterial(ctx, moltenFragment, {}));
+    disc.rotation.x = -Math.PI / 2;
+    disc.position.set(cx, floor, cz);
+    disc.frustumCulled = false;
+    group.add(disc);
+  }
+
+  // ---- the plateau round the pit -------------------------------------------------
+  {
+    // From the pit's edge (outside the top turn, all the way round) out past the horizon.
+    const pos: number[] = [];
+    const far = (p: THREE.Vector3) => {
+      const l = Math.hypot(p.x - cx, p.z - cz) || 1;
+      return [cx + ((p.x - cx) / l) * 30000, rim, cz + ((p.z - cz) / l) * 30000];
+    };
+    for (let q = 0; q < edge.length; q++) {
+      const a = edge[q];
+      const b = edge[(q + 1) % edge.length];
+      const fa = far(a);
+      const fb = far(b);
+      pos.push(a.x, rim, a.z, ...fa, b.x, rim, b.z, b.x, rim, b.z, ...fa, ...fb);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const mat = groundMaterial(
+      ctx,
+      plateauFragment,
+      {
+        uBase: { value: new THREE.Color(theme.groundLight2) },
+        uSeam: { value: new THREE.Color(theme.groundDeep) },
+        uCentre: { value: new THREE.Vector2(cx, cz) },
+        uEdge: { value: edgeR },
+      },
+      THREE.DoubleSide,
+    );
+    const plateau = new THREE.Mesh(g, mat);
+    plateau.frustumCulled = false;
+    group.add(plateau);
+  }
+
+  // Places taken on the plateau (plan circles), so nothing stands in anything else.
+  const taken: Array<[number, number, number]> = [];
+  const free = (x: number, z: number, r: number) => taken.every(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) > r + tr);
+  const onPlateau = (x: number, z: number, r: number) => {
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TAU;
+      if (pit.groundAt(x + Math.cos(a) * r, z + Math.sin(a) * r) < rim - 1) return false;
+    }
+    return pit.groundAt(x, z) >= rim - 1;
+  };
+  const steel = toonMaterial({ color: 0x2c303e });
+  const steelParts: THREE.BufferGeometry[] = [];
+  const glowParts: THREE.BufferGeometry[] = [];
+  const white = new THREE.Color(0xffffff);
+  const neonCol = (hex: number, k = 1.7) => new THREE.Color(hex).multiplyScalar(k);
+
+  // ---- the Gantry: a truss across the pit over the start straight -----------------
+  const f0 = makeFrame();
+  frameAt(track, 0, f0);
+  const T = new THREE.Vector3(f0.tx, 0, f0.tz).normalize();
+  const R = new THREE.Vector3(-T.z, 0, T.x);
+  const O = new THREE.Vector3(f0.px, 0, f0.pz);
+  const along = (t: number, d: number, y: number) => new THREE.Vector3(O.x + T.x * t + R.x * d, y, O.z + T.z * t + R.z * d);
+  let tIn = -1;
+  let tOut = -1;
+  for (let t = 0; t < 2400; t += 4) {
+    const p = along(t, 0, 0);
+    if (pit.groundAt(p.x, p.z) < rim - 1) {
+      if (tIn < 0) tIn = t;
+      tOut = t;
+    }
+  }
+  const tA = tIn - 30;
+  const tB = tOut + 50;
+  let yTop = 0;
+  for (let i = 0; i < track.n; i++) {
+    const rx = track.px[i] - O.x;
+    const rz = track.pz[i] - O.z;
+    const t = rx * T.x + rz * T.z;
+    const d = rx * R.x + rz * R.z;
+    if (t > tA && t < tB && Math.abs(d) < 60) yTop = Math.max(yTop, track.py[i]);
+  }
+  const yb = yTop + 34;
+  const DEPTH = 20;
+  const HALF = 7;
+  if (tIn > 0) {
+    const posts = Math.max(2, Math.round((tB - tA) / 25));
+    const step = (tB - tA) / posts;
+    for (const side of [-1, 1]) {
+      steelParts.push(beam(along(tA, side * HALF, yb), along(tB, side * HALF, yb), 2.6));
+      steelParts.push(beam(along(tA, side * HALF, yb + DEPTH), along(tB, side * HALF, yb + DEPTH), 2.6));
+      // The underlit chords.
+      glowParts.push(tint(beam(along(tA, side * HALF, yb - 1.5), along(tB, side * HALF, yb - 1.5), 0.5, 0.4), neonCol(side < 0 ? 0xff2fa8 : 0x26e6ff)));
+      for (let k = 0; k <= posts; k++) {
+        const t = tA + k * step;
+        steelParts.push(beam(along(t, side * HALF, yb), along(t, side * HALF, yb + DEPTH), 1.4));
+        if (k < posts) steelParts.push(beam(along(t, side * HALF, k % 2 ? yb : yb + DEPTH), along(t + step, side * HALF, k % 2 ? yb + DEPTH : yb), 1.0));
+      }
+    }
+    for (let k = 0; k <= posts; k++) {
+      const t = tA + k * step;
+      steelParts.push(beam(along(t, -HALF, yb + DEPTH), along(t, HALF, yb + DEPTH), 1.0));
+      steelParts.push(beam(along(t, -HALF, yb), along(t, HALF, yb), 1.0));
+    }
+    // Legs at each end, either side of the road, down to the plateau.
+    for (const t of [tA, tB]) {
+      const lx = 46;
+      for (const side of [-1, 1]) {
+        steelParts.push(beam(along(t, side * lx, rim), along(t, side * lx, yb + DEPTH + 2), 4.2));
+        steelParts.push(beam(along(t, side * lx, yb - 70), along(t, side * HALF, yb), 1.6));
+        glowParts.push(tint(beam(along(t - 2.4, side * lx, rim + 6), along(t - 2.4, side * lx, yb + DEPTH), 0.5, 0.5), neonCol(0x26e6ff)));
+        taken.push([along(t, side * lx, 0).x, along(t, side * lx, 0).z, 12]);
+      }
+      steelParts.push(beam(along(t, -lx, yb + DEPTH + 2), along(t, lx, yb + DEPTH + 2), 3.6, 4.4));
+      steelParts.push(beam(along(t, -lx, yb), along(t, lx, yb), 2.4));
+    }
+    // Hangers down to the road over the pit, either side.
+    const leap = pieceRange(track, 'lip');
+    const land = pieceRange(track, 'landing slope');
+    const hang = (s: number) => {
+      frameAt(track, s, f0);
+      const w = hwAt(track, s) + 4;
+      for (const side of [-1, 1]) {
+        const x = f0.px + f0.rx * w * side;
+        const z = f0.pz + f0.rz * w * side;
+        steelParts.push(beam(new THREE.Vector3(x, f0.py + f0.ry * w * side - 1, z), new THREE.Vector3(x, yb, z), 0.7));
+      }
+    };
+    for (let s = Math.max(4, tIn - 12); leap && s < leap[0] - 4; s += 24) hang(s);
+    if (land) hang((land[0] + land[1]) / 2);
+    // The circuit's name over the way in, hung from the near legs' beam.
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(132, 132 / 3.2), new THREE.MeshBasicMaterial({ map: neonSign('NEON CRUCIBLE', '#ff3fbf'), transparent: true, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
+    (sign.material as THREE.MeshBasicMaterial).color.setScalar(1.6);
+    frameAt(track, tA, f0);
+    const sy = f0.py + 52;
+    const sp = along(tA, 0, sy + 132 / 6.4);
+    sign.position.copy(sp);
+    sign.lookAt(sp.clone().sub(T));
+    group.add(sign);
+    for (const side of [-1, 1]) steelParts.push(beam(along(tA, side * 52, sy + 132 / 3.2 - 1), along(tA, side * 46, yb), 0.5));
+  }
+  const nearGantry = (x: number, z: number, r: number) => {
+    const rx = x - O.x;
+    const rz = z - O.z;
+    const t = rx * T.x + rz * T.z;
+    const d = rx * R.x + rz * R.z;
+    return t > tA - r - 20 && t < tB + r + 20 && Math.abs(d) < 60 + r;
+  };
+
+  // ---- the pour: a ladle on a tower crane tipping melt into the pit ---------------
+  {
+    // Where on the floor nothing is above: farthest from any road.
+    let best: [number, number, number] | null = null;
+    for (let rr = 20; rr < floorR; rr += 8) {
+      for (let a = 0; a < TAU; a += TAU / 72) {
+        const x = cx + Math.cos(a) * rr;
+        const z = cz + Math.sin(a) * rr;
+        // Inside the first turn's face, with room.
+        const f = pit.at(pit.angleOf(x, z));
+        if (f < 0) continue;
+        const i = idx[Math.round(f)];
+        if (Math.hypot(track.px[i] - cx, track.pz[i] - cz) - track.hw[i] - 32 < rr) continue;
+        let c = 1e9;
+        for (let j = 0; j < track.n; j += 2) c = Math.min(c, Math.hypot(track.px[j] - x, track.pz[j] - z) - track.hw[j]);
+        if (!best || c > best[2]) best = [x, z, c];
+      }
+    }
+    if (best && best[2] > 14) {
+      const [px, pz] = best;
+      const a0 = Math.atan2(pz - cz, px - cx);
+      let tower: THREE.Vector3 | null = null;
+      for (let k = 0; k < 40 && !tower; k++) {
+        const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05;
+        for (let rr = edgeR + 40; rr < edgeR + 160; rr += 10) {
+          const x = cx + Math.cos(a) * rr;
+          const z = cz + Math.sin(a) * rr;
+          if (onPlateau(x, z, 20) && ctx.clearance(x, z) > 60 && !nearGantry(x, z, 20)) {
+            tower = new THREE.Vector3(x, rim, z);
+            break;
+          }
+        }
+      }
+      if (tower) {
+        taken.push([tower.x, tower.z, 30]);
+        const jibY = yb + DEPTH + 70;
+        const tip = new THREE.Vector3(px, jibY, pz);
+        const back = new THREE.Vector3(tower.x, jibY, tower.z).sub(tip).normalize();
+        const side = new THREE.Vector3(-back.z, 0, back.x);
+        // The mast: four legs and their bracing.
+        const mastTop = jibY + 34;
+        const corners = [
+          [-5, -5],
+          [5, -5],
+          [5, 5],
+          [-5, 5],
+        ].map(([a, b]) => new THREE.Vector3(tower!.x + back.x * a + side.x * b, 0, tower!.z + back.z * a + side.z * b));
+        for (let k = 0; k < 4; k++) {
+          const c = corners[k];
+          const n2 = corners[(k + 1) % 4];
+          steelParts.push(beam(new THREE.Vector3(c.x, rim, c.z), new THREE.Vector3(c.x, mastTop, c.z), 1.6));
+          for (let y = rim; y < mastTop - 20; y += 20) steelParts.push(beam(new THREE.Vector3(c.x, y, c.z), new THREE.Vector3(n2.x, y + 20, n2.z), 0.7));
+        }
+        // The jib out over the pit, and the counter-jib with its weights.
+        const root = new THREE.Vector3(tower.x, jibY, tower.z);
+        for (const s2 of [-2.5, 2.5]) {
+          steelParts.push(beam(root.clone().addScaledVector(side, s2), tip.clone().addScaledVector(back, -6).addScaledVector(side, s2), 1.4));
+          steelParts.push(beam(root.clone().addScaledVector(side, s2).add(new THREE.Vector3(0, 8, 0)), tip.clone().addScaledVector(back, 30).addScaledVector(side, s2).add(new THREE.Vector3(0, 1, 0)), 0.9));
+        }
+        const counter = root.clone().addScaledVector(back, 60);
+        steelParts.push(beam(root, counter, 3, 2));
+        steelParts.push(beam(counter.clone().add(new THREE.Vector3(0, -6, 0)), counter.clone().addScaledVector(back, -14).add(new THREE.Vector3(0, -6, 0)), 9, 10));
+        steelParts.push(beam(new THREE.Vector3(tower.x, mastTop, tower.z), tip.clone().addScaledVector(back, 120).add(new THREE.Vector3(0, 2, 0)), 0.5));
+        steelParts.push(beam(new THREE.Vector3(tower.x, mastTop, tower.z), counter, 0.5));
+        glowParts.push(tint(beam(root.clone().add(new THREE.Vector3(0, -1.6, 0)), tip.clone().add(new THREE.Vector3(0, -1.6, 0)), 0.4), neonCol(0xffa020)));
+        // The ladle, hung under the tip, tipped toward the pour.
+        const ladleY = yb - 30;
+        for (const s2 of [-4, 4]) steelParts.push(beam(tip.clone().addScaledVector(side, s2), new THREE.Vector3(px, ladleY + 16, pz).addScaledVector(back, 12).addScaledVector(side, s2), 0.4));
+        const ladle = new THREE.Mesh(new THREE.CylinderGeometry(15, 11, 24, 18, 1, true), new THREE.MeshLambertMaterial({ color: 0x3a3238, side: THREE.DoubleSide }));
+        const melt = new THREE.Mesh(new THREE.CircleGeometry(14, 18), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.1, 0.25), toneMapped: false }));
+        melt.rotation.x = -Math.PI / 2;
+        melt.position.y = 9;
+        ladle.add(melt);
+        const lip = new THREE.Vector3(px, ladleY, pz);
+        ladle.position.copy(lip).addScaledVector(back, 12).add(new THREE.Vector3(0, 6, 0));
+        ladle.rotateOnWorldAxis(side, -0.55);
+        group.add(ladle);
+        // The stream, and the splash where it meets the melt.
+        const fall = ladleY - floor;
+        const stream = new THREE.Mesh(
+          new THREE.CylinderGeometry(2.2, 3.4, fall, 10, 1, true),
+          new THREE.ShaderMaterial({ vertexShader: pourVertex, fragmentShader: pourFragment, uniforms: { uTime: { value: 0 } }, toneMapped: false }),
+        );
+        stream.position.set(px, floor + fall / 2, pz);
+        group.add(stream);
+        const splash = new THREE.Mesh(new THREE.CircleGeometry(16, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 1.4, 0.35), transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false }));
+        splash.rotation.x = -Math.PI / 2;
+        splash.position.set(px, floor + 0.4, pz);
+        group.add(splash);
+        const sm = stream.material as THREE.ShaderMaterial;
+        ctx.updates.push((time) => {
+          sm.uniforms.uTime.value = time;
+          splash.scale.setScalar(0.85 + 0.15 * Math.sin(time * 7.3) * Math.sin(time * 3.1));
+        });
+      }
+    }
+  }
+
+  // ---- floodlights on the rim, their beams down into the pit ----------------------
+  {
+    const beamMat = new THREE.ShaderMaterial({
+      vertexShader: beamVertex,
+      fragmentShader: beamFragment,
+      uniforms: { uColor: { value: new THREE.Color(0.75, 0.85, 1.0) }, uStrength: { value: 0.16 } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const lamps: THREE.BufferGeometry[] = [];
+    let placed = 0;
+    for (let k = 0; k < 24 && placed < 8; k++) {
+      const a = (k / 24) * TAU + 0.11;
+      const rr = edgeR + 50;
+      const x = cx + Math.cos(a) * rr;
+      const z = cz + Math.sin(a) * rr;
+      if (!onPlateau(x, z, 12) || ctx.clearance(x, z) < 45 || nearGantry(x, z, 10) || !free(x, z, 120)) continue;
+      taken.push([x, z, 120]);
+      placed++;
+      const top = rim + 120;
+      steelParts.push(beam(new THREE.Vector3(x, rim, z), new THREE.Vector3(x, top, z), 3));
+      const head = new THREE.Vector3(x, top + 4, z);
+      steelParts.push(beam(head.clone().add(new THREE.Vector3(-8 * Math.sin(a), 0, 8 * Math.cos(a))), head.clone().add(new THREE.Vector3(8 * Math.sin(a), 0, -8 * Math.cos(a))), 2.4, 4));
+      glowParts.push(tint(beam(head.clone().add(new THREE.Vector3(-7 * Math.sin(a) - Math.cos(a) * 1.4, -1.2, 7 * Math.cos(a) - Math.sin(a) * 1.4)), head.clone().add(new THREE.Vector3(7 * Math.sin(a) - Math.cos(a) * 1.4, -1.2, -7 * Math.cos(a) - Math.sin(a) * 1.4)), 2.6, 2.4), new THREE.Color(2.2, 2.3, 2.5)));
+      for (const spread of [-0.35, 0.35]) {
+        const ta = a + Math.PI + spread;
+        const target = new THREE.Vector3(x + Math.cos(ta) * 240, rim - 210 - Math.abs(spread) * 60, z + Math.sin(ta) * 240);
+        const len = head.distanceTo(target);
+        const g = new THREE.CylinderGeometry(1.5, len * 0.17, len, 20, 1, true);
+        g.translate(0, -len / 2, 0);
+        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), target.clone().sub(head).normalize());
+        g.applyQuaternion(q);
+        g.translate(head.x, head.y - 1.2, head.z);
+        lamps.push(g);
+      }
+    }
+    if (lamps.length) {
+      const beams = new THREE.Mesh(mergeGeometries(lamps)!, beamMat);
+      beams.frustumCulled = false;
+      beams.renderOrder = 5;
+      group.add(beams);
+    }
+  }
+
+  // ---- smelter stacks, burning off at the top -----------------------------------
+  const flames: THREE.Mesh[] = [];
+  const beacons: THREE.Vector3[] = [];
+  {
+    const rnd = mulberry(5150);
+    const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 0.9, 0.2), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+    let placed = 0;
+    for (let k = 0; k < 300 && placed < 6; k++) {
+      const a = rnd() * TAU;
+      const rr = edgeR + 260 + rnd() * 700;
+      const x = cx + Math.cos(a) * rr;
+      const z = cz + Math.sin(a) * rr;
+      if (ctx.clearance(x, z) < 110 || nearGantry(x, z, 30) || !free(x, z, 40)) continue;
+      taken.push([x, z, 40]);
+      placed++;
+      const h = 180 + rnd() * 120;
+      const stack = new THREE.CylinderGeometry(9, 15, h, 14, 1).toNonIndexed();
+      stack.translate(x, rim + h / 2, z);
+      steelParts.push(stack);
+      for (const yy of [0.35, 0.7]) glowParts.push(tint(new THREE.CylinderGeometry(9 + 6 * (1 - yy) + 0.4, 9 + 6 * (1 - yy) + 0.4, 1.4, 14, 1, true).toNonIndexed().translate(x, rim + h * yy, z), neonCol(0xff3020, 1.4)));
+      glowParts.push(tint(new THREE.CylinderGeometry(9.6, 9.6, 3, 14, 1, true).toNonIndexed().translate(x, rim + h - 2, z), neonCol(0xff8a20, 2)));
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(7, 30, 10, 1, true), flameMat);
+      flame.geometry.translate(0, 15, 0);
+      flame.position.set(x, rim + h, z);
+      group.add(flame);
+      flames.push(flame);
+      beacons.push(new THREE.Vector3(x, rim + h + 1, z));
+    }
+  }
+
+  // ---- the city round the rim ----------------------------------------------------
+  {
+    const rnd = mulberry(3301);
+    const parts: THREE.BufferGeometry[] = [];
+    const tints = [new THREE.Color(0xffffff), new THREE.Color(0xd6d9ec), new THREE.Color(0xe8d8e4), new THREE.Color(0xcfe0ee)];
+    const neonHues = [0xff2fa8, 0x26e6ff, 0xffa020, 0xa05cff, 0x3dff9a];
+    const signs: Array<[string, string]> = [
+      ['KESTREL', '#26e6ff'],
+      ['AOKI HEAVY', '#ffa020'],
+      ['NOVA', '#ff3fbf'],
+      ['HALCYON', '#a05cff'],
+      ['ZGP', '#3dff9a'],
+      ['FOUNDRY 7', '#ff5a3a'],
+    ];
+    const signMats = signs.map(([w, c]) => {
+      const m = new THREE.MeshBasicMaterial({ map: neonSign(w, c), transparent: true, side: THREE.DoubleSide, toneMapped: false, depthWrite: false });
+      m.color.setScalar(1.5);
+      return m;
+    });
+    let signsUp = 0;
+    let placed = 0;
+    for (let tries = 0; tries < 2400 && placed < 260; tries++) {
+      const a = rnd() * TAU;
+      const near = rnd() < 0.55;
+      const rr = near ? edgeR + 150 + Math.pow(rnd(), 1.4) * 1300 : edgeR + 1500 + rnd() * 5200;
+      const x = cx + Math.cos(a) * rr;
+      const z = cz + Math.sin(a) * rr;
+      const w = 28 + rnd() * 44;
+      const d = 28 + rnd() * 44;
+      const size = Math.max(w, d) * 0.75;
+      if (ctx.clearance(x, z) < 90 + size || nearGantry(x, z, size) || !free(x, z, size)) continue;
+      const closeness = 1 - Math.min(1, (rr - edgeR) / 1800);
+      const h = 50 + rnd() * 110 + closeness * closeness * (80 + rnd() * 300);
+      const rot = rnd() * 1.6;
+      const tn = tints[Math.floor(rnd() * tints.length)];
+      parts.push(tower(w, h, d, x, rim, z, rot, tn));
+      taken.push([x, z, size]);
+      placed++;
+      let crown = h;
+      if (h > 200 && rnd() < 0.6) {
+        // A setback crown, and a mast.
+        parts.push(tower(w * 0.62, h * 0.16, d * 0.62, x, rim + h, z, rot, tn));
+        crown = h * 1.16;
+        if (rnd() < 0.7) {
+          parts.push(tower(2.4, h * 0.2, 2.4, x, rim + crown, z, 0, tn));
+          crown += h * 0.2;
+        }
+      }
+      // Neon up two corners of some, and a sign on the roof of the tall ones near the pit.
+      const cr = Math.cos(rot);
+      const sr = Math.sin(rot);
+      if (rnd() < 0.5) {
+        const hue = neonCol(neonHues[Math.floor(rnd() * neonHues.length)]);
+        for (const [ox, oz] of [
+          [w / 2, d / 2],
+          [-w / 2, -d / 2],
+        ]) {
+          const px = x + ox * cr + oz * sr;
+          const pz = z - ox * sr + oz * cr;
+          glowParts.push(tint(beam(new THREE.Vector3(px, rim + h * 0.08, pz), new THREE.Vector3(px, rim + h * 0.97, pz), 1.3), hue));
+        }
+      }
+      if (near && h > 200 && signsUp < 14) {
+        const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.1, (w * 1.1) / 3.2), signMats[signsUp % signMats.length]);
+        sign.position.set(x, rim + h + (w * 1.1) / 6.4 + 2, z);
+        sign.lookAt(cx, sign.position.y, cz);
+        group.add(sign);
+        signsUp++;
+      }
+      if (crown > 160) beacons.push(new THREE.Vector3(x, rim + crown + 2, z));
+    }
+    const facade = nightWindows(false);
+    const lit = nightWindows(true);
+    const cityMat = new THREE.MeshLambertMaterial({ map: facade, emissive: 0xffffff, emissiveMap: lit, emissiveIntensity: 1.25, vertexColors: true });
+    const city = new THREE.Mesh(mergeGeometries(parts)!, cityMat);
+    city.frustumCulled = false;
+    group.add(city);
+  }
+
+  // ---- the steel and the neon, all of it ------------------------------------------
+  {
+    for (const g of steelParts) {
+      if (!g.attributes.color) tint(g, white);
+      if (g.attributes.uv) g.deleteAttribute('uv');
+      if (g.attributes.normal) g.deleteAttribute('normal');
+    }
+    const steelGeo = mergeGeometries(steelParts)!;
+    steelGeo.computeVertexNormals();
+    const mesh = new THREE.Mesh(steelGeo, steel);
+    mesh.frustumCulled = false;
+    group.add(mesh);
+    for (const g of glowParts) {
+      if (g.attributes.uv) g.deleteAttribute('uv');
+      if (g.attributes.normal) g.deleteAttribute('normal');
+    }
+    const glow = new THREE.Mesh(mergeGeometries(glowParts)!, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
+    glow.frustumCulled = false;
+    group.add(glow);
+  }
+
+  // ---- red beacons on everything tall, blinking ------------------------------------
+  {
+    const geo = new THREE.SphereGeometry(1.6, 8, 6);
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 0.15, 0.1), toneMapped: false });
+    const inst = new THREE.InstancedMesh(geo, mat, Math.max(1, beacons.length));
+    const m = new THREE.Matrix4();
+    beacons.forEach((p, k) => inst.setMatrixAt(k, m.makeTranslation(p.x, p.y, p.z)));
+    inst.count = beacons.length;
+    inst.frustumCulled = false;
+    group.add(inst);
+    ctx.updates.push((time) => {
+      inst.visible = time % 1.6 < 0.8;
+      for (let k = 0; k < flames.length; k++) {
+        const fl = flames[k];
+        const s = 0.8 + 0.25 * Math.sin(time * 9 + k * 1.7) * Math.sin(time * 4.3 + k);
+        fl.scale.set(1, s, 1);
+      }
+    });
   }
 }
