@@ -18,7 +18,8 @@ export interface TitanAsset {
   parts: Map<string, TitanPartGeometry[]>;
 }
 
-const urls = import.meta.glob('./assets/titan*.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+// Only the model's own levels: the blockout and anything else beside them are not built in.
+const urls = import.meta.glob(['./assets/titan.glb', './assets/titan-lod1.glb', './assets/titan-lod2.glb'], { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 /** Whether the model is in the build at all. */
 export const hasTitanModel = (): boolean => './assets/titan.glb' in urls;
