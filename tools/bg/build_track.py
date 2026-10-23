@@ -111,7 +111,9 @@ def main():
     assert len(crucible) == 2, f'{len(crucible)} boards on T4'
     frostline = cut_out(sheet('track-t5-frostline.png'))
     assert len(frostline) == 2, f'{len(frostline)} boards on T5'
-    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('crucible', crucible[0]), ('frostline', frostline[0]), ('banner', circuit[3]), ('crucibleSign', crucible[1]), ('frostlineSign', frostline[1])]
+    titan = cut_out(sheet('track-t6-titan.png'))
+    assert len(titan) == 2, f'{len(titan)} boards on T6'
+    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('crucible', crucible[0]), ('frostline', frostline[0]), ('titan', titan[0]), ('banner', circuit[3]), ('crucibleSign', crucible[1]), ('frostlineSign', frostline[1]), ('titanSign', titan[1])]
     aspect = {}
     for name, b in signs:
         files[name] = save(b, os.path.join(d, f'board-{name}.webp'), 90)
@@ -131,9 +133,9 @@ def main():
         f"  surfaces: {{ {', '.join(surfaces)} }},",
         f"  crowdAspect: {round(surfaces['crowd'].shape[1] / surfaces['crowd'].shape[0], 4)},",
         f"  boards: [{', '.join(sign(n) for n in BOARDS)}],",
-        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS + ['crucible', 'frostline'])} }},",
+        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS + ['crucible', 'frostline', 'titan'])} }},",
         f"  banner: {sign('banner')},",
-        f"  circuitSigns: {{ crucible: {sign('crucibleSign')}, frostline: {sign('frostlineSign')} }},",
+        f"  circuitSigns: {{ crucible: {sign('crucibleSign')}, frostline: {sign('frostlineSign')}, titan: {sign('titanSign')} }},",
         '};',
         'export default kit;',
         '',

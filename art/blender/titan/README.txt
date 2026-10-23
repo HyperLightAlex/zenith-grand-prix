@@ -189,7 +189,9 @@ npx tsx tools/titan/export.ts whenever the road changes)
 All in the game's axes (x east, y up, z south), imported with Y up and -Z
 forward, so a game point (x, y, z) is Blender (x, -z, y): east is +X,
 north +Y, up +Z. Export glTF with +Y up and it comes back in the game's
-axes. Units are metres.
+axes. Units are metres. (Checked with Blender 5.2.2: the placeholder,
+imported this way and exported as below, comes back to the game where it
+started, to the millimetre.)
 
 THE ROAD IS NEVER MOVED IN BLENDER. If a part cannot fit, report it: the
 game side moves the road and regenerates the files.

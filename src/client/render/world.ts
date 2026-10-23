@@ -1648,10 +1648,16 @@ function buildFrostline(ctx: Ctx): void {
       trackMatrix(track, s, 0, 46, Math.PI, m);
       sign.applyMatrix4(m);
       group.add(sign);
+      // Painted (track sheet T5), on a panel of its own shape in the same frame.
       const own = paintedTrack.circuitSigns[theme.id];
       if (own) {
-        const pm = new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide, toneMapped: false });
-        swapMaterial(ctx, sign, pm);
+        const ph = Math.min(H, W / own.aspect);
+        const panel = new THREE.Mesh(new THREE.PlaneGeometry(W, ph), new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide, toneMapped: false }));
+        trackMatrix(track, s, 0, 46 + (H - ph) / 2, Math.PI, m);
+        panel.applyMatrix4(m);
+        group.add(panel);
+        ctx.plainOnly.push(sign);
+        ctx.paintedOnly.push(panel);
       }
       const frame: THREE.BufferGeometry[] = [];
       for (const side of [-1, 1]) {
@@ -2275,8 +2281,17 @@ function buildTitansRest(ctx: Ctx): void {
     trackMatrix(track, s, 0, 40, Math.PI, m);
     sign.applyMatrix4(m);
     group.add(sign);
+    // Painted (track sheet T6), on a panel of its own shape in the same frame.
     const own = paintedTrack.circuitSigns[theme.id];
-    if (own) swapMaterial(ctx, sign, new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide }));
+    if (own) {
+      const ph = Math.min(H, W / own.aspect);
+      const panel = new THREE.Mesh(new THREE.PlaneGeometry(W, ph), new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide }));
+      trackMatrix(track, s, 0, 40 + (H - ph) / 2, Math.PI, m);
+      panel.applyMatrix4(m);
+      group.add(panel);
+      ctx.plainOnly.push(sign);
+      ctx.paintedOnly.push(panel);
+    }
     for (const side of [-1, 1]) {
       const foot = pointAt(s, side * (W / 2 + 4), -30);
       put('slate', limb(new THREE.Vector3(foot.x, -5, foot.z), new THREE.Vector3(foot.x, foot.y + 30 + 40 + H / 2 + 3, foot.z), 4, 3, 6));

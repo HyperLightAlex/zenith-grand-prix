@@ -142,7 +142,7 @@ describe.skipIf(!model)("Titan's Rest: the titan's Blender model", () => {
           if (i < 0) continue;
           let k = 0;
           while (k + 1 < starts.length && starts[k + 1] <= i * t.ds) k++;
-          const name = TITANS_REST.pieces[k]?.name ?? '?';
+          const name = TITANS_REST.pieces[k]?.name ?? `#${k}`;
           where.set(`${part} on ${name}`, (where.get(`${part} on ${name}`) ?? 0) + 1);
         }
       }

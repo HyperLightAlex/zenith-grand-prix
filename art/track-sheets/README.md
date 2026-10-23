@@ -30,7 +30,7 @@ stay crisp and bright, so the paintings go underneath them, never over them.
 | T3 Circuit boards and banner | track-t3-circuits.png | in the game. All spelt right, each emblem as asked; cut cleanly. The boards came out 2.25:1 and the banner 9.9:1 (not 3.2:1 and 14.7:1), so they too stand in frames of their own shape: the banner over the line a little deeper than the plain one |
 | T4 Neon Crucible | track-t4-crucible.png | in the game. Made with T3 attached; both spelt right, the emblem as asked, cut cleanly. The board came out 3.26:1 (the others 2.25:1) and the sign 3.23:1 |
 | T5 Frostline | track-t5-frostline.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the aurora's arcs in cyan and violet), cut cleanly. The board came out 3.12:1 and the sign 4.14:1 |
-| T6 Titan's Rest | track-t6-titan.png | to be made |
+| T6 Titan's Rest | track-t6-titan.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the titan's helmet half buried, its sword beside it), cut cleanly. The board came out 2.60:1 and the sign 4.64:1; the sign is drawn on a panel of its own shape in the plain sign's frame (Frostline's too, 4.14:1) |
 
 ## The prompt
 

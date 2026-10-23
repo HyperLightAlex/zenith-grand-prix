@@ -27,7 +27,8 @@ export const hasTitanModel = (): boolean => './assets/titan.glb' in urls;
 function partOf(o: THREE.Object3D): string {
   for (let p: THREE.Object3D | null = o; p; p = p.parent) {
     if (typeof p.userData.part === 'string') return p.userData.part;
-    const m = /^titan\/([^/]+)/.exec(p.name);
+    // three takes the slashes out of node names; the exporter keeps the original in extras.
+    const m = /^titan\/([^/]+)/.exec(typeof p.userData.name === 'string' ? p.userData.name : p.name);
     if (m) return m[1];
   }
   return 'body';
