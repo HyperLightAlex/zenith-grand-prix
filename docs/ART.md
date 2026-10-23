@@ -171,8 +171,13 @@ to one brief per circuit and checked one at a time.
   turns, as layered paintings would.
 - **Clouds**: painted cumulus cards in place of the modelled ones, turning to
   face the camera but staying upright. The Crucible has smoke and steam
-  instead, on the smokestacks round its rim and where the pour lands, each
-  plume standing on its own foot.
+  instead, rising from the smokestacks round its rim and where the pour
+  lands: a stream of the effects' drawn puffs (fx sheet 8), each let go at
+  the source, swelling as it climbs, leaning with the wind and breaking up
+  at the top, shaded in the night's violets and lit orange from below near
+  the fire (`render/puffs.ts`). A puff is round, so it looks right from any
+  side; the painted plumes of sheet N3, flat cards turning to face the
+  camera, showed their turning as the camera went round them.
 - **Surfaces**, as repeating painted textures:
   - Meridian: the sea, three kinds of tower facade (glass offices, hotels,
     dark glass), the platforms the towers stand on, and white panels on the

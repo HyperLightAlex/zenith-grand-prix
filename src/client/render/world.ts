@@ -14,6 +14,7 @@ import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, hwAt, makeFrame, type Track } from '../../sim/track';
 import { look } from './look';
 import { pitOf } from './pit';
+import { PuffStreams, type PuffSource } from './puffs';
 import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paintedSurfaceMaterial as paintedRock, paintedTexture, paintedTrack, whiteTexture, type PaintedSet } from './painted';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
@@ -1906,7 +1907,7 @@ function buildCrucible(ctx: Ctx): void {
   const white = new THREE.Color(0xffffff);
   const neonCol = (hex: number, k = 1.3) => new THREE.Color(hex).multiplyScalar(k);
   // Where smoke and steam rise in the painted look: the stacks' mouths and the pour.
-  const plumeSpots: Plume[] = [];
+  const puffSources: PuffSource[] = [];
 
   // ---- the Gantry: a truss across the pit over the start straight -----------------
   const f0 = makeFrame();
@@ -2115,7 +2116,7 @@ function buildCrucible(ctx: Ctx): void {
         group.add(sparks);
         const sparkRnd = mulberry(4040);
         const sparkDir = Array.from({ length: SPARKS }, () => [sparkRnd() * TAU, 6 + sparkRnd() * 10, 14 + sparkRnd() * 14, sparkRnd()]);
-        plumeSpots.push({ x: px, y: floor, z: pz, width: [70, 90], cards: [4] });
+        puffSources.push({ x: px, y: floor, z: pz, kind: 'steam' });
         const sm = stream.material as THREE.ShaderMaterial;
         ctx.updates.push((time) => {
           sm.uniforms.uTime.value = time;
@@ -2207,7 +2208,7 @@ function buildCrucible(ctx: Ctx): void {
       group.add(flame);
       flames.push(flame);
       beacons.push(new THREE.Vector3(x, rim + h + 1, z));
-      plumeSpots.push({ x, y: rim + h - 1, z, width: [95, 150], cards: [0, 1, 3, 5] });
+      puffSources.push({ x, y: rim + h + 6, z, kind: 'smoke' });
     }
   }
 
@@ -2358,48 +2359,13 @@ function buildCrucible(ctx: Ctx): void {
     });
   }
 
-  if (ctx.painted) paintedPlumes(ctx, plumeSpots, 77);
-}
-
-/** A place smoke or steam rises from: its foot, how wide its card may be, and which cards. */
-interface Plume {
-  x: number;
-  y: number;
-  z: number;
-  width: [number, number];
-  cards: number[];
-}
-
-/**
- * Painted smoke and steam (the anime look): a card for each, its foot (the
- * plume's base, wherever it is across the painting) on the spot, turning
- * about the upright to face the camera as the painted clouds do.
- */
-function paintedPlumes(ctx: Ctx, spots: Plume[], seed: number): void {
-  const { cards, url } = ctx.painted!.clouds;
-  if (cards.length === 0 || spots.length === 0) return;
-  const map = paintedTexture(url);
-  const rnd = mulberry(seed);
-  const mats = cards.map((c) => paintedCardMaterial(map, [c.u0, c.v0, c.u1 - c.u0, c.v1 - c.v0], 1, THREE.DoubleSide));
-  const geos = cards.map((c) => new THREE.PlaneGeometry(1, 1).translate(0.5 - (c.base ?? 0.5), 0.5, 0));
-  const group = new THREE.Group();
-  const meshes: THREE.Mesh[] = [];
-  for (const sp of spots) {
-    const k = sp.cards[Math.floor(rnd() * sp.cards.length)] % cards.length;
-    const w = sp.width[0] + rnd() * (sp.width[1] - sp.width[0]);
-    const m = new THREE.Mesh(geos[k], mats[k]);
-    m.scale.set(rnd() < 0.5 ? -w : w, w / cards[k].aspect, 1);
-    m.position.set(sp.x, sp.y, sp.z);
-    m.frustumCulled = false;
-    group.add(m);
-    meshes.push(m);
+  // Smoke and steam in drawn puffs, in the painted look.
+  if (ctx.painted && puffSources.length) {
+    const puffs = new PuffStreams(puffSources);
+    group.add(puffs.mesh);
+    ctx.paintedOnly.push(puffs.mesh);
+    ctx.updates.push((time, camera) => {
+      if (puffs.mesh.visible) puffs.update(time, camera);
+    });
   }
-  ctx.group.add(group);
-  ctx.paintedOnly.push(group);
-  const cam = new THREE.Vector3();
-  ctx.updates.push((_time, camera) => {
-    if (!group.visible) return;
-    camera.getWorldPosition(cam);
-    for (const m of meshes) m.rotation.y = Math.atan2(cam.x - m.position.x, cam.z - m.position.z);
-  });
 }

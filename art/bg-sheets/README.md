@@ -45,7 +45,7 @@ All four circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
 | N1 Sky | bg-n1-sky.png | horizon at 767 px; the moon's halo where asked, at the middle and 25 degrees up, but fainter than the city's glow along the horizon, so its column is given by hand (the cutter would take the glow for it) and the game draws the moon's disc there |
 | N1B Sky | bg-n1b-sky.png | horizon at 767 px; its edges match N1's closely, the joins blended as usual |
 | N2 Horizon | bg-n2-horizon.png | three strips (mountains, the far city, the foundry district), bottoms level, ends matching; the foundry's steam is crisp enough to cut cleanly |
-| N3 Smoke and steam | bg-n3-smoke.png | six plumes, cut cleanly; a few greenish dabs painted inside the smoke, put back to its lavender when cut. Each plume's foot is found from its bottom rows (`base`), and the game stands that on its stack |
+| N3 Smoke and steam | bg-n3-smoke.png | six plumes, cut cleanly; a few greenish dabs painted inside the smoke, put back to its lavender when cut. Each plume's foot is found from its bottom rows (`base`). Not shown at present: as flat cards turning to face the camera, the plumes showed their turning in motion, and the stacks and the pour now rise in drawn puffs (fx sheet 8, recoloured) instead |
 | N4 Surfaces | bg-n4-surfaces.png | cut and blended like M4. The facade also gives a map of its lit windows alone (`facadeLit`), for their glow; the game draws it half as large again as painted, so the windows stay windows at a distance |
 | N5 Neon signs | bg-n5-signs.png | all six spelt right, each cut by its outline like the track kit's boards, 3.26:1 |
 
@@ -226,8 +226,9 @@ SHEET H4: SURFACES (six tiling squares, full bleed)
 
 Night over an open-pit mine, so its set is not quite the others'. Sheet 3
 is smoke and steam, not clouds: the circuit has no cumulus, and the game
-stands the plumes on the smokestacks round the rim and over the pit's
-molten floor. Its surfaces are the pit's wall (twice: high up, and scorched
+stood the plumes on the smokestacks round the rim and over the pit's
+molten floor (it now draws those in puffs from fx sheet 8 instead, which
+look the same from any side). Its surfaces are the pit's wall (twice: high up, and scorched
 low down by the melt), the molten floor, the yard round the rim, the
 city's facades at night (the game takes the lit windows from the painting
 for their glow) and the rusted steel of the stacks, the crane, the ladle
