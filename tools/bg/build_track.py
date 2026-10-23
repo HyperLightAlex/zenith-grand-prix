@@ -17,7 +17,8 @@ What it does to the sheets:
 - Boards and the banner: each cut out of the green by its outline (they are
   plain rectangles), trimmed a pixel inside its edge, kept at its own shape.
 - T4, Neon Crucible's: its board (in with the others) and the neon sign over
-  the way into its pit.
+  the way into its pit. T5, Frostline's: its board and the sign over the Ice
+  Barrel's mouth.
 """
 import json
 import os
@@ -108,7 +109,9 @@ def main():
     assert len(circuit) == len(CIRCUITS) + 1, f'{len(circuit)} boards on T3'
     crucible = cut_out(sheet('track-t4-crucible.png'))
     assert len(crucible) == 2, f'{len(crucible)} boards on T4'
-    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('crucible', crucible[0]), ('banner', circuit[3]), ('crucibleSign', crucible[1])]
+    frostline = cut_out(sheet('track-t5-frostline.png'))
+    assert len(frostline) == 2, f'{len(frostline)} boards on T5'
+    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('crucible', crucible[0]), ('frostline', frostline[0]), ('banner', circuit[3]), ('crucibleSign', crucible[1]), ('frostlineSign', frostline[1])]
     aspect = {}
     for name, b in signs:
         files[name] = save(b, os.path.join(d, f'board-{name}.webp'), 90)
@@ -128,9 +131,9 @@ def main():
         f"  surfaces: {{ {', '.join(surfaces)} }},",
         f"  crowdAspect: {round(surfaces['crowd'].shape[1] / surfaces['crowd'].shape[0], 4)},",
         f"  boards: [{', '.join(sign(n) for n in BOARDS)}],",
-        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS + ['crucible'])} }},",
+        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS + ['crucible', 'frostline'])} }},",
         f"  banner: {sign('banner')},",
-        f"  circuitSigns: {{ crucible: {sign('crucibleSign')} }},",
+        f"  circuitSigns: {{ crucible: {sign('crucibleSign')}, frostline: {sign('frostlineSign')} }},",
         '};',
         'export default kit;',
         '',

@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-The first four circuits' sheets are in the game (`tools/bg/build_backgrounds.py`); Frostline's are to be made.
+All five circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -48,10 +48,10 @@ The first four circuits' sheets are in the game (`tools/bg/build_backgrounds.py`
 | N3 Smoke and steam | bg-n3-smoke.png | six plumes, cut cleanly; a few greenish dabs painted inside the smoke, put back to its lavender when cut. Each plume's foot is found from its bottom rows (`base`). Not shown at present: as flat cards turning to face the camera, the plumes showed their turning in motion, and the stacks and the pour now rise in drawn puffs (fx sheet 8, recoloured) instead |
 | N4 Surfaces | bg-n4-surfaces.png | cut and blended like M4. The facade also gives a map of its lit windows alone (`facadeLit`), for their glow; the game draws it half as large again as painted, so the windows stay windows at a distance |
 | N5 Neon signs | bg-n5-signs.png | all six spelt right, each cut by its outline like the track kit's boards, 3.26:1 |
-| F1 Sky | bg-f1-sky.png | to be made |
-| F1B Sky | bg-f1b-sky.png | to be made |
-| F2 Horizon | bg-f2-horizon.png | to be made |
-| F3 Surfaces | bg-f3-surfaces.png | to be made |
+| F1 Sky | bg-f1-sky.png | horizon at 767 px; the moon's halo at the middle, 25 degrees up, but the aurora is brighter, so its column is given by hand, as N1's |
+| F1B Sky | bg-f1b-sky.png | horizon at 767 px, level with F1's; the aurora carries on across both joins |
+| F2 Horizon | bg-f2-horizon.png | three strips (mountains, a coast of glaciers, icebergs in the pack ice), bottoms level, ends matching; the mountains' strip is the shortest, 171 px |
+| F3 Surfaces | bg-f3-surfaces.png | cut and blended like M4: snow, ice cliff, pack ice, blue ice, the nunatak's rock, the frozen fall |
 
 ## Meridian Skyway
 

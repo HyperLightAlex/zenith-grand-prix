@@ -1363,13 +1363,29 @@ uniform vec3 uSky;
 uniform vec3 uFloe;
 uniform vec3 uSunDir;
 uniform float uTime;
+uniform float uPainted;
+uniform sampler2D uSeaMap;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE}
+${UNTONE}
 void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   vec2 p = vWorld.xz;
+  if (uPainted > 0.5) {
+    // The painted pack ice, drifting slowly, at two sizes and turned,
+    // blended by a slow noise so its floes never line up into a grid.
+    vec2 q = p + vec2(uTime * 1.2, uTime * 0.5);
+    vec3 a = texture2D(uSeaMap, q / 260.0).rgb;
+    vec3 b = texture2D(uSeaMap, mat2(0.8, -0.6, 0.6, 0.8) * q / 330.0 + 0.37).rgb;
+    vec3 col = unTone(mix(a, b, smoothstep(0.3, 0.7, noise(p * 0.0017))));
+    gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+    return;
+  }
   float w = noise(p * 0.01 + vec2(uTime * 0.03, uTime * 0.02)) * 0.6 + noise(p * 0.04 - vec2(uTime * 0.05, 0.0)) * 0.4;
   vec3 N = normalize(vec3((w - 0.5) * 0.25, 1.0, (noise(p * 0.02 + 7.0) - 0.5) * 0.25));
   float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
@@ -1416,16 +1432,29 @@ uniform vec3 uShade;
 uniform vec3 uCrevasse;
 uniform float uCrevasseY;
 uniform float uTime;
+uniform float uPainted;
+uniform sampler2D uSnowMap;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
 ${NOISE}
+${UNTONE}
 void main() {
   vec2 p = vWorld.xz;
   float big = fbm(p * 0.0021);
-  vec3 col = mix(uShade, uSnow, smoothstep(0.32, 0.58, big));
-  float rip = sin(dot(p, vec2(0.055, 0.021)) + noise(p * 0.012) * 6.0);
-  col *= 0.95 + 0.05 * step(0.0, rip);
+  vec3 col;
+  if (uPainted > 0.5) {
+    // The painted snow at two sizes and turned, blended by a slow noise,
+    // with broad drifts of light and shade across it.
+    vec3 a = texture2D(uSnowMap, p / 70.0).rgb;
+    vec3 b = texture2D(uSnowMap, mat2(0.8, -0.6, 0.6, 0.8) * p / 93.0 + 0.41).rgb;
+    col = mix(a, b, smoothstep(0.3, 0.7, noise(p * 0.004)));
+    col *= 0.9 + 0.12 * smoothstep(0.32, 0.58, big);
+  } else {
+    col = mix(uShade, uSnow, smoothstep(0.32, 0.58, big));
+    float rip = sin(dot(p, vec2(0.055, 0.021)) + noise(p * 0.012) * 6.0);
+    col *= 0.95 + 0.05 * step(0.0, rip);
+  }
   // On the glacier: crevasses, long thin cracks across the flow, deep blue
   // with a pale lip, in sets that come and go.
   if (vWorld.y > uCrevasseY) {
@@ -1437,6 +1466,7 @@ void main() {
     col = mix(col, uSnow * 1.04, lip * 0.5);
     col = mix(col, uCrevasse, crack);
   }
+  if (uPainted > 0.5) col = unTone(col);
   // Glints that come and go as the camera moves.
   vec2 g = floor(p * 0.7);
   float glint = step(0.996, hash(g)) * step(0.6, noise(p * 0.3 + cameraPosition.xz * 0.02));
@@ -1448,7 +1478,7 @@ void main() {
 }`;
 
 /** An outline in plan, as (x, z), stood up from `y0` to `y1`: snow on top, ice in bands down the sides. */
-function iceBlock(ctx: Ctx, outline: Array<[number, number]>, y0: number, y1: number, top: THREE.Material, bands: (x: number, y: number, z: number) => THREE.Color): THREE.Mesh {
+function iceBlock(ctx: Ctx, outline: Array<[number, number]>, y0: number, y1: number, top: THREE.Material, bands: (x: number, y: number, z: number) => THREE.Color, paintedSide: THREE.Material | null = null): THREE.Mesh {
   const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: y1 - y0, bevelEnabled: false, steps: Math.max(1, Math.round((y1 - y0) / 9)) });
   geo.rotateX(-Math.PI / 2);
@@ -1461,6 +1491,12 @@ function iceBlock(ctx: Ctx, outline: Array<[number, number]>, y0: number, y1: nu
   const mesh = new THREE.Mesh(flat, [top, side]);
   mesh.frustumCulled = false;
   ctx.group.add(mesh);
+  // Painted: the ice cliff down the sides; the top keeps its own (painted) snow.
+  if (paintedSide) {
+    const plain = [top, side];
+    const painted = [top, paintedSide];
+    ctx.swaps.push((on) => (mesh.material = on ? painted : plain));
+  }
   return mesh;
 }
 
@@ -1483,10 +1519,27 @@ function turnCentre(track: Track, range: [number, number]): [number, number] {
 function buildFrostline(ctx: Ctx): void {
   const { track, group, cx, cz, theme } = ctx;
   const frost = frostOf(track);
-  stars(ctx);
+  const surf = ctx.painted?.surfaces;
+  const tex = (name: string) => (surf?.[name] ? paintedTexture(surf[name], { repeat: true }) : null);
+  const snowTex = tex('snow');
+  const cliffTex = tex('icecliff');
+  const blueTex = tex('blueice');
+  const rockTex = tex('rock');
+  const fallTex = tex('icefall');
+  /** Painted ice, rock or a frozen fall, a little lit from within so it reads at blue hour. */
+  const paintedIce = (wall: THREE.Texture | null, size: number, glow = 0.18) => {
+    if (!wall || !snowTex) return null;
+    const mat = paintedRock(wall, snowTex, size, 60);
+    (mat as THREE.MeshLambertMaterial).emissive = new THREE.Color(0x3a5a9a);
+    (mat as THREE.MeshLambertMaterial).emissiveIntensity = glow;
+    return mat;
+  };
+  const sky = stars(ctx);
+  // The painted sky has its own.
+  if (ctx.painted) ctx.plainOnly.push(sky);
 
   // ---- the sea, and pack ice on it ------------------------------------------
-  groundPlane(
+  const seaMat = groundPlane(
     ctx,
     iceSeaFragment,
     {
@@ -1494,9 +1547,16 @@ function buildFrostline(ctx: Ctx): void {
       uShallow: { value: new THREE.Color(theme.groundLight2) },
       uSky: { value: new THREE.Color(0x5a6fb0) },
       uFloe: { value: new THREE.Color(0xc6d6f2) },
+      uPainted: { value: 0 },
+      uSeaMap: { value: null },
     },
     theme.groundY,
   );
+  const packTex = tex('packice');
+  if (packTex) {
+    seaMat.uniforms.uSeaMap.value = packTex;
+    ctx.swaps.push((on) => (seaMat.uniforms.uPainted.value = on ? 1 : 0));
+  }
   if (!frost) return;
   const { shelfY, glacierY } = frost;
 
@@ -1506,7 +1566,11 @@ function buildFrostline(ctx: Ctx): void {
     uShade: { value: new THREE.Color(0xa8bde6) },
     uCrevasse: { value: new THREE.Color(0x1f4c9c) },
     uCrevasseY: { value: glacierY - 1 },
+    uPainted: { value: 0 },
+    uSnowMap: { value: snowTex },
   });
+  if (snowTex) ctx.swaps.push((on) => (snow.uniforms.uPainted.value = on ? 1 : 0));
+  const cliffPaint = paintedIce(cliffTex, 70);
   const deep = new THREE.Color(0x3d6fb8);
   const pale = new THREE.Color(0x9cc6ef);
   const white = new THREE.Color(0xd9e8fa);
@@ -1526,8 +1590,8 @@ function buildFrostline(ctx: Ctx): void {
     if (crack) band.lerp(deep, 0.45);
     return band.multiplyScalar(0.96 + 0.04 * (b % 2));
   };
-  iceBlock(ctx, frost.shelf, theme.groundY - 6, shelfY, snow, bands);
-  iceBlock(ctx, frost.glacier, shelfY - 2, glacierY, snow, bands);
+  iceBlock(ctx, frost.shelf, theme.groundY - 6, shelfY, snow, bands, cliffPaint);
+  iceBlock(ctx, frost.glacier, shelfY - 2, glacierY, snow, bands, cliffPaint);
 
   // ---- the Ice Barrel: a tube of clear ice round the climb ---------------------
   {
@@ -1603,11 +1667,13 @@ function buildFrostline(ctx: Ctx): void {
     }
   }
   const iceMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1d3a78, emissiveIntensity: 0.4 });
-  const add = (parts: THREE.BufferGeometry[], mat: THREE.Material) => {
+  const blueIce = paintedIce(blueTex, 34, 0.22);
+  const add = (parts: THREE.BufferGeometry[], mat: THREE.Material, painted: THREE.Material | null = blueIce) => {
     if (parts.length === 0) return null;
     const mesh = new THREE.Mesh(mergeGeometries(parts)!, mat);
     mesh.frustumCulled = false;
     group.add(mesh);
+    if (painted) swapMaterial(ctx, mesh, painted);
     return mesh;
   };
   const tinted = (g: THREE.BufferGeometry, c: THREE.Color) => paint(g, () => c);
@@ -1670,7 +1736,7 @@ function buildFrostline(ctx: Ctx): void {
       }
       add(pillars, iceMat);
       add(vault, iceMat);
-      const shell = add(shells, new THREE.MeshLambertMaterial({ color: 0xa8d6ff, emissive: 0x2a5aa0, emissiveIntensity: 0.5, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false }));
+      const shell = add(shells, new THREE.MeshLambertMaterial({ color: 0xa8d6ff, emissive: 0x2a5aa0, emissiveIntensity: 0.5, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false }), null);
       if (shell) shell.renderOrder = 3;
     }
   }
@@ -1750,8 +1816,8 @@ function buildFrostline(ctx: Ctx): void {
         rock.push(tinted(g, new THREE.Color(0x2c2f45).multiplyScalar(0.9 + rnd() * 0.25)));
         caps.push(tinted(cap, new THREE.Color(0xeef4ff)));
       }
-      add(rock, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
-      add(caps, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x2a3a70, emissiveIntensity: 0.3 }));
+      add(rock, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), paintedIce(rockTex, 40, 0.08));
+      add(caps, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x2a3a70, emissiveIntensity: 0.3 }), paintedIce(snowTex, 40));
     }
   }
 
@@ -1784,7 +1850,7 @@ function buildFrostline(ctx: Ctx): void {
           parts.push(tinted(g, new THREE.Color().setHSL(0.57, 0.65, 0.78 + rnd() * 0.12)));
         }
       }
-      add(parts, iceMat);
+      add(parts, iceMat, paintedIce(fallTex, 46, 0.25));
       // A cold glow in its heart.
       const glow = new THREE.Mesh(new THREE.CylinderGeometry(12, 18, topY - shelfY - 20, 7, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 1.1, 1.3), toneMapped: false, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
       glow.position.set(fx, (topY + shelfY) / 2, fz);
@@ -1871,7 +1937,7 @@ function buildFrostline(ctx: Ctx): void {
       g.translate(x, theme.groundY + (g.boundingBox ? 0 : 0) + h * 0.45, z);
       bergs.push(paint(g, (_x, y) => (y > theme.groundY + h * 0.7 ? new THREE.Color(0xeaf2ff) : new THREE.Color(0x8dbbe8))));
     }
-    add(bergs, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1d3a78, emissiveIntensity: 0.3 }));
+    add(bergs, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1d3a78, emissiveIntensity: 0.3 }), paintedIce(cliffTex, 50));
     const body: THREE.BufferGeometry[] = [];
     const caps: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 40; i++) {
@@ -1892,8 +1958,10 @@ function buildFrostline(ctx: Ctx): void {
       cap.translate(x, theme.groundY + h - h * 0.25 + 2, z);
       caps.push(cap);
     }
-    add(body, new THREE.MeshLambertMaterial({ color: theme.ridge, flatShading: true }));
-    add(caps, new THREE.MeshLambertMaterial({ color: 0xdfe8ff, flatShading: true, emissive: 0x2a3a70, emissiveIntensity: 0.25 }));
+    // The painted horizon replaces the far mountains.
+    const peaks = add(body, new THREE.MeshLambertMaterial({ color: theme.ridge, flatShading: true }), null);
+    const snowcaps = add(caps, new THREE.MeshLambertMaterial({ color: 0xdfe8ff, flatShading: true, emissive: 0x2a3a70, emissiveIntensity: 0.25 }), null);
+    if (ctx.painted && peaks && snowcaps) ctx.plainOnly.push(peaks, snowcaps);
   }
 }
 

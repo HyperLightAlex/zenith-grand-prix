@@ -161,12 +161,15 @@ to one brief per circuit and checked one at a time.
   is still drawn as a hard disc on top: where the light comes from at
   Meridian, on the horizon at Canyon (its sky is painted with the sun
   setting; the disc sinks behind the far mesas), high overhead at Helios;
-  at the Crucible it is the moon, cold white, where its halo is painted.
+  at the Crucible and Frostline it is the moon, cold white, where its halo
+  is painted. Frostline's sky has the aurora painted into it (the plain look
+  draws its own, swaying).
 - **The horizon**: three painted strips, each on a ring round the circuit at
   its own distance (Meridian: far mountains, the coast, a city across the
   water; Canyon: mesas, buttes and spires, hoodoos; Helios: far snowy peaks,
   nearer peaks, a wall of cumulus; the Crucible: mountains, the far side of
-  the city, the foundry district), standing on the ground and repeating
+  the city, the foundry district; Frostline: snowy mountains, a coast of
+  glaciers, icebergs in the pack ice), standing on the ground and repeating
   round the circle. They move against each other a little as the circuit
   turns, as layered paintings would.
 - **Clouds**: painted cumulus cards in place of the modelled ones, turning to
@@ -198,6 +201,13 @@ to one brief per circuit and checked one at a time.
     steel on the stacks, the crane, the ladle and the gantry. Its rooftop
     neon signs are painted too (sheet N5), as is the sign over the way into
     the pit (track sheet T4).
+  - Frostline: the sea among the pack ice (drifting, at two sizes), the snow
+    on the shelf and the glacier (at two sizes, the glacier's crevasses
+    drawn over it), ice cliffs down their sides, blue glacier ice on the
+    seracs, the bridge's pillars, the caves' ribs and the fallen blocks, the
+    nunatak's rock, and the frozen waterfall round the Icefall's column. Its
+    sign over the Ice Barrel's mouth is on track sheet T5. It has no clouds
+    sheet: the circuit has no cumulus.
   The rock's texture coordinates come from the world position and each
   face's facing (`paintedRock` in `world.ts`): the strata stay level all the
   way round a mesa and dip gently across the desert, so no two mesas band
