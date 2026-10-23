@@ -1,5 +1,6 @@
 {
   "format": 1,
+  "phase": "1.2",
   "background": "#E4E6EC",
   "bodyCamera": {
     "orthographicScale": 1856.346,
@@ -41,7 +42,7 @@
         1024
       ],
       "rawRender": "raw/front.png",
-      "rawSha256": "fe9d72ab8ef1ad5277ab12dee80fab8cbccda5fc65d413a3c1dc273f7c52200e",
+      "rawSha256": "5639fe0b7dd7143cf5c50ea4f92c1fc73442a17b35e5245f9c11c5a83dd5c9ac",
       "renderDisplay": {
         "sourceSize": [
           512,
@@ -57,7 +58,36 @@
           0
         ]
       },
-      "comparison": "front.png"
+      "comparison": "front.png",
+      "camera": {
+        "target": [
+          0.0,
+          0.0,
+          736.7999877929688
+        ],
+        "eye": [
+          0.0,
+          -4000.0,
+          736.7999877929688
+        ],
+        "requestedScale": 1856.346,
+        "orthographicScale": 1856.346,
+        "resolution": [
+          512,
+          1024
+        ],
+        "detailFit": false,
+        "cameraBounds": {
+          "x": [
+            -381.0003662109375,
+            381.0003662109375
+          ],
+          "y": [
+            -736.8007202148438,
+            713.699462890625
+          ]
+        }
+      }
     },
     {
       "id": "three-quarter",
@@ -78,7 +108,7 @@
         1024
       ],
       "rawRender": "raw/three-quarter.png",
-      "rawSha256": "1a0866a6497199ff1d444e36d12b31d2dd5a51b3176b26eae7744bb27fd6b5d2",
+      "rawSha256": "745f6c296d466b6d519ca738d12d7b2e37b42037c734bcbc015a6cdf2df124d1",
       "renderDisplay": {
         "sourceSize": [
           512,
@@ -94,7 +124,36 @@
           0
         ]
       },
-      "comparison": "three-quarter.png"
+      "comparison": "three-quarter.png",
+      "camera": {
+        "target": [
+          0.0,
+          0.0,
+          736.7999877929688
+        ],
+        "eye": [
+          2828.0,
+          -2828.0,
+          736.7999877929688
+        ],
+        "requestedScale": 1856.346,
+        "orthographicScale": 1856.346,
+        "resolution": [
+          512,
+          1024
+        ],
+        "detailFit": false,
+        "cameraBounds": {
+          "x": [
+            -439.64398193359375,
+            348.0023498535156
+          ],
+          "y": [
+            -736.8002319335938,
+            713.699951171875
+          ]
+        }
+      }
     },
     {
       "id": "side",
@@ -115,7 +174,7 @@
         1024
       ],
       "rawRender": "raw/side.png",
-      "rawSha256": "2754ee38d0ae049ef5ee6f4a9540fdb5347957bff4bd4259eae5008ba23b9ede",
+      "rawSha256": "217fa360d2e3afd0da24e2d9fb9b3bf0c10f98a0385e88305c3f7c412d21d2ad",
       "renderDisplay": {
         "sourceSize": [
           512,
@@ -131,7 +190,36 @@
           0
         ]
       },
-      "comparison": "side.png"
+      "comparison": "side.png",
+      "camera": {
+        "target": [
+          0.0,
+          0.0,
+          736.7999877929688
+        ],
+        "eye": [
+          4000.0,
+          0.0,
+          736.7999877929688
+        ],
+        "requestedScale": 1856.346,
+        "orthographicScale": 1856.346,
+        "resolution": [
+          512,
+          1024
+        ],
+        "detailFit": false,
+        "cameraBounds": {
+          "x": [
+            -295.20001220703125,
+            191.50009155273438
+          ],
+          "y": [
+            -736.8001708984375,
+            713.699951171875
+          ]
+        }
+      }
     },
     {
       "id": "back",
@@ -152,7 +240,7 @@
         1024
       ],
       "rawRender": "raw/back.png",
-      "rawSha256": "5413e63f167316a9fac29bbc471c35471924b60ce7ea6d28355367f3bd9b9541",
+      "rawSha256": "ee379a3ea7264e8191ec15a124fb8ee8db37b55f78ae4c068197b5ecf629ef8a",
       "renderDisplay": {
         "sourceSize": [
           512,
@@ -168,7 +256,36 @@
           0
         ]
       },
-      "comparison": "back.png"
+      "comparison": "back.png",
+      "camera": {
+        "target": [
+          0.0,
+          0.0,
+          736.7999877929688
+        ],
+        "eye": [
+          0.0,
+          4000.0,
+          736.7999877929688
+        ],
+        "requestedScale": 1856.346,
+        "orthographicScale": 1856.346,
+        "resolution": [
+          512,
+          1024
+        ],
+        "detailFit": false,
+        "cameraBounds": {
+          "x": [
+            -381.0009765625,
+            380.999755859375
+          ],
+          "y": [
+            -736.8006591796875,
+            713.6995239257812
+          ]
+        }
+      }
     },
     {
       "id": "head-front",
@@ -189,7 +306,7 @@
         512
       ],
       "rawRender": "raw/head-front.png",
-      "rawSha256": "4e081c5c9f8e576389ad6c93c5c8d87f7aae84ec9aa826678f430b546a6e3b42",
+      "rawSha256": "0d996ec0a3da15e6a563501792c77cda1be4adc7641ebfaba3743e74c9479f36",
       "renderDisplay": {
         "sourceSize": [
           768,
@@ -205,7 +322,36 @@
           0
         ]
       },
-      "comparison": "head-front.png"
+      "comparison": "head-front.png",
+      "camera": {
+        "target": [
+          0.0,
+          0.0,
+          1247.0
+        ],
+        "eye": [
+          0.0,
+          -2000.0,
+          1247.0
+        ],
+        "requestedScale": 480,
+        "orthographicScale": 480,
+        "resolution": [
+          768,
+          512
+        ],
+        "detailFit": true,
+        "cameraBounds": {
+          "x": [
+            -127.99076843261719,
+            127.99076843261719
+          ],
+          "y": [
+            -140.99851989746094,
+            143.39772033691406
+          ]
+        }
+      }
     },
     {
       "id": "head-side",
@@ -226,7 +372,7 @@
         512
       ],
       "rawRender": "raw/head-side.png",
-      "rawSha256": "78fef3b86aeab5bf482a862b907e5bf47e015c2b15699e1c38fea13108e1e30b",
+      "rawSha256": "049c30cb66e4b7ff3e802010c5f6fdde0e06a575fe807360fa69ee4e3b9b7831",
       "renderDisplay": {
         "sourceSize": [
           768,
@@ -242,7 +388,36 @@
           0
         ]
       },
-      "comparison": "head-side.png"
+      "comparison": "head-side.png",
+      "camera": {
+        "target": [
+          0.0,
+          0.0,
+          1247.0
+        ],
+        "eye": [
+          2000.0,
+          0.0,
+          1247.0
+        ],
+        "requestedScale": 480,
+        "orthographicScale": 480,
+        "resolution": [
+          768,
+          512
+        ],
+        "detailFit": true,
+        "cameraBounds": {
+          "x": [
+            -131.0,
+            104.992431640625
+          ],
+          "y": [
+            -140.998291015625,
+            143.39794921875
+          ]
+        }
+      }
     },
     {
       "id": "head-above",
@@ -263,7 +438,7 @@
         512
       ],
       "rawRender": "raw/head-above.png",
-      "rawSha256": "f16ce9cfd24bd77f75caad40e6b59c666668d012b2bedff2ec7467754202eddc",
+      "rawSha256": "ddc0cb22186ed5f396cb389f138a3a1b7e4bd51253a471b5b35aa43781a547ff",
       "renderDisplay": {
         "sourceSize": [
           768,
@@ -279,7 +454,36 @@
           0
         ]
       },
-      "comparison": "head-above.png"
+      "comparison": "head-above.png",
+      "camera": {
+        "target": [
+          0.0,
+          0.0,
+          1247.0
+        ],
+        "eye": [
+          0.0,
+          0.0,
+          3247.0
+        ],
+        "requestedScale": 480,
+        "orthographicScale": 480,
+        "resolution": [
+          768,
+          512
+        ],
+        "detailFit": true,
+        "cameraBounds": {
+          "x": [
+            -127.99076843261719,
+            127.99076843261719
+          ],
+          "y": [
+            -131.00009155273438,
+            104.99234008789062
+          ]
+        }
+      }
     },
     {
       "id": "halo",
@@ -300,7 +504,7 @@
         512
       ],
       "rawRender": "raw/halo.png",
-      "rawSha256": "1cf3a64882dcfbe52c9c41ad626f91db4e747f039b41690b72b45c884c37cead",
+      "rawSha256": "c851e884a39e7c9d5046ef6b73d22c5036096ed0aa6610e5a1efb0cdcf5b8d6e",
       "renderDisplay": {
         "sourceSize": [
           768,
@@ -316,7 +520,36 @@
           0
         ]
       },
-      "comparison": "halo.png"
+      "comparison": "halo.png",
+      "camera": {
+        "target": [
+          0.0,
+          142.0,
+          1280.0
+        ],
+        "eye": [
+          0.0,
+          -2000.0,
+          1280.0
+        ],
+        "requestedScale": 525,
+        "orthographicScale": 544.1481082997424,
+        "resolution": [
+          768,
+          512
+        ],
+        "detailFit": true,
+        "cameraBounds": {
+          "x": [
+            -147.49998474121094,
+            147.49998474121094
+          ],
+          "y": [
+            -167.00039672851562,
+            170.49974060058594
+          ]
+        }
+      }
     },
     {
       "id": "right-arm",
@@ -337,7 +570,7 @@
         448
       ],
       "rawRender": "raw/right-arm.png",
-      "rawSha256": "84c9c1f960c059d2d9ba794d07a05e40fee2992c21a63c46340295d2b9b766c5",
+      "rawSha256": "d4a82e3f895b3da37a7f46737688250e5bcc030b2326e437aa05e55d473fdd47",
       "renderDisplay": {
         "sourceSize": [
           1520,
@@ -353,7 +586,36 @@
           0
         ]
       },
-      "comparison": "right-arm.png"
+      "comparison": "right-arm.png",
+      "camera": {
+        "target": [
+          300.0,
+          -35.0,
+          0.0
+        ],
+        "eye": [
+          300.0,
+          -35.0,
+          3000.0
+        ],
+        "requestedScale": 880,
+        "orthographicScale": 923.4043202501663,
+        "resolution": [
+          1520,
+          448
+        ],
+        "detailFit": true,
+        "cameraBounds": {
+          "x": [
+            -434.0000305175781,
+            408.73590087890625
+          ],
+          "y": [
+            -110.99996948242188,
+            99.00003814697266
+          ]
+        }
+      }
     },
     {
       "id": "sword-flat",
@@ -374,7 +636,7 @@
         284
       ],
       "rawRender": "raw/sword-flat.png",
-      "rawSha256": "ecf5836ab1701881c90e7faef87b7f352d7f6a56d21f7773a43ad510e3392d74",
+      "rawSha256": "de6affec4861f72a109a39e47e98e1cf16d0deece44ded026b8643b8da6e738f",
       "renderDisplay": {
         "sourceSize": [
           1520,
@@ -390,7 +652,36 @@
           0
         ]
       },
-      "comparison": "sword-flat.png"
+      "comparison": "sword-flat.png",
+      "camera": {
+        "target": [
+          0.0,
+          300.0,
+          0.0
+        ],
+        "eye": [
+          0.0,
+          300.0,
+          2000.0
+        ],
+        "requestedScale": 630,
+        "orthographicScale": 638.2978723404256,
+        "resolution": [
+          1520,
+          284
+        ],
+        "detailFit": true,
+        "cameraBounds": {
+          "x": [
+            -300.0,
+            300.0
+          ],
+          "y": [
+            -53.0000114440918,
+            53.0000114440918
+          ]
+        }
+      }
     },
     {
       "id": "sword-edge",
@@ -411,7 +702,7 @@
         90
       ],
       "rawRender": "raw/sword-edge.png",
-      "rawSha256": "9c50351d1209c2c6263315c7c8f679fd7311381f1c13fc6d19ff21c139e80aa6",
+      "rawSha256": "b47bda81690bf80c8502c3781c0b4645a45b9b25387d5a54f356041f20730b62",
       "renderDisplay": {
         "sourceSize": [
           1520,
@@ -427,7 +718,36 @@
           0
         ]
       },
-      "comparison": "sword-edge.png"
+      "comparison": "sword-edge.png",
+      "camera": {
+        "target": [
+          0.0,
+          300.0,
+          0.0
+        ],
+        "eye": [
+          2000.0,
+          300.0,
+          0.0
+        ],
+        "requestedScale": 630,
+        "orthographicScale": 638.2980671334774,
+        "resolution": [
+          1520,
+          90
+        ],
+        "detailFit": true,
+        "cameraBounds": {
+          "x": [
+            -299.9999084472656,
+            300.0000915527344
+          ],
+          "y": [
+            -11.000089645385742,
+            10.99991512298584
+          ]
+        }
+      }
     }
   ],
   "framingNotes": []

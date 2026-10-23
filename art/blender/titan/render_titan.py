@@ -1,4 +1,8 @@
-"""Render Phase1 review only. Does not save cameras, visibility or poses to .blend."""
+"""Render standing Phase 1 step 2 review only; never save scene changes.
+
+Body views retain G1's fixed page scale. Detail cameras only widen when
+necessary to keep the entire selected assembly inside a 3% image margin.
+"""
 import bpy,math,sys,json
 from pathlib import Path
 from mathutils import Vector,Matrix
@@ -23,8 +27,10 @@ camera.type='ORTHO';camera.clip_start=.1;camera.clip_end=20000
 meshes=[o for o in scene.objects if o.type=='MESH']
 rig=bpy.data.objects['titan_rig']
 worlds={o.name:o.matrix_world.copy() for o in meshes}
+framing_path=OUT/'framing.json'
+framing=json.loads(framing_path.read_text()) if framing_path.exists() else {}
 
-def render(name,target,eye,scale,size,predicate,up='Y',transform=None):
+def render(name,target,eye,scale,size,predicate,up='Y',transform=None,fit_detail=False):
     for o in meshes:
         o.hide_render=not predicate(o)
         if transform and not o.hide_render:
@@ -35,7 +41,22 @@ def render(name,target,eye,scale,size,predicate,up='Y',transform=None):
     cam.location=eye;cam.rotation_euler=(target-eye).to_track_quat('-Z',up).to_euler()
     if name=='sword-flat':
         cam.rotation_euler=Matrix(((0,-1,0),(1,0,0),(0,0,1))).to_euler()
+    # Camera-space bounds use the same rigid review transforms as the render.
+    # Widening an orthographic camera preserves proportions in both axes.
+    bpy.context.view_layer.update()
+    inverse=cam.matrix_world.inverted()
+    corners=[inverse@(o.matrix_world@Vector(c)) for o in meshes if not o.hide_render for c in o.bound_box]
+    half_width=.5*size[0]/max(size);half_height=.5*size[1]/max(size)
+    requested_scale=scale
+    if fit_detail:
+        margin=.94  # 3% empty border on each side, including large pauldrons.
+        needed=max(max(abs(v.x)/(half_width*margin),abs(v.y)/(half_height*margin)) for v in corners)
+        scale=max(scale,needed)
     camera.ortho_scale=scale
+    framing[name]={'target':list(target),'eye':list(eye),'requestedScale':requested_scale,
+                   'orthographicScale':scale,'resolution':list(size),'detailFit':fit_detail,
+                   'cameraBounds':{'x':[min(v.x for v in corners),max(v.x for v in corners)],
+                                   'y':[min(v.y for v in corners),max(v.y for v in corners)]}}
     scene.render.resolution_x,scene.render.resolution_y=size
     scene.render.filepath=str(OUT/(name+'.png'))
     bpy.ops.render.render(write_still=True)
@@ -50,20 +71,21 @@ def want(name):return not selected or name in selected
 body_views=[('front',(0,-4000,736.8)),('three-quarter',(2828,-2828,736.8)),('side',(4000,0,736.8)),('back',(0,4000,736.8))]
 for name,eye in body_views:
     if want(name):render(name,(0,0,736.8),eye,1856.346,(512,1024),body)
-# Keep all body cameras level. Crown1300->y201, sole0->y918: target736.14.
+# Keep all body cameras level. Crown1300->y201, sole0->y918: target736.8.
 # Closeups are whole-object comparisons, not claims of matching G2's larger horns.
 for name,eye in [('head-front',(0,-2000,1247)),('head-side',(2000,0,1247)),('head-above',(0,0,3247))]:
-    if want(name):render(name,(0,0,1247),eye,480,(768,512),head)
-if want('halo'):render('halo',(0,142,1280),(0,-2000,1280),525,(768,512),halo)
+    if want(name):render(name,(0,0,1247),eye,480,(768,512),head,fit_detail=True)
+if want('halo'):render('halo',(0,142,1280),(0,-2000,1280),525,(768,512),halo,fit_detail=True)
 if want('right-arm'):
     # Reorient the isolated arm as a rigid review assembly, shoulder left, palm up.
     pivot=Vector((-235,0,1085))
     transform=Matrix.Rotation(-math.pi/2,4,'X')@Matrix.Rotation(-math.pi/2,4,'Y')@Matrix.Translation(-pivot)
-    render('right-arm',(300,-35,0),(300,-35,3000),880,(1520,448),arm,transform=transform)
+    render('right-arm',(300,-35,0),(300,-35,3000),880,(1520,448),arm,transform=transform,fit_detail=True)
 if want('sword-flat'):
     # Camera local right is world+Y, making pommel left and point right.
-    render('sword-flat',(0,300,0),(0,300,2000),630,(1520,284),sword,up='X')
+    render('sword-flat',(0,300,0),(0,300,2000),630,(1520,284),sword,up='X',fit_detail=True)
 if want('sword-edge'):
-    render('sword-edge',(0,300,0),(2000,300,0),630,(1520,90),sword)
+    render('sword-edge',(0,300,0),(2000,300,0),630,(1520,90),sword,fit_detail=True)
 for o in meshes:o.matrix_world=worlds[o.name];o.hide_render=False
+framing_path.write_text(json.dumps(framing,indent=2)+'\n')
 print('TITAN_RENDERS',str(OUT))

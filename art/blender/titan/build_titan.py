@@ -1,6 +1,6 @@
-"""Titan's Rest — Phase 1 step 1. Run with Blender 5.2.2 --background --python.
+"""Titan's Rest — Phase 1 step 2. Run with Blender 5.2.2 --background --python.
 
-Procedural source for the standing approval blockout, not the wreck or final LODs.
+Procedural source for the standing refinement review, not the wreck or final LODs.
 All dimensions are metres. Front is -Y; anatomical left is +X.
 """
 import bpy, bmesh, math, json, sys
@@ -21,7 +21,7 @@ def fresh():
     # This script is run in a new background process, never in an artist's scene.
     bpy.ops.wm.read_factory_settings(use_empty=True)
     s = bpy.context.scene
-    s.name = 'Titan — standing blockout'
+    s.name = 'Titan — standing refinement'
     s.unit_settings.system='METRIC'; s.unit_settings.scale_length=1
     s.unit_settings.length_unit='METERS'
     mats={}
@@ -50,7 +50,7 @@ def mesh(bone, name, verts, faces, mat='armour', face_mats=None):
     for i,p in enumerate(data.polygons): p.material_index=list(MATS).index(face_mats[i] if face_mats else mat)
     o=bpy.data.objects.new('titan/'+bone+'/'+name,data)
     (SWORD if bone=='sword' else BODY).objects.link(o)
-    o['titan_part']=bone; o['phase']='1.1'; PARTS.append(o)
+    o['titan_part']=bone; o['part']=bone; o['phase']='1.2'; PARTS.append(o)
     return o
 
 def loft(bone,name,rings,mat='armour',bands=None):
@@ -97,7 +97,7 @@ def cylinder(bone,name,a,b,r,mat='frame',n=16,r2=None):
     return loft(bone,name,rings,mat)
 
 def ball(bone,name,p,r,mat='slate'):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,radius=1,location=p)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24,ring_count=12,radius=1,location=p)
     o=bpy.context.object; o.name='titan/'+bone+'/'+name
     for c in list(o.users_collection):c.objects.unlink(o)
     BODY.objects.link(o)
@@ -106,7 +106,7 @@ def ball(bone,name,p,r,mat='slate'):
     for layer in list(o.data.uv_layers):o.data.uv_layers.remove(layer)
     o.data.materials.append(MATS[mat])
     for e in o.data.edges:e.use_edge_sharp=True
-    o['titan_part']=bone; o['phase']='1.1'; PARTS.append(o); o.select_set(False)
+    o['titan_part']=bone; o['part']=bone; o['phase']='1.2'; PARTS.append(o); o.select_set(False)
     return o
 
 def tube(bone,name,points,radii,mat='gold',n=8):
@@ -391,6 +391,9 @@ bpy.context.view_layer.objects.active=blade; bpy.ops.object.join()
 blade.name='titan/sword/assembly'; blade['titan_part']='sword'; blade['role']='sword'
 blade.select_set(False)
 
+# Step 2 reshapes only geometry; reviewed body pivots remain immutable.
+exec(compile((HERE/'refine_titan.py').read_text(),str(HERE/'refine_titan.py'),'exec'))
+
 # Armature and rigid bone parenting, preserving authored metre coordinates.
 data=bpy.data.armatures.new('titan_rig'); rig=bpy.data.objects.new('titan_rig',data)
 bpy.context.scene.collection.objects.link(rig); bpy.context.view_layer.objects.active=rig; rig.select_set(True)
@@ -403,15 +406,15 @@ bpy.ops.object.mode_set(mode='OBJECT'); rig.show_in_front=True; data.display_typ
 for o in BODY.objects:
     world=o.matrix_world.copy(); o.parent=rig; o.parent_type='BONE'; o.parent_bone=o['titan_part']
     bpy.context.view_layer.update(); o.matrix_world=world
-rig['phase']='1.1 — standing blockout only'; rig['source_commit']='e7c11d303c9c201bfedc976e204c3789cf911797'
+rig['phase']='1.2 — standing refinement only'; rig['source_commit']=__import__('subprocess').check_output(['git','rev-parse','HEAD'],cwd=str(ROOT),text=True).strip()
 rig['units']='metres; Blender -Y forward, Z up, +X anatomical left'
 rig['pose_notes']='Rigid segments. Move upper-arm and shoulder-cap bones independently. Halo detach with Keep Transform. Sword is independent.'
 for b in data.bones:b.use_deform=False
 for s in bpy.data.screens:
     for area in s.areas:
         if area.type=='VIEW_3D':area.spaces.active.clip_end=20000;area.spaces.active.clip_start=.5
-bpy.context.scene['phase']='1.1'
-bpy.context.scene['brief']='No step2 refinement; no wreck pose, breaks, corridors, road fitting or LODs.'
+bpy.context.scene['phase']='1.2'
+bpy.context.scene['brief']='Phase1 step2 standing refinement; no wreck pose, breaks, corridors, road fitting or LODs.'
 bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True); bpy.context.view_layer.objects.active=rig
 bpy.context.view_layer.update()
 
