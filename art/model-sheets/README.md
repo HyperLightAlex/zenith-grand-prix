@@ -114,10 +114,10 @@ Make G1 first and check it before the others.
 
 | Sheet | File | Notes |
 |---|---|---|
-| G1 The titan | | to be made |
-| G2 Head and halo | | to be made |
-| G3 Arm and sword | | to be made |
-| G4 Inside its chest | | to be made |
+| G1 The titan | model-g1-titan.png | The design, for the build. The four views agree on its parts and proportions: the small horned head with its forehead jewel, the halo on struts off its back, the shield breastplate with its ridge and red stripes, the curved plates caging its ribs, the vents on its back. Not followed: its hands, drawn slate with gold knuckles; G3's armoured hand is used, since the road climbs onto its palm. The trim came out a brighter gold than the #C9A04A asked for; kept, as it reads well against the white sand |
+| G2 Head and halo | model-g2-titan-head.png | The head's shape and the halo. The horns are larger than on G1; the build follows G2's shape at a size between the two. The halo is drawn standing on its three struts rather than off a back; the wreck uses it that way, torn off and standing in the sand on its struts. Its engraving is plainer than asked; the R4 bronze tile carries the fine channels |
+| G3 Arm and sword | model-g3-titan-arm.png | The right arm and hand, and the sword. The palm is one broad plate, the fingers ivory in three segments. The blade is about 19 times as long as it is wide, as asked; the guard is a crescent swept toward the point rather than flat-topped, and the road passes over its middle. The flat and edge views line up pommel to point |
+| G4 Inside its chest | model-g4-titan-chest.png | The inside: an oval section with the armour shell, ring frames, a great open chamber above the spine (room for the Ribcage loop) and the two corridors either side of the spine; the wound's peeled plates, snapped ribs, hanging cables and drifted sand; a corridor lit through its roof; a rib's joint. Panels two to four came out as full pictures rather than on the grey, which does not matter for a reference |
 
 Image model: record the model, its version and the image size here when the
 sheets are made.
