@@ -149,7 +149,7 @@ function lerpAngle(a: number, b: number, t: number): number {
   return a + d * t;
 }
 
-const DUST: Record<string, number> = { meridian: 0x9aa2b0, canyon: 0xc98a5a, helios: 0xe8eef8, crucible: 0x8a7484, frostline: 0xdce6f6 };
+const DUST: Record<string, number> = { meridian: 0x9aa2b0, canyon: 0xc98a5a, helios: 0xe8eef8, crucible: 0x8a7484, frostline: 0xdce6f6, titan: 0xe8dcc0 };
 
 /** A seat's mech: its custom mech if it flies one, its faction's stock mech otherwise. */
 function frameFor(m: MechState, livery: Livery): MechRig {

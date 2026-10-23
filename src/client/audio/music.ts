@@ -17,7 +17,7 @@ export type TrackName = 'menu' | 'race' | 'results' | 'hangar';
 
 export interface TrackInfo {
   name: TrackName;
-  /** Which circuit's race music ('meridian', 'canyon', 'helios', 'crucible', 'frostline'); the menu's is 'menu'. */
+  /** Which circuit's race music ('meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan'); the menu's is 'menu'. */
   style: string;
   /** Arrangement phase (the race track follows the lap phase; the menu is always 1). */
   phase: number;
@@ -526,8 +526,8 @@ const HELIOS: RaceStyle = {
 };
 
 // Neon Crucible has only its recorded song: without it, Helios's. Frostline
-// has none yet, and plays Helios's.
-const STYLES: Record<string, RaceStyle> = { meridian: MERIDIAN, canyon: CANYON, helios: HELIOS, crucible: HELIOS, frostline: HELIOS };
+// and Titan's Rest have none yet, and play Helios's and Canyon's.
+const STYLES: Record<string, RaceStyle> = { meridian: MERIDIAN, canyon: CANYON, helios: HELIOS, crucible: HELIOS, frostline: HELIOS, titan: CANYON };
 
 /** The circuits that have race music of their own. */
 export const RACE_STYLES = Object.keys(STYLES);
@@ -926,7 +926,7 @@ class MenuTrack extends Track {
   }
 }
 
-/** `style` picks the race music: a circuit's theme id ('meridian', 'canyon', 'helios', 'crucible', 'frostline'). */
+/** `style` picks the race music: a circuit's theme id ('meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan'). */
 export function createTrack(name: TrackName, ctx: Ctx, white: AudioBuffer, now: number, style = 'meridian'): MusicTrack {
   return name === 'race' ? new RaceTrack(ctx, white, now, style) : new MenuTrack(ctx, now);
 }

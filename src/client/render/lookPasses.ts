@@ -467,6 +467,8 @@ export const LOOK_PALETTES: Record<string, LookPalette> = {
   crucible: { ink: 0x12081e, shadowGrade: [0.95, 0.92, 1.07], lightGrade: [1.05, 0.99, 0.95], lift: [0.006, 0.003, 0.012] },
   // Blue hour on the ice: indigo ink, cold blue shadows, the aurora's green faintly in the light.
   frostline: { ink: 0x0c1430, shadowGrade: [0.93, 0.97, 1.08], lightGrade: [1.0, 1.03, 1.02], lift: [0.004, 0.008, 0.014] },
+  // Morning in the white desert: slate ink, cool lilac shadows, warm clean light.
+  titan: { ink: 0x1c1a2a, shadowGrade: [0.96, 0.96, 1.05], lightGrade: [1.05, 1.02, 0.95], lift: [0.006, 0.006, 0.008] },
 };
 
 /**

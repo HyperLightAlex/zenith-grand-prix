@@ -13,6 +13,7 @@ background sheets in `art/bg-sheets`.
 | T3 Circuit boards and banner | Three boards of the circuits' names on green, and the start banner | The circuit's own board along its track, and the banner over the line |
 | T4 Neon Crucible | Its board on green, in T3's design, and the neon sign over the way into the pit | Its board along its track (it keeps the plain one until then), and the sign hung from the gantry |
 | T5 Frostline | Its board on green, in T3's design, and the sign over the Ice Barrel's mouth | Its board along its track, and the sign over the road where it climbs into the glacier |
+| T6 Titan's Rest | Its board on green, in T3's design, and the sign over the road onto the titan's hand | Its board along its track, and the sign where the road climbs onto the titan |
 
 What stays as the game draws it: the lane lines, edge lines, kerbs, chevrons,
 the start line and grid boxes, the charge strips, speed pads, cell gates,
@@ -29,6 +30,7 @@ stay crisp and bright, so the paintings go underneath them, never over them.
 | T3 Circuit boards and banner | track-t3-circuits.png | in the game. All spelt right, each emblem as asked; cut cleanly. The boards came out 2.25:1 and the banner 9.9:1 (not 3.2:1 and 14.7:1), so they too stand in frames of their own shape: the banner over the line a little deeper than the plain one |
 | T4 Neon Crucible | track-t4-crucible.png | in the game. Made with T3 attached; both spelt right, the emblem as asked, cut cleanly. The board came out 3.26:1 (the others 2.25:1) and the sign 3.23:1 |
 | T5 Frostline | track-t5-frostline.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the aurora's arcs in cyan and violet), cut cleanly. The board came out 3.12:1 and the sign 4.14:1 |
+| T6 Titan's Rest | track-t6-titan.png | to be made |
 
 ## The prompt
 
@@ -113,4 +115,22 @@ The same kit and style as the attached sheet, for a fifth circuit: Frostline, ra
 
 - Top half: one board in the middle 512x512 cell of the top row, exactly 480 px wide and 150 px tall, centred in its cell, in exactly the design of the three circuit boards on the attached sheet: deep teal board #103B3F, pale cyan #E9FBFF lettering, an electric-cyan #35F0FF stripe, and a small flat emblem of the circuit at the left. FROSTLINE, the emblem a glacier's peak under an arc of aurora in cyan and violet (no green). Nothing in the other two cells of the top row.
 - Bottom half: the sign over the road at the mouth of the Ice Barrel, where it climbs into the glacier, one board exactly 960 px wide and 300 px tall, centred left to right with its middle 768 px from the top: a deep indigo board #0C1430 with FROSTLINE across it in one line of bold white capitals, a band beneath the lettering shading from cyan #35F0FF through blue to violet #A05CFF like the aurora's light, and a thin pale ice-blue #C8E4FF line running round the board just inside its edge.
+```
+
+T6, made later than the others for the sixth circuit, with sheet T3
+attached so the board matches the other circuits' boards:
+
+```
+ZENITH GP: TRACK KIT. SHEET T6: TITAN'S REST (attach sheet T3; one sheet, on green)
+
+The same kit and style as the attached sheet, for a sixth circuit: Titan's Rest, raced on a clear morning in a white desert on and around the wreck of a colossal fallen mech, half buried in the dunes.
+
+- Art from a 1980s Japanese TV mecha anime: signs painted as clean, flat graphic design, the way background artists painted signage into a scene.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, blur, film grain or noise (the game adds its own grain and glow).
+- 1536x1024, landscape. Paint it on perfectly flat pure green, #00FF00: no shading, texture, gradient, glow or shadow on the green. Nothing in the art itself may be green or close to it. Crisp edges against the green, with no soft halo.
+- Every board is seen straight-on, flat, a perfect rectangle with square corners, evenly lit, with no frame, posts, stand, reflections or perspective (the game builds the frames).
+- Lettering: spell every word exactly as given, in capitals, and nothing else.
+
+- Top half: one board in the middle 512x512 cell of the top row, exactly 480 px wide and 150 px tall, centred in its cell, in exactly the design of the three circuit boards on the attached sheet: deep teal board #103B3F, pale cyan #E9FBFF lettering, an electric-cyan #35F0FF stripe, and a small flat emblem of the circuit at the left. TITAN'S REST, the emblem a giant mech's helmet half buried in a dune with a sword standing beside it. Nothing in the other two cells of the top row.
+- Bottom half: the sign over the road where it climbs onto the fallen titan's hand, one board exactly 960 px wide and 300 px tall, centred left to right with its middle 768 px from the top: a sun-faded red board #B84A3A with TITAN'S REST across it in one line of bold ivory #F3EEDF capitals, a slate #3A3F4A stripe beneath the lettering, and a thin ivory line running round the board just inside its edge, its paint a little worn and chipped at the corners like the titan's own armour.
 ```

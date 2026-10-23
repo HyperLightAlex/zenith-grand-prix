@@ -74,6 +74,7 @@ export const TRACK_BLURBS: Record<string, string> = {
   helios: 'Built for speed and air, above the clouds. The Drop, a full loop, the Carousel, and Split Decision: a jump or the safe way round.',
   crucible: 'Down and back up, at night in an open-pit mine. The Leap, the Hook, a straight drop into the Drill, and the Coil up the pit wall, one turn of it with nothing on the inside.',
   frostline: 'An ice shelf under the aurora. The Aurora Split, a bridge with no barrier or the caves; the Ice Barrel up into the glacier; the Calving off its face; the Icefall and the Aurora Loop.',
+  titan: 'On and through a fallen colossus in a white desert. Up its arm, through its halo, off its crown; a loop inside its ribs, a fork through its body, and twice round down the blade of its sword.',
 };
 
 /** The match formats on offer. A single race is a series of one. */

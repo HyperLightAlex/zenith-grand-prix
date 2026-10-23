@@ -1,4 +1,4 @@
-// The 3D circuits: Corkscrew Canyon, Helios Drop, Neon Crucible and Frostline. Their
+// The 3D circuits: Corkscrew Canyon, Helios Drop, Neon Crucible, Frostline and Titan's Rest. Their
 // geometry, and the things only they have: jumps and falls, open edges, forks
 // with a wall down the middle, speed pads, loops and corkscrews, a straight
 // drop and a spiral climb.
@@ -21,6 +21,7 @@ import {
   MERIDIAN,
   MODE,
   PHASE,
+  TITANS_REST,
   TRACKS,
   buildTrack,
   closure,
@@ -44,9 +45,9 @@ import type { CircuitDef, MechInput, RaceState, SimEvent, Track } from '../src/s
 import { pitOf } from '../src/client/render/pit';
 import { findNonFinite, hash, makeSeats, snapshot } from './helpers';
 
-const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE];
+const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST];
 /** The circuits with a fork. */
-const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE];
+const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE, TITANS_REST];
 const BUILT = new Map<string, Track>(CIRCUITS.map((d) => [d.id, buildTrack(d)]));
 const track = (def: CircuitDef) => BUILT.get(def.id)!;
 
@@ -67,7 +68,7 @@ const openRuns = (t: Track) => runs(t, (i) => !t.wallL[i] && !t.wallR[i] && t.ro
 
 describe('the circuit list', () => {
   it('has Meridian first, then the 3D circuits, each found by id', () => {
-    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline']);
+    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan']);
     for (const d of TRACKS) expect(trackById(d.id)).toBe(d);
     // An unknown id falls back to Meridian rather than failing.
     expect(trackById('nowhere')).toBe(MERIDIAN);
@@ -739,6 +740,113 @@ describe('Frostline', () => {
     let minUp = 1;
     for (let s = l0; s < l1; s += 4) minUp = Math.min(minUp, t.upY[at(s)]);
     expect(minUp).toBeLessThan(-0.95);
+  });
+});
+
+describe("Titan's Rest", () => {
+  const def = TITANS_REST;
+  const t = track(def);
+  const starts = pieceStarts(def);
+  const piece = (name: string): [number, number] => {
+    const i = def.pieces.findIndex((p) => p.name === name);
+    if (i < 0) throw new Error(`no piece ${name}`);
+    return [starts[i], i + 1 < starts.length ? starts[i + 1] : t.length];
+  };
+  const at = (s: number) => Math.floor(wrapS(t, s) / t.ds) % t.n;
+  const fork = t.forks[0];
+
+  it('climbs the Arm to the shoulder, high over the sand', () => {
+    expect(t.py[at(piece('T1 the Shoulder')[0])] - t.py[at(0)]).toBeGreaterThan(160);
+  });
+
+  it('rolls through the Halo and turns over in the Ribcage, held to the road', () => {
+    for (const name of ['the Halo', 'the Ribcage']) {
+      const [a, b] = piece(name);
+      let minUp = 1;
+      for (let s = a + 8; s < b - 8; s += 4) {
+        minUp = Math.min(minUp, t.upY[at(s)]);
+        expect(t.mag[at(s)], name).toBe(1);
+      }
+      expect(minUp, name).toBeLessThan(-0.9);
+    }
+  });
+
+  it('wraps the Sword: twice round the outside of its blade, the road facing away from it all the way', () => {
+    const [a, b] = piece('the Sword');
+    const i0 = at(a);
+    const i1 = at(b);
+    // The blade: the line the road wraps round, 40 below where it starts.
+    const ax = [t.px[i0] - t.ux[i0] * 40, t.py[i0] - t.uy[i0] * 40, t.pz[i0] - t.uz[i0] * 40];
+    const bx = [t.px[i1] - t.ux[i1] * 40, t.py[i1] - t.uy[i1] * 40, t.pz[i1] - t.uz[i1] * 40];
+    const dir = [bx[0] - ax[0], bx[1] - ax[1], bx[2] - ax[2]];
+    const len = Math.hypot(dir[0], dir[1], dir[2]);
+    let turns = 0;
+    let prevUp = t.uy[i0];
+    for (let s = a + 4; s < b - 4; s += 4) {
+      const i = at(s);
+      const rel = [t.px[i] - ax[0], t.py[i] - ax[1], t.pz[i] - ax[2]];
+      const along = (rel[0] * dir[0] + rel[1] * dir[1] + rel[2] * dir[2]) / len;
+      const off = [rel[0] - (dir[0] / len) * along, rel[1] - (dir[1] / len) * along, rel[2] - (dir[2] / len) * along];
+      const r = Math.hypot(off[0], off[1], off[2]);
+      expect(r).toBeGreaterThan(38);
+      expect(r).toBeLessThan(42);
+      // Up points straight away from the blade.
+      expect((off[0] * t.ux[i] + off[1] * t.uy[i] + off[2] * t.uz[i]) / r).toBeGreaterThan(0.97);
+      expect(t.mag[i]).toBe(1);
+      if (prevUp < 0 && t.uy[i] >= 0) turns++;
+      prevUp = t.uy[i];
+    }
+    expect(turns).toBe(2);
+    // Down the blade from the hilt to the point.
+    expect(t.py[i0] - t.py[i1]).toBeGreaterThan(100);
+  });
+
+  it('splits through the Hull: the breastbone open on its outside, the corridors walled', () => {
+    for (let s = fork.s0 + 80; s < fork.s1 - 80; s += 8) {
+      expect(t.wallR[at(s)]).toBe(0);
+      expect(t.wallL[at(s)]).toBe(1);
+    }
+    expect(fork.right.pads).toBe(1);
+    expect(fork.left.gates).toBe(1);
+    const knocked = (d: number, push: number) => {
+      const { race, inputs } = quietRace(def);
+      const s = (fork.s0 + fork.s1) / 2;
+      place(race, t, 0, s, d, 100);
+      inputs[0].mx = push;
+      return stepFor(race, t, inputs, 60).some((e) => e.type === 'fall' && e.mech === 0);
+    };
+    expect(knocked(hwAt(t, (fork.s0 + fork.s1) / 2) - 3, 1)).toBe(true);
+    expect(knocked(-(hwAt(t, (fork.s0 + fork.s1) / 2) - 3), -1)).toBe(false);
+  });
+
+  it('clears the Crown Drop at the formation-lap limiter; well short of it, it falls to the sand', () => {
+    const [p0, p1] = piece('gap');
+    const [g0, g1] = gaps(t).find(([a, b]) => a < p1 && b > p0)!;
+    const run = (limiter: number) => {
+      const race = createRace(t, { seed: 1, seats: makeSeats('all'), rules: { limiter1: limiter } });
+      const inputs = race.mechs.map(() => emptyInput());
+      while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
+      // Off the speed pad, so the jump alone is tried.
+      place(race, t, 0, g0 - 70, 12, limiter);
+      race.mechs.forEach((o, k) => {
+        if (k) o.s = wrapS(t, g0 - 2500 - k * 30);
+      });
+      inputs[0].throttle = 1;
+      let landed = -1;
+      let fell = false;
+      for (let i = 0; i < 600 && landed < 0 && !fell; i++) {
+        stepRace(race, t, inputs);
+        for (const e of race.events) {
+          if (e.type === 'land' && e.mech === 0 && race.mechs[0].s > g0) landed = race.mechs[0].s;
+          if (e.type === 'fall' && e.mech === 0) fell = true;
+        }
+      }
+      return { landed, fell };
+    };
+    const lap1 = run(110);
+    expect(lap1.fell).toBe(false);
+    expect(lap1.landed).toBeGreaterThan(g1);
+    expect(run(75).fell).toBe(true);
   });
 });
 

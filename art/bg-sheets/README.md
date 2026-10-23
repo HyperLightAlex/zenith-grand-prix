@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-All five circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
+The first five circuits' sheets are in the game (`tools/bg/build_backgrounds.py`); Titan's Rest's are to be made.
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -52,6 +52,11 @@ All five circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
 | F1B Sky | bg-f1b-sky.png | horizon at 767 px, level with F1's; the aurora carries on across both joins |
 | F2 Horizon | bg-f2-horizon.png | three strips (mountains, a coast of glaciers, icebergs in the pack ice), bottoms level, ends matching; the mountains' strip is the shortest, 171 px |
 | F3 Surfaces | bg-f3-surfaces.png | cut and blended like M4: snow, ice cliff, pack ice, blue ice, the nunatak's rock, the frozen fall |
+| R1 Sky | bg-r1-sky.png | to be made |
+| R1B Sky | bg-r1b-sky.png | to be made |
+| R2 Horizon | bg-r2-horizon.png | to be made |
+| R3 Clouds | bg-r3-clouds.png | to be made |
+| R4 Surfaces | bg-r4-surfaces.png | to be made |
 
 ## Meridian Skyway
 
@@ -389,4 +394,82 @@ SHEET F1B: SKY, THE HALF FACING AWAY (make it after F1, with F1 attached)
 - Same size, style and palette as F1, the horizon at exactly the same height, the same flat haze below it and the same plain deep indigo along the top edge.
 - The other half of the sky, behind the viewer, facing away from the moon. Its left edge must continue seamlessly from F1's right edge, and its right edge seamlessly into F1's left edge, so the two side by side make the whole sky round.
 - No moon halo here: a deeper sky with more stars, the pink afterglow along the horizon a little stronger (the sun has just set on this side), and the aurora's curtains carrying on across it from F1's edges, joining them, in the same colours.
+```
+
+## Titan's Rest
+
+Morning in a white desert where a colossus fell in a war long over: a giant
+mech kilometres long lying on its back, half buried in the dunes, one arm
+flung out, its chest torn open to the ribs, the broken halo behind its head
+standing up out of the sand, and its sword stuck upright beside it. The road
+climbs its arm, splits through and over its chest, loops inside its ribs,
+rolls through the halo, and corkscrews down the sword's blade. Its colours
+keep it apart from Canyon's dusk: a low white-gold sun in a pale aqua sky,
+bone-white sand with cool blue shadows, the titan's ivory armour with faded
+red markings, its frame bronze and verdigris. The game draws the titan and
+everything near the road; these sheets are the painted world round it. Its
+board along the track and the sign over the road onto the titan's hand are
+on track sheet T6 (`art/track-sheets`).
+
+| Sheet | File |
+|---|---|
+| R1 Sky, facing the sun | bg-r1-sky.png |
+| R1B Sky, facing away | bg-r1b-sky.png |
+| R2 Horizon | bg-r2-horizon.png |
+| R3 Clouds | bg-r3-clouds.png |
+| R4 Surfaces | bg-r4-surfaces.png |
+
+```
+ZENITH GP: CIRCUIT BACKGROUNDS. TITAN'S REST (five sheets; make them one at a time, in order R1, R2, R3, R4, then R1B with R1 attached, each as its own image)
+
+The setting: a racing circuit in a desert of white sand on a clear, hazy morning, built on and around the wreck of a colossal fallen mech, kilometres long, lying on its back half buried in the dunes: one arm flung out across the sand, its chest torn open to its ribs, a broken halo ring standing up out of the sand behind its head, and its great sword stuck upright in the ground beside it. Out across the desert lie the half-buried wrecks of other fallen giants from the same ancient war. The game draws the road, the mechs, the titan and the nearby scenery; these sheets are the painted world around them.
+
+STYLE, ALL SHEETS
+- Background art from a 1980s Japanese TV mecha anime, painted by hand the way the background department did it: poster colour (gouache) on illustration board, skies airbrushed in smooth gradients, everything else painted in a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture. The morning painted clean and bright: warm light, cool blue-lilac shadows.
+- No ink outlines anywhere; background paintings had none.
+- Distance shown by atmospheric perspective: the further away, the paler and more it sinks into the warm, dusty haze.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, depth-of-field blur, film grain or noise (the game adds its own grain and glow).
+- Nothing but scenery: no people, living mechs, vehicles, aircraft, birds, animals, buildings, text, numbers, labels, logos, borders, signatures or watermarks.
+- Palette: clear aqua-blue #2F7FA8 high in the sky, pale aqua #9FD0DC, cream-gold haze #F2DCA8 along the horizon, the sun's white-gold #FFF4D6, dusty haze #D9C7A2, distant hills pale blue-lilac #A9AFCB, sand bone-white #EFE6D0 to pale ochre #D8BA8C with cool shadows #9AA2C8, the giants' armour weathered ivory #E6E0D2 and slate #6E7486 with faded red markings #B84A3A, their inner frames bronze #8A6A3A with verdigris #5FA08A, dark gunmetal #3A3F4A for blades.
+- Every sheet is 1536x1024, landscape.
+
+SHEETS 2 AND 3 ARE CUT OUT BY THE GAME
+- Paint them on perfectly flat pure green, #00FF00: no shading, texture, gradient, glow or shadow on the green.
+- Nothing in the art itself may be green or close to it: the verdigris stays a blue-teal (#5FA08A at its greenest), and there is no grass, cactus or other plant.
+- Crisp edges against the green, with no soft halo.
+
+SHEET R1: SKY, THE HALF FACING THE SUN (full bleed, no green screen)
+- Half the sky around the viewer, the half facing the sun, unrolled into one painting from the horizon at the bottom to straight overhead at the top edge. Its left edge should also continue seamlessly into its right edge.
+- The horizon is a perfectly straight, level line exactly three quarters of the way down (768 px from the top). Below it, only flat dusty haze (#D9C7A2); paint nothing there.
+- The sun is at the middle of the image, low in the morning sky, about 12 degrees up: its centre about 100 px above the horizon line. Paint its glow, a wide soft haze of white-gold fading into the sky, brightest close round it, but not the sun's disc itself (the game draws it).
+- An airbrushed gradient from clear aqua-blue at the top, through pale aqua, to a broad band of cream-gold haze along the horizon, warmest near the sun.
+- Clouds: a few small, flat-bottomed fair-weather clouds low over the horizon, their sides toward the sun lit gold-white, their shadowed sides a cool blue-lilac; a few thin high streaks of cirrus catching the light. Most of the sky clear.
+- The top edge is plain clear aqua-blue, even across the full width.
+
+SHEET R2: HORIZON (three strips on green)
+- Three separate horizontal strips stacked top to bottom with green between them. Each runs the full width of the image and is about 260 px tall.
+- Each strip's bottom edge is a perfectly straight, level line (it stands on the horizon), with the strip filled solid down to it. Each strip repeats: its left end must continue seamlessly into its right end.
+- Top strip, farthest: a long range of low, worn mountains in pale blue-lilac (#A9AFCB) sinking into the haze, low contrast, the sun-side slopes a touch warmer.
+- Middle strip: a graveyard of giants far off across the dunes: the half-buried wrecks of other colossal mechs, a hand reaching up out of the sand, a broken helmet, a curved spine, a fallen shoulder, swords and spears stuck in the ground at angles, in pale, hazy ivory, slate and faded red, softened by distance, among long, low dunes.
+- Bottom strip, nearest: dunes of bone-white and pale ochre sand with cool blue-lilac shadows in their hollows, a few dark slate outcrops of rock, and scattered smaller wreckage half buried: armour plates, a broken gun barrel, a fallen pylon.
+
+SHEET R3: CLOUDS (six cards on green)
+- Six separate clouds, one in each cell of an invisible 3x2 grid (cells 512x512), each centred in its cell and filling about 80% of it without touching the cell's edges or another cloud.
+- Morning fair-weather clouds lit low from one side by the sun: flat, level bottoms, billowing tops, the sides toward the sun gold-white #FFF4D6, the shadowed sides cool blue-lilac #9AA2C8, the bottoms a warm grey-lilac. Painted the way a cel background painter painted cumulus: defined, billowing shapes in three or four flat tones, separated crisply; no wispy, see-through or blurred edges.
+- Six different shapes: a tall towering cloud; a long, low, flat bank; a small round puff; a wide cloud with two rising heads; a line of small cloudlets kept together as one shape; a ragged cloud trailing a little at one end.
+
+SHEET R4: SURFACES (six tiling squares, full bleed)
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge must continue into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon) and evenly lit, with no cast shadows across it, no glow and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats.
+- 1, top left: the desert sand seen from straight above: bone-white to pale ochre, low wind ripples in two soft tones running one way, a scatter of darker grains. No footprints, tracks or plants.
+- 2, top middle: the titan's outer armour: big weathered ivory plates with recessed panel seams and rows of rivets, scoured by sand, chipped to slate-grey metal along the edges, a few faint streaks of grime.
+- 3, top right: the same armour where its markings were: the plates painted a faded, sun-bleached red, scratched and chipped through to ivory primer and slate metal in places.
+- 4, bottom left: the titan's inner frame: heavy bronze-brown structural metal, girders and bolted plates, streaked with blue-teal verdigris, with bundles of conduit running across it.
+- 5, bottom middle: the sword's blade: dark gunmetal steel, pitted and scratched along its length, a few long scars, faint sand drifted into the pits. The scratches run one way (top to bottom).
+- 6, bottom right: engraved bronze for the halo ring and the sword's hilt: warm bronze-gold panels engraved with fine, angular circuit-like channels, worn smooth and bright on the high spots and darker in the grooves.
+
+SHEET R1B: SKY, THE HALF FACING AWAY (make it after R1, with R1 attached)
+- Same size, style and palette as R1, the horizon at exactly the same height, the same flat dusty haze below it and the same plain clear aqua-blue along the top edge.
+- The other half of the sky, behind the viewer, facing away from the sun. Its left edge must continue seamlessly from R1's right edge, and its right edge seamlessly into R1's left edge, so the two side by side make the whole sky round.
+- No sun glow here: a deeper, clearer aqua sky, the haze along the horizon cooler and paler (more cream than gold), and a few small fair-weather clouds low down, lit on the sides facing back toward the sun (toward the sheet's edges), shadowed blue-lilac on the sides facing the viewer.
 ```

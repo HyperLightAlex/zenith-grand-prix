@@ -28,7 +28,7 @@ export interface Theme {
   /** The aurora's curtains in the plain sky: how bright (0 or absent: none). */
   aurora?: number;
   /** What the circuit stands on, and how far down it is. */
-  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice';
+  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice' | 'wreck';
   groundY: number;
   groundDeep: number;
   groundLight2: number;
@@ -168,6 +168,31 @@ export const THEMES: Record<string, Theme> = {
     ridge: 0x3a4a78,
     cloudShade: 0x5a6aa8,
     clouds: 0,
+  },
+  // Morning in a white desert: a low white-gold sun in a clear aqua sky,
+  // bone-white sand with cool blue shadows, a colossus lying in it.
+  titan: {
+    id: 'titan',
+    sunLight: 0xfff0d6,
+    sunIntensity: 2.3,
+    skyLight: 0x9fd0dc,
+    groundLight: 0xefe6d0,
+    hemiIntensity: 1.0,
+    skyZenith: 0x2f7fa8,
+    skyMid: 0x9fd0dc,
+    skyHorizon: 0xf2dca8,
+    halo: [1.0, 0.9, 0.65],
+    cirrus: [1.0, 0.95, 0.86],
+    cirrusAmount: 0.4,
+    fog: 0xd9c7a2,
+    fogDensity: 0.00011,
+    ground: 'wreck',
+    groundY: 0,
+    groundDeep: 0xb9b6cc,
+    groundLight2: 0xefe6d0,
+    ridge: 0xa9afcb,
+    cloudShade: 0x9aa2c8,
+    clouds: 16,
   },
 };
 

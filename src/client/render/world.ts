@@ -555,6 +555,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   else if (theme.ground === 'clouds') buildHelios(ctx);
   else if (theme.ground === 'pit') buildCrucible(ctx);
   else if (theme.ground === 'ice') buildFrostline(ctx);
+  else if (theme.ground === 'wreck') buildTitansRest(ctx);
   else buildMeridian(ctx);
   if (painted) horizonRings(ctx);
 
@@ -1962,6 +1963,515 @@ function buildFrostline(ctx: Ctx): void {
     const peaks = add(body, new THREE.MeshLambertMaterial({ color: theme.ridge, flatShading: true }), null);
     const snowcaps = add(caps, new THREE.MeshLambertMaterial({ color: 0xdfe8ff, flatShading: true, emissive: 0x2a3a70, emissiveIntensity: 0.25 }), null);
     if (ctx.painted && peaks && snowcaps) ctx.plainOnly.push(peaks, snowcaps);
+  }
+}
+
+// ---- Titan's Rest ---------------------------------------------------------
+
+/** A limb between two points: a cylinder from radius `ra` at `a` to `rb` at `b`, non-indexed, without uvs. */
+function limb(a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number, sides = 10): THREE.BufferGeometry {
+  const len = a.distanceTo(b);
+  const g = new THREE.CylinderGeometry(rb, ra, Math.max(len, 0.01), sides, 1).toNonIndexed();
+  g.deleteAttribute('uv');
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+  g.applyQuaternion(q);
+  g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  return g;
+}
+
+/** A box from corner to corner, non-indexed, without uvs. */
+function block(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): THREE.BufferGeometry {
+  const g = new THREE.BoxGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)).toNonIndexed();
+  g.deleteAttribute('uv');
+  g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  return g;
+}
+
+/** A tube along points, non-indexed, without uvs. */
+function bone(pts: THREE.Vector3[], r: number, sides = 8): THREE.BufferGeometry {
+  const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 3, r, sides, false).toNonIndexed();
+  g.deleteAttribute('uv');
+  return g;
+}
+
+/** Titan's Rest's sign over the road onto the hand, as the plain look letters it. */
+function titanSign(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 640;
+  c.height = 200;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#b84a3a';
+  g.fillRect(0, 0, 640, 200);
+  g.strokeStyle = '#f3eedf';
+  g.lineWidth = 4;
+  g.strokeRect(10, 10, 620, 180);
+  g.fillStyle = '#3a3f4a';
+  g.fillRect(40, 142, 560, 14);
+  g.fillStyle = '#f3eedf';
+  let size = 92;
+  g.font = `bold ${size}px "Arial Black", Impact, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  while (g.measureText("TITAN'S REST").width > 560 && size > 30) {
+    size -= 4;
+    g.font = `bold ${size}px "Arial Black", Impact, sans-serif`;
+  }
+  g.fillText("TITAN'S REST", 320, 80);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/**
+ * Titan's Rest: the desert, and the colossus lying on its back in it, built
+ * round the road: its arm under the climb, its head under the brow, the halo
+ * round the roll behind it, its torso hollow round the Breach, the Ribcage
+ * and the Hull, its other arm's elbow over the Long Flank, its sword round
+ * the corkscrew. Every part is placed from the road's own pieces.
+ */
+function buildTitansRest(ctx: Ctx): void {
+  const { track, group, cx, cz, theme } = ctx;
+  const surf = ctx.painted?.surfaces;
+  const tex = (name: string) => (surf?.[name] ? paintedTexture(surf[name], { repeat: true }) : null);
+  const f = makeFrame();
+  const pointAt = (s: number, d = 0, h = 0) => {
+    frameAt(track, s, f);
+    return new THREE.Vector3(f.px + f.rx * d + f.ux * h, f.py + f.ry * d + f.uy * h, f.pz + f.rz * d + f.uz * h);
+  };
+  const range = (name: string) => pieceRange(track, name);
+
+  // ---- the desert -------------------------------------------------------------
+  const zeroA = Array.from({ length: MAX_GORGES }, () => new THREE.Vector4(0, 0, 1, 0));
+  const zeroB = Array.from({ length: MAX_GORGES }, () => new THREE.Vector4(0, 0, 0, 0));
+  const desertMat = groundPlane(
+    ctx,
+    desertFragment,
+    {
+      uSand: { value: new THREE.Color(theme.groundLight2) },
+      uRock: { value: new THREE.Color(theme.groundDeep) },
+      uGorgeA: { value: zeroA },
+      uGorgeB: { value: zeroB },
+      uPainted: { value: 0 },
+      uSandMap: { value: null },
+      uClayMap: { value: null },
+      uGorgeMap: { value: null },
+    },
+    theme.groundY,
+  );
+  const sandTex = tex('sand');
+  if (sandTex) {
+    desertMat.uniforms.uSandMap.value = sandTex;
+    desertMat.uniforms.uClayMap.value = sandTex;
+    desertMat.uniforms.uGorgeMap.value = sandTex;
+    ctx.swaps.push((on) => (desertMat.uniforms.uPainted.value = on ? 1 : 0));
+  }
+
+  // The titan's materials: ivory armour, its faded red markings, slate at the
+  // joints, the bronze frame inside, the sword's gunmetal and the halo's bronze.
+  const toon = (color: number, emissive = 0x000000, k = 0) => toonMaterial({ color, vertexColors: false, emissive, emissiveIntensity: k });
+  const mats = {
+    armour: toon(0xe6e0d2),
+    red: toon(0xb84a3a),
+    slate: toon(0x6e7486),
+    frame: toon(0x8a6a3a),
+    verdigris: toon(0x5fa08a),
+    blade: toon(0x3a3f4a),
+    edge: toon(0xb8bcc8),
+    bronze: toon(0xc9a04a, 0x3a2400, 0.25),
+  };
+  const painted = {
+    armour: tex('armour'),
+    red: tex('armourRed'),
+    frame: tex('frame'),
+    blade: tex('blade'),
+    bronze: tex('bronze'),
+  };
+  const paintedMat = (wall: THREE.Texture | null, size: number) => (wall ? paintedRock(wall, wall, size, size, THREE.FrontSide, { toon: true, dip: 0 }) : null);
+  const swaps: Record<keyof typeof mats, THREE.Material | null> = {
+    armour: paintedMat(painted.armour, 60),
+    red: paintedMat(painted.red, 60),
+    slate: paintedMat(painted.armour, 40),
+    frame: paintedMat(painted.frame, 40),
+    verdigris: paintedMat(painted.frame, 40),
+    blade: paintedMat(painted.blade, 50),
+    edge: paintedMat(painted.blade, 50),
+    bronze: paintedMat(painted.bronze, 40),
+  };
+  const parts: Record<keyof typeof mats, THREE.BufferGeometry[]> = { armour: [], red: [], slate: [], frame: [], verdigris: [], blade: [], edge: [], bronze: [] };
+  const put = (kind: keyof typeof mats, g: THREE.BufferGeometry) => {
+    if (g.attributes.uv) g.deleteAttribute('uv');
+    parts[kind].push(g.index ? g.toNonIndexed() : g);
+  };
+
+  // ---- anchors, from the road ------------------------------------------------
+  const palm = range('the Palm');
+  const arm = range('the Arm');
+  const shoulder = range('T1 the Shoulder');
+  const brow = range('the Brow');
+  const halo = range('the Halo');
+  const flank = range('the Long Flank');
+  const elbow = range('under the Elbow');
+  const breach = range('T4 the Breach');
+  const ribcage = range('the Ribcage');
+  const hull = range('the Hull');
+  const sword = range('the Sword');
+  if (!palm || !arm || !shoulder || !brow || !halo || !flank || !elbow || !breach || !ribcage || !hull || !sword) return;
+  const collarZ = pointAt(brow[0]).z;
+  const flankZ = pointAt(flank[0] + 200).z;
+  const southZ = pointAt(arm[1]).z - 2;
+  const northZ = flankZ + 120;
+  const axisZ = (southZ + northZ) / 2;
+  const half = Math.abs(northZ - southZ) / 2;
+  const westX = pointAt(shoulder[1]).x - 10;
+  const hullX = pointAt((hull[0] + hull[1]) / 2).x;
+  const eastX = hullX + 300;
+  const top = 175;
+
+  // ---- the right hand, palm up, and the arm the road climbs ---------------------
+  {
+    // The palm: a slab under the road, its top just under the deck.
+    for (let s = palm[0] - 20; s < palm[1] + 10; s += 24) {
+      const p = pointAt(s, 0, -7);
+      const q = pointAt(s + 24, 0, -7);
+      put('armour', limb(new THREE.Vector3(p.x, p.y - 22, p.z), new THREE.Vector3(q.x, q.y - 22, q.z), 70, 70, 6));
+    }
+    // Fingers spread out across the sand toward the line, clear of the road.
+    const heel = pointAt(palm[0]);
+    for (const [dx, len, rot] of [
+      [-95, 170, -0.25],
+      [-55, 210, -0.08],
+      [55, 220, 0.06],
+      [95, 180, 0.22],
+    ] as const) {
+      const base = new THREE.Vector3(heel.x + dx, 10, heel.z + 10);
+      const mid = new THREE.Vector3(base.x + Math.sin(rot) * len * 0.5, 14, base.z + Math.cos(rot) * len * 0.5);
+      const tip = new THREE.Vector3(base.x + Math.sin(rot) * len, 6, base.z + Math.cos(rot) * len);
+      if (Math.abs(mid.x) < 48 || Math.abs(tip.x) < 48) continue;
+      put('armour', limb(base, mid, 20, 18, 8));
+      put('slate', limb(mid, tip, 17, 14, 8));
+    }
+    // The thumb, off to the side.
+    put('armour', limb(new THREE.Vector3(heel.x + 90, 12, heel.z - 120), new THREE.Vector3(heel.x + 190, 10, heel.z - 60), 24, 18, 8));
+    // Wrist to elbow to shoulder: under the deck all the way, the forearm then the upper arm.
+    const mid = (arm[0] + arm[1]) / 2;
+    const seg = (s0: number, s1: number, r0: number, r1: number, kind: keyof typeof mats) => {
+      for (let s = s0; s < s1; s += 30) {
+        const e = Math.min(s1, s + 30);
+        const ra = r0 + ((r1 - r0) * (s - s0)) / (s1 - s0);
+        const rb = r0 + ((r1 - r0) * (e - s0)) / (s1 - s0);
+        put(kind, limb(pointAt(s, 0, -8 - ra), pointAt(e, 0, -8 - rb), ra, rb, 10));
+      }
+    };
+    seg(palm[1] - 20, mid - 30, 46, 58, 'armour');
+    seg(mid - 30, mid + 30, 70, 70, 'slate');
+    seg(mid + 30, arm[1] + 10, 62, 74, 'armour');
+    // Red bands round the forearm and the upper arm.
+    for (const s of [palm[1] + 80, mid + 120]) {
+      const p = pointAt(s, 0, -8 - 60);
+      const q = pointAt(s + 14, 0, -8 - 60);
+      put('red', limb(p, q, 66, 66, 10));
+    }
+    // The shoulder's armour, under the turn.
+    const sp = pointAt((shoulder[0] + shoulder[1]) / 2);
+    put('red', block(sp.x - 110, sp.x + 80, 40, sp.y - 8, southZ - 120, southZ + 60));
+  }
+
+  // ---- the head, under the brow, and the halo behind it --------------------------
+  {
+    const b0 = pointAt(brow[0]);
+    const b1 = pointAt(brow[1]);
+    const hx0 = Math.max(b0.x, b1.x) + 40;
+    const hx1 = Math.min(b0.x, b1.x) - 30;
+    const hz = collarZ - 50;
+    const hTop = b0.y - 8;
+    // The neck, then the helmet: a block with a chamfered crown, face up.
+    put('slate', limb(new THREE.Vector3(westX + 20, 90, axisZ + 60), new THREE.Vector3(hx0, 95, hz), 95, 90, 10));
+    put('armour', block(hx1, hx0, -20, hTop - 22, hz - 150, hz + 150));
+    put('armour', block(hx1 + 18, hx0 - 18, hTop - 22, hTop, hz - 128, hz + 128));
+    // Cheek guards and the visor's red frame, either side of the road.
+    put('red', block(hx1 + 30, hx0 - 30, hTop - 30, hTop - 4, hz + 128, hz + 152));
+    put('red', block(hx1 + 30, hx0 - 30, hTop - 30, hTop - 4, hz - 152, hz - 128));
+    // Two horns swept back toward the halo, either side.
+    for (const side of [-1, 1]) {
+      const root = new THREE.Vector3(hx1 + 30, hTop - 40, hz + side * 120);
+      put('edge', limb(root, new THREE.Vector3(hx1 - 90, hTop + 10, hz + side * 190), 16, 3, 6));
+    }
+    // Its eyes, dim now, either side of the road.
+    const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.35, 0.9, 1.0), toneMapped: false });
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 22), eyeMat);
+      eye.position.set((hx0 + hx1) / 2 - 10, hTop + 0.5, hz + side * 95);
+      group.add(eye);
+    }
+    // The halo: a great broken ring round the roll, standing up out of the sand.
+    const hc = pointAt((halo[0] + halo[1]) / 2);
+    const R = hc.y + 18;
+    const ring: THREE.Vector3[] = [];
+    // Broken: a gap high on one side.
+    for (let a = 0.35; a <= Math.PI * 2 - 0.05; a += 0.06) ring.push(new THREE.Vector3(hc.x, hc.y + Math.cos(a) * R, hc.z + Math.sin(a) * R));
+    put('bronze', bone(ring, 16, 10));
+    put('bronze', bone(ring.map((p) => new THREE.Vector3(p.x - 14, p.y, p.z)), 9, 8));
+    // A few spokes still standing in it, and a broken piece fallen at its foot.
+    for (const a of [1.2, 2.4, 4.0, 5.1]) {
+      const p = new THREE.Vector3(hc.x, hc.y + Math.cos(a) * R, hc.z + Math.sin(a) * R);
+      const q = new THREE.Vector3(hc.x, hc.y + Math.cos(a) * (R - 70), hc.z + Math.sin(a) * (R - 70));
+      put('bronze', limb(p, q, 7, 5, 6));
+    }
+    const piece: THREE.Vector3[] = [];
+    for (let a = 0; a < 0.33; a += 0.05) piece.push(new THREE.Vector3(hc.x - 90 + a * 40, 6 + a * 30, hc.z - R - 30 + Math.sin(a * 3) * 60));
+    put('bronze', bone(piece, 15, 8));
+  }
+
+  // ---- the torso: hollow, its chest torn open over the Ribcage ---------------------
+  {
+    const bp = pointAt(breach[1]);
+    const woundX0 = bp.x - 230;
+    const woundX1 = bp.x + 150;
+    const hp = pointAt((hull[0] + hull[1]) / 2);
+    // The flanks, with the Breach through the north one and the way out through the south.
+    const wall = 24;
+    const flankWall = (z0: number, z1: number, holeX0: number, holeX1: number, holeTop: number) => {
+      put('armour', block(westX, holeX0, -20, top, z0, z1));
+      put('armour', block(holeX1, eastX, -20, top, z0, z1));
+      put('armour', block(holeX0, holeX1, holeTop, top, z0, z1));
+    };
+    flankWall(northZ - wall, northZ, bp.x - 110, bp.x + 90, 150);
+    flankWall(southZ, southZ + wall, hp.x - 110, hp.x + 90, 120);
+    put('armour', block(westX, westX + wall, -20, top, southZ, northZ));
+    put('armour', block(eastX - wall, eastX, -20, top, southZ, northZ));
+    // The breastplate over the rest, a red stripe down its middle.
+    put('armour', block(westX, woundX0, top - 25, top, southZ, northZ));
+    put('armour', block(woundX1, eastX, top - 25, top, southZ, northZ));
+    put('red', block(westX + 40, woundX0 - 20, top, top + 6, axisZ - 40, axisZ + 40));
+    put('red', block(woundX1 + 20, eastX - 40, top, top + 6, axisZ - 40, axisZ + 40));
+    // Broken plates at the wound's edges, bent up and out.
+    const rnd = mulberry(1919);
+    for (let k = 0; k < 9; k++) {
+      const x = k % 2 ? woundX0 + rnd() * 30 : woundX1 - rnd() * 30;
+      const z = southZ + 60 + rnd() * (half * 2 - 120);
+      const g = block(-30, 30, -6, 6, -40, 40);
+      g.rotateZ((k % 2 ? 1 : -1) * (0.4 + rnd() * 0.5));
+      g.rotateX((rnd() - 0.5) * 0.6);
+      g.translate(x, top - 6, z);
+      put('armour', g);
+    }
+    // The ribs: arches across the body from flank to flank, either side of the road.
+    const roadX0 = Math.min(pointAt(ribcage[0]).x, pointAt(ribcage[1]).x, hp.x) - 90;
+    const roadX1 = Math.max(pointAt(ribcage[0]).x, pointAt(ribcage[1]).x, hp.x) + 80;
+    for (let x = woundX0 + 20; x < woundX1 - 10; x += 62) {
+      if (x > roadX0 && x < roadX1) continue;
+      const pts: THREE.Vector3[] = [];
+      for (let a = 0; a <= Math.PI + 1e-6; a += Math.PI / 16) pts.push(new THREE.Vector3(x, Math.sin(a) * (top - 10), axisZ + Math.cos(a) * (half - 30)));
+      put('frame', bone(pts, 11, 8));
+    }
+    // The keel under the breastbone route, and the corridors' walls and roof.
+    const lane = (track.hw[Math.floor(((hull[0] + hull[1]) / 2) / track.ds)] + 6) / 2;
+    const zs = [pointAt(hull[0]).z, pointAt(hull[1]).z].sort((a, b) => a - b);
+    const bb = pointAt((hull[0] + hull[1]) / 2, lane, 0);
+    const shiftR = track.shiftR[Math.floor(((hull[0] + hull[1]) / 2) / track.ds)];
+    const riseR = track.riseR[Math.floor(((hull[0] + hull[1]) / 2) / track.ds)];
+    const shiftL = track.shiftL[Math.floor(((hull[0] + hull[1]) / 2) / track.ds)];
+    const riseL = track.riseL[Math.floor(((hull[0] + hull[1]) / 2) / track.ds)];
+    frameAt(track, (hull[0] + hull[1]) / 2, f);
+    const rx = f.rx;
+    const keelX = bb.x + rx * shiftR;
+    put('frame', block(keelX - 16, keelX + 16, -10, bb.y + riseR - 7, zs[0] + 60, zs[1] - 30));
+    const cor = pointAt((hull[0] + hull[1]) / 2, -lane, 0);
+    const corX = cor.x + rx * shiftL;
+    const roofY = cor.y + riseL + 30;
+    put('frame', block(corX - lane - 10, corX - lane - 4, -10, roofY, zs[0] + 70, zs[1] - 40));
+    put('frame', block(corX + lane + 4, corX + lane + 10, -10, roofY, zs[0] + 70, zs[1] - 40));
+    put('verdigris', block(corX - lane - 10, corX + lane + 10, roofY, roofY + 6, zs[0] + 70, zs[1] - 40));
+    // Conduits along the floor of the cavity.
+    for (const dz of [-0.6, 0.6]) put('verdigris', limb(new THREE.Vector3(woundX0, 8, axisZ + dz * half), new THREE.Vector3(woundX1, 8, axisZ + dz * half), 9, 9, 6));
+  }
+
+  // ---- the other arm, its elbow over the Long Flank ------------------------------
+  {
+    const ep = pointAt((elbow[0] + elbow[1]) / 2);
+    const sh = new THREE.Vector3(westX + 60, 90, northZ - 20);
+    const el = new THREE.Vector3(ep.x, ep.y + 140, ep.z);
+    const hand = new THREE.Vector3(ep.x - 340, 12, ep.z - 330);
+    put('armour', limb(sh, el, 62, 56, 10));
+    put('slate', limb(el, el.clone().add(new THREE.Vector3(0, 0, -10)), 70, 70, 10));
+    put('armour', limb(el, hand, 54, 44, 10));
+    put('red', limb(el.clone().lerp(hand, 0.3), el.clone().lerp(hand, 0.34), 57, 57, 10));
+    put('armour', block(hand.x - 70, hand.x + 70, -10, 26, hand.z - 90, hand.z + 70));
+  }
+
+  // ---- the legs, out east of the waist, half buried --------------------------------
+  {
+    for (const dz of [-0.45, 0.45]) {
+      const z = axisZ + dz * half;
+      const hip = new THREE.Vector3(eastX - 40, 50, z);
+      const knee = new THREE.Vector3(eastX + 620, 70, z + dz * 40);
+      const ankle = new THREE.Vector3(eastX + 1200, 40, z + dz * 70);
+      put('armour', limb(hip, knee, 125, 105, 10));
+      put('slate', limb(knee, knee.clone().add(new THREE.Vector3(30, 0, 0)), 112, 112, 10));
+      put('armour', limb(knee, ankle, 100, 80, 10));
+      put('red', limb(knee.clone().lerp(ankle, 0.45), knee.clone().lerp(ankle, 0.5), 96, 96, 10));
+      // The foot, toes up.
+      put('armour', block(ankle.x - 20, ankle.x + 90, -20, 190, z + dz * 70 - 80, z + dz * 70 + 80));
+    }
+  }
+
+  // ---- the sword: driven into the sand at a slant, the road round its blade ----------
+  {
+    const i0 = Math.round(sword[0] / track.ds) % track.n;
+    const i1 = Math.round(sword[1] / track.ds) % track.n;
+    const R = 40;
+    const a0 = new THREE.Vector3(track.px[i0] - track.ux[i0] * R, track.py[i0] - track.uy[i0] * R, track.pz[i0] - track.uz[i0] * R);
+    const a1 = new THREE.Vector3(track.px[i1] - track.ux[i1] * R, track.py[i1] - track.uy[i1] * R, track.pz[i1] - track.uz[i1] * R);
+    const dir = a1.clone().sub(a0).normalize();
+    const guard = a0.clone().addScaledVector(dir, -28);
+    // The blade, from the guard to its point well into the sand.
+    const toSand = (guard.y + 30) / Math.max(0.1, -dir.y);
+    const point = guard.clone().addScaledVector(dir, toSand);
+    const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+    const up = new THREE.Vector3().crossVectors(side, dir).normalize();
+    const blade = (w: number, t: number, from: THREE.Vector3, to: THREE.Vector3) => {
+      const len = from.distanceTo(to);
+      const g = new THREE.BoxGeometry(w, t, len).toNonIndexed();
+      g.deleteAttribute('uv');
+      g.applyMatrix4(new THREE.Matrix4().makeBasis(side, up, dir));
+      g.translate((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2);
+      return g;
+    };
+    put('blade', blade(56, 12, guard, point));
+    // Its edges, catching the light.
+    put('edge', blade(62, 4, guard, point));
+    // The guard, broad across, and the stump of the grip with its pommel.
+    const gw = blade(300, 26, guard.clone().addScaledVector(dir, -12), guard.clone().addScaledVector(dir, 12));
+    put('bronze', gw);
+    const grip = guard.clone().addScaledVector(dir, -44);
+    put('red', limb(guard.clone().addScaledVector(dir, -12), grip, 11, 11, 8));
+    put('bronze', limb(grip, grip.clone().addScaledVector(dir, -14), 13, 10, 8));
+  }
+
+  // ---- dunes drifted against it, and wreckage half buried ----------------------------
+  {
+    const rnd = mulberry(611);
+    const dunes: THREE.BufferGeometry[] = [];
+    const clear = (x: number, z: number, r: number) => ctx.clearance(x, z) > r + 40;
+    for (let tries = 0; tries < 600 && dunes.length < 40; tries++) {
+      const x = westX - 300 + rnd() * (eastX + 1600 - westX);
+      const z = axisZ + (rnd() - 0.5) * (half * 2 + 500);
+      const r = 60 + rnd() * 120;
+      if (!clear(x, z, r)) continue;
+      const g = new THREE.SphereGeometry(r, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).toNonIndexed();
+      g.deleteAttribute('uv');
+      g.scale(1.6 + rnd() * 0.8, 0.22 + rnd() * 0.18, 1);
+      g.rotateY(rnd() * 3);
+      g.translate(x, -2, z);
+      dunes.push(paint(g, () => new THREE.Color(0xf1e6cc)));
+    }
+    if (dunes.length) {
+      const m = new THREE.Mesh(mergeGeometries(dunes)!, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x6a5e48, emissiveIntensity: 0.35 }));
+      m.frustumCulled = false;
+      group.add(m);
+      if (sandTex) swapMaterial(ctx, m, paintedRock(sandTex, sandTex, 60, 60));
+    }
+    // Wreckage: armour plates, a gun barrel, a fallen pylon, half buried round about.
+    let wrecks = 0;
+    for (let tries = 0; tries < 400 && wrecks < 34; tries++) {
+      const a = rnd() * Math.PI * 2;
+      const r = 400 + rnd() * 1800;
+      const x = cx + Math.cos(a) * r;
+      const z = cz + Math.sin(a) * r;
+      const sz = 40 + rnd() * 70;
+      if (!clear(x, z, sz * 1.8)) continue;
+      if (x > westX - 60 && x < eastX + 1400 && Math.abs(z - axisZ) < half + 80) continue;
+      const g = rnd() < 0.6 ? block(-sz, sz, -sz * 0.18, sz * 0.18, -sz * 0.7, sz * 0.7) : limb(new THREE.Vector3(-sz * 1.6, 0, 0), new THREE.Vector3(sz * 1.6, 0, 0), sz * 0.3, sz * 0.24, 8);
+      g.rotateX((rnd() - 0.5) * 0.7);
+      g.rotateZ((rnd() - 0.5) * 0.7);
+      g.rotateY(rnd() * 3);
+      g.translate(x, sz * 0.05, z);
+      put(rnd() < 0.2 ? 'red' : rnd() < 0.45 ? 'slate' : 'armour', g);
+      wrecks++;
+    }
+  }
+
+  // ---- far off: other fallen giants, and mountains --------------------------------
+  {
+    const rnd = mulberry(77);
+    const far: THREE.BufferGeometry[] = [];
+    for (let k = 0; k < 9; k++) {
+      const a = (k / 9) * Math.PI * 2 + rnd() * 0.4;
+      const r = 2600 + rnd() * 2400;
+      const x = cx + Math.cos(a) * r;
+      const z = cz + Math.sin(a) * r;
+      const kind = k % 3;
+      if (kind === 0) {
+        // A hand reaching up out of the sand.
+        far.push(limb(new THREE.Vector3(x, -40, z), new THREE.Vector3(x + 40, 260, z), 60, 50, 8));
+        for (let fi = 0; fi < 4; fi++) far.push(limb(new THREE.Vector3(x + 40 + (fi - 1.5) * 34, 250, z), new THREE.Vector3(x + 40 + (fi - 1.5) * 50, 400 - Math.abs(fi - 1.5) * 30, z + 20), 14, 10, 6));
+      } else if (kind === 1) {
+        // A helmet, half buried, tipped over.
+        const g = block(-150, 150, -60, 160, -130, 130);
+        g.rotateZ(0.5);
+        g.rotateY(rnd() * 3);
+        g.translate(x, 0, z);
+        far.push(g);
+      } else {
+        // A spear, or a sword, stuck at an angle.
+        const tip = new THREE.Vector3(x + (rnd() - 0.5) * 300, 380 + rnd() * 200, z + (rnd() - 0.5) * 300);
+        far.push(limb(new THREE.Vector3(x, -30, z), tip, 22, 10, 6));
+      }
+    }
+    const farMesh = new THREE.Mesh(mergeGeometries(far)!, toon(0xd8d2c4));
+    farMesh.frustumCulled = false;
+    group.add(farMesh);
+    if (swaps.armour) swapMaterial(ctx, farMesh, swaps.armour);
+    const body: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 34; i++) {
+      const a = (i / 34) * Math.PI * 2 + rnd() * 0.12;
+      const r = 9000 + rnd() * 3500;
+      const h = 500 + rnd() * 1200;
+      const g = new THREE.ConeGeometry(900 + rnd() * 1200, h, 5, 1).toNonIndexed();
+      g.rotateY(rnd() * 3);
+      g.translate(cx + Math.cos(a) * r, theme.groundY + h / 2 - 40, cz + Math.sin(a) * r);
+      body.push(g);
+    }
+    const peaks = new THREE.Mesh(mergeGeometries(body)!, new THREE.MeshLambertMaterial({ color: theme.ridge, flatShading: true }));
+    peaks.frustumCulled = false;
+    group.add(peaks);
+    if (ctx.painted) ctx.plainOnly.push(peaks);
+  }
+
+  // ---- morning clouds ------------------------------------------------------------
+  cumulus(ctx, 707, theme.clouds, (rnd) => {
+    const a = rnd() * Math.PI * 2;
+    const r = 3000 + rnd() * 6500;
+    return [cx + Math.cos(a) * r, 800 + rnd() * 700, cz + Math.sin(a) * r, 160 + rnd() * 260];
+  });
+
+  // ---- the sign over the road onto the hand -----------------------------------------
+  {
+    const s = palm[0] - 40;
+    const W = 96;
+    const H = 30;
+    const m = new THREE.Matrix4();
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: titanSign(), side: THREE.DoubleSide }));
+    trackMatrix(track, s, 0, 40, Math.PI, m);
+    sign.applyMatrix4(m);
+    group.add(sign);
+    const own = paintedTrack.circuitSigns[theme.id];
+    if (own) swapMaterial(ctx, sign, new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide }));
+    for (const side of [-1, 1]) {
+      const foot = pointAt(s, side * (W / 2 + 4), -30);
+      put('slate', limb(new THREE.Vector3(foot.x, -5, foot.z), new THREE.Vector3(foot.x, foot.y + 30 + 40 + H / 2 + 3, foot.z), 4, 3, 6));
+    }
+  }
+
+  // All of it, one mesh per material.
+  for (const kind of Object.keys(parts) as Array<keyof typeof mats>) {
+    if (parts[kind].length === 0) continue;
+    const mesh = new THREE.Mesh(mergeGeometries(parts[kind])!, mats[kind]);
+    mesh.frustumCulled = false;
+    group.add(mesh);
+    const sw = swaps[kind];
+    if (sw) swapMaterial(ctx, mesh, sw);
   }
 }
 

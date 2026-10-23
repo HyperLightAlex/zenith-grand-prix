@@ -169,6 +169,8 @@ const STINGER_KEY: Record<string, Partial<Record<SfxName, number>>> = {
   crucible: { lap_phase: 2, final_lap: 5, finish: 2 },
   // Helios's synthesised music too, until it has a song of its own.
   frostline: { lap_phase: 2, final_lap: 5, finish: 2 },
+  // Canyon's synthesised music, until it has a song of its own.
+  titan: { lap: 1, lap_phase: -5, final_lap: -6, finish: -1 },
 };
 /** Semitones above the gate chime's home note for each gate banked: steps of A minor. */
 const GATE_STEPS = [0, 2, 3, 5, 7];

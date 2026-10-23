@@ -6,14 +6,15 @@ import { CRUCIBLE } from './crucible';
 import { FROSTLINE } from './frostline';
 import { HELIOS } from './helios';
 import { MERIDIAN } from './meridian';
+import { TITANS_REST } from './titan';
 
 export type AnyTrackDef = TrackDef | CircuitDef;
 
-export const TRACKS: readonly AnyTrackDef[] = [MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE];
+export const TRACKS: readonly AnyTrackDef[] = [MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST];
 
 /** The circuit with this id, or Meridian. */
 export function trackById(id: string | undefined | null): AnyTrackDef {
   return TRACKS.find((t) => t.id === id) ?? MERIDIAN;
 }
 
-export { CANYON, CRUCIBLE, FROSTLINE, HELIOS, MERIDIAN };
+export { CANYON, CRUCIBLE, FROSTLINE, HELIOS, MERIDIAN, TITANS_REST };

@@ -2,7 +2,9 @@
 //
 // A CircuitDef is driven like a turtle: a run of pieces, each a straight, a
 // level turn, a climb, a pitch (the parts of a jump), a loop, a corkscrew
-// roll or a spiral (a turn that climbs, widening or tightening as it goes),
+// roll, a barrel (a roll round an axis off the road: round the inside of a
+// tube, or round the outside of a column) or a spiral (a turn that climbs,
+// widening or tightening as it goes),
 // starting at the start line facing -z. The builder carries a full
 // frame (forward, right, up) through every piece, so a loop really turns the
 // road over and a corkscrew really rolls it, then samples the result every
@@ -63,6 +65,14 @@ export type Piece = PieceProps &
     | { loop: [radius: number, shift: number] }
     /** A corkscrew: this length of straight rolled through the angle, positive rolling right. */
     | { roll: [length: number, degrees: number] }
+    /**
+     * A barrel: like a roll, but round an axis `radius` away along the road's
+     * up (positive: overhead, the road running round the inside of a tube;
+     * negative: underneath, the road wrapping round the outside of a column).
+     * The axis runs on straight for `length`; the turn eases in and out, so
+     * the road swings off its line and back without a kink. Whole turns only.
+     */
+    | { barrel: [length: number, degrees: number, radius: number] }
     /**
      * A spiral: a turn about the vertical that climbs `height` (negative to
      * descend) as it goes round `degrees` (positive to the right), its
@@ -169,7 +179,7 @@ interface Fine {
 }
 
 function kindOf(pc: Piece): string {
-  return 'straight' in pc ? 'straight' : 'turn' in pc ? 'turn' : 'climb' in pc ? 'climb' : 'pitch' in pc ? 'pitch' : 'loop' in pc ? 'loop' : 'spiral' in pc ? 'spiral' : 'roll';
+  return 'straight' in pc ? 'straight' : 'turn' in pc ? 'turn' : 'climb' in pc ? 'climb' : 'pitch' in pc ? 'pitch' : 'loop' in pc ? 'loop' : 'spiral' in pc ? 'spiral' : 'barrel' in pc ? 'barrel' : 'roll';
 }
 
 /** A spiral's grade (rise over run) a share `f` of the way round: level at an end that eases, steady between. */
@@ -326,6 +336,30 @@ function walk(def: CircuitDef, pieces: Piece[]): { steps: Fine[]; starts: number
         advance(L / n, shift / n);
         T.t = rot(T.t, T.r, da / 2);
         T.u = rot(T.u, T.r, da / 2);
+      }
+      fix();
+    } else if ('barrel' in pc) {
+      const [L, deg, R] = pc.barrel;
+      const th = (deg * Math.PI) / 180;
+      // The turn so far, a share f of the way along: easing in and out (no
+      // turning at either end), so the road leaves its line smoothly.
+      const turned = (f: number) => th * (f - Math.sin(2 * Math.PI * f) / (2 * Math.PI));
+      const n = Math.max(1, Math.ceil(Math.hypot(L, th * R) / STEP));
+      const A: V3 = [T.p[0] + T.u[0] * R, T.p[1] + T.u[1] * R, T.p[2] + T.u[2] * R];
+      const r0 = T.r;
+      const u0 = T.u;
+      for (let k = 0; k < n; k++) {
+        // Curvature toward the road's up: toward the axis for a tube, away round a column.
+        const dth = Math.abs(turned((k + 1) / n) - turned(k / n));
+        const c = dth > 1e-12 ? L / n / dth : Infinity;
+        push(i, 0, Number.isFinite(c) ? R / (R * R + c * c) : 0);
+        const a = turned((k + 1) / n);
+        T.r = rot(r0, T.t, a);
+        T.u = rot(u0, T.t, a);
+        A[0] += (T.t[0] * L) / n;
+        A[1] += (T.t[1] * L) / n;
+        A[2] += (T.t[2] * L) / n;
+        T.p = [A[0] - T.u[0] * R, A[1] - T.u[1] * R, A[2] - T.u[2] * R];
       }
       fix();
     } else {
@@ -500,7 +534,7 @@ export function buildCircuit(def: CircuitDef): Track {
     // steeper than about 60 degrees; where there is no road there is no rail
     // (a gap in road going straight down is a fall along it, not off it).
     const kind = kindOf(pc);
-    mag[k] = (kind === 'loop' || kind === 'roll' || upY[k] < 0.5) && roadL[k] && roadR[k] ? 1 : 0;
+    mag[k] = (kind === 'loop' || kind === 'roll' || kind === 'barrel' || upY[k] < 0.5) && roadL[k] && roadR[k] ? 1 : 0;
   }
   const hw = smoothRing(hwRaw, 6, 2);
 
