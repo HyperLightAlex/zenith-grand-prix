@@ -5,8 +5,9 @@ synthesised one, and still build lap by lap as the synthesised music does.
 The game plays these by default; `?music=synth` in the address plays the
 synthesised music instead.
 Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
-(疾走の回路), Helios Drop (午間の雲上レース) and Neon Crucible (Neon
-Fire). The menus have a title
+(疾走の回路), Helios Drop (午間の雲上レース), Neon Crucible (Neon
+Fire), Frostline (Aurora Dash) and Titan's Rest (White Desert Charge).
+The menus have a title
 theme (Blue Night Sky), and the results one for when the player's team
 wins (トロフィーセレモニー) and one for when it loses (Minor Theme; see
 "Screens' music" below). The hangar screens play a setlist of songs, one
@@ -21,16 +22,17 @@ What each song was asked for, and what is still to make, is in
 | 3 | the rest: the full song, at full volume, with the kick and bass lifted (+5 dB below 140 Hz) |
 | finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
-| Layer | Meridian | Canyon | Helios | Crucible |
+| Layer | Meridian | Canyon | Helios | Crucible, Frostline, Titan's Rest |
 |---|---|---|---|---|
 | melody | keys, synth, strings, guitar | synth, keys, guitar, strings, brass, voices | keys, synth | synth, keys, guitar, strings, brass, woodwinds, voices |
 | bass | bass | bass | bass | bass |
 | drums | drums | drums | drums | drums |
 | lap 3's | brass, percussion, effects, woodwinds | percussion, effects | percussion, effects | percussion, effects |
 
-On Canyon and Helios lap 3 is also a change of place: Helios's song jumps
-to its drop, Canyon's to its last chorus, a key up (see "The finale"
-below).
+On Canyon, Helios and Titan's Rest lap 3 is also a change of place:
+Helios's song jumps to its drop, Canyon's to its last chorus, a key up,
+Titan's Rest's to its last section, where its C minor turns to C major
+(see "The finale" below).
 
 Lap 1 is -23.5 LUFS at the game's default volumes: under the racing,
 about where the synthesised race music's first lap sits (-23.3; a finished
@@ -96,6 +98,23 @@ its second, where the second half repeats the first two bars late) is far
 better than any that leaves room for one after it, and the build allows a
 finale only after the loop.
 
+Frostline's Aurora Dash (150 BPM, stems only) and Titan's Rest's White
+Desert Charge (about 140 BPM, stems only) come apart as Neon Fire does,
+so their layers are the same. In Aurora Dash every melody stem is carved
+out of another (0.38 to 0.83); the drums very nearly are not (0.33 at
+most, against the sparse vocal chops), and the bass, percussion and
+effects are clean. In White Desert Charge the vocal chops, guitar,
+strings, brass and woodwinds were carved out of one another (0.54 to
+0.77) and the synth and keys out of them (0.33 to 0.50); the drums are
+0.31 against the vocal chops and 0.26 at most against the rest, and the
+bass, percussion and effects are clean (0.17 at most).
+
+Aurora Dash has no finale: it was asked for with a last chorus a
+semitone up and came back without one (it moves between E major or C#
+minor and B major or G# minor, and ends on C# major). It loops
+bars 50 to 95 (45 bars, 72 s: about a lap) and ends from bar 112, its
+cadence onto the last C# major chord.
+
 **The finale.** Helios's song is trance: intro, a long groove, a
 breakdown, a build and a drop, then an outro, all on one 16-bar chord
 cycle (E minor: Em, Am, D, G, C, Am, then four bars of B). Laps 1 and 2
@@ -119,6 +138,19 @@ guitar, on the same F chord) and ends from bar 106, the cadence onto its
 last A minor hit. Laps 1 and 2 loop bars 26 to 66 (69 s, phrase to
 phrase).
 
+White Desert Charge is in C minor throughout (its middle sections lean
+on G minor), with no key change, but its last section (from bar 96, the
+loudest part of it, the vocal chops back in) turns to C major, round
+Ab, Bb and C. That is its lap 3. Every stretch of the song leads home to
+C (most of its bars are Ab, Bb, Fm or Gm, a step or two from it), so the
+lap change goes in on the next bar line, always at bar 96 (`"cycle": 1`:
+one place to land), and lands as a homecoming whatever bar it leaves. It
+loops bars 96 to 108 (12 bars, 20 s: the seam goes from Bb to C as the
+song's own bar 95 does into 96) and ends from bar 108: C, Ab, Bb and onto
+its last C major hit. Laps 1 and 2 loop bars 31 to 90 (59 bars, 101 s:
+both come after the same climb, Bb, Eb, Fm, Gm, Ab, Bb, onto C minor), so
+two laps at a normal pace hear the song through with nothing repeated.
+
 **Stingers.** The race stingers are written for Meridian's synthesised
 music, and each circuit moves them into its own key, including the key
 change its synthesised music makes on the last lap. A song can give its
@@ -134,6 +166,13 @@ own (`stingers` in the recipe, semitones from the written key):
 - Neon Fire is in D minor and ends on D major (a Bb, C, D cadence): the
   lap chime is on D and A, the battle stab resolves to D minor, the
   final-lap fanfare's open chord is on D and the flag is in D major.
+- Aurora Dash is centred on C# minor and ends on C# major: the lap chime
+  is on C# and G#, the battle stab resolves to C# minor, the final-lap
+  fanfare's open chord is on C# and the flag is in C# major.
+- White Desert Charge is in C minor and its last section in C major: the
+  lap chime is on C and G, the battle stab resolves to C minor, the
+  final-lap fanfare's open chord is on C (the finale it goes into) and
+  the flag is in C major.
 
 How Meridian's recipe got here, from playtests (the others follow it): the first version kept the kick, muffled,
 on lap 1, and its laps were too alike; the second took the kick out of
@@ -272,13 +311,16 @@ browser (the setup plays it, the corner shows it, M and a tap go on).
      and ends from bar 106; Helios loops its groove, bars 16
      to 64 (three turns of its chord cycle), and ends from bar 116, a
      wind-down onto a last E major hit; Neon Fire loops bars 66 to 116 and
-     ends from bar 120, a Bb, C, D cadence onto its last D major hit.
+     ends from bar 120, a Bb, C, D cadence onto its last D major hit;
+     Aurora Dash loops bars 50 to 95 and ends from bar 112; White Desert
+     Charge loops bars 31 to 90 and ends from bar 108.
    - `finale` (optional): `{"lap": 3, "from": 80, "loop": [88, 104],
      "cycle": 16}` (Helios): on lap 3, jump to the bar from `from` on at
      the same place in the `cycle`-bar chord cycle, then loop `loop`. Both
      loops should be whole cycles. With `"phrase": {"bars": 4, "first":
      2}` (Canyon) it waits instead for the next phrase's first bar line
-     and goes in at `from`.
+     and goes in at `from`. With `"cycle": 1` (Titan's Rest) it goes in
+     at `from` on the next bar line, whichever it is.
    - `stingers` (optional): semitones to move each race stinger by while
      the song plays, in place of the circuit's (see above).
    - `master`: the gain and two shelves that make the summed stems sound
@@ -301,7 +343,8 @@ browser (the setup plays it, the corner shows it, M and a tap go on).
    `quality` 0; its default, 4, cuts above 16 kHz and is audibly rougher
    once four layers are summed. Canyon: 145 s of its 192, 17.9 MB;
    Helios: 157 s of its 203, 19.2 MB; Neon Fire: 156 s of its 160, 18.5
-   MB).
+   MB; Aurora Dash: 161 s of its 188, 20.5 MB; White Desert Charge, the
+   longest loop: 187 s of its 197, 23.8 MB).
 5. **Add it** to `SONGS` in `src/client/audio/song.ts` (a screen's: to
    `SCREEN_SONGS`, as one layer with every stem in it, `laps` all 0, and
    one `loudness`; see `songs/results-win.json`).
@@ -338,7 +381,8 @@ decodes it) and the game measures its own decoder against it and allows
 for the difference (Chromium's matches to the sample).
 
 Decoded, each layer takes 8 bytes a sample frame: Meridian's four take
-about 225 MB at 48 kHz, Canyon's 222 MB, Helios's 241 MB, Neon Fire's 239 MB. So only one song is held decoded:
+about 225 MB at 48 kHz, Canyon's 222 MB, Helios's 241 MB, Neon Fire's 239 MB,
+Aurora Dash's 247 MB, White Desert Charge's 287 MB. So only one song is held decoded:
 the one for the circuit coming up. The game names it as soon as it knows
 (the circuit it has built, and the circuit shown on the race setup, the
 online room and the Grand Prix briefing, once it has stayed there a

@@ -4,11 +4,12 @@
 //
 //   lap 1   the melody and the bass, a little quieter
 //   lap 2   the drums come in: the beat, for the fighting
-//   lap 3   the rest (Meridian: brass, percussion, effects; Canyon and
-//           Helios: percussion and effects): the full song, at full volume,
+//   lap 3   the rest (Meridian: brass, percussion, effects; the others:
+//           percussion and effects): the full song, at full volume,
 //           with the kick and bass lifted (a low shelf). A song can also go
 //           somewhere else for it (Helios: into its drop; Canyon: its last
-//           chorus, a key up; see `finale`)
+//           chorus, a key up; Titan's Rest: its last section, in the major;
+//           see `finale`)
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
 //
@@ -41,6 +42,8 @@ export const SONGS: Record<string, string> = {
   canyon: 'music/canyon/',
   helios: 'music/helios/',
   crucible: 'music/crucible/',
+  frostline: 'music/frostline/',
+  titan: 'music/titan/',
 };
 
 /**

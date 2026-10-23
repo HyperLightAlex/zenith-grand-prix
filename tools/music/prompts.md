@@ -19,8 +19,8 @@ build matches its mastering).
 | Canyon race | 疾走の回路 | G minor (A minor last chorus), ~140 BPM | in the game (replaced 紅砂のレース, E, which did not fit the vibe) |
 | Helios race | 午間の雲上レース | E minor, ~145 BPM | in the game |
 | Neon Crucible race | Neon Fire | D minor (ends in D major), ~193 BPM | in the game (stems only; the brief was not kept) |
-| Frostline race | 極光ライン (Aurora Line) | F# minor (G minor last chorus), 150 BPM | to make (brief below) |
-| Titan's Rest race | 巨神の眠り (The Sleeping Giant) | C minor, 138 BPM | to make (brief below) |
+| Frostline race | Aurora Dash (asked for as 極光ライン, Aurora Line) | C# minor and E major, ends in C# major, 150 BPM | in the game (stems only; it came back in another key and without the key change, so it has no finale) |
+| Titan's Rest race | White Desert Charge (asked for as 巨神の眠り, The Sleeping Giant) | C minor (C major last section), ~140 BPM | in the game (stems only; lap 3 goes to its last section) |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
 | Results, loss (and the Grand Prix award below first) | Minor Theme | E minor, 100 BPM | in the game (from the second brief below: the first was too hopeful, not synth or anime enough) |
@@ -39,7 +39,8 @@ onto a final hit, not a fade. A lap-3 finale is a bonus: a last chorus a
 step up (Canyon) or a build and drop (Helios). Keep the lead on one
 instrument: vocal chops and choirs get carved out of the other stems and
 tangle them. Export the stems and the full song as WAVs. The circuits'
-songs so far are in A, G, E and D minor, so the new ones take other keys.
+songs so far are in A, G, E, D, C# and C minor, so a new one takes another
+key.
 
 ## Frostline race
 
