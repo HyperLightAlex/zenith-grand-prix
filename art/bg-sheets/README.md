@@ -52,11 +52,11 @@ The first five circuits' sheets are in the game (`tools/bg/build_backgrounds.py`
 | F1B Sky | bg-f1b-sky.png | horizon at 767 px, level with F1's; the aurora carries on across both joins |
 | F2 Horizon | bg-f2-horizon.png | three strips (mountains, a coast of glaciers, icebergs in the pack ice), bottoms level, ends matching; the mountains' strip is the shortest, 171 px |
 | F3 Surfaces | bg-f3-surfaces.png | cut and blended like M4: snow, ice cliff, pack ice, blue ice, the nunatak's rock, the frozen fall |
-| R1 Sky | bg-r1-sky.png | to be made |
-| R1B Sky | bg-r1b-sky.png | to be made |
-| R2 Horizon | bg-r2-horizon.png | to be made |
-| R3 Clouds | bg-r3-clouds.png | to be made |
-| R4 Surfaces | bg-r4-surfaces.png | to be made |
+| R1 Sky | bg-r1-sky.png | horizon at 767 px; the sun's glow in the middle (column 783), 15.5 degrees up, where the disc is drawn |
+| R1B Sky | bg-r1b-sky.png | horizon at 767 px, level with R1's; both edges match R1's exactly |
+| R2 Horizon | bg-r2-horizon.png | three strips (worn mountains, the graveyard of giants, dunes with wreckage), bottoms level, ends matching; the mountains' strip is the shortest, 173 px |
+| R3 Clouds | bg-r3-clouds.png | all six, cut by their outlines |
+| R4 Surfaces | bg-r4-surfaces.png | cut and blended like M4: sand, armour, red armour, frame, blade, engraved bronze |
 
 ## Meridian Skyway
 

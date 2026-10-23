@@ -96,6 +96,13 @@ CIRCUITS = {
         surfaces='bg-f3-surfaces.png',
         tiles=['snow', 'icecliff', 'packice', 'blueice', 'rock', 'icefall'],
     ),
+    'titan': dict(
+        sky=['bg-r1-sky.png', 'bg-r1b-sky.png'],
+        horizon='bg-r2-horizon.png',
+        clouds='bg-r3-clouds.png',
+        surfaces='bg-r4-surfaces.png',
+        tiles=['sand', 'armour', 'armourRed', 'frame', 'blade', 'bronze'],
+    ),
 }
 
 
