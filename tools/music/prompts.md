@@ -19,10 +19,95 @@ build matches its mastering).
 | Canyon race | 疾走の回路 | G minor (A minor last chorus), ~140 BPM | in the game (replaced 紅砂のレース, E, which did not fit the vibe) |
 | Helios race | 午間の雲上レース | E minor, ~145 BPM | in the game |
 | Neon Crucible race | Neon Fire | D minor (ends in D major), ~193 BPM | in the game (stems only; the brief was not kept) |
+| Frostline race | 極光ライン (Aurora Line) | F# minor (G minor last chorus), 150 BPM | to make (brief below) |
+| Titan's Rest race | 巨神の眠り (The Sleeping Giant) | C minor, 138 BPM | to make (brief below) |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
 | Results, loss (and the Grand Prix award below first) | Minor Theme | E minor, 100 BPM | in the game (from the second brief below: the first was too hopeful, not synth or anime enough) |
 | Hangar | a setlist: 蒼い火花 (the opening), 赤いランプ, Silver Dawn, 青い軌道, 湾岸線を抜けて, Neon Garage Drive and two instrumentals | | in the game, eight so far (one dedicated song was smooth jazz, then far too high energy; titles here are stand-ins where the file lost its own) |
+
+## Race songs: what each needs
+
+Instrumental, one steady tempo, the full band from the first bar, about
+2:30 to 3:00. The race builds it lap by lap from its stems: lap 1 is the
+melody and the bass (so the lead should carry the song without drums),
+lap 2 brings in the drums, lap 3 everything (so give it percussion and
+effects of its own, which come out as clean stems and have something to
+add). It loops a long stretch of one energy from its middle (about a lap:
+60 to 75 s), then plays its ending, so it needs a clear one: a cadence
+onto a final hit, not a fade. A lap-3 finale is a bonus: a last chorus a
+step up (Canyon) or a build and drop (Helios). Keep the lead on one
+instrument: vocal chops and choirs get carved out of the other stems and
+tangle them. Export the stems and the full song as WAVs. The circuits'
+songs so far are in A, G, E and D minor, so the new ones take other keys.
+
+## Frostline race
+
+The fifth circuit: a night race over an ice shelf under the aurora, out to
+a glacier and back (the Aurora Split, the Ice Barrel up into the glacier,
+the Calving off its face, the Icefall and the Aurora Loop). Cold, clear and
+fast: crystal and glass rather than Canyon's grit or Helios's trance. Lap
+3 is the last chorus a semitone up (the aurora flaring).
+
+Title: 極光ライン (Aurora Line)
+
+Styles:
+
+```
+1980s mecha anime racing BGM, instrumental, 150 BPM, F# minor, crystalline FM bell arpeggios, glassy synth lead carrying a soaring hook, icy analog pads, driving octave synth bass, punchy gated reverb drums, tambourine and shaker, whooshing risers and sweeps, a night race across an ice shelf under the aurora, fast, cold and determined, bright and clear, tight modern mix
+```
+
+Exclude: `vocals, choir, saxophone`
+
+Lyrics (structure only):
+
+```
+[Intro: full band from the first bar, the hook on the synth lead]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Bridge: bells and pads over the beat, the drums keep going]
+[Final Chorus: key change up a semitone, everything in]
+[Outro: cadence onto a final hit]
+```
+
+## Titan's Rest race
+
+The sixth circuit: a sunrise race on and through a colossal war machine
+fallen in a white desert, up its arm, over its face, through its halo,
+inside its ribs and twice round the blade of its sword. Heroic and vast:
+a 1980s super robot show's battle music, heavier and slower than the
+others, with a desert colour in its melody. Lap 3 is a build into the
+biggest section (the giant's theme at full strength).
+
+Title: 巨神の眠り (The Sleeping Giant)
+
+Styles:
+
+```
+1980s super robot anime battle BGM, instrumental, 138 BPM, C minor, heroic and vast, exotic harmonic minor melody on a soaring analog synth lead, distorted rock guitar riffs and power chords, bold synth brass stabs, driving picked bass, heavy gated reverb drums with big toms, taiko and timpani hits, sand-wind whooshes, a race across a white desert past a fallen colossus at sunrise, epic and determined, tight modern mix
+```
+
+Exclude: `vocals, saxophone, orchestral strings`
+
+Lyrics (structure only):
+
+```
+[Intro: full band from the first bar, the main riff]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Breakdown: guitar riff and synth lead, the drums and bass keep the beat]
+[Build]
+[Final Chorus: the biggest section, everything in]
+[Outro: ends on a final hit]
+```
 
 ## Title theme
 
