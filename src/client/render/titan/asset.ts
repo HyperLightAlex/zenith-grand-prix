@@ -24,10 +24,11 @@ const urls = import.meta.glob(['./assets/titan.glb', './assets/titan-lod1.glb', 
 /** Whether the model is in the build at all. */
 export const hasTitanModel = (): boolean => './assets/titan.glb' in urls;
 
-/** The part a mesh belongs to: its node's (or a parent's) `part` extra, or titan/<part>/... in its name. */
+/** The part a mesh belongs to: its node's (or a parent's) `part` (or `titan_part`) extra, or titan/<part>/... in its name. */
 function partOf(o: THREE.Object3D): string {
   for (let p: THREE.Object3D | null = o; p; p = p.parent) {
     if (typeof p.userData.part === 'string') return p.userData.part;
+    if (typeof p.userData.titan_part === 'string') return p.userData.titan_part;
     // three takes the slashes out of node names; the exporter keeps the original in extras.
     const m = /^titan\/([^/]+)/.exec(typeof p.userData.name === 'string' ? p.userData.name : p.name);
     if (m) return m[1];
