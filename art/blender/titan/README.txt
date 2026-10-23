@@ -65,7 +65,8 @@ SCALE AND UNITS
       chest depth, breastplate to back (no vents)    about 330 m
       head (helmet): width / chin to crown           about 110 / 115 m
       arm, shoulder joint to fingertips              about 690 m
-      hand, wrist to fingertips / palm width         about 145 / 80 m
+      hand, wrist to fingertips / palm width         about 180 / 100 m
+        (revised by the game-side proportions review on 2026-10-23)
       legs, crotch to soles                          about 670 m
       halo, outer diameter                           about 295 m
   - Set the viewport clip end to 20 km.
@@ -273,7 +274,7 @@ PHASE 4: LEVELS OF DETAIL AND THE FINAL EXPORT
 PRODUCTION NOTES
 (Blender: record your notes, decisions and QA here, below this line.)
 
-2026-10-23 — PHASE 1 / STEP 1 BLOCKOUT (AWAITING PROPORTION REVIEW)
+2026-10-23 — PHASE 1 / STEP 1 BLOCKOUT (HISTORICAL; REVIEW FOLLOWED BELOW)
 
 Based on latest origin/main e7c11d303c9c201bfedc976e204c3789cf911797.
 Isolated branch: alexander/titan-blockout. Existing portrait/model-sheet edits
@@ -450,3 +451,149 @@ On this Mac: /Applications/Blender.app/Contents/MacOS/Blender
 STOP POINT
 Phase 1 step 1 complete. Proportions await approval. Do not start step 2 or
 Phase 2 until separately requested; the standing source is the handoff.
+
+
+2026-10-23 — PHASE 1 / STEP 2 STANDING REFINEMENT (AWAITING REVIEW)
+
+Pulled main 2225cd28879ad6b198fede62e87960f1681e8464 before editing.
+The Phase 2 fit files are present but were neither loaded, changed nor used
+for posing. Still standing at 1300 m, with the original body and wrist pivots.
+Blender 5.2.2 LTS d13f752e3b9c. Work remains on alexander/titan-blockout.
+
+REVIEW CHANGES / INTERPRETATION
+- Thigh armour is now 235 x 235 m at its broadest horizontal section, with
+  fuller intermediate rings and tapered hip/knee openings. Only its middle
+  armour is shifted outward, preserving a crotch gap without moving hips.
+- Calf armour is 255 m wide, with a bell profile following the original
+  knee-to-ankle centreline. Main shell depth is 255 m; its raised front ridge
+  brings the complete armour depth to 263 m. Gold lower rim and red band stay.
+- Upper arms have 130 x 130 m sections. Forearm cuff sections are 165 x 142 m,
+  with a wide flat inner face, two real 3 m grooves and gold rails on both
+  sides. Elbow bearings, knee bearings/shields and visible support pieces
+  grow with the surrounding armour while preserving their pivots.
+- Pauldrons are now closed curved shells with a concave underside, gold
+  borders, three inset ivory panels, an internal hub and three support ribs.
+  Shell and trim share tessellation, preventing surface intersections. The
+  approved shoulder span remains 700 m including outer bearings.
+- Palm width is 100 m and measured wrist-to-fingertip length 179.83 m.
+  The user explicitly allowed finger knuckles to move to retain even finger
+  proportions: all 30 finger bones and their geometry scale together about
+  the fixed wrists. The 21 non-finger bones, including hand head/tail, remain
+  exactly unchanged. joints-step1.json is the immutable approved reference.
+- The complete head assembly moves 76 m forward in -Y, putting the visor's
+  forward surface 125 m ahead of the shoulder pivots. Helmet width/height,
+  horn shapes and crown height remain. An angled neck core and side yokes
+  connect to the original neck/head pivots. The chest-mounted collar stays.
+- Physical edge chamfers refine palm, fingers, tassets, knee shields and foot
+  trims. No fine engraving, rivets, textures, UVs or modelled ink are added.
+  Approved chest/bands/halo/sword design and the ten colours are retained.
+- Every exported mesh now has both part=<bone> and titan_part=<bone>. Sword
+  remains independent with both tags 'sword'. GLB hierarchy remains rigid.
+
+The hand dimensions above supersede the initial brief's 145/80 estimate.
+Dimensions are measured from actual geometry, not the original bone tails.
+Cross-section measurements deliberately exclude limb centreline slope; whole
+world-space bounds are also reported in blockout-report.json.
+
+MEASURED METRES
+  crown_to_soles: 1300.000
+  shoulder_span: 700.000
+  chest_depth_excluding_vents: 328.000
+  helmet_width: 110.000
+  helmet_chin_to_crown: 115.000
+  shoulder_to_middle_fingertip: 711.568
+  wrist_to_middle_fingertip: 179.832
+  hand_length_projected_Z: 178.736
+  palm_width: 100.000
+  face_forward_of_shoulder_pivots: 125.000
+  crotch_to_soles: 650.000
+  halo_outer_diameter: 295.000
+  sword_overall: 600.000
+  blade_length: 437.000
+  blade_width: 23.000
+  blade_thickness: 8.000
+  blade_aspect: 19.000
+  thigh_armour_ring_section_width_depth: 235.000 / 235.000
+  shin_armour_ring_section_width_depth: 255.000 / 263.000
+  upper_arm_armour_ring_section_width_depth: 130.000 / 130.000
+  forearm_armour_ring_section_width_depth: 165.000 / 142.000
+
+TRIANGLES BY RIGID PART
+  chest                         1,984
+  foot.L                        1,648
+  foot.R                        1,648
+  forearm.L                     1,296
+  forearm.R                     1,296
+  halo                          3,240
+  hand.L                        1,234
+  hand.R                        1,234
+  head                            862
+  index.01.L                      776
+  index.01.R                      776
+  index.02.L                      776
+  index.02.R                      776
+  index.03.L                      776
+  index.03.R                      776
+  middle.01.L                     776
+  middle.01.R                     776
+  middle.02.L                     776
+  middle.02.R                     776
+  middle.03.L                     776
+  middle.03.R                     776
+  neck                            472
+  pelvis                        1,118
+  pinky.01.L                      776
+  pinky.01.R                      776
+  pinky.02.L                      776
+  pinky.02.R                      776
+  pinky.03.L                      776
+  pinky.03.R                      776
+  ring.01.L                       776
+  ring.01.R                       776
+  ring.02.L                       776
+  ring.02.R                       776
+  ring.03.L                       776
+  ring.03.R                       776
+  shin.L                        1,358
+  shin.R                        1,358
+  shoulder.L                    4,516
+  shoulder.R                    4,516
+  spine                           448
+  sword                         1,124
+  thigh.L                         728
+  thigh.R                         728
+  thumb.01.L                      776
+  thumb.01.R                      776
+  thumb.02.L                      776
+  thumb.02.R                      776
+  thumb.03.L                      776
+  thumb.03.R                      776
+  upper_arm.L                     816
+  upper_arm.R                     816
+  TOTAL                        55,720
+  332 mesh objects / 51 bones; under the 600,000 triangle refinement limit.
+
+FINAL QA
+- 9,373 independent asset/export checks: zero failures or warnings.
+- 1,512 pose/contact checks over 42 cases: zero failures.
+- Source and reimport retain all 332 meshes / 55,720 triangles.
+- Both part tags verified on source objects, GLB nodes and reimported meshes.
+- Maximum fixed-body rest joint delta: 0.000000 m.
+- Maximum GLB round-trip world-bounds delta: 0.003395081 m.
+- Maximum articulated attachment gap 0.147 mm; maximum gimbal-centre delta
+  0.979 mm. Parent frame geometry still penetrates every tested joint gimbal.
+- Audits do not edit or save the standing production scene. They certify
+  attachment continuity, not armour collision clearance or road clearance.
+
+REPRODUCIBILITY / REVIEW
+Use the same rebuild/export/QA commands above. build_titan.py invokes the new
+refine_titan.py before parenting; every edit is scripted. export_titan.py
+checks fixed body joints against joints-step1.json before writing the GLB.
+All eleven side-by-side previews and the two articulation views are refreshed.
+Body cameras and source crops are unchanged. Detail cameras widen only when
+needed to retain a 3% border; actual framing is in previews/raw/framing.json
+and comparison-manifest.json. Open previews/index.html for the review.
+
+STOP POINT
+Phase 1 step 2 complete, standing refinement awaiting review. No Phase 2
+wreck pose, fitting, burial, road editing, damage, corridors or LODs performed.

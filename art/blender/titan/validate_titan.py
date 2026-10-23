@@ -6,6 +6,7 @@ same rigid joint-node hierarchy: glTF has no native Blender armature datatype.
 import argparse
 import collections
 import json
+import hashlib
 import math
 from pathlib import Path
 import struct
@@ -52,7 +53,7 @@ ARGS = arguments()
 TOL = ARGS.tolerance
 REPORT = {'blender': bpy.app.version_string, 'blend': str(Path(ARGS.blendPath).resolve()),
           'glb': str(Path(ARGS.glbPath).resolve()), 'tolerance_metres': TOL,
-          'scope': 'Phase 1 step 1 only; no scene or GLB is saved',
+          'scope': 'Phase 1 step 2 standing refinement only; no scene or GLB is saved',
           'failures': [], 'warnings': [], 'checks': []}
 
 
@@ -128,9 +129,9 @@ def mesh_snapshot(objects, phase):
                 boundary = sum(e.is_boundary for e in bm.edges)
             finally:
                 bm.free()
-            part = str(ob.get('titan_part', ob.name.split('/')[1] if '/' in ob.name else 'unknown'))
+            part = str(ob.get('part', ob.get('titan_part', ob.name.split('/')[1] if '/' in ob.name else 'unknown')))
             result[ob.name] = {
-                'part': part, 'vertices': vertices, 'bounds': bounds(vertices),
+                'part': part, 'part_property': ob.get('part'), 'titan_part_property': ob.get('titan_part'), 'vertices': vertices, 'bounds': bounds(vertices),
                 'triangles': len(me.loop_triangles), 'zero_area_triangles': zero_area,
                 'nonmanifold_edges': nonmanifold, 'boundary_edges': boundary,
                 'raw_nonmanifold_edges': raw_nonmanifold, 'raw_boundary_edges': raw_boundary,
@@ -148,6 +149,9 @@ def mesh_snapshot(objects, phase):
                 'armature_modifiers': sum(m.type == 'ARMATURE' for m in ob.modifiers),
                 'origin': xyz(ob.matrix_world.translation),
             }
+            check(ob.get('part') == part and ob.get('titan_part') == part,
+                  f'{phase}: matching part and titan_part properties {ob.name}',
+                  {'part': ob.get('part'), 'titan_part': ob.get('titan_part')})
             check(len(me.vertices) > 0 and len(me.polygons) > 0, f'{phase}: populated mesh {ob.name}')
             check(zero_area == 0, f'{phase}: no zero-area triangles {ob.name}', zero_area)
             check(wire == 0 and stray == 0, f'{phase}: no stray geometry {ob.name}', {'wire': wire, 'vertices': stray})
@@ -232,6 +236,32 @@ def production():
                       'tail': xyz(rig.matrix_world @ b.tail_local), 'length': b.length}
              for b in rig.data.bones}
     check(all(b['length'] > 1e-5 for b in bones.values()), 'production: all bones have nonzero length')
+    reference_path = Path(ARGS.blendPath).resolve().parent / 'joints-step1.json'
+    reference_bytes = reference_path.read_bytes()
+    reference_sha = hashlib.sha256(reference_bytes).hexdigest()
+    check(reference_sha == '88823721acf0cbf2e32fcae64a5adbc780c303c27007bd3af9fb8867a97e6ec7',
+          'production: immutable approved step-1 joint reference', reference_sha)
+    reference = json.loads(reference_bytes)['bones']
+    check(set(reference) == set(bones), 'production: joint names unchanged from step 1')
+    joint_audit = {'reference': reference_path.name, 'reference_sha256': reference_sha,
+                   'fixed_joint_count': 0, 'max_fixed_delta_metres': 0.0,
+                   'finger_changes': {},
+                   'authorization': 'User approved scaling the finger knuckles only; body joints and wrists remain fixed.'}
+    for name, current in bones.items():
+        old = reference[name]
+        check(current['parent'] == old['parent'], f'production: approved parent unchanged {name}')
+        delta = max(abs(current[key][i]-old[key][i]) for key in ('head','tail') for i in range(3))
+        if name.split('.')[0] in ('thumb','index','middle','ring','pinky'):
+            joint_audit['finger_changes'][name] = {'before': old,
+                'after': {k: current[k] for k in ('head','tail','parent')},
+                'max_coordinate_delta_metres': delta}
+        else:
+            joint_audit['fixed_joint_count'] += 1
+            joint_audit['max_fixed_delta_metres'] = max(joint_audit['max_fixed_delta_metres'], delta)
+            check(delta <= 1e-5, f'production: fixed approved rest joint {name}', delta)
+    check(joint_audit['fixed_joint_count'] == 21, 'production: all 21 non-finger joints remain fixed')
+    check(len(joint_audit['finger_changes']) == 30, 'production: exactly 30 finger joints audited')
+    REPORT['joint_preservation'] = joint_audit
     for name, bone in bones.items():
         if name.endswith('.L') and name[:-2]+'.R' in bones:
             opposite = bones[name[:-2]+'.R']
@@ -245,7 +275,7 @@ def production():
     sword = [ob for ob in meshes if ob.name == 'titan/sword/assembly']
     check(len(sword) == 1, 'production: one independent sword assembly')
     for ob in meshes:
-        part = ob.get('titan_part')
+        part = ob.get('part')
         named_part = ob.name.split('/')[1] if '/' in ob.name else None
         check(part == named_part and part in set(PARENTS) | {'sword'},
               f'production: semantic part {ob.name}', {'property': part, 'name': named_part})
@@ -260,7 +290,7 @@ def production():
         check(len(ob.vertex_groups) == 0 and not any(m.type == 'ARMATURE' for m in ob.modifiers),
               f'production: no weights or deformation {ob.name}')
     data = mesh_snapshot(meshes, 'production')
-    check(sum(d['triangles'] for d in data.values()) < 100000, 'production: fewer than 100000 triangles',
+    check(sum(d['triangles'] for d in data.values()) < 600000, 'production: fewer than 600000 triangles',
           sum(d['triangles'] for d in data.values()))
     used = {m for d in data.values() for m in d['materials']}
     check(used == set(MATERIAL_HEX), 'production: all ten exact material names assigned', sorted(used))
@@ -317,6 +347,40 @@ def production():
             measures[f'hand.{side}_palm_part_width_X'] = bounds(palm_points)['size'][0]
         if f'thigh.{side}' in bones:
             measures[f'leg.{side}_hip_joint_to_ground_Z'] = bones[f'thigh.{side}']['head'][2] - body_bounds['min'][2]
+    # Check the actual plate dimensions, independent of export_titan.py's
+    # report. Horizontal profile sections exclude the sloping limb centreline.
+    requested = {
+        'thigh': ('thigh', ('thigh-armour',), 235.0, 235.0),
+        'shin': ('shin', ('greave-side-shell','greave-armour'), 255.0, 255.0),
+        'upper_arm': ('upper_arm', ('upper-arm-armour',), 130.0, None),
+        'forearm': ('forearm', ('forearm-armour',), 165.0, None),
+    }
+    for side in ('L','R'):
+        for label, (part, names, wanted_width, wanted_depth) in requested.items():
+            part_points = [p for name in names for p in data[f'titan/{part}.{side}/{name}']['vertices']]
+            sections = collections.defaultdict(list)
+            for point in part_points:
+                sections[round(point[2], 2)].append(point)
+            sections = [ring for ring in sections.values() if len(ring) >= 4]
+            section_size = [max(max(p[i] for p in ring)-min(p[i] for p in ring) for ring in sections)
+                            for i in (0,1)]
+            measures[f'{label}.{side}_armour_ring_section_width_depth'] = section_size
+            measures[f'{label}.{side}_armour_overall_bounds'] = bounds(part_points)
+            check(abs(section_size[0]-wanted_width) <= wanted_width*.10,
+                  f'production: {label}.{side} requested armour width {wanted_width:g} m', section_size[0])
+            if wanted_depth:
+                check(abs(section_size[1]-wanted_depth) <= wanted_depth*.10,
+                      f'production: {label}.{side} requested armour depth {wanted_depth:g} m', section_size[1])
+        palm = data[f'titan/hand.{side}/palm-frame']['bounds']['size'][0]
+        measures[f'hand.{side}_palm_frame_width'] = palm
+        check(abs(palm-100) <= 10, f'production: {side} palm about 100 m wide', palm)
+        hand_length = measures[f'hand.{side}_wrist_to_furthest_tip']
+        check(abs(hand_length-180) <= 18, f'production: {side} hand about 180 m wrist to tip', hand_length)
+    visor_bounds = data['titan/head/visor-band']['bounds']
+    shoulder_y = (bones['upper_arm.L']['head'][1]+bones['upper_arm.R']['head'][1])/2
+    face_offset = shoulder_y-visor_bounds['min'][1]
+    measures['face_forward_of_shoulder_pivots'] = face_offset
+    check(abs(face_offset-125) <= 12.5, 'production: visor front about 125 m forward of shoulder pivots', face_offset)
     halo_points = [p for name,d in data.items() if d['part'] == 'halo' and 'strut' not in name.lower() for p in d['vertices']]
     if halo_points:
         measures['halo_extent_excluding_named_struts'] = bounds(halo_points)['size']
@@ -415,6 +479,9 @@ def validate_glb(source, bones):
             continue
         name = node.get('name', '')
         expected = source.get(name, {}).get('part')
+        extras = node.get('extras', {})
+        check(extras.get('part') == expected and extras.get('titan_part') == expected,
+              f'GLB: exact part and legacy titan_part extras {name}', extras)
         if expected:
             check(parent_bone(i) == (None if expected == 'sword' else expected),
                   f'GLB: rigid attachment {name}', {'expected': expected, 'actual': parent_bone(i)})

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble Titan Phase 1 review pictures from Blender renders and G1/G2/G3.
+"""Assemble Titan Phase 1 step 2 review pictures from Blender renders and G1/G2/G3.
 
 Requires Pillow. Run with a Python installation that provides it:
   python3 art/blender/titan/assemble_titan_previews.py --root /path/to/igpx
@@ -109,7 +109,7 @@ def card(view: View, output: Path, root: Path) -> str:
     return f'''<figure id="{view.slug}" class="comparison">
   <figcaption><h3>{html.escape(view.title)}</h3><span>{caption}</span></figcaption>
   <a class="image-link" href="{view.slug}.png" title="Open full-size {html.escape(view.title, quote=True)} comparison">
-    <img src="{view.slug}.png" width="{width}" height="{height}" alt="{html.escape(view.title, quote=True)}: {view.sheet.upper()} reference on the left, Blender blockout on the right" loading="lazy">
+    <img src="{view.slug}.png" width="{width}" height="{height}" alt="{html.escape(view.title, quote=True)}: {view.sheet.upper()} reference on the left, refined Blender model on the right" loading="lazy">
   </a>
   <div class="view-links"><a href="raw/{view.slug}.png">Raw render</a><a href="references/{view.slug}.png">Reference crop</a><a href="{link(root / SHEETS[view.sheet], output)}">Full {view.sheet.upper()} sheet</a></div>
 </figure>'''
@@ -119,13 +119,15 @@ def make_index(root: Path, output: Path, warnings: list[str]) -> str:
     titan = root / "art/blender/titan"
     source_files = [
         ("Production scene", titan / "titan-production.blend"),
-        ("Blockout GLB", root / "src/client/render/titan/assets/titan-blockout.glb"),
+        ("Phase 1 GLB", root / "src/client/render/titan/assets/titan-blockout.glb"),
         ("Joint positions", titan / "joints.json"),
+        ("Step 1 joint baseline", titan / "joints-step1.json"),
         ("Measurements and triangle counts", titan / "blockout-report.json"),
         ("Independent validation", titan / "validation-report.json"),
         ("Pose/contact validation", titan / "pose-report.json"),
         ("Brief and production notes", titan / "README.txt"),
         ("Crop and assembly record", output / "comparison-manifest.json"),
+        ("Camera framing record", output / "raw/framing.json"),
         *[(path.name, path) for path in sorted(titan.glob("*.py"))],
         *[(f"{key.upper()} source sheet", root / path) for key, path in SHEETS.items()],
     ]
@@ -135,7 +137,7 @@ def make_index(root: Path, output: Path, warnings: list[str]) -> str:
     for key, title, description in (
         ("body", "01 · Standing proportions", "Four orthographic views at G1’s page height. Reference pixels keep their original vertical coordinates; body renders are shown at their native 512 × 1024 size."),
         ("head", "02 · Head, collar and halo", "Complete G2 cells preserve the horns, collar and halo supports. The mounted halo follows G1; its close-up is isolated for shape review."),
-        ("arm", "03 · Arm and sword", "G3’s palm-up hand is the authority for finger construction. Both sword reference crops keep identical horizontal bounds and scale."),
+        ("arm", "03 · Arm and sword", "G3’s palm-up hand supplies finger construction; G1 sets the revised 180 m hand length and 100 m palm width. Both sword reference crops keep identical horizontal bounds and scale."),
     ):
         cards = "\n".join(card(view, output, root) for view in VIEWS if view.section == key)
         sections.append(f'<section><div class="section-heading"><h2>{title}</h2><p>{description}</p></div><div class="cards {key}">{cards}</div></section>')
@@ -148,15 +150,15 @@ def make_index(root: Path, output: Path, warnings: list[str]) -> str:
         warning_html = f'<aside class="notes"><h2>Render framing notes</h2><ul>{items}</ul></aside>'
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Titan · Phase 1 blockout review</title>
+<title>Titan · Phase 1 refinement review</title>
 <style>
 :root{{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#28313e;background:#f4f5f7;color-scheme:light;line-height:1.5}}
 *{{box-sizing:border-box}}body{{margin:0}}main{{max-width:1480px;margin:auto;padding:42px 30px 64px}}a{{color:#315a80;text-underline-offset:3px}}a:hover{{color:#172c40}}header{{padding:0 0 26px;border-bottom:1px solid #d8dce3}}.eyebrow{{margin:0 0 9px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:#766236}}h1{{font-size:clamp(28px,4vw,44px);letter-spacing:-.035em;line-height:1.12;margin:0 0 15px}}header p{{max-width:850px;color:#5c6676;margin:0}}.legend{{display:flex;gap:20px;margin-top:18px;font-size:13px}}.legend b{{color:#29313f}}nav{{display:flex;gap:8px;flex-wrap:wrap;padding:20px 0}}nav a{{font-size:12px;padding:6px 10px;background:white;border:1px solid #dce0e7;border-radius:4px;text-decoration:none}}section{{margin-top:28px}}.section-heading{{display:flex;align-items:baseline;gap:24px;margin:0 0 15px}}h2{{font-size:20px;letter-spacing:-.02em;margin:0}}.section-heading p{{font-size:13px;color:#626d7e;max-width:850px;margin:0}}.cards{{display:grid;gap:24px;grid-template-columns:repeat(2,minmax(0,1fr))}}.cards.arm{{grid-template-columns:minmax(0,1fr)}}figure{{margin:0;background:#fff;border:1px solid #d5dae2;border-radius:6px;overflow:hidden;scroll-margin-top:18px}}figcaption{{padding:14px 16px 12px;border-bottom:1px solid #e4e7ed}}h3{{font-size:16px;font-weight:650;margin:0 0 3px}}figcaption span{{display:block;font-size:11px;color:#697485}}.image-link{{display:block;background:#e4e6ec}}img{{display:block;width:100%;height:auto}}.view-links{{display:flex;gap:18px;flex-wrap:wrap;padding:10px 16px;font-size:12px;border-top:1px solid #e4e7ed}}.notes{{margin:26px 0 0;padding:18px 22px;background:#eceef2;border:1px solid #d9dee7;border-radius:5px;font-size:13px;color:#536072}}.notes h2{{font-size:15px}}.notes p{{margin:8px 0 0}}.sources{{margin-top:34px;padding-top:24px;border-top:1px solid #d8dce3}}.sources ul{{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:9px 22px;font-size:13px}}footer{{font-size:12px;color:#697485;margin-top:24px}}@media(max-width:850px){{main{{padding:28px 14px 40px}}.cards{{grid-template-columns:minmax(0,1fr)}}.section-heading{{display:block}}.section-heading p{{margin-top:8px}}.legend{{display:block}}}}@media print{{main{{max-width:none;padding:0}}nav{{display:none}}.cards{{display:block}}figure{{break-inside:avoid;margin:0 0 18px}}.view-links{{display:none}}}}
 </style></head><body><main>
-<header><p class="eyebrow">Zenith GP / Titan’s Rest / Phase 1 · Step 1</p><h1>Standing Titan — blockout review</h1><p>Review the large forms, proportions and articulation before refinement. All 11 comparisons place the model sheet on the left and the Blender blockout on the right. Open any image to inspect it at full resolution.</p><div class="legend"><span><b>Reference</b> · approved G1 / G2 / G3 drawings</span><span><b>Blockout</b> · flat materials, orthographic renders</span></div></header>
+<header><p class="eyebrow">Zenith GP / Titan’s Rest / Phase 1 · Step 2</p><h1>Standing Titan — refinement review</h1><p>Review the fuller limbs, larger hands, rounded shoulder armour and forward head before Phase 2. All body joint positions remain fixed; finger knuckles follow the approved larger hands. All 11 comparisons place the model sheet on the left and the refined Blender model on the right. Open any image to inspect it at full resolution.</p><div class="legend"><span><b>Reference</b> · approved G1 / G2 / G3 drawings</span><span><b>Refined model</b> · flat materials, orthographic renders</span></div></header>
 <nav aria-label="Comparison views">{nav}</nav>
 {''.join(sections)}
-<aside class="notes"><h2>How to read these comparisons</h2><p>Standing views preserve the source sheet’s page scale, with no vertical crop or resizing. Detail views retain each complete source crop; render fitting is uniform and never stretches either axis. G3’s shoulder silhouette and sword guard overlap slightly between rows, so a small neighboring fragment remains in those reference crops. No reference shapes have been erased or redrawn. This is an intact standing blockout, before the wreck pose, road fitting or damage pass.</p></aside>
+<aside class="notes"><h2>How to read these comparisons</h2><p>Standing views preserve the source sheet’s page scale, with no vertical crop or resizing. Detail views retain each complete source crop; render fitting is uniform and never stretches either axis. Detail cameras widen only if needed to retain the complete assembly and a 3% border; actual framing is recorded alongside the renders. G3’s shoulder silhouette and sword guard overlap slightly between rows, so a small neighboring fragment remains in those reference crops. No reference shapes have been erased or redrawn. This is the intact standing Phase 1 step 2 model. The wreck pose, road fitting and damage passes have not started.</p></aside>
 {warning_html}
 <section class="sources"><h2>Source files and measurements</h2><ul>{sources}</ul></section>
 <footer>Generated by assemble_titan_previews.py from the saved renders and original model sheets. Crop coordinates, input hashes and display transforms are recorded in comparison-manifest.json.</footer>
@@ -184,7 +186,9 @@ def main() -> None:
             raise SystemExit(f"{view.slug}: body render must be 512x1024 to preserve page scale; found {renders[view.slug].size}")
 
     (output / "references").mkdir(parents=True, exist_ok=True)
-    record = {"format": 1, "background": BG, "bodyCamera": {"orthographicScale": 1856.346, "targetZ": 736.8, "helmetCrownPixelY": 201, "groundPixelY": 918}, "references": {key: {"path": path, "sha256": digest(root / path)} for key, path in SHEETS.items()}, "views": []}
+    record = {"format": 1, "phase": "1.2", "background": BG, "bodyCamera": {"orthographicScale": 1856.346, "targetZ": 736.8, "helmetCrownPixelY": 201, "groundPixelY": 918}, "references": {key: {"path": path, "sha256": digest(root / path)} for key, path in SHEETS.items()}, "views": []}
+    framing_path=raw/'framing.json'
+    framing=json.loads(framing_path.read_text()) if framing_path.exists() else {}
     warnings: list[str] = []
     for view in VIEWS:
         crop = sheets[view.sheet].crop(view.crop)
@@ -199,12 +203,12 @@ def main() -> None:
         comparison.paste(blockout, (view.panel[0], HEADER))
         draw = ImageDraw.Draw(comparison)
         draw.rectangle((0, 0, comparison.width, HEADER - 1), fill=LABEL_BG)
-        for x, label, source in ((0, "Reference", view.sheet.upper()), (view.panel[0], "Blockout", "Phase 1 / Step 1")):
+        for x, label, source in ((0, "Reference", view.sheet.upper()), (view.panel[0], "Refined model", "Phase 1 / Step 2")):
             draw.text((x + 18, 12), label, font=font(19), fill=INK)
             draw.text((x + 18, 35), source, font=font(11), fill=MUTED)
         draw.line((view.panel[0], 0, view.panel[0], comparison.height), fill=DIVIDER, width=1)
         comparison.save(output / f"{view.slug}.png")
-        record["views"].append({"id": view.slug, "title": view.title, "sheet": view.sheet, "referenceCrop": list(view.crop), "referencePaste": [view.paste_x, 0], "panel": list(view.panel), "rawRender": f"raw/{view.slug}.png", "rawSha256": digest(raw / f"{view.slug}.png"), "renderDisplay": transform, "comparison": f"{view.slug}.png"})
+        record["views"].append({"id": view.slug, "title": view.title, "sheet": view.sheet, "referenceCrop": list(view.crop), "referencePaste": [view.paste_x, 0], "panel": list(view.panel), "rawRender": f"raw/{view.slug}.png", "rawSha256": digest(raw / f"{view.slug}.png"), "renderDisplay": transform, "comparison": f"{view.slug}.png", "camera": framing.get(view.slug)})
     record["framingNotes"] = warnings
     (output / "comparison-manifest.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     (output / "index.html").write_text(make_index(root, output, warnings), encoding="utf-8")
