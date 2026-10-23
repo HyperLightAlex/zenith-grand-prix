@@ -201,9 +201,13 @@ width, the curvature in the vertical plane, how far up the road faces, grip
 and whether it holds mechs on.
 
 - **Air.** A mech has a height above the road. On the ground the road holds
-  it while gravity's share plus the road's curve still push it down; over a
-  crest taken fast, off a ramp, or past the end of the road, it flies under
-  gravity (with under a third of its steering) and lands where the road is. A hard
+  it while gravity's share and its skates' hold (100 u/s², over twice
+  gravity) still outweigh the road's curve; over a crest taken faster than
+  that, off a ramp, or past the end of the road, it flies under gravity
+  (with under a third of its steering) and lands where the road is, the
+  hold pulling it back while it is still rising off road under it. (Before
+  the hold, a boosting mech left any crest under about 900 units' radius and
+  flew on: on Titan's Rest, over the whole of the Sword.) A hard
   landing costs up to 12% speed. Jumps are built for one speed: the arc is
   the path a mech at exactly that speed would follow, with the middle of it
   missing. Faster flies further; slower falls in. The landing slope can be

@@ -83,6 +83,7 @@ import {
   FALL_DEPTH,
   FALL_TICKS,
   GRAVITY,
+  SKATE_HOLD,
   HARD_LANDING,
   MAG_PULL,
   PAD_MULT,
@@ -658,17 +659,18 @@ function stepRetired(track: Track, m: MechState): void {
 
 /**
  * Height above the road. On the ground the road holds a mech while its push
- * against the surface (gravity's share plus the curve of the road) stays
- * positive; over a crest taken fast enough, or past the end of the road, it
- * leaves it and flies, and comes down where the road is. A mech that comes
- * down with no road under it has fallen. Loops and corkscrews hold whatever
- * the speed. Plan tracks never get here.
+ * against the surface (gravity's share and the skates' hold, plus the curve
+ * of the road) stays positive; over a crest taken fast enough, or past the
+ * end of the road, it leaves it and flies, and comes down where the road is.
+ * Flying over road and still rising off it, the hold pulls it back too. A
+ * mech that comes down with no road under it has fallen. Loops and
+ * corkscrews hold whatever the speed. Plan tracks never get here.
  */
 function stepAir(race: RaceState, track: Track, m: MechState): void {
   if (!track.air || m.retired || m.finished) return;
   const on = roadAt(track, m.s, m.d);
   if (!m.air) {
-    if (!on || (!magAt(track, m.s) && GRAVITY * upYAt(track, m.s) + kvAt(track, m.s) * m.vs * m.vs < 0)) {
+    if (!on || (!magAt(track, m.s) && GRAVITY * upYAt(track, m.s) + SKATE_HOLD + kvAt(track, m.s) * m.vs * m.vs < 0)) {
       m.air = true;
       m.vh = 0;
       m.airT = 0;
@@ -689,8 +691,9 @@ function stepAir(race: RaceState, track: Track, m: MechState): void {
     return;
   }
   // Over a loop or a corkscrew the skates' grip on the rail pulls a mech in
-  // whichever way up the road is; elsewhere it is gravity and the road's curve.
-  const pull = magAt(track, m.s) ? -MAG_PULL : -GRAVITY * upYAt(track, m.s) - kvAt(track, m.s) * m.vs * m.vs;
+  // whichever way up the road is; elsewhere it is gravity and the road's
+  // curve, and the skates' hold while it is rising off road under it.
+  const pull = magAt(track, m.s) ? -MAG_PULL : -GRAVITY * upYAt(track, m.s) - kvAt(track, m.s) * m.vs * m.vs - (on && m.vh > 0 ? SKATE_HOLD : 0);
   m.vh += pull * DT;
   m.h += m.vh * DT;
   m.airT++;

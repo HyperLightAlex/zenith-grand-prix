@@ -185,6 +185,16 @@ export const MAX_HEADING = 1.2;
  * scale, so a jump is a leap and not a float.
  */
 export const GRAVITY = 45;
+/**
+ * The skates' hold on the road, u/s^2 on top of gravity's share: the road
+ * keeps a mech until a crest asks for more than both (speed squared over the
+ * crest's radius), and once off, while it is still rising away from road
+ * under it, the hold pulls it back as hard. Without it, a boosting mech left
+ * every crest sharper than about 900 units' radius and flew on over whatever
+ * followed (Titan's Rest's Sword, twice round its blade). Jumps are gaps: no
+ * road under a mech, no hold, so they fly as built.
+ */
+export const SKATE_HOLD = 100;
 /** Steering left in the air, as a share of the grip on the road. */
 export const AIR_CONTROL = 0.3;
 /** Below the road surface by this much, with no road under it: the mech has fallen. */
