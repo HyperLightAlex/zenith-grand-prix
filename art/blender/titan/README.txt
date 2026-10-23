@@ -162,3 +162,181 @@ REPORT BACK
 
 PRODUCTION NOTES
 (Blender: record your notes, decisions and QA here, below this line.)
+
+2026-10-23 — PHASE 1 / STEP 1 BLOCKOUT (AWAITING PROPORTION REVIEW)
+
+Based on latest origin/main e7c11d303c9c201bfedc976e204c3789cf911797.
+Isolated branch: alexander/titan-blockout. Existing portrait/model-sheet edits
+in the original checkout were left untouched. No game logic or road changes.
+Blender 5.2.2 LTS, d13f752e3b9c (2026-09-15 build), on macOS arm64.
+
+Built the intact standing titan, closed oval thorax and shield breastplate,
+three overlapping rib plates per flank, bronze/slate abdomen and hip frame,
+large pauldrons, flared segmented collar, helmet/visor/jewel/temple discs,
+paired swept horns, upper-back halo and three mounting struts, full arms,
+G3-style armoured palms and articulated fingers, thighs/knees/shins, closed
+broad feet, twin rear vent housings, and the separate 600 m sword.
+
+This is the approval BLOCKOUT, not Phase 1 step 2. Faceted envelopes and
+simple joint gimbals stand in for the sheet's carefully sculpted transitions.
+No rivets, engraving, scratches, ink, UVs, textures, LODs, road fitting,
+burial, damage, hollow chest, corridors or wreck pose have been produced.
+
+INTERPRETATION / DEPARTURES
+- G1 determines overall proportions. G3 supplies palm/finger construction,
+  but enlarges the hand relative to its arm; using that whole drawing at one
+  scale would violate the brief's 145 m hand check. The neutral hands here
+  are open, with four ivory three-segment fingers and one three-segment thumb.
+- G2 supplies the hooked backward horn sweep at an intermediate size. The
+  smooth centre helmet envelope has no added crest. Left/right forms are
+  mirrored; the exact side view overlaps the two identical horns.
+- The halo is a flat 295 m annulus, 35 m radial band / 24 m body depth, with
+  thicker edge rims, three inward tabs and three upper-back mounts. It stays
+  attached to chest through its separate halo bone; it has not been torn off.
+- G1's feet stop at the page's ground line. Closed soles/heels were inferred
+  at Z=0; the wide long footprint and raised pauldron caps follow G1 rather
+  than a conventional humanoid's smaller feet. Knee bearings remain centred.
+- G4 informs the oval thorax volume only. The chest is deliberately closed.
+- Chest face panel gaps have a recessed backing 3 m behind their faces;
+  typical seams are 3 m wide. Sword centre groove is 3 m wide / 3 m deep.
+  Structural gaps at articulations are occupied by the frame/gimbals.
+- Ten specified material names and exact palette values are retained.
+  Roughness and the review studio light provide no painted texture/detail.
+
+RIG / EXPORT
+One titan_rig armature, 51 bones. Every armour mesh is rigidly bone-parented,
+with no weights, vertex groups or Armature modifiers. Shoulder cap and upper
+arm are independent chest children, so the cap can be adjusted separately.
+All finger phalanges have their own bones. Halo is a detachable chest child.
+Sword is one independent object titan/sword/assembly at world origin, point
+along +Y and flat faces toward Z. The blade itself is 8 m thick; the grip and
+pommel are thicker. All object scales are applied. Export uses glTF +Y up,
+explicit normals, material names and the complete rigid joint hierarchy.
+Blender's reimport reconstructs the 51-bone rig and its rigid attachments.
+joints.json records rest heads/tails and parents in Blender metre axes.
+
+MEASURED METRES (rounding only for this text; full precision in JSON)
+  Helmet crown to soles                         1300.0
+  Shoulder span including outer bearings         700.0   (armour caps 690)
+  Chest depth, excluding vents                   328.0
+  Helmet width / chin to crown               110 / 115
+  Shoulder pivot to middle fingertip              677.7
+  Wrist to middle fingertip / palm width       145.8 / 80
+  Crotch (hip pivot) to sole                      650.0
+  Halo outer diameter                            295.0
+  Sword overall                                  600.0
+  Blade length / width / thickness            437 / 23 / 8  (19:1)
+All listed proportion checks are within the brief's approximately 10% band.
+
+TRIANGLES BY RIGID PART
+  chest                      1,984
+  foot.L                       736
+  foot.R                       736
+  forearm.L                    414
+  forearm.R                    414
+  halo                       2,328
+  hand.L                       330
+  hand.R                       330
+  head                         770
+  index.01.L                   280
+  index.01.R                   280
+  index.02.L                   280
+  index.02.R                   280
+  index.03.L                   280
+  index.03.R                   280
+  middle.01.L                  280
+  middle.01.R                  280
+  middle.02.L                  280
+  middle.02.R                  280
+  middle.03.L                  280
+  middle.03.R                  280
+  neck                          60
+  pelvis                       206
+  pinky.01.L                   280
+  pinky.01.R                   280
+  pinky.02.L                   280
+  pinky.02.R                   280
+  pinky.03.L                   280
+  pinky.03.R                   280
+  ring.01.L                    280
+  ring.01.R                    280
+  ring.02.L                    280
+  ring.02.R                    280
+  ring.03.L                    280
+  ring.03.R                    280
+  shin.L                       822
+  shin.R                       822
+  shoulder.L                   288
+  shoulder.R                   288
+  spine                        448
+  sword                      1,124
+  thigh.L                      360
+  thigh.R                      360
+  thumb.01.L                   280
+  thumb.01.R                   280
+  thumb.02.L                   280
+  thumb.02.R                   280
+  thumb.03.L                   280
+  thumb.03.R                   280
+  upper_arm.L                  392
+  upper_arm.R                  392
+  TOTAL                     22,004
+  root is a control bone without geometry; total includes the sword.
+  300 mesh objects, under the 100,000-triangle blockout budget.
+
+QA
+Independent validation: 7,516 checks, zero failures/warnings.
+Closed/manifold source meshes, no degenerate triangles or stray vertices,
+no UVs/textures, correct materials, symmetric body/rest joints, applied
+scales and full rigid hierarchy. GLB reimport retains all 300 meshes and
+22,004 triangles; maximum world-bounds deviation is
+0.003326 m (3.33 mm at 1,300 m scale).
+The importer-only Icosphere custom bone display helper is explicitly proven
+absent from the GLB and excluded from mesh counts; no exported mesh is skipped.
+
+Pose checks: 1,448 assertions across 42 cases: neutral, 40 isolated bone
+rotations, and combined maximum review pose. Both shoulder caps and upper
+arms at 90 degrees; elbows 120; knees 60; wrists 45; all 30 knuckles 90.
+Actual parent-frame triangles still intersect each closed faceted gimbal.
+Maximum attachment error 0.14 mm. This checks connected frames, NOT armour
+collision clearance or road clearance. Review poses never overwrite the
+standing production file. Reports: validation-report.json and pose-report.json.
+
+PREVIEWS / REVIEW
+Open previews/index.html (or serve the repository root with a static server).
+11 required sheet comparisons: G1 front/three-quarter/side/back, G2 head
+front/side/above and isolated halo, G3 right arm palm-up / sword flat / edge.
+The body cameras are level orthographic views at G1's original page scale:
+512x1024, ortho 1856.346 m, target Z736.8, crown about y201, sole y918.
+Detail crops preserve the whole source image at its aspect ratio. The two
+sword views use the same camera width and horizontal scale. Raw alpha renders
+are composited on #E4E6EC, with studio lighting from upper left. Source crop
+coordinates and hashes are in previews/comparison-manifest.json. The small
+neighboring fragments in G3 crops are present in the source, not model parts.
+Extra front/side maximum-range pictures show the posing check only.
+
+REBUILD / EXPORT / REVIEW COMMANDS (from the repository root)
+Use Blender 5.2.2 LTS; substitute its absolute executable path as needed.
+On this Mac: /Applications/Blender.app/Contents/MacOS/Blender
+
+  blender --background --python art/blender/titan/build_titan.py
+    Rebuilds the standing source, saves titan-production.blend, then exports.
+    It is intended for a fresh background process, never an artist's scene.
+
+  blender --background art/blender/titan/titan-production.blend --python art/blender/titan/export_titan.py
+    Re-exports the saved rest scene to GLB, joints.json and blockout-report.json.
+    Refuses a posed scene. No generated mesh/file is hand edited.
+
+  blender --background art/blender/titan/titan-production.blend --python art/blender/titan/render_titan.py
+    Renders the 11 required unposed/isolated views without saving changes.
+
+  blender --background --python art/blender/titan/validate_titan.py -- art/blender/titan/titan-production.blend src/client/render/titan/assets/titan-blockout.glb art/blender/titan/validation-report.json
+
+  blender --background --python art/blender/titan/pose_titan.py -- art/blender/titan/titan-production.blend art/blender/titan/previews/raw art/blender/titan/pose-report.json
+
+  python3 art/blender/titan/assemble_titan_previews.py --root .
+    Requires Pillow. Writes the comparison PNGs, manifest and review index.
+
+STOP POINT
+Phase 1 step 1 complete. Proportions await approval. Do not start step 2 or
+Phase 2 until separately requested; the standing source is the handoff.
