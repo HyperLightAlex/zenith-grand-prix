@@ -957,6 +957,93 @@ export function buildTrackVisual(
     const signs: Array<PaintedSign | null> = [kit.boards[0], kit.boards[1], kit.boards[2], kit.boards[3], own, kit.boards[4], kit.boards[5]];
     const signMats = signs.map((sg) => (sg ? paintedSignMaterial(paintedTexture(sg.url)) : mats[4]));
     const m = new THREE.Matrix4();
+    // Against a pit's wall (up the Crucible's Coil), a board is fixed flat to
+    // the rock above the barrier and curves round with it, upright as the
+    // wall is: one standing out past the barrier, flat, stood in the rock,
+    // and showed through the curving wall at its ends. It hangs over the neon
+    // band along the wall's foot, in front of it.
+    const BOARD_UP = 7.6;
+    const BOARD_H = 9.4;
+    const rockBehind = (i: number, side: number) => {
+      if (!pit) return false;
+      const out = side * (track.hw[i] + 10);
+      return pit.groundAt(track.px[i] + track.rx[i] * out, track.pz[i] + track.rz[i] * out) > track.py[i] + track.ry[i] * side * track.hw[i] + BOARD_UP;
+    };
+    // The wall's face at `s` (where world.ts stands it: behind the barrier,
+    // from its foot), brought out toward the road by `inset`; at the board's
+    // foot, so far above the road's edge.
+    const onFace = (s: number, side: number, inset: number, out: THREE.Vector3) => {
+      frameAt(track, s, f);
+      const w = hwAt(track, s);
+      const d = side * (w + 2.3);
+      const l = Math.hypot(f.rx, f.rz) || 1;
+      return out.set(
+        f.px + f.rx * d - f.ux * 1.6 - ((side * f.rx) / l) * inset,
+        f.py + f.ry * side * w + BOARD_UP,
+        f.pz + f.rz * d - f.uz * 1.6 - ((side * f.rz) / l) * inset,
+      );
+    };
+    // A strip of the face `width` across, centred on `s`, `grow` bigger all round (the backing).
+    const faceStrip = (s: number, side: number, width: number, inset: number, grow: number): THREE.BufferGeometry => {
+      const half = width / 2 + grow;
+      const mid = onFace(s, side, inset, new THREE.Vector3());
+      const pts = [mid];
+      const along = [0];
+      for (const dir of [1, -1]) {
+        let run = 0;
+        let ss = s;
+        let prev = mid;
+        while (run < half - 1e-6) {
+          ss += dir * 0.75;
+          const p = onFace(ss, side, inset, new THREE.Vector3());
+          const step = Math.hypot(p.x - prev.x, p.z - prev.z);
+          if (step < 1e-6) continue;
+          if (run + step > half) {
+            p.lerpVectors(prev, p, (half - run) / step);
+            run = half;
+          } else run += step;
+          if (dir > 0) {
+            pts.push(p);
+            along.push(run);
+          } else {
+            pts.unshift(p);
+            along.unshift(-run);
+          }
+          prev = p;
+        }
+      }
+      const pos: number[] = [];
+      const uv: number[] = [];
+      for (let q = 0; q < pts.length; q++) {
+        // Read left to right from the road.
+        const u = 0.5 - (side * along[q]) / (2 * half);
+        pos.push(pts[q].x, pts[q].y - grow, pts[q].z, pts[q].x, pts[q].y + BOARD_H + grow, pts[q].z);
+        uv.push(u, 0, u, 1);
+      }
+      // Facing the road: (along x up) toward it, from the wall's side.
+      const a = pts[0];
+      const b = pts[pts.length - 1];
+      frameAt(track, s, f);
+      const flip = -side * ((b.x - a.x) * f.rz - (b.z - a.z) * f.rx) < 0;
+      const index: number[] = [];
+      for (let q = 0; q + 1 < pts.length; q++) {
+        const [lo, hi, lo2, hi2] = [2 * q, 2 * q + 1, 2 * q + 2, 2 * q + 3];
+        if (flip) index.push(lo, hi, lo2, hi, hi2, lo2);
+        else index.push(lo, lo2, hi, hi, lo2, hi2);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.setIndex(index);
+      g.computeVertexNormals();
+      return g;
+    };
+    const onWall = (s: number, side: number, width: number, mat: THREE.Material) => {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(faceStrip(s, side, width, 0.6, 0.5), backMat), new THREE.Mesh(faceStrip(s, side, width, 0.75, 0), mat));
+      group.add(g);
+      return g;
+    };
     let k = 0;
     for (let s = 150; s < track.length - 100; s += 170) {
       const i = Math.floor(wrapS(track, s) / track.ds);
@@ -967,6 +1054,13 @@ export function buildTrackVisual(
       // Stand the board on the outside of any bend, facing the road.
       const side = track.kappa[i] > 0.0004 ? -1 : track.kappa[i] < -0.0004 ? 1 : k % 2 === 0 ? 1 : -1;
       if (!plain(i) || !(side < 0 ? track.wallL[i] : track.wallR[i])) continue;
+      if (rockBehind(i, side)) {
+        plainOnly.push(onWall(s, side, 30, mats[k % mats.length]));
+        const sg = signs[k % signs.length];
+        paintedOnly.push(onWall(s, side, sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
+        k++;
+        continue;
+      }
       trackMatrix(track, s, side * (track.hw[i] + 5.5), 9.5, side > 0 ? -Math.PI / 2 - 0.25 : Math.PI / 2 + 0.25, m);
       // A board on its back and two posts: plain, and painted (its frame to the painting's shape, as tall).
       const stand = (w: number, mat: THREE.Material) => {
