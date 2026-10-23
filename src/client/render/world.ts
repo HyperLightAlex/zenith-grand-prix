@@ -2241,6 +2241,9 @@ function buildTitansRest(ctx: Ctx): void {
     );
     group.add(model);
     placeholder.visible = false;
+  }).catch((err) => {
+    // Not loaded (no network, or outside a browser): the placeholder stays.
+    console.warn('titan model not loaded', err);
   });
 
   // ---- dunes drifted against it, and wreckage half buried ----------------------------

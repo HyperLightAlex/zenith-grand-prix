@@ -274,7 +274,10 @@ PHASE 2: POSE IT AND FIT IT
      images, custom properties on. Name every object titan/<bone>/<what>
      and give it a custom property part = <bone>; keep the ten material
      slots by name. The game shows it in place of its placeholder, and its
-     tests check it against the road (tests/titan.test.ts). STOP and report:
+     tests check it against the road (tests/titan.test.ts). (Until then the
+     titan.glb there is a preview: fit/posed.glb with every triangle in the
+     road's space dropped, by tools/titan/cut_preview.ts. Export over it.)
+     STOP and report:
      the check's output, the stretches that could not be seated, anything
      that departs from the targets.
 
