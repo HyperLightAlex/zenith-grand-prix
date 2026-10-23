@@ -5,7 +5,7 @@
 // at any point, so pylons do not stand through it.
 import * as THREE from 'three';
 import type { Track } from '../../../sim/track';
-import { KEEP_OUT, RoadIndex } from './keepout';
+import { KEEP_OUT, RoadIndex, triangleInRoad } from './keepout';
 import { fitToRoad, surfacePoints, titanShapes, TITAN_POSE, type TitanMat, type TitanShape, type V3 } from './pose';
 
 const vec = (v: V3) => new THREE.Vector3(v[0], v[1], v[2]);
@@ -64,7 +64,7 @@ function mergeNonIndexed(gs: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return g;
 }
 
-/** Drop the triangles with any corner in the space the road needs (up to `up` over its deck). */
+/** Drop the triangles reaching into the space the road needs (up to `up` over its deck): any corner, or any point across them about 2.5 apart. */
 export function cutForRoad(g: THREE.BufferGeometry, index: RoadIndex, up: number): THREE.BufferGeometry {
   const p = g.attributes.position.array as Float32Array;
   const n = g.attributes.normal?.array as Float32Array | undefined;
@@ -72,10 +72,13 @@ export function cutForRoad(g: THREE.BufferGeometry, index: RoadIndex, up: number
   const keepN: number[] = [];
   const scratch: number[] = [];
   for (let t = 0; t < p.length; t += 9) {
-    let hit = false;
-    for (let k = 0; k < 9 && !hit; k += 3) hit = index.hit(p[t + k], p[t + k + 1], p[t + k + 2], up, scratch) >= 0;
-    if (!hit) hit = index.hit((p[t] + p[t + 3] + p[t + 6]) / 3, (p[t + 1] + p[t + 4] + p[t + 7]) / 3, (p[t + 2] + p[t + 5] + p[t + 8]) / 3, up, scratch) >= 0;
-    if (hit) continue;
+    let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+    for (let k = 0; k < 9; k += 3) {
+      x0 = Math.min(x0, p[t + k]); x1 = Math.max(x1, p[t + k]);
+      y0 = Math.min(y0, p[t + k + 1]); y1 = Math.max(y1, p[t + k + 1]);
+      z0 = Math.min(z0, p[t + k + 2]); z1 = Math.max(z1, p[t + k + 2]);
+    }
+    if (index.anyNear(x0, z0, x1, z1, y0, y1) && triangleInRoad(index, p, t, 2.5, up, KEEP_OUT.down, scratch)) continue;
     for (let k = 0; k < 9; k++) {
       keepP.push(p[t + k]);
       if (n) keepN.push(n[t + k]);

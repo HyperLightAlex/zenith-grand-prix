@@ -1,12 +1,16 @@
 // The ground Frostline is laid on, worked out from the circuit itself: an
 // ice shelf standing out of the sea under every low stretch of road, and the
 // glacier on top of it under the high ones. The glacier's south face is cut
-// where the Calving leaves it (the road's ramp juts out over the drop), and a
-// slot runs up into it for the climb, the Ice Barrel's tube lying in it. Both
-// the scenery (world.ts) and the road's supports (trackMesh.ts) ask it where
-// the ground is.
+// where the Calving leaves it (the road's ramp juts out over the drop) and
+// held back off the roads below its top (the Aurora Split's bridge runs along
+// its foot), and a slot runs up into it for the climb, the Ice Barrel's tube
+// lying in it. Both tops dip under the road wherever a banked turn's low edge
+// would go into them (ground.ts). Both the scenery (world.ts) and the road's
+// supports (trackMesh.ts) ask it where the ground is.
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import type { Track } from '../../sim/track';
+import { Dips } from './ground';
+import { KEEP_OUT, keepBoxes } from './titan/keepout';
 
 export interface Frost {
   /** Tops of the shelf and of the glacier; the sea is at 0. */
@@ -17,7 +21,12 @@ export interface Frost {
   glacier: Array<[number, number]>;
   /** The climb: the samples from the glacier's foot to its top, and the slot it runs in. */
   climb: [number, number];
-  /** Height of the ground at a point: the glacier, the shelf, or the sea. */
+  /** The glacier's south face where the Calving leaves it: its line (z) and how far it runs (x). */
+  face: { z: number; x0: number; x1: number };
+  /** Where the tops dip under the road. */
+  shelfDips: Dips;
+  glacierDips: Dips;
+  /** Height of the ground at a point: the glacier, the shelf (either dipping under a road), or the sea. */
   groundAt(x: number, z: number): number;
 }
 
@@ -145,6 +154,53 @@ function findFrost(track: Track): Frost | null {
     }
   }
 
+  // Held back off every road below its top: each point of the outline (a few
+  // units apart) moved in, square to it, until it is clear of the road's space
+  // there (across the deck and past each edge, keepout.ts) by a margin.
+  const MARGIN = 6;
+  const below = (i: number) => track.py[i] < glacierY + KEEP_OUT.up;
+  const inRoad = (x: number, z: number) => {
+    for (let i = 0; i < track.n; i++) {
+      const vx = x - track.px[i];
+      const vz = z - track.pz[i];
+      if (vx * vx + vz * vz > 120 * 120 || !below(i)) continue;
+      const tl = Math.hypot(track.tx[i], track.tz[i]) || 1;
+      const along = (vx * track.tx[i] + vz * track.tz[i]) / tl;
+      if (along < -track.ds || along > track.ds) continue;
+      const rl = Math.hypot(track.rx[i], track.rz[i]) || 1;
+      const d = (vx * track.rx[i] + vz * track.rz[i]) / (rl * rl);
+      for (const b of keepBoxes(track, i, 0, 0)) {
+        // Only where that route's deck is under the top (the roads on top run over it).
+        if (track.py[i] + track.ry[i] * Math.min(Math.max(d, b.d0), b.d1) + track.uy[i] * b.h0 >= glacierY + 0.5) continue;
+        if (d > b.d0 - MARGIN / rl && d < b.d1 + MARGIN / rl) return true;
+      }
+    }
+    return false;
+  };
+  {
+    const dense: Array<[number, number]> = [];
+    for (let k = 0; k < glacier.length; k++) {
+      const [ax, az] = glacier[k];
+      const [bx, bz] = glacier[(k + 1) % glacier.length];
+      const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 8));
+      for (let q = 0; q < steps; q++) dense.push([ax + ((bx - ax) * q) / steps, az + ((bz - az) * q) / steps]);
+    }
+    const moved = dense.map(([x, z], k) => {
+      const [px, pz] = dense[(k + dense.length - 1) % dense.length];
+      const [nx, nz] = dense[(k + 1) % dense.length];
+      const len = Math.hypot(nx - px, nz - pz) || 1;
+      // Inward is to the left going round (the corners run clockwise seen from above).
+      const ix = (nz - pz) / len;
+      const iz = -(nx - px) / len;
+      for (let step = 0; step <= 200; step += 2) {
+        if (!inRoad(x + ix * step, z + iz * step)) return [x + ix * step, z + iz * step] as [number, number];
+      }
+      return [x, z] as [number, number];
+    });
+    glacier.length = 0;
+    glacier.push(...moved);
+  }
+
   // The shelf: round every low stretch of road and under the glacier, its
   // coast a little ragged.
   const low: Array<[number, number]> = [];
@@ -185,6 +241,8 @@ function findFrost(track: Track): Frost | null {
     }
   }
   const shelfY = shelfRoad - 3;
-  const groundAt = (x: number, z: number) => (inside(glacier, x, z) ? glacierY : inside(shelf, x, z) ? shelfY : 0);
-  return { shelfY, glacierY, shelf, glacier, climb: [c0, c1], groundAt };
+  const shelfDips = new Dips(track, shelfY);
+  const glacierDips = new Dips(track, glacierY);
+  const groundAt = (x: number, z: number) => (inside(glacier, x, z) ? glacierDips.at(x, z) : inside(shelf, x, z) ? shelfDips.at(x, z) : 0);
+  return { shelfY, glacierY, shelf, glacier, climb: [c0, c1], face: { z: faceZ, x0: west, x1: crestX + 120 }, shelfDips, glacierDips, groundAt };
 }

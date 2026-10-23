@@ -38,14 +38,16 @@ def load_road():
 
 
 def boxes(R, up):
-    """Per sample, two boxes (d0, d1, h0, h1): the whole road twice where it is not forked, each route through a fork."""
+    """Per sample, two boxes (d0, d1, h0, h1): the whole road twice where it is not forked, each route through a fork (as keepBoxes in the game's keepout.ts)."""
     k = R['keep']
     hw = R['hw'] + k['side']
     sL, sR = R['shift'][:, 0], R['shift'][:, 1]
     rL, rR = R['rise'][:, 0], R['rise'][:, 1]
     forked = (R['median'] > 0.01) | (sL != 0) | (sR != 0) | (rL != 0) | (rR != 0)
-    left = np.stack([np.where(forked, -hw + sL, -hw), np.where(forked, k['side'] + sL, hw), np.where(forked, -k['down'] + rL, -k['down']), np.where(forked, up + rL, up)], 1)
-    right = np.stack([np.where(forked, -k['side'] + sR, -hw), np.where(forked, hw + sR, hw), np.where(forked, -k['down'] + rR, -k['down']), np.where(forked, up + rR, up)], 1)
+    # Through a fork, each route from its outer edge to the back of the wall down the middle (the median, less the wall and a margin).
+    m = R['median'] - k['side']
+    left = np.stack([np.where(forked, -hw + sL, -hw), np.where(forked, -m + sL, hw), np.where(forked, -k['down'] + rL, -k['down']), np.where(forked, up + rL, up)], 1)
+    right = np.stack([np.where(forked, m + sR, -hw), np.where(forked, hw + sR, hw), np.where(forked, -k['down'] + rR, -k['down']), np.where(forked, up + rR, up)], 1)
     return left, right
 
 

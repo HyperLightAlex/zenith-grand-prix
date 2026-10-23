@@ -14,12 +14,14 @@ import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, hwAt, makeFrame, type Track } from '../../sim/track';
 import { look } from './look';
 import { frostOf, inside } from './frost';
+import { topSurface, type Dips } from './ground';
+import { KEEP_OUT, RoadIndex, inRoadSpace } from './titan/keepout';
 import { pitOf } from './pit';
 import { PuffStreams, type PuffSource } from './puffs';
 import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paintedSurfaceMaterial as paintedRock, paintedTexture, paintedTrack, whiteTexture, type PaintedSet } from './painted';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
-import { trackMatrix } from './trackSpace';
+import { trackMatrix, trackPoint } from './trackSpace';
 import { titanGround, titanPlaceholder } from './titan/placeholder';
 import { loadTitan, titanModel, type TitanSlot } from './titan/asset';
 import type { TitanMat } from './titan/pose';
@@ -454,6 +456,8 @@ interface Ctx {
   maxZ: number;
   /** Distance from a point to the nearest bit of road, in plan. */
   clearance(x: number, z: number): number;
+  /** Whether a piece of scenery reaches into the space the road needs (keepout.ts). */
+  inRoad(g: THREE.BufferGeometry): boolean;
   updates: Array<(time: number, camera: THREE.Camera) => void>;
   /** The circuit's painted background, if it has one. */
   painted: PaintedSet | null;
@@ -479,6 +483,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
     minZ = Math.min(minZ, track.pz[i]);
     maxZ = Math.max(maxZ, track.pz[i]);
   }
+  let roads: RoadIndex | null = null;
   const ctx: Ctx = {
     track,
     theme,
@@ -496,6 +501,10 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
         if (dd < best) best = dd;
       }
       return Math.sqrt(best);
+    },
+    inRoad(g: THREE.BufferGeometry): boolean {
+      roads ??= new RoadIndex(track);
+      return inRoadSpace(roads, g);
     },
     updates: [],
     painted,
@@ -1481,26 +1490,36 @@ void main() {
   #include <fog_fragment>
 }`;
 
-/** An outline in plan, as (x, z), stood up from `y0` to `y1`: snow on top, ice in bands down the sides. */
-function iceBlock(ctx: Ctx, outline: Array<[number, number]>, y0: number, y1: number, top: THREE.Material, bands: (x: number, y: number, z: number) => THREE.Color, paintedSide: THREE.Material | null = null): THREE.Mesh {
+/**
+ * An outline in plan, as (x, z), stood up from `y0` to `y1`: ice in bands down
+ * the sides, and snow on top, dipping under the road where `dips` says.
+ */
+function iceBlock(ctx: Ctx, outline: Array<[number, number]>, y0: number, y1: number, top: THREE.Material, bands: (x: number, y: number, z: number) => THREE.Color, paintedSide: THREE.Material | null, dips: Dips): THREE.Mesh {
   const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: y1 - y0, bevelEnabled: false, steps: Math.max(1, Math.round((y1 - y0) / 9)) });
   geo.rotateX(-Math.PI / 2);
   geo.translate(0, y0, 0);
-  // The sides in bands of colour by height (each face its own, so they stay flat).
-  const flat = geo.toNonIndexed();
+  // Only the sides (the extrusion's second group): the top is drawn on its own below.
+  const all = geo.toNonIndexed();
+  const sides = all.groups.find((g) => g.materialIndex === 1)!;
+  const flat = new THREE.BufferGeometry();
+  const p = all.attributes.position.array as Float32Array;
+  flat.setAttribute('position', new THREE.Float32BufferAttribute(p.slice(sides.start * 3, (sides.start + sides.count) * 3), 3));
+  // In bands of colour by height (each face its own, so they stay flat).
   paint(flat, bands);
   flat.computeVertexNormals();
   const side = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1a2c5a, emissiveIntensity: 0.35 });
-  const mesh = new THREE.Mesh(flat, [top, side]);
+  const mesh = new THREE.Mesh<THREE.BufferGeometry, THREE.Material>(flat, side);
   mesh.frustumCulled = false;
   ctx.group.add(mesh);
   // Painted: the ice cliff down the sides; the top keeps its own (painted) snow.
-  if (paintedSide) {
-    const plain = [top, side];
-    const painted = [top, paintedSide];
-    ctx.swaps.push((on) => (mesh.material = on ? painted : plain));
-  }
+  if (paintedSide) ctx.swaps.push((on) => (mesh.material = on ? paintedSide : side));
+  const cap = new THREE.Mesh(
+    topSurface(outline, (x, z) => dips.at(x, z), (x0, z0, x1, z1) => dips.touches(x0, z0, x1, z1, 0)),
+    top,
+  );
+  cap.frustumCulled = false;
+  ctx.group.add(cap);
   return mesh;
 }
 
@@ -1594,8 +1613,8 @@ function buildFrostline(ctx: Ctx): void {
     if (crack) band.lerp(deep, 0.45);
     return band.multiplyScalar(0.96 + 0.04 * (b % 2));
   };
-  iceBlock(ctx, frost.shelf, theme.groundY - 6, shelfY, snow, bands, cliffPaint);
-  iceBlock(ctx, frost.glacier, shelfY - 2, glacierY, snow, bands, cliffPaint);
+  iceBlock(ctx, frost.shelf, theme.groundY - 6, shelfY, snow, bands, cliffPaint, frost.shelfDips);
+  iceBlock(ctx, frost.glacier, shelfY - 2, glacierY, snow, bands, cliffPaint, frost.glacierDips);
 
   // ---- the Ice Barrel: a tube of clear ice round the climb ---------------------
   {
@@ -1603,7 +1622,8 @@ function buildFrostline(ctx: Ctx): void {
     const pts: THREE.Vector3[] = [];
     for (let i = c0 - 6; i <= c1 + 4; i += 2) pts.push(new THREE.Vector3(track.px[i], track.py[i], track.pz[i]));
     const curve = new THREE.CatmullRomCurve3(pts);
-    const R = 34;
+    // Clear of the road's space all round, its ribs too (the climbs either end are the full width).
+    const R = 36.5;
     const tubeGeo = new THREE.TubeGeometry(curve, pts.length * 2, R, 20, false);
     const glass = new THREE.MeshLambertMaterial({ color: 0x9fd2ff, emissive: 0x24508f, emissiveIntensity: 0.45, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false });
     const tube = new THREE.Mesh(tubeGeo, glass);
@@ -1697,6 +1717,26 @@ function buildFrostline(ctx: Ctx): void {
       const shells: THREE.BufferGeometry[] = [];
       const rnd = mulberry(611);
       const lane = (track.hw[Math.floor((fork.s0 + fork.s1) / 2 / track.ds)] + fork.median) / 2;
+      // The caves' section, across the route (right of the middle, so the
+      // fork's offset takes it to the route): straight walls up past the road's
+      // space, behind the middle wall and the outer barrier, and a low vault over.
+      const cave = (i: number): Array<[number, number]> => {
+        const din = Math.max(0.5, track.median[i] - KEEP_OUT.side - 1.2);
+        const dout = track.hw[i] + KEEP_OUT.side + 1.5;
+        const wall = KEEP_OUT.up + 1.5;
+        const out: Array<[number, number]> = [[din, 0], [din, wall]];
+        const SEG = 10;
+        for (let k = 1; k < SEG; k++) {
+          const a = Math.PI - (k / SEG) * Math.PI;
+          out.push([(din + dout) / 2 + Math.cos(a) * ((dout - din) / 2), wall + Math.sin(a) * 9]);
+        }
+        out.push([dout, wall], [dout, 0]);
+        return out;
+      };
+      // Only where the caves have swung all the way out, and run straight on (their mouths open where they swing).
+      let widest = 0;
+      for (let s = fork.s0; s < fork.s1; s += 4) widest = Math.max(widest, Math.abs(track.shiftR[Math.floor(s / track.ds) % track.n]));
+      const caved = (i: number) => Math.abs(track.shiftR[i]) > widest - 2;
       for (let s = fork.s0 + 40; s < fork.s1 - 40; s += 4) {
         const i = Math.floor(s / track.ds) % track.n;
         // Under the bridge, where it stands well up: an ice pillar every so often.
@@ -1709,25 +1749,25 @@ function buildFrostline(ctx: Ctx): void {
         }
         // Over the caves, once they have swung clear: slim ribs of ice, every
         // 40 (a camera beside the route looks through them, and the clear roof).
-        if (Math.abs(track.shiftR[i]) > 14 && Math.round(s) % 40 < 4) {
-          trackMatrix(track, s, lane, 0, 0, m);
-          const g = new THREE.TorusGeometry(lane + 1, 1.5, 5, 14, Math.PI).toNonIndexed();
-          g.applyMatrix4(m);
+        if (caved(i) && Math.round(s) % 40 < 4) {
+          const path = new THREE.CurvePath<THREE.Vector3>();
+          const pts = cave(i).map(([d, h]) => place(s, d, h).clone());
+          for (let k = 0; k + 1 < pts.length; k++) path.add(new THREE.LineCurve3(pts[k], pts[k + 1]));
+          const g = new THREE.TubeGeometry(path, pts.length * 3, 1, 5, false).toNonIndexed();
           vault.push(tinted(g, new THREE.Color(0xb6dafa).multiplyScalar(0.9 + rnd() * 0.15)));
         }
       }
-      // The caves' roof between the arches: clear ice, a half pipe along the route.
+      // The caves' walls and roof between the ribs: clear ice along the route.
       {
         const pos: number[] = [];
         const idx: number[] = [];
-        const SEG = 14;
+        const SEG = cave(0).length - 1;
         let row = 0;
         for (let s = fork.s0 + 40; s < fork.s1 - 40; s += 8) {
           const i = Math.floor(s / track.ds) % track.n;
-          if (Math.abs(track.shiftR[i]) < 14) continue;
-          for (let k = 0; k <= SEG; k++) {
-            const a = (k / SEG) * Math.PI;
-            const p = place(s, lane + Math.cos(a) * (lane + 1), Math.sin(a) * (lane + 1));
+          if (!caved(i)) continue;
+          for (const [d, h] of cave(i)) {
+            const p = place(s, d, h);
             pos.push(p.x, p.y, p.z);
           }
           if (row > 0) {
@@ -1777,7 +1817,9 @@ function buildFrostline(ctx: Ctx): void {
       g.rotateZ((rnd() - 0.5) * 0.35);
       g.rotateX((rnd() - 0.5) * 0.35);
       g.translate(x, ground + h / 2 - 2, z);
-      parts.push(tinted(g, new THREE.Color().setHSL(0.58 + rnd() * 0.04, 0.6, 0.72 + rnd() * 0.16)));
+      const tint = new THREE.Color().setHSL(0.58 + rnd() * 0.04, 0.6, 0.72 + rnd() * 0.16);
+      if (ctx.inRoad(g)) continue;
+      parts.push(tinted(g, tint));
       placed++;
     }
     // A few on the shelf too, by the low roads.
@@ -1794,7 +1836,9 @@ function buildFrostline(ctx: Ctx): void {
       g.rotateY(rnd() * 3);
       g.rotateZ((rnd() - 0.5) * 0.3);
       g.translate(x, shelfY + h / 2 - 2, z);
-      parts.push(tinted(g, new THREE.Color().setHSL(0.58 + rnd() * 0.04, 0.55, 0.74 + rnd() * 0.14)));
+      const tint = new THREE.Color().setHSL(0.58 + rnd() * 0.04, 0.55, 0.74 + rnd() * 0.14);
+      if (ctx.inRoad(g)) continue;
+      parts.push(tinted(g, tint));
       placed++;
     }
     add(parts, iceMat);
@@ -1823,6 +1867,7 @@ function buildFrostline(ctx: Ctx): void {
         cap.rotateY(rnd() * 3);
         g.translate(x, glacierY + h / 2 - 6, z);
         cap.translate(x, glacierY + h - h * 0.2 - 5, z);
+        if (k > 0 && (ctx.inRoad(g) || ctx.inRoad(cap))) continue;
         rock.push(tinted(g, new THREE.Color(0x2c2f45).multiplyScalar(0.9 + rnd() * 0.25)));
         caps.push(tinted(cap, new THREE.Color(0xeef4ff)));
       }
@@ -1886,7 +1931,8 @@ function buildFrostline(ctx: Ctx): void {
           c.copy(green).lerp(magenta, 0.5 - 0.5 * Math.cos(Math.max(0, Math.min(1, f)) * Math.PI * 2));
           const fade = Math.min(1, Math.max(0, (s - range[0] + 30) / 40), Math.max(0, (range[1] + 30 - s) / 40));
           for (const h of [3.4, 13]) {
-            const p = place(s, side * (hwAt(track, s) + 2.6), h);
+            // Past the barrier and the road's space beside it.
+            const p = place(s, side * (hwAt(track, s) + KEEP_OUT.side + 1), h);
             pos.push(p.x, p.y, p.z);
             const k = h > 5 ? 0.25 * fade : fade;
             col.push(c.r * k, c.g * k, c.b * k);
@@ -1912,10 +1958,10 @@ function buildFrostline(ctx: Ctx): void {
   {
     const rnd = mulberry(303);
     const parts: THREE.BufferGeometry[] = [];
-    const face = frost.glacier[0][1];
+    const { face } = frost;
     for (let tries = 0; tries < 400 && parts.length < 24; tries++) {
-      const x = frost.glacier[0][0] + rnd() * (frost.glacier[2][0] - frost.glacier[0][0]);
-      const z = face + 20 + rnd() * 160;
+      const x = face.x0 + rnd() * (face.x1 - face.x0);
+      const z = face.z + 20 + rnd() * 160;
       const sz = 8 + rnd() * 22;
       if (frost.groundAt(x, z) !== shelfY || ctx.clearance(x, z) < 40 + sz) continue;
       const g = new THREE.BoxGeometry(sz * (1 + rnd()), sz * (0.6 + rnd() * 0.8), sz * (1 + rnd())).toNonIndexed();
@@ -1923,7 +1969,9 @@ function buildFrostline(ctx: Ctx): void {
       g.rotateX((rnd() - 0.5) * 0.6);
       g.rotateZ((rnd() - 0.5) * 0.6);
       g.translate(x, shelfY + sz * 0.3, z);
-      parts.push(tinted(g, new THREE.Color().setHSL(0.58, 0.55, 0.7 + rnd() * 0.18)));
+      const tint = new THREE.Color().setHSL(0.58, 0.55, 0.7 + rnd() * 0.18);
+      if (ctx.inRoad(g)) continue;
+      parts.push(tinted(g, tint));
     }
     add(parts, iceMat);
   }
@@ -2130,21 +2178,45 @@ function buildTitansRest(ctx: Ctx): void {
     const kindOf: Record<TitanMat, keyof typeof mats> = { armour: 'armour', red: 'red', slate: 'slate', gold: 'bronze', frame: 'frame', visor: 'blade', blade: 'blade' };
     for (const m of Object.keys(shapes) as TitanMat[]) for (const g of shapes[m]) putTitan(kindOf[m], g);
   }
-  // The corridors through the Hull: walls either side of its left route, and a roof.
+  // The corridors through the Hull: a wall along its left route's outside, and
+  // a roof, following the route where it has swung out from the middle (past
+  // the road's space: behind the outer barrier, over its top).
   const hull = range('the Hull');
   if (hull) {
-    const mid = (hull[0] + hull[1]) / 2;
-    const j = Math.floor(mid / track.ds);
-    const lane = (track.hw[j] - track.median[j]) / 2;
-    frameAt(track, mid, f);
-    const zs = [pointAt(hull[0]).z, pointAt(hull[1]).z].sort((a, b) => a - b);
-    const cor = pointAt(mid, -track.median[j] - lane, 0);
-    const corX = cor.x + f.rx * track.shiftL[j];
-    const floor = cor.y + track.riseL[j];
-    const roofY = floor + 30;
-    putTitan('frame', block(corX - lane - 10, corX - lane - 4, -10, roofY, zs[0] + 70, zs[1] - 40));
-    putTitan('frame', block(corX + lane + 4, corX + lane + 10, -10, roofY, zs[0] + 70, zs[1] - 40));
-    putTitan('verdigris', block(corX - lane - 10, corX + lane + 10, roofY, roofY + 6, zs[0] + 70, zs[1] - 40));
+    const v = new THREE.Vector3();
+    /** A section (d, h across and up the left route) swept along it, as triangles. */
+    const sweepLeft = (section: (i: number) => Array<[number, number]>) => {
+      const rows: THREE.Vector3[][] = [];
+      for (let s = hull[0]; s <= hull[1]; s += 4) {
+        const i = Math.floor(s / track.ds) % track.n;
+        if (track.shiftL[i] > -10) {
+          rows.push([]);
+          continue;
+        }
+        rows.push(section(i).map(([d, h]) => trackPoint(track, s, d, h, v).clone()));
+      }
+      const pos: number[] = [];
+      for (let r = 0; r + 1 < rows.length; r++) {
+        const a = rows[r];
+        const b = rows[r + 1];
+        if (!a.length || !b.length) continue;
+        for (let k = 0; k < a.length; k++) {
+          const k2 = (k + 1) % a.length;
+          for (const p of [a[k], b[k], b[k2], a[k], b[k2], a[k2]]) pos.push(p.x, p.y, p.z);
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.computeVertexNormals();
+      return g;
+    };
+    const roof = KEEP_OUT.up + 12;
+    // (The route swings out and back the whole way through, a sample's road
+    // space lying across it at a slant, so the wall keeps a little further off.
+    // On the middle's side the middle wall is the corridor's.)
+    const outer = (i: number) => -(track.hw[i] + KEEP_OUT.side + 3);
+    putTitan('frame', sweepLeft((i) => [[outer(i) - 6, -10], [outer(i) - 6, roof], [outer(i), roof], [outer(i), -10]]));
+    putTitan('verdigris', sweepLeft((i) => [[outer(i) - 6, roof], [outer(i) - 6, roof + 6], [-0.4, roof + 6], [-0.4, roof]]));
   }
   const body = titanGround(track);
   const placeholder = new THREE.Group();
@@ -2189,6 +2261,8 @@ function buildTitansRest(ctx: Ctx): void {
       g.scale(1.6 + rnd() * 0.8, 0.22 + rnd() * 0.18, 1);
       g.rotateY(rnd() * 3);
       g.translate(x, -2, z);
+      // Stretched, a dune reaches further than its clearance allowed for: none over the road.
+      if (ctx.inRoad(g)) continue;
       dunes.push(paint(g, () => new THREE.Color(0xf1e6cc)));
     }
     if (dunes.length) {
@@ -2212,7 +2286,9 @@ function buildTitansRest(ctx: Ctx): void {
       g.rotateZ((rnd() - 0.5) * 0.7);
       g.rotateY(rnd() * 3);
       g.translate(x, sz * 0.05, z);
-      put(rnd() < 0.2 ? 'red' : rnd() < 0.45 ? 'slate' : 'armour', g);
+      const kind = rnd() < 0.2 ? 'red' : rnd() < 0.45 ? 'slate' : 'armour';
+      if (ctx.inRoad(g.index ? g.toNonIndexed() : g)) continue;
+      put(kind, g);
       wrecks++;
     }
   }

@@ -305,7 +305,15 @@ without it). Each follows the same arrangement over the three laps, and the
 lap and phase stingers are moved into the circuit's key. The Crucible's pit
 is worked out from the circuit (`src/client/render/pit.ts`): the scenery
 and the road's supports both ask it where the ground is, and no support
-pylon comes down on or through another stretch of road.
+pylon comes down on or through another stretch of road. Frostline's ice is
+worked out the same way (`frost.ts`): its shelf and glacier dip under every
+banked turn whose low edge would go into them (`ground.ts`), and the
+glacier's face is held back off the roads below its top. Nothing the
+scenery builds may stand in the space the road needs (above the deck,
+across it and a little past each edge: `titan/keepout.ts`), and pieces
+placed at random that would are left out; `tests/scenery.test.ts` checks
+every circuit's scenery and supports against it (the Crucible's benches,
+rim and pit rock still stand at its road's edge, so it is not checked yet).
 
 The race music is a recorded song (`?music=synth` plays the synthesised
 music above instead)

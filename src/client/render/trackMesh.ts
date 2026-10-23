@@ -810,9 +810,11 @@ export function buildTrackVisual(
       for (let j = 0; j < n; j += 2) {
         const gap = Math.abs(j - i);
         if (Math.min(gap, n - gap) < away) continue;
+        // (Through a fork, its routes reach out to either side, and up.)
         const y = track.py[j];
-        if (y > top || y < bottom - 8) continue;
-        if ((track.px[j] - x) ** 2 + (track.pz[j] - z) ** 2 < (track.hw[j] + 6) ** 2) return true;
+        if (y > top || y + Math.max(track.riseL[j], track.riseR[j]) < bottom - 8) continue;
+        const reach = track.hw[j] + Math.max(Math.abs(track.shiftL[j]), Math.abs(track.shiftR[j])) + 6;
+        if ((track.px[j] - x) ** 2 + (track.pz[j] - z) ** 2 < reach ** 2) return true;
       }
       return false;
     };
@@ -840,6 +842,7 @@ export function buildTrackVisual(
     geo.translate(0, -0.5, 0);
     const mat = new THREE.MeshLambertMaterial({ color: 0x6f7b8f });
     const inst = new THREE.InstancedMesh(geo, mat, Math.max(1, spots.length));
+    inst.name = 'pylons';
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const p = new THREE.Vector3();
