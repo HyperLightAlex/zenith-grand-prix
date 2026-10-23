@@ -592,6 +592,22 @@ describe('Neon Crucible', () => {
     expect(checked).toBeGreaterThan(1000);
   });
 
+  it('keeps every road over the pit floor clear of the melt, banked edges and all', () => {
+    const pit = pitOf(t)!;
+    // The Hearth across the floor and the Coil's first turn are banked toward
+    // the middle: their inner edges, barriers and all, stay well above it.
+    let checked = 0;
+    for (let i = 0; i < t.n; i++) {
+      if (t.py[i] > pit.floor + 60) continue;
+      for (const d of [-(t.hw[i] + 2.3), 0, t.hw[i] + 2.3]) {
+        const y = t.py[i] + t.ry[i] * d;
+        if (y - pit.floor < 3.9) throw new Error(`road ${(y - pit.floor).toFixed(2)} above the melt at s ${(i * t.ds).toFixed(0)}, d ${d.toFixed(1)}`);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(300);
+  });
+
   it('climbs at one steady grade across the cuts between its pieces', () => {
     const run = spiralRun({ r0: 135, r1: 360, degrees: 1545, grade: 0.0575, cuts: [450, 900] });
     const sp = run.map((p) => (p as { spiral: [number, number, number, number, string] }).spiral);

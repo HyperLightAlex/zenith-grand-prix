@@ -37,8 +37,12 @@ interface Stream {
   size: [number, number];
   /** How fast it climbs, units a second, as it is let go and later. */
   rise: [number, number];
-  /** How far from the source a puff may start. */
-  spread: number;
+  /** How far from the source a puff starts: between these. */
+  spread: [number, number];
+  /** How fast it spreads out from the source as it climbs, units a second. */
+  outward: number;
+  /** How many are the big cloud rather than the small puff (0..1). */
+  big: number;
   /** How far above the source the fire still lights its underside. */
   glowReach: number;
   /** How much the wind takes it (the pit's floor is out of most of it). */
@@ -47,25 +51,12 @@ interface Stream {
 
 const STREAMS: Record<PuffKind, Stream> = {
   // From a smelter stack's top, over its flame: a tall column, leaning off.
-  smoke: {
-    rate: 1.7,
-    life: 14,
-    size: [18, 120],
-    rise: [20, 4],
-    spread: 4,
-    glowReach: 70,
-    wind: 1.4,
-  },
-  // Off the melt where the pour lands: paler, quicker, gone sooner.
-  steam: {
-    rate: 3.2,
-    life: 6,
-    size: [16, 72],
-    rise: [16, 6],
-    spread: 7,
-    glowReach: 140,
-    wind: 0.3,
-  },
+  smoke: { rate: 1.7, life: 14, size: [18, 120], rise: [20, 4], spread: [0, 4], outward: 0, big: 0.55, glowReach: 70, wind: 1.4 },
+  // Boiling up off the melt round the foot of the pour: in a ring round the
+  // stream (which stays clear), smaller and quicker than the smoke, opening
+  // out as it climbs and gone well before the turns above; paler, and lit
+  // by the melt all the way.
+  steam: { rate: 4.2, life: 4.2, size: [10, 44], rise: [24, 9], spread: [7, 13], outward: 3, big: 0.3, glowReach: 150, wind: 0.15 },
 };
 
 /** The wind the puffs lean with, units a second. */
@@ -133,9 +124,9 @@ export function puffsAt(src: PuffSource, seed: number, time: number, out: Puff[]
     const lean = age * (0.35 + 0.65 * f) * s.wind;
     const wide = (s.size[0] + (s.size[1] - s.size[0]) * Math.pow(f, 0.6)) * (0.8 + 0.4 * r(2));
     const a = r(3) * Math.PI * 2;
-    const from = s.spread * Math.sqrt(r(4));
+    const from = s.spread[0] + (s.spread[1] - s.spread[0]) * Math.sqrt(r(4)) + s.outward * age;
     const drift = wide * 0.22 * (r(5) * 2 - 1);
-    const row = r(6) < 0.55 ? 1 : 0;
+    const row = r(6) < s.big ? 1 : 0;
     const col = f < 0.24 ? 0 : f < 0.5 ? 1 : 2;
     const below = Math.max(0, 1 - up / s.glowReach);
     out.push({

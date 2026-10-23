@@ -91,8 +91,29 @@ function findPit(track: Track): Pit | null {
   const n = idx.length;
   const end = idx[n - 1];
   const rim = track.py[end] - 8;
-  const floor = track.py[idx[0]] - 3;
   const radius = (i: number) => Math.hypot(track.px[i] - cx, track.pz[i] - cz);
+  // The melt reaches out under the first turn, to just past its inner edge
+  // (as world.ts lays it), and lies well under every road over it. Not just
+  // under the Coil's start: the Hearth across the floor and the first turn
+  // are banked down toward the middle, and their inner edges dip some 7 m
+  // below their centres, which put them in the melt 3 m under the start.
+  let meltR = 0;
+  for (let q = 0; q < n && phi[q] < TAU; q++) {
+    const i = idx[q];
+    const d = track.hw[i] + 2.3;
+    meltR = Math.max(meltR, Math.hypot(track.px[i] + track.rx[i] * d - cx, track.pz[i] + track.rz[i] * d - cz));
+  }
+  meltR += 6;
+  let lowest = track.py[idx[0]];
+  for (let i = 0; i < track.n; i++) {
+    const w = track.hw[i] + 2.3;
+    for (let k = -4; k <= 4; k++) {
+      const d = (w * k) / 4;
+      if (Math.hypot(track.px[i] + track.rx[i] * d - cx, track.pz[i] + track.rz[i] * d - cz) > meltR) continue;
+      lowest = Math.min(lowest, track.py[i] + track.ry[i] * d);
+    }
+  }
+  const floor = lowest - 4;
   let floorRadius = 1e9;
   for (let q = 0; q < n && phi[q] < TAU; q++) floorRadius = Math.min(floorRadius, radius(idx[q]));
   floorRadius += 4;
