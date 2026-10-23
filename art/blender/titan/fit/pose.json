@@ -49,207 +49,212 @@
   "shoulderR": {
    "game": [
     0,
-    53,
-    -1149
+    71.5,
+    -1187
    ],
    "blender": [
     0,
-    1149,
-    53
+    1187,
+    71.5
    ]
   },
   "shoulderL": {
    "game": [
     0,
-    53,
-    -1695
+    71.5,
+    -1657
    ],
    "blender": [
     0,
-    1695,
-    53
+    1657,
+    71.5
    ]
   },
   "elbowR": {
    "game": [
     0,
-    36.11,
-    -867.506
+    55.748,
+    -924.472
    ],
    "blender": [
     0,
-    867.506,
-    36.11
+    924.472,
+    55.748
    ]
   },
   "wristR": {
    "game": [
     0,
-    21.377,
-    -621.948
+    39.458,
+    -652.96
    ],
    "blender": [
     0,
-    621.948,
-    21.377
+    652.96,
+    39.458
    ]
   },
   "fingertipR": {
    "game": [
     0,
-    10.536,
-    -441.273
+    28.677,
+    -473.284
    ],
    "blender": [
     0,
-    441.273,
-    10.536
+    473.284,
+    28.677
    ]
   },
   "elbowL": {
    "game": [
-    -214.818,
-    149.918,
-    -1849.869
+    -150.018,
+    196.647,
+    -1833.074
    ],
    "blender": [
-    -214.818,
-    1849.869,
-    149.918
+    -150.018,
+    1833.074,
+    196.647
    ]
   },
   "wristL": {
    "game": [
-    -325.662,
-    63.706,
-    -2051.851
+    -231.581,
+    47.114,
+    -2045.138
    ],
    "blender": [
-    -325.662,
-    2051.851,
-    63.706
+    -231.581,
+    2045.138,
+    47.114
    ]
   },
   "fingertipL": {
    "game": [
-    -407.218,
-    0.273,
-    -2200.465
+    -285.557,
+    -51.842,
+    -2185.475
    ],
    "blender": [
-    -407.218,
-    2200.465,
-    0.273
+    -285.557,
+    2185.475,
+    -51.842
    ]
   },
   "neck": {
    "game": [
-    -56,
-    44,
+    -105,
+    100,
     -1422
    ],
    "blender": [
-    -56,
+    -105,
     1422,
-    44
+    100
    ]
   },
   "head": {
    "game": [
-    -131,
-    102,
+    -157,
+    149,
     -1422
    ],
    "blender": [
-    -131,
+    -157,
     1422,
-    102
+    149
    ]
   },
   "hipR": {
    "game": [
-    437,
-    25,
-    -1286
+    435,
+    71.5,
+    -1322
    ],
    "blender": [
-    437,
-    1286,
-    25
+    435,
+    1322,
+    71.5
    ]
   },
   "kneeR": {
    "game": [
-    664,
-    35,
-    -1272
+    660,
+    71.5,
+    -1290
    ],
    "blender": [
-    664,
-    1272,
-    35
+    660,
+    1290,
+    71.5
    ]
   },
   "ankleR": {
    "game": [
-    1000,
-    25,
-    -1232
+    975,
+    71.5,
+    -1242
    ],
    "blender": [
-    1000,
-    1232,
-    25
+    975,
+    1242,
+    71.5
    ]
   },
   "hipL": {
    "game": [
-    437,
-    25,
-    -1558
+    435,
+    71.5,
+    -1522
    ],
    "blender": [
-    437,
-    1558,
-    25
+    435,
+    1522,
+    71.5
    ]
   },
   "kneeL": {
    "game": [
-    664,
-    35,
-    -1572
+    660,
+    71.5,
+    -1554
    ],
    "blender": [
-    664,
-    1572,
-    35
+    660,
+    1554,
+    71.5
    ]
   },
   "ankleL": {
    "game": [
-    1000,
-    25,
-    -1612
+    975,
+    71.5,
+    -1602
    ],
    "blender": [
-    1000,
-    1612,
-    25
+    975,
+    1602,
+    71.5
    ]
   }
+ },
+ "head": {
+  "pitch": 45,
+  "lift": 25,
+  "note": "Its neck broken: the head tipped forward on it by pitch degrees (chin toward the chest, so the face turns toward the feet and the brow rises) about the head pivot, and propped up lift metres on its fallen collar plates and drifted sand, so the road runs on from the top of the chest across the face."
  },
  "halo": {
   "centre": {
    "game": [
-    -321.247,
-    196,
+    -518.833,
+    190,
     -1422
    ],
    "blender": [
-    -321.247,
+    -518.833,
     1422,
-    196
+    190
    ]
   },
   "axis": {
@@ -265,19 +270,19 @@
    ]
   },
   "note": "Torn off and standing upright on its struts past the crown, facing along the road, which rolls a full turn through it. Its inner edge must stay clear of the whole roll.",
-  "minInnerRadius": 37.248
+  "minInnerRadius": 37.247
  },
  "sword": {
   "guard": {
    "game": [
     401.247,
-    160.218,
-    -452.472
+    160.299,
+    -452.624
    ],
    "blender": [
     401.247,
-    452.472,
-    160.218
+    452.624,
+    160.299
    ]
   },
   "towardPoint": {
@@ -293,11 +298,11 @@
    ]
   },
   "blade": {
-   "blade": 480,
-   "width": 26,
-   "thick": 10,
+   "blade": 437,
+   "width": 23,
+   "thick": 8,
    "grip": 26,
-   "guard": 90
+   "guard": 106
   },
   "note": "Driven into the sand at a slant, its grip snapped off a short way above the guard (the rest of the grip and the pommel lie in the sand nearby). The road crests over the guard, then corkscrews twice round the blade, under the deck all the way round.",
   "maxBladeRadius": 21.997

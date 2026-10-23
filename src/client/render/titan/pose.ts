@@ -49,34 +49,36 @@ export interface Ring extends Base {
 export type TitanShape = Capsule | Solid | Ring;
 
 /**
- * Standing, from G1 at 1300 m: h is the height above the soles, lat the
+ * Standing, as its Blender model is built (art/blender/titan: the refined
+ * blockout, to G1 at 1300 m): h is the height above the soles, lat the
  * distance to its right of its centreline, dep the distance forward of its
- * back (the back plate, without the vents).
+ * back (the back plate, without the vents). The joints are its rig's pivots.
  */
 export const STANDING = {
   height: 1300,
   crown: 1300,
-  chin: 1211,
-  shoulder: { h: 1124, lat: 273, dep: 173 },
-  upperArm: 282,
-  foreArm: 246,
-  hand: 181,
-  head: { h: 1255, dep: 222, half: [45, 86, 45] as V3 },
-  faceDep: 309,
-  neck: { h: 1180, dep: 164, r: 45 },
-  chest: { h: 997, dep: 178, half: [183, 178, 218] as V3 },
-  pauldron: { h: 1141, lat: 278, dep: 145, half: [72, 145, 78] as V3 },
-  abdomen: { h: 757, dep: 150, half: [62, 140, 155] as V3 },
-  pelvis: { h: 650, dep: 150, half: [52, 140, 236] as V3 },
-  hip: { h: 687, lat: 136, dep: 145 },
-  knee: { h: 460, lat: 150, dep: 155 },
-  ankle: { h: 124, lat: 190, dep: 145 },
+  chin: 1185,
+  shoulder: { h: 1085, lat: 235, dep: 191.5 },
+  upperArm: 263,
+  foreArm: 272,
+  hand: 180,
+  /** The helmet: its middle, and half its height, depth and width; the head's pivot (on the neck). */
+  head: { h: 1242, dep: 269, half: [57.5, 43.5, 55] as V3, pivot: 1190 },
+  faceDep: 322,
+  neck: { h: 1190, dep: 220, r: 44 },
+  chest: { h: 1023, dep: 190, half: [196, 190, 196] as V3 },
+  pauldron: { h: 1120, lat: 270, dep: 191.5, half: [100, 136, 80] as V3 },
+  abdomen: { h: 819, dep: 191.5, half: [97, 96, 101] as V3 },
+  pelvis: { h: 691, dep: 195, half: [94, 115, 200] as V3 },
+  hip: { h: 650, lat: 100, dep: 191.5 },
+  knee: { h: 425, lat: 132, dep: 191.5 },
+  ankle: { h: 110, lat: 180, dep: 191.5 },
   /** The boots: heel to toe along dep, ankle to sole along h, across. */
-  foot: { dep0: -120, dep1: 400, lat: 165 },
-  radii: { upperArm: 55, foreArm: 75, neck: 45, thigh: 115, shin: 125 },
+  foot: { dep0: 24, dep1: 486, lat: 150 },
+  radii: { upperArm: 65, foreArm: 78, neck: 44, thigh: 117, shin: 130 },
   /** The hand: half length, half width, half thickness (palm up). */
-  handHalf: [90, 42, 24] as V3,
-  halo: { R: 150, width: 34, depth: 26 },
+  handHalf: [90, 50, 41] as V3,
+  halo: { R: 147.5, width: 35, depth: 24 },
 } as const;
 
 /** Where and how it lies. */
@@ -100,6 +102,8 @@ export interface TitanPose {
   /** Blade length, width and thickness. */
   /** Blade length, width and thickness; the stump of the grip left above the guard (it snapped off); the guard's span. */
   sword: { blade: number; width: number; thick: number; grip: number; guard: number };
+  /** The head tipped forward on its broken neck (chin toward the chest) by `pitch` degrees, and propped up `lift` metres on its fallen collar and drifted sand. */
+  head: { pitch: number; lift: number };
 }
 
 export const TITAN_POSE: TitanPose = {
@@ -107,12 +111,13 @@ export const TITAN_POSE: TitanPose = {
   zc: -1422,
   burial: 120,
   rightArm: [0, -0.06, 1],
-  leftElbow: [-215, 150, -1850],
-  leftForeArm: [-0.45, -0.35, -0.82],
+  leftElbow: [-190, 230, -1880],
+  leftForeArm: [-0.3, -0.55, -0.78],
   halo: [-330, 195, -1422],
   swordGuard: [230, 205, -1000],
   swordDir: [0, -0.47, 0.88],
-  sword: { blade: 480, width: 26, thick: 10, grip: 26, guard: 90 },
+  sword: { blade: 437, width: 23, thick: 8, grip: 26, guard: 106 },
+  head: { pitch: 45, lift: 25 },
 };
 
 /**
@@ -193,6 +198,29 @@ function bodySolid(kind: 'box' | 'ellipsoid', part: string, mat: TitanMat, c: V3
   return { kind, part, mat, c, axes: [UP, FWD, RIGHT], half };
 }
 
+/**
+ * Tip shapes forward about a pivot (lying, the face looks up and the feet are
+ * east: the chin goes east, toward the chest) and lift them.
+ */
+function tipHead(shapes: TitanShape[], pivot: V3, head: { pitch: number; lift: number }): void {
+  const a = (-head.pitch * Math.PI) / 180;
+  const c = Math.cos(a), s = Math.sin(a);
+  const turn = (v: V3): V3 => [v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]];
+  const move = (p: V3): V3 => add(add(pivot, turn(sub(p, pivot))), [0, head.lift, 0]);
+  for (const sh of shapes) {
+    if (sh.kind === 'capsule') {
+      sh.a = move(sh.a);
+      sh.b = move(sh.b);
+    } else if (sh.kind === 'ring') {
+      sh.c = move(sh.c);
+      sh.axis = turn(sh.axis);
+    } else {
+      sh.c = move(sh.c);
+      sh.axes = sh.axes.map(turn) as [V3, V3, V3];
+    }
+  }
+}
+
 /** The titan as simple shapes, where it lies. */
 export function titanShapes(pose: TitanPose = TITAN_POSE): TitanShape[] {
   const S = STANDING;
@@ -207,14 +235,15 @@ export function titanShapes(pose: TitanPose = TITAN_POSE): TitanShape[] {
   for (const [side, k] of [['R', 1], ['L', -1]] as const) {
     out.push(bodySolid('box', `shoulder.${side}`, 'gold', lying(pose, S.pauldron.h, k * S.pauldron.lat, S.pauldron.dep), S.pauldron.half));
   }
-  // The neck and head, face up.
-  cap('neck', 'slate', lying(pose, 1124, 0, S.neck.dep), j.neck, S.radii.neck);
+  // The neck and head, face up, then tipped forward and propped up as the pose has it.
+  const headFrom = out.length;
+  cap('neck', 'slate', lying(pose, S.shoulder.h, 0, S.neck.dep), j.neck, S.radii.neck);
   out.push(bodySolid('ellipsoid', 'head', 'armour', j.head, S.head.half));
   // The dark visor band across its face.
   out.push(bodySolid('box', 'head', 'visor', lying(pose, S.head.h - 15, 0, S.faceDep - 14), [10, 10, 36]));
   for (const k of [1, -1]) {
-    const root = lying(pose, S.head.h + 25, k * 38, S.head.dep + 40);
-    const tip = lying(pose, S.crown + 95, k * 95, S.head.dep - 10);
+    const root = lying(pose, S.head.h + 20, k * 40, S.head.dep + 20);
+    const tip = lying(pose, S.crown + 90, k * 96, S.shoulder.dep - 35);
     cap('head', 'gold', root, tip, 16, 4);
   }
   // The arms.
@@ -229,6 +258,7 @@ export function titanShapes(pose: TitanPose = TITAN_POSE): TitanShape[] {
     const up = cross(across, along);
     out.push({ kind: 'box', part: `hand.${side}`, mat: 'armour', c: add(w, scale(along, S.handHalf[0])), axes: [along, up, across], half: [S.handHalf[0], S.handHalf[2], S.handHalf[1]] });
   }
+  tipHead(out.slice(headFrom).filter((s) => s.part === 'head'), lying(pose, S.head.pivot, 0, S.shoulder.dep), pose.head);
   // Faded red bands round the arms and shins.
   const band = (part: string, a: V3, b: V3, at: number, r: number) => {
     const d = norm(sub(b, a));

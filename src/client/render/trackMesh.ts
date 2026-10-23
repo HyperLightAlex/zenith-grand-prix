@@ -823,8 +823,17 @@ export function buildTrackVisual(
       const z = track.pz[i] - track.uz[i] * 5.5;
       const g = groundAt(x, z);
       if (y - g < 2 || blocked(i, x, z, y, g)) continue;
-      // Not down through the fallen titan: where the road is over it, it stands on the titan.
-      if (titan && [0, 1, -1].some((k) => titan.topAt(x + track.rx[i] * k * track.hw[i], z + track.rz[i] * k * track.hw[i]) > g)) continue;
+      // Over the fallen titan, it stands on the titan, its foot sunk into the armour; where
+      // the road lies close on it (or the titan is under only part of the road), none.
+      if (titan) {
+        const tops = [0, 1, -1].map((k) => titan.topAt(x + track.rx[i] * k * track.hw[i], z + track.rz[i] * k * track.hw[i]));
+        if (tops.some((h) => h > g)) {
+          const top = titan.topAt(x, z);
+          if (top <= g || y - top < 14) continue;
+          spots.push([i, top - 8]);
+          continue;
+        }
+      }
       spots.push([i, g]);
     }
     const geo = new THREE.CylinderGeometry(3.2, 4.6, 1, 6, 1, false);

@@ -1,15 +1,22 @@
 // How the road of Titan's Rest fits the fallen titan: where any part of it
 // reaches into the space the road needs, how far the road floats over the
 // parts it runs on, and a JSON of both for plot_fit.py to draw.
-//   npx tsx tools/titan/fit.ts [out.json]
-import { writeFileSync } from 'node:fs';
+//   npx tsx tools/titan/fit.ts [out.json] [--model posed.glb]
+// With --model, the titan is that model (glTF in the game's axes, posed as
+// the wreck: tools/titan/pose_model.py) instead of its simple shapes.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { readTitanLevel } from '../../src/client/render/titan/read';
 import { buildTrack } from '../../src/sim/track';
 import { trackById } from '../../src/sim/tracks/index';
 import { pieceStarts, type CircuitDef } from '../../src/sim/circuit';
 import { KEEP_OUT, RoadIndex } from '../../src/client/render/titan/keepout';
 import { surfacePoints, titanShapes, TITAN_POSE, fitToRoad, type V3 } from '../../src/client/render/titan/pose';
 
-const out = process.argv[2] ?? 'titan-fit.json';
+const args = process.argv.slice(2);
+const modelAt = args.indexOf('--model');
+const model = modelAt >= 0 ? args.splice(modelAt, 2)[1] : null;
+const out = args[0] ?? 'titan-fit.json';
 const def = trackById('titan') as CircuitDef;
 const t = buildTrack(def);
 const starts = pieceStarts(def);
@@ -20,7 +27,27 @@ const pieceAt = (s: number) => {
 };
 const pieceName = (k: number) => def.pieces[k]?.name ?? `#${k}`;
 const index = new RoadIndex(t);
-const shapes = titanShapes(fitToRoad(TITAN_POSE, t));
+/** Each part's surface as points about `step` apart, from the model or the simple shapes. */
+async function partPoints(step: number): Promise<Array<{ part: string; mat: string; pts: V3[] }>> {
+  if (!model) return titanShapes(fitToRoad(TITAN_POSE, t)).map((s) => ({ part: s.part, mat: s.mat, pts: surfacePoints(s, step) }));
+  const bytes = readFileSync(model);
+  const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+  const list: Array<{ part: string; mat: string; pts: V3[] }> = [];
+  for (const [part, geo] of readTitanLevel(gltf.scene)) {
+    for (const [slot, g] of Object.entries(geo)) {
+      const p = g!.attributes.position.array as Float32Array;
+      const pts: V3[] = [];
+      for (let k = 0; k < p.length; k += 9) {
+        const a = [p[k], p[k + 1], p[k + 2]], b = [p[k + 3], p[k + 4], p[k + 5]], c = [p[k + 6], p[k + 7], p[k + 8]];
+        const n = Math.max(1, Math.min(48, Math.ceil(Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Math.hypot(c[0] - a[0], c[1] - a[1], c[2] - a[2]), Math.hypot(c[0] - b[0], c[1] - b[1], c[2] - b[2])) / step)));
+        for (let i = 0; i <= n; i++) for (let j = 0; j <= n - i; j++) pts.push([a[0] + (b[0] - a[0]) * (i / n) + (c[0] - a[0]) * (j / n), a[1] + (b[1] - a[1]) * (i / n) + (c[1] - a[1]) * (j / n), a[2] + (b[2] - a[2]) * (i / n) + (c[2] - a[2]) * (j / n)]);
+      }
+      list.push({ part, mat: slot === 'gold' ? 'gold' : slot, pts });
+    }
+  }
+  return list;
+}
+const shapes = await partPoints(6);
 
 // Parts in the space the road needs (hard) or in the sky over it (soft).
 const hard = new Map<string, Map<string, number>>();
@@ -36,7 +63,7 @@ const scratch: number[] = [];
 const near: number[] = [];
 const shapeOut: Array<{ part: string; mat: string; pts: V3[] }> = [];
 for (const s of shapes) {
-  const pts = surfacePoints(s, 6);
+  const pts = s.pts;
   const keep: V3[] = [];
   for (let k = 0; k < pts.length; k++) {
     const [x, y, z] = pts[k];

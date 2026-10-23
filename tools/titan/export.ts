@@ -3,15 +3,18 @@
 //   road.obj        the road's deck and barriers, to see it by
 //   keepout.obj     the space round the road the titan must leave empty (KEEP_OUT.up over the deck)
 //   sky.obj         the sky over the road that should stay open too (KEEP_OUT.sky), bar what is meant to pass over
-//   guide.obj       the placeholder titan (pose.ts), where each part goes
+//   guide.obj       the titan where each part goes: with --model, the Blender model posed
+//                   as the wreck (tools/titan/pose_model.py's posed.glb); else the placeholder (pose.ts)
 //   pose.json       its joints and the parts the road places (the halo, the sword), and the limits
 //   stretches.json  where the road runs on the titan and where it goes through it
 // All in the game's axes and metres: x east, y up, z south. Imported into
 // Blender as OBJ with Y up and -Z forward (its importer's default), a game
 // point (x, y, z) lands at Blender (x, -z, y), and glTF exported from
 // Blender with +Y up (its default) comes back to the game's axes.
-//   npx tsx tools/titan/export.ts [out dir]
-import { mkdirSync, writeFileSync } from 'node:fs';
+//   npx tsx tools/titan/export.ts [out dir] [--model posed.glb]
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { readTitanLevel } from '../../src/client/render/titan/read';
 import { join } from 'node:path';
 import { buildTrack, type Track } from '../../src/sim/track';
 import { trackById } from '../../src/sim/tracks/index';
@@ -20,7 +23,10 @@ import { KEEP_OUT, keepBoxes, RoadIndex } from '../../src/client/render/titan/ke
 import { fitToRoad, STANDING, titanJoints, titanShapes, TITAN_POSE, type V3 } from '../../src/client/render/titan/pose';
 import { shapeGeometry } from '../../src/client/render/titan/placeholder';
 
-const out = process.argv[2] ?? 'art/blender/titan/fit';
+const args = process.argv.slice(2);
+const modelAt = args.indexOf('--model');
+const model = modelAt >= 0 ? args.splice(modelAt, 2)[1] : null;
+const out = args[0] ?? 'art/blender/titan/fit';
 mkdirSync(out, { recursive: true });
 const def = trackById('titan') as CircuitDef;
 const t = buildTrack(def);
@@ -152,13 +158,26 @@ for (const [file, up, what] of [
 const pose = fitToRoad(TITAN_POSE, t);
 {
   const o = new Obj();
-  for (const s of titanShapes(pose)) {
-    o.object(`guide/${s.part}/${s.mat}`);
-    const g = shapeGeometry(s, 24);
-    const p = g.attributes.position.array as Float32Array;
+  const tri = (p: ArrayLike<number>) => {
     for (let k = 0; k < p.length; k += 9) o.face([p[k], p[k + 1], p[k + 2]], [p[k + 3], p[k + 4], p[k + 5]], [p[k + 6], p[k + 7], p[k + 8]]);
+  };
+  if (model) {
+    const bytes = readFileSync(model);
+    const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+    for (const [part, geo] of readTitanLevel(gltf.scene)) {
+      for (const [slot, g] of Object.entries(geo)) {
+        o.object(`guide/${part}/${slot}`);
+        tri(g!.attributes.position.array as Float32Array);
+      }
+    }
+    o.write(join(out, 'guide.obj'), "Titan's Rest: the titan's Blender model posed as the wreck (tools/titan/pose_model.py), where each part goes. Unbroken: the openings and the damage are still to make.");
+  } else {
+    for (const s of titanShapes(pose)) {
+      o.object(`guide/${s.part}/${s.mat}`);
+      tri(shapeGeometry(s, 24).attributes.position.array as Float32Array);
+    }
+    o.write(join(out, 'guide.obj'), "Titan's Rest: the titan as simple shapes where each part goes (src/client/render/titan/pose.ts). A guide, not a design.");
   }
-  o.write(join(out, 'guide.obj'), "Titan's Rest: the titan as simple shapes where each part goes (src/client/render/titan/pose.ts). A guide, not a design.");
 }
 // How far out from a line any of the road's space reaches, between two distances along the road.
 const reach = (s0: number, s1: number, a: V3, dir: V3, up: number, nearest: boolean) => {
@@ -201,6 +220,11 @@ writeFileSync(
       burialDepth: pose.burial,
       body: { up: both([-1, 0, 0]), forward: both([0, 1, 0]), right: both([0, 0, 1]) },
       joints: Object.fromEntries(Object.entries(joints).map(([k, v]) => [k, both(v)])),
+      head: {
+        pitch: pose.head.pitch,
+        lift: pose.head.lift,
+        note: 'Its neck broken: the head tipped forward on it by pitch degrees (chin toward the chest, so the face turns toward the feet and the brow rises) about the head pivot, and propped up lift metres on its fallen collar plates and drifted sand, so the road runs on from the top of the chest across the face.',
+      },
       halo: {
         centre: both(pose.halo),
         axis: both(haloDir),
@@ -231,12 +255,12 @@ writeFileSync(
     {
       about: 'Where the road runs on the titan (its deck seated just over the titan, slab bottom 6.2 m under the deck) and where it passes through it (the titan open round it). Distances along the road; see road.json for the samples.',
       on: [
-        { ...span('the Palm'), part: 'hand.R', note: 'climbs over the fingertips onto the open palm' },
-        { ...span('the Arm'), part: 'forearm.R, upper_arm.R', note: 'along the top of the arm, palm up, to the shoulder' },
-        { ...span('the Shoulder'), part: 'shoulder.R', note: 'over the top of the right shoulder armour' },
+        { ...span('the Palm'), part: 'hand.R', note: 'climbs over the fingertips and the open palm, rising to the wrist' },
+        { ...span('the Arm'), part: 'forearm.R', note: 'along the top of the forearm, palm up' },
+        { ...span('the Shoulder'), part: 'upper_arm.R, shoulder.R, chest', note: 'climbs off the upper arm, over the top of the right shoulder armour and onto the chest (over the upper arm it rises clear of it: pylons stand on the arm there)' },
         { ...span('the Collar'), part: 'chest', note: 'north along the top of the chest by the collarbone' },
-        { ...span('T1 the Chin'), part: 'chest, neck', note: 'turns west onto the chin' },
-        { ...span('the Brow'), part: 'head', note: 'over the face and forehead, down the middle, between the horns' },
+        { ...span('T1 the Chin'), part: 'chest, head', note: 'turns west off the chest onto the chin' },
+        { ...span('the Brow'), part: 'head', note: 'over the face and forehead, down the middle, between the horns: the head tipped forward on its broken neck and propped up (pose.json head)' },
         { ...span('over the crossguard'), part: 'sword', note: 'crests over the guard onto the blade' },
       ],
       through: [
@@ -247,6 +271,7 @@ writeFileSync(
         { piece: 'out of the right flank', s0: r1(range('the Hull').s1), s1: r1(range('out of the Hull').s0), part: 'chest', note: 'out through an opening in the right (south) flank' },
         { ...span('the Sword'), part: 'sword', note: 'twice round the blade, the blade under the deck all the way' },
       ],
+      past: [{ ...span('past the crown'), part: 'head', note: 'down past the crown and between the horns, clear of them, to the Halo' }],
       under: [{ ...span('the Long Flank'), part: 'upper_arm.L, forearm.L', note: 'under the raised left elbow' }],
     },
     null,

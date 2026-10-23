@@ -10,9 +10,9 @@ import { buildTrack } from '../src/sim/track';
 import { TITANS_REST } from '../src/sim/tracks/titan';
 import { pieceStarts } from '../src/sim/circuit';
 import { KEEP_OUT, RoadIndex } from '../src/client/render/titan/keepout';
-import { fitToRoad, STANDING, titanJoints, TITAN_POSE } from '../src/client/render/titan/pose';
+import { fitToRoad, STANDING, titanJoints, titanShapes, TITAN_POSE } from '../src/client/render/titan/pose';
 import { titanGround, titanPlaceholder } from '../src/client/render/titan/placeholder';
-import { readTitanLevel, slotOf, TITAN_SLOTS } from '../src/client/render/titan/asset';
+import { readTitanLevel, slotOf, TITAN_SLOTS } from '../src/client/render/titan/read';
 import type * as THREE from 'three';
 
 const t = buildTrack(TITANS_REST);
@@ -43,13 +43,21 @@ function* surface(g: THREE.BufferGeometry, step: number): Generator<[number, num
 describe("Titan's Rest: the titan and the road", () => {
   const pose = fitToRoad(TITAN_POSE, t);
   const j = titanJoints(pose);
+  // The head where it lies: tipped forward and propped up.
+  const helmet = titanShapes(pose).find((s) => s.part === 'head' && s.kind === 'ellipsoid')!;
+  const head = helmet.kind === 'ellipsoid' ? helmet.c : j.head;
+  /** The least distance in plan from p to the road over a piece. */
+  const over = (p: number[], name: string) => {
+    const [a, b] = piece(name);
+    let best = Infinity;
+    for (let s = a; s < b; s += 4) best = Math.min(best, Math.hypot(p[0] - t.px[at(s)], p[2] - t.pz[at(s)]));
+    return best;
+  };
 
   it('lies with the road on it: the arm under the climb, the head under the brow, the halo round the roll, the chest round the loop', () => {
     const near = (p: number[], s: number, within: number) => Math.hypot(p[0] - t.px[at(s)], p[2] - t.pz[at(s)]) < within;
-    const [a0, a1] = piece('the Arm');
-    expect(near(j.elbowR, (a0 + a1) / 2, 150)).toBe(true);
-    const [b0, b1] = piece('the Brow');
-    expect(near(j.head, (b0 + b1) / 2, 120)).toBe(true);
+    expect(over(j.elbowR, 'the Shoulder')).toBeLessThan(10);
+    expect(Math.min(over(head, 'the Brow'), over(head, 'T1 the Chin'))).toBeLessThan(40);
     const [h0, h1] = piece('the Halo');
     expect(near(pose.halo, (h0 + h1) / 2, 1)).toBe(true);
     // The loop goes round inside the chest: its top under the chest's top.
@@ -79,7 +87,7 @@ describe("Titan's Rest: the titan and the road", () => {
     expect(Math.hypot(blade.width / 2, blade.thick / 2)).toBeLessThan(20);
   });
 
-  it('builds a placeholder clear of the road, and pylons do not stand through it', () => {
+  it('builds a placeholder clear of the road, and knows where its top is (for the pylons standing on it)', () => {
     const geo = titanPlaceholder(t);
     let n = 0, hits = 0;
     const scratch: number[] = [];
@@ -95,7 +103,7 @@ describe("Titan's Rest: the titan and the road", () => {
     expect(n).toBeGreaterThan(1000);
     expect(hits).toBe(0);
     const ground = titanGround(t)!;
-    expect(ground.topAt(j.head[0], j.head[2])).toBeGreaterThan(100);
+    expect(ground.topAt(head[0], head[2])).toBeGreaterThan(150);
     expect(ground.topAt(0, 500)).toBe(-Infinity);
   });
 });

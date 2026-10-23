@@ -19,8 +19,8 @@ import math
 import os
 import sys
 
-import bmesh
 import bpy
+import bmesh  # after bpy: as the bpy module, bpy puts it on the path
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))

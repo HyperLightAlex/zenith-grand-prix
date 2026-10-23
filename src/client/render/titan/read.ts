@@ -1,0 +1,104 @@
+// Reading the fallen titan's Blender model (art/blender/titan/README.txt):
+// each mesh is one part of the titan (its rig's bone, from its node's `part`
+// extra or its name, titan/<part>/...) in one of ten material slots, by the
+// material's name. Apart from asset.ts so tools can use it outside Vite.
+import * as THREE from 'three';
+
+/** The model's material slots, by name. */
+export const TITAN_SLOTS = ['armour', 'red', 'slate', 'gold', 'frame', 'verdigris', 'visor', 'jewel', 'blade', 'edge'] as const;
+export type TitanSlot = (typeof TITAN_SLOTS)[number];
+
+/** One part at one level of detail: its geometry in each slot, in world space. */
+export type TitanPartGeometry = Partial<Record<TitanSlot, THREE.BufferGeometry>>;
+export interface TitanAsset {
+  /** part -> one entry per level of detail, finest first. */
+  parts: Map<string, TitanPartGeometry[]>;
+}
+
+/** The part a mesh belongs to: its node's (or a parent's) `part` (or `titan_part`) extra, or titan/<part>/... in its name. */
+function partOf(o: THREE.Object3D): string {
+  for (let p: THREE.Object3D | null = o; p; p = p.parent) {
+    if (typeof p.userData.part === 'string') return p.userData.part;
+    if (typeof p.userData.titan_part === 'string') return p.userData.titan_part;
+    // three takes the slashes out of node names; the exporter keeps the original in extras.
+    const m = /^titan\/([^/]+)/.exec(typeof p.userData.name === 'string' ? p.userData.name : p.name);
+    if (m) return m[1];
+  }
+  return 'body';
+}
+
+/** The slot a material is, from its name: exactly, or its first word (Blender's .001 suffixes and the like dropped). */
+export function slotOf(name: string): TitanSlot | null {
+  const n = name.toLowerCase().replace(/[.\s_-]\d+$/, '');
+  return (TITAN_SLOTS as readonly string[]).includes(n) ? (n as TitanSlot) : null;
+}
+
+/** Read one exported level: every mesh's geometry, in world space, grouped by part and slot. */
+export function readTitanLevel(scene: THREE.Object3D): Map<string, TitanPartGeometry> {
+  scene.updateMatrixWorld(true);
+  const lists = new Map<string, Partial<Record<TitanSlot, THREE.BufferGeometry[]>>>();
+  scene.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const part = partOf(o);
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    const groups = o.geometry.groups.length ? o.geometry.groups : [{ start: 0, count: o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count, materialIndex: 0 }];
+    for (const grp of groups) {
+      const slot = slotOf(mats[grp.materialIndex ?? 0]?.name ?? '') ?? 'armour';
+      const g = sliceTriangles(o.geometry, grp.start, grp.count);
+      g.applyMatrix4(o.matrixWorld);
+      let byPart = lists.get(part);
+      if (!byPart) lists.set(part, (byPart = {}));
+      (byPart[slot] ??= []).push(g);
+    }
+  });
+  const out = new Map<string, TitanPartGeometry>();
+  for (const [part, bySlot] of lists) {
+    const merged: TitanPartGeometry = {};
+    for (const slot of Object.keys(bySlot) as TitanSlot[]) merged[slot] = mergeTriangles(bySlot[slot]!);
+    out.set(part, merged);
+  }
+  return out;
+}
+
+/** Triangles [start, start + count) of a geometry's index (or vertices), as their own non-indexed geometry with positions and normals. */
+function sliceTriangles(g: THREE.BufferGeometry, start: number, count: number): THREE.BufferGeometry {
+  const pos = g.attributes.position;
+  const nor = g.attributes.normal;
+  const idx = g.index;
+  const P = new Float32Array(count * 3);
+  const N = new Float32Array(count * 3);
+  for (let k = 0; k < count; k++) {
+    const v = idx ? idx.getX(start + k) : start + k;
+    P[k * 3] = pos.getX(v);
+    P[k * 3 + 1] = pos.getY(v);
+    P[k * 3 + 2] = pos.getZ(v);
+    if (nor) {
+      N[k * 3] = nor.getX(v);
+      N[k * 3 + 1] = nor.getY(v);
+      N[k * 3 + 2] = nor.getZ(v);
+    }
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  if (!nor) out.computeVertexNormals();
+  return out;
+}
+
+function mergeTriangles(gs: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  if (gs.length === 1) return gs[0];
+  const n = gs.reduce((a, g) => a + g.attributes.position.count, 0);
+  const P = new Float32Array(n * 3);
+  const N = new Float32Array(n * 3);
+  let o = 0;
+  for (const g of gs) {
+    P.set(g.attributes.position.array as Float32Array, o);
+    N.set(g.attributes.normal.array as Float32Array, o);
+    o += g.attributes.position.count * 3;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  return out;
+}
+

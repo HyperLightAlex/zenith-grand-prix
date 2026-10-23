@@ -164,8 +164,11 @@ REPORT BACK
 PHASES 2 TO 4: THE WRECK, FITTED TO THE ROAD
 ======================================================================
 
-THE FILES (art/blender/titan/fit/; the game side regenerates them with
-npx tsx tools/titan/export.ts whenever the road changes)
+THE FILES (art/blender/titan/fit/; the game side regenerates them whenever
+the road changes: npx tsx tools/titan/export.ts, then
+python3 tools/titan/pose_model.py -- <titan-blockout.glb> art/blender/titan/fit,
+then npx tsx tools/titan/export.ts art/blender/titan/fit --model
+art/blender/titan/fit/posed.glb)
   plan.png        the road over the titan from above and from the south,
                   each piece of the road named: the overview
   road.obj        the road's deck, the slab under it and its barriers
@@ -175,8 +178,15 @@ npx tsx tools/titan/export.ts whenever the road changes)
                   behind it), each route of the Hull's fork its own box
   sky.obj         the sky over the road, to 40 m, that should stay open
                   too, bar the parts meant to pass over the road (below)
-  guide.obj       the titan as simple shapes where each part goes: a guide
-                  to where, not to how it looks
+  guide.obj       the refined model (Phase 1 step 2) posed as the wreck,
+                  where each part goes; unbroken (the openings and the
+                  damage are still to make)
+  posed.glb       the same, as glTF in the game's axes
+  rig-pose.json   that pose as numbers: titan_rig's world matrix and each
+                  bone's posed matrix (armature space and world), the
+                  halo's and the sword's world matrices (Blender axes).
+                  Made by tools/titan/pose_model.py from the model's own
+                  export, so it fits the rig exactly
   pose.json       the targets: every joint, the halo's centre and axis, the
                   sword's guard and blade direction, the burial depth, and
                   the limits (the halo's smallest inner radius, the sword
@@ -199,13 +209,21 @@ game side moves the road and regenerates the files.
 PHASE 2: POSE IT AND FIT IT
   1  Run load_fit.py in the production file (it remakes FIT each time; FIT
      is never exported). Keep the titan in a collection named TITAN.
-  2  Pose the rig to the targets in pose.json (the empties in FIT/targets):
+  2  Pose the rig as rig-pose.json has it (set titan_rig's matrix_world to
+     its "rig", each pose bone's matrix to its "armature"; guide.obj shows
+     the result), then refine by eye. It is the pose in pose.json (the
+     empties in FIT/targets):
      - on its back, face up, head to the west (-X), feet to the east, its
        right side to the south (-Y); its back plate burialDepth (120 m)
        under the sand (Z = 0). The sand covers everything below Z = 0;
        faces more than 20 m under it can be deleted.
      - the right arm flung straight out south across the sand, palm up,
        the hand open (the road climbs over the fingertips onto the palm);
+     - its neck broken: the head tipped forward on it 45 degrees (chin
+       toward the chest; pose.json head.pitch) and propped up 25 m
+       (head.lift) on its fallen collar plates and drifted sand, so the
+       road runs on from the top of the chest across its face. Model what
+       holds it up: plates, wreckage, sand;
      - the left arm raised: the upper arm up from the shoulder, the elbow
        high over the Long Flank, the forearm down to the hand lying on the
        sand to the north;
@@ -230,7 +248,13 @@ PHASE 2: POSE IT AND FIT IT
      the surface under the road 1 to 6 m below the slab, across its whole
      width, so the road lies on the titan. Where the design will not allow
      it, report the stretch and the gap: the road's height is changed to
-     suit.
+     suit. With rig-pose.json as it is, the gap from the slab down to the
+     model is: the Palm 12 to 55 m (the road rises over the palm to the
+     wrist: lift the palm or the wrist where it can), the Arm 6 to 12, the
+     Shoulder 5 to 94 (it climbs clear of the upper arm before the
+     shoulder armour; the game stands pylons on the arm there, so leave
+     that), the Collar 11 to 27, T1 the Chin 6 to 24, the Brow 7 to 41
+     (the face: the most seen, the most worth seating).
   5  Open it where stretches.json has the road THROUGH it, as G4 draws the
      damage: the wound in the left (north) flank of the chest where the
      road goes in (the Breach); the chamber in the chest round the loop
