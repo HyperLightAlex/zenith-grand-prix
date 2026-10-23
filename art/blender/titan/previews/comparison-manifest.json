@@ -1,0 +1,434 @@
+{
+  "format": 1,
+  "background": "#E4E6EC",
+  "bodyCamera": {
+    "orthographicScale": 1856.346,
+    "targetZ": 736.8,
+    "helmetCrownPixelY": 201,
+    "groundPixelY": 918
+  },
+  "references": {
+    "g1": {
+      "path": "art/model-sheets/model-g1-titan.png",
+      "sha256": "45458c731e70556d1f8e3985856aafba01521dbf3a62b9ec9cce65a02b2d55a2"
+    },
+    "g2": {
+      "path": "art/model-sheets/model-g2-titan-head.png",
+      "sha256": "3d88523c6b1f626e7ad30ba4906e307a637c06bc8f0fa98087fd6b9d303c401a"
+    },
+    "g3": {
+      "path": "art/model-sheets/model-g3-titan-arm.png",
+      "sha256": "4793ffa391952db546033d508c0c0865d323634372ecb2f8d3d00d4075270af9"
+    }
+  },
+  "views": [
+    {
+      "id": "front",
+      "title": "Front",
+      "sheet": "g1",
+      "referenceCrop": [
+        8,
+        0,
+        414,
+        1024
+      ],
+      "referencePaste": [
+        49,
+        0
+      ],
+      "panel": [
+        512,
+        1024
+      ],
+      "rawRender": "raw/front.png",
+      "rawSha256": "fe9d72ab8ef1ad5277ab12dee80fab8cbccda5fc65d413a3c1dc273f7c52200e",
+      "renderDisplay": {
+        "sourceSize": [
+          512,
+          1024
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          512,
+          1024
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "front.png"
+    },
+    {
+      "id": "three-quarter",
+      "title": "Three-quarter",
+      "sheet": "g1",
+      "referenceCrop": [
+        414,
+        0,
+        786,
+        1024
+      ],
+      "referencePaste": [
+        79,
+        0
+      ],
+      "panel": [
+        512,
+        1024
+      ],
+      "rawRender": "raw/three-quarter.png",
+      "rawSha256": "1a0866a6497199ff1d444e36d12b31d2dd5a51b3176b26eae7744bb27fd6b5d2",
+      "renderDisplay": {
+        "sourceSize": [
+          512,
+          1024
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          512,
+          1024
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "three-quarter.png"
+    },
+    {
+      "id": "side",
+      "title": "Side",
+      "sheet": "g1",
+      "referenceCrop": [
+        786,
+        0,
+        1091,
+        1024
+      ],
+      "referencePaste": [
+        107,
+        0
+      ],
+      "panel": [
+        512,
+        1024
+      ],
+      "rawRender": "raw/side.png",
+      "rawSha256": "2754ee38d0ae049ef5ee6f4a9540fdb5347957bff4bd4259eae5008ba23b9ede",
+      "renderDisplay": {
+        "sourceSize": [
+          512,
+          1024
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          512,
+          1024
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "side.png"
+    },
+    {
+      "id": "back",
+      "title": "Back",
+      "sheet": "g1",
+      "referenceCrop": [
+        1100,
+        0,
+        1529,
+        1024
+      ],
+      "referencePaste": [
+        33,
+        0
+      ],
+      "panel": [
+        512,
+        1024
+      ],
+      "rawRender": "raw/back.png",
+      "rawSha256": "5413e63f167316a9fac29bbc471c35471924b60ce7ea6d28355367f3bd9b9541",
+      "renderDisplay": {
+        "sourceSize": [
+          512,
+          1024
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          512,
+          1024
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "back.png"
+    },
+    {
+      "id": "head-front",
+      "title": "Head and collar \u00b7 front",
+      "sheet": "g2",
+      "referenceCrop": [
+        0,
+        0,
+        768,
+        512
+      ],
+      "referencePaste": [
+        0,
+        0
+      ],
+      "panel": [
+        768,
+        512
+      ],
+      "rawRender": "raw/head-front.png",
+      "rawSha256": "4e081c5c9f8e576389ad6c93c5c8d87f7aae84ec9aa826678f430b546a6e3b42",
+      "renderDisplay": {
+        "sourceSize": [
+          768,
+          512
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          768,
+          512
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "head-front.png"
+    },
+    {
+      "id": "head-side",
+      "title": "Head and collar \u00b7 side",
+      "sheet": "g2",
+      "referenceCrop": [
+        768,
+        0,
+        1536,
+        512
+      ],
+      "referencePaste": [
+        0,
+        0
+      ],
+      "panel": [
+        768,
+        512
+      ],
+      "rawRender": "raw/head-side.png",
+      "rawSha256": "78fef3b86aeab5bf482a862b907e5bf47e015c2b15699e1c38fea13108e1e30b",
+      "renderDisplay": {
+        "sourceSize": [
+          768,
+          512
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          768,
+          512
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "head-side.png"
+    },
+    {
+      "id": "head-above",
+      "title": "Head and collar \u00b7 above",
+      "sheet": "g2",
+      "referenceCrop": [
+        0,
+        512,
+        768,
+        1024
+      ],
+      "referencePaste": [
+        0,
+        0
+      ],
+      "panel": [
+        768,
+        512
+      ],
+      "rawRender": "raw/head-above.png",
+      "rawSha256": "f16ce9cfd24bd77f75caad40e6b59c666668d012b2bedff2ec7467754202eddc",
+      "renderDisplay": {
+        "sourceSize": [
+          768,
+          512
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          768,
+          512
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "head-above.png"
+    },
+    {
+      "id": "halo",
+      "title": "Halo \u00b7 face-on",
+      "sheet": "g2",
+      "referenceCrop": [
+        768,
+        512,
+        1536,
+        1024
+      ],
+      "referencePaste": [
+        0,
+        0
+      ],
+      "panel": [
+        768,
+        512
+      ],
+      "rawRender": "raw/halo.png",
+      "rawSha256": "1cf3a64882dcfbe52c9c41ad626f91db4e747f039b41690b72b45c884c37cead",
+      "renderDisplay": {
+        "sourceSize": [
+          768,
+          512
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          768,
+          512
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "halo.png"
+    },
+    {
+      "id": "right-arm",
+      "title": "Right arm \u00b7 palm up",
+      "sheet": "g3",
+      "referenceCrop": [
+        8,
+        92,
+        1528,
+        540
+      ],
+      "referencePaste": [
+        0,
+        0
+      ],
+      "panel": [
+        1520,
+        448
+      ],
+      "rawRender": "raw/right-arm.png",
+      "rawSha256": "84c9c1f960c059d2d9ba794d07a05e40fee2992c21a63c46340295d2b9b766c5",
+      "renderDisplay": {
+        "sourceSize": [
+          1520,
+          448
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          1520,
+          448
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "right-arm.png"
+    },
+    {
+      "id": "sword-flat",
+      "title": "Sword \u00b7 flat",
+      "sheet": "g3",
+      "referenceCrop": [
+        8,
+        514,
+        1528,
+        798
+      ],
+      "referencePaste": [
+        0,
+        0
+      ],
+      "panel": [
+        1520,
+        284
+      ],
+      "rawRender": "raw/sword-flat.png",
+      "rawSha256": "ecf5836ab1701881c90e7faef87b7f352d7f6a56d21f7773a43ad510e3392d74",
+      "renderDisplay": {
+        "sourceSize": [
+          1520,
+          284
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          1520,
+          284
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "sword-flat.png"
+    },
+    {
+      "id": "sword-edge",
+      "title": "Sword \u00b7 edge-on",
+      "sheet": "g3",
+      "referenceCrop": [
+        8,
+        822,
+        1528,
+        912
+      ],
+      "referencePaste": [
+        0,
+        0
+      ],
+      "panel": [
+        1520,
+        90
+      ],
+      "rawRender": "raw/sword-edge.png",
+      "rawSha256": "9c50351d1209c2c6263315c7c8f679fd7311381f1c13fc6d19ff21c139e80aa6",
+      "renderDisplay": {
+        "sourceSize": [
+          1520,
+          90
+        ],
+        "scale": 1.0,
+        "displaySize": [
+          1520,
+          90
+        ],
+        "offset": [
+          0,
+          0
+        ]
+      },
+      "comparison": "sword-edge.png"
+    }
+  ],
+  "framingNotes": []
+}
