@@ -43,10 +43,10 @@ PHASES
   3  Break it: the wound, the hollow chest with the chamber the loop runs
      through, the corridors through its body (G4).
   4  Detail, levels of detail and the final export.
-Phases 2 to 4 need files from the game side (the road, the clearance zones,
-the target pose, a clearance checker). They will be added to art/blender/
-titan/fit/ with their own section in this README. Do not start Phase 2 until
-that section exists.
+Phases 2 to 4 use files from the game side (the road, the clearance zones,
+the target pose, a clearance checker) in art/blender/titan/fit/; see
+PHASES 2 TO 4 below. Start Phase 2 only once the Phase 1 blockout has been
+agreed.
 
 ======================================================================
 PHASE 1: THE TITAN STANDING
@@ -159,6 +159,114 @@ REPORT BACK
   - Triangle counts per part.
   - The measured figures from SCALE AND UNITS.
   - Anything in the sheets you had to interpret.
+
+======================================================================
+PHASES 2 TO 4: THE WRECK, FITTED TO THE ROAD
+======================================================================
+
+THE FILES (art/blender/titan/fit/; the game side regenerates them with
+npx tsx tools/titan/export.ts whenever the road changes)
+  plan.png        the road over the titan from above and from the south,
+                  each piece of the road named: the overview
+  road.obj        the road's deck, the slab under it and its barriers
+  keepout.obj     the space round the road the titan must leave EMPTY:
+                  3.8 m past each edge, from 6.5 m under the deck (the slab
+                  is 6.2 m deep) to 18 m over it (a mech, the chase camera
+                  behind it), each route of the Hull's fork its own box
+  sky.obj         the sky over the road, to 40 m, that should stay open
+                  too, bar the parts meant to pass over the road (below)
+  guide.obj       the titan as simple shapes where each part goes: a guide
+                  to where, not to how it looks
+  pose.json       the targets: every joint, the halo's centre and axis, the
+                  sword's guard and blade direction, the burial depth, and
+                  the limits (the halo's smallest inner radius, the sword
+                  blade's largest radius from its axis)
+  stretches.json  where the road runs ON the titan, where it goes THROUGH
+                  it and where it passes UNDER it, by piece of the road
+  road.json       the road itself, every 4 m (for the checker)
+  load_fit.py     loads all of it into the open file as the collection FIT
+  check_clearance.py  checks the TITAN collection against the road
+All in the game's axes (x east, y up, z south), imported with Y up and -Z
+forward, so a game point (x, y, z) is Blender (x, -z, y): east is +X,
+north +Y, up +Z. Export glTF with +Y up and it comes back in the game's
+axes. Units are metres.
+
+THE ROAD IS NEVER MOVED IN BLENDER. If a part cannot fit, report it: the
+game side moves the road and regenerates the files.
+
+PHASE 2: POSE IT AND FIT IT
+  1  Run load_fit.py in the production file (it remakes FIT each time; FIT
+     is never exported). Keep the titan in a collection named TITAN.
+  2  Pose the rig to the targets in pose.json (the empties in FIT/targets):
+     - on its back, face up, head to the west (-X), feet to the east, its
+       right side to the south (-Y); its back plate burialDepth (120 m)
+       under the sand (Z = 0). The sand covers everything below Z = 0;
+       faces more than 20 m under it can be deleted.
+     - the right arm flung straight out south across the sand, palm up,
+       the hand open (the road climbs over the fingertips onto the palm);
+     - the left arm raised: the upper arm up from the shoulder, the elbow
+       high over the Long Flank, the forearm down to the hand lying on the
+       sand to the north;
+     - the legs straight out east, the boots toes up (or fallen outward, if
+       that reads better and stays clear of the road);
+     - the halo torn off and standing on its struts past the crown, facing
+       along the road (pose.json halo.axis), centred on halo.centre, its
+       inner edge at least halo.minInnerRadius from that centre: the road
+       rolls a full turn through it;
+     - the sword driven into the sand at a slant south of the chest, its
+       guard at sword.guard, the blade toward sword.towardPoint and into
+       the sand, everything of the blade within sword.maxBladeRadius of its
+       axis (the road corkscrews round it, the blade under the deck all the
+       way). Its grip snapped off a short way above the guard: leave no
+       more than 26 m of it; the rest of the grip and the pommel lie in the
+       sand nearby, clear of the road (plan.png has them east of the blade).
+  3  Fit it. Nothing of the titan may be inside FIT/keepout. Nothing should
+     be inside FIT/sky either, except: the left arm over the Long Flank, the
+     halo round the Halo roll, the roofs over the Hull's corridors.
+  4  Seat the road where stretches.json has it ON the titan (the palm, the
+     arm, the shoulder, the collar, the chin, the face, the crossguard):
+     the surface under the road 1 to 6 m below the slab, across its whole
+     width, so the road lies on the titan. Where the design will not allow
+     it, report the stretch and the gap: the road's height is changed to
+     suit.
+  5  Open it where stretches.json has the road THROUGH it, as G4 draws the
+     damage: the wound in the left (north) flank of the chest where the
+     road goes in (the Breach); the chamber in the chest round the loop
+     (the Ribcage), ribs and frame round it; the Hull's two routes through
+     the chest, the left through corridors walled and roofed in bronze
+     plate (the roof at least 20 m over the deck), the right (the gallery)
+     high along the ribs and open on its outside; the opening in the right
+     (south) flank where the road comes out.
+  6  Check: blender --background titan-production.blend --python
+     art/blender/titan/fit/check_clearance.py -- --strict
+     It must end "Clear of the road." It lists what is in the sky over the
+     road; only the three exceptions in step 3 may be.
+  7  Export the posed titan (meshes only, the pose applied, no armature) as
+     src/client/render/titan/assets/titan.glb: glTF binary, +Y up, the
+     TITAN collection only, modifiers applied, normals on, no UVs or
+     images, custom properties on. Name every object titan/<bone>/<what>
+     and give it a custom property part = <bone>; keep the ten material
+     slots by name. The game shows it in place of its placeholder, and its
+     tests check it against the road (tests/titan.test.ts). STOP and report:
+     the check's output, the stretches that could not be seated, anything
+     that departs from the targets.
+
+PHASE 3: BREAK IT AND WEATHER IT
+  The damage beyond the openings, from G4 and the sheets: plates peeled and
+  bent out round the wound, ribs snapped, cut cables and conduit hanging,
+  sand drifted into the hollows and against its sides, armour chipped and
+  dented along its edges. Keep the check clear. Export over titan.glb.
+
+PHASE 4: LEVELS OF DETAIL AND THE FINAL EXPORT
+  - titan.glb (the finest) no more than 600k triangles, titan-lod1.glb no
+    more than 150k, titan-lod2.glb no more than 40k, all three with the
+    same parts. The game switches each part separately by its distance, so
+    every level keeps every part.
+  - Each level passes the check; the coarser levels may lose detail but not
+    grow into the road's space.
+  - Previews of the wreck from the places in stretches.json, and from far
+    off, beside the placeholder's (the game side can supply race-camera
+    pictures of the placeholder).
 
 PRODUCTION NOTES
 (Blender: record your notes, decisions and QA here, below this line.)

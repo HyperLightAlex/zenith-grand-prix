@@ -15,6 +15,7 @@ how each piece is built) are in [ART.md](ART.md); this is the front door.
 | Each painted sheet: its prompt, what to attach, its key colour, how the game uses it, its status | `art/<kind>-sheets/README.md` (fx, bg, track, hud, hangar, key, faction, mech, model) |
 | Turning sheets into game files | `tools/fx/` (effects), `tools/bg/` (everything else) |
 | The 3D roster: building each mech in Blender from its sheet, exporting it, its QA record | `art/blender/roster/README.txt`, `QA.txt`; the Sunhawk in `art/blender/sunhawk/README.txt` |
+| The fallen titan of Titan's Rest: its model sheets, the Blender brief, the road and clearance files it is fitted to, its placeholder and loader | `art/model-sheets/README.md`, `art/blender/titan/README.txt`, `tools/titan/` (`export.ts`, `fit.ts`), `src/client/render/titan/` |
 | Mech customization (paint, parts swapped within a frame, portraits) and the models' part tags | [docs/CUSTOMIZATION.md](CUSTOMIZATION.md) |
 | The mechs' ink lines (geometry ink), with how to reproduce the comparison | [docs/mech-lines-report.md](mech-lines-report.md), `art/blender/ink_geometry.py`, `ink-overrides.json` |
 | Pictures of the game for checking: scripted cameras, before and after, finding moments | [tools/capture/README.md](../tools/capture/README.md) |

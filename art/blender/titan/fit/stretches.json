@@ -1,0 +1,107 @@
+{
+ "about": "Where the road runs on the titan (its deck seated just over the titan, slab bottom 6.2 m under the deck) and where it passes through it (the titan open round it). Distances along the road; see road.json for the samples.",
+ "on": [
+  {
+   "piece": "the Palm",
+   "s0": 280,
+   "s1": 643.604,
+   "part": "hand.R",
+   "note": "climbs over the fingertips onto the open palm"
+  },
+  {
+   "piece": "the Arm",
+   "s0": 643.604,
+   "s1": 1213.41,
+   "part": "forearm.R, upper_arm.R",
+   "note": "along the top of the arm, palm up, to the shoulder"
+  },
+  {
+   "piece": "the Shoulder",
+   "s0": 1213.41,
+   "s1": 1273.41,
+   "part": "shoulder.R",
+   "note": "over the top of the right shoulder armour"
+  },
+  {
+   "piece": "the Collar",
+   "s0": 1273.41,
+   "s1": 1355.41,
+   "part": "chest",
+   "note": "north along the top of the chest by the collarbone"
+  },
+  {
+   "piece": "T1 the Chin",
+   "s0": 1355.41,
+   "s1": 1496.782,
+   "part": "chest, neck",
+   "note": "turns west onto the chin"
+  },
+  {
+   "piece": "the Brow",
+   "s0": 1496.782,
+   "s1": 1596.782,
+   "part": "head",
+   "note": "over the face and forehead, down the middle, between the horns"
+  },
+  {
+   "piece": "over the crossguard",
+   "s0": 6529.339,
+   "s1": 6627.077,
+   "part": "sword",
+   "note": "crests over the guard onto the blade"
+  }
+ ],
+ "through": [
+  {
+   "piece": "the Halo",
+   "s0": 1596.782,
+   "s1": 1856.782,
+   "part": "halo",
+   "note": "rolls a full turn through the standing ring"
+  },
+  {
+   "piece": "into the Breach",
+   "s0": 4637.257,
+   "s1": 4887.257,
+   "part": "chest",
+   "note": "in through the wound in the left (north) flank"
+  },
+  {
+   "piece": "the Ribcage",
+   "s0": 4887.257,
+   "s1": 5345.03,
+   "part": "chest",
+   "note": "a full loop inside the ribs: the chest hollow round it"
+  },
+  {
+   "piece": "the Hull",
+   "s0": 5375.03,
+   "s1": 5625.03,
+   "part": "chest",
+   "note": "a fork: the left route through walled and roofed corridors, the right (the gallery) high along the ribs, open on its outside"
+  },
+  {
+   "piece": "out of the right flank",
+   "s0": 5625.03,
+   "s1": 5685.03,
+   "part": "chest",
+   "note": "out through an opening in the right (south) flank"
+  },
+  {
+   "piece": "the Sword",
+   "s0": 6627.077,
+   "s1": 7143.898,
+   "part": "sword",
+   "note": "twice round the blade, the blade under the deck all the way"
+  }
+ ],
+ "under": [
+  {
+   "piece": "the Long Flank",
+   "s0": 3176.177,
+   "s1": 4480.177,
+   "part": "upper_arm.L, forearm.L",
+   "note": "under the raised left elbow"
+  }
+ ]
+}

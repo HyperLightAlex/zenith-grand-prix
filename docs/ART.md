@@ -162,14 +162,17 @@ to one brief per circuit and checked one at a time.
   Meridian, on the horizon at Canyon (its sky is painted with the sun
   setting; the disc sinks behind the far mesas), high overhead at Helios;
   at the Crucible and Frostline it is the moon, cold white, where its halo
-  is painted. Frostline's sky has the aurora painted into it (the plain look
+  is painted; at Titan's Rest the morning sun, low and white-gold, where R1
+  paints its glow. Frostline's sky has the aurora painted into it (the plain look
   draws its own, swaying).
 - **The horizon**: three painted strips, each on a ring round the circuit at
   its own distance (Meridian: far mountains, the coast, a city across the
   water; Canyon: mesas, buttes and spires, hoodoos; Helios: far snowy peaks,
   nearer peaks, a wall of cumulus; the Crucible: mountains, the far side of
   the city, the foundry district; Frostline: snowy mountains, a coast of
-  glaciers, icebergs in the pack ice), standing on the ground and repeating
+  glaciers, icebergs in the pack ice; Titan's Rest: worn mountains, a
+  graveyard of other fallen giants, dunes with wreckage), standing on the
+  ground and repeating
   round the circle. They move against each other a little as the circuit
   turns, as layered paintings would.
 - **Clouds**: painted cumulus cards in place of the modelled ones, turning to
@@ -208,6 +211,13 @@ to one brief per circuit and checked one at a time.
     nunatak's rock, and the frozen waterfall round the Icefall's column. Its
     sign over the Ice Barrel's mouth is on track sheet T5. It has no clouds
     sheet: the circuit has no cumulus.
+  - Titan's Rest: the sand, and on the fallen titan its ivory armour, its
+    faded red markings, its bronze frame (inside the chest), its sword's
+    gunmetal blade and the engraved bronze of its halo and guard. The titan
+    itself is a model built in Blender to its model sheets (G1 to G4 in
+    `art/model-sheets`) and fitted to the road (`art/blender/titan`);
+    until it is in, the game draws a placeholder from simple shapes in the
+    same pose (`render/titan/pose.ts`).
   The rock's texture coordinates come from the world position and each
   face's facing (`paintedRock` in `world.ts`): the strata stay level all the
   way round a mesa and dip gently across the desert, so no two mesas band

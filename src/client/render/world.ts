@@ -21,6 +21,7 @@ import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
 import { trackMatrix } from './trackSpace';
 import { titanGround, titanPlaceholder } from './titan/placeholder';
+import { loadTitan, titanModel, type TitanSlot } from './titan/asset';
 import type { TitanMat } from './titan/pose';
 
 const skyVertex = /* glsl */ `
@@ -2100,21 +2101,28 @@ function buildTitansRest(ctx: Ctx): void {
     edge: paintedMat(painted.blade, 50),
     bronze: paintedMat(painted.bronze, 40),
   };
+  // The armour shows its inside where the road runs through the titan.
+  mats.armour.side = THREE.DoubleSide;
+  if (swaps.armour) swaps.armour.side = THREE.DoubleSide;
   const parts: Record<keyof typeof mats, THREE.BufferGeometry[]> = { armour: [], red: [], slate: [], frame: [], verdigris: [], blade: [], edge: [], bronze: [] };
-  const put = (kind: keyof typeof mats, g: THREE.BufferGeometry) => {
+  const titanParts: Record<keyof typeof mats, THREE.BufferGeometry[]> = { armour: [], red: [], slate: [], frame: [], verdigris: [], blade: [], edge: [], bronze: [] };
+  const into = (to: typeof parts) => (kind: keyof typeof mats, g: THREE.BufferGeometry) => {
     if (g.attributes.uv) g.deleteAttribute('uv');
-    parts[kind].push(g.index ? g.toNonIndexed() : g);
+    to[kind].push(g.index ? g.toNonIndexed() : g);
   };
+  const put = into(parts);
 
   // ---- the titan ------------------------------------------------------------------
-  // Its simple shapes (titan/pose.ts), laid where the road needs them, with
-  // the road's space cut out: the placeholder until its Blender model is in.
+  // Its Blender model when it is in the build (titan/asset.ts). Until then,
+  // and while it loads, its simple shapes (titan/pose.ts), laid where the road
+  // needs them, with the road's space cut out.
   const palm = range('the Palm');
   if (!palm) return;
+  const putTitan = into(titanParts);
   {
     const shapes = titanPlaceholder(track);
     const kindOf: Record<TitanMat, keyof typeof mats> = { armour: 'armour', red: 'red', slate: 'slate', gold: 'bronze', frame: 'frame', visor: 'blade', blade: 'blade' };
-    for (const m of Object.keys(shapes) as TitanMat[]) for (const g of shapes[m]) put(kindOf[m], g);
+    for (const m of Object.keys(shapes) as TitanMat[]) for (const g of shapes[m]) putTitan(kindOf[m], g);
   }
   // The corridors through the Hull: walls either side of its left route, and a roof.
   const hull = range('the Hull');
@@ -2128,11 +2136,34 @@ function buildTitansRest(ctx: Ctx): void {
     const corX = cor.x + f.rx * track.shiftL[j];
     const floor = cor.y + track.riseL[j];
     const roofY = floor + 30;
-    put('frame', block(corX - lane - 10, corX - lane - 4, -10, roofY, zs[0] + 70, zs[1] - 40));
-    put('frame', block(corX + lane + 4, corX + lane + 10, -10, roofY, zs[0] + 70, zs[1] - 40));
-    put('verdigris', block(corX - lane - 10, corX + lane + 10, roofY, roofY + 6, zs[0] + 70, zs[1] - 40));
+    putTitan('frame', block(corX - lane - 10, corX - lane - 4, -10, roofY, zs[0] + 70, zs[1] - 40));
+    putTitan('frame', block(corX + lane + 4, corX + lane + 10, -10, roofY, zs[0] + 70, zs[1] - 40));
+    putTitan('verdigris', block(corX - lane - 10, corX + lane + 10, roofY, roofY + 6, zs[0] + 70, zs[1] - 40));
   }
   const body = titanGround(track);
+  const placeholder = new THREE.Group();
+  placeholder.name = 'titan placeholder';
+  group.add(placeholder);
+  loadTitan().then((asset) => {
+    if (!asset) return;
+    const dark = toon(0x2a2e38);
+    const jewel = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 0.75, 0.78), toneMapped: false });
+    const kindOf: Partial<Record<TitanSlot, keyof typeof mats>> = { armour: 'armour', red: 'red', slate: 'slate', gold: 'bronze', frame: 'frame', verdigris: 'verdigris', blade: 'blade', edge: 'edge' };
+    const on = look.on && ctx.painted !== null;
+    const model = titanModel(
+      asset,
+      (slot) => (slot === 'visor' ? dark : slot === 'jewel' ? jewel : mats[kindOf[slot]!]),
+      (mesh, slot) => {
+        const sw = kindOf[slot] ? swaps[kindOf[slot]!] : null;
+        if (!sw) return;
+        const plain = mesh.material as THREE.Material;
+        ctx.swaps.push((p) => (mesh.material = p ? sw : plain));
+        mesh.material = on ? sw : plain;
+      },
+    );
+    group.add(model);
+    placeholder.visible = false;
+  });
 
   // ---- dunes drifted against it, and wreckage half buried ----------------------------
   {
@@ -2252,14 +2283,16 @@ function buildTitansRest(ctx: Ctx): void {
     }
   }
 
-  // All of it, one mesh per material.
-  for (const kind of Object.keys(parts) as Array<keyof typeof mats>) {
-    if (parts[kind].length === 0) continue;
-    const mesh = new THREE.Mesh(mergeGeometries(parts[kind])!, mats[kind]);
-    mesh.frustumCulled = false;
-    group.add(mesh);
-    const sw = swaps[kind];
-    if (sw) swapMaterial(ctx, mesh, sw);
+  // All of it, one mesh per material; the placeholder titan on its own, so its model can take its place.
+  for (const [into, from] of [[group, parts], [placeholder, titanParts]] as const) {
+    for (const kind of Object.keys(from) as Array<keyof typeof mats>) {
+      if (from[kind].length === 0) continue;
+      const mesh = new THREE.Mesh(mergeGeometries(from[kind])!, mats[kind]);
+      mesh.frustumCulled = false;
+      into.add(mesh);
+      const sw = swaps[kind];
+      if (sw) swapMaterial(ctx, mesh, sw);
+    }
   }
 }
 

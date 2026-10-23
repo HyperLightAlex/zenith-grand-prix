@@ -1,0 +1,305 @@
+{
+ "about": "Where the fallen titan of Titan's Rest lies: the targets to pose the model to. Game axes and Blender axes for every point. It lies on its back, head west, feet east, its right side to the south; its back plate is burialDepth below the sand (y 0). The joints are its rig's pivots; the halo and the sword are placed by the road, which runs through and round them.",
+ "units": "metres",
+ "axes": {
+  "game": "x east, y up, z south",
+  "blender": "X east, Y north, Z up: a game point (x, y, z) is Blender (x, -z, y)"
+ },
+ "height": 1300,
+ "burialDepth": 120,
+ "body": {
+  "up": {
+   "game": [
+    -1,
+    0,
+    0
+   ],
+   "blender": [
+    -1,
+    0,
+    0
+   ]
+  },
+  "forward": {
+   "game": [
+    0,
+    1,
+    0
+   ],
+   "blender": [
+    0,
+    0,
+    1
+   ]
+  },
+  "right": {
+   "game": [
+    0,
+    0,
+    1
+   ],
+   "blender": [
+    0,
+    -1,
+    0
+   ]
+  }
+ },
+ "joints": {
+  "shoulderR": {
+   "game": [
+    0,
+    53,
+    -1149
+   ],
+   "blender": [
+    0,
+    1149,
+    53
+   ]
+  },
+  "shoulderL": {
+   "game": [
+    0,
+    53,
+    -1695
+   ],
+   "blender": [
+    0,
+    1695,
+    53
+   ]
+  },
+  "elbowR": {
+   "game": [
+    0,
+    36.11,
+    -867.506
+   ],
+   "blender": [
+    0,
+    867.506,
+    36.11
+   ]
+  },
+  "wristR": {
+   "game": [
+    0,
+    21.377,
+    -621.948
+   ],
+   "blender": [
+    0,
+    621.948,
+    21.377
+   ]
+  },
+  "fingertipR": {
+   "game": [
+    0,
+    10.536,
+    -441.273
+   ],
+   "blender": [
+    0,
+    441.273,
+    10.536
+   ]
+  },
+  "elbowL": {
+   "game": [
+    -214.818,
+    149.918,
+    -1849.869
+   ],
+   "blender": [
+    -214.818,
+    1849.869,
+    149.918
+   ]
+  },
+  "wristL": {
+   "game": [
+    -325.662,
+    63.706,
+    -2051.851
+   ],
+   "blender": [
+    -325.662,
+    2051.851,
+    63.706
+   ]
+  },
+  "fingertipL": {
+   "game": [
+    -407.218,
+    0.273,
+    -2200.465
+   ],
+   "blender": [
+    -407.218,
+    2200.465,
+    0.273
+   ]
+  },
+  "neck": {
+   "game": [
+    -56,
+    44,
+    -1422
+   ],
+   "blender": [
+    -56,
+    1422,
+    44
+   ]
+  },
+  "head": {
+   "game": [
+    -131,
+    102,
+    -1422
+   ],
+   "blender": [
+    -131,
+    1422,
+    102
+   ]
+  },
+  "hipR": {
+   "game": [
+    437,
+    25,
+    -1286
+   ],
+   "blender": [
+    437,
+    1286,
+    25
+   ]
+  },
+  "kneeR": {
+   "game": [
+    664,
+    35,
+    -1272
+   ],
+   "blender": [
+    664,
+    1272,
+    35
+   ]
+  },
+  "ankleR": {
+   "game": [
+    1000,
+    25,
+    -1232
+   ],
+   "blender": [
+    1000,
+    1232,
+    25
+   ]
+  },
+  "hipL": {
+   "game": [
+    437,
+    25,
+    -1558
+   ],
+   "blender": [
+    437,
+    1558,
+    25
+   ]
+  },
+  "kneeL": {
+   "game": [
+    664,
+    35,
+    -1572
+   ],
+   "blender": [
+    664,
+    1572,
+    35
+   ]
+  },
+  "ankleL": {
+   "game": [
+    1000,
+    25,
+    -1612
+   ],
+   "blender": [
+    1000,
+    1612,
+    25
+   ]
+  }
+ },
+ "halo": {
+  "centre": {
+   "game": [
+    -321.247,
+    196,
+    -1422
+   ],
+   "blender": [
+    -321.247,
+    1422,
+    196
+   ]
+  },
+  "axis": {
+   "game": [
+    -1,
+    0,
+    0
+   ],
+   "blender": [
+    -1,
+    0,
+    0
+   ]
+  },
+  "note": "Torn off and standing upright on its struts past the crown, facing along the road, which rolls a full turn through it. Its inner edge must stay clear of the whole roll.",
+  "minInnerRadius": 37.248
+ },
+ "sword": {
+  "guard": {
+   "game": [
+    401.247,
+    160.218,
+    -452.472
+   ],
+   "blender": [
+    401.247,
+    452.472,
+    160.218
+   ]
+  },
+  "towardPoint": {
+   "game": [
+    0,
+    -0.469,
+    0.883
+   ],
+   "blender": [
+    0,
+    -0.883,
+    -0.469
+   ]
+  },
+  "blade": {
+   "blade": 480,
+   "width": 26,
+   "thick": 10,
+   "grip": 26,
+   "guard": 90
+  },
+  "note": "Driven into the sand at a slant, its grip snapped off a short way above the guard (the rest of the grip and the pommel lie in the sand nearby). The road crests over the guard, then corkscrews twice round the blade, under the deck all the way round.",
+  "maxBladeRadius": 21.997
+ }
+}
