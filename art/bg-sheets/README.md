@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-All four circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
+The first four circuits' sheets are in the game (`tools/bg/build_backgrounds.py`); Frostline's are to be made.
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -48,6 +48,10 @@ All four circuits' sheets are in the game (`tools/bg/build_backgrounds.py`).
 | N3 Smoke and steam | bg-n3-smoke.png | six plumes, cut cleanly; a few greenish dabs painted inside the smoke, put back to its lavender when cut. Each plume's foot is found from its bottom rows (`base`). Not shown at present: as flat cards turning to face the camera, the plumes showed their turning in motion, and the stacks and the pour now rise in drawn puffs (fx sheet 8, recoloured) instead |
 | N4 Surfaces | bg-n4-surfaces.png | cut and blended like M4. The facade also gives a map of its lit windows alone (`facadeLit`), for their glow; the game draws it half as large again as painted, so the windows stay windows at a distance |
 | N5 Neon signs | bg-n5-signs.png | all six spelt right, each cut by its outline like the track kit's boards, 3.26:1 |
+| F1 Sky | bg-f1-sky.png | to be made |
+| F1B Sky | bg-f1b-sky.png | to be made |
+| F2 Horizon | bg-f2-horizon.png | to be made |
+| F3 Surfaces | bg-f3-surfaces.png | to be made |
 
 ## Meridian Skyway
 
@@ -312,4 +316,77 @@ SHEET N1B: SKY, THE HALF FACING AWAY (make it after N1, with N1 attached)
 - Same size, style and palette as N1, the horizon at exactly the same height, the same flat night haze below it and the same plain near-black navy along the top edge.
 - The other half of the sky, behind the viewer, facing away from the moon. Its left edge must continue seamlessly from N1's right edge, and its right edge seamlessly into N1's left edge, so the two side by side make the whole sky round.
 - No moon halo here: a deeper, darker sky with more stars, and the city's magenta and amber glow along the horizon just as strong as on N1 (the city surrounds the circuit). The low bands of cloud carry on across it, lit from below by the city, magenta and amber underneath, dark violet on top.
+```
+
+## Frostline
+
+An ice shelf at the blue hour, the sun just down, under the aurora. It has
+no clouds sheet: the circuit has no cumulus, and plumes on flat cards show
+their turning (see Neon Crucible). So its sheets are the sky (twice), the
+horizon and the surfaces: the snow on the shelf and the glacier, the ice
+cliffs round them, the sea among the pack ice, the blue ice of the seracs,
+the bridge's pillars, the caves' vault and the icebergs, the nunatak's rock,
+and the frozen waterfall the road winds down round. The aurora is painted
+into the sky (the plain look draws its own, moving); the moon is drawn by
+the game over the painted sky, 25 degrees up. Its board along the track and
+the sign over the Ice Barrel's mouth are on track sheet T5
+(`art/track-sheets`).
+
+| Sheet | File |
+|---|---|
+| F1 Sky, facing the moon | bg-f1-sky.png |
+| F1B Sky, facing away | bg-f1b-sky.png |
+| F2 Horizon | bg-f2-horizon.png |
+| F3 Surfaces | bg-f3-surfaces.png |
+
+```
+ZENITH GP: CIRCUIT BACKGROUNDS. FROSTLINE (four sheets; make them one at a time, in order F1, F2, F3, then F1B with F1 attached, each as its own image)
+
+The setting: a racing circuit on a great ice shelf at the edge of a polar sea, at the blue hour just after sunset: the road runs along the shelf's edge, climbs inside a tube of clear ice up through a glacier, leaps off the glacier's face and winds down round a frozen waterfall, among towers of blue ice, with pack ice and icebergs out on the dark sea and the aurora hanging over everything. The game draws the road, the mechs, the ice and the nearby scenery; these sheets are the painted world around them.
+
+STYLE, ALL SHEETS
+- Background art from a 1980s Japanese TV mecha anime, painted by hand the way the background department did it: poster colour (gouache) on illustration board, skies airbrushed in smooth gradients, everything else painted in a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture. Snow and ice painted the way those backgrounds painted them: clean whites and pale blues in the light, clear cobalt and violet-blue in the shadows, never grey.
+- No ink outlines anywhere; background paintings had none.
+- Distance shown by atmospheric perspective: the further away, the more it sinks into the pale blue-violet haze.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, depth-of-field blur, film grain or noise (the game adds its own grain and glow).
+- Nothing but scenery: no people, mechs, vehicles, ships, aircraft, birds, animals, buildings, text, numbers, labels, logos, borders, signatures or watermarks.
+- Palette: deep indigo #070F33 high in the sky, blue #22417E, the afterglow's soft pink #D99AB6 along the horizon, haze #6F7FB4, distant mountains #3A4A78, moonlight #C8D2FF, aurora green #5CFFB0 at its foot through cyan to magenta #E060FF and violet at its head, snow white #EEF4FF with shade #A8BDE6, glacier ice #9CC6EF to deep blue #3D6FB8, dark sea #0A1630 and #29507E, pack ice #C6D6F2, rock dark blue-grey #2C2F45.
+- Every sheet is 1536x1024, landscape.
+
+SHEET 2 IS CUT OUT BY THE GAME
+- Paint it on perfectly flat pure green, #00FF00: no shading, texture, gradient, glow or shadow on the green.
+- Nothing in the art itself may be green or close to it: no aurora on this sheet, and no green in the ice or the sea.
+- Crisp edges against the green, with no soft halo.
+
+SHEET F1: SKY, THE HALF FACING THE MOON (full bleed, no green screen)
+- Half the sky around the viewer, the half facing the moon, unrolled into one painting from the horizon at the bottom to straight overhead at the top edge. Its left edge should also continue seamlessly into its right edge.
+- The horizon is a perfectly straight, level line exactly three quarters of the way down (768 px from the top). Below it, only flat haze (#6F7FB4); paint nothing there.
+- The moon is at the middle of the image, about 25 degrees up: its centre about 210 px above the horizon line. Paint its cold halo, a soft round glow of pale blue-white fading into the sky, but not the moon's disc itself (the game draws it).
+- An airbrushed gradient from deep indigo at the top through blue to the blue hour's afterglow along the horizon: a broad band of soft pink with a thin line of pale lilac right at the horizon, even all the way across.
+- The aurora: two or three great curtains hanging across the sky in long, slow folds, from about 15 degrees up to about 55 degrees up, crossing the whole width of the image. Each is bright green at its lower edge, which is crisp and wavy, rising into cyan and then magenta and violet at its top, where it fades into the sky; fine vertical rays streak through it. Painted as a cel background painter painted an aurora: glowing flat bands of colour with a crisp lower edge, softened only upward. Keep it clear of the moon's halo.
+- Stars: small single dots and a few tiny four-point twinkles, thick near the top, thinning out into the pink near the horizon, fewer behind the aurora.
+- Clouds: none, but for a few long, thin streaks low over the horizon catching the pink afterglow.
+- The top edge is plain deep indigo, even across the full width.
+
+SHEET F2: HORIZON (three strips on green)
+- Three separate horizontal strips stacked top to bottom with green between them. Each runs the full width of the image and is about 260 px tall.
+- Each strip's bottom edge is a perfectly straight, level line (it stands on the horizon), with the strip filled solid down to it. Each strip repeats: its left end must continue seamlessly into its right end.
+- Top strip, farthest: a long range of high mountains under snow, in pale blue-violet (#3A4A78) sinking into the haze, low contrast, their snowfields catching a little pink afterglow on the sides facing the moon, the highest peaks reaching about two thirds of the strip's height.
+- Middle strip: a coast of glaciers: wide tongues of ice flowing down between dark rock ridges to end in sheer ice cliffs at the sea, the ice white and pale blue with cobalt shadows in its crevasses, the rock dark blue-grey dusted with snow.
+- Bottom strip, nearest: the edge of the pack ice: tabular icebergs of many sizes, flat-topped with sheer sides, white on their lit faces and clear blue in shadow, a few with arches or caves worn through them, standing on a band of dark sea along the bottom edge scattered with small floes.
+
+SHEET F3: SURFACES (six tiling squares, full bleed)
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge must continue into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon) and evenly lit, with no cast shadows across it, no glow and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats.
+- 1, top left: the snow on the shelf and the glacier, seen from straight above: smooth, wind-packed snow in white and pale blue, with low wind ripples (sastrugi) in two soft tones running one way. No footprints, tracks or marks.
+- 2, top middle: the face of an ice cliff, the shelf's edge and the glacier's sides, seen straight-on: horizontal layers of white and pale blue ice of different thicknesses with a few thin dark bands of grit, cut by vertical fractures and a few deep blue crevices running down.
+- 3, top right: the sea among the pack ice, seen from straight above: dark navy water with plates of floating ice of many sizes and irregular shapes, white with pale blue edges, open leads of water between them.
+- 4, bottom left: blue glacier ice, as on the broken face of a serac or an iceberg: clear cobalt and turquoise-blue (not green) ice in crisp faceted planes, paler where the fractures catch the light, a few trapped bubbles.
+- 5, bottom middle: the nunatak's rock: dark blue-grey basalt in blocky fractured planes, with frost in its cracks and small drifts of snow on its ledges.
+- 6, bottom right: a frozen waterfall seen straight-on: long ropes of icicles and frozen flow running top to bottom, white to pale cyan, with blue hollows between them.
+
+SHEET F1B: SKY, THE HALF FACING AWAY (make it after F1, with F1 attached)
+- Same size, style and palette as F1, the horizon at exactly the same height, the same flat haze below it and the same plain deep indigo along the top edge.
+- The other half of the sky, behind the viewer, facing away from the moon. Its left edge must continue seamlessly from F1's right edge, and its right edge seamlessly into F1's left edge, so the two side by side make the whole sky round.
+- No moon halo here: a deeper sky with more stars, the pink afterglow along the horizon a little stronger (the sun has just set on this side), and the aurora's curtains carrying on across it from F1's edges, joining them, in the same colours.
 ```

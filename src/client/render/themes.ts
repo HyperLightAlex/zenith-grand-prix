@@ -25,8 +25,10 @@ export interface Theme {
   cirrusAmount: number;
   fog: number;
   fogDensity: number;
+  /** The aurora's curtains in the plain sky: how bright (0 or absent: none). */
+  aurora?: number;
   /** What the circuit stands on, and how far down it is. */
-  ground: 'sea' | 'desert' | 'clouds' | 'pit';
+  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice';
   groundY: number;
   groundDeep: number;
   groundLight2: number;
@@ -136,6 +138,35 @@ export const THEMES: Record<string, Theme> = {
     groundLight2: 0x2a2634,
     ridge: 0x1c1432,
     cloudShade: 0x2a1a40,
+    clouds: 0,
+  },
+  // Blue hour on an ice shelf: the sun just down, a deep blue sky with a
+  // pink band along the horizon, the aurora's curtains overhead, cold light
+  // off the snow. groundY is the sea round the shelf (see frost.ts).
+  frostline: {
+    id: 'frostline',
+    sunLight: 0xc4d2ff,
+    sunIntensity: 1.5,
+    skyLight: 0x7f9ce6,
+    groundLight: 0xdbe6ff,
+    hemiIntensity: 1.15,
+    skyZenith: 0x070f33,
+    skyMid: 0x22417e,
+    skyHorizon: 0xd99ab6,
+    halo: [0.55, 0.62, 1.0],
+    disc: [1.5, 1.58, 1.8],
+    discGlow: [0.45, 0.55, 0.95],
+    cirrus: [0.62, 0.66, 0.92],
+    cirrusAmount: 0.2,
+    aurora: 1,
+    fog: 0x6f7fb4,
+    fogDensity: 0.00012,
+    ground: 'ice',
+    groundY: 0,
+    groundDeep: 0x0a1630,
+    groundLight2: 0x29507e,
+    ridge: 0x3a4a78,
+    cloudShade: 0x5a6aa8,
     clouds: 0,
   },
 };

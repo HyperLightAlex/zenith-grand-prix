@@ -5,6 +5,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { look } from './look';
 import { paintedSignMaterial, paintedSurfaceMaterial, paintedTexture, paintedTrack, type PaintedSign } from './painted';
+import { frostOf } from './frost';
 import { pitOf } from './pit';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
@@ -797,7 +798,8 @@ export function buildTrackVisual(
     return track.roadL[j] === 1 && track.roadR[j] === 1 && track.mag[j] === 0 && track.median[j] < 0.1 && track.upY[j] > 0.85 && Math.abs(track.ty[j]) < 0.35;
   };
   const pit = pitOf(track);
-  const groundAt = (x: number, z: number) => (pit ? pit.groundAt(x, z) : theme.groundY);
+  const frost = frostOf(track);
+  const groundAt = (x: number, z: number) => (pit ? pit.groundAt(x, z) : frost ? frost.groundAt(x, z) : theme.groundY);
   {
     const spacing = 30; // samples
     const spots: Array<[number, number]> = [];

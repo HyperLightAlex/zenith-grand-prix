@@ -13,6 +13,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, hwAt, makeFrame, type Track } from '../../sim/track';
 import { look } from './look';
+import { frostOf, inside } from './frost';
 import { pitOf } from './pit';
 import { PuffStreams, type PuffSource } from './puffs';
 import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paintedSurfaceMaterial as paintedRock, paintedTexture, paintedTrack, whiteTexture, type PaintedSet } from './painted';
@@ -60,6 +61,7 @@ uniform vec3 uDiscDir;
 uniform vec3 uDiscColor;
 uniform vec3 uDiscPlain;
 uniform vec3 uGlowPlain;
+uniform float uAurora;
 varying vec3 vDir;
 ${NOISE}
 ${UNTONE}
@@ -110,6 +112,21 @@ void main() {
     float m = smoothstep(0.52, 0.62, c) * smoothstep(0.02, 0.2, h) * (1.0 - smoothstep(0.55, 0.9, h));
     vec3 cloud = mix(uCirrus, vec3(1.0), smoothstep(0.6, 0.75, c));
     col = mix(col, cloud, m * uCirrusAmt);
+  }
+  // The aurora: curtains hanging across the sky, swaying slowly, green at
+  // their foot and magenta at their head, streaked with rays; painted in
+  // flat steps of brightness.
+  if (uAurora > 0.0 && h > 0.0) {
+    float az = atan(dir.z, dir.x);
+    float sway = sin(az * 2.0 + uTime * 0.03) * 0.35 + sin(az * 5.0 - uTime * 0.05) * 0.12;
+    float fold = fbm(vec2(az * 2.6 + sway, uTime * 0.012));
+    float foot = 0.2 + 0.1 * noise(vec2(az * 3.0, 1.7));
+    float hb = smoothstep(foot, foot + 0.03, h) * (1.0 - smoothstep(foot + 0.1, foot + 0.38, h));
+    float rays = 0.3 + 0.7 * noise(vec2(az * 90.0 + sway * 20.0, uTime * 0.15));
+    float a = smoothstep(0.56, 0.66, fold) * hb * rays;
+    a = floor(a * 4.0 + 0.5) / 4.0;
+    vec3 ac = mix(vec3(0.1, 1.0, 0.5), vec3(0.75, 0.18, 1.0), smoothstep(foot + 0.04, foot + 0.26, h));
+    col += ac * a * 0.3 * uAurora;
   }
   // Below the horizon just continue the haze.
   col = mix(col, uHorizon * 0.92, smoothstep(0.0, -0.08, h));
@@ -513,6 +530,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uDiscColor: { value: new THREE.Vector3(...(SUN_DISC[theme.id]?.color ?? [1.9, 1.75, 1.45])) },
       uDiscPlain: { value: new THREE.Vector3(...(theme.disc ?? [1.9, 1.75, 1.45])) },
       uGlowPlain: { value: new THREE.Vector3(...(theme.discGlow ?? [1.0, 0.86, 0.62])) },
+      uAurora: { value: theme.aurora ?? 0 },
     },
     side: THREE.BackSide,
     depthWrite: false,
@@ -536,6 +554,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   if (theme.ground === 'desert') buildCanyon(ctx);
   else if (theme.ground === 'clouds') buildHelios(ctx);
   else if (theme.ground === 'pit') buildCrucible(ctx);
+  else if (theme.ground === 'ice') buildFrostline(ctx);
   else buildMeridian(ctx);
   if (painted) horizonRings(ctx);
 
@@ -1334,6 +1353,550 @@ function buildHelios(ctx: Ctx): void {
   }
 }
 
+// ---- Frostline -------------------------------------------------------------
+
+/** The sea round the ice shelf: dark, cold water and pack ice drifting in plates. */
+const iceSeaFragment = /* glsl */ `
+uniform vec3 uDeep;
+uniform vec3 uShallow;
+uniform vec3 uSky;
+uniform vec3 uFloe;
+uniform vec3 uSunDir;
+uniform float uTime;
+varying vec3 vWorld;
+#include <common>
+#include <fog_pars_fragment>
+${NOISE}
+void main() {
+  vec3 V = normalize(cameraPosition - vWorld);
+  vec2 p = vWorld.xz;
+  float w = noise(p * 0.01 + vec2(uTime * 0.03, uTime * 0.02)) * 0.6 + noise(p * 0.04 - vec2(uTime * 0.05, 0.0)) * 0.4;
+  vec3 N = normalize(vec3((w - 0.5) * 0.25, 1.0, (noise(p * 0.02 + 7.0) - 0.5) * 0.25));
+  float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+  vec3 col = mix(uDeep, uShallow, smoothstep(0.35, 0.75, w) * 0.5);
+  col = mix(col, uSky, fres * 0.8);
+  // Pack ice: plates (the cells of a scatter of points), some open water
+  // between, each plate a flat tone with a lit rim.
+  vec2 q = p * 0.011 + vec2(noise(p * 0.003), noise(p * 0.003 + 5.2)) * 1.4 + vec2(uTime * 0.004, uTime * 0.0015);
+  vec2 cell = floor(q);
+  vec2 f = fract(q);
+  float d1 = 9.0;
+  float d2 = 9.0;
+  vec2 id = vec2(0.0);
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 g = vec2(float(x), float(y));
+      vec2 o = vec2(hash(cell + g), hash(cell + g + 19.1));
+      float d = length(g + o - f);
+      if (d < d1) { d2 = d1; d1 = d; id = cell + g; }
+      else if (d < d2) d2 = d;
+    }
+  }
+  float edge = d2 - d1;
+  // Thicker near the shelf, thinning out to open water.
+  float pack = 0.35 + 0.35 * smoothstep(0.3, 0.7, noise(p * 0.0012 + 1.3));
+  float has = step(1.0 - pack, hash(id + 3.7));
+  float floe = has * smoothstep(0.08, 0.11, edge);
+  float rim = has * (smoothstep(0.08, 0.11, edge) - smoothstep(0.13, 0.16, edge));
+  vec3 ice = uFloe * (0.82 + 0.18 * hash(id + 9.1));
+  col = mix(col, ice, floe);
+  col = mix(col, uFloe * 1.12, rim * 0.6);
+  vec3 H = normalize(uSunDir + V);
+  col += vec3(0.75, 0.82, 1.0) * pow(max(dot(N, H), 0.0), 160.0) * (1.0 - floe) * 0.8;
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}`;
+
+/** Snow on the shelf and the glacier: drifts in broad soft shade, wind ripples in two tones, glints. */
+const snowFragment = /* glsl */ `
+uniform vec3 uSnow;
+uniform vec3 uShade;
+uniform vec3 uCrevasse;
+uniform float uCrevasseY;
+uniform float uTime;
+varying vec3 vWorld;
+#include <common>
+#include <fog_pars_fragment>
+${NOISE}
+void main() {
+  vec2 p = vWorld.xz;
+  float big = fbm(p * 0.0021);
+  vec3 col = mix(uShade, uSnow, smoothstep(0.32, 0.58, big));
+  float rip = sin(dot(p, vec2(0.055, 0.021)) + noise(p * 0.012) * 6.0);
+  col *= 0.95 + 0.05 * step(0.0, rip);
+  // On the glacier: crevasses, long thin cracks across the flow, deep blue
+  // with a pale lip, in sets that come and go.
+  if (vWorld.y > uCrevasseY) {
+    vec2 q = vec2(p.x * 0.012 + noise(p * 0.006) * 2.2, p.y * 0.0035);
+    float c = abs(fract(q.x + noise(vec2(q.y * 3.0, 4.1)) * 0.6) - 0.5);
+    float set = smoothstep(0.45, 0.6, noise(p * 0.004 + 2.3));
+    float crack = (1.0 - smoothstep(0.012, 0.026, c)) * set;
+    float lip = (1.0 - smoothstep(0.026, 0.05, c)) * set;
+    col = mix(col, uSnow * 1.04, lip * 0.5);
+    col = mix(col, uCrevasse, crack);
+  }
+  // Glints that come and go as the camera moves.
+  vec2 g = floor(p * 0.7);
+  float glint = step(0.996, hash(g)) * step(0.6, noise(p * 0.3 + cameraPosition.xz * 0.02));
+  col += vec3(0.7, 0.85, 1.0) * glint * 0.6;
+  gl_FragColor = vec4(col, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}`;
+
+/** An outline in plan, as (x, z), stood up from `y0` to `y1`: snow on top, ice in bands down the sides. */
+function iceBlock(ctx: Ctx, outline: Array<[number, number]>, y0: number, y1: number, top: THREE.Material, bands: (x: number, y: number, z: number) => THREE.Color): THREE.Mesh {
+  const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: y1 - y0, bevelEnabled: false, steps: Math.max(1, Math.round((y1 - y0) / 9)) });
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(0, y0, 0);
+  // The sides in bands of colour by height (each face its own, so they stay flat).
+  const flat = geo.toNonIndexed();
+  paint(flat, bands);
+  flat.computeVertexNormals();
+  const side = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1a2c5a, emissiveIntensity: 0.35 });
+  const mesh = new THREE.Mesh(flat, [top, side]);
+  mesh.frustumCulled = false;
+  ctx.group.add(mesh);
+  return mesh;
+}
+
+/** Where a turn's (or a spiral's) curvature centres gather: the middle it turns round. */
+function turnCentre(track: Track, range: [number, number]): [number, number] {
+  let sx = 0;
+  let sz = 0;
+  let k = 0;
+  for (let i = Math.ceil(range[0] / track.ds); i < Math.floor(range[1] / track.ds); i++) {
+    const kp = track.kappa[i];
+    if (Math.abs(kp) < 1e-4) continue;
+    const l = Math.hypot(track.rx[i], track.rz[i]) || 1;
+    sx += track.px[i] + track.rx[i] / l / kp;
+    sz += track.pz[i] + track.rz[i] / l / kp;
+    k++;
+  }
+  return k ? [sx / k, sz / k] : [0, 0];
+}
+
+function buildFrostline(ctx: Ctx): void {
+  const { track, group, cx, cz, theme } = ctx;
+  const frost = frostOf(track);
+  stars(ctx);
+
+  // ---- the sea, and pack ice on it ------------------------------------------
+  groundPlane(
+    ctx,
+    iceSeaFragment,
+    {
+      uDeep: { value: new THREE.Color(theme.groundDeep) },
+      uShallow: { value: new THREE.Color(theme.groundLight2) },
+      uSky: { value: new THREE.Color(0x5a6fb0) },
+      uFloe: { value: new THREE.Color(0xc6d6f2) },
+    },
+    theme.groundY,
+  );
+  if (!frost) return;
+  const { shelfY, glacierY } = frost;
+
+  // ---- the shelf and the glacier on it ---------------------------------------
+  const snow = groundMaterial(ctx, snowFragment, {
+    uSnow: { value: new THREE.Color(0xeef4ff) },
+    uShade: { value: new THREE.Color(0xa8bde6) },
+    uCrevasse: { value: new THREE.Color(0x1f4c9c) },
+    uCrevasseY: { value: glacierY - 1 },
+  });
+  const deep = new THREE.Color(0x3d6fb8);
+  const pale = new THREE.Color(0x9cc6ef);
+  const white = new THREE.Color(0xd9e8fa);
+  const band = new THREE.Color();
+  const bands = (x: number, y: number, z: number) => {
+    // The layers wander up and down along the cliff, so they read as strata, not stripes.
+    const wob = Math.sin(x * 0.013 + z * 0.007) * 7 + Math.sin(x * 0.041 - z * 0.029) * 3;
+    const yy = y + wob;
+    const b = Math.floor((yy + 1000) / 11);
+    // Old blue ice low down, younger white ice above, the odd thin layer of grit.
+    const t = Math.min(1, Math.max(0, yy / 220));
+    band.copy(deep).lerp(pale, 0.35 + t * 0.6);
+    if (b % 7 === 3) band.lerp(white, 0.3);
+    if (b % 13 === 6) band.multiplyScalar(0.84);
+    // Vertical fractures: darker blue slices here and there.
+    const crack = Math.sin(x * 0.09 + z * 0.11) > 0.97 || Math.sin(x * 0.07 - z * 0.13 + 2.0) > 0.98;
+    if (crack) band.lerp(deep, 0.45);
+    return band.multiplyScalar(0.96 + 0.04 * (b % 2));
+  };
+  iceBlock(ctx, frost.shelf, theme.groundY - 6, shelfY, snow, bands);
+  iceBlock(ctx, frost.glacier, shelfY - 2, glacierY, snow, bands);
+
+  // ---- the Ice Barrel: a tube of clear ice round the climb ---------------------
+  {
+    const [c0, c1] = frost.climb;
+    const pts: THREE.Vector3[] = [];
+    for (let i = c0 - 6; i <= c1 + 4; i += 2) pts.push(new THREE.Vector3(track.px[i], track.py[i], track.pz[i]));
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const R = 34;
+    const tubeGeo = new THREE.TubeGeometry(curve, pts.length * 2, R, 20, false);
+    const glass = new THREE.MeshLambertMaterial({ color: 0x9fd2ff, emissive: 0x24508f, emissiveIntensity: 0.45, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false });
+    const tube = new THREE.Mesh(tubeGeo, glass);
+    tube.frustumCulled = false;
+    tube.renderOrder = 3;
+    group.add(tube);
+    // Ribs of thicker ice round it, and a glowing seam along its top.
+    const ribs: THREE.BufferGeometry[] = [];
+    const len = curve.getLength();
+    const q = new THREE.Quaternion();
+    for (let a = 12; a < len; a += 26) {
+      const u = a / len;
+      const p = curve.getPointAt(u);
+      const tng = curve.getTangentAt(u);
+      const g = new THREE.TorusGeometry(R + 0.6, 1.8, 6, 28).toNonIndexed();
+      q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tng);
+      g.applyQuaternion(q);
+      g.translate(p.x, p.y, p.z);
+      ribs.push(g);
+    }
+    const ribMesh = new THREE.Mesh(mergeGeometries(ribs)!, new THREE.MeshLambertMaterial({ color: 0xbfe2ff, emissive: 0x3a74c8, emissiveIntensity: 0.5, flatShading: true }));
+    ribMesh.frustumCulled = false;
+    group.add(ribMesh);
+  }
+
+  // Track-space helpers.
+  const m = new THREE.Matrix4();
+  const at = new THREE.Vector3();
+  const place = (s: number, d: number, h: number) => {
+    trackMatrix(track, s, d, h, 0, m);
+    return at.setFromMatrixPosition(m);
+  };
+
+  // ---- the sign over the Ice Barrel's mouth, on a frame of ice -----------------
+  {
+    const range = pieceRange(track, 'into the glacier');
+    if (range) {
+      const s = range[0] - 36;
+      const W = 96;
+      const H = 30;
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: iceSign(), side: THREE.DoubleSide, toneMapped: false }));
+      trackMatrix(track, s, 0, 46, Math.PI, m);
+      sign.applyMatrix4(m);
+      group.add(sign);
+      const own = paintedTrack.circuitSigns[theme.id];
+      if (own) {
+        const pm = new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide, toneMapped: false });
+        swapMaterial(ctx, sign, pm);
+      }
+      const frame: THREE.BufferGeometry[] = [];
+      for (const side of [-1, 1]) {
+        const foot = place(s, side * (W / 2 + 4), 0).clone();
+        const head = place(s, side * (W / 2 + 4), 46 + H / 2 + 4).clone();
+        const post = new THREE.CylinderGeometry(3.4, 5.5, head.y - shelfY, 6, 1).toNonIndexed();
+        post.translate(foot.x, (head.y + shelfY) / 2, foot.z);
+        frame.push(paint(post, () => new THREE.Color(0x9cc8f2)));
+      }
+      const beamGeo = new THREE.BoxGeometry(W + 14, 4, 4).toNonIndexed();
+      trackMatrix(track, s, 0, 46 + H / 2 + 4, Math.PI, m);
+      beamGeo.applyMatrix4(m);
+      frame.push(paint(beamGeo, () => new THREE.Color(0xb6dafa)));
+      const fm = new THREE.Mesh(mergeGeometries(frame)!, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1d3a78, emissiveIntensity: 0.4 }));
+      fm.frustumCulled = false;
+      group.add(fm);
+    }
+  }
+  const iceMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1d3a78, emissiveIntensity: 0.4 });
+  const add = (parts: THREE.BufferGeometry[], mat: THREE.Material) => {
+    if (parts.length === 0) return null;
+    const mesh = new THREE.Mesh(mergeGeometries(parts)!, mat);
+    mesh.frustumCulled = false;
+    group.add(mesh);
+    return mesh;
+  };
+  const tinted = (g: THREE.BufferGeometry, c: THREE.Color) => paint(g, () => c);
+
+  // ---- the Aurora Split: pillars under the bridge, a vault over the caves -----
+  {
+    const fork = track.forks[0];
+    if (fork) {
+      const pillars: THREE.BufferGeometry[] = [];
+      const vault: THREE.BufferGeometry[] = [];
+      const shells: THREE.BufferGeometry[] = [];
+      const rnd = mulberry(611);
+      const lane = (track.hw[Math.floor((fork.s0 + fork.s1) / 2 / track.ds)] + fork.median) / 2;
+      for (let s = fork.s0 + 40; s < fork.s1 - 40; s += 4) {
+        const i = Math.floor(s / track.ds) % track.n;
+        // Under the bridge, where it stands well up: an ice pillar every so often.
+        if (track.riseL[i] > 14 && Math.round(s) % 96 < 4) {
+          const top = place(s, -lane, -6).clone();
+          const h = top.y - shelfY;
+          const g = new THREE.CylinderGeometry(5, 9, h, 6, 1).toNonIndexed();
+          g.translate(top.x, shelfY + h / 2, top.z);
+          pillars.push(tinted(g, new THREE.Color(0x9cc8f2).multiplyScalar(0.9 + rnd() * 0.15)));
+        }
+        // Over the caves, once they have swung clear: slim ribs of ice, every
+        // 40 (a camera beside the route looks through them, and the clear roof).
+        if (Math.abs(track.shiftR[i]) > 14 && Math.round(s) % 40 < 4) {
+          trackMatrix(track, s, lane, 0, 0, m);
+          const g = new THREE.TorusGeometry(lane + 1, 1.5, 5, 14, Math.PI).toNonIndexed();
+          g.applyMatrix4(m);
+          vault.push(tinted(g, new THREE.Color(0xb6dafa).multiplyScalar(0.9 + rnd() * 0.15)));
+        }
+      }
+      // The caves' roof between the arches: clear ice, a half pipe along the route.
+      {
+        const pos: number[] = [];
+        const idx: number[] = [];
+        const SEG = 14;
+        let row = 0;
+        for (let s = fork.s0 + 40; s < fork.s1 - 40; s += 8) {
+          const i = Math.floor(s / track.ds) % track.n;
+          if (Math.abs(track.shiftR[i]) < 14) continue;
+          for (let k = 0; k <= SEG; k++) {
+            const a = (k / SEG) * Math.PI;
+            const p = place(s, lane + Math.cos(a) * (lane + 1), Math.sin(a) * (lane + 1));
+            pos.push(p.x, p.y, p.z);
+          }
+          if (row > 0) {
+            const b = (row - 1) * (SEG + 1);
+            for (let k = 0; k < SEG; k++) idx.push(b + k, b + SEG + 1 + k, b + k + 1, b + k + 1, b + SEG + 1 + k, b + SEG + 2 + k);
+          }
+          row++;
+        }
+        if (row > 1) {
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+          g.setIndex(idx);
+          g.computeVertexNormals();
+          shells.push(g);
+        }
+      }
+      add(pillars, iceMat);
+      add(vault, iceMat);
+      const shell = add(shells, new THREE.MeshLambertMaterial({ color: 0xa8d6ff, emissive: 0x2a5aa0, emissiveIntensity: 0.5, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false }));
+      if (shell) shell.renderOrder = 3;
+    }
+  }
+
+  // ---- the Seracs: towers of ice round the turns on top ------------------------
+  {
+    const rnd = mulberry(1212);
+    const parts: THREE.BufferGeometry[] = [];
+    const range = pieceRange(track, 'the Seracs');
+    const crest = pieceRange(track, 'the crest');
+    const near: Array<[number, number]> = [];
+    if (range) for (let s = range[0]; s < range[0] + 460; s += 24) near.push([place(s, 0, 0).x, at.z]);
+    if (crest) for (let s = crest[0]; s < crest[1]; s += 60) near.push([place(s, 0, 0).x, at.z]);
+    let placed = 0;
+    for (let tries = 0; tries < 2400 && placed < 90; tries++) {
+      const [bx, bz] = near[Math.floor(rnd() * near.length)];
+      const a = rnd() * Math.PI * 2;
+      const r = 50 + rnd() * 170;
+      const x = bx + Math.cos(a) * r;
+      const z = bz + Math.sin(a) * r;
+      const ground = frost.groundAt(x, z);
+      if (ground !== glacierY) continue;
+      const w = 7 + rnd() * 14;
+      if (ctx.clearance(x, z) < 42 + w) continue;
+      const h = 22 + rnd() * rnd() * 90;
+      const g = new THREE.CylinderGeometry(w * (0.35 + rnd() * 0.4), w, h, 4 + Math.floor(rnd() * 3), 1).toNonIndexed();
+      g.rotateY(rnd() * 3);
+      g.rotateZ((rnd() - 0.5) * 0.35);
+      g.rotateX((rnd() - 0.5) * 0.35);
+      g.translate(x, ground + h / 2 - 2, z);
+      parts.push(tinted(g, new THREE.Color().setHSL(0.58 + rnd() * 0.04, 0.6, 0.72 + rnd() * 0.16)));
+      placed++;
+    }
+    // A few on the shelf too, by the low roads.
+    for (let tries = 0; tries < 900 && placed < 130; tries++) {
+      const a = rnd() * Math.PI * 2;
+      const r = 200 + rnd() * 1400;
+      const x = cx + Math.cos(a) * r;
+      const z = cz + Math.sin(a) * r;
+      if (frost.groundAt(x, z) !== shelfY) continue;
+      const w = 6 + rnd() * 10;
+      if (ctx.clearance(x, z) < 60 + w) continue;
+      const h = 14 + rnd() * rnd() * 60;
+      const g = new THREE.CylinderGeometry(w * (0.3 + rnd() * 0.4), w, h, 5, 1).toNonIndexed();
+      g.rotateY(rnd() * 3);
+      g.rotateZ((rnd() - 0.5) * 0.3);
+      g.translate(x, shelfY + h / 2 - 2, z);
+      parts.push(tinted(g, new THREE.Color().setHSL(0.58 + rnd() * 0.04, 0.55, 0.74 + rnd() * 0.14)));
+      placed++;
+    }
+    add(parts, iceMat);
+  }
+
+  // ---- the Nunatak: dark rock through the glacier, inside the hairpin ----------
+  {
+    const range = pieceRange(track, 'T3 the Nunatak');
+    if (range) {
+      const [nx, nz] = turnCentre(track, range);
+      const rnd = mulberry(77);
+      const rock: THREE.BufferGeometry[] = [];
+      const caps: THREE.BufferGeometry[] = [];
+      for (let k = 0; k < 6; k++) {
+        const a = rnd() * Math.PI * 2;
+        const r = k === 0 ? 0 : 20 + rnd() * 50;
+        const rb = k === 0 ? 70 : 30 + rnd() * 30;
+        const h = k === 0 ? 170 : 60 + rnd() * 70;
+        const x = nx + Math.cos(a) * r;
+        const z = nz + Math.sin(a) * r;
+        if (k > 0 && ctx.clearance(x, z) < rb + 40) continue;
+        const g = new THREE.ConeGeometry(rb, h, 6, 2).toNonIndexed();
+        roughen(g, rb * 0.12, k * 7.1);
+        g.rotateY(rnd() * 3);
+        const cap = new THREE.ConeGeometry(rb * 0.4, h * 0.4, 6, 1).toNonIndexed();
+        cap.rotateY(rnd() * 3);
+        g.translate(x, glacierY + h / 2 - 6, z);
+        cap.translate(x, glacierY + h - h * 0.2 - 5, z);
+        rock.push(tinted(g, new THREE.Color(0x2c2f45).multiplyScalar(0.9 + rnd() * 0.25)));
+        caps.push(tinted(cap, new THREE.Color(0xeef4ff)));
+      }
+      add(rock, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+      add(caps, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x2a3a70, emissiveIntensity: 0.3 }));
+    }
+  }
+
+  // ---- the Icefall: a frozen cascade the road winds down round ----------------
+  {
+    const range = pieceRange(track, 'the Icefall');
+    if (range) {
+      const [fx, fz] = turnCentre(track, range);
+      const topY = track.py[Math.floor(range[0] / track.ds)] + 30;
+      const rnd = mulberry(4501);
+      const parts: THREE.BufferGeometry[] = [];
+      // The column, and icicles hanging round it in tiers.
+      const core = new THREE.CylinderGeometry(20, 34, topY - shelfY, 7, 4).toNonIndexed();
+      roughen(core, 3, 2.2);
+      core.translate(fx, (topY + shelfY) / 2, fz);
+      parts.push(tinted(core, new THREE.Color(0x8fc2f0)));
+      const crown = new THREE.CylinderGeometry(46, 30, 14, 9, 1).toNonIndexed();
+      crown.translate(fx, topY, fz);
+      parts.push(tinted(crown, new THREE.Color(0xc4e2ff)));
+      for (let tier = 0; tier < 4; tier++) {
+        const y = topY - tier * ((topY - shelfY) / 4.4);
+        const R = 42 - tier * 4;
+        const count = 14 - tier;
+        for (let k = 0; k < count; k++) {
+          const a = (k / count) * Math.PI * 2 + rnd() * 0.3 + tier;
+          const len = 18 + rnd() * 34;
+          const g = new THREE.ConeGeometry(3 + rnd() * 4, len, 5, 1).toNonIndexed();
+          g.rotateX(Math.PI);
+          g.translate(fx + Math.cos(a) * R, y - len / 2, fz + Math.sin(a) * R);
+          parts.push(tinted(g, new THREE.Color().setHSL(0.57, 0.65, 0.78 + rnd() * 0.12)));
+        }
+      }
+      add(parts, iceMat);
+      // A cold glow in its heart.
+      const glow = new THREE.Mesh(new THREE.CylinderGeometry(12, 18, topY - shelfY - 20, 7, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 1.1, 1.3), toneMapped: false, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.position.set(fx, (topY + shelfY) / 2, fz);
+      group.add(glow);
+    }
+  }
+
+  // ---- the Aurora Loop: ribbons of the aurora's light along both sides ---------
+  {
+    const range = pieceRange(track, 'the Aurora Loop');
+    if (range) {
+      const pos: number[] = [];
+      const col: number[] = [];
+      const idx: number[] = [];
+      const c = new THREE.Color();
+      const green = new THREE.Color(0.25, 1.2, 0.7);
+      const magenta = new THREE.Color(0.95, 0.35, 1.15);
+      for (const side of [-1, 1]) {
+        let row = 0;
+        const base = pos.length / 3;
+        for (let s = range[0] - 30; s <= range[1] + 30; s += 4) {
+          const f = (s - range[0]) / (range[1] - range[0]);
+          c.copy(green).lerp(magenta, 0.5 - 0.5 * Math.cos(Math.max(0, Math.min(1, f)) * Math.PI * 2));
+          const fade = Math.min(1, Math.max(0, (s - range[0] + 30) / 40), Math.max(0, (range[1] + 30 - s) / 40));
+          for (const h of [3.4, 13]) {
+            const p = place(s, side * (hwAt(track, s) + 2.6), h);
+            pos.push(p.x, p.y, p.z);
+            const k = h > 5 ? 0.25 * fade : fade;
+            col.push(c.r * k, c.g * k, c.b * k);
+          }
+          if (row > 0) {
+            const b = base + (row - 1) * 2;
+            idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+          }
+          row++;
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      g.setIndex(idx);
+      const ribbons = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      ribbons.frustumCulled = false;
+      group.add(ribbons);
+    }
+  }
+
+  // ---- fallen blocks under the glacier's face, the Calving's leavings ----------
+  {
+    const rnd = mulberry(303);
+    const parts: THREE.BufferGeometry[] = [];
+    const face = frost.glacier[0][1];
+    for (let tries = 0; tries < 400 && parts.length < 24; tries++) {
+      const x = frost.glacier[0][0] + rnd() * (frost.glacier[2][0] - frost.glacier[0][0]);
+      const z = face + 20 + rnd() * 160;
+      const sz = 8 + rnd() * 22;
+      if (frost.groundAt(x, z) !== shelfY || ctx.clearance(x, z) < 40 + sz) continue;
+      const g = new THREE.BoxGeometry(sz * (1 + rnd()), sz * (0.6 + rnd() * 0.8), sz * (1 + rnd())).toNonIndexed();
+      g.rotateY(rnd() * 3);
+      g.rotateX((rnd() - 0.5) * 0.6);
+      g.rotateZ((rnd() - 0.5) * 0.6);
+      g.translate(x, shelfY + sz * 0.3, z);
+      parts.push(tinted(g, new THREE.Color().setHSL(0.58, 0.55, 0.7 + rnd() * 0.18)));
+    }
+    add(parts, iceMat);
+  }
+
+  // ---- icebergs out at sea, and mountains beyond -------------------------------
+  {
+    const rnd = mulberry(2026);
+    const bergs: THREE.BufferGeometry[] = [];
+    for (let tries = 0; tries < 500 && bergs.length < 40; tries++) {
+      const a = rnd() * Math.PI * 2;
+      const r = 1200 + rnd() * 6500;
+      const x = cx + Math.cos(a) * r;
+      const z = cz + Math.sin(a) * r;
+      const w = 40 + rnd() * 160;
+      if (frost.groundAt(x, z) !== 0 || inside(frost.shelf, x + w, z) || inside(frost.shelf, x - w, z) || inside(frost.shelf, x, z + w) || inside(frost.shelf, x, z - w)) continue;
+      const h = 14 + rnd() * 50;
+      // Tabular, flat on top and sheer at the sides, a few with a peak.
+      const g = (rnd() < 0.7 ? new THREE.CylinderGeometry(w, w * 1.08, h, 6 + Math.floor(rnd() * 3), 1) : new THREE.ConeGeometry(w, h * 2.6, 6, 1)).toNonIndexed();
+      roughen(g, w * 0.14, rnd() * 9);
+      g.rotateY(rnd() * 3);
+      g.translate(x, theme.groundY + (g.boundingBox ? 0 : 0) + h * 0.45, z);
+      bergs.push(paint(g, (_x, y) => (y > theme.groundY + h * 0.7 ? new THREE.Color(0xeaf2ff) : new THREE.Color(0x8dbbe8))));
+    }
+    add(bergs, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x1d3a78, emissiveIntensity: 0.3 }));
+    const body: THREE.BufferGeometry[] = [];
+    const caps: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 40; i++) {
+      const a = (i / 40) * Math.PI * 2 + rnd() * 0.1;
+      const r = 9000 + rnd() * 4000;
+      const h = 900 + rnd() * 2200;
+      const rb = 700 + rnd() * 1200;
+      const x = cx + Math.cos(a) * r;
+      const z = cz + Math.sin(a) * r;
+      const rot = rnd() * 3;
+      const g = new THREE.ConeGeometry(rb, h, 5, 1).toNonIndexed();
+      g.rotateY(rot);
+      g.translate(x, theme.groundY + h / 2, z);
+      body.push(g);
+      const cap = new THREE.ConeGeometry(rb * 0.5, h * 0.5, 5, 1).toNonIndexed();
+      cap.rotateY(rot);
+      cap.scale(1.02, 1, 1.02);
+      cap.translate(x, theme.groundY + h - h * 0.25 + 2, z);
+      caps.push(cap);
+    }
+    add(body, new THREE.MeshLambertMaterial({ color: theme.ridge, flatShading: true }));
+    add(caps, new THREE.MeshLambertMaterial({ color: 0xdfe8ff, flatShading: true, emissive: 0x2a3a70, emissiveIntensity: 0.25 }));
+  }
+}
+
 // ---- Neon Crucible ----------------------------------------------------------
 
 /** The pit's floor: a crust broken up over churning melt, molten in the seams. */
@@ -1599,6 +2162,39 @@ function neonSign(words: string, color: string): THREE.CanvasTexture {
     g.globalAlpha = k < 2 ? 1 : 0.75;
     g.fillText(words, 256, 84);
   }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Frostline's sign over the Ice Barrel's mouth, as the plain look letters it. */
+function iceSign(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 640;
+  c.height = 200;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#0c1430';
+  g.fillRect(0, 0, 640, 200);
+  g.strokeStyle = '#c8e4ff';
+  g.lineWidth = 4;
+  g.strokeRect(10, 10, 620, 180);
+  const band = g.createLinearGradient(40, 0, 600, 0);
+  band.addColorStop(0, '#35f0ff');
+  band.addColorStop(0.5, '#3d7bff');
+  band.addColorStop(1, '#a05cff');
+  g.fillStyle = band;
+  g.fillRect(40, 140, 560, 16);
+  g.fillStyle = '#ffffff';
+  g.font = 'bold 96px "Arial Black", Impact, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  let size = 96;
+  while (g.measureText('FROSTLINE').width > 560 && size > 30) {
+    size -= 4;
+    g.font = `bold ${size}px "Arial Black", Impact, sans-serif`;
+  }
+  g.fillText('FROSTLINE', 320, 82);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
