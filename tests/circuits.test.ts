@@ -755,8 +755,8 @@ describe("Titan's Rest", () => {
   const at = (s: number) => Math.floor(wrapS(t, s) / t.ds) % t.n;
   const fork = t.forks[0];
 
-  it('climbs the Arm to the shoulder, high over the sand', () => {
-    expect(t.py[at(piece('T1 the Shoulder')[0])] - t.py[at(0)]).toBeGreaterThan(160);
+  it('climbs the Arm and over the shoulder, high over the sand', () => {
+    expect(t.py[at(piece('the Collar')[0])] - t.py[at(0)]).toBeGreaterThan(160);
   });
 
   it('rolls through the Halo and turns over in the Ribcage, held to the road', () => {
@@ -775,9 +775,11 @@ describe("Titan's Rest", () => {
     const [a, b] = piece('the Sword');
     const i0 = at(a);
     const i1 = at(b);
-    // The blade: the line the road wraps round, 40 below where it starts.
-    const ax = [t.px[i0] - t.ux[i0] * 40, t.py[i0] - t.uy[i0] * 40, t.pz[i0] - t.uz[i0] * 40];
-    const bx = [t.px[i1] - t.ux[i1] * 40, t.py[i1] - t.uy[i1] * 40, t.pz[i1] - t.uz[i1] * 40];
+    const sword = def.pieces.find((p) => p.name === 'the Sword');
+    const R = sword && 'barrel' in sword ? Math.abs(sword.barrel[2]) : 0;
+    // The blade: the line the road wraps round, R below where it starts.
+    const ax = [t.px[i0] - t.ux[i0] * R, t.py[i0] - t.uy[i0] * R, t.pz[i0] - t.uz[i0] * R];
+    const bx = [t.px[i1] - t.ux[i1] * R, t.py[i1] - t.uy[i1] * R, t.pz[i1] - t.uz[i1] * R];
     const dir = [bx[0] - ax[0], bx[1] - ax[1], bx[2] - ax[2]];
     const len = Math.hypot(dir[0], dir[1], dir[2]);
     let turns = 0;
@@ -788,8 +790,8 @@ describe("Titan's Rest", () => {
       const along = (rel[0] * dir[0] + rel[1] * dir[1] + rel[2] * dir[2]) / len;
       const off = [rel[0] - (dir[0] / len) * along, rel[1] - (dir[1] / len) * along, rel[2] - (dir[2] / len) * along];
       const r = Math.hypot(off[0], off[1], off[2]);
-      expect(r).toBeGreaterThan(38);
-      expect(r).toBeLessThan(42);
+      expect(r).toBeGreaterThan(R - 2);
+      expect(r).toBeLessThan(R + 2);
       // Up points straight away from the blade.
       expect((off[0] * t.ux[i] + off[1] * t.uy[i] + off[2] * t.uz[i]) / r).toBeGreaterThan(0.97);
       expect(t.mag[i]).toBe(1);
@@ -801,7 +803,7 @@ describe("Titan's Rest", () => {
     expect(t.py[i0] - t.py[i1]).toBeGreaterThan(100);
   });
 
-  it('splits through the Hull: the breastbone open on its outside, the corridors walled', () => {
+  it('splits through the Hull: the gallery open on its outside, the corridors walled', () => {
     for (let s = fork.s0 + 80; s < fork.s1 - 80; s += 8) {
       expect(t.wallR[at(s)]).toBe(0);
       expect(t.wallL[at(s)]).toBe(1);

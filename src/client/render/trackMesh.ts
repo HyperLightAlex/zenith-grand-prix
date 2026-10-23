@@ -6,6 +6,7 @@ import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { look } from './look';
 import { paintedSignMaterial, paintedSurfaceMaterial, paintedTexture, paintedTrack, type PaintedSign } from './painted';
 import { frostOf } from './frost';
+import { titanGround } from './titan/placeholder';
 import { pitOf } from './pit';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
@@ -799,6 +800,7 @@ export function buildTrackVisual(
   };
   const pit = pitOf(track);
   const frost = frostOf(track);
+  const titan = titanGround(track);
   const groundAt = (x: number, z: number) => (pit ? pit.groundAt(x, z) : frost ? frost.groundAt(x, z) : theme.groundY);
   {
     const spacing = 30; // samples
@@ -821,6 +823,8 @@ export function buildTrackVisual(
       const z = track.pz[i] - track.uz[i] * 5.5;
       const g = groundAt(x, z);
       if (y - g < 2 || blocked(i, x, z, y, g)) continue;
+      // Not down through the fallen titan: where the road is over it, it stands on the titan.
+      if (titan && [0, 1, -1].some((k) => titan.topAt(x + track.rx[i] * k * track.hw[i], z + track.rz[i] * k * track.hw[i]) > g)) continue;
       spots.push([i, g]);
     }
     const geo = new THREE.CylinderGeometry(3.2, 4.6, 1, 6, 1, false);
