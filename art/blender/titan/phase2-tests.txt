@@ -1,0 +1,8 @@
+
+ RUN  v5.0.3 /Users/alexanderkelley/.codex/worktrees/titan-blockout/igpx
+
+
+ Test Files  2 passed (2)
+      Tests  10 passed | 1 skipped (11)
+   Start at  19:55:54
+   Duration  3.98s (tests 87%, transform 8%, import 4%)
