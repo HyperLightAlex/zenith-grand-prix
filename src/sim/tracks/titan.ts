@@ -42,56 +42,66 @@ export const TITANS_REST: CircuitDef = {
     /*  4 */ { straight: 52, name: 'the Collar' },
     /*  5 */ { turn: [90, -90], bank: 12, name: 'T1 the Chin' },
     /*  6 */ { straight: 60, name: 'the Brow' },
-    /*  7 */ { climb: [240, -72], name: 'past the crown' },
-    /*  8 */ { roll: [260, -360], width: 22, name: 'the Halo' },
-    /*  9 */ { straight: 60 },
-    ...jump({ ramp: 8, down: 30, speed: 100, gap: 0.78, land: 100 }), // 10-15 the Crown Drop
-    /* 16 */ { climb: [260, -52], name: 'down to the sand' },
-    /* 17 */ { turn: [115, 90], bank: 12, name: 'T2' },
-    /* 18 */ { straight: 200, name: 'closing A' },
-    /* 19 */ { turn: [115, 90], bank: 12, name: 'T3' },
-    /* 20 */ { straight: 1504, name: 'the Long Flank' },
-    /* 21 */ { turn: [100, 90], bank: 14, name: 'T4 the Breach' },
-    /* 22 */ { straight: 250 },
-    /* 23 */ { loop: [72, 70], name: 'the Ribcage' },
-    /* 24 */ { straight: 30 },
-    /* 25 */ { straight: 250, ...inHull, open: 'right', name: 'the Hull' },
-    /* 26 */ { straight: 60 },
-    /* 27 */ { turn: [100, -90], bank: 10, name: 'out of the Hull' },
-    /* 28 */ { straight: 40 },
-    /* 29 */ { turn: [100, 90], bank: 10 },
-    /* 30 */ { climb: [440, 185], name: 'up to the hilt' },
-    /* 31 */ { pitch: [200, -28], name: 'over the crossguard' },
-    /* 32 */ { barrel: [300, 720, -30], width: 20, name: 'the Sword' },
-    /* 33 */ { pitch: [200, 28], name: 'off the point' },
-    /* 34 */ { climb: [270, 0], name: 'settles the height' },
-    /* 35 */ { turn: [150, 90], bank: 14, name: 'T5' },
-    /* 36 */ { straight: 100, name: 'the home dunes' },
-    /* 37 */ { turn: [150, 90], bank: 16, name: 'T6 Homecoming' },
-    /* 38 */ { straight: 200, name: 'run to the line' },
+    // Down past the crown on a long arc over the top and a short one at the
+    // foot, not an S of two equal arcs: the road holds a mech over its top to
+    // about 200 u/s (it was 178). The Halo, and the halo round it, stay put.
+    /*  7 */ { pitch: [286, -33.4], name: 'past the crown' },
+    /*  8 */ { pitch: [150, 33.4], name: 'down to the Halo' },
+    /*  9 */ { roll: [260, -360], width: 22, name: 'the Halo' },
+    /* 10 */ { straight: 60 },
+    ...jump({ ramp: 8, down: 30, speed: 100, gap: 0.78, land: 100 }), // 11-16 the Crown Drop
+    /* 17 */ { climb: [260, -52], name: 'down to the sand' },
+    /* 18 */ { turn: [115, 90], bank: 12, name: 'T2' },
+    /* 19 */ { straight: 200, name: 'closing A' },
+    /* 20 */ { turn: [115, 90], bank: 12, name: 'T3' },
+    /* 21 */ { straight: 1504, name: 'the Long Flank' },
+    /* 22 */ { turn: [100, 90], bank: 14, name: 'T4 the Breach' },
+    /* 23 */ { straight: 250 },
+    /* 24 */ { loop: [72, 70], name: 'the Ribcage' },
+    /* 25 */ { straight: 30 },
+    /* 26 */ { straight: 250, ...inHull, open: 'right', name: 'the Hull' },
+    /* 27 */ { straight: 10 },
+    /* 28 */ { turn: [100, -90], bank: 10, name: 'out of the Hull' },
+    /* 29 */ { straight: 40 },
+    /* 30 */ { turn: [100, 90], bank: 10 },
+    // Up to the hilt steeply, and over the top onto the blade on one long
+    // arc, so the road holds a mech over it (the skates' hold, SKATE_HOLD)
+    // up to about 225 u/s: an S of a climb and a tight pitch over threw a
+    // boosting mech clean over the Sword. The run to the guard is fixed by the
+    // Sword (the barrel, and the titan's sword round it, stay put).
+    /* 31 */ { pitch: [153.9, 46], name: 'up to the hilt' },
+    /* 32 */ { straight: 65.1, name: 'the hilt' },
+    /* 33 */ { pitch: [360, -74], name: 'over the crossguard' },
+    /* 34 */ { barrel: [300, 720, -30], width: 20, name: 'the Sword' },
+    /* 35 */ { pitch: [200, 28], name: 'off the point' },
+    /* 36 */ { climb: [270, 0], name: 'settles the height' },
+    /* 37 */ { turn: [150, 90], bank: 14, name: 'T5' },
+    /* 38 */ { straight: 100, name: 'the home dunes' },
+    /* 39 */ { turn: [150, 90], bank: 16, name: 'T6 Homecoming' },
+    /* 40 */ { straight: 200, name: 'run to the line' },
   ],
-  closeWith: [18, 36],
-  settle: 34,
+  closeWith: [19, 38],
+  settle: 36,
   strips: [
     { piece: 0, at: 0.3, len: 180, d: 14, halfW: 5 },
     { piece: 3, at: 0.15, len: 180, d: -12, halfW: 5 }, // up the arm to the shoulder
     { piece: 6, at: 0, len: 60, d: 12, halfW: 5 }, // over the brow
-    { piece: 20, at: 0.2, len: 200, d: -14, halfW: 5 }, // the Long Flank
-    { piece: 20, at: 0.7, len: 200, d: 14, halfW: 5 },
-    { piece: 25, at: 0.2, len: 120, d: -23, halfW: 5 }, // the corridors
-    { piece: 34, at: 0.1, len: 150, d: 0, halfW: 5 }, // off the sword's point
-    { piece: 36, at: 0, len: 90, d: 14, halfW: 5 },
+    { piece: 21, at: 0.2, len: 200, d: -14, halfW: 5 }, // the Long Flank
+    { piece: 21, at: 0.7, len: 200, d: 14, halfW: 5 },
+    { piece: 26, at: 0.2, len: 120, d: -23, halfW: 5 }, // the corridors
+    { piece: 36, at: 0.1, len: 150, d: 0, halfW: 5 }, // off the sword's point
+    { piece: 38, at: 0, len: 90, d: 14, halfW: 5 },
   ],
   gates: [
     { piece: 5, at: 0.6, d: 16, halfW: 4.5 }, // outside of T1
-    { piece: 17, at: 0.5, d: -18, halfW: 4.5 }, // outside of T2
-    { piece: 21, at: 0.6, d: -18, halfW: 4.5 }, // outside of the Breach
-    { piece: 25, at: 0.65, d: -24, halfW: 4.5 }, // the corridors
-    { piece: 30, at: 0.5, d: 16, halfW: 4.5 }, // up to the hilt
-    { piece: 35, at: 0.5, d: -18, halfW: 4.5 }, // outside of T5
+    { piece: 18, at: 0.5, d: -18, halfW: 4.5 }, // outside of T2
+    { piece: 22, at: 0.6, d: -18, halfW: 4.5 }, // outside of the Breach
+    { piece: 26, at: 0.65, d: -24, halfW: 4.5 }, // the corridors
+    { piece: 31, at: 0.5, d: 16, halfW: 4.5 }, // up to the hilt
+    { piece: 37, at: 0.5, d: -18, halfW: 4.5 }, // outside of T5
   ],
   pads: [
-    { piece: 25, at: 0.4, len: 60, d: 24, halfW: 6 }, // the gallery
-    { piece: 9, at: 0, len: 50, d: 0, halfW: 8 }, // into the Crown Drop
+    { piece: 26, at: 0.4, len: 60, d: 24, halfW: 6 }, // the gallery
+    { piece: 10, at: 0, len: 50, d: 0, halfW: 8 }, // into the Crown Drop
   ],
 };

@@ -245,7 +245,7 @@ PHASE 2: POSE IT AND FIT IT
      be inside FIT/sky either, except: the left arm over the Long Flank, the
      halo round the Halo roll, the roofs over the Hull's corridors.
   4  Seat the road where stretches.json has it ON the titan (the palm, the
-     arm, the shoulder, the collar, the chin, the face, the crossguard):
+     arm, the shoulder, the collar, the chin, the face):
      the surface under the road 1 to 6 m below the slab, across its whole
      width, so the road lies on the titan. Where the design will not allow
      it, report the stretch and the gap: the road's height is changed to
@@ -280,7 +280,39 @@ PHASE 2: POSE IT AND FIT IT
      the check's output, the stretches that could not be seated, anything
      that departs from the targets.
 
+THE ROAD SINCE PHASE 2 (2026-10-24, the game side)
+  Phase 2 was reviewed and taken into the game (d263798). The road was then
+  re-laid in two places, so mechs at boost speed stay on it instead of
+  flying off the crests (the game's skates now hold the road; see
+  docs/DESIGN.md, Air):
+  - Past the crown: one long arc over the top and a short one at the foot
+    (the pieces "past the crown" and "down to the Halo"), in place of an S.
+    The road leaves the Brow and arrives at the Halo where it did.
+  - Up to the hilt and over the crossguard: a steep climb ("up to the
+    hilt", "the hilt") and one long arc over the top and down onto the
+    blade ("over the crossguard"), in place of an S and a tight pitch. It
+    starts 50 m sooner: the straight after the Hull is 50 m shorter, so the
+    road turns out of the Hull 50 m earlier.
+  The Halo, the Sword and everything from the Halo to the Hull stay put
+  (within 0.2 m; pose.json is unchanged). The fit files are regenerated for
+  the new road; Phase 2's model already passes the game's checks against
+  it. The crossguard is no longer ON in stretches.json: the guard lies
+  inside the corkscrew's radius from the blade, 15 to 20 m under the slab,
+  so the road passes over it and is not meant to rest on it.
+  The Palm's road is unchanged. Between the fingers and the palm, at about
+  s 550 to 565, the knuckle line drops some 20 m below the road: the
+  fingers sit low, and the palm stands high behind them. No road profile
+  can rest on both without throwing mechs off a new crest, so close the
+  step on the model (Phase 3).
+
 PHASE 3: BREAK IT AND WEATHER IT
+  First, re-run the Phase 2 build (fit_wreck.py) and its checks on the
+  regenerated fit files, so the seating, the openings and the supports are
+  made for the road as it now is.
+  Then, under the Palm's road: armour the knuckle line (knuckle guards, a
+  bent plate, wreckage) so the road rests on the hand from the fingertips
+  to the wrist: 1 to 6 m under the slab, as on the other ON stretches.
+  Keep the hand open and the fingers spread round it.
   The damage beyond the openings, from G4 and the sheets: plates peeled and
   bent out round the wound, ribs snapped, cut cables and conduit hanging,
   sand drifted into the hollows and against its sides, armour chipped and

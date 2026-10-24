@@ -42,55 +42,48 @@
    "s1": 1577.267,
    "part": "head",
    "note": "over the face and forehead, down the middle, between the horns: the head tipped forward on its broken neck and propped up (pose.json head)"
-  },
-  {
-   "piece": "over the crossguard",
-   "s0": 6962.311,
-   "s1": 7060.05,
-   "part": "sword",
-   "note": "crests over the guard onto the blade"
   }
  ],
  "through": [
   {
    "piece": "the Halo",
-   "s0": 1831.418,
-   "s1": 2091.418,
+   "s0": 1831.429,
+   "s1": 2091.429,
    "part": "halo",
    "note": "rolls a full turn through the standing ring"
   },
   {
    "piece": "into the Breach",
-   "s0": 5070.23,
-   "s1": 5320.23,
+   "s0": 5070.248,
+   "s1": 5320.248,
    "part": "chest",
    "note": "in through the wound in the left (north) flank"
   },
   {
    "piece": "the Ribcage",
-   "s0": 5320.23,
-   "s1": 5778.003,
+   "s0": 5320.248,
+   "s1": 5778.021,
    "part": "chest",
    "note": "a full loop inside the ribs: the chest hollow round it"
   },
   {
    "piece": "the Hull",
-   "s0": 5808.003,
-   "s1": 6058.003,
+   "s0": 5808.021,
+   "s1": 6058.021,
    "part": "chest",
    "note": "a fork: the left route through walled and roofed corridors, the right (the gallery) high along the ribs, open on its outside"
   },
   {
    "piece": "out of the right flank",
-   "s0": 6058.003,
-   "s1": 6118.003,
+   "s0": 6058.021,
+   "s1": 6068.021,
    "part": "chest",
    "note": "out through an opening in the right (south) flank"
   },
   {
    "piece": "the Sword",
-   "s0": 7060.05,
-   "s1": 7576.87,
+   "s0": 7075.794,
+   "s1": 7592.615,
    "part": "sword",
    "note": "twice round the blade, the blade under the deck all the way"
   }
@@ -99,16 +92,23 @@
   {
    "piece": "past the crown",
    "s0": 1577.267,
-   "s1": 1831.418,
+   "s1": 1831.429,
    "part": "head",
    "note": "down past the crown and between the horns, clear of them, to the Halo"
+  },
+  {
+   "piece": "up to the hilt, over the crossguard",
+   "s0": 6422.18,
+   "s1": 7075.794,
+   "part": "sword",
+   "note": "up to the hilt and over the top onto the blade on one long arc, passing over the guard just before the corkscrew: the guard lies inside the corkscrew's radius from the blade, so the road cannot rest on it, and does not have to"
   }
  ],
  "under": [
   {
    "piece": "the Long Flank",
-   "s0": 3409.15,
-   "s1": 4913.15,
+   "s0": 3409.168,
+   "s1": 4913.168,
    "part": "upper_arm.L, forearm.L",
    "note": "under the raised left elbow"
   }

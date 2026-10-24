@@ -261,7 +261,6 @@ writeFileSync(
         { ...span('the Collar'), part: 'chest', note: 'north along the top of the chest by the collarbone' },
         { ...span('T1 the Chin'), part: 'chest, head', note: 'turns west off the chest onto the chin' },
         { ...span('the Brow'), part: 'head', note: 'over the face and forehead, down the middle, between the horns: the head tipped forward on its broken neck and propped up (pose.json head)' },
-        { ...span('over the crossguard'), part: 'sword', note: 'crests over the guard onto the blade' },
       ],
       through: [
         { ...span('the Halo'), part: 'halo', note: 'rolls a full turn through the standing ring' },
@@ -271,7 +270,16 @@ writeFileSync(
         { piece: 'out of the right flank', s0: r1(range('the Hull').s1), s1: r1(range('out of the Hull').s0), part: 'chest', note: 'out through an opening in the right (south) flank' },
         { ...span('the Sword'), part: 'sword', note: 'twice round the blade, the blade under the deck all the way' },
       ],
-      past: [{ ...span('past the crown'), part: 'head', note: 'down past the crown and between the horns, clear of them, to the Halo' }],
+      past: [
+        { piece: 'past the crown', s0: r1(range('past the crown').s0), s1: r1(range('down to the Halo').s1), part: 'head', note: 'down past the crown and between the horns, clear of them, to the Halo' },
+        {
+          piece: 'up to the hilt, over the crossguard',
+          s0: r1(range('up to the hilt').s0),
+          s1: r1(range('over the crossguard').s1),
+          part: 'sword',
+          note: "up to the hilt and over the top onto the blade on one long arc, passing over the guard just before the corkscrew: the guard lies inside the corkscrew's radius from the blade, so the road cannot rest on it, and does not have to",
+        },
+      ],
       under: [{ ...span('the Long Flank'), part: 'upper_arm.L, forearm.L', note: 'under the raised left elbow' }],
     },
     null,
