@@ -21,6 +21,7 @@ build matches its mastering).
 | Neon Crucible race | Neon Fire | D minor (ends in D major), ~193 BPM | in the game (stems only; the brief was not kept) |
 | Frostline race | Aurora Dash (asked for as 極光ライン, Aurora Line) | C# minor and E major, ends in C# major, 150 BPM | in the game (stems only; it came back in another key and without the key change, so it has no finale) |
 | Titan's Rest race | White Desert Charge (asked for as 巨神の眠り, The Sleeping Giant) | C minor (C major last section), ~140 BPM | in the game (stems only; lap 3 goes to its last section) |
+| Zenith Ring race | 天頂の環 (The Ring at the Zenith) | B minor (C# minor last chorus), 158 BPM | to be made |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
 | Results, loss (and the Grand Prix award below first) | Minor Theme | E minor, 100 BPM | in the game (from the second brief below: the first was too hopeful, not synth or anime enough) |
@@ -40,7 +41,7 @@ step up (Canyon) or a build and drop (Helios). Keep the lead on one
 instrument: vocal chops and choirs get carved out of the other stems and
 tangle them. Export the stems and the full song as WAVs. The circuits'
 songs so far are in A, G, E, D, C# and C minor, so a new one takes another
-key.
+key (Zenith Ring's is asked for in B minor).
 
 ## Frostline race
 
@@ -108,6 +109,42 @@ Lyrics (structure only):
 [Build]
 [Final Chorus: the biggest section, everything in]
 [Outro: ends on a final hit]
+```
+
+## Zenith Ring race
+
+The seventh circuit and the season's finale: a race in orbit round a great
+ring station over the Earth, up the inside of the Ring and down its outside
+upside down, round the core in the Möbius, down the Mass Driver and through
+the docking ring, and over the solar arrays with nothing past their edge.
+The biggest and fastest of them: a 1980s space-opera mecha show's climax
+battle music, soaring and bright, the sense of height and speed of orbit.
+Lap 3 is the last chorus a whole step up, everything in (the final lap of
+the season).
+
+Title: 天頂の環 (The Ring at the Zenith)
+
+Styles:
+
+```
+1980s space opera mecha anime climax BGM, instrumental, 158 BPM, B minor, soaring and heroic, a bright analog synth lead carrying a sweeping hook, bold synth brass fanfares, fast sequenced arpeggios, shimmering FM bell pads, galloping octave synth bass, punchy gated reverb drums with big tom fills, crash cymbals, laser zaps and whooshing sweeps, a race in orbit round a great ring station high above the Earth, triumphant and urgent, tight modern mix
+```
+
+Exclude: `vocals, choir, orchestral strings`
+
+Lyrics (structure only):
+
+```
+[Intro: full band from the first bar, the brass fanfare]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Bridge: arpeggios and bells over the beat, the drums keep going]
+[Final Chorus: key change up a whole step, everything in]
+[Outro: cadence onto a final hit]
 ```
 
 ## Title theme

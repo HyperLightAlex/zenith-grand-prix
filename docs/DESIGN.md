@@ -191,9 +191,15 @@ barriers all the way round, and elevation and banking only for show. The
 3D circuits are built from pieces (`src/sim/circuit.ts`): straights, turns,
 climbs, pitches (crests and dips), loops, rolls and spirals (a turn that
 climbs, widening as it goes: `spiralRun` cuts one into several pieces that
-climb at one steady grade, so a stretch of it can have an open edge), each
-of which can set the road's width and banking, cut a gap, leave an edge open
-or split the road.
+climb at one steady grade, so a stretch of it can have an open edge),
+barrels (a roll round an axis off the road) and twists (a pitch whose road
+rolls over as it goes, and can move out from the arc's centre: Zenith Ring's
+Hatch, from the inside of its band to the outside, and the top of its
+Möbius), each of which can set the road's width and banking, cut a gap,
+leave an edge open, split the road or hold mechs to it whatever their
+speed (the outside of Zenith Ring's band). Where a twist's road is rolled
+across its arc, the arc turns under a mech: the Möbius rolls only over its
+top third, so it turns the road about 25 degrees one way and back.
 The builder drives a frame (forward, right, up) through the pieces, lengthens
 two straights and sets one climb so the lap closes, then resamples every 4
 units. Every sample carries its own width, wall flags, a middle wall's half
@@ -295,8 +301,11 @@ hairpin gets a carve held loosely to the third.
 pilots carve by the line they want, so they rarely hold a carve tight: a
 person who does will reach the higher tiers far more often.)
 
-Each circuit has its own setting (Meridian: golden hour over the sea and a
-city; Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
+Each circuit has its own setting (Zenith Ring: in orbit, a ring station
+built round the road, the Earth below filling the sky under its limb, its
+night side lit with cities, and no ground at all, so no support pylons:
+`src/client/render/zenith.ts`, a stand-in until it has a model; Meridian:
+golden hour over the sea and a city; Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
 Sky Bridge; Helios: noon above a sea of cloud, floating islands, the Sun Gate
 over the Drop; the Crucible: night over an open-pit mine, the Coil cut into
 its wall as benches with a line of neon along each, shading from magenta at

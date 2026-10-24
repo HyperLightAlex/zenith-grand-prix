@@ -7,14 +7,15 @@ import { FROSTLINE } from './frostline';
 import { HELIOS } from './helios';
 import { MERIDIAN } from './meridian';
 import { TITANS_REST } from './titan';
+import { ZENITH_RING } from './zenith';
 
 export type AnyTrackDef = TrackDef | CircuitDef;
 
-export const TRACKS: readonly AnyTrackDef[] = [MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST];
+export const TRACKS: readonly AnyTrackDef[] = [MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ZENITH_RING];
 
 /** The circuit with this id, or Meridian. */
 export function trackById(id: string | undefined | null): AnyTrackDef {
   return TRACKS.find((t) => t.id === id) ?? MERIDIAN;
 }
 
-export { CANYON, CRUCIBLE, FROSTLINE, HELIOS, MERIDIAN, TITANS_REST };
+export { CANYON, CRUCIBLE, FROSTLINE, HELIOS, MERIDIAN, TITANS_REST, ZENITH_RING };

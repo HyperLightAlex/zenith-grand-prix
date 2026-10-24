@@ -27,8 +27,8 @@ export interface Theme {
   fogDensity: number;
   /** The aurora's curtains in the plain sky: how bright (0 or absent: none). */
   aurora?: number;
-  /** What the circuit stands on, and how far down it is. */
-  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice' | 'wreck';
+  /** What the circuit stands on, and how far down it is ('orbit': nothing; the sky is space, with the Earth below). */
+  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice' | 'wreck' | 'orbit';
   groundY: number;
   groundDeep: number;
   groundLight2: number;
@@ -193,6 +193,34 @@ export const THEMES: Record<string, Theme> = {
     ridge: 0xa9afcb,
     cloudShade: 0x9aa2c8,
     clouds: 16,
+  },
+  // In orbit: black sky and hard white sunlight, the Earth filling the sky
+  // below the station, blue light coming up off it. groundY is far under
+  // everything (nothing stands on it).
+  zenith: {
+    id: 'zenith',
+    sunLight: 0xffffff,
+    sunIntensity: 2.6,
+    skyLight: 0x56648e,
+    groundLight: 0x7eaae6,
+    hemiIntensity: 1.35,
+    skyZenith: 0x000004,
+    skyMid: 0x02040c,
+    skyHorizon: 0x2a5cb0,
+    halo: [1.0, 0.98, 0.95],
+    disc: [3.2, 3.1, 2.9],
+    discGlow: [1.1, 1.05, 0.95],
+    cirrus: [1, 1, 1],
+    cirrusAmount: 0,
+    fog: 0x05070f,
+    fogDensity: 0.00001,
+    ground: 'orbit',
+    groundY: -3000,
+    groundDeep: 0x0b2a5c,
+    groundLight2: 0x3f7fc8,
+    ridge: 0x1a2a4a,
+    cloudShade: 0x8090b0,
+    clouds: 0,
   },
 };
 

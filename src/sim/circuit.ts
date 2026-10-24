@@ -3,8 +3,9 @@
 // A CircuitDef is driven like a turtle: a run of pieces, each a straight, a
 // level turn, a climb, a pitch (the parts of a jump), a loop, a corkscrew
 // roll, a barrel (a roll round an axis off the road: round the inside of a
-// tube, or round the outside of a column) or a spiral (a turn that climbs,
-// widening or tightening as it goes),
+// tube, or round the outside of a column), a spiral (a turn that climbs,
+// widening or tightening as it goes) or a twist (a pitch whose road rolls
+// over as it goes: a loop and a corkscrew at once),
 // starting at the start line facing -z. The builder carries a full
 // frame (forward, right, up) through every piece, so a loop really turns the
 // road over and a corkscrew really rolls it, then samples the result every
@@ -47,6 +48,13 @@ export interface PieceProps {
   gap?: true | 'left' | 'right';
   /** No barrier on that side. */
   open?: 'left' | 'right' | 'both';
+  /**
+   * The skates grip the rail through this piece whatever the speed and
+   * whichever way up, as through a loop: for a crest that must not throw a
+   * mech off (the outside of the Zenith's ring, with nothing past it but
+   * the drop to Earth).
+   */
+  hold?: true;
   fork?: ForkSpec;
   /** For the designer's own reference. */
   name?: string;
@@ -59,8 +67,8 @@ export type Piece = PieceProps &
     | { turn: [radius: number, degrees: number] }
     /** An S-shaped climb (or drop, height negative) over a level distance. */
     | { climb: [length: number, height: number] }
-    /** A vertical arc: radius and degrees, positive nose up. */
-    | { pitch: [radius: number, degrees: number] }
+    /** A vertical arc: radius and degrees, positive nose up; moving `shift` to the right on the way round (as a loop does). */
+    | { pitch: [radius: number, degrees: number, shift?: number] }
     /** A full loop of this radius, moving `shift` to the right on the way round so it clears itself. */
     | { loop: [radius: number, shift: number] }
     /** A corkscrew: this length of straight rolled through the angle, positive rolling right. */
@@ -83,6 +91,17 @@ export type Piece = PieceProps &
      * a turn does.
      */
     | { spiral: [r0: number, r1: number, degrees: number, height: number, ease?: SpiralEase] }
+    /**
+     * A twist: a pitch (radius and degrees, as a pitch takes them, and a
+     * `shift` to the right on the way round) whose road rolls through `roll`
+     * degrees about its own line as it goes (positive rolling right), easing
+     * in and out. A whole loop with a whole roll goes up the inside, over
+     * the top on the outside and down the inside again. `out` moves the road
+     * that far away from the arc's centre as it goes (easing too), so a road
+     * rolled over onto the outside of a ring's band runs on its outer face.
+     * Its road turns under a mech wherever it is rolled across the arc.
+     */
+    | { twist: [radius: number, degrees: number, roll: number, shift?: number, out?: number] }
   );
 
 export type SpiralEase = 'both' | 'in' | 'out' | 'none';
@@ -179,7 +198,7 @@ interface Fine {
 }
 
 function kindOf(pc: Piece): string {
-  return 'straight' in pc ? 'straight' : 'turn' in pc ? 'turn' : 'climb' in pc ? 'climb' : 'pitch' in pc ? 'pitch' : 'loop' in pc ? 'loop' : 'spiral' in pc ? 'spiral' : 'barrel' in pc ? 'barrel' : 'roll';
+  return 'straight' in pc ? 'straight' : 'turn' in pc ? 'turn' : 'climb' in pc ? 'climb' : 'pitch' in pc ? 'pitch' : 'loop' in pc ? 'loop' : 'spiral' in pc ? 'spiral' : 'barrel' in pc ? 'barrel' : 'twist' in pc ? 'twist' : 'roll';
 }
 
 /** A spiral's grade (rise over run) a share `f` of the way round: level at an end that eases, steady between. */
@@ -232,7 +251,7 @@ function walk(def: CircuitDef, pieces: Piece[]): { steps: Fine[]; starts: number
     T.u = norm(cross(T.r, T.t));
     T.r = norm(cross(T.t, T.u));
   };
-  const pitchArc = (i: number, R: number, deg: number) => {
+  const pitchArc = (i: number, R: number, deg: number, shift = 0) => {
     const a = (deg * Math.PI) / 180;
     const L = R * Math.abs(a);
     const n = Math.max(1, Math.ceil(L / STEP));
@@ -241,7 +260,7 @@ function walk(def: CircuitDef, pieces: Piece[]): { steps: Fine[]; starts: number
       push(i, 0, Math.sign(a) / R);
       T.t = rot(T.t, T.r, da / 2);
       T.u = rot(T.u, T.r, da / 2);
-      advance(L / n);
+      advance(L / n, shift / n);
       T.t = rot(T.t, T.r, da / 2);
       T.u = rot(T.u, T.r, da / 2);
     }
@@ -289,7 +308,42 @@ function walk(def: CircuitDef, pieces: Piece[]): { steps: Fine[]; starts: number
         pitchArc(i, R, H > 0 ? -deg : deg);
       }
     } else if ('pitch' in pc) {
-      pitchArc(i, pc.pitch[0], pc.pitch[1]);
+      pitchArc(i, pc.pitch[0], pc.pitch[1], pc.pitch[2]);
+    } else if ('twist' in pc) {
+      const [R, deg, rollDeg, shift = 0, out = 0] = pc.twist;
+      const a = (deg * Math.PI) / 180;
+      const roll = (rollDeg * Math.PI) / 180;
+      const sg = Math.sign(a) || 1;
+      const t0 = T.t;
+      const r0 = T.r;
+      const u0 = T.u;
+      // The arc's centre: toward the road's up for a pitch nose up, away for nose down.
+      const C: V3 = [T.p[0] + u0[0] * sg * R, T.p[1] + u0[1] * sg * R, T.p[2] + u0[2] * sg * R];
+      const ease = (f: number) => f - Math.sin(2 * Math.PI * f) / (2 * Math.PI);
+      // The road a share f of the way: on the arc (a pitch would carry the
+      // frame so), out from it, across, and rolled about its line.
+      const at = (f: number) => {
+        const ta = rot(t0, r0, a * f);
+        const ua = rot(u0, r0, a * f);
+        const rad = R + out * ease(f);
+        const p: V3 = [C[0] - ua[0] * sg * rad + r0[0] * shift * f, C[1] - ua[1] * sg * rad + r0[1] * shift * f, C[2] - ua[2] * sg * rad + r0[2] * shift * f];
+        return { p, t: ta, u: rot(ua, ta, roll * ease(f)), toward: [ua[0] * sg, ua[1] * sg, ua[2] * sg] as V3, rad };
+      };
+      const n = Math.max(1, Math.ceil(Math.hypot(Math.abs(a) * (R + out / 2), shift) / STEP));
+      for (let k = 0; k < n; k++) {
+        // The arc's curve, toward its centre, seen from the road: the part
+        // along its up holds a mech to it (as a loop's does), the part across
+        // it turns it (positive right).
+        const mid = at((k + 0.5) / n);
+        const right = cross(mid.t, mid.u);
+        push(i, dot(mid.toward, right) / mid.rad, dot(mid.toward, mid.u) / mid.rad);
+        const nx = at((k + 1) / n);
+        T.p = nx.p;
+        T.t = nx.t;
+        T.u = nx.u;
+        T.r = cross(T.t, T.u);
+      }
+      fix();
     } else if ('spiral' in pc) {
       // (Off level road, or on from the piece before in a run of them.)
       if (Math.abs(T.r[1]) > 1e-4) throw new Error(`circuit ${def.id}: piece ${i} spirals off a road that is banked or rolled`);
@@ -530,11 +584,12 @@ export function buildCircuit(def: CircuitDef): Track {
     roadR[k] = pc.gap === true || pc.gap === 'right' ? 0 : 1;
     wallL[k] = roadL[k] && pc.open !== 'left' && pc.open !== 'both' ? 1 : 0;
     wallR[k] = roadR[k] && pc.open !== 'right' && pc.open !== 'both' ? 1 : 0;
-    // The skates grip the rail through loops, corkscrews and anything
-    // steeper than about 60 degrees; where there is no road there is no rail
-    // (a gap in road going straight down is a fall along it, not off it).
+    // The skates grip the rail through loops, corkscrews, twists, anything
+    // steeper than about 60 degrees and anything that says so; where there
+    // is no road there is no rail (a gap in road going straight down is a
+    // fall along it, not off it).
     const kind = kindOf(pc);
-    mag[k] = (kind === 'loop' || kind === 'roll' || kind === 'barrel' || upY[k] < 0.5) && roadL[k] && roadR[k] ? 1 : 0;
+    mag[k] = (kind === 'loop' || kind === 'roll' || kind === 'barrel' || kind === 'twist' || pc.hold || upY[k] < 0.5) && roadL[k] && roadR[k] ? 1 : 0;
   }
   const hw = smoothRing(hwRaw, 6, 2);
 

@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-The first five circuits' sheets are in the game (`tools/bg/build_backgrounds.py`); Titan's Rest's are to be made.
+The first six circuits' sheets are in the game (`tools/bg/build_backgrounds.py`); Zenith Ring's are to be made.
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -472,4 +472,92 @@ SHEET R1B: SKY, THE HALF FACING AWAY (make it after R1, with R1 attached)
 - Same size, style and palette as R1, the horizon at exactly the same height, the same flat dusty haze below it and the same plain clear aqua-blue along the top edge.
 - The other half of the sky, behind the viewer, facing away from the sun. Its left edge must continue seamlessly from R1's right edge, and its right edge seamlessly into R1's left edge, so the two side by side make the whole sky round.
 - No sun glow here: a deeper, clearer aqua sky, the haze along the horizon cooler and paler (more cream than gold), and a few small fair-weather clouds low down, lit on the sides facing back toward the sun (toward the sheet's edges), shadowed blue-lilac on the sides facing the viewer.
+```
+
+## Zenith Ring
+
+The finale, in orbit, on a great ring station high over the Earth: the road
+runs up the inside of the Ring (a wheel standing on edge, its band the road's
+floor), rolls through a hatch at its top onto the outside and comes down it
+upside down with the Earth overhead; it loops round the station's core,
+rolling over its top; it races down the Mass Driver, a run of glowing coils,
+and leaps across open space through a docking ring onto a module beyond;
+and it crosses fields of solar arrays with nothing past their edge. There is
+no ground and no horizon: above, black space, stars, the Milky Way and a
+hard white sun; below, the Earth, filling the sky under its limb. So its
+sheets differ from the others': two halves of the starry sky, the Earth's
+surface seen from orbit (the game lays it on the planet and lights it,
+day and night side), things far off in orbit on cards in place of clouds,
+and the station's surfaces. Its board along the track and the sign over the
+road into the Ring are on track sheet T7 (`art/track-sheets`).
+
+| Sheet | File |
+|---|---|
+| Z1 Sky, facing the sun | bg-z1-sky.png |
+| Z1B Sky, facing away | bg-z1b-sky.png |
+| Z2 The Earth | bg-z2-earth.png |
+| Z3 Far off | bg-z3-far.png |
+| Z4 Surfaces | bg-z4-surfaces.png |
+
+```
+ZENITH GP: CIRCUIT BACKGROUNDS. ZENITH RING (five sheets; make them one at a time, in order Z1, Z2, Z3, Z4, then Z1B with Z1 attached, each as its own image)
+
+The setting: the last circuit of the season, a racing circuit in orbit high above the Earth, built round a great ring station: a wheel kilometres across standing on edge, its band a road on the inside and the outside, a long spine running from its hub to a reactor core, a mass driver of glowing coils, docking modules, and fields of solar arrays. The sun is hard and white in a black sky full of stars; the Earth fills everything below, oceans, cloud and land in daylight, the far side in night with its cities lit. The game draws the road, the mechs, the station and the Earth's shape and light; these sheets are the painted space, planet and surfaces around them.
+
+STYLE, ALL SHEETS
+- Background art from a 1980s Japanese TV mecha anime, the space episodes, painted by hand the way the background department did it: poster colour (gouache) on illustration board, space and the planet airbrushed in smooth gradients, everything else painted in a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture. Space painted the way those backgrounds painted it: deep, clean blacks and navies, stars as crisp dots, lit metal hard-edged with dark shadows lit faintly blue by the Earth.
+- No ink outlines anywhere; background paintings had none.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, depth-of-field blur, film grain or noise (the game adds its own grain and glow).
+- Nothing but scenery: no people, mechs, text, numbers, labels, logos, flags, borders, signatures or watermarks.
+- Palette: space black #05070F and deep navy #0A1030, the Milky Way pale violet-blue #8A90C0 and dusty rose #B08A9A, stars white with a few pale blue and pale gold, the sun white #FFFFFF with a pale warm glow #FFF6E0; the Earth's ocean deep blue #0B2A5C to #1A4E8A, cloud white #EEF2F8 with blue-grey shadows #9AA8C8, land ochre #A8804A, tan #C8A870 and olive #5A6A32, the night side navy-black #0A1430 with city lights amber #FFB15A; the station's white plating #DFE4EC, shadow lavender-blue #8E9AC0, gold foil #D9A441, solar cells navy #1B2C5C, warning orange #FF7A2A.
+- Every sheet is 1536x1024, landscape.
+
+SHEET 3 IS CUT OUT BY THE GAME
+- Paint it on perfectly flat pure green, #00FF00: no shading, texture, gradient, glow or shadow on the green.
+- Nothing in the art itself may be green or close to it.
+- Crisp edges against the green, with no soft halo.
+
+SHEET Z1: SKY, THE HALF FACING THE SUN (full bleed, no green screen)
+- Half the sky around the viewer, the half facing the sun, unrolled into one painting from the level of the viewer's eyes at the bottom to straight overhead at the top edge. Its left edge should also continue seamlessly into its right edge.
+- A perfectly straight, level line exactly three quarters of the way down (768 px from the top) is the viewer's eye level. Below it, only flat space black (#05070F); paint nothing there (the game draws the Earth below, its curved edge further down).
+- The sun is at the middle of the image, about 25 degrees up: its centre about 210 px above the eye-level line. Paint its glare: a small, intense white glow fading quickly into the black, and four long, thin, straight rays crossing at it, the way a cel background painted a bright star; but not the sun's disc itself (the game draws it).
+- Space: black at the top, deepening to a faintly blue navy toward the eye-level line, as if lit from below by the planet.
+- The Milky Way: a broad band crossing the sky at a slant from one edge to the other, painted as soft drifts of pale violet-blue and dusty rose with dark lanes of dust through it and thick fields of tiny stars along it.
+- Stars: many small single dots of different brightness all over the black, a few larger ones with small four-point twinkles, some faintly pale blue or pale gold. Fewer close round the sun's glare.
+- No planets, moons, comets, nebulae in other colours, ships or stations: those are drawn by the game.
+
+SHEET Z2: THE EARTH, FROM ORBIT (six tiling squares, full bleed)
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels. Each is the Earth's surface seen from orbit, straight down, a square a few hundred kilometres across.
+- Each square repeats on its own: its left edge must continue into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon, no curve of the planet) and evenly lit, with no cast shadows across it and no vignette: the game adds the day and night and the haze toward the planet's edge. Keep the detail even, with no single feature that would stand out when it repeats.
+- 1, top left: open ocean in daylight: deep blue with slow lighter swirls of current, and small fair-weather clouds in loose rows (cloud streets) scattered across a third of it.
+- 2, top middle: dry country in daylight: ochre and tan desert and scrub with long, low ridges, dry river beds branching across it and a few small clouds. No coastline, no sea.
+- 3, top right: the top of a weather system: dense white cloud in billowing cells with blue-grey shadows between them, a few gaps showing the deep blue sea beneath.
+- 4, bottom left: green country in daylight: olive and dark green forest and patches of farmland in muted tan and green, a winding river, scattered small clouds. No coastline, no sea, no towns.
+- 5, bottom middle: the night side over land: near-black navy, clusters of warm amber city lights of many sizes joined by thin threads of lit roads, a few faint wisps of cloud catching a little moonlight.
+- 6, bottom right: mountains in daylight: a high range of snow-capped peaks and glaciers, valleys in grey-brown and olive with blue-violet shadows, a few clouds caught on the peaks.
+
+SHEET Z3: FAR OFF (six cards on green)
+- Six separate things floating in orbit, far off, one in each cell of an invisible 3x2 grid (cells 512x512), each centred in its cell and filling about 80% of it without touching the cell's edges or another one.
+- Each lit hard from the left by the sun, its shadowed side dark and lit faintly blue from below by the Earth, in the station's colours: white plating, gold foil, navy solar cells, grey metal, a touch of warning orange.
+- 1: a communications satellite: a box body wrapped in gold foil, two long wings of solar panels, a white dish antenna on an arm.
+- 2: a distant space station of another design: a long lattice truss with cylindrical modules, white radiator panels and four solar wings.
+- 3: a cargo freighter: a long boxy hull, cargo containers clamped along its spine, engine bells at the back, small dark windows at the front.
+- 4: a spent rocket stage: a long white cylinder with an open engine end, drifting at a slant.
+- 5: a radio telescope: a great dish on a lattice frame, its back to the viewer at an angle.
+- 6: a cluster of orbital wreckage kept together as one shape: broken panels, bent struts and a torn solar wing.
+
+SHEET Z4: SURFACES (six tiling squares, full bleed)
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge must continue into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective) and evenly lit, with no cast shadows across it, no glow and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats.
+- 1, top left: the station's white hull plating: square panels with recessed seams, rows of small rivets, faint streaks of grime, a few small stencilled marks without readable words.
+- 2, top middle: gold foil insulation: crinkled, folded gold foil in big pillowed panels with taped seams, the folds catching the light in two or three tones.
+- 3, top right: solar cells: a regular grid of navy-blue cells in thin silver lines, the cells' sheen varying a little from one to the next.
+- 4, bottom left: radiator panels: white panels with fine parallel ribs running top to bottom, a seam every so often.
+- 5, bottom middle: dark machinery: gunmetal panels with pipes, conduits and bundled cables running across them, small hatches and valves.
+- 6, bottom right: the inner face of the Ring's band: white plating with rows of small square windows, the windows dark (the game lights them), a thin orange stripe every few rows.
+
+SHEET Z1B: SKY, THE HALF FACING AWAY (make it after Z1, with Z1 attached)
+- Same size, style and palette as Z1, the eye-level line at exactly the same height, the same flat space black below it and the same black along the top edge.
+- The other half of the sky, behind the viewer, facing away from the sun. Its left edge must continue seamlessly from Z1's right edge, and its right edge seamlessly into Z1's left edge, so the two side by side make the whole sky round.
+- No sun here: deeper black with more stars, and the Milky Way carrying on across it from Z1's edges, joining them, in the same colours.
 ```

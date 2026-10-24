@@ -10,4 +10,5 @@ export { award, AWARD_SLOTS } from './awards';
 export { createRace, stepRace, startGrade, updatePlaces, pointsFor, koBonus, teamPoints, setTactic, mayCall } from './sim';
 export * from './snapshot';
 export * from './match';
-export { MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, TRACKS, trackById, type AnyTrackDef } from './tracks/index';
+export { MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ZENITH_RING, TRACKS, trackById, type AnyTrackDef } from './tracks/index';
+export { MOBIUS, RING } from './tracks/zenith';

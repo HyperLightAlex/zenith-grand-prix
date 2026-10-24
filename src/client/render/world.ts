@@ -25,6 +25,7 @@ import { trackMatrix, trackPoint } from './trackSpace';
 import { titanPlaceholder } from './titan/placeholder';
 import { loadTitan, titanGroundOf, titanModel, type TitanSlot } from './titan/asset';
 import type { TitanMat } from './titan/pose';
+import { buildZenith } from './zenith';
 
 const skyVertex = /* glsl */ `
 varying vec3 vDir;
@@ -47,6 +48,106 @@ float fbm(vec2 p) {
   return v;
 }`;
 
+/**
+ * Space, for a circuit in orbit: black, stars and the Milky Way, the sun's
+ * hard disc and glare, and the Earth below, filling the sky under its limb
+ * (the station about 2% of its radius up: the limb 12 degrees down). The
+ * Earth turns slowly under cloud; lit by its own sun direction (lower in the
+ * sky than the station's, so its night side shows along the far limb, its
+ * cities lit), and a thin blue atmosphere along the limb.
+ */
+const SPACE = /* glsl */ `
+float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float noise3(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x);
+  float b = mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x);
+  float c = mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), f.x);
+  float d = mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), f.x);
+  return mix(mix(a, b, f.y), mix(c, d, f.y), f.z);
+}
+float fbm3(vec3 p) {
+  float v = 0.0, a = 0.5;
+  for (int i = 0; i < 5; i++) { v += a * noise3(p); p = p * 2.03 + 0.17; a *= 0.5; }
+  return v;
+}
+vec3 starsAt(vec3 d) {
+  vec3 a = abs(d);
+  vec2 uv;
+  float face;
+  if (a.x >= a.y && a.x >= a.z) { uv = d.yz / a.x; face = d.x > 0.0 ? 0.0 : 1.0; }
+  else if (a.y >= a.z) { uv = d.xz / a.y; face = d.y > 0.0 ? 2.0 : 3.0; }
+  else { uv = d.xy / a.z; face = d.z > 0.0 ? 4.0 : 5.0; }
+  vec2 g = uv * 110.0;
+  vec2 cell = floor(g);
+  vec2 f = fract(g) - 0.5;
+  float r0 = hash(cell + face * 37.0);
+  if (r0 < 0.972) return vec3(0.0);
+  vec2 off = vec2(hash(cell + 3.1 + face), hash(cell + 7.7 + face)) - 0.5;
+  float b = (r0 - 0.972) / 0.028;
+  float s = smoothstep(0.09 + b * 0.07, 0.0, length(f - off * 0.6)) * (0.25 + b * b * 2.2);
+  return s * mix(vec3(1.0, 0.82, 0.68), vec3(0.72, 0.84, 1.0), hash(cell + 11.0 + face));
+}
+vec3 spaceSky(vec3 d, vec3 sunDir, vec3 earthSun, vec3 discCol, vec3 glowCol, float time) {
+  // The Earth: a sphere of radius 1 whose centre is D below.
+  const float D = 1.0223;
+  float dy = d.y;
+  float disc = D * D * dy * dy - D * D + 1.0;
+  float limbY = -sqrt(1.0 - 1.0 / (D * D));
+  vec3 col = vec3(0.0015, 0.002, 0.005);
+  // The Milky Way, a faint band across the sky.
+  vec3 pole = normalize(vec3(0.35, 0.55, 0.76));
+  float band = exp(-pow(dot(d, pole) / 0.16, 2.0));
+  col += vec3(0.05, 0.05, 0.065) * band * (0.4 + 0.8 * fbm3(d * 9.0));
+  col += starsAt(d) * (0.35 + 0.65 * band + 0.5);
+  if (dy < 0.0 && disc > 0.0) {
+    float t = -D * dy - sqrt(disc);
+    vec3 n = normalize(t * d - vec3(0.0, -D, 0.0));
+    // Turning slowly; the cloud drifting faster.
+    float spin = time * 0.0006;
+    vec3 q = vec3(n.x * cos(spin) - n.z * sin(spin), n.y, n.x * sin(spin) + n.z * cos(spin));
+    // (The station is low: what it sees of the Earth is a few hundred
+    // kilometres across, so the detail is fine.)
+    float land = smoothstep(0.53, 0.56, fbm3(q * 22.0 + vec3(3.0, 0.0, 1.0)));
+    float green = fbm3(q * 70.0);
+    vec3 ocean = mix(vec3(0.006, 0.035, 0.12), vec3(0.012, 0.08, 0.19), fbm3(q * 90.0));
+    vec3 ground = mix(vec3(0.16, 0.13, 0.07), vec3(0.05, 0.1, 0.035), smoothstep(0.4, 0.6, green));
+    vec3 surf = mix(ocean, ground, land);
+    vec3 qc = q * 36.0 + vec3(time * 0.004, 0.0, time * 0.002);
+    float cloud = smoothstep(0.5, 0.68, fbm3(qc + fbm3(qc * 0.5) * 1.5));
+    surf = mix(surf, vec3(0.85, 0.88, 0.92), cloud * 0.85);
+    float lit = dot(n, earthSun);
+    float day = smoothstep(-0.06, 0.12, lit);
+    vec3 dayCol = surf * (0.3 + 2.2 * max(lit, 0.0));
+    // The sun glinting off the sea.
+    vec3 hv = normalize(earthSun - d);
+    dayCol += vec3(1.0, 0.9, 0.75) * pow(max(dot(n, hv), 0.0), 60.0) * (1.0 - land) * (1.0 - cloud) * 0.8;
+    // Cities at night, in clusters over the land, dimmed under cloud.
+    float cities = smoothstep(0.62, 0.8, noise3(q * 600.0)) * smoothstep(0.45, 0.7, noise3(q * 80.0)) * land * (1.0 - cloud * 0.8);
+    vec3 nightCol = vec3(0.002, 0.004, 0.012) + vec3(1.0, 0.62, 0.28) * cities * 0.9;
+    vec3 earth = mix(nightCol, dayCol, day);
+    // Dusk along the terminator.
+    earth += vec3(0.5, 0.18, 0.05) * exp(-pow(lit / 0.06, 2.0)) * 0.35 * (1.0 - cloud * 0.5);
+    // Air: thicker toward the limb, blue on the day side.
+    float graze = 1.0 - clamp((limbY - dy) / 0.35, 0.0, 1.0);
+    vec3 air = vec3(0.12, 0.32, 0.85) * (0.15 + 0.85 * day);
+    earth = mix(earth, air, pow(graze, 3.0) * 0.7);
+    col = earth;
+  }
+  // The atmosphere's thin bright band along the limb, and its glow above it.
+  float above = dy - limbY;
+  float rim = exp(-abs(above) / 0.006) * 0.9 + exp(-max(above, 0.0) / 0.03) * 0.25 * step(0.0, above);
+  float sunSide = 0.35 + 0.65 * smoothstep(-0.6, 0.8, dot(normalize(vec2(d.x, d.z)), normalize(vec2(earthSun.x, earthSun.z))));
+  col += vec3(0.25, 0.55, 1.0) * rim * sunSide;
+  // The sun: a hard disc and its glare (none through the Earth).
+  float sd = max(dot(d, sunDir), 0.0);
+  float clear = step(disc, 0.0) + step(0.0, dy);
+  col += glowCol * (pow(sd, 900.0) * 1.0 + pow(sd, 90.0) * 0.12 + pow(sd, 8.0) * 0.03) * min(clear, 1.0);
+  col = mix(col, discCol, smoothstep(0.99955, 0.99975, sd) * min(clear, 1.0));
+  return col;
+}`;
+
 const skyFragment = /* glsl */ `
 uniform vec3 uZenith;
 uniform vec3 uMid;
@@ -67,12 +168,22 @@ uniform vec3 uDiscColor;
 uniform vec3 uDiscPlain;
 uniform vec3 uGlowPlain;
 uniform float uAurora;
+uniform float uSpace;
+uniform vec3 uEarthSun;
 varying vec3 vDir;
 ${NOISE}
 ${UNTONE}
+${SPACE}
 void main() {
   vec3 dir = normalize(vDir);
   float h = dir.y;
+  if (uSpace > 0.5) {
+    vec3 col = spaceSky(dir, uSunDir, uEarthSun, uDiscPlain, uGlowPlain, uTime);
+    gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    return;
+  }
   if (uPainted > 0.5) {
     // The painted sky, round the horizon and up to the zenith, the middle of
     // its sun-side half turned to the sun; the disc drawn over it, where the
@@ -456,8 +567,8 @@ interface Ctx {
   maxZ: number;
   /** Distance from a point to the nearest bit of road, in plan. */
   clearance(x: number, z: number): number;
-  /** Whether a piece of scenery reaches into the space the road needs (keepout.ts). */
-  inRoad(g: THREE.BufferGeometry): boolean;
+  /** Whether a piece of scenery reaches into the space the road needs (keepout.ts), looked at about `step` apart. */
+  inRoad(g: THREE.BufferGeometry, step?: number): boolean;
   updates: Array<(time: number, camera: THREE.Camera) => void>;
   /** The circuit's painted background, if it has one. */
   painted: PaintedSet | null;
@@ -502,9 +613,9 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       }
       return Math.sqrt(best);
     },
-    inRoad(g: THREE.BufferGeometry): boolean {
+    inRoad(g: THREE.BufferGeometry, step = 3): boolean {
       roads ??= new RoadIndex(track);
-      return inRoadSpace(roads, g);
+      return inRoadSpace(roads, g, step);
     },
     updates: [],
     painted,
@@ -543,6 +654,9 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uDiscPlain: { value: new THREE.Vector3(...(theme.disc ?? [1.9, 1.75, 1.45])) },
       uGlowPlain: { value: new THREE.Vector3(...(theme.discGlow ?? [1.0, 0.86, 0.62])) },
       uAurora: { value: theme.aurora ?? 0 },
+      uSpace: { value: theme.ground === 'orbit' ? 1 : 0 },
+      // The Earth's sun: the station's, nearer the horizon (see SPACE).
+      uEarthSun: { value: new THREE.Vector3(SUN_DIR.x, 0, SUN_DIR.z).normalize().multiplyScalar(Math.cos(0.14)).setY(Math.sin(0.14)) },
     },
     side: THREE.BackSide,
     depthWrite: false,
@@ -568,6 +682,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   else if (theme.ground === 'pit') buildCrucible(ctx);
   else if (theme.ground === 'ice') buildFrostline(ctx);
   else if (theme.ground === 'wreck') buildTitansRest(ctx);
+  else if (theme.ground === 'orbit') buildZenith(ctx);
   else buildMeridian(ctx);
   if (painted) horizonRings(ctx);
 

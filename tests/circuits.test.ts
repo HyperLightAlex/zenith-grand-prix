@@ -1,4 +1,4 @@
-// The 3D circuits: Corkscrew Canyon, Helios Drop, Neon Crucible, Frostline and Titan's Rest. Their
+// The 3D circuits: Corkscrew Canyon, Helios Drop, Neon Crucible, Frostline, Titan's Rest and Zenith Ring. Their
 // geometry, and the things only they have: jumps and falls, open edges, forks
 // with a wall down the middle, speed pads, loops and corkscrews, a straight
 // drop and a spiral climb.
@@ -23,6 +23,9 @@ import {
   PHASE,
   TITANS_REST,
   TRACKS,
+  ZENITH_RING,
+  RING,
+  MOBIUS,
   buildTrack,
   closure,
   createRace,
@@ -43,11 +46,12 @@ import {
 } from '../src/sim/index';
 import type { CircuitDef, MechInput, RaceState, SimEvent, Track } from '../src/sim/index';
 import { pitOf } from '../src/client/render/pit';
+import { frameAt, makeFrame } from '../src/sim/track';
 import { findNonFinite, hash, makeSeats, snapshot } from './helpers';
 
-const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST];
+const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ZENITH_RING];
 /** The circuits with a fork. */
-const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE, TITANS_REST];
+const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE, TITANS_REST, ZENITH_RING];
 const BUILT = new Map<string, Track>(CIRCUITS.map((d) => [d.id, buildTrack(d)]));
 const track = (def: CircuitDef) => BUILT.get(def.id)!;
 
@@ -68,7 +72,7 @@ const openRuns = (t: Track) => runs(t, (i) => !t.wallL[i] && !t.wallR[i] && t.ro
 
 describe('the circuit list', () => {
   it('has Meridian first, then the 3D circuits, each found by id', () => {
-    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan']);
+    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan', 'zenith']);
     for (const d of TRACKS) expect(trackById(d.id)).toBe(d);
     // An unknown id falls back to Meridian rather than failing.
     expect(trackById('nowhere')).toBe(MERIDIAN);
@@ -830,6 +834,142 @@ describe("Titan's Rest", () => {
       while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
       // Off the speed pad, so the jump alone is tried.
       place(race, t, 0, g0 - 70, 12, limiter);
+      race.mechs.forEach((o, k) => {
+        if (k) o.s = wrapS(t, g0 - 2500 - k * 30);
+      });
+      inputs[0].throttle = 1;
+      let landed = -1;
+      let fell = false;
+      for (let i = 0; i < 600 && landed < 0 && !fell; i++) {
+        stepRace(race, t, inputs);
+        for (const e of race.events) {
+          if (e.type === 'land' && e.mech === 0 && race.mechs[0].s > g0) landed = race.mechs[0].s;
+          if (e.type === 'fall' && e.mech === 0) fell = true;
+        }
+      }
+      return { landed, fell };
+    };
+    const lap1 = run(110);
+    expect(lap1.fell).toBe(false);
+    expect(lap1.landed).toBeGreaterThan(g1);
+    expect(run(75).fell).toBe(true);
+  });
+});
+
+describe('Zenith Ring', () => {
+  const def = ZENITH_RING;
+  const t = track(def);
+  const starts = pieceStarts(def);
+  const piece = (name: string): [number, number] => {
+    const i = def.pieces.findIndex((p) => p.name === name);
+    if (i < 0) throw new Error(`no piece ${name}`);
+    return [starts[i], i + 1 < starts.length ? starts[i + 1] : t.length];
+  };
+  const at = (s: number) => Math.floor(wrapS(t, s) / t.ds) % t.n;
+  const fork = t.forks[0];
+  type V = [number, number, number];
+  const sub = (a: V, b: V): V => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const pos = (i: number): V => [t.px[i], t.py[i], t.pz[i]];
+  const up = (i: number): V => [t.ux[i], t.uy[i], t.uz[i]];
+  /** Round an axis through `c` along `axis`: how far out a sample is, which way out, and how far along. */
+  const round = (c: V, axis: V, i: number) => {
+    const rel = sub(pos(i), c);
+    const along = dot(rel, axis);
+    const off: V = [rel[0] - axis[0] * along, rel[1] - axis[1] * along, rel[2] - axis[2] * along];
+    const r = Math.hypot(off[0], off[1], off[2]);
+    return { r, out: [off[0] / r, off[1] / r, off[2] / r] as V, along };
+  };
+
+  it('rides the Ring: up its inside, through the Hatch onto its outside, down that upside down, round one centre', () => {
+    const [a] = piece('up the inside');
+    const [h0, h1] = piece('the Hatch');
+    const [, b] = piece('down the outside');
+    // Where it comes in, between samples, and the way it faces on the
+    // straight into it (the road's frame on the Ring leans with its drift
+    // across the band).
+    const f0 = frameAt(t, a, makeFrame());
+    const fs = frameAt(t, a - 20, makeFrame());
+    const i0 = at(a);
+    const c: V = [f0.px + fs.ux * RING.radius, f0.py + fs.uy * RING.radius, f0.pz + fs.uz * RING.radius];
+    const axis: V = [fs.rx, fs.ry, fs.rz];
+    let minUp = 1;
+    for (let s = a + 8; s < h0; s += 4) {
+      const { r, out } = round(c, axis, at(s));
+      expect(Math.abs(r - RING.radius)).toBeLessThan(1);
+      // Its up toward the centre: on the band's inner face.
+      expect(-dot(up(at(s)), out)).toBeGreaterThan(0.97);
+    }
+    for (let s = h0; s < h1; s += 4) expect(t.mag[at(s)]).toBe(1);
+    for (let s = h1 + 8; s < b - 8; s += 4) {
+      const { r, out } = round(c, axis, at(s));
+      expect(Math.abs(r - (RING.radius + RING.band))).toBeLessThan(1);
+      // Its up away from the centre: on the band's outer face, held whatever the speed.
+      expect(dot(up(at(s)), out)).toBeGreaterThan(0.97);
+      expect(t.mag[at(s)]).toBe(1);
+      minUp = Math.min(minUp, t.uy[at(s)]);
+    }
+    expect(minUp).toBeLessThan(-0.99);
+    // Across the band on the way round, so it comes out clear of where it went in.
+    expect(round(c, axis, at(b)).along - round(c, axis, i0).along).toBeCloseTo(RING.across, 0);
+  });
+
+  it('turns over round the core in the Möbius: up its inside, over the top on its outside, down its inside', () => {
+    const [a] = piece('the Möbius');
+    const [o0, o1] = piece('over the core');
+    const f0 = frameAt(t, a, makeFrame());
+    const fs = frameAt(t, a - 20, makeFrame());
+    const i0 = at(a);
+    const c: V = [f0.px + fs.ux * MOBIUS.radius, f0.py + fs.uy * MOBIUS.radius, f0.pz + fs.uz * MOBIUS.radius];
+    const axis: V = [fs.rx, fs.ry, fs.rz];
+    const end = starts[def.pieces.findIndex((p) => p.name === 'over the core') + 2];
+    for (let s = a + 8; s < end - 8; s += 4) {
+      const { r } = round(c, axis, at(s));
+      expect(Math.abs(r - MOBIUS.radius)).toBeLessThan(1);
+      if (s > o0 && s < o1) expect(t.mag[at(s)]).toBe(1);
+    }
+    // At the top, upright on the outside, over the core.
+    const top = at((o0 + o1) / 2);
+    expect(t.uy[top]).toBeGreaterThan(0.99);
+    expect(dot(up(top), round(c, axis, top).out)).toBeGreaterThan(0.99);
+    // Out where it went in, moved along the core, the right way up.
+    expect(t.uy[at(end)]).toBeGreaterThan(0.99);
+    expect(Math.abs(t.py[at(end)] - t.py[i0])).toBeLessThan(1);
+    expect(Math.abs(round(c, axis, at(end)).along - round(c, axis, i0).along)).toBeCloseTo(MOBIUS.across, 0);
+  });
+
+  it('splits through the Dock: over its back, open on the outside, with the pad; through it, walled, with the gate', () => {
+    for (let s = fork.s0 + 80; s < fork.s1 - 80; s += 8) {
+      expect(t.wallR[at(s)]).toBe(0);
+      expect(t.wallL[at(s)]).toBe(1);
+    }
+    expect(fork.right.pads).toBe(1);
+    expect(fork.left.gates).toBe(1);
+  });
+
+  it('has no barrier on the outside of the Solar Wings\' bends: a knock that way is a fall', () => {
+    const [a] = piece('the Solar Wings');
+    const [b] = piece('down off the wings');
+    let open = 0;
+    for (let s = a; s < b; s += 4) if (!t.wallL[at(s)] || !t.wallR[at(s)]) open++;
+    expect(open * 4).toBeGreaterThan((b - a) * 0.95);
+    // Half way round its first bend, a left: open on the right.
+    const [w0, w1] = piece('the Solar Wings');
+    const s = (w0 + w1) / 2;
+    const { race, inputs } = quietRace(def);
+    place(race, t, 0, s, hwAt(t, s) - 3, 100);
+    inputs[0].mx = 1;
+    expect(stepFor(race, t, inputs, 60).some((e) => e.type === 'fall' && e.mech === 0)).toBe(true);
+  });
+
+  it('clears the docking ring at the formation-lap limiter off the pads; well short of it, it falls', () => {
+    const [p0, p1] = piece('gap');
+    const [g0, g1] = gaps(t).find(([a, b]) => a < p1 && b > p0)!;
+    const run = (limiter: number) => {
+      const race = createRace(t, { seed: 1, seats: makeSeats('all'), rules: { limiter1: limiter } });
+      const inputs = race.mechs.map(() => emptyInput());
+      while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
+      place(race, t, 0, g0 - 70, 19, limiter);
       race.mechs.forEach((o, k) => {
         if (k) o.s = wrapS(t, g0 - 2500 - k * 30);
       });

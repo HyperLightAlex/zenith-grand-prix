@@ -405,7 +405,7 @@ function boardTexture(lines: string[], bg: string, fg: string, accent: string): 
 
 export function buildTrackVisual(
   track: Track,
-  theme: { id?: string; sunLight: number; skyLight: number; groundY: number } = { sunLight: COLORS.sunLight, skyLight: COLORS.skyLight, groundY: -6 },
+  theme: { id?: string; sunLight: number; skyLight: number; groundY: number; ground?: string } = { sunLight: COLORS.sunLight, skyLight: COLORS.skyLight, groundY: -6 },
 ): TrackVisual {
   const group = new THREE.Group();
   // The painted track kit (the anime look): what is drawn only in one look
@@ -794,8 +794,10 @@ export function buildTrackVisual(
   // ---- support pylons ------------------------------------------------------
   // Down to the ground under level road. (Loops, corkscrews and forks stand
   // on their own.) Not where one would come down on, or through, another
-  // stretch of road; not where the road already sits on the ground.
+  // stretch of road; not where the road already sits on the ground. In
+  // orbit there is no ground: the station holds the road up.
   const plain = (i: number) => {
+    if (theme.ground === 'orbit') return false;
     const j = ((i % n) + n) % n;
     return track.roadL[j] === 1 && track.roadR[j] === 1 && track.mag[j] === 0 && track.median[j] < 0.1 && track.upY[j] > 0.85 && Math.abs(track.ty[j]) < 0.35;
   };
