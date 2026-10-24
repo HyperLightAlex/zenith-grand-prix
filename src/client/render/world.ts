@@ -89,18 +89,35 @@ vec3 starsAt(vec3 d) {
   float s = smoothstep(0.09 + b * 0.07, 0.0, length(f - off * 0.6)) * (0.25 + b * b * 2.2);
   return s * mix(vec3(1.0, 0.82, 0.68), vec3(0.72, 0.84, 1.0), hash(cell + 11.0 + face));
 }
+/** The painted sky over a circuit in orbit (Z1 and Z1B): stars and the Milky Way, mirrored below eye level down to the Earth's limb. */
+vec3 paintedSpace(vec3 d) {
+  float elev = asin(clamp(abs(d.y), 0.0, 1.0));
+  float az = atan(d.z, d.x);
+  vec2 uv = vec2(uPanoSunU + (az - uSunAz) / 6.2831853, uPanoHorizon + (1.0 - uPanoHorizon) * clamp(elev / 1.5707963, 0.0, 1.0));
+  vec2 dx = dFdx(uv);
+  vec2 dy = dFdy(uv);
+  dx.x -= floor(dx.x + 0.5);
+  dy.x -= floor(dy.x + 0.5);
+  return unTone(textureGrad(uPano, vec2(fract(uv.x), uv.y), dx, dy).rgb);
+}
 vec3 spaceSky(vec3 d, vec3 sunDir, vec3 earthSun, vec3 discCol, vec3 glowCol, float time) {
   // The Earth: a sphere of radius 1 whose centre is D below.
   const float D = 1.0223;
   float dy = d.y;
   float disc = D * D * dy * dy - D * D + 1.0;
   float limbY = -sqrt(1.0 - 1.0 / (D * D));
-  vec3 col = vec3(0.0015, 0.002, 0.005);
-  // The Milky Way, a faint band across the sky.
-  vec3 pole = normalize(vec3(0.35, 0.55, 0.76));
-  float band = exp(-pow(dot(d, pole) / 0.16, 2.0));
-  col += vec3(0.05, 0.05, 0.065) * band * (0.4 + 0.8 * fbm3(d * 9.0));
-  col += starsAt(d) * (0.35 + 0.65 * band + 0.5);
+  bool painted = uPainted > 0.5;
+  vec3 col;
+  if (painted) {
+    col = paintedSpace(d);
+  } else {
+    col = vec3(0.0015, 0.002, 0.005);
+    // The Milky Way, a faint band across the sky.
+    vec3 pole = normalize(vec3(0.35, 0.55, 0.76));
+    float band = exp(-pow(dot(d, pole) / 0.16, 2.0));
+    col += vec3(0.05, 0.05, 0.065) * band * (0.4 + 0.8 * fbm3(d * 9.0));
+    col += starsAt(d) * (0.35 + 0.65 * band + 0.5);
+  }
   if (dy < 0.0 && disc > 0.0) {
     float t = -D * dy - sqrt(disc);
     vec3 n = normalize(t * d - vec3(0.0, -D, 0.0));
@@ -110,23 +127,48 @@ vec3 spaceSky(vec3 d, vec3 sunDir, vec3 earthSun, vec3 discCol, vec3 glowCol, fl
     // (The station is low: what it sees of the Earth is a few hundred
     // kilometres across, so the detail is fine.)
     float land = smoothstep(0.53, 0.56, fbm3(q * 22.0 + vec3(3.0, 0.0, 1.0)));
-    float green = fbm3(q * 70.0);
-    vec3 ocean = mix(vec3(0.006, 0.035, 0.12), vec3(0.012, 0.08, 0.19), fbm3(q * 90.0));
-    vec3 ground = mix(vec3(0.16, 0.13, 0.07), vec3(0.05, 0.1, 0.035), smoothstep(0.4, 0.6, green));
-    vec3 surf = mix(ocean, ground, land);
     vec3 qc = q * 36.0 + vec3(time * 0.004, 0.0, time * 0.002);
-    float cloud = smoothstep(0.5, 0.68, fbm3(qc + fbm3(qc * 0.5) * 1.5));
-    surf = mix(surf, vec3(0.85, 0.88, 0.92), cloud * 0.85);
+    float cloudField = fbm3(qc + fbm3(qc * 0.5) * 1.5);
+    vec3 surf;
+    vec3 nightSurf;
+    float cloud;
+    if (painted) {
+      // The painted squares (Z2) laid flat across the Earth below, each about
+      // 190 km: sea and three kinds of country, the weather's cloud over
+      // them, the night side's lit cities over the land.
+      vec2 e = q.xz / max(q.y, 0.5) / 0.03;
+      float kind = fbm3(q * 10.0 + vec3(7.0, 2.0, 5.0));
+      vec3 ocean = unTone(texture2D(uEarth0, e).rgb);
+      vec3 desert = unTone(texture2D(uEarth1, e * 0.9 + 0.31).rgb);
+      vec3 green = unTone(texture2D(uEarth3, e * 1.1 + 0.57).rgb);
+      vec3 hills = unTone(texture2D(uEarth5, e + 0.13).rgb);
+      vec3 country = mix(mix(desert, green, smoothstep(0.42, 0.5, kind)), hills, smoothstep(0.56, 0.63, kind));
+      surf = mix(ocean, country, land);
+      vec3 deck = unTone(texture2D(uEarth2, e * 0.8 + vec2(time * 0.0008, 0.0) + 0.71).rgb);
+      float white = smoothstep(0.35, 0.75, dot(deck, vec3(0.3, 0.45, 0.25)));
+      cloud = smoothstep(0.5, 0.64, cloudField) * white;
+      surf = mix(surf, deck, cloud);
+      vec3 lights = unTone(texture2D(uEarth4, e * 1.2 + 0.4).rgb);
+      nightSurf = mix(ocean * 0.05 + vec3(0.002, 0.004, 0.012), lights, land) * (1.0 - cloud * 0.7);
+    } else {
+      float green = fbm3(q * 70.0);
+      vec3 ocean = mix(vec3(0.006, 0.035, 0.12), vec3(0.012, 0.08, 0.19), fbm3(q * 90.0));
+      vec3 ground = mix(vec3(0.16, 0.13, 0.07), vec3(0.05, 0.1, 0.035), smoothstep(0.4, 0.6, green));
+      surf = mix(ocean, ground, land);
+      cloud = smoothstep(0.5, 0.68, cloudField);
+      surf = mix(surf, vec3(0.85, 0.88, 0.92), cloud * 0.85);
+      // Cities at night, in clusters over the land, dimmed under cloud.
+      float cities = smoothstep(0.62, 0.8, noise3(q * 600.0)) * smoothstep(0.45, 0.7, noise3(q * 80.0)) * land * (1.0 - cloud * 0.8);
+      nightSurf = vec3(0.002, 0.004, 0.012) + vec3(1.0, 0.62, 0.28) * cities * 0.9;
+    }
     float lit = dot(n, earthSun);
     float day = smoothstep(-0.06, 0.12, lit);
-    vec3 dayCol = surf * (0.3 + 2.2 * max(lit, 0.0));
+    // (A painting is painted in full daylight; the sun is low over this part of the Earth.)
+    vec3 dayCol = painted ? surf * (0.62 + 1.2 * max(lit, 0.0)) : surf * (0.3 + 2.2 * max(lit, 0.0));
     // The sun glinting off the sea.
     vec3 hv = normalize(earthSun - d);
-    dayCol += vec3(1.0, 0.9, 0.75) * pow(max(dot(n, hv), 0.0), 60.0) * (1.0 - land) * (1.0 - cloud) * 0.8;
-    // Cities at night, in clusters over the land, dimmed under cloud.
-    float cities = smoothstep(0.62, 0.8, noise3(q * 600.0)) * smoothstep(0.45, 0.7, noise3(q * 80.0)) * land * (1.0 - cloud * 0.8);
-    vec3 nightCol = vec3(0.002, 0.004, 0.012) + vec3(1.0, 0.62, 0.28) * cities * 0.9;
-    vec3 earth = mix(nightCol, dayCol, day);
+    dayCol += vec3(1.0, 0.9, 0.75) * pow(max(dot(n, hv), 0.0), 160.0) * (1.0 - land) * (1.0 - cloud) * (painted ? 0.3 : 0.5);
+    vec3 earth = mix(nightSurf, dayCol, day);
     // Dusk along the terminator.
     earth += vec3(0.5, 0.18, 0.05) * exp(-pow(lit / 0.06, 2.0)) * 0.35 * (1.0 - cloud * 0.5);
     // Air: thicker toward the limb, blue on the day side.
@@ -138,13 +180,16 @@ vec3 spaceSky(vec3 d, vec3 sunDir, vec3 earthSun, vec3 discCol, vec3 glowCol, fl
   // The atmosphere's thin bright band along the limb, and its glow above it.
   float above = dy - limbY;
   float rim = exp(-abs(above) / 0.006) * 0.9 + exp(-max(above, 0.0) / 0.03) * 0.25 * step(0.0, above);
-  float sunSide = 0.35 + 0.65 * smoothstep(-0.6, 0.8, dot(normalize(vec2(d.x, d.z)), normalize(vec2(earthSun.x, earthSun.z))));
+  float sunSide = 0.35 + 0.65 * smoothstep(-0.6, 0.8, dot(normalize(vec2(d.x, d.z) + vec2(1e-5, 0.0)), normalize(vec2(earthSun.x, earthSun.z))));
   col += vec3(0.25, 0.55, 1.0) * rim * sunSide;
-  // The sun: a hard disc and its glare (none through the Earth).
-  float sd = max(dot(d, sunDir), 0.0);
+  // The sun: a hard disc and its glare (none through the Earth). Over the
+  // painted sky, where the painting has it.
+  vec3 sdir = painted ? uDiscDir : sunDir;
+  vec3 scol = painted ? uDiscColor : discCol;
+  float sd = max(dot(d, sdir), 0.0);
   float clear = step(disc, 0.0) + step(0.0, dy);
-  col += glowCol * (pow(sd, 900.0) * 1.0 + pow(sd, 90.0) * 0.12 + pow(sd, 8.0) * 0.03) * min(clear, 1.0);
-  col = mix(col, discCol, smoothstep(0.99955, 0.99975, sd) * min(clear, 1.0));
+  col += glowCol * (pow(sd, 900.0) * 1.0 + pow(sd, 90.0) * 0.12 + pow(sd, 8.0) * (painted ? 0.0 : 0.03)) * min(clear, 1.0);
+  col = mix(col, scol, smoothstep(0.99955, 0.99975, sd) * min(clear, 1.0));
   return col;
 }`;
 
@@ -170,6 +215,12 @@ uniform vec3 uGlowPlain;
 uniform float uAurora;
 uniform float uSpace;
 uniform vec3 uEarthSun;
+uniform sampler2D uEarth0;
+uniform sampler2D uEarth1;
+uniform sampler2D uEarth2;
+uniform sampler2D uEarth3;
+uniform sampler2D uEarth4;
+uniform sampler2D uEarth5;
 varying vec3 vDir;
 ${NOISE}
 ${UNTONE}
@@ -631,6 +682,13 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   group.add(new THREE.HemisphereLight(theme.skyLight, theme.groundLight, theme.hemiIntensity));
 
   // ---- sky ----------------------------------------------------------------
+  // The painted sky is shown once its pictures are in (the sky, and in orbit the Earth's).
+  let skyReady = false;
+  let skyWaiting = painted ? 1 + (painted.earth ? EARTH.filter((k) => painted.earth![k]).length : 0) : 0;
+  const skyLoaded = () => {
+    skyWaiting--;
+    if (skyWaiting <= 0) skyReady = true;
+  };
   const skyMat = new THREE.ShaderMaterial({
     vertexShader: skyVertex,
     fragmentShader: skyFragment,
@@ -657,6 +715,8 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uSpace: { value: theme.ground === 'orbit' ? 1 : 0 },
       // The Earth's sun: the station's, nearer the horizon (see SPACE).
       uEarthSun: { value: new THREE.Vector3(SUN_DIR.x, 0, SUN_DIR.z).normalize().multiplyScalar(Math.cos(0.14)).setY(Math.sin(0.14)) },
+      // The Earth's painted squares (Z2), for a circuit in orbit with a painted set.
+      ...Object.fromEntries(EARTH.map((k, i) => [`uEarth${i}`, { value: painted?.earth?.[k] ? paintedTexture(painted.earth[k], { repeat: true, onReady: () => skyLoaded() }) : blankTexture() }])),
     },
     side: THREE.BackSide,
     depthWrite: false,
@@ -666,9 +726,8 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   sky.frustumCulled = false;
   sky.renderOrder = -10;
   group.add(sky);
-  let skyReady = false;
   if (painted) {
-    const pano = paintedTexture(painted.sky, { onReady: () => (skyReady = true) });
+    const pano = paintedTexture(painted.sky, { onReady: () => skyLoaded() });
     pano.wrapS = THREE.RepeatWrapping;
     skyMat.uniforms.uPano.value = pano;
   }
@@ -707,6 +766,14 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       for (const u of ctx.updates) u(time, camera);
     },
   };
+}
+
+/** The Earth's painted squares, in the order the space sky's samplers take them. */
+const EARTH = ['ocean', 'desert', 'cloud', 'green', 'night', 'mountains'];
+let blank: THREE.Texture | null = null;
+/** A 1x1 texture for samplers a sky does not use. */
+function blankTexture(): THREE.Texture {
+  return (blank ??= whiteTexture());
 }
 
 /** Where the painted sky's sun disc goes: toward the light, at the height its painting has it. */

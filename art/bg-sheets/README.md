@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-The first six circuits' sheets are in the game (`tools/bg/build_backgrounds.py`); Zenith Ring's are to be made.
+Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`).
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -57,6 +57,11 @@ The first six circuits' sheets are in the game (`tools/bg/build_backgrounds.py`)
 | R2 Horizon | bg-r2-horizon.png | three strips (worn mountains, the graveyard of giants, dunes with wreckage), bottoms level, ends matching; the mountains' strip is the shortest, 173 px |
 | R3 Clouds | bg-r3-clouds.png | all six, cut by their outlines |
 | R4 Surfaces | bg-r4-surfaces.png | cut and blended like M4: sand, armour, red armour, frame, blade, engraved bronze |
+| Z1 Sky | bg-z1-sky.png | eye level at 767 px; the sun's glare at the middle, 25 degrees up, but the Milky Way is brighter, so its column is given by hand, as N1's; a flat band of the black along the top edge, which is the zenith |
+| Z1B Sky | bg-z1b-sky.png | eye level at 766 px; made from Z1, so its edges are Z1's exactly (and much of its star field: it is a star field, it does not show) and the Milky Way meets across both joins |
+| Z2 The Earth | bg-z2-earth.png | cut and blended like M4: ocean, desert, cloud, green country, the night side's cities, mountains; the game lays them across the Earth below and lights them |
+| Z3 Far off | bg-z3-far.png | all six, cut by their outlines; the radio telescope's mast runs off the bottom of the sheet, so its cut end is faded out |
+| Z4 Surfaces | bg-z4-surfaces.png | cut and blended like M4: plating, gold foil, solar cells, radiator, machinery, the band's windowed face |
 
 ## Meridian Skyway
 

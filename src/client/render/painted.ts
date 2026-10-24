@@ -14,6 +14,7 @@ import canyon from './backgrounds/canyon';
 import crucible from './backgrounds/crucible';
 import frostline from './backgrounds/frostline';
 import titan from './backgrounds/titan';
+import zenith from './backgrounds/zenith';
 import helios from './backgrounds/helios';
 import meridian from './backgrounds/meridian';
 import trackKit from './backgrounds/track';
@@ -45,6 +46,8 @@ export interface PaintedSet {
   surfaces: Record<string, string>;
   /** Signs on the scenery (Neon Crucible's neon signs), in the sheet's order. */
   signs?: PaintedSign[];
+  /** In orbit (Zenith Ring): the Earth's surface seen from orbit, repeating squares by kind (ocean, desert, cloud, green, night, mountains). */
+  earth?: Record<string, string>;
 }
 
 /** A painted sign: its picture and its width over its height. */
@@ -83,7 +86,7 @@ export interface PaintedHangar {
 
 export const paintedHangar: PaintedHangar = hangarKit;
 
-const SETS: Record<string, PaintedSet> = { meridian, canyon, helios, crucible, frostline, titan };
+const SETS: Record<string, PaintedSet> = { meridian, canyon, helios, crucible, frostline, titan, zenith };
 
 /** The painted background for a circuit's setting, if it has one. */
 export function paintedSet(themeId: string): PaintedSet | null {
@@ -154,6 +157,8 @@ export const SUN_DISC: Record<string, { elevation: number; color: [number, numbe
   frostline: { elevation: 25, color: [1.5, 1.58, 1.8] },
   // Titan's Rest's morning sun, where R1 paints its glow, white-gold.
   titan: { elevation: 15.5, color: [2.0, 1.88, 1.6] },
+  // Zenith Ring's sun, hard and white, where Z1 paints its glare.
+  zenith: { elevation: 24.6, color: [3.2, 3.1, 2.9] },
 };
 
 /**

@@ -9,15 +9,19 @@
 // in it: the Ring's band opens where the road comes in through its foot,
 // rolls through it at the top and rolls out from under it.
 //
-// A stand-in until the station has a model of its own.
+// With the painted background (the anime look), each kind of surface takes
+// its painting (Z4: plating, gold foil, solar cells, radiators, machinery,
+// the band's windowed face), and things far off in orbit (Z3) hang in the
+// sky round it. A stand-in until the station has a model of its own.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
 import { MOBIUS, RING } from '../../sim/tracks/zenith';
+import { paintedCardMaterial, paintedSurfaceMaterial, paintedTexture, paintedTrack, type PaintedSet } from './painted';
 import { toonMaterial } from './palette';
 import { KEEP_OUT } from './titan/keepout';
-import { trackPoint } from './trackSpace';
+import { trackMatrix, trackPoint } from './trackSpace';
 
 /** What the world builder hands over (world.ts's context has all of it). */
 export interface StationCtx {
@@ -25,6 +29,10 @@ export interface StationCtx {
   group: THREE.Group;
   inRoad(g: THREE.BufferGeometry, step?: number): boolean;
   updates: Array<(time: number, camera: THREE.Camera) => void>;
+  /** The painted background, if there is one, and the switch between it and the plain look. */
+  painted: PaintedSet | null;
+  paintedOnly: THREE.Object3D[];
+  swaps: Array<(painted: boolean) => void>;
 }
 
 const f = makeFrame();
@@ -208,6 +216,14 @@ const RADIATOR = 0xf2f4f7;
 const SOLAR = 0x1b2c5c;
 const SOLAR_FRAME = 0x8a93a6;
 
+/**
+ * The station's kinds of surface: each a mesh, and with the painted
+ * background its painting (Z4) and how many units one repeat of it covers.
+ * Trim keeps its plain colour either way.
+ */
+type Kind = 'plating' | 'foil' | 'solar' | 'radiator' | 'machinery' | 'band' | 'trim';
+const REPEAT: Record<Exclude<Kind, 'trim'>, number> = { plating: 24, foil: 16, solar: 9, radiator: 14, machinery: 12, band: 18 };
+
 /** The coils' glow: a pulse running down the Mass Driver, coil after coil. */
 function coilMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -242,13 +258,13 @@ export function buildZenith(ctx: StationCtx): void {
   const range = (name: string) => rangeOf(track, starts, name);
   const rnd = mulberry(9101);
 
-  const hull: THREE.BufferGeometry[] = [];
+  const parts: Record<Kind, THREE.BufferGeometry[]> = { plating: [], foil: [], solar: [], radiator: [], machinery: [], band: [], trim: [] };
   const glow: THREE.BufferGeometry[] = [];
-  /** Keep a piece unless it stands in the road's space. */
-  const keep = (list: THREE.BufferGeometry[], g: THREE.BufferGeometry | null, c: number | THREE.Color, step = 3): boolean => {
+  /** Keep a piece (of a kind of surface, or a light) unless it stands in the road's space. */
+  const keep = (kind: Kind | 'glow', g: THREE.BufferGeometry | null, c: number | THREE.Color, step = 3): boolean => {
     if (!g) return false;
     if (ctx.inRoad(g, step)) return false;
-    list.push(colour(g, c));
+    (kind === 'glow' ? glow : parts[kind]).push(colour(g, c));
     return true;
   };
 
@@ -278,7 +294,7 @@ export function buildZenith(ctx: StationCtx): void {
         const foil = (Math.floor(deg / 30) * 5 + k) % 11 === 3;
         shade.set(seam ? HULL_SEAM : foil ? FOIL : k === 0 || k === LANES - 1 ? HULL_DARK : HULL).multiplyScalar(0.96 + rnd() * 0.04);
         // (Finely, where the road rolls through the band at the top.)
-        keep(hull, tile, shade, deg > 140 && deg < 220 ? 1 : 3);
+        keep(seam ? 'plating' : foil ? 'foil' : k === 0 || k === LANES - 1 ? 'machinery' : 'band', tile, shade, deg > 140 && deg < 220 ? 1 : 3);
       }
       // The rims along the band's edges, standing in past its inner face, a
       // band of lit windows along each.
@@ -287,12 +303,12 @@ export function buildZenith(ctx: StationCtx): void {
           ringPoint(rf, deg, R - 18, a), ringPoint(rf, deg, R + B + 3, a), ringPoint(rf, deg, R + B + 3, a + out * 5), ringPoint(rf, deg, R - 18, a + out * 5),
           ringPoint(rf, deg + STEP, R - 18, a), ringPoint(rf, deg + STEP, R + B + 3, a), ringPoint(rf, deg + STEP, R + B + 3, a + out * 5), ringPoint(rf, deg + STEP, R - 18, a + out * 5),
         ]);
-        if (keep(hull, rim, deg % 30 < STEP ? HULL_SEAM : HULL_DARK)) {
+        if (keep('plating', rim, deg % 30 < STEP ? HULL_SEAM : HULL_DARK)) {
           for (const side of [-0.3, 5.3]) {
             const ax = a + out * side;
             const lit = (Math.floor(deg / STEP) * 7 + (out > 0 ? 3 : 0)) % 5 !== 0;
             if (!lit) continue;
-            keep(glow, solid([
+            keep('glow', solid([
               ringPoint(rf, deg + 0.3, R - 12, ax), ringPoint(rf, deg + 0.3, R - 8, ax), ringPoint(rf, deg + 0.3, R - 8, ax + out * 0.2), ringPoint(rf, deg + 0.3, R - 12, ax + out * 0.2),
               ringPoint(rf, deg + STEP - 0.3, R - 12, ax), ringPoint(rf, deg + STEP - 0.3, R - 8, ax), ringPoint(rf, deg + STEP - 0.3, R - 8, ax + out * 0.2), ringPoint(rf, deg + STEP - 0.3, R - 12, ax + out * 0.2),
             ]), 0xffd89a);
@@ -305,16 +321,16 @@ export function buildZenith(ctx: StationCtx): void {
     const hubA0 = rf.a0 - 70;
     const hubA1 = rf.a1 + 70;
     const at = (a: number) => rf.centre.clone().addScaledVector(rf.axis, a);
-    keep(hull, rod(at(hubA0), at(hubA1), HUB, 24), HULL);
-    for (const a of [hubA0 + 12, rf.a0 - 10, rf.a1 + 10, hubA1 - 12]) keep(hull, rod(at(a - 4), at(a + 4), HUB + 5, 24), HULL_SEAM);
-    keep(glow, rod(at((hubA0 + hubA1) / 2 - 1.5), at((hubA0 + hubA1) / 2 + 1.5), HUB + 1, 24), 0x7ff4ff);
+    keep('plating', rod(at(hubA0), at(hubA1), HUB, 24), HULL);
+    for (const a of [hubA0 + 12, rf.a0 - 10, rf.a1 + 10, hubA1 - 12]) keep('machinery', rod(at(a - 4), at(a + 4), HUB + 5, 24), HULL_SEAM);
+    keep('glow', rod(at((hubA0 + hubA1) / 2 - 1.5), at((hubA0 + hubA1) / 2 + 1.5), HUB + 1, 24), 0x7ff4ff);
     // A docking port on its far end.
-    keep(hull, rod(at(hubA0 - 50), at(hubA0), 22, 16, 30), HULL_DARK);
-    keep(glow, hoop(at(hubA0 - 50), rf.axis, 24, 1.2, 32, 6), 0x7ff4ff);
+    keep('machinery', rod(at(hubA0 - 50), at(hubA0), 22, 16, 30), HULL_DARK);
+    keep('glow', hoop(at(hubA0 - 50), rf.axis, 24, 1.2, 32, 6), 0x7ff4ff);
     for (const deg of [45, 135, 225, 315]) {
       for (const a of [rf.a0 + 2.5, rf.a1 - 2.5]) {
-        keep(hull, beam(ringPoint(rf, deg, HUB, a), ringPoint(rf, deg, R - 18, a), 9, 9, rf.axis), HULL_DARK);
-        keep(glow, beam(ringPoint(rf, deg, HUB + 6, a), ringPoint(rf, deg, R - 24, a), 1.2, 9.6, rf.axis), 0x7ff4ff);
+        keep('machinery', beam(ringPoint(rf, deg, HUB, a), ringPoint(rf, deg, R - 18, a), 9, 9, rf.axis), HULL_DARK);
+        keep('glow', beam(ringPoint(rf, deg, HUB + 6, a), ringPoint(rf, deg, R - 24, a), 1.2, 9.6, rf.axis), 0x7ff4ff);
       }
     }
   }
@@ -330,44 +346,44 @@ export function buildZenith(ctx: StationCtx): void {
     // Round the road's loop (it moves `across` along the core on the way round).
     const a0 = Math.min(0, MOBIUS.across) - 36;
     const a1 = Math.max(0, MOBIUS.across) + 36;
-    keep(hull, rod(along(a0), along(a1), CORE, 32), HULL);
-    for (let a = a0 + 14; a < a1 - 6; a += 24) keep(glow, rod(along(a - 1.5), along(a + 1.5), CORE + 0.8, 32), 0x7ff4ff);
+    keep('plating', rod(along(a0), along(a1), CORE, 32), HULL);
+    for (let a = a0 + 14; a < a1 - 6; a += 24) keep('glow', rod(along(a - 1.5), along(a + 1.5), CORE + 0.8, 32), 0x7ff4ff);
     // The reactor past it, away from the hub, and its glowing end.
     const toHub = rf.centre.clone().sub(centre).dot(right) > 0 ? 1 : -1;
     const hubFace = toHub > 0 ? a1 : a0;
     const awayFace = toHub > 0 ? a0 : a1;
     const tip = awayFace - toHub * 120;
-    keep(hull, rod(along(awayFace), along(awayFace - toHub * 60), CORE - 10, 32, CORE), FOIL);
-    keep(hull, rod(along(awayFace - toHub * 60), along(tip), CORE - 24, 24, CORE - 10), HULL_DARK);
-    keep(glow, rod(along(tip), along(tip - toHub * 4), CORE - 32, 24), 0xa8f8ff);
+    keep('foil', rod(along(awayFace), along(awayFace - toHub * 60), CORE - 10, 32, CORE), FOIL);
+    keep('machinery', rod(along(awayFace - toHub * 60), along(tip), CORE - 24, 24, CORE - 10), HULL_DARK);
+    keep('glow', rod(along(tip), along(tip - toHub * 4), CORE - 32, 24), 0xa8f8ff);
     // The spine, from the hub's end to the core.
     const hubEnd = rf.centre.clone().addScaledVector(rf.axis, rf.a1 + 70);
     const coreEnd = along(hubFace);
     const spineDir = coreEnd.clone().sub(hubEnd);
     const spineLen = spineDir.length();
     spineDir.normalize();
-    keep(hull, rod(hubEnd, coreEnd, 13, 16), HULL_DARK);
+    keep('machinery', rod(hubEnd, coreEnd, 13, 16), HULL_DARK);
     const side = v3().crossVectors(spineDir, v3(0, 1, 0)).normalize();
     for (let a = 40; a < spineLen - 30; a += 46) {
       const c = hubEnd.clone().addScaledVector(spineDir, a);
-      keep(hull, rod(c.clone().addScaledVector(spineDir, -3), c.clone().addScaledVector(spineDir, 3), 18, 16), HULL_SEAM);
+      keep('machinery', rod(c.clone().addScaledVector(spineDir, -3), c.clone().addScaledVector(spineDir, 3), 18, 16), HULL_SEAM);
       // Pods off it, round and round; radiators off every other collar.
       const k = Math.round(a / 46);
       const dir = [v3(0, 1, 0), side, v3(0, -1, 0), side.clone().negate()][k % 4];
-      if (k % 3 !== 1) keep(hull, rod(c.clone().addScaledVector(dir, 14), c.clone().addScaledVector(dir, 60), 15, 16), k % 2 ? FOIL : HULL);
+      if (k % 3 !== 1) keep(k % 2 ? 'foil' : 'plating', rod(c.clone().addScaledVector(dir, 14), c.clone().addScaledVector(dir, 60), 15, 16), k % 2 ? FOIL : HULL);
       if (k % 2 === 0) {
         const out = [side, side.clone().negate()][Math.floor(k / 2) % 2];
-        keep(hull, panel(c.clone().addScaledVector(out, 70), out.clone().multiplyScalar(52), spineDir.clone().multiplyScalar(14), 1.6), RADIATOR);
+        keep('radiator', panel(c.clone().addScaledVector(out, 70), out.clone().multiplyScalar(52), spineDir.clone().multiplyScalar(14), 1.6), RADIATOR);
       }
     }
     // Two great solar wings off the middle of the spine, turned to the sun.
     const mid = hubEnd.clone().addScaledVector(spineDir, spineLen * 0.5);
     for (const out of [side, side.clone().negate()]) {
-      keep(hull, beam(mid.clone().addScaledVector(out, 16), mid.clone().addScaledVector(out, 330), 4, 4), SOLAR_FRAME);
+      keep('machinery', beam(mid.clone().addScaledVector(out, 16), mid.clone().addScaledVector(out, 330), 4, 4), SOLAR_FRAME);
       for (let k = 0; k < 6; k++) {
         const c = mid.clone().addScaledVector(out, 50 + k * 48);
         const tilt = v3(0, 1, 0).applyAxisAngle(out, 0.5).multiplyScalar(36);
-        keep(hull, panel(c, out.clone().multiplyScalar(22), v3().crossVectors(out, tilt).normalize().multiplyScalar(36), 1), SOLAR);
+        keep('solar', panel(c, out.clone().multiplyScalar(22), v3().crossVectors(out, tilt).normalize().multiplyScalar(36), 1), SOLAR);
       }
     }
   }
@@ -379,9 +395,9 @@ export function buildZenith(ctx: StationCtx): void {
     const from = starts[def.pieces.findIndex((pc) => pc.name === 'the Mass Driver') - 1];
     const lip = range('lip');
     const to = lip ? lip[1] : driver[1];
-    keep(hull, sweep(track, from, to, 8, () => [[-26, -9], [26, -9], [20, -30], [-20, -30]]), HULL_DARK);
-    keep(glow, sweep(track, from, to, 8, () => [[-26.4, -9.5], [-26.4, -11.5], [-25.4, -11.5], [-25.4, -9.5]]), 0x7ff4ff);
-    keep(glow, sweep(track, from, to, 8, () => [[25.4, -9.5], [25.4, -11.5], [26.4, -11.5], [26.4, -9.5]]), 0x7ff4ff);
+    keep('machinery', sweep(track, from, to, 8, () => [[-26, -9], [26, -9], [20, -30], [-20, -30]]), HULL_DARK);
+    keep('glow', sweep(track, from, to, 8, () => [[-26.4, -9.5], [-26.4, -11.5], [-25.4, -11.5], [-25.4, -9.5]]), 0x7ff4ff);
+    keep('glow', sweep(track, from, to, 8, () => [[25.4, -9.5], [25.4, -11.5], [26.4, -11.5], [26.4, -9.5]]), 0x7ff4ff);
     const n = Math.floor((driver[1] - driver[0] - 20) / 30);
     for (let k = 0; k <= n; k++) {
       const s = driver[0] + 10 + k * 30;
@@ -409,13 +425,13 @@ export function buildZenith(ctx: StationCtx): void {
     // line (it flies the arc a mech at the jump's own speed would): a tight
     // ring to thread.
     const c = plainPoint(track, s, 0, 9);
-    keep(hull, hoop(c, t, 42, 4, 72, 10), HULL);
-    keep(glow, hoop(c.clone().addScaledVector(t, -4.2), t, 42, 1, 72, 6), 0x7ff4ff);
+    keep('plating', hoop(c, t, 42, 4, 72, 10), HULL);
+    keep('glow', hoop(c.clone().addScaledVector(t, -4.2), t, 42, 1, 72, 6), 0x7ff4ff);
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;
       const dir = u.clone().applyAxisAngle(t, a);
-      keep(hull, beam(c.clone().addScaledVector(dir, 45), c.clone().addScaledVector(dir, 70), 5, 5, t), HULL_DARK);
-      keep(glow, rod(c.clone().addScaledVector(dir, 70).addScaledVector(t, -1), c.clone().addScaledVector(dir, 70).addScaledVector(t, 1), 3, 8), k % 2 ? 0xff4a3a : 0x4aff7a);
+      keep('machinery', beam(c.clone().addScaledVector(dir, 45), c.clone().addScaledVector(dir, 70), 5, 5, t), HULL_DARK);
+      keep('glow', rod(c.clone().addScaledVector(dir, 70).addScaledVector(t, -1), c.clone().addScaledVector(dir, 70).addScaledVector(t, 1), 3, 8), k % 2 ? 0xff4a3a : 0x4aff7a);
     }
   }
 
@@ -425,12 +441,12 @@ export function buildZenith(ctx: StationCtx): void {
   if (landing && dock) {
     const end = dock[1] + 40;
     // The body under it all.
-    keep(hull, sweep(track, landing[0], end, 8, () => [[-72, -12], [72, -12], [64, -60], [-64, -60]]), HULL);
-    keep(hull, sweep(track, landing[0] - 30, landing[0] + 4, 8, () => [[-66, -12], [66, -12], [58, -56], [-58, -56]]), FOIL);
+    keep('plating', sweep(track, landing[0], end, 8, () => [[-72, -12], [72, -12], [64, -60], [-64, -60]]), HULL);
+    keep('foil', sweep(track, landing[0] - 30, landing[0] + 4, 8, () => [[-66, -12], [66, -12], [58, -56], [-58, -56]]), FOIL);
     // The gallery's raised back under the right route, and the corridor
     // walled and roofed round the left one, where the routes have swung out.
     const v = v3();
-    const routeSweep = (side: -1 | 1, section: (i: number) => Array<[number, number]>, c: number) => {
+    const routeSweep = (side: -1 | 1, section: (i: number) => Array<[number, number]>, c: number, kind: Kind | 'glow') => {
       const rows: THREE.Vector3[][] = [];
       for (let s = dock[0]; s <= dock[1]; s += 4) {
         const i = Math.floor(s / track.ds) % track.n;
@@ -453,14 +469,14 @@ export function buildZenith(ctx: StationCtx): void {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       g.computeVertexNormals();
-      keep(hull, g, c);
+      keep(kind, g, c);
     };
     const edge = (i: number) => track.hw[i] + KEEP_OUT.side + 3;
-    routeSweep(1, (i) => [[0.5, -1], [edge(i), -1], [edge(i), -12 - track.riseR[i]], [0.5, -12 - track.riseR[i]]], HULL_DARK);
+    routeSweep(1, (i) => [[0.5, -1], [edge(i), -1], [edge(i), -12 - track.riseR[i]], [0.5, -12 - track.riseR[i]]], HULL_DARK, 'machinery');
     const roof = KEEP_OUT.up + 12;
-    routeSweep(-1, (i) => [[-edge(i) - 6, -12 - track.riseL[i]], [-edge(i) - 6, roof], [-edge(i), roof], [-edge(i), -12 - track.riseL[i]]], HULL);
-    routeSweep(-1, (i) => [[-edge(i) - 6, roof], [-edge(i) - 6, roof + 6], [-0.4, roof + 6], [-0.4, roof]], HULL_SEAM);
-    routeSweep(-1, (i) => [[-edge(i) - 0.2, roof - 2], [-edge(i) - 0.2, roof - 4], [-edge(i), roof - 4], [-edge(i), roof - 2]], 0x7ff4ff);
+    routeSweep(-1, (i) => [[-edge(i) - 6, -12 - track.riseL[i]], [-edge(i) - 6, roof], [-edge(i), roof], [-edge(i), -12 - track.riseL[i]]], HULL, 'band');
+    routeSweep(-1, (i) => [[-edge(i) - 6, roof], [-edge(i) - 6, roof + 6], [-0.4, roof + 6], [-0.4, roof]], HULL_SEAM, 'machinery');
+    routeSweep(-1, (i) => [[-edge(i) - 0.2, roof - 2], [-edge(i) - 0.2, roof - 4], [-edge(i), roof - 4], [-edge(i), roof - 2]], 0x7ff4ff, 'glow');
   }
 
   // ---- the solar arrays under the Solar Wings ----
@@ -480,33 +496,168 @@ export function buildZenith(ctx: StationCtx): void {
       for (let z = z0 - 300; z <= z1 + 300; z += D * 2 + 10) {
         const c = v3(x + (rnd() - 0.5) * 2, y - 70 - rnd() * 6, z);
         const ey = v3(0, Math.sin(tilt), Math.cos(tilt)).multiplyScalar(D);
-        keep(hull, panel(c, v3(W / 2, 0, 0), ey, 0.8), SOLAR);
-        keep(hull, beam(c.clone().add(v3(-W / 2, -1, 0)), c.clone().add(v3(W / 2, -1, 0)), 1.6, 1.6), SOLAR_FRAME);
+        keep('solar', panel(c, v3(W / 2, 0, 0), ey, 0.8), SOLAR);
+        keep('machinery', beam(c.clone().add(v3(-W / 2, -1, 0)), c.clone().add(v3(W / 2, -1, 0)), 1.6, 1.6), SOLAR_FRAME);
       }
       // The mast each row hangs from.
-      keep(hull, beam(v3(x, y - 74, z0 - 320), v3(x, y - 74, z1 + 320), 3, 3), SOLAR_FRAME);
+      keep('machinery', beam(v3(x, y - 74, z0 - 320), v3(x, y - 74, z1 + 320), 3, 3), SOLAR_FRAME);
     }
   }
 
   // ---- the paddock by the line ----
   const start = range('start straight');
   if (start) {
-    keep(hull, sweep(track, start[0] - 220, start[0] + 260, 10, () => [[-104, -6], [-58, -6], [-58, 30], [-104, 30]]), HULL);
-    keep(glow, sweep(track, start[0] - 220, start[0] + 260, 10, () => [[-57.8, 14], [-57.6, 14], [-57.6, 20], [-57.8, 20]]), 0xffd89a);
-    keep(hull, sweep(track, start[0] - 220, start[0] + 260, 10, () => [[-108, 30], [-54, 30], [-54, 34], [-108, 34]]), STRIPE);
+    keep('band', sweep(track, start[0] - 220, start[0] + 260, 10, () => [[-104, -6], [-58, -6], [-58, 30], [-104, 30]]), HULL);
+    keep('glow', sweep(track, start[0] - 220, start[0] + 260, 10, () => [[-57.8, 14], [-57.6, 14], [-57.6, 20], [-57.8, 20]]), 0xffd89a);
+    keep('trim', sweep(track, start[0] - 220, start[0] + 260, 10, () => [[-108, 30], [-54, 30], [-54, 34], [-108, 34]]), STRIPE);
+  }
+
+  // ---- the sign over the road into the Ring, on a frame from the deck's edges ----
+  const intake = range('the Intake');
+  if (intake) {
+    // (Back from the Ring's foot: the road down its outside comes low over the line here.)
+    const s = intake[0] - 90;
+    const W = 96;
+    const H = 30;
+    const Y = 40;
+    const m = new THREE.Matrix4();
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: zenithSign(), side: THREE.DoubleSide }));
+    trackMatrix(track, s, 0, Y, Math.PI, m);
+    sign.applyMatrix4(m);
+    group.add(sign);
+    // Painted (track sheet T7), on a panel of its own shape in the same frame.
+    const own = paintedTrack.circuitSigns[def.theme ?? ''];
+    if (own) {
+      const ph = Math.min(H, W / own.aspect);
+      const panel = new THREE.Mesh(new THREE.PlaneGeometry(W, ph), new THREE.MeshBasicMaterial({ map: paintedTexture(own.url), side: THREE.DoubleSide }));
+      trackMatrix(track, s, 0, Y + (H - ph) / 2, Math.PI, m);
+      panel.applyMatrix4(m);
+      group.add(panel);
+      ctx.swaps.push((on) => {
+        sign.visible = !on;
+        panel.visible = on;
+      });
+    }
+    for (const side of [-1, 1]) keep('machinery', beam(plainPoint(track, s, side * (W / 2 + 4), -8), plainPoint(track, s, side * (W / 2 + 4), Y + H / 2 + 3), 3, 3), HULL_DARK);
+    keep('machinery', beam(plainPoint(track, s, -W / 2 - 6, Y + H / 2 + 3), plainPoint(track, s, W / 2 + 6, Y + H / 2 + 3), 3, 3), HULL_DARK);
   }
 
   // ---- into the scene ----
-  if (hull.length) {
-    const mesh = new THREE.Mesh(mergeGeometries(hull), toonMaterial({ color: 0xffffff }));
-    mesh.name = 'station';
+  const plain = toonMaterial({ color: 0xffffff });
+  for (const kind of Object.keys(parts) as Kind[]) {
+    if (!parts[kind].length) continue;
+    const mesh = new THREE.Mesh<THREE.BufferGeometry, THREE.Material>(mergeGeometries(parts[kind]), plain);
+    mesh.name = `station ${kind}`;
     group.add(mesh);
+    const url = kind !== 'trim' ? ctx.painted?.surfaces[kind] : undefined;
+    if (url && kind !== 'trim') {
+      // (The painting only once it is in: until then a painted material draws black.)
+      let on = false;
+      let ready = false;
+      const map = paintedTexture(url, {
+        repeat: true,
+        onReady: () => {
+          ready = true;
+          mesh.material = on ? painted : plain;
+        },
+      });
+      const painted = paintedSurfaceMaterial(map, map, REPEAT[kind], REPEAT[kind], THREE.FrontSide, { toon: true, dip: 0 });
+      ctx.swaps.push((p) => {
+        on = p;
+        mesh.material = on && ready ? painted : plain;
+      });
+    }
   }
+  farOff(ctx, rf);
   if (glow.length) {
     const mesh = new THREE.Mesh(mergeGeometries(glow), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
     mesh.name = 'station lights';
     group.add(mesh);
   }
+}
+
+/**
+ * Things far off in orbit, with the painted background: its cards (Z3: a
+ * satellite, another station, a freighter, a spent stage, a radio
+ * telescope, some wreckage), hung a few kilometres out round the station,
+ * above the Earth's limb, each turned to face the camera.
+ */
+function farOff(ctx: StationCtx, rf: RingFrame | null): void {
+  const set = ctx.painted;
+  if (!set || set.clouds.cards.length === 0) return;
+  const { cards, url } = set.clouds;
+  const map = paintedTexture(url);
+  const mats = cards.map((c) => paintedCardMaterial(map, [c.u0, c.v0, c.u1 - c.u0, c.v1 - c.v0], 1, THREE.DoubleSide));
+  const geo = new THREE.PlaneGeometry(1, 1);
+  const centre = rf ? rf.centre.clone().add(v3(700, -150, 300)) : v3();
+  // Card, how wide, how far out, which way round (degrees), how high (degrees above level).
+  const hung: Array<[number, number, number, number, number]> = [
+    [0, 180, 2600, 30, 14],
+    [1, 900, 7000, 140, 6],
+    [2, 420, 3800, 215, 22],
+    [3, 220, 3000, 290, -3],
+    [4, 380, 4600, 340, 30],
+    [5, 160, 2200, 100, 3],
+    [0, 120, 4200, 250, 40],
+    [5, 110, 2700, 190, -5],
+  ];
+  const group = new THREE.Group();
+  group.name = 'far off';
+  const meshes: Array<{ m: THREE.Mesh; spin: number }> = [];
+  for (const [k, w, r, az, el] of hung) {
+    if (!cards[k]) continue;
+    const a = (az * Math.PI) / 180;
+    const e = (el * Math.PI) / 180;
+    const m = new THREE.Mesh(geo, mats[k]);
+    m.position.set(centre.x + Math.cos(a) * Math.cos(e) * r, centre.y + Math.sin(e) * r, centre.z + Math.sin(a) * Math.cos(e) * r);
+    m.scale.set(w, w / cards[k].aspect, 1);
+    m.renderOrder = -6;
+    m.frustumCulled = false;
+    group.add(m);
+    meshes.push({ m, spin: (k % 2 ? 1 : -1) * (0.004 + (k * 0.0013) % 0.004) });
+  }
+  ctx.group.add(group);
+  ctx.paintedOnly.push(group);
+  ctx.updates.push((time, camera) => {
+    if (!group.visible) return;
+    // Facing the camera, turning slowly in its own plane as things adrift do.
+    for (const { m, spin } of meshes) {
+      m.quaternion.copy(camera.quaternion);
+      m.rotateZ(time * spin);
+    }
+  });
+}
+
+/** Zenith Ring's sign over the road into the Ring, as the plain look letters it. */
+function zenithSign(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 640;
+  c.height = 200;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#0a1030';
+  g.fillRect(0, 0, 640, 200);
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 4;
+  g.strokeRect(10, 10, 620, 180);
+  const band = g.createLinearGradient(40, 0, 600, 0);
+  band.addColorStop(0, '#4a90ff');
+  band.addColorStop(1, '#9ad8ff');
+  g.fillStyle = band;
+  g.fillRect(40, 142, 560, 14);
+  g.fillStyle = '#ffffff';
+  let size = 92;
+  g.font = `bold ${size}px "Arial Black", Impact, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  while (g.measureText('ZENITH RING').width > 560 && size > 30) {
+    size -= 4;
+    g.font = `bold ${size}px "Arial Black", Impact, sans-serif`;
+  }
+  g.fillText('ZENITH RING', 320, 80);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
 }
 
 function mulberry(seed: number): () => number {

@@ -21,6 +21,9 @@ What it does to the sheets:
   alone (Neon Crucible's facades: the lit windows, for their glow).
 - Signs (Neon Crucible's neon signs): each cut out of the green by its
   outline, as the track kit's boards are.
+- The Earth (Zenith Ring, in orbit): its surface's squares seen from orbit,
+  made to repeat as the surfaces are; no horizon strips (there is no
+  horizon), and its cards are things far off in orbit in place of clouds.
 """
 import json
 import os
@@ -102,6 +105,19 @@ CIRCUITS = {
         clouds='bg-r3-clouds.png',
         surfaces='bg-r4-surfaces.png',
         tiles=['sand', 'armour', 'armourRed', 'frame', 'blade', 'bronze'],
+    ),
+    'zenith': dict(
+        sky=['bg-z1-sky.png', 'bg-z1b-sky.png'],
+        # The Milky Way is brighter than the sun's small glare: its column on Z1, by hand.
+        sun_col=768,
+        # Things far off in orbit, in place of clouds. The radio telescope's
+        # mast runs off the bottom of the sheet: cut ends fade out.
+        clouds='bg-z3-far.png',
+        fade_cut=True,
+        surfaces='bg-z4-surfaces.png',
+        tiles=['plating', 'foil', 'solar', 'radiator', 'machinery', 'band'],
+        earth='bg-z2-earth.png',
+        earth_tiles=['ocean', 'desert', 'cloud', 'green', 'night', 'mountains'],
     ),
 }
 
@@ -324,6 +340,18 @@ def build_clouds(spec):
         y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
         card = rgba[y0:y1, x0:x1].copy()
         card[..., 3] *= m[y0:y1, x0:x1]
+        if spec.get('fade_cut'):
+            # Where it runs off the sheet, fade it out rather than end it on a straight cut.
+            n = 48
+            ramp = np.linspace(0, 1, n)
+            if y1 >= H - 1:
+                card[-n:, :, 3] *= ramp[::-1][:, None]
+            if y0 <= 0:
+                card[:n, :, 3] *= ramp[:, None]
+            if x1 >= W - 1:
+                card[:, -n:, 3] *= ramp[::-1][None, :]
+            if x0 <= 0:
+                card[:, :n, 3] *= ramp[None, :]
         h, w = card.shape[:2]
         s = min(1.0, 500 / w, 500 / h)
         if s < 1:
@@ -376,10 +404,10 @@ def lights(t):
     return t * m
 
 
-def build_surfaces(spec):
-    sheet = load(spec['surfaces'])
+def build_surfaces(spec, sheet_key='surfaces', tiles_key='tiles'):
+    sheet = load(spec[sheet_key])
     out = {}
-    for i, name in enumerate(spec['tiles']):
+    for i, name in enumerate(spec[tiles_key]):
         r, c = divmod(i, 3)
         out[name] = seamless(sheet[r * 512:(r + 1) * 512, c * 512:(c + 1) * 512])
     for name, lit in spec.get('lit', {}).items():
@@ -419,7 +447,7 @@ def main():
         files = {}
         sky, sun = build_sky(spec)
         files['sky'] = save(sky, os.path.join(d, 'sky.webp'), 84)
-        strips = build_horizon(spec)
+        strips = build_horizon(spec) if 'horizon' in spec else []
         for i, s in enumerate(strips):
             files[f'horizon{i}'] = save(s, os.path.join(d, f'horizon{i}.webp'))
         if 'clouds' in spec:
@@ -430,6 +458,9 @@ def main():
         surfaces = build_surfaces(spec)
         for k, t in surfaces.items():
             files[k] = save(t, os.path.join(d, f'{k}.webp'), 84)
+        earth = build_surfaces(spec, 'earth', 'earth_tiles') if 'earth' in spec else {}
+        for k, t in earth.items():
+            files[f'earth-{k}'] = save(t, os.path.join(d, f'earth-{k}.webp'), 84)
         signs = cut_boards(load(spec['signs'])) if 'signs' in spec else []
         for i, b in enumerate(signs):
             files[f'sign{i}'] = save(b, os.path.join(d, f'sign{i}.webp'), 90)
@@ -443,6 +474,8 @@ def main():
             lines.append(f"import horizon{i} from './{name}/horizon{i}.webp';")
         for k in surfaces:
             lines.append(f"import {ident(k)} from './{name}/{k}.webp';")
+        for k in earth:
+            lines.append(f"import earth{k[0].upper() + k[1:]} from './{name}/earth-{k}.webp';")
         for i in range(len(signs)):
             lines.append(f"import sign{i} from './{name}/sign{i}.webp';")
         strip_list = ', '.join(f'{{ url: horizon{i}, aspect: {round(s.shape[1] / s.shape[0], 4)} }}' for i, s in enumerate(strips))
@@ -456,7 +489,9 @@ def main():
             f'  horizon: [{strip_list}],',
             (f'  clouds: {{ url: clouds, cards: {json.dumps(cards)} }},' if 'clouds' in spec else "  clouds: { url: '', cards: [] },"),
             f'  surfaces: {{ {surf} }},',
-        ] + ([f"  signs: [{', '.join(f'{{ url: sign{i}, aspect: {round(b.shape[1] / b.shape[0], 4)} }}' for i, b in enumerate(signs))}],"] if signs else []) + [
+        ] + ([f"  signs: [{', '.join(f'{{ url: sign{i}, aspect: {round(b.shape[1] / b.shape[0], 4)} }}' for i, b in enumerate(signs))}],"] if signs else []) + (
+            [f"  earth: {{ {', '.join(f'{json.dumps(k)}: earth{k[0].upper() + k[1:]}' for k in earth)} }},"] if earth else []
+        ) + [
             '};',
             'export default set;',
             '',

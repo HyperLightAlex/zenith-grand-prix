@@ -163,16 +163,23 @@ to one brief per circuit and checked one at a time.
   setting; the disc sinks behind the far mesas), high overhead at Helios;
   at the Crucible and Frostline it is the moon, cold white, where its halo
   is painted; at Titan's Rest the morning sun, low and white-gold, where R1
-  paints its glow. Frostline's sky has the aurora painted into it (the plain look
-  draws its own, swaying).
+  paints its glow; at Zenith Ring the sun in space, hard and white, where Z1
+  paints its small glare. Frostline's sky has the aurora painted into it (the plain look
+  draws its own, swaying). Zenith Ring's sky is space: its painting (stars
+  and the Milky Way) goes on down past eye level, mirrored, to the Earth's
+  limb, and below it the Earth is laid with painted squares of its surface
+  seen from orbit (sheet Z2: ocean, desert, green country and mountains,
+  the weather's cloud over them, the night side's lit cities), lit by the
+  game: a low sun across it, the night side along the far limb, haze and a
+  thin blue atmosphere toward the edge.
 - **The horizon**: three painted strips, each on a ring round the circuit at
   its own distance (Meridian: far mountains, the coast, a city across the
   water; Canyon: mesas, buttes and spires, hoodoos; Helios: far snowy peaks,
   nearer peaks, a wall of cumulus; the Crucible: mountains, the far side of
   the city, the foundry district; Frostline: snowy mountains, a coast of
   glaciers, icebergs in the pack ice; Titan's Rest: worn mountains, a
-  graveyard of other fallen giants, dunes with wreckage), standing on the
-  ground and repeating
+  graveyard of other fallen giants, dunes with wreckage; Zenith Ring, with
+  no horizon, has none), standing on the ground and repeating
   round the circle. They move against each other a little as the circuit
   turns, as layered paintings would.
 - **Clouds**: painted cumulus cards in place of the modelled ones, turning to
@@ -183,7 +190,11 @@ to one brief per circuit and checked one at a time.
   at the top, shaded in the night's violets and lit orange from below near
   the fire (`render/puffs.ts`). A puff is round, so it looks right from any
   side; the painted plumes of sheet N3, flat cards turning to face the
-  camera, showed their turning as the camera went round them.
+  camera, showed their turning as the camera went round them. Zenith Ring
+  has things far off in orbit instead (sheet Z3: a satellite, another
+  station, a freighter, a spent stage, a radio telescope, wreckage), hung a
+  few kilometres out and facing the camera, turning slowly as things adrift
+  do.
 - **Surfaces**, as repeating painted textures:
   - Meridian: the sea, three kinds of tower facade (glass offices, hotels,
     dark glass), the platforms the towers stand on, and white panels on the
@@ -218,6 +229,11 @@ to one brief per circuit and checked one at a time.
     `art/model-sheets`) and fitted to the road (`art/blender/titan`);
     until it is in, the game draws a placeholder from simple shapes in the
     same pose (`render/titan/pose.ts`).
+  - Zenith Ring: the station's white plating, gold foil, solar cells,
+    radiators, dark machinery, and the Ring band's windowed face (the
+    stand-in station, `render/zenith.ts`, is drawn in kinds of surface so
+    each takes its painting). Its sign over the road into the Ring is on
+    track sheet T7.
   The rock's texture coordinates come from the world position and each
   face's facing (`paintedRock` in `world.ts`): the strata stay level all the
   way round a mesa and dip gently across the desert, so no two mesas band
