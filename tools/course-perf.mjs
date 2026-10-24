@@ -24,7 +24,7 @@ await page.addInitScript(() => {
 });
 const url = new URL(base);
 // The computer flies the player's mech round, so the camera goes round the lap.
-for (const [k, v] of Object.entries({ mute: '1', perf: '1', seed: '9', auto: 'FW' })) url.searchParams.set(k, v);
+for (const [k, v] of Object.entries({ mute: '1', perf: '1', seed: '9', demo: '1' })) url.searchParams.set(k, v);
 await page.goto(url.href);
 await page.waitForFunction(() => window.game, null, { polling: 100, timeout: 120000 });
 const out = [];
