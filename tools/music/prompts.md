@@ -21,6 +21,7 @@ build matches its mastering).
 | Neon Crucible race | Neon Fire | D minor (ends in D major), ~193 BPM | in the game (stems only; the brief was not kept) |
 | Frostline race | Aurora Dash (asked for as 極光ライン, Aurora Line) | C# minor and E major, ends in C# major, 150 BPM | in the game (stems only; it came back in another key and without the key change, so it has no finale) |
 | Titan's Rest race | White Desert Charge (asked for as 巨神の眠り, The Sleeping Giant) | C minor (C major last section), ~140 BPM | in the game (stems only; lap 3 goes to its last section) |
+| Abyss Line race | 深海ライン (Deep Sea Line) | F minor (F# minor last chorus), 132 BPM | to be made |
 | Zenith Ring race | 天頂の環 (The Ring at the Zenith) | B minor (C# minor last chorus), 158 BPM | to be made |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
@@ -41,7 +42,7 @@ step up (Canyon) or a build and drop (Helios). Keep the lead on one
 instrument: vocal chops and choirs get carved out of the other stems and
 tangle them. Export the stems and the full song as WAVs. The circuits'
 songs so far are in A, G, E, D, C# and C minor, so a new one takes another
-key (Zenith Ring's is asked for in B minor).
+key (Zenith Ring's is asked for in B minor, Abyss Line's in F minor).
 
 ## Frostline race
 
@@ -111,9 +112,45 @@ Lyrics (structure only):
 [Outro: ends on a final hit]
 ```
 
+## Abyss Line race
+
+The seventh circuit: a race through glass tubes on the sea floor beside an
+undersea town, a hundred metres down: the Braid's two tubes twisting round
+each other, down into the trench and twice round the inside of the Twist,
+the Trench Leap across a chasm, and up under the roof of the town's great
+glass dome, upside down, its lights overhead. Deep, glassy and flowing: the
+dreamiest of them, slower than the others but still driving, the colour of
+the water and the town's lights through it. Lap 3 is the last chorus a
+semitone up.
+
+Title: 深海ライン (Deep Sea Line)
+
+Styles:
+
+```
+1980s mecha anime racing BGM, instrumental, 132 BPM, F minor, deep and flowing, a glassy FM electric piano and a soaring analog synth lead carrying the hook, shimmering chorus guitar arpeggios, a singing fretless bass, warm analog pads like light through water, punchy gated reverb drums, shakers and wind chimes, bubbling synth sweeps, a race through glass tubes on the sea floor beside an undersea town, dreamy but driving, tight modern mix
+```
+
+Exclude: `vocals, choir, saxophone`
+
+Lyrics (structure only):
+
+```
+[Intro: full band from the first bar, the hook on the synth lead]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Bridge: electric piano and guitar arpeggios over the beat, the drums keep going]
+[Final Chorus: key change up a semitone, everything in]
+[Outro: cadence onto a final hit]
+```
+
 ## Zenith Ring race
 
-The seventh circuit and the season's finale: a race in orbit round a great
+The ninth circuit and the season's finale: a race in orbit round a great
 ring station over the Earth, up the inside of the Ring and down its outside
 upside down, round the core in the Möbius, down the Mass Driver and through
 the docking ring, and over the solar arrays with nothing past their edge.

@@ -75,6 +75,7 @@ export const TRACK_BLURBS: Record<string, string> = {
   crucible: 'Down and back up, at night in an open-pit mine. The Leap, the Hook, a straight drop into the Drill, and the Coil up the pit wall, one turn of it with nothing on the inside.',
   frostline: 'An ice shelf under the aurora. The Aurora Split, a bridge with no barrier or the caves; the Ice Barrel up into the glacier; the Calving off its face; the Icefall and the Aurora Loop.',
   titan: 'On and through a fallen colossus in a white desert. Up its arm, through its halo, off its crown; a loop inside its ribs, a fork through its body, and twice round down the blade of its sword.',
+  abyss: 'Glass tubes on the sea floor beside an undersea town. The Braid, two tubes twisting round each other; down into the trench and twice round the inside of the Twist; the Trench Leap; across the inside of the town\'s dome upside down.',
   zenith: 'The finale, in orbit. Round the inside of the Ring and down its outside upside down, the Earth overhead; the Möbius round the core; the Mass Driver and a leap through the docking ring; the Solar Wings, with nothing past their edge.',
 };
 

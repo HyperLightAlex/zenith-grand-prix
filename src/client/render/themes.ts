@@ -27,8 +27,8 @@ export interface Theme {
   fogDensity: number;
   /** The aurora's curtains in the plain sky: how bright (0 or absent: none). */
   aurora?: number;
-  /** What the circuit stands on, and how far down it is ('orbit': nothing; the sky is space, with the Earth below). */
-  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice' | 'wreck' | 'orbit';
+  /** What the circuit stands on, and how far down it is ('orbit': nothing; the sky is space, with the Earth below. 'seabed': the sea floor, the sky is the sea). */
+  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice' | 'wreck' | 'orbit' | 'seabed';
   groundY: number;
   groundDeep: number;
   groundLight2: number;
@@ -193,6 +193,35 @@ export const THEMES: Record<string, Theme> = {
     ridge: 0xa9afcb,
     cloudShade: 0x9aa2c8,
     clouds: 16,
+  },
+  // On the sea floor, a hundred metres down: blue-green water fading to
+  // navy below and lit from the surface above, light coming down in shafts,
+  // pale sand, the town's lights. The fog is the water: things are lost in
+  // it within a kilometre or two.
+  abyss: {
+    id: 'abyss',
+    sunLight: 0xc8f2ff,
+    sunIntensity: 1.7,
+    skyLight: 0x6fd0e6,
+    groundLight: 0x0c3a52,
+    hemiIntensity: 1.25,
+    skyZenith: 0x9cf0ff,
+    skyMid: 0x1f86a6,
+    skyHorizon: 0x0f5a74,
+    halo: [0.55, 0.9, 1.0],
+    disc: [1.4, 1.65, 1.75],
+    discGlow: [0.45, 0.8, 0.9],
+    cirrus: [1, 1, 1],
+    cirrusAmount: 0,
+    fog: 0x0f5a74,
+    fogDensity: 0.00055,
+    ground: 'seabed',
+    groundY: 0,
+    groundDeep: 0x2a4a58,
+    groundLight2: 0xcfc6a2,
+    ridge: 0x0f3a50,
+    cloudShade: 0x2a6a80,
+    clouds: 0,
   },
   // In orbit: black sky and hard white sunlight, the Earth filling the sky
   // below the station, blue light coming up off it. groundY is far under

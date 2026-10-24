@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`).
+Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`) but Abyss Line's, which are to be made.
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -565,4 +565,88 @@ SHEET Z1B: SKY, THE HALF FACING AWAY (make it after Z1, with Z1 attached)
 - Same size, style and palette as Z1, the eye-level line at exactly the same height, the same flat space black below it and the same black along the top edge.
 - The other half of the sky, behind the viewer, facing away from the sun. Its left edge must continue seamlessly from Z1's right edge, and its right edge seamlessly into Z1's left edge, so the two side by side make the whole sky round.
 - No sun here: deeper black with more stars, and the Milky Way carrying on across it from Z1's edges, joining them, in the same colours.
+```
+
+## Abyss Line
+
+A racing circuit through glass tubes on the sea floor, a hundred metres
+down, beside an undersea town under a great glass dome: the light comes
+down from the surface in shafts, the water fades to blue-green all round
+and navy below, pale sand and dark rock, a trench going down into the dark,
+kelp, and the town's lights. Its "sky" is the water all round: the half
+facing the sun, with the surface bright above and the shafts of light
+coming down, and the half facing away. Its horizon is what stands far off
+in the water: rock ridges and sea mounts, the domes of the town's outskirts,
+the kelp forest; its cards are sea life drifting by (there are no clouds
+under the sea); its surfaces are the sand, the rock, the trench's walls,
+the town's facades, the dome's frame and coral. Its board along the track
+and the sign over the road into the town are on track sheet T8
+(`art/track-sheets`).
+
+| Sheet | File |
+|---|---|
+| A1 The water, facing the sun | bg-a1-sky.png |
+| A1B The water, facing away | bg-a1b-sky.png |
+| A2 Horizon | bg-a2-horizon.png |
+| A3 Sea life | bg-a3-life.png |
+| A4 Surfaces | bg-a4-surfaces.png |
+
+```
+ZENITH GP: CIRCUIT BACKGROUNDS. ABYSS LINE (five sheets; make them one at a time, in order A1, A2, A3, A4, then A1B with A1 attached, each as its own image)
+
+The setting: a racing circuit on the sea floor, about a hundred metres down, beside an undersea town: the road runs inside glass tubes laid across pale sand among dark rocks and kelp, two tubes twisting round each other, down into a deep trench and up again, and up under the roof of the town's great glass dome, whose streets glow with warm and cold lights. Sunlight comes down from the surface far above in soft shafts; the water fades to blue-green all round and to deep navy below. The game draws the road, the tubes, the mechs, the dome and the town and the sea floor near the road; these sheets are the painted water, the far scenery, the sea life and the surfaces around them.
+
+STYLE, ALL SHEETS
+- Background art from a 1980s Japanese TV mecha anime, the underwater episodes, painted by hand the way the background department did it: poster colour (gouache) on illustration board, the water airbrushed in smooth gradients, everything else painted in a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture. Water painted the way those backgrounds painted it: clear blue-greens fading with distance, light coming down in soft shafts and rippling across surfaces, never murky brown.
+- No ink outlines anywhere; background paintings had none.
+- Distance shown the way water shows it: the further away, the more it fades into the blue-green of the water, losing its colour first and then its shape.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, depth-of-field blur, film grain or noise (the game adds its own grain and glow).
+- Nothing but scenery and sea life: no people, divers, mechs, submarines, ships, vehicles, text, numbers, labels, logos, borders, signatures or watermarks.
+- Palette: the surface's bright aqua #9CF0FF high above, blue-green water #1F86A6, the water at eye level #0F5A74, deep navy #06202C below, light shafts pale aqua-white #D8FBFF, sand pale cream #CFC6A2 with cool blue shadows #7A9AA8, rock dark blue-grey #46565C, kelp deep olive #3F6A44 to golden brown #8A7A3A, coral rose #D87A8A and coral orange #E89A5A, the town's warm lights #FFD28A and cold lights #9FF0FF, the dome's frame steel blue-grey #4F5C66.
+- Every sheet is 1536x1024, landscape.
+
+SHEETS 2 AND 3 ARE CUT OUT BY THE GAME
+- Paint them on perfectly flat pure magenta, #FF00FF: no shading, texture, gradient, glow or shadow on the magenta. (Not green: the kelp and the water are green and blue-green.)
+- Nothing in the art itself may be magenta, pink or purple, or close to them: the coral stays rose and orange, nothing violet.
+- Crisp edges against the magenta, with no soft halo.
+
+SHEET A1: THE WATER, THE HALF FACING THE SUN (full bleed, no magenta)
+- Half the water all round the viewer, the half facing the sun, unrolled into one painting from the level of the viewer's eyes at the bottom to straight overhead at the top edge. Its left edge should also continue seamlessly into its right edge.
+- A perfectly straight, level line exactly three quarters of the way down (768 px from the top) is the viewer's eye level. Below it, only flat deep water (#0F5A74); paint nothing there.
+- An airbrushed gradient from the bright, rippling underside of the surface along the top (pale aqua and white, broken into a net of bright ripples) down through clear blue-green to the deeper blue-green at eye level.
+- The sun is behind the surface at the middle of the image, high up: a soft bright patch on the rippling surface near the top, from which broad soft shafts of pale light come down at a slant through the water, fanning out and fading before they reach eye level.
+- Small drifting specks of marine snow here and there, and a few small strings of rising bubbles.
+- The top edge is the surface's even pale aqua across the full width.
+
+SHEET A2: HORIZON (three strips on magenta)
+- Three separate horizontal strips stacked top to bottom with magenta between them. Each runs the full width of the image and is about 260 px tall.
+- Each strip's bottom edge is a perfectly straight, level line (it stands on the sea floor), with the strip filled solid down to it. Each strip repeats: its left end must continue seamlessly into its right end.
+- Top strip, farthest: long ridges of undersea rock and the slopes of sea mounts, faded almost into the blue-green water, very low contrast.
+- Middle strip: the town's outskirts far off: clusters of small glass domes and round towers on the sea floor, their windows lit in warm and cold points, linked by thin glass tubes, softened by distance.
+- Bottom strip, nearest: a kelp forest: tall ribbons of kelp in deep olive and golden brown rising from rocks and sand, swaying, with light catching their edges, a few round rocks and sponges at their feet.
+
+SHEET A3: SEA LIFE (six cards on magenta)
+- Six separate things drifting in the water, one in each cell of an invisible 3x2 grid (cells 512x512), each centred in its cell and filling about 80% of it without touching the cell's edges or another one.
+- Lit softly from above by the light coming down through the water, their undersides in cool blue shadow, painted in a few flat tones each.
+- 1: a school of small silver-blue fish swimming together in a long curving shoal, kept together as one shape.
+- 2: a large manta ray gliding, seen from a little below, its wings spread.
+- 3: three jellyfish together, pale and glassy with a faint warm glow inside, their tentacles trailing.
+- 4: a whale far off, its long body and flippers softened by the water.
+- 5: a sea turtle swimming, seen from the side.
+- 6: a smaller school of yellow-and-blue reef fish swimming in a round cluster, kept together as one shape.
+
+SHEET A4: SURFACES (six tiling squares, full bleed)
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge must continue into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective) and evenly lit, with no cast shadows across it, no glow and no vignette: the game adds the light and the water's rippling light. Keep the detail even, with no single feature that would stand out when it repeats.
+- 1, top left: the sea floor's sand seen from straight above: pale cream sand in low ripples running one way, a scatter of small shells and pebbles. No footprints, tracks or plants.
+- 2, top middle: dark rock: blue-grey stone in rounded, worn shapes with crevices, a few patches of small sponges and barnacles.
+- 3, top right: the trench's wall seen straight-on: layered dark rock in horizontal bands from blue-grey to near-black, with ledges and a few tufts of pale sea growth.
+- 4, bottom left: the town's facades: pale blue-grey panelled walls with rows of round porthole windows, the windows dark (the game lights them).
+- 5, bottom middle: the dome's frame: steel blue-grey girders in a lattice, bolted plates at the joints, a little rust and sea growth along the edges.
+- 6, bottom right: coral: a reef seen from straight above, rounded heads and branching coral in rose, orange and cream with blue shadows between them.
+
+SHEET A1B: THE WATER, THE HALF FACING AWAY (make it after A1, with A1 attached)
+- Same size, style and palette as A1, the eye-level line at exactly the same height, the same flat deep water below it and the same pale aqua along the top edge.
+- The other half of the water, behind the viewer, facing away from the sun. Its left edge must continue seamlessly from A1's right edge, and its right edge seamlessly into A1's left edge, so the two side by side make the whole round.
+- No bright patch of the sun here: the surface above still rippling and bright but evener, fainter shafts of light coming down at a slant from the A1 side, the water a little deeper blue-green, more marine snow.
 ```

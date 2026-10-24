@@ -196,7 +196,8 @@ barrels (a roll round an axis off the road) and twists (a pitch whose road
 rolls over as it goes, and can move out from the arc's centre: Zenith Ring's
 Hatch, from the inside of its band to the outside, and the top of its
 Möbius), each of which can set the road's width and banking, cut a gap,
-leave an edge open, split the road or hold mechs to it whatever their
+leave an edge open, split the road (its two routes drawn apart, or twisted
+round each other as a double helix: Abyss Line's Braid) or hold mechs to it whatever their
 speed (the outside of Zenith Ring's band). Where a twist's road is rolled
 across its arc, the arc turns under a mech: the Möbius rolls only over its
 top third, so it turns the road about 25 degrees one way and back.
@@ -301,7 +302,13 @@ hairpin gets a carve held loosely to the third.
 pilots carve by the line they want, so they rarely hold a carve tight: a
 person who does will reach the higher tiers far more often.)
 
-Each circuit has its own setting (Zenith Ring: in orbit, a ring station
+Each circuit has its own setting (Abyss Line: on the sea floor a hundred
+metres down, the road in glass tubes (one round each strand of the Braid, a
+wide one round the Twist, broken off at the Trench Leap), the trench carved
+into the floor under it, the town's great glass dome with the town lit on
+its floor, the water for a sky, light coming down in shafts:
+`src/client/render/abyss.ts`, a stand-in until its painted background is
+made; Zenith Ring: in orbit, a ring station
 built round the road, the Earth below filling the sky under its limb, its
 night side lit with cities, and no ground at all, so no support pylons:
 `src/client/render/zenith.ts`, a stand-in until it has a model; Meridian:

@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  ABYSS_LINE,
   ATK,
   BTN,
   CANYON,
@@ -26,6 +27,8 @@ import {
   ZENITH_RING,
   RING,
   MOBIUS,
+  DOME,
+  TWIST,
   buildTrack,
   closure,
   createRace,
@@ -49,9 +52,9 @@ import { pitOf } from '../src/client/render/pit';
 import { frameAt, makeFrame } from '../src/sim/track';
 import { findNonFinite, hash, makeSeats, snapshot } from './helpers';
 
-const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ZENITH_RING];
+const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ABYSS_LINE, ZENITH_RING];
 /** The circuits with a fork. */
-const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE, TITANS_REST, ZENITH_RING];
+const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE, TITANS_REST, ABYSS_LINE, ZENITH_RING];
 const BUILT = new Map<string, Track>(CIRCUITS.map((d) => [d.id, buildTrack(d)]));
 const track = (def: CircuitDef) => BUILT.get(def.id)!;
 
@@ -72,7 +75,7 @@ const openRuns = (t: Track) => runs(t, (i) => !t.wallL[i] && !t.wallR[i] && t.ro
 
 describe('the circuit list', () => {
   it('has Meridian first, then the 3D circuits, each found by id', () => {
-    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan', 'zenith']);
+    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan', 'abyss', 'zenith']);
     for (const d of TRACKS) expect(trackById(d.id)).toBe(d);
     // An unknown id falls back to Meridian rather than failing.
     expect(trackById('nowhere')).toBe(MERIDIAN);
@@ -834,6 +837,120 @@ describe("Titan's Rest", () => {
       while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
       // Off the speed pad, so the jump alone is tried.
       place(race, t, 0, g0 - 70, 12, limiter);
+      race.mechs.forEach((o, k) => {
+        if (k) o.s = wrapS(t, g0 - 2500 - k * 30);
+      });
+      inputs[0].throttle = 1;
+      let landed = -1;
+      let fell = false;
+      for (let i = 0; i < 600 && landed < 0 && !fell; i++) {
+        stepRace(race, t, inputs);
+        for (const e of race.events) {
+          if (e.type === 'land' && e.mech === 0 && race.mechs[0].s > g0) landed = race.mechs[0].s;
+          if (e.type === 'fall' && e.mech === 0) fell = true;
+        }
+      }
+      return { landed, fell };
+    };
+    const lap1 = run(110);
+    expect(lap1.fell).toBe(false);
+    expect(lap1.landed).toBeGreaterThan(g1);
+    expect(run(75).fell).toBe(true);
+  });
+});
+
+describe('Abyss Line', () => {
+  const def = ABYSS_LINE;
+  const t = track(def);
+  const starts = pieceStarts(def);
+  const piece = (name: string): [number, number] => {
+    const i = def.pieces.findIndex((p) => p.name === name);
+    if (i < 0) throw new Error(`no piece ${name}`);
+    return [starts[i], i + 1 < starts.length ? starts[i + 1] : t.length];
+  };
+  const at = (s: number) => Math.floor(wrapS(t, s) / t.ds) % t.n;
+  const fork = t.forks[0];
+
+  it("twists the Braid's strands twice round each other, crossing over and under with room between", () => {
+    let crossings = 0;
+    let prev = 0;
+    let stacked = 0;
+    for (let s = fork.s0 + 4; s < fork.s1 - 4; s += 4) {
+      const i = at(s);
+      const above = t.riseR[i] - t.riseL[i];
+      if (Math.abs(above) > 20 && prev !== 0 && Math.sign(above) !== prev) crossings++;
+      if (Math.abs(above) > 20) prev = Math.sign(above);
+      // One right over the other (side by side within a strand's width): far enough apart for a mech between.
+      const across = Math.abs(t.shiftR[i] - t.shiftL[i] + (t.hw[i] + t.median[i]));
+      if (across < 20) {
+        stacked++;
+        expect(Math.abs(above)).toBeGreaterThan(60);
+      }
+    }
+    // Over, under, over, under: twice round.
+    expect(crossings).toBe(3);
+    expect(stacked).toBeGreaterThan(20);
+  });
+
+  it('runs the Dome Run up the dome, across under its roof upside down round its middle, and down', () => {
+    const [a, b] = piece('under the roof');
+    const f0 = frameAt(t, a, makeFrame());
+    const R = DOME.radius - DOME.under;
+    const c = [f0.px + f0.ux * R, f0.py + f0.uy * R, f0.pz + f0.uz * R];
+    for (let s = a + 4; s < b - 4; s += 4) {
+      const i = at(s);
+      const off = [t.px[i] - c[0], t.py[i] - c[1], t.pz[i] - c[2]];
+      const along = off[0] * f0.rx + off[1] * f0.ry + off[2] * f0.rz;
+      const r = Math.hypot(off[0] - f0.rx * along, off[1] - f0.ry * along, off[2] - f0.rz * along);
+      expect(Math.abs(r - R)).toBeLessThan(1);
+      expect(t.uy[i]).toBeLessThan(-0.85);
+      expect(t.mag[i]).toBe(1);
+    }
+    // The roof is over the town: the road under it is the circuit's highest.
+    let top = -Infinity;
+    for (let i = 0; i < t.n; i++) top = Math.max(top, t.py[i]);
+    expect(t.py[at((a + b) / 2)]).toBeCloseTo(top, 0);
+  });
+
+  it('runs the Twist twice round the inside of its tube, the road facing in to its axis all the way', () => {
+    const [a, b] = piece('the Twist');
+    const i0 = at(a);
+    const i1 = at(b);
+    const R = TWIST.radius;
+    const ax = [t.px[i0] + t.ux[i0] * R, t.py[i0] + t.uy[i0] * R, t.pz[i0] + t.uz[i0] * R];
+    const bx = [t.px[i1] + t.ux[i1] * R, t.py[i1] + t.uy[i1] * R, t.pz[i1] + t.uz[i1] * R];
+    const dir = [bx[0] - ax[0], bx[1] - ax[1], bx[2] - ax[2]];
+    const len = Math.hypot(dir[0], dir[1], dir[2]);
+    let turns = 0;
+    let prevUp = t.uy[i0];
+    for (let s = a + 4; s < b - 4; s += 4) {
+      const i = at(s);
+      const rel = [t.px[i] - ax[0], t.py[i] - ax[1], t.pz[i] - ax[2]];
+      const along = (rel[0] * dir[0] + rel[1] * dir[1] + rel[2] * dir[2]) / len;
+      const off = [rel[0] - (dir[0] / len) * along, rel[1] - (dir[1] / len) * along, rel[2] - (dir[2] / len) * along];
+      const r = Math.hypot(off[0], off[1], off[2]);
+      expect(r).toBeGreaterThan(R - 2);
+      expect(r).toBeLessThan(R + 2);
+      // Up points in toward the axis.
+      expect(-(off[0] * t.ux[i] + off[1] * t.uy[i] + off[2] * t.uz[i]) / r).toBeGreaterThan(0.97);
+      expect(t.mag[i]).toBe(1);
+      if (prevUp < 0 && t.uy[i] >= 0) turns++;
+      prevUp = t.uy[i];
+    }
+    expect(turns).toBe(TWIST.turns);
+    // A long straight, level: the axis neither climbs nor falls.
+    expect(Math.abs(ax[1] - bx[1])).toBeLessThan(1);
+    expect(len).toBeGreaterThan(TWIST.length - 5);
+  });
+
+  it('clears the Trench Leap at the formation-lap limiter off the pad; well short of it, it falls into the chasm', () => {
+    const [p0, p1] = piece('gap');
+    const [g0, g1] = gaps(t).find(([a, b]) => a < p1 && b > p0)!;
+    const run = (limiter: number) => {
+      const race = createRace(t, { seed: 1, seats: makeSeats('all'), rules: { limiter1: limiter } });
+      const inputs = race.mechs.map(() => emptyInput());
+      while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
+      place(race, t, 0, g0 - 70, 14, limiter);
       race.mechs.forEach((o, k) => {
         if (k) o.s = wrapS(t, g0 - 2500 - k * 30);
       });

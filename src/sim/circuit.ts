@@ -37,6 +37,14 @@ export interface ForkSpec {
   /** Drawing only: each route moved across (positive right) and up at full spread. */
   left?: { shift: number; rise: number };
   right?: { shift: number; rise: number };
+  /**
+   * Drawing only, in place of left and right: the two routes twisted round
+   * each other as a double helix about the road's line, `turns` whole turns,
+   * each route's middle `radius` from the line, the right one rising over
+   * the left as it starts, then crossing under it, and so on, side by side
+   * again at the end.
+   */
+  braid?: { turns: number; radius: number };
 }
 
 export interface PieceProps {
@@ -610,6 +618,31 @@ export function buildCircuit(def: CircuitDef): Track {
   const OPEN = 60;
   for (const fs of forkSpans) {
     const len = fs.s1 - fs.s0;
+    const braid = fs.spec.braid;
+    if (braid) {
+      // Out to the helix's radius as the wall down the middle comes up, round
+      // it (the turning easing in and out), and back in as the wall goes.
+      const a = fs.s0 + OPEN;
+      const b = fs.s1 - OPEN;
+      for (let k = 0; k < n; k++) {
+        const s = k * ds;
+        if (s < fs.s0 || s > fs.s1) continue;
+        const open = smoothstep(fs.s0, fs.s0 + OPEN, s) * (1 - smoothstep(fs.s1 - OPEN, fs.s1, s));
+        median[k] = Math.max(median[k], fs.spec.median * open);
+        const out = smoothstep(fs.s0 + OPEN * 0.5, a + 60, s) * (1 - smoothstep(b - 60, fs.s1 - OPEN * 0.5, s));
+        const f = clamp((s - a) / Math.max(b - a, 1), 0, 1);
+        const th = 2 * Math.PI * braid.turns * (f - Math.sin(2 * Math.PI * f) / (2 * Math.PI));
+        // Each route's middle, side by side where the routes open (half way
+        // across its lane), out on the helix in between.
+        const mid = (hw[k] + median[k]) / 2;
+        const rho = mid + (braid.radius - mid) * out;
+        shiftL[k] = mid - rho * Math.cos(th);
+        riseL[k] = -rho * Math.sin(th) * out;
+        shiftR[k] = rho * Math.cos(th) - mid;
+        riseR[k] = rho * Math.sin(th) * out;
+      }
+      continue;
+    }
     // Routes that cross over and under each other (each drawn toward the
     // other's side) part vertically first, while still side by side, and
     // only swing across once the upper one is high enough to clear a mech

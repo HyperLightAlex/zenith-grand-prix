@@ -26,6 +26,7 @@ import { titanPlaceholder } from './titan/placeholder';
 import { loadTitan, titanGroundOf, titanModel, type TitanSlot } from './titan/asset';
 import type { TitanMat } from './titan/pose';
 import { buildZenith } from './zenith';
+import { buildAbyss } from './abyss';
 
 const skyVertex = /* glsl */ `
 varying vec3 vDir;
@@ -193,6 +194,33 @@ vec3 spaceSky(vec3 d, vec3 sunDir, vec3 earthSun, vec3 discCol, vec3 glowCol, fl
   return col;
 }`;
 
+/**
+ * Under the sea: the water all round, its colour (the fog's) at eye level,
+ * navy below, brightening above toward the surface, and the surface itself
+ * a bright window overhead, rippling, the sun a soft glow in it, shafts of
+ * light coming down through the water.
+ */
+const SEA = /* glsl */ `
+vec3 seaSky(vec3 d, vec3 sunDir, vec3 zenith, vec3 mid, vec3 horizon, vec3 discCol, float time) {
+  float h = d.y;
+  vec3 col = mix(horizon, horizon * 0.25, smoothstep(0.0, -0.7, h));
+  col = mix(col, mid, smoothstep(0.0, 0.55, h));
+  // The surface, seen from below: a bright window straight up (Snell's),
+  // its edge rippling.
+  vec2 uv = d.xz / max(h, 0.05);
+  float ripple = noise(uv * 3.0 + vec2(time * 0.12, time * 0.08)) * 0.5 + noise(uv * 7.0 - vec2(time * 0.2, 0.0)) * 0.25;
+  float window = smoothstep(0.62, 0.78, h + ripple * 0.06);
+  col = mix(col, zenith, window * (0.55 + 0.45 * ripple));
+  // Shafts of light down through the water, swaying.
+  float az = atan(d.z, d.x);
+  float shafts = smoothstep(0.55, 0.9, noise(vec2(az * 9.0 + sin(time * 0.05) * 0.6, time * 0.03))) * smoothstep(-0.1, 0.5, h) * (1.0 - window);
+  col += zenith * shafts * 0.12;
+  // The sun, a soft glow through the surface.
+  float sd = max(dot(d, normalize(vec3(sunDir.x, max(sunDir.y, 0.6), sunDir.z))), 0.0);
+  col += discCol * (pow(sd, 40.0) * 0.35 + pow(sd, 6.0) * 0.08);
+  return col;
+}`;
+
 const skyFragment = /* glsl */ `
 uniform vec3 uZenith;
 uniform vec3 uMid;
@@ -214,6 +242,7 @@ uniform vec3 uDiscPlain;
 uniform vec3 uGlowPlain;
 uniform float uAurora;
 uniform float uSpace;
+uniform float uSea;
 uniform vec3 uEarthSun;
 uniform sampler2D uEarth0;
 uniform sampler2D uEarth1;
@@ -225,9 +254,16 @@ varying vec3 vDir;
 ${NOISE}
 ${UNTONE}
 ${SPACE}
+${SEA}
 void main() {
   vec3 dir = normalize(vDir);
   float h = dir.y;
+  if (uSea > 0.5) {
+    gl_FragColor = vec4(seaSky(dir, uSunDir, uZenith, uMid, uHorizon, uDiscPlain, uTime), 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    return;
+  }
   if (uSpace > 0.5) {
     vec3 col = spaceSky(dir, uSunDir, uEarthSun, uDiscPlain, uGlowPlain, uTime);
     gl_FragColor = vec4(col, 1.0);
@@ -713,6 +749,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uGlowPlain: { value: new THREE.Vector3(...(theme.discGlow ?? [1.0, 0.86, 0.62])) },
       uAurora: { value: theme.aurora ?? 0 },
       uSpace: { value: theme.ground === 'orbit' ? 1 : 0 },
+      uSea: { value: theme.ground === 'seabed' ? 1 : 0 },
       // The Earth's sun: the station's, nearer the horizon (see SPACE).
       uEarthSun: { value: new THREE.Vector3(SUN_DIR.x, 0, SUN_DIR.z).normalize().multiplyScalar(Math.cos(0.14)).setY(Math.sin(0.14)) },
       // The Earth's painted squares (Z2), for a circuit in orbit with a painted set.
@@ -742,6 +779,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   else if (theme.ground === 'ice') buildFrostline(ctx);
   else if (theme.ground === 'wreck') buildTitansRest(ctx);
   else if (theme.ground === 'orbit') buildZenith(ctx);
+  else if (theme.ground === 'seabed') buildAbyss(ctx);
   else buildMeridian(ctx);
   if (painted) horizonRings(ctx);
 
