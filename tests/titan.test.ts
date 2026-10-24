@@ -147,19 +147,22 @@ describe.skipIf(!model)("Titan's Rest: the titan's Blender model", () => {
     expect(saved).toEqual(titanTopGrid(parts));
   });
 
-  it('leaves the space round the road empty', async () => {
-    const { parts } = await level('titan.glb');
+  it('leaves the space round the road empty, at every level of detail', async () => {
     const scratch: number[] = [];
     const where = new Map<string, number>();
-    for (const [part, geo] of parts) {
-      for (const g of Object.values(geo)) {
-        for (const [x, y, z] of surface(g, 4)) {
-          const i = index.hit(x, y, z, KEEP_OUT.up, scratch);
-          if (i < 0) continue;
-          let k = 0;
-          while (k + 1 < starts.length && starts[k + 1] <= i * t.ds) k++;
-          const name = TITANS_REST.pieces[k]?.name ?? `#${k}`;
-          where.set(`${part} on ${name}`, (where.get(`${part} on ${name}`) ?? 0) + 1);
+    for (const file of ['titan.glb', 'titan-lod1.glb', 'titan-lod2.glb']) {
+      if (!existsSync(new URL(file, ASSETS))) continue;
+      const { parts } = await level(file);
+      for (const [part, geo] of parts) {
+        for (const g of Object.values(geo)) {
+          for (const [x, y, z] of surface(g, 4)) {
+            const i = index.hit(x, y, z, KEEP_OUT.up, scratch);
+            if (i < 0) continue;
+            let k = 0;
+            while (k + 1 < starts.length && starts[k + 1] <= i * t.ds) k++;
+            const key = `${file}: ${part} on ${TITANS_REST.pieces[k]?.name ?? `#${k}`}`;
+            where.set(key, (where.get(key) ?? 0) + 1);
+          }
         }
       }
     }

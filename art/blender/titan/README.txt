@@ -322,7 +322,15 @@ PHASE 4: LEVELS OF DETAIL AND THE FINAL EXPORT
   - titan.glb (the finest) no more than 600k triangles, titan-lod1.glb no
     more than 150k, titan-lod2.glb no more than 40k, all three with the
     same parts. The game switches each part separately by its distance, so
-    every level keeps every part.
+    every level keeps every part. (titan/asset.ts: a part goes to lod1
+    from 1.5 times its radius plus 400 m from the camera, and to lod2 from
+    4 times its radius plus 1200 m, its radius half its bounding box's
+    diagonal. The parts the road runs on are seen close up at the finest
+    level; from the far side of the course most of the titan is at lod2.)
+  - Leave titan.glb as Phase 3 made it unless something must change: the
+    game builds the road's supports on its top (titan-top.json, from
+    tools/titan/top.ts), and its test fails until the game side remakes
+    that file.
   - Each level passes the check; the coarser levels may lose detail but not
     grow into the road's space.
   - Previews of the wreck from the places in stretches.json, and from far
