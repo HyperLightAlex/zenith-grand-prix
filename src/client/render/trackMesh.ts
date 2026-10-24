@@ -237,7 +237,8 @@ void main() {
     float ld = (d - st.z) / st.w;
     float across = 1.0 - smoothstep(0.92, 1.0, abs(ld));
     float rim = smoothstep(0.78, 0.9, abs(ld)) * across;
-    float chev = fract((ss - abs(ld) * 5.0 - uTime * 34.0) / 11.0);
+    // (Each chevron's point at the middle of the lane and ahead of its arms: pointing the way the race runs.)
+    float chev = fract((ss + abs(ld) * 5.0 - uTime * 34.0) / 11.0);
     float arrows = smoothstep(0.0, 0.08, chev) * (1.0 - smoothstep(0.42, 0.5, chev));
     float fade = smoothstep(st.x, st.x + 14.0, ss) * (1.0 - smoothstep(st.y - 14.0, st.y, ss));
     float m = along * across * fade;
@@ -253,7 +254,7 @@ void main() {
     float ld = (d - gt.y) / gt.z;
     float across = 1.0 - smoothstep(0.9, 1.0, abs(ld));
     float rim = smoothstep(0.7, 0.86, abs(ld)) * across;
-    float chev = fract((s - abs(ld) * 5.0 - uTime * 30.0) / 9.0);
+    float chev = fract((s + abs(ld) * 5.0 - uTime * 30.0) / 9.0);
     float arrows = smoothstep(0.0, 0.1, chev) * (1.0 - smoothstep(0.4, 0.5, chev));
     float fade = (1.0 - smoothstep(70.0, 110.0, ga)) * smoothstep(-3.0, 0.0, ga);
     float m = across * fade;
