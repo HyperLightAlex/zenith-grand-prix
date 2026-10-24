@@ -1,0 +1,3334 @@
+{
+  "phase": 4,
+  "blender": "5.2.2 LTS",
+  "engine": "EEVEE",
+  "cameraSource": "../phase3/framing.json",
+  "cameraSourceSha256": "9956fbe69e13205d2dc47fb1c5966aebbbbb79e37890df13f6d54b4107e19503",
+  "productionContext": "titan-production.blend",
+  "productionContextSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212",
+  "fitSha256": {
+    "guide.obj": "b91e005602a1714070e3101f5845385f48710052022bed4b32648dc8460ff482",
+    "road.obj": "b3376004b776f3a90fb8955144172c79bd9c3c69db1af9d399c21d05ea9ea216",
+    "check_clearance.py": "56cff1d726c2483f5c95086bf8023ed6526776a7da159a11aaf52bdcb9373303",
+    "rig-pose.json": "b2991cd22b2d16bad8984ef65424784176a444cafda77dfc8230f28936ef956f",
+    "stretches.json": "e0eea1e69b23ba83513aef2f0d0e9bf83bb97b2b91a69e33923aba974e5ee54b",
+    "pose.json": "1bb7c1e4e2239e273f8b96cd10ba8c05d70c1cb31479f198ad670f0d6b4e2a4a",
+    "load_fit.py": "e85539db2971a241620dd82dbb713166f90b137c0790661988cb7997bfad9c93",
+    "road.json": "5336c53a2339225ab88ef5cc8104093f495148abfba7911a1274f9e611f746a6",
+    "sky.obj": "54b7ca3397a5e40d674abce8fea64ab27b63f3fa43c0b2e8ac89b0d69251c343",
+    "plan.png": "b797beb82be231076c43182b43b88cbe863d2c97288baaaa901257bfa419ff92",
+    "keepout.obj": "56940079a2bbd7c308b14e8e29263f9c43e05339914352312d465caab5a16486",
+    "posed.glb": "5b096ec5ffb8f52957524906d5c6cc4dfadffe8fb2475ce79a41f8e820f188dc"
+  },
+  "reviewSandZ": 0,
+  "sourceFilesSaved": false,
+  "switchingDistance": {
+    "lod1": "radius * 1.5 + 400",
+    "lod2": "radius * 4 + 1200",
+    "gameReferenceBounds": "levels.lod0.partBounds"
+  },
+  "cameras": {
+    "overview": {
+      "title": "The fallen titan",
+      "caption": "Full wreck on the unchanged road. White review sand marks Z = 0; buried geometry is intentionally occluded.",
+      "image": "overview.png",
+      "camera": [
+        -1412.5465087890625,
+        -834.9031982421875,
+        2090.543701171875
+      ],
+      "target": [
+        274.5836181640625,
+        1158.977783203125,
+        173.35025024414062
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "palm": {
+      "title": "Palm \u00b7 fingertips to wrist",
+      "caption": "Approach over the open right hand. Inspect the road support across its full width.",
+      "image": "palm.png",
+      "camera": [
+        -260.0,
+        340.0,
+        255.0
+      ],
+      "target": [
+        0.0,
+        610.0,
+        90.0
+      ],
+      "lens": 44.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "arm-shoulder": {
+      "title": "Arm and shoulder",
+      "caption": "Forearm seating and the approved pylon-supported climb above the upper arm.",
+      "image": "arm-shoulder.png",
+      "camera": [
+        -430.0,
+        770.0,
+        440.0
+      ],
+      "target": [
+        0.0,
+        1000.0,
+        125.0
+      ],
+      "lens": 42.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "brow": {
+      "title": "Brow \u00b7 face and propped head",
+      "caption": "Face, chin and forehead beneath the road, with the broken-neck supports below.",
+      "image": "brow.png",
+      "camera": [
+        179.99996948242188,
+        1030.0,
+        710.0
+      ],
+      "target": [
+        -125.0,
+        1422.0,
+        190.0
+      ],
+      "lens": 44.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "collar": {
+      "title": "Collar and chin",
+      "caption": "Transition from the chest to the lifted head; collar plates and frame remain visible.",
+      "image": "collar.png",
+      "camera": [
+        310.0,
+        1150.0,
+        390.0
+      ],
+      "target": [
+        -40.0,
+        1365.0,
+        200.0
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "halo": {
+      "title": "Halo \u00b7 full roll",
+      "caption": "Detached halo standing beyond the crown. The road rolls through the opening.",
+      "image": "halo.png",
+      "camera": [
+        -1269.905029296875,
+        948.8763427734375,
+        432.43914794921875
+      ],
+      "target": [
+        -518.8330078125,
+        1422.0,
+        190.0
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "breach": {
+      "title": "Breach \u00b7 north flank entrance",
+      "caption": "The northern wound, seen from outside along the approach into the chest.",
+      "image": "breach.png",
+      "camera": [
+        420.0,
+        1900.0,
+        205.0
+      ],
+      "target": [
+        231.0,
+        1600.0,
+        70.0
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "ribcage": {
+      "title": "Ribcage \u00b7 chamber overview",
+      "caption": "The northern chest opening, bronze ribs and frame surrounding the loop.",
+      "image": "ribcage.png",
+      "camera": [
+        300.0,
+        1830.0,
+        399.9999694824219
+      ],
+      "target": [
+        198.0,
+        1500.0,
+        90.0
+      ],
+      "lens": 26.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "ribcage-high": {
+      "title": "Ribcage \u00b7 inside the chamber",
+      "caption": "Wide view from inside the chest: the complete loop and the surrounding bronze frame.",
+      "image": "ribcage-high.png",
+      "camera": [
+        300.0,
+        1550.0,
+        100.0
+      ],
+      "target": [
+        198.0,
+        1500.0,
+        90.0
+      ],
+      "lens": 10.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "hull-left": {
+      "title": "Hull \u00b7 left bronze corridor",
+      "caption": "Inside the left route. Inspect the bronze walls and roof clearance over the road.",
+      "image": "hull-left.png",
+      "camera": [
+        197.26800537109375,
+        1380.1280517578125,
+        25.99599838256836
+      ],
+      "target": [
+        185.72207641601562,
+        1292.1190185546875,
+        30.674055099487305
+      ],
+      "lens": 21.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "hull-gallery": {
+      "title": "Hull \u00b7 right open gallery",
+      "caption": "Looking toward the south exit along the raised right route, beside the ribs and the bronze left corridor; the gallery has no enclosing outer wall or roof.",
+      "image": "hull-gallery.png",
+      "camera": [
+        138.2310028076172,
+        1412.1309814453125,
+        52.00699996948242
+      ],
+      "target": [
+        119.84199523925781,
+        1320.1219482421875,
+        42.16999816894531
+      ],
+      "lens": 24.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "exit": {
+      "title": "Exit \u00b7 south flank",
+      "caption": "The opening where the two routes leave the southern flank.",
+      "image": "exit.png",
+      "camera": [
+        410.0,
+        920.0,
+        175.0
+      ],
+      "target": [
+        160.0,
+        1220.0,
+        45.0
+      ],
+      "lens": 44.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "sword": {
+      "title": "Sword \u00b7 blade, guard and broken grip",
+      "caption": "The road around the buried blade. The snapped grip and pommel rest east of it.",
+      "image": "sword.png",
+      "camera": [
+        1065.75537109375,
+        -206.0391845703125,
+        540.5899047851562
+      ],
+      "target": [
+        401.24700927734375,
+        351.0789794921875,
+        106.36399841308594
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "knuckles": {
+      "title": "Palm \u00b7 knuckle support",
+      "caption": "Close inspection of the bent support at s 550\u2013565. The fingers remain spread around the supported central route.",
+      "image": "knuckles.png",
+      "camera": [
+        -240.60110473632812,
+        572.9871215820312,
+        126.20616149902344
+      ],
+      "target": [
+        0.0,
+        544.114990234375,
+        90.11599731445312
+      ],
+      "lens": 43.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "fingertip-support": {
+      "title": "Palm \u00b7 fingertip bearing from the side",
+      "caption": "Low side inspection of the bent fingertip supports and their attachment to the spread fingers.",
+      "image": "fingertip-support.png",
+      "camera": [
+        -250.13360595703125,
+        429.2589111328125,
+        103.07105255126953
+      ],
+      "target": [
+        0.0,
+        504.2989807128906,
+        58.047000885009766
+      ],
+      "lens": 46.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "wound-roots": {
+      "title": "Breach \u00b7 roots of the peeled armour",
+      "caption": "Looking into the north wound from above, showing where the peeled lips join the surviving ivory shell.",
+      "image": "wound-roots.png",
+      "camera": [
+        288.99017333984375,
+        1754.5301513671875,
+        299.400146484375
+      ],
+      "target": [
+        140.25,
+        1581.0,
+        175.4499969482422
+      ],
+      "lens": 47.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "peeled-wound": {
+      "title": "Breach \u00b7 peeled wound plates",
+      "caption": "Armour folded outward around the north chest wound, with the road entrance and exposed bronze frame visible.",
+      "image": "peeled-wound.png",
+      "camera": [
+        524.49365234375,
+        1858.833251953125,
+        375.7063293457031
+      ],
+      "target": [
+        185.75,
+        1458.5,
+        175.53965759277344
+      ],
+      "lens": 45.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "ribs-cables": {
+      "title": "Ribcage \u00b7 snapped ribs and cut cables",
+      "caption": "The damaged rib ends and hanging services around the chamber. The complete model remains visible, including the loop.",
+      "image": "ribs-cables.png",
+      "camera": [
+        633.6412353515625,
+        2003.50537109375,
+        398.384033203125
+      ],
+      "target": [
+        194.5,
+        1454.5789794921875,
+        105.623291015625
+      ],
+      "lens": 45.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "sand-drift": {
+      "title": "Burial \u00b7 sand at the north wound",
+      "caption": "Modelled sand gathered against the wreck and in its hollows, using an existing production material slot.",
+      "image": "sand-drift.png",
+      "camera": [
+        439.2535095214844,
+        1915.910888671875,
+        160.70249938964844
+      ],
+      "target": [
+        204.97738647460938,
+        1564.4967041015625,
+        8.423022270202637
+      ],
+      "lens": 45.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "armour-wear": {
+      "title": "Shoulder \u00b7 chipped and dented armour",
+      "caption": "A broad capped edge chip and shallow dent on the surviving right pauldron; primary markings and silhouette remain recognizable.",
+      "image": "armour-wear.png",
+      "camera": [
+        459.5931396484375,
+        903.3687133789062,
+        455.46978759765625
+      ],
+      "target": [
+        -45.66947937011719,
+        1156.0,
+        101.78592681884766
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    }
+  },
+  "levels": {
+    "lod0": {
+      "triangles": 196114,
+      "trianglesByPart": {
+        "chest": 69201,
+        "foot.L": 1412,
+        "foot.R": 1412,
+        "forearm.L": 5208,
+        "forearm.R": 30769,
+        "halo": 3240,
+        "hand.L": 1224,
+        "hand.R": 12220,
+        "head": 13727,
+        "index.01.L": 776,
+        "index.01.R": 1032,
+        "index.02.L": 776,
+        "index.02.R": 1032,
+        "index.03.L": 776,
+        "index.03.R": 1032,
+        "middle.01.L": 776,
+        "middle.01.R": 1064,
+        "middle.02.L": 776,
+        "middle.02.R": 1064,
+        "middle.03.L": 448,
+        "middle.03.R": 1437,
+        "neck": 800,
+        "pelvis": 958,
+        "pinky.01.L": 612,
+        "pinky.01.R": 1032,
+        "pinky.02.R": 1032,
+        "pinky.03.R": 1032,
+        "ring.01.L": 776,
+        "ring.01.R": 1032,
+        "ring.02.L": 478,
+        "ring.02.R": 1032,
+        "ring.03.R": 1364,
+        "shin.L": 2919,
+        "shin.R": 3044,
+        "shoulder.L": 10078,
+        "shoulder.R": 10073,
+        "spine": 228,
+        "sword": 1348,
+        "thigh.L": 812,
+        "thigh.R": 736,
+        "thumb.01.L": 776,
+        "thumb.01.R": 1104,
+        "thumb.02.L": 776,
+        "thumb.02.R": 1088,
+        "thumb.03.L": 776,
+        "thumb.03.R": 1084,
+        "upper_arm.L": 906,
+        "upper_arm.R": 816
+      },
+      "objects": 386,
+      "partBounds": {
+        "chest": {
+          "centerBlender": [
+            90.50091552734375,
+            1462.0565185546875,
+            128.7418975830078
+          ],
+          "radius": 358.7007207007675,
+          "lod1Distance": 938.0510810511512,
+          "lod2Distance": 2634.80288280307
+        },
+        "thumb.03.R": {
+          "centerBlender": [
+            84.30879211425781,
+            574.4918212890625,
+            77.46556091308594
+          ],
+          "radius": 27.17735673077995,
+          "lod1Distance": 440.76603509616996,
+          "lod2Distance": 1308.7094269231197
+        },
+        "index.02.L": {
+          "centerBlender": [
+            -248.96043395996094,
+            2165.730224609375,
+            12.751434326171875
+          ],
+          "radius": 28.73259679406429,
+          "lod1Distance": 443.0988951910964,
+          "lod2Distance": 1314.9303871762572
+        },
+        "pinky.03.R": {
+          "centerBlender": [
+            -51.75662612915039,
+            517.7554321289062,
+            64.38655853271484
+          ],
+          "radius": 25.47282277874564,
+          "lod1Distance": 438.2092341681185,
+          "lod2Distance": 1301.8912911149826
+        },
+        "shoulder.L": {
+          "centerBlender": [
+            -34.4998779296875,
+            1691.5,
+            93.75006866455078
+          ],
+          "radius": 171.2296064499361,
+          "lod1Distance": 656.8444096749042,
+          "lod2Distance": 1884.9184257997445
+        },
+        "spine": {
+          "centerBlender": [
+            326.5000305175781,
+            1422.0,
+            75.75019836425781
+          ],
+          "radius": 142.2280273630276,
+          "lod1Distance": 613.3420410445414,
+          "lod2Distance": 1768.9121094521104
+        },
+        "sword": {
+          "centerBlender": [
+            450.4753723144531,
+            292.949462890625,
+            81.10491943359375
+          ],
+          "radius": 236.51707787176807,
+          "lod1Distance": 754.7756168076521,
+          "lod2Distance": 2146.068311487072
+        },
+        "thumb.02.R": {
+          "centerBlender": [
+            74.75108337402344,
+            599.0576171875,
+            80.52649688720703
+          ],
+          "radius": 29.96801858751298,
+          "lod1Distance": 444.9520278812695,
+          "lod2Distance": 1319.872074350052
+        },
+        "upper_arm.R": {
+          "centerBlender": [
+            0.2471923828125,
+            1082.3038330078125,
+            65.27059936523438
+          ],
+          "radius": 193.98766924810582,
+          "lod1Distance": 690.9815038721588,
+          "lod2Distance": 1975.9506769924233
+        },
+        "forearm.L": {
+          "centerBlender": [
+            -202.96371459960938,
+            1916.3709716796875,
+            128.2726593017578
+          ],
+          "radius": 228.25899960009792,
+          "lod1Distance": 742.3884994001469,
+          "lod2Distance": 2113.0359984003917
+        },
+        "index.03.R": {
+          "centerBlender": [
+            52.24543380737305,
+            505.8988342285156,
+            56.60136795043945
+          ],
+          "radius": 27.486973954631985,
+          "lod1Distance": 441.23046093194796,
+          "lod2Distance": 1309.947895818528
+        },
+        "shoulder.R": {
+          "centerBlender": [
+            -34.4998779296875,
+            1152.5,
+            93.75006866455078
+          ],
+          "radius": 171.22963496610333,
+          "lod1Distance": 656.844452449155,
+          "lod2Distance": 1884.9185398644133
+        },
+        "hand.R": {
+          "centerBlender": [
+            0.76953125,
+            586.011474609375,
+            73.42253875732422
+          ],
+          "radius": 140.9309493003688,
+          "lod1Distance": 611.3964239505532,
+          "lod2Distance": 1763.7237972014752
+        },
+        "middle.03.L": {
+          "centerBlender": [
+            -271.28387451171875,
+            2174.9267578125,
+            -14.612371444702148
+          ],
+          "radius": 20.488698030347358,
+          "lod1Distance": 430.73304704552106,
+          "lod2Distance": 1281.9547921213893
+        },
+        "neck": {
+          "centerBlender": [
+            -143.3702392578125,
+            1438.247802734375,
+            123.143310546875
+          ],
+          "radius": 220.99916704806265,
+          "lod1Distance": 731.498750572094,
+          "lod2Distance": 2083.9966681922506
+        },
+        "ring.01.L": {
+          "centerBlender": [
+            -268.669921875,
+            2106.4638671875,
+            -4.875667572021484
+          ],
+          "radius": 28.525082710273246,
+          "lod1Distance": 442.7876240654099,
+          "lod2Distance": 1314.100330841093
+        },
+        "ring.02.L": {
+          "centerBlender": [
+            -275.52398681640625,
+            2126.0302734375,
+            -14.17238712310791
+          ],
+          "radius": 19.859775590195373,
+          "lod1Distance": 429.78966338529307,
+          "lod2Distance": 1279.4391023607816
+        },
+        "upper_arm.L": {
+          "centerBlender": [
+            -62.145538330078125,
+            1727.900390625,
+            119.89625549316406
+          ],
+          "radius": 215.75209116889226,
+          "lod1Distance": 723.6281367533384,
+          "lod2Distance": 2063.0083646755693
+        },
+        "head": {
+          "centerBlender": [
+            -135.8709716796875,
+            1422.0,
+            179.44952392578125
+          ],
+          "radius": 181.4961111949957,
+          "lod1Distance": 672.2441667924936,
+          "lod2Distance": 1925.9844447799828
+        },
+        "middle.02.L": {
+          "centerBlender": [
+            -265.44830322265625,
+            2151.657470703125,
+            -5.8770599365234375
+          ],
+          "radius": 29.087101062879874,
+          "lod1Distance": 443.63065159431983,
+          "lod2Distance": 1316.3484042515195
+        },
+        "thumb.01.L": {
+          "centerBlender": [
+            -218.79510498046875,
+            2103.162841796875,
+            66.33618927001953
+          ],
+          "radius": 29.19780253672582,
+          "lod1Distance": 443.7967038050887,
+          "lod2Distance": 1316.7912101469033
+        },
+        "middle.03.R": {
+          "centerBlender": [
+            17.631023406982422,
+            495.940185546875,
+            55.972877502441406
+          ],
+          "radius": 28.26282945834863,
+          "lod1Distance": 442.39424418752293,
+          "lod2Distance": 1313.0513178333945
+        },
+        "thigh.R": {
+          "centerBlender": [
+            523.5980224609375,
+            1290.99951171875,
+            84.50045013427734
+          ],
+          "radius": 213.38967710944922,
+          "lod1Distance": 720.0845156641739,
+          "lod2Distance": 2053.5587084377967
+        },
+        "index.03.L": {
+          "centerBlender": [
+            -255.05015563964844,
+            2192.7919921875,
+            0.009611129760742188
+          ],
+          "radius": 28.732716282755998,
+          "lod1Distance": 443.099074424134,
+          "lod2Distance": 1314.930865131024
+        },
+        "halo": {
+          "centerBlender": [
+            -512.3333740234375,
+            1421.9998779296875,
+            168.7496337890625
+          ],
+          "radius": 225.35541373572545,
+          "lod1Distance": 738.0331206035881,
+          "lod2Distance": 2101.421654942902
+        },
+        "middle.01.L": {
+          "centerBlender": [
+            -256.2054443359375,
+            2123.88330078125,
+            8.11693286895752
+          ],
+          "radius": 30.924895830526353,
+          "lod1Distance": 446.3873437457895,
+          "lod2Distance": 1323.6995833221054
+        },
+        "hand.L": {
+          "centerBlender": [
+            -246.8783721923828,
+            2075.0966796875,
+            31.26868438720703
+          ],
+          "radius": 98.01555899288388,
+          "lod1Distance": 547.0233384893259,
+          "lod2Distance": 1592.0622359715355
+        },
+        "middle.01.R": {
+          "centerBlender": [
+            13.63647174835205,
+            563.8433837890625,
+            70.94434356689453
+          ],
+          "radius": 27.87601390414494,
+          "lod1Distance": 441.81402085621744,
+          "lod2Distance": 1311.5040556165798
+        },
+        "pinky.01.R": {
+          "centerBlender": [
+            -39.772037506103516,
+            567.7223510742188,
+            73.60245513916016
+          ],
+          "radius": 25.354626825106887,
+          "lod1Distance": 438.0319402376603,
+          "lod2Distance": 1301.4185073004276
+        },
+        "thumb.01.R": {
+          "centerBlender": [
+            54.29349136352539,
+            620.706298828125,
+            82.66404724121094
+          ],
+          "radius": 30.52015995328692,
+          "lod1Distance": 445.78023992993036,
+          "lod2Distance": 1322.0806398131476
+        },
+        "middle.02.R": {
+          "centerBlender": [
+            15.633883476257324,
+            529.8807373046875,
+            63.88620376586914
+          ],
+          "radius": 28.280374722082215,
+          "lod1Distance": 442.42056208312334,
+          "lod2Distance": 1313.121498888329
+        },
+        "thumb.03.L": {
+          "centerBlender": [
+            -224.88809204101562,
+            2158.99609375,
+            60.99738311767578
+          ],
+          "radius": 28.141094028052695,
+          "lod1Distance": 442.21164104207907,
+          "lod2Distance": 1312.5643761122108
+        },
+        "foot.L": {
+          "centerBlender": [
+            1009.0003662109375,
+            1602.0001220703125,
+            173.35025024414062
+          ],
+          "radius": 256.33198955102637,
+          "lod1Distance": 784.4979843265396,
+          "lod2Distance": 2225.3279582041055
+        },
+        "shin.R": {
+          "centerBlender": [
+            780.7232055664062,
+            1267.7225341796875,
+            93.50016784667969
+          ],
+          "radius": 260.5133716277823,
+          "lod1Distance": 790.7700574416734,
+          "lod2Distance": 2242.0534865111294
+        },
+        "pinky.02.R": {
+          "centerBlender": [
+            -45.76435470581055,
+            542.73876953125,
+            69.82731628417969
+          ],
+          "radius": 25.47283146456761,
+          "lod1Distance": 438.20924719685144,
+          "lod2Distance": 1301.8913258582704
+        },
+        "ring.03.R": {
+          "centerBlender": [
+            -17.21150779724121,
+            501.9664306640625,
+            59.04106140136719
+          ],
+          "radius": 27.17727854843668,
+          "lod1Distance": 440.765917822655,
+          "lod2Distance": 1308.7091141937467
+        },
+        "index.02.R": {
+          "centerBlender": [
+            46.25334930419922,
+            535.7567138671875,
+            63.7741584777832
+          ],
+          "radius": 27.487030855193783,
+          "lod1Distance": 441.23054628279067,
+          "lod2Distance": 1309.9481234207751
+        },
+        "shin.L": {
+          "centerBlender": [
+            780.7232055664062,
+            1576.2445068359375,
+            93.50016784667969
+          ],
+          "radius": 260.49727835670376,
+          "lod1Distance": 790.7459175350557,
+          "lod2Distance": 2241.989113426815
+        },
+        "pelvis": {
+          "centerBlender": [
+            393.9842529296875,
+            1422.0,
+            86.00019836425781
+          ],
+          "radius": 244.21572894804504,
+          "lod1Distance": 766.3235934220676,
+          "lod2Distance": 2176.86291579218
+        },
+        "ring.01.R": {
+          "centerBlender": [
+            -13.216472625732422,
+            564.992919921875,
+            72.49933624267578
+          ],
+          "radius": 26.783335084881475,
+          "lod1Distance": 440.1750026273222,
+          "lod2Distance": 1307.1333403395258
+        },
+        "forearm.R": {
+          "centerBlender": [
+            0.728973388671875,
+            814.3023681640625,
+            55.68275451660156
+          ],
+          "radius": 199.18086772179262,
+          "lod1Distance": 698.7713015826889,
+          "lod2Distance": 1996.7234708871706
+        },
+        "foot.R": {
+          "centerBlender": [
+            1009.0003662109375,
+            1242.0,
+            173.3502197265625
+          ],
+          "radius": 256.3320009802961,
+          "lod1Distance": 784.4980014704441,
+          "lod2Distance": 2225.328003921184
+        },
+        "index.01.L": {
+          "centerBlender": [
+            -242.8707275390625,
+            2138.66796875,
+            25.49321174621582
+          ],
+          "radius": 28.732642465356232,
+          "lod1Distance": 443.09896369803437,
+          "lod2Distance": 1314.9305698614248
+        },
+        "ring.02.R": {
+          "centerBlender": [
+            -15.214075088500977,
+            533.4735107421875,
+            66.18873596191406
+          ],
+          "radius": 27.186836743211792,
+          "lod1Distance": 440.7802551148177,
+          "lod2Distance": 1308.7473469728473
+        },
+        "thumb.02.L": {
+          "centerBlender": [
+            -219.05615234375,
+            2132.59912109375,
+            67.69760131835938
+          ],
+          "radius": 27.739370148761488,
+          "lod1Distance": 441.60905522314226,
+          "lod2Distance": 1310.957480595046
+        },
+        "pinky.01.L": {
+          "centerBlender": [
+            -278.1195373535156,
+            2086.6171875,
+            -12.609813690185547
+          ],
+          "radius": 20.59347918365654,
+          "lod1Distance": 430.8902187754848,
+          "lod2Distance": 1282.3739167346262
+        },
+        "thigh.L": {
+          "centerBlender": [
+            523.5980224609375,
+            1552.9697265625,
+            84.50045013427734
+          ],
+          "radius": 213.40694098584868,
+          "lod1Distance": 720.110411478773,
+          "lod2Distance": 2053.6277639433947
+        },
+        "index.01.R": {
+          "centerBlender": [
+            40.26112365722656,
+            565.6146240234375,
+            70.58121490478516
+          ],
+          "radius": 27.311789636518036,
+          "lod1Distance": 440.96768445477704,
+          "lod2Distance": 1309.2471585460721
+        }
+      },
+      "file": "titan.glb",
+      "sha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+      "views": {
+        "overview": {
+          "title": "The fallen titan",
+          "caption": "Full wreck on the unchanged road. White review sand marks Z = 0; buried geometry is intentionally occluded.",
+          "image": "lod0/overview.png",
+          "camera": [
+            -1412.5465087890625,
+            -834.9031982421875,
+            2090.5439453125
+          ],
+          "target": [
+            274.5836181640625,
+            1158.977783203125,
+            173.35025024414062
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "palm": {
+          "title": "Palm \u00b7 fingertips to wrist",
+          "caption": "Approach over the open right hand. Inspect the road support across its full width.",
+          "image": "lod0/palm.png",
+          "camera": [
+            -260.0,
+            340.0,
+            255.0
+          ],
+          "target": [
+            0.0,
+            610.0,
+            90.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "halo": {
+          "title": "Halo \u00b7 full roll",
+          "caption": "Detached halo standing beyond the crown. The road rolls through the opening.",
+          "image": "lod0/halo.png",
+          "camera": [
+            -1269.905029296875,
+            948.8763427734375,
+            432.43914794921875
+          ],
+          "target": [
+            -518.8330078125,
+            1422.0,
+            190.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "breach": {
+          "title": "Breach \u00b7 north flank entrance",
+          "caption": "The northern wound, seen from outside along the approach into the chest.",
+          "image": "lod0/breach.png",
+          "camera": [
+            420.0,
+            1900.0,
+            205.0
+          ],
+          "target": [
+            231.0,
+            1600.0,
+            70.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "armour-wear": {
+          "title": "Shoulder \u00b7 chipped and dented armour",
+          "caption": "A broad capped edge chip and shallow dent on the surviving right pauldron; primary markings and silhouette remain recognizable.",
+          "image": "lod0/armour-wear.png",
+          "camera": [
+            459.5931396484375,
+            903.3687133789062,
+            455.46978759765625
+          ],
+          "target": [
+            -45.66947937011719,
+            1156.0,
+            101.78592681884766
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "arm-shoulder": {
+          "title": "Arm and shoulder",
+          "caption": "Forearm seating and the approved pylon-supported climb above the upper arm.",
+          "image": "lod0/arm-shoulder.png",
+          "camera": [
+            -430.0,
+            770.0,
+            440.0
+          ],
+          "target": [
+            0.0,
+            1000.0,
+            125.0
+          ],
+          "lens": 42.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "brow": {
+          "title": "Brow \u00b7 face and propped head",
+          "caption": "Face, chin and forehead beneath the road, with the broken-neck supports below.",
+          "image": "lod0/brow.png",
+          "camera": [
+            179.99996948242188,
+            1030.0,
+            710.0
+          ],
+          "target": [
+            -125.0,
+            1422.0,
+            190.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "collar": {
+          "title": "Collar and chin",
+          "caption": "Transition from the chest to the lifted head; collar plates and frame remain visible.",
+          "image": "lod0/collar.png",
+          "camera": [
+            310.0,
+            1150.0,
+            390.0
+          ],
+          "target": [
+            -40.0,
+            1365.0,
+            200.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribcage": {
+          "title": "Ribcage \u00b7 chamber overview",
+          "caption": "The northern chest opening, bronze ribs and frame surrounding the loop.",
+          "image": "lod0/ribcage.png",
+          "camera": [
+            300.0,
+            1830.0,
+            399.9999694824219
+          ],
+          "target": [
+            198.0,
+            1500.0,
+            90.0
+          ],
+          "lens": 26.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribcage-high": {
+          "title": "Ribcage \u00b7 inside the chamber",
+          "caption": "Wide view from inside the chest: the complete loop and the surrounding bronze frame.",
+          "image": "lod0/ribcage-high.png",
+          "camera": [
+            300.0,
+            1550.0,
+            100.0
+          ],
+          "target": [
+            198.0,
+            1500.0,
+            90.0
+          ],
+          "lens": 10.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "hull-left": {
+          "title": "Hull \u00b7 left bronze corridor",
+          "caption": "Inside the left route. Inspect the bronze walls and roof clearance over the road.",
+          "image": "lod0/hull-left.png",
+          "camera": [
+            197.26800537109375,
+            1380.1280517578125,
+            25.99599838256836
+          ],
+          "target": [
+            185.72207641601562,
+            1292.1190185546875,
+            30.674055099487305
+          ],
+          "lens": 21.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "hull-gallery": {
+          "title": "Hull \u00b7 right open gallery",
+          "caption": "Looking toward the south exit along the raised right route, beside the ribs and the bronze left corridor; the gallery has no enclosing outer wall or roof.",
+          "image": "lod0/hull-gallery.png",
+          "camera": [
+            138.2310028076172,
+            1412.1309814453125,
+            52.00699996948242
+          ],
+          "target": [
+            119.84199523925781,
+            1320.1219482421875,
+            42.16999816894531
+          ],
+          "lens": 24.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "exit": {
+          "title": "Exit \u00b7 south flank",
+          "caption": "The opening where the two routes leave the southern flank.",
+          "image": "lod0/exit.png",
+          "camera": [
+            410.0,
+            920.0,
+            175.0
+          ],
+          "target": [
+            160.0,
+            1220.0,
+            45.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "sword": {
+          "title": "Sword \u00b7 blade, guard and broken grip",
+          "caption": "The road around the buried blade. The snapped grip and pommel rest east of it.",
+          "image": "lod0/sword.png",
+          "camera": [
+            1065.75537109375,
+            -206.0391845703125,
+            540.5899047851562
+          ],
+          "target": [
+            401.24700927734375,
+            351.0789794921875,
+            106.36399841308594
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "knuckles": {
+          "title": "Palm \u00b7 knuckle support",
+          "caption": "Close inspection of the bent support at s 550\u2013565. The fingers remain spread around the supported central route.",
+          "image": "lod0/knuckles.png",
+          "camera": [
+            -240.60110473632812,
+            572.9871215820312,
+            126.20616149902344
+          ],
+          "target": [
+            0.0,
+            544.114990234375,
+            90.11599731445312
+          ],
+          "lens": 43.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "fingertip-support": {
+          "title": "Palm \u00b7 fingertip bearing from the side",
+          "caption": "Low side inspection of the bent fingertip supports and their attachment to the spread fingers.",
+          "image": "lod0/fingertip-support.png",
+          "camera": [
+            -250.13360595703125,
+            429.2589111328125,
+            103.07105255126953
+          ],
+          "target": [
+            0.0,
+            504.2989807128906,
+            58.047000885009766
+          ],
+          "lens": 46.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "wound-roots": {
+          "title": "Breach \u00b7 roots of the peeled armour",
+          "caption": "Looking into the north wound from above, showing where the peeled lips join the surviving ivory shell.",
+          "image": "lod0/wound-roots.png",
+          "camera": [
+            288.99017333984375,
+            1754.5301513671875,
+            299.400146484375
+          ],
+          "target": [
+            140.25,
+            1581.0,
+            175.4499969482422
+          ],
+          "lens": 47.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "peeled-wound": {
+          "title": "Breach \u00b7 peeled wound plates",
+          "caption": "Armour folded outward around the north chest wound, with the road entrance and exposed bronze frame visible.",
+          "image": "lod0/peeled-wound.png",
+          "camera": [
+            524.49365234375,
+            1858.833251953125,
+            375.70635986328125
+          ],
+          "target": [
+            185.75,
+            1458.5,
+            175.53965759277344
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribs-cables": {
+          "title": "Ribcage \u00b7 snapped ribs and cut cables",
+          "caption": "The damaged rib ends and hanging services around the chamber. The complete model remains visible, including the loop.",
+          "image": "lod0/ribs-cables.png",
+          "camera": [
+            633.6412353515625,
+            2003.50537109375,
+            398.384033203125
+          ],
+          "target": [
+            194.5,
+            1454.5789794921875,
+            105.623291015625
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "sand-drift": {
+          "title": "Burial \u00b7 sand at the north wound",
+          "caption": "Modelled sand gathered against the wreck and in its hollows, using an existing production material slot.",
+          "image": "lod0/sand-drift.png",
+          "camera": [
+            439.2535095214844,
+            1915.910888671875,
+            160.7025146484375
+          ],
+          "target": [
+            204.97738647460938,
+            1564.4967041015625,
+            8.423022270202637
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        }
+      }
+    },
+    "lod1": {
+      "triangles": 103267,
+      "trianglesByPart": {
+        "chest": 33215,
+        "foot.L": 1412,
+        "foot.R": 1412,
+        "forearm.L": 1448,
+        "forearm.R": 7982,
+        "halo": 3240,
+        "hand.L": 1224,
+        "hand.R": 6774,
+        "head": 7047,
+        "index.01.L": 776,
+        "index.01.R": 884,
+        "index.02.L": 776,
+        "index.02.R": 814,
+        "index.03.L": 776,
+        "index.03.R": 860,
+        "middle.01.L": 776,
+        "middle.01.R": 876,
+        "middle.02.L": 776,
+        "middle.02.R": 778,
+        "middle.03.L": 448,
+        "middle.03.R": 1289,
+        "neck": 800,
+        "pelvis": 958,
+        "pinky.01.L": 612,
+        "pinky.01.R": 934,
+        "pinky.02.R": 820,
+        "pinky.03.R": 850,
+        "ring.01.L": 776,
+        "ring.01.R": 912,
+        "ring.02.L": 478,
+        "ring.02.R": 794,
+        "ring.03.R": 1269,
+        "shin.L": 1206,
+        "shin.R": 1272,
+        "shoulder.L": 4166,
+        "shoulder.R": 4172,
+        "spine": 207,
+        "sword": 1312,
+        "thigh.L": 812,
+        "thigh.R": 736,
+        "thumb.01.L": 776,
+        "thumb.01.R": 904,
+        "thumb.02.L": 776,
+        "thumb.02.R": 808,
+        "thumb.03.L": 776,
+        "thumb.03.R": 876,
+        "upper_arm.L": 866,
+        "upper_arm.R": 816
+      },
+      "objects": 386,
+      "partBounds": {
+        "chest": {
+          "centerBlender": [
+            90.50091552734375,
+            1462.0565185546875,
+            128.7418975830078
+          ],
+          "radius": 358.7007207007675,
+          "lod1Distance": 938.0510810511512,
+          "lod2Distance": 2634.80288280307
+        },
+        "head": {
+          "centerBlender": [
+            -135.8709716796875,
+            1422.0,
+            179.44952392578125
+          ],
+          "radius": 181.4961111949957,
+          "lod1Distance": 672.2441667924936,
+          "lod2Distance": 1925.9844447799828
+        },
+        "shin.L": {
+          "centerBlender": [
+            780.7232055664062,
+            1576.2445068359375,
+            93.50016784667969
+          ],
+          "radius": 260.49727835670376,
+          "lod1Distance": 790.7459175350557,
+          "lod2Distance": 2241.989113426815
+        },
+        "shoulder.R": {
+          "centerBlender": [
+            -34.4998779296875,
+            1152.5,
+            93.75006866455078
+          ],
+          "radius": 171.22963496610333,
+          "lod1Distance": 656.844452449155,
+          "lod2Distance": 1884.9185398644133
+        },
+        "foot.L": {
+          "centerBlender": [
+            1009.0003662109375,
+            1602.0001220703125,
+            173.35025024414062
+          ],
+          "radius": 256.33198955102637,
+          "lod1Distance": 784.4979843265396,
+          "lod2Distance": 2225.3279582041055
+        },
+        "index.01.L": {
+          "centerBlender": [
+            -242.8707275390625,
+            2138.66796875,
+            25.49321174621582
+          ],
+          "radius": 28.732642465356232,
+          "lod1Distance": 443.09896369803437,
+          "lod2Distance": 1314.9305698614248
+        },
+        "pinky.01.L": {
+          "centerBlender": [
+            -278.1195373535156,
+            2086.6171875,
+            -12.609813690185547
+          ],
+          "radius": 20.59347918365654,
+          "lod1Distance": 430.8902187754848,
+          "lod2Distance": 1282.3739167346262
+        },
+        "ring.01.L": {
+          "centerBlender": [
+            -268.669921875,
+            2106.4638671875,
+            -4.875667572021484
+          ],
+          "radius": 28.525082710273246,
+          "lod1Distance": 442.7876240654099,
+          "lod2Distance": 1314.100330841093
+        },
+        "shin.R": {
+          "centerBlender": [
+            780.7232055664062,
+            1267.7225341796875,
+            93.50016784667969
+          ],
+          "radius": 260.5133716277823,
+          "lod1Distance": 790.7700574416734,
+          "lod2Distance": 2242.0534865111294
+        },
+        "upper_arm.R": {
+          "centerBlender": [
+            0.2471923828125,
+            1082.3038330078125,
+            65.27059936523438
+          ],
+          "radius": 193.98766924810582,
+          "lod1Distance": 690.9815038721588,
+          "lod2Distance": 1975.9506769924233
+        },
+        "hand.L": {
+          "centerBlender": [
+            -246.8783721923828,
+            2075.0966796875,
+            31.26868438720703
+          ],
+          "radius": 98.01555899288388,
+          "lod1Distance": 547.0233384893259,
+          "lod2Distance": 1592.0622359715355
+        },
+        "index.03.L": {
+          "centerBlender": [
+            -255.05015563964844,
+            2192.7919921875,
+            0.009611129760742188
+          ],
+          "radius": 28.732716282755998,
+          "lod1Distance": 443.099074424134,
+          "lod2Distance": 1314.930865131024
+        },
+        "shoulder.L": {
+          "centerBlender": [
+            -34.4998779296875,
+            1691.5,
+            93.75006866455078
+          ],
+          "radius": 171.2296064499361,
+          "lod1Distance": 656.8444096749042,
+          "lod2Distance": 1884.9184257997445
+        },
+        "foot.R": {
+          "centerBlender": [
+            1009.0003662109375,
+            1242.0,
+            173.3502197265625
+          ],
+          "radius": 256.3320009802961,
+          "lod1Distance": 784.4980014704441,
+          "lod2Distance": 2225.328003921184
+        },
+        "spine": {
+          "centerBlender": [
+            326.5000305175781,
+            1422.0,
+            75.75019836425781
+          ],
+          "radius": 142.2280273630276,
+          "lod1Distance": 613.3420410445414,
+          "lod2Distance": 1768.9121094521104
+        },
+        "neck": {
+          "centerBlender": [
+            -143.3702392578125,
+            1438.247802734375,
+            123.143310546875
+          ],
+          "radius": 220.99916704806265,
+          "lod1Distance": 731.498750572094,
+          "lod2Distance": 2083.9966681922506
+        },
+        "pelvis": {
+          "centerBlender": [
+            393.9842529296875,
+            1422.0,
+            86.00019836425781
+          ],
+          "radius": 244.21572894804504,
+          "lod1Distance": 766.3235934220676,
+          "lod2Distance": 2176.86291579218
+        },
+        "forearm.L": {
+          "centerBlender": [
+            -202.96371459960938,
+            1916.3709716796875,
+            128.2726593017578
+          ],
+          "radius": 228.25899960009792,
+          "lod1Distance": 742.3884994001469,
+          "lod2Distance": 2113.0359984003917
+        },
+        "ring.01.R": {
+          "centerBlender": [
+            -13.216472625732422,
+            564.992919921875,
+            72.49933624267578
+          ],
+          "radius": 26.783335084881475,
+          "lod1Distance": 440.1750026273222,
+          "lod2Distance": 1307.1333403395258
+        },
+        "halo": {
+          "centerBlender": [
+            -512.3333740234375,
+            1421.9998779296875,
+            168.7496337890625
+          ],
+          "radius": 225.35541373572545,
+          "lod1Distance": 738.0331206035881,
+          "lod2Distance": 2101.421654942902
+        },
+        "middle.02.R": {
+          "centerBlender": [
+            15.633883476257324,
+            529.8807373046875,
+            63.88620376586914
+          ],
+          "radius": 28.280374722082215,
+          "lod1Distance": 442.42056208312334,
+          "lod2Distance": 1313.121498888329
+        },
+        "ring.03.R": {
+          "centerBlender": [
+            -17.21150779724121,
+            501.9664306640625,
+            59.04106140136719
+          ],
+          "radius": 27.17727854843668,
+          "lod1Distance": 440.765917822655,
+          "lod2Distance": 1308.7091141937467
+        },
+        "thigh.L": {
+          "centerBlender": [
+            523.5980224609375,
+            1552.9697265625,
+            84.50045013427734
+          ],
+          "radius": 213.40694098584868,
+          "lod1Distance": 720.110411478773,
+          "lod2Distance": 2053.6277639433947
+        },
+        "thumb.03.R": {
+          "centerBlender": [
+            84.30879211425781,
+            574.4918212890625,
+            77.46556091308594
+          ],
+          "radius": 27.17735673077995,
+          "lod1Distance": 440.76603509616996,
+          "lod2Distance": 1308.7094269231197
+        },
+        "forearm.R": {
+          "centerBlender": [
+            0.728973388671875,
+            814.3023681640625,
+            55.68275451660156
+          ],
+          "radius": 199.18086772179262,
+          "lod1Distance": 698.7713015826889,
+          "lod2Distance": 1996.7234708871706
+        },
+        "thumb.02.R": {
+          "centerBlender": [
+            74.75108337402344,
+            599.0576171875,
+            80.52649688720703
+          ],
+          "radius": 29.96801858751298,
+          "lod1Distance": 444.9520278812695,
+          "lod2Distance": 1319.872074350052
+        },
+        "thumb.02.L": {
+          "centerBlender": [
+            -219.05615234375,
+            2132.59912109375,
+            67.69760131835938
+          ],
+          "radius": 27.739370148761488,
+          "lod1Distance": 441.60905522314226,
+          "lod2Distance": 1310.957480595046
+        },
+        "upper_arm.L": {
+          "centerBlender": [
+            -62.145538330078125,
+            1727.900390625,
+            119.89625549316406
+          ],
+          "radius": 215.75209116889226,
+          "lod1Distance": 723.6281367533384,
+          "lod2Distance": 2063.0083646755693
+        },
+        "sword": {
+          "centerBlender": [
+            450.4753723144531,
+            292.949462890625,
+            81.10491943359375
+          ],
+          "radius": 236.51707787176807,
+          "lod1Distance": 754.7756168076521,
+          "lod2Distance": 2146.068311487072
+        },
+        "thumb.01.L": {
+          "centerBlender": [
+            -218.79510498046875,
+            2103.162841796875,
+            66.33618927001953
+          ],
+          "radius": 29.19780253672582,
+          "lod1Distance": 443.7967038050887,
+          "lod2Distance": 1316.7912101469033
+        },
+        "pinky.03.R": {
+          "centerBlender": [
+            -51.75662612915039,
+            517.7554321289062,
+            64.38655853271484
+          ],
+          "radius": 25.47282277874564,
+          "lod1Distance": 438.2092341681185,
+          "lod2Distance": 1301.8912911149826
+        },
+        "thigh.R": {
+          "centerBlender": [
+            523.5980224609375,
+            1290.99951171875,
+            84.50045013427734
+          ],
+          "radius": 213.38967710944922,
+          "lod1Distance": 720.0845156641739,
+          "lod2Distance": 2053.5587084377967
+        },
+        "hand.R": {
+          "centerBlender": [
+            0.76953125,
+            586.011474609375,
+            73.42253875732422
+          ],
+          "radius": 140.9309493003688,
+          "lod1Distance": 611.3964239505532,
+          "lod2Distance": 1763.7237972014752
+        },
+        "index.01.R": {
+          "centerBlender": [
+            40.26112365722656,
+            565.6146240234375,
+            70.58121490478516
+          ],
+          "radius": 27.311789636518036,
+          "lod1Distance": 440.96768445477704,
+          "lod2Distance": 1309.2471585460721
+        },
+        "middle.01.R": {
+          "centerBlender": [
+            13.63647174835205,
+            563.8433837890625,
+            70.94434356689453
+          ],
+          "radius": 27.87601390414494,
+          "lod1Distance": 441.81402085621744,
+          "lod2Distance": 1311.5040556165798
+        },
+        "index.02.R": {
+          "centerBlender": [
+            46.25334930419922,
+            535.7567138671875,
+            63.7741584777832
+          ],
+          "radius": 27.487030855193783,
+          "lod1Distance": 441.23054628279067,
+          "lod2Distance": 1309.9481234207751
+        },
+        "index.03.R": {
+          "centerBlender": [
+            52.24543380737305,
+            505.8988342285156,
+            56.60136795043945
+          ],
+          "radius": 27.486973954631985,
+          "lod1Distance": 441.23046093194796,
+          "lod2Distance": 1309.947895818528
+        },
+        "pinky.02.R": {
+          "centerBlender": [
+            -45.76435470581055,
+            542.73876953125,
+            69.82731628417969
+          ],
+          "radius": 25.47283146456761,
+          "lod1Distance": 438.20924719685144,
+          "lod2Distance": 1301.8913258582704
+        },
+        "ring.02.R": {
+          "centerBlender": [
+            -15.214075088500977,
+            533.4735107421875,
+            66.18873596191406
+          ],
+          "radius": 27.186836743211792,
+          "lod1Distance": 440.7802551148177,
+          "lod2Distance": 1308.7473469728473
+        },
+        "middle.03.L": {
+          "centerBlender": [
+            -271.28387451171875,
+            2174.9267578125,
+            -14.612371444702148
+          ],
+          "radius": 20.488698030347358,
+          "lod1Distance": 430.73304704552106,
+          "lod2Distance": 1281.9547921213893
+        },
+        "thumb.03.L": {
+          "centerBlender": [
+            -224.88809204101562,
+            2158.99609375,
+            60.99738311767578
+          ],
+          "radius": 28.141094028052695,
+          "lod1Distance": 442.21164104207907,
+          "lod2Distance": 1312.5643761122108
+        },
+        "middle.01.L": {
+          "centerBlender": [
+            -256.2054443359375,
+            2123.88330078125,
+            8.11693286895752
+          ],
+          "radius": 30.924895830526353,
+          "lod1Distance": 446.3873437457895,
+          "lod2Distance": 1323.6995833221054
+        },
+        "middle.03.R": {
+          "centerBlender": [
+            17.631023406982422,
+            495.940185546875,
+            55.972877502441406
+          ],
+          "radius": 28.26282945834863,
+          "lod1Distance": 442.39424418752293,
+          "lod2Distance": 1313.0513178333945
+        },
+        "pinky.01.R": {
+          "centerBlender": [
+            -39.772037506103516,
+            567.7223510742188,
+            73.60245513916016
+          ],
+          "radius": 25.354626825106887,
+          "lod1Distance": 438.0319402376603,
+          "lod2Distance": 1301.4185073004276
+        },
+        "index.02.L": {
+          "centerBlender": [
+            -248.96043395996094,
+            2165.730224609375,
+            12.751434326171875
+          ],
+          "radius": 28.73259679406429,
+          "lod1Distance": 443.0988951910964,
+          "lod2Distance": 1314.9303871762572
+        },
+        "middle.02.L": {
+          "centerBlender": [
+            -265.44830322265625,
+            2151.657470703125,
+            -5.8770599365234375
+          ],
+          "radius": 29.087101062879874,
+          "lod1Distance": 443.63065159431983,
+          "lod2Distance": 1316.3484042515195
+        },
+        "ring.02.L": {
+          "centerBlender": [
+            -275.52398681640625,
+            2126.0302734375,
+            -14.17238712310791
+          ],
+          "radius": 19.859775590195373,
+          "lod1Distance": 429.78966338529307,
+          "lod2Distance": 1279.4391023607816
+        },
+        "thumb.01.R": {
+          "centerBlender": [
+            54.29349136352539,
+            620.706298828125,
+            82.66404724121094
+          ],
+          "radius": 30.52015995328692,
+          "lod1Distance": 445.78023992993036,
+          "lod2Distance": 1322.0806398131476
+        }
+      },
+      "file": "titan-lod1.glb",
+      "sha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+      "views": {
+        "overview": {
+          "title": "The fallen titan",
+          "caption": "Full wreck on the unchanged road. White review sand marks Z = 0; buried geometry is intentionally occluded.",
+          "image": "lod1/overview.png",
+          "camera": [
+            -1412.5465087890625,
+            -834.9031982421875,
+            2090.5439453125
+          ],
+          "target": [
+            274.5836181640625,
+            1158.977783203125,
+            173.35025024414062
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "palm": {
+          "title": "Palm \u00b7 fingertips to wrist",
+          "caption": "Approach over the open right hand. Inspect the road support across its full width.",
+          "image": "lod1/palm.png",
+          "camera": [
+            -260.0,
+            340.0,
+            255.0
+          ],
+          "target": [
+            0.0,
+            610.0,
+            90.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "halo": {
+          "title": "Halo \u00b7 full roll",
+          "caption": "Detached halo standing beyond the crown. The road rolls through the opening.",
+          "image": "lod1/halo.png",
+          "camera": [
+            -1269.905029296875,
+            948.8763427734375,
+            432.43914794921875
+          ],
+          "target": [
+            -518.8330078125,
+            1422.0,
+            190.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "breach": {
+          "title": "Breach \u00b7 north flank entrance",
+          "caption": "The northern wound, seen from outside along the approach into the chest.",
+          "image": "lod1/breach.png",
+          "camera": [
+            420.0,
+            1900.0,
+            205.0
+          ],
+          "target": [
+            231.0,
+            1600.0,
+            70.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "armour-wear": {
+          "title": "Shoulder \u00b7 chipped and dented armour",
+          "caption": "A broad capped edge chip and shallow dent on the surviving right pauldron; primary markings and silhouette remain recognizable.",
+          "image": "lod1/armour-wear.png",
+          "camera": [
+            459.5931396484375,
+            903.3687133789062,
+            455.46978759765625
+          ],
+          "target": [
+            -45.66947937011719,
+            1156.0,
+            101.78592681884766
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "arm-shoulder": {
+          "title": "Arm and shoulder",
+          "caption": "Forearm seating and the approved pylon-supported climb above the upper arm.",
+          "image": "lod1/arm-shoulder.png",
+          "camera": [
+            -430.0,
+            770.0,
+            440.0
+          ],
+          "target": [
+            0.0,
+            1000.0,
+            125.0
+          ],
+          "lens": 42.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "brow": {
+          "title": "Brow \u00b7 face and propped head",
+          "caption": "Face, chin and forehead beneath the road, with the broken-neck supports below.",
+          "image": "lod1/brow.png",
+          "camera": [
+            179.99996948242188,
+            1030.0,
+            710.0
+          ],
+          "target": [
+            -125.0,
+            1422.0,
+            190.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "collar": {
+          "title": "Collar and chin",
+          "caption": "Transition from the chest to the lifted head; collar plates and frame remain visible.",
+          "image": "lod1/collar.png",
+          "camera": [
+            310.0,
+            1150.0,
+            390.0
+          ],
+          "target": [
+            -40.0,
+            1365.0,
+            200.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribcage": {
+          "title": "Ribcage \u00b7 chamber overview",
+          "caption": "The northern chest opening, bronze ribs and frame surrounding the loop.",
+          "image": "lod1/ribcage.png",
+          "camera": [
+            300.0,
+            1830.0,
+            399.9999694824219
+          ],
+          "target": [
+            198.0,
+            1500.0,
+            90.0
+          ],
+          "lens": 26.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribcage-high": {
+          "title": "Ribcage \u00b7 inside the chamber",
+          "caption": "Wide view from inside the chest: the complete loop and the surrounding bronze frame.",
+          "image": "lod1/ribcage-high.png",
+          "camera": [
+            300.0,
+            1550.0,
+            100.0
+          ],
+          "target": [
+            198.0,
+            1500.0,
+            90.0
+          ],
+          "lens": 10.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "hull-left": {
+          "title": "Hull \u00b7 left bronze corridor",
+          "caption": "Inside the left route. Inspect the bronze walls and roof clearance over the road.",
+          "image": "lod1/hull-left.png",
+          "camera": [
+            197.26800537109375,
+            1380.1280517578125,
+            25.99599838256836
+          ],
+          "target": [
+            185.72207641601562,
+            1292.1190185546875,
+            30.674055099487305
+          ],
+          "lens": 21.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "hull-gallery": {
+          "title": "Hull \u00b7 right open gallery",
+          "caption": "Looking toward the south exit along the raised right route, beside the ribs and the bronze left corridor; the gallery has no enclosing outer wall or roof.",
+          "image": "lod1/hull-gallery.png",
+          "camera": [
+            138.2310028076172,
+            1412.1309814453125,
+            52.00699996948242
+          ],
+          "target": [
+            119.84199523925781,
+            1320.1219482421875,
+            42.16999816894531
+          ],
+          "lens": 24.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "exit": {
+          "title": "Exit \u00b7 south flank",
+          "caption": "The opening where the two routes leave the southern flank.",
+          "image": "lod1/exit.png",
+          "camera": [
+            410.0,
+            920.0,
+            175.0
+          ],
+          "target": [
+            160.0,
+            1220.0,
+            45.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "sword": {
+          "title": "Sword \u00b7 blade, guard and broken grip",
+          "caption": "The road around the buried blade. The snapped grip and pommel rest east of it.",
+          "image": "lod1/sword.png",
+          "camera": [
+            1065.75537109375,
+            -206.0391845703125,
+            540.5899047851562
+          ],
+          "target": [
+            401.24700927734375,
+            351.0789794921875,
+            106.36399841308594
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "knuckles": {
+          "title": "Palm \u00b7 knuckle support",
+          "caption": "Close inspection of the bent support at s 550\u2013565. The fingers remain spread around the supported central route.",
+          "image": "lod1/knuckles.png",
+          "camera": [
+            -240.60110473632812,
+            572.9871215820312,
+            126.20616149902344
+          ],
+          "target": [
+            0.0,
+            544.114990234375,
+            90.11599731445312
+          ],
+          "lens": 43.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "fingertip-support": {
+          "title": "Palm \u00b7 fingertip bearing from the side",
+          "caption": "Low side inspection of the bent fingertip supports and their attachment to the spread fingers.",
+          "image": "lod1/fingertip-support.png",
+          "camera": [
+            -250.13360595703125,
+            429.2589111328125,
+            103.07105255126953
+          ],
+          "target": [
+            0.0,
+            504.2989807128906,
+            58.047000885009766
+          ],
+          "lens": 46.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "wound-roots": {
+          "title": "Breach \u00b7 roots of the peeled armour",
+          "caption": "Looking into the north wound from above, showing where the peeled lips join the surviving ivory shell.",
+          "image": "lod1/wound-roots.png",
+          "camera": [
+            288.99017333984375,
+            1754.5301513671875,
+            299.400146484375
+          ],
+          "target": [
+            140.25,
+            1581.0,
+            175.4499969482422
+          ],
+          "lens": 47.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "peeled-wound": {
+          "title": "Breach \u00b7 peeled wound plates",
+          "caption": "Armour folded outward around the north chest wound, with the road entrance and exposed bronze frame visible.",
+          "image": "lod1/peeled-wound.png",
+          "camera": [
+            524.49365234375,
+            1858.833251953125,
+            375.70635986328125
+          ],
+          "target": [
+            185.75,
+            1458.5,
+            175.53965759277344
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribs-cables": {
+          "title": "Ribcage \u00b7 snapped ribs and cut cables",
+          "caption": "The damaged rib ends and hanging services around the chamber. The complete model remains visible, including the loop.",
+          "image": "lod1/ribs-cables.png",
+          "camera": [
+            633.6412353515625,
+            2003.50537109375,
+            398.384033203125
+          ],
+          "target": [
+            194.5,
+            1454.5789794921875,
+            105.623291015625
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "sand-drift": {
+          "title": "Burial \u00b7 sand at the north wound",
+          "caption": "Modelled sand gathered against the wreck and in its hollows, using an existing production material slot.",
+          "image": "lod1/sand-drift.png",
+          "camera": [
+            439.2535095214844,
+            1915.910888671875,
+            160.7025146484375
+          ],
+          "target": [
+            204.97738647460938,
+            1564.4967041015625,
+            8.423022270202637
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        }
+      }
+    },
+    "lod2": {
+      "triangles": 39910,
+      "trianglesByPart": {
+        "chest": 17693,
+        "foot.L": 364,
+        "foot.R": 364,
+        "forearm.L": 912,
+        "forearm.R": 3954,
+        "halo": 1332,
+        "hand.L": 174,
+        "hand.R": 1942,
+        "head": 2921,
+        "index.01.L": 102,
+        "index.01.R": 152,
+        "index.02.L": 102,
+        "index.02.R": 108,
+        "index.03.L": 102,
+        "index.03.R": 142,
+        "middle.01.L": 102,
+        "middle.01.R": 146,
+        "middle.02.L": 106,
+        "middle.02.R": 102,
+        "middle.03.L": 122,
+        "middle.03.R": 213,
+        "neck": 534,
+        "pelvis": 358,
+        "pinky.01.L": 82,
+        "pinky.01.R": 102,
+        "pinky.02.R": 108,
+        "pinky.03.R": 140,
+        "ring.01.L": 106,
+        "ring.01.R": 160,
+        "ring.02.L": 62,
+        "ring.02.R": 104,
+        "ring.03.R": 236,
+        "shin.L": 622,
+        "shin.R": 688,
+        "shoulder.L": 912,
+        "shoulder.R": 912,
+        "spine": 207,
+        "sword": 1312,
+        "thigh.L": 356,
+        "thigh.R": 280,
+        "thumb.01.L": 102,
+        "thumb.01.R": 146,
+        "thumb.02.L": 102,
+        "thumb.02.R": 106,
+        "thumb.03.L": 102,
+        "thumb.03.R": 146,
+        "upper_arm.L": 410,
+        "upper_arm.R": 360
+      },
+      "objects": 386,
+      "partBounds": {
+        "chest": {
+          "centerBlender": [
+            90.50091552734375,
+            1462.0565185546875,
+            128.8416290283203
+          ],
+          "radius": 358.74208669408307,
+          "lod1Distance": 938.1131300411246,
+          "lod2Distance": 2634.9683467763325
+        },
+        "head": {
+          "centerBlender": [
+            -135.870849609375,
+            1421.9957275390625,
+            179.4439239501953
+          ],
+          "radius": 181.48806698246375,
+          "lod1Distance": 672.2321004736956,
+          "lod2Distance": 1925.952267929855
+        },
+        "foot.L": {
+          "centerBlender": [
+            1009.0609130859375,
+            1602.0001220703125,
+            173.35025024414062
+          ],
+          "radius": 256.3502547784964,
+          "lod1Distance": 784.5253821677445,
+          "lod2Distance": 2225.4010191139855
+        },
+        "ring.01.L": {
+          "centerBlender": [
+            -268.4952087402344,
+            2106.1416015625,
+            -4.879708290100098
+          ],
+          "radius": 28.907552757805572,
+          "lod1Distance": 443.3613291367084,
+          "lod2Distance": 1315.6302110312222
+        },
+        "shoulder.L": {
+          "centerBlender": [
+            -34.814369201660156,
+            1691.49755859375,
+            93.97267150878906
+          ],
+          "radius": 171.5826277469,
+          "lod1Distance": 657.37394162035,
+          "lod2Distance": 1886.3305109876
+        },
+        "thumb.03.L": {
+          "centerBlender": [
+            -224.88809204101562,
+            2159.1923828125,
+            60.70228576660156
+          ],
+          "radius": 27.955517448449186,
+          "lod1Distance": 441.9332761726738,
+          "lod2Distance": 1311.8220697937968
+        },
+        "forearm.L": {
+          "centerBlender": [
+            -202.96371459960938,
+            1916.3709716796875,
+            128.2726593017578
+          ],
+          "radius": 228.25899960009792,
+          "lod1Distance": 742.3884994001469,
+          "lod2Distance": 2113.0359984003917
+        },
+        "neck": {
+          "centerBlender": [
+            -143.31736755371094,
+            1438.247802734375,
+            123.09967041015625
+          ],
+          "radius": 221.00636965863112,
+          "lod1Distance": 731.5095544879466,
+          "lod2Distance": 2084.0254786345245
+        },
+        "shoulder.R": {
+          "centerBlender": [
+            -34.814369201660156,
+            1152.504150390625,
+            93.98395538330078
+          ],
+          "radius": 171.57596002527205,
+          "lod1Distance": 657.3639400379082,
+          "lod2Distance": 1886.303840101088
+        },
+        "foot.R": {
+          "centerBlender": [
+            1009.2997436523438,
+            1242.0,
+            173.3502197265625
+          ],
+          "radius": 256.27973055426907,
+          "lod1Distance": 784.4195958314036,
+          "lod2Distance": 2225.118922217076
+        },
+        "middle.03.L": {
+          "centerBlender": [
+            -271.4862976074219,
+            2175.214599609375,
+            -14.721510887145996
+          ],
+          "radius": 20.120511662175232,
+          "lod1Distance": 430.18076749326286,
+          "lod2Distance": 1280.4820466487008
+        },
+        "index.01.L": {
+          "centerBlender": [
+            -242.84976196289062,
+            2138.66796875,
+            25.78666114807129
+          ],
+          "radius": 28.88030428697052,
+          "lod1Distance": 443.3204564304558,
+          "lod2Distance": 1315.521217147882
+        },
+        "pelvis": {
+          "centerBlender": [
+            393.975830078125,
+            1421.943115234375,
+            86.00019836425781
+          ],
+          "radius": 244.13220235471292,
+          "lod1Distance": 766.1983035320693,
+          "lod2Distance": 2176.528809418852
+        },
+        "spine": {
+          "centerBlender": [
+            326.5000305175781,
+            1422.0,
+            75.75019836425781
+          ],
+          "radius": 142.2280273630276,
+          "lod1Distance": 613.3420410445414,
+          "lod2Distance": 1768.9121094521104
+        },
+        "pinky.01.R": {
+          "centerBlender": [
+            -39.53596496582031,
+            568.1922607421875,
+            73.84133911132812
+          ],
+          "radius": 25.16754768631558,
+          "lod1Distance": 437.7513215294734,
+          "lod2Distance": 1300.6701907452623
+        },
+        "ring.01.R": {
+          "centerBlender": [
+            -13.046759605407715,
+            564.85595703125,
+            72.553466796875
+          ],
+          "radius": 26.760322219208774,
+          "lod1Distance": 440.14048332881316,
+          "lod2Distance": 1307.041288876835
+        },
+        "middle.02.R": {
+          "centerBlender": [
+            15.329063415527344,
+            530.0963745117188,
+            64.19734191894531
+          ],
+          "radius": 28.509431984821585,
+          "lod1Distance": 442.76414797723237,
+          "lod2Distance": 1314.0377279392862
+        },
+        "shin.L": {
+          "centerBlender": [
+            780.750244140625,
+            1576.2445068359375,
+            93.50016784667969
+          ],
+          "radius": 260.47683888159804,
+          "lod1Distance": 790.7152583223971,
+          "lod2Distance": 2241.907355526392
+        },
+        "upper_arm.L": {
+          "centerBlender": [
+            -63.71607971191406,
+            1727.920166015625,
+            120.17283630371094
+          ],
+          "radius": 214.68402699155916,
+          "lod1Distance": 722.0260404873387,
+          "lod2Distance": 2058.736107966237
+        },
+        "sword": {
+          "centerBlender": [
+            450.4753723144531,
+            292.949462890625,
+            81.10491943359375
+          ],
+          "radius": 236.51707787176807,
+          "lod1Distance": 754.7756168076521,
+          "lod2Distance": 2146.068311487072
+        },
+        "halo": {
+          "centerBlender": [
+            -512.5496826171875,
+            1421.9998779296875,
+            168.7277069091797
+          ],
+          "radius": 225.38712017963914,
+          "lod1Distance": 738.0806802694588,
+          "lod2Distance": 2101.5484807185567
+        },
+        "index.02.R": {
+          "centerBlender": [
+            46.365440368652344,
+            535.793701171875,
+            64.17830657958984
+          ],
+          "radius": 27.402262172455192,
+          "lod1Distance": 441.1033932586828,
+          "lod2Distance": 1309.6090486898208
+        },
+        "middle.01.L": {
+          "centerBlender": [
+            -256.28143310546875,
+            2123.67626953125,
+            8.235930442810059
+          ],
+          "radius": 31.16349232329682,
+          "lod1Distance": 446.7452384849452,
+          "lod2Distance": 1324.6539692931872
+        },
+        "forearm.R": {
+          "centerBlender": [
+            0.728973388671875,
+            813.709716796875,
+            55.68275451660156
+          ],
+          "radius": 198.69378750078286,
+          "lod1Distance": 698.0406812511743,
+          "lod2Distance": 1994.7751500031313
+        },
+        "thumb.01.R": {
+          "centerBlender": [
+            54.105491638183594,
+            620.6746826171875,
+            82.70893859863281
+          ],
+          "radius": 30.714628639714757,
+          "lod1Distance": 446.07194295957214,
+          "lod2Distance": 1322.858514558859
+        },
+        "upper_arm.R": {
+          "centerBlender": [
+            0.2471923828125,
+            1082.0855712890625,
+            65.2069091796875
+          ],
+          "radius": 193.77516091666973,
+          "lod1Distance": 690.6627413750045,
+          "lod2Distance": 1975.100643666679
+        },
+        "ring.02.L": {
+          "centerBlender": [
+            -275.17431640625,
+            2126.1083984375,
+            -13.992694854736328
+          ],
+          "radius": 19.747783681394438,
+          "lod1Distance": 429.62167552209166,
+          "lod2Distance": 1278.9911347255777
+        },
+        "ring.03.R": {
+          "centerBlender": [
+            -17.11798095703125,
+            501.9664001464844,
+            58.931915283203125
+          ],
+          "radius": 26.769436771365818,
+          "lod1Distance": 440.1541551570487,
+          "lod2Distance": 1307.0777470854632
+        },
+        "middle.01.R": {
+          "centerBlender": [
+            13.604044914245605,
+            563.9302978515625,
+            71.11514282226562
+          ],
+          "radius": 27.810900421435054,
+          "lod1Distance": 441.71635063215257,
+          "lod2Distance": 1311.2436016857403
+        },
+        "index.03.L": {
+          "centerBlender": [
+            -255.27813720703125,
+            2193.1181640625,
+            0.11068391799926758
+          ],
+          "radius": 28.64830993673877,
+          "lod1Distance": 442.97246490510815,
+          "lod2Distance": 1314.593239746955
+        },
+        "pinky.01.L": {
+          "centerBlender": [
+            -278.2131042480469,
+            2086.5634765625,
+            -12.53126049041748
+          ],
+          "radius": 20.65286471837356,
+          "lod1Distance": 430.9792970775603,
+          "lod2Distance": 1282.6114588734943
+        },
+        "hand.R": {
+          "centerBlender": [
+            0.7672615051269531,
+            586.011474609375,
+            73.42253875732422
+          ],
+          "radius": 140.9241159110551,
+          "lod1Distance": 611.3861738665827,
+          "lod2Distance": 1763.6964636442203
+        },
+        "pinky.03.R": {
+          "centerBlender": [
+            -51.535457611083984,
+            517.79248046875,
+            63.849281311035156
+          ],
+          "radius": 25.238017950085307,
+          "lod1Distance": 437.85702692512797,
+          "lod2Distance": 1300.9520718003412
+        },
+        "thumb.01.L": {
+          "centerBlender": [
+            -218.7222900390625,
+            2103.02783203125,
+            66.33617401123047
+          ],
+          "radius": 29.288938508339843,
+          "lod1Distance": 443.9334077625098,
+          "lod2Distance": 1317.1557540333595
+        },
+        "shin.R": {
+          "centerBlender": [
+            781.02880859375,
+            1267.7225341796875,
+            93.50016784667969
+          ],
+          "radius": 260.28275265204377,
+          "lod1Distance": 790.4241289780657,
+          "lod2Distance": 2241.131010608175
+        },
+        "thumb.02.R": {
+          "centerBlender": [
+            74.65316772460938,
+            599.1212158203125,
+            80.54476928710938
+          ],
+          "radius": 30.113974171963545,
+          "lod1Distance": 445.1709612579453,
+          "lod2Distance": 1320.4558966878542
+        },
+        "thigh.R": {
+          "centerBlender": [
+            523.5679931640625,
+            1290.99951171875,
+            84.50045013427734
+          ],
+          "radius": 213.4097438028545,
+          "lod1Distance": 720.1146157042817,
+          "lod2Distance": 2053.6389752114183
+        },
+        "middle.02.L": {
+          "centerBlender": [
+            -265.67950439453125,
+            2151.53662109375,
+            -5.6453399658203125
+          ],
+          "radius": 29.303319603671557,
+          "lod1Distance": 443.95497940550734,
+          "lod2Distance": 1317.2132784146863
+        },
+        "pinky.02.R": {
+          "centerBlender": [
+            -45.46076202392578,
+            542.918701171875,
+            69.72357177734375
+          ],
+          "radius": 25.544983325414467,
+          "lod1Distance": 438.3174749881217,
+          "lod2Distance": 1302.179933301658
+        },
+        "thumb.03.R": {
+          "centerBlender": [
+            84.04887390136719,
+            574.533447265625,
+            77.03663635253906
+          ],
+          "radius": 26.986646953067943,
+          "lod1Distance": 440.4799704296019,
+          "lod2Distance": 1307.9465878122717
+        },
+        "thigh.L": {
+          "centerBlender": [
+            523.4481201171875,
+            1552.9697265625,
+            84.50045013427734
+          ],
+          "radius": 213.50715600200033,
+          "lod1Distance": 720.2607340030005,
+          "lod2Distance": 2054.0286240080013
+        },
+        "index.01.R": {
+          "centerBlender": [
+            39.928619384765625,
+            565.6912841796875,
+            70.72962951660156
+          ],
+          "radius": 27.431782120162843,
+          "lod1Distance": 441.1476731802443,
+          "lod2Distance": 1309.7271284806513
+        },
+        "hand.L": {
+          "centerBlender": [
+            -246.91888427734375,
+            2074.77294921875,
+            31.245182037353516
+          ],
+          "radius": 97.80684014175912,
+          "lod1Distance": 546.7102602126387,
+          "lod2Distance": 1591.2273605670366
+        },
+        "ring.02.R": {
+          "centerBlender": [
+            -14.74578857421875,
+            533.2772216796875,
+            66.47198486328125
+          ],
+          "radius": 27.045750603975144,
+          "lod1Distance": 440.56862590596273,
+          "lod2Distance": 1308.1830024159005
+        },
+        "index.03.R": {
+          "centerBlender": [
+            52.46316909790039,
+            505.8642272949219,
+            56.954933166503906
+          ],
+          "radius": 27.341490140990537,
+          "lod1Distance": 441.0122352114858,
+          "lod2Distance": 1309.365960563962
+        },
+        "middle.03.R": {
+          "centerBlender": [
+            17.44500160217285,
+            496.4055480957031,
+            56.30918884277344
+          ],
+          "radius": 27.97523575070668,
+          "lod1Distance": 441.96285362606,
+          "lod2Distance": 1311.9009430028268
+        },
+        "index.02.L": {
+          "centerBlender": [
+            -249.15847778320312,
+            2165.885498046875,
+            12.383694648742676
+          ],
+          "radius": 28.52465235960516,
+          "lod1Distance": 442.78697853940776,
+          "lod2Distance": 1314.0986094384207
+        },
+        "thumb.02.L": {
+          "centerBlender": [
+            -219.07003784179688,
+            2132.60498046875,
+            67.86489868164062
+          ],
+          "radius": 27.46676986205829,
+          "lod1Distance": 441.20015479308745,
+          "lod2Distance": 1309.8670794482332
+        }
+      },
+      "file": "titan-lod2.glb",
+      "sha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+      "views": {
+        "hull-left": {
+          "title": "Hull \u00b7 left bronze corridor",
+          "caption": "Inside the left route. Inspect the bronze walls and roof clearance over the road.",
+          "image": "lod2/hull-left.png",
+          "camera": [
+            197.26800537109375,
+            1380.1280517578125,
+            25.99599838256836
+          ],
+          "target": [
+            185.72207641601562,
+            1292.1190185546875,
+            30.674055099487305
+          ],
+          "lens": 21.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "hull-gallery": {
+          "title": "Hull \u00b7 right open gallery",
+          "caption": "Looking toward the south exit along the raised right route, beside the ribs and the bronze left corridor; the gallery has no enclosing outer wall or roof.",
+          "image": "lod2/hull-gallery.png",
+          "camera": [
+            138.2310028076172,
+            1412.1309814453125,
+            52.00699996948242
+          ],
+          "target": [
+            119.84199523925781,
+            1320.1219482421875,
+            42.16999816894531
+          ],
+          "lens": 24.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "overview": {
+          "title": "The fallen titan",
+          "caption": "Full wreck on the unchanged road. White review sand marks Z = 0; buried geometry is intentionally occluded.",
+          "image": "lod2/overview.png",
+          "camera": [
+            -1412.5465087890625,
+            -834.9031982421875,
+            2090.5439453125
+          ],
+          "target": [
+            274.5836181640625,
+            1158.977783203125,
+            173.35025024414062
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "palm": {
+          "title": "Palm \u00b7 fingertips to wrist",
+          "caption": "Approach over the open right hand. Inspect the road support across its full width.",
+          "image": "lod2/palm.png",
+          "camera": [
+            -260.0,
+            340.0,
+            255.0
+          ],
+          "target": [
+            0.0,
+            610.0,
+            90.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "arm-shoulder": {
+          "title": "Arm and shoulder",
+          "caption": "Forearm seating and the approved pylon-supported climb above the upper arm.",
+          "image": "lod2/arm-shoulder.png",
+          "camera": [
+            -430.0,
+            770.0,
+            440.0
+          ],
+          "target": [
+            0.0,
+            1000.0,
+            125.0
+          ],
+          "lens": 42.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "brow": {
+          "title": "Brow \u00b7 face and propped head",
+          "caption": "Face, chin and forehead beneath the road, with the broken-neck supports below.",
+          "image": "lod2/brow.png",
+          "camera": [
+            179.99996948242188,
+            1030.0,
+            710.0
+          ],
+          "target": [
+            -125.0,
+            1422.0,
+            190.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "collar": {
+          "title": "Collar and chin",
+          "caption": "Transition from the chest to the lifted head; collar plates and frame remain visible.",
+          "image": "lod2/collar.png",
+          "camera": [
+            310.0,
+            1150.0,
+            390.0
+          ],
+          "target": [
+            -40.0,
+            1365.0,
+            200.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "halo": {
+          "title": "Halo \u00b7 full roll",
+          "caption": "Detached halo standing beyond the crown. The road rolls through the opening.",
+          "image": "lod2/halo.png",
+          "camera": [
+            -1269.905029296875,
+            948.8763427734375,
+            432.43914794921875
+          ],
+          "target": [
+            -518.8330078125,
+            1422.0,
+            190.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "breach": {
+          "title": "Breach \u00b7 north flank entrance",
+          "caption": "The northern wound, seen from outside along the approach into the chest.",
+          "image": "lod2/breach.png",
+          "camera": [
+            420.0,
+            1900.0,
+            205.0
+          ],
+          "target": [
+            231.0,
+            1600.0,
+            70.0
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribcage": {
+          "title": "Ribcage \u00b7 chamber overview",
+          "caption": "The northern chest opening, bronze ribs and frame surrounding the loop.",
+          "image": "lod2/ribcage.png",
+          "camera": [
+            300.0,
+            1830.0,
+            399.9999694824219
+          ],
+          "target": [
+            198.0,
+            1500.0,
+            90.0
+          ],
+          "lens": 26.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribcage-high": {
+          "title": "Ribcage \u00b7 inside the chamber",
+          "caption": "Wide view from inside the chest: the complete loop and the surrounding bronze frame.",
+          "image": "lod2/ribcage-high.png",
+          "camera": [
+            300.0,
+            1550.0,
+            100.0
+          ],
+          "target": [
+            198.0,
+            1500.0,
+            90.0
+          ],
+          "lens": 10.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "exit": {
+          "title": "Exit \u00b7 south flank",
+          "caption": "The opening where the two routes leave the southern flank.",
+          "image": "lod2/exit.png",
+          "camera": [
+            410.0,
+            920.0,
+            175.0
+          ],
+          "target": [
+            160.0,
+            1220.0,
+            45.0
+          ],
+          "lens": 44.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "sword": {
+          "title": "Sword \u00b7 blade, guard and broken grip",
+          "caption": "The road around the buried blade. The snapped grip and pommel rest east of it.",
+          "image": "lod2/sword.png",
+          "camera": [
+            1065.75537109375,
+            -206.0391845703125,
+            540.5899047851562
+          ],
+          "target": [
+            401.24700927734375,
+            351.0789794921875,
+            106.36399841308594
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "knuckles": {
+          "title": "Palm \u00b7 knuckle support",
+          "caption": "Close inspection of the bent support at s 550\u2013565. The fingers remain spread around the supported central route.",
+          "image": "lod2/knuckles.png",
+          "camera": [
+            -240.60110473632812,
+            572.9871215820312,
+            126.20616149902344
+          ],
+          "target": [
+            0.0,
+            544.114990234375,
+            90.11599731445312
+          ],
+          "lens": 43.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "fingertip-support": {
+          "title": "Palm \u00b7 fingertip bearing from the side",
+          "caption": "Low side inspection of the bent fingertip supports and their attachment to the spread fingers.",
+          "image": "lod2/fingertip-support.png",
+          "camera": [
+            -250.13360595703125,
+            429.2589111328125,
+            103.07105255126953
+          ],
+          "target": [
+            0.0,
+            504.2989807128906,
+            58.047000885009766
+          ],
+          "lens": 46.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "wound-roots": {
+          "title": "Breach \u00b7 roots of the peeled armour",
+          "caption": "Looking into the north wound from above, showing where the peeled lips join the surviving ivory shell.",
+          "image": "lod2/wound-roots.png",
+          "camera": [
+            288.99017333984375,
+            1754.5301513671875,
+            299.400146484375
+          ],
+          "target": [
+            140.25,
+            1581.0,
+            175.4499969482422
+          ],
+          "lens": 47.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "peeled-wound": {
+          "title": "Breach \u00b7 peeled wound plates",
+          "caption": "Armour folded outward around the north chest wound, with the road entrance and exposed bronze frame visible.",
+          "image": "lod2/peeled-wound.png",
+          "camera": [
+            524.49365234375,
+            1858.833251953125,
+            375.70635986328125
+          ],
+          "target": [
+            185.75,
+            1458.5,
+            175.53965759277344
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "ribs-cables": {
+          "title": "Ribcage \u00b7 snapped ribs and cut cables",
+          "caption": "The damaged rib ends and hanging services around the chamber. The complete model remains visible, including the loop.",
+          "image": "lod2/ribs-cables.png",
+          "camera": [
+            633.6412353515625,
+            2003.50537109375,
+            398.384033203125
+          ],
+          "target": [
+            194.5,
+            1454.5789794921875,
+            105.623291015625
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "sand-drift": {
+          "title": "Burial \u00b7 sand at the north wound",
+          "caption": "Modelled sand gathered against the wreck and in its hollows, using an existing production material slot.",
+          "image": "lod2/sand-drift.png",
+          "camera": [
+            439.2535095214844,
+            1915.910888671875,
+            160.7025146484375
+          ],
+          "target": [
+            204.97738647460938,
+            1564.4967041015625,
+            8.423022270202637
+          ],
+          "lens": 45.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        },
+        "armour-wear": {
+          "title": "Shoulder \u00b7 chipped and dented armour",
+          "caption": "A broad capped edge chip and shallow dent on the surviving right pauldron; primary markings and silhouette remain recognizable.",
+          "image": "lod2/armour-wear.png",
+          "camera": [
+            459.5931396484375,
+            903.3687133789062,
+            455.46978759765625
+          ],
+          "target": [
+            -45.66947937011719,
+            1156.0,
+            101.78592681884766
+          ],
+          "lens": 48.0,
+          "wholeAssemblyFramed": false,
+          "sourceSha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+          "samples": 16,
+          "resolutionPercent": 100,
+          "width": 1400,
+          "height": 900
+        }
+      }
+    }
+  }
+}

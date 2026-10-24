@@ -1,0 +1,583 @@
+{
+  "phase": 4,
+  "blender": "5.2.2 LTS",
+  "finest_unchanged": true,
+  "finest_sha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+  "levels": [
+    {
+      "level": 0,
+      "file": "titan.glb",
+      "sha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+      "triangles": 196114,
+      "triangles_by_part": {
+        "chest": 69201,
+        "foot.L": 1412,
+        "foot.R": 1412,
+        "forearm.L": 5208,
+        "forearm.R": 30769,
+        "halo": 3240,
+        "hand.L": 1224,
+        "hand.R": 12220,
+        "head": 13727,
+        "index.01.L": 776,
+        "index.01.R": 1032,
+        "index.02.L": 776,
+        "index.02.R": 1032,
+        "index.03.L": 776,
+        "index.03.R": 1032,
+        "middle.01.L": 776,
+        "middle.01.R": 1064,
+        "middle.02.L": 776,
+        "middle.02.R": 1064,
+        "middle.03.L": 448,
+        "middle.03.R": 1437,
+        "neck": 800,
+        "pelvis": 958,
+        "pinky.01.L": 612,
+        "pinky.01.R": 1032,
+        "pinky.02.R": 1032,
+        "pinky.03.R": 1032,
+        "ring.01.L": 776,
+        "ring.01.R": 1032,
+        "ring.02.L": 478,
+        "ring.02.R": 1032,
+        "ring.03.R": 1364,
+        "shin.L": 2919,
+        "shin.R": 3044,
+        "shoulder.L": 10078,
+        "shoulder.R": 10073,
+        "spine": 228,
+        "sword": 1348,
+        "thigh.L": 812,
+        "thigh.R": 736,
+        "thumb.01.L": 776,
+        "thumb.01.R": 1104,
+        "thumb.02.L": 776,
+        "thumb.02.R": 1088,
+        "thumb.03.L": 776,
+        "thumb.03.R": 1084,
+        "upper_arm.L": 906,
+        "upper_arm.R": 816
+      },
+      "meshes": 386,
+      "strict_clearance": {
+        "level": 0,
+        "file": "titan.glb",
+        "strict_exit_code": 0,
+        "objects": 386,
+        "surface_points": 3937287,
+        "sky_overlaps": [
+          {
+            "object": "titan/chest/hull-left-roof",
+            "part": "chest",
+            "points": 25194,
+            "pieces": {
+              "the Hull": 25194
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-0",
+            "part": "chest",
+            "points": 1831,
+            "pieces": {
+              "the Hull": 1831
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-1",
+            "part": "chest",
+            "points": 1657,
+            "pieces": {
+              "the Hull": 1657
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-10",
+            "part": "chest",
+            "points": 1503,
+            "pieces": {
+              "the Hull": 1503
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-2",
+            "part": "chest",
+            "points": 1324,
+            "pieces": {
+              "the Hull": 1324
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-3",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-4",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-5",
+            "part": "chest",
+            "points": 1200,
+            "pieces": {
+              "the Hull": 1200
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-6",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-7",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-8",
+            "part": "chest",
+            "points": 1323,
+            "pieces": {
+              "the Hull": 1323
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-9",
+            "part": "chest",
+            "points": 1504,
+            "pieces": {
+              "the Hull": 1504
+            }
+          },
+          {
+            "object": "titan/forearm.L/forearm-armour",
+            "part": "forearm.L",
+            "points": 201,
+            "pieces": {
+              "the Long Flank": 201
+            }
+          }
+        ],
+        "sky_points": 41017,
+        "full_output": "clearance-lod0.txt",
+        "export_sha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+        "full_output_sha256": "3a6409d3b02973c62fe7f75331b09a7fa5c3117dbd1fa7cb33da220dd1b39061",
+        "sky_by_road_piece": {
+          "the Hull": 40816,
+          "the Long Flank": 201
+        },
+        "hard_road_hits": 0,
+        "result": "Clear of the road."
+      }
+    },
+    {
+      "level": 1,
+      "file": "titan-lod1.glb",
+      "sha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+      "triangles": 103267,
+      "triangles_by_part": {
+        "chest": 33215,
+        "foot.L": 1412,
+        "foot.R": 1412,
+        "forearm.L": 1448,
+        "forearm.R": 7982,
+        "halo": 3240,
+        "hand.L": 1224,
+        "hand.R": 6774,
+        "head": 7047,
+        "index.01.L": 776,
+        "index.01.R": 884,
+        "index.02.L": 776,
+        "index.02.R": 814,
+        "index.03.L": 776,
+        "index.03.R": 860,
+        "middle.01.L": 776,
+        "middle.01.R": 876,
+        "middle.02.L": 776,
+        "middle.02.R": 778,
+        "middle.03.L": 448,
+        "middle.03.R": 1289,
+        "neck": 800,
+        "pelvis": 958,
+        "pinky.01.L": 612,
+        "pinky.01.R": 934,
+        "pinky.02.R": 820,
+        "pinky.03.R": 850,
+        "ring.01.L": 776,
+        "ring.01.R": 912,
+        "ring.02.L": 478,
+        "ring.02.R": 794,
+        "ring.03.R": 1269,
+        "shin.L": 1206,
+        "shin.R": 1272,
+        "shoulder.L": 4166,
+        "shoulder.R": 4172,
+        "spine": 207,
+        "sword": 1312,
+        "thigh.L": 812,
+        "thigh.R": 736,
+        "thumb.01.L": 776,
+        "thumb.01.R": 904,
+        "thumb.02.L": 776,
+        "thumb.02.R": 808,
+        "thumb.03.L": 776,
+        "thumb.03.R": 876,
+        "upper_arm.L": 866,
+        "upper_arm.R": 816
+      },
+      "meshes": 386,
+      "strict_clearance": {
+        "level": 1,
+        "file": "titan-lod1.glb",
+        "strict_exit_code": 0,
+        "objects": 386,
+        "surface_points": 3704548,
+        "sky_overlaps": [
+          {
+            "object": "titan/chest/hull-left-roof",
+            "part": "chest",
+            "points": 22448,
+            "pieces": {
+              "the Hull": 22448
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-0",
+            "part": "chest",
+            "points": 1497,
+            "pieces": {
+              "the Hull": 1497
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-1",
+            "part": "chest",
+            "points": 1437,
+            "pieces": {
+              "the Hull": 1437
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-10",
+            "part": "chest",
+            "points": 1504,
+            "pieces": {
+              "the Hull": 1504
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-2",
+            "part": "chest",
+            "points": 1324,
+            "pieces": {
+              "the Hull": 1324
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-3",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-4",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-5",
+            "part": "chest",
+            "points": 1200,
+            "pieces": {
+              "the Hull": 1200
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-6",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-7",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-8",
+            "part": "chest",
+            "points": 1323,
+            "pieces": {
+              "the Hull": 1323
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-9",
+            "part": "chest",
+            "points": 1503,
+            "pieces": {
+              "the Hull": 1503
+            }
+          },
+          {
+            "object": "titan/forearm.L/forearm-armour",
+            "part": "forearm.L",
+            "points": 153,
+            "pieces": {
+              "the Long Flank": 153
+            }
+          }
+        ],
+        "sky_points": 37669,
+        "full_output": "clearance-lod1.txt",
+        "export_sha256": "84666b91233540bf0eca1e1ca80e9941a1f89b70092b67a591047fef1c60a0be",
+        "full_output_sha256": "67a18eb91ce9ae56a754cfda24c93a6fc5486d1d07df005ad800aca485eacf8b",
+        "sky_by_road_piece": {
+          "the Hull": 37516,
+          "the Long Flank": 153
+        },
+        "hard_road_hits": 0,
+        "result": "Clear of the road."
+      }
+    },
+    {
+      "level": 2,
+      "file": "titan-lod2.glb",
+      "sha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+      "triangles": 39910,
+      "triangles_by_part": {
+        "chest": 17693,
+        "foot.L": 364,
+        "foot.R": 364,
+        "forearm.L": 912,
+        "forearm.R": 3954,
+        "halo": 1332,
+        "hand.L": 174,
+        "hand.R": 1942,
+        "head": 2921,
+        "index.01.L": 102,
+        "index.01.R": 152,
+        "index.02.L": 102,
+        "index.02.R": 108,
+        "index.03.L": 102,
+        "index.03.R": 142,
+        "middle.01.L": 102,
+        "middle.01.R": 146,
+        "middle.02.L": 106,
+        "middle.02.R": 102,
+        "middle.03.L": 122,
+        "middle.03.R": 213,
+        "neck": 534,
+        "pelvis": 358,
+        "pinky.01.L": 82,
+        "pinky.01.R": 102,
+        "pinky.02.R": 108,
+        "pinky.03.R": 140,
+        "ring.01.L": 106,
+        "ring.01.R": 160,
+        "ring.02.L": 62,
+        "ring.02.R": 104,
+        "ring.03.R": 236,
+        "shin.L": 622,
+        "shin.R": 688,
+        "shoulder.L": 912,
+        "shoulder.R": 912,
+        "spine": 207,
+        "sword": 1312,
+        "thigh.L": 356,
+        "thigh.R": 280,
+        "thumb.01.L": 102,
+        "thumb.01.R": 146,
+        "thumb.02.L": 102,
+        "thumb.02.R": 106,
+        "thumb.03.L": 102,
+        "thumb.03.R": 146,
+        "upper_arm.L": 410,
+        "upper_arm.R": 360
+      },
+      "meshes": 386,
+      "strict_clearance": {
+        "level": 2,
+        "file": "titan-lod2.glb",
+        "strict_exit_code": 0,
+        "objects": 386,
+        "surface_points": 3099959,
+        "sky_overlaps": [
+          {
+            "object": "titan/chest/hull-left-roof",
+            "part": "chest",
+            "points": 22448,
+            "pieces": {
+              "the Hull": 22448
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-0",
+            "part": "chest",
+            "points": 1497,
+            "pieces": {
+              "the Hull": 1497
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-1",
+            "part": "chest",
+            "points": 1437,
+            "pieces": {
+              "the Hull": 1437
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-10",
+            "part": "chest",
+            "points": 1504,
+            "pieces": {
+              "the Hull": 1504
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-2",
+            "part": "chest",
+            "points": 1324,
+            "pieces": {
+              "the Hull": 1324
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-3",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-4",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-5",
+            "part": "chest",
+            "points": 1200,
+            "pieces": {
+              "the Hull": 1200
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-6",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-7",
+            "part": "chest",
+            "points": 1320,
+            "pieces": {
+              "the Hull": 1320
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-8",
+            "part": "chest",
+            "points": 1323,
+            "pieces": {
+              "the Hull": 1323
+            }
+          },
+          {
+            "object": "titan/chest/hull-roof-crossmember-9",
+            "part": "chest",
+            "points": 1503,
+            "pieces": {
+              "the Hull": 1503
+            }
+          },
+          {
+            "object": "titan/forearm.L/forearm-armour",
+            "part": "forearm.L",
+            "points": 153,
+            "pieces": {
+              "the Long Flank": 153
+            }
+          }
+        ],
+        "sky_points": 37669,
+        "full_output": "clearance-lod2.txt",
+        "export_sha256": "642f5cd730f48ae041e7060d9078aaf054770ed92b5be2d1d020b81e27d3af7e",
+        "full_output_sha256": "6ae1b4bd4e861546bb9ea322fa22d94e871d029c17ff0e39c2f91b95d0d8e296",
+        "sky_by_road_piece": {
+          "the Hull": 37516,
+          "the Long Flank": 153
+        },
+        "hard_road_hits": 0,
+        "result": "Clear of the road."
+      }
+    }
+  ],
+  "contract": {
+    "report": "contract.json",
+    "checks": 8512,
+    "failures": []
+  },
+  "fit_sha256": {
+    "check_clearance.py": "56cff1d726c2483f5c95086bf8023ed6526776a7da159a11aaf52bdcb9373303",
+    "guide.obj": "b91e005602a1714070e3101f5845385f48710052022bed4b32648dc8460ff482",
+    "keepout.obj": "56940079a2bbd7c308b14e8e29263f9c43e05339914352312d465caab5a16486",
+    "load_fit.py": "e85539db2971a241620dd82dbb713166f90b137c0790661988cb7997bfad9c93",
+    "plan.png": "b797beb82be231076c43182b43b88cbe863d2c97288baaaa901257bfa419ff92",
+    "pose.json": "1bb7c1e4e2239e273f8b96cd10ba8c05d70c1cb31479f198ad670f0d6b4e2a4a",
+    "posed.glb": "5b096ec5ffb8f52957524906d5c6cc4dfadffe8fb2475ce79a41f8e820f188dc",
+    "rig-pose.json": "b2991cd22b2d16bad8984ef65424784176a444cafda77dfc8230f28936ef956f",
+    "road.json": "5336c53a2339225ab88ef5cc8104093f495148abfba7911a1274f9e611f746a6",
+    "road.obj": "b3376004b776f3a90fb8955144172c79bd9c3c69db1af9d399c21d05ea9ea216",
+    "sky.obj": "54b7ca3397a5e40d674abce8fea64ab27b63f3fa43c0b2e8ac89b0d69251c343",
+    "stretches.json": "e0eea1e69b23ba83513aef2f0d0e9bf83bb97b2b91a69e33923aba974e5ee54b"
+  },
+  "tests": {
+    "command": "npx vitest run tests/titan.test.ts tests/scenery.test.ts",
+    "exit_code": 0,
+    "files_passed": 2,
+    "tests_passed": 11,
+    "tests_skipped": 1,
+    "skip_reason": "Existing Crucible scenery NOT_YET case (benches, rim and rock at the road edge); no Titan test skipped.",
+    "duration": "4.77s (tests 88%, transform 8%, import 3%)",
+    "output": "tests.txt"
+  },
+  "src_changes": [
+    "src/client/render/titan/assets/titan-lod1.glb",
+    "src/client/render/titan/assets/titan-lod2.glb"
+  ],
+  "method": "Each exact GLB imported into a fresh TITAN collection; unchanged fit/check_clearance.py --strict samples triangle surfaces at 4 m. Sky hits independently classified by object name and part.",
+  "all_checks_passed": true
+}
