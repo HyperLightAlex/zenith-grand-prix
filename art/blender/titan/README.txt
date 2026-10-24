@@ -1224,3 +1224,570 @@ Validation and counts
 
 Phase 2 is committed for review only. Phase 3 damage/weathering and Phase 4
 LOD work remain unstarted. Do not continue either without review.
+
+
+PHASE 3 — CURRENT ROAD, PALM GUARDS AND G4 DAMAGE (2026-10-24)
+  Branch: titan, starting at ec82ae570fa4950ebcffe1984797c20659d46304.
+  Native Blender 5.2.2 LTS, build d13f752e3b9c. Phase 3 only.
+
+  Re-ran fit_wreck.py first against the regenerated crown/hilt road files.
+  Baseline: 169,945 triangles / 344 meshes; 2,496 validation checks passed;
+  strict clearance ended "Clear of the road." Baseline game tests had only
+  the expected stale titan-top.json failure. Full baseline evidence is in
+  reports/phase3-baseline/ (including its complete clearance output).
+
+  weather_wreck.py now rebuilds that fit from titan-standing.blend, then adds:
+  - Three bent bearing slats over the central fingers, an articulated knuckle
+    guard and a wrist seam plate. The fixed rig and spread fingers remain.
+  - Four unequal ivory lips rooted in measured surviving shell edges, peeled
+    outward around the north wound and south exit. One smaller frame-held
+    scrap remains. The red band follows and embeds into its bent carrier.
+  - Snapped ribs 2, 4 and 5 with jagged capped ends, bent forks and a broken
+    longitudinal member. The surrounding ribs/frame still explain the chest.
+  - Thick slate/red cut conduits with exposed bronze cores, hanging beside
+    the wound; paired runs outside the Hull corridor wall.
+  - Low irregular sand accumulations in the chest hollow, against the wound,
+    collar and limb sides, and under the broken pommel, with sparse buried
+    armour fragments. Sand uses the existing pale armour slot: no eleventh
+    material and no exported ground plane.
+  - Large capped corner chips and shallow dents on the pauldrons, left
+    forearm and greaves. No tiny rivets, scratches or engraved texture.
+
+  The primary peeled lips intersect the original ivory shell (not merely
+  nearby bronze ribs). The red band intersects its carrier, and cable cores
+  join their conduits. Attachment evidence is in reports/phase3-final/.
+  Deliberately loose armour debris rests in the modelled sand.
+
+REBUILD / REVIEW
+  From the repository root, with Blender 5.2:
+    blender --background --python-exit-code 1 --python art/blender/titan/weather_wreck.py
+  This always runs the current Phase 2 fit from the immutable standing source
+  before Phase 3. The optional --baseline path is for iteration only.
+  A final clean default rebuild reproduced the reviewed GLB byte for byte:
+    01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a
+  See reports/phase3-final/rebuild-reference.json.
+
+  Render without saving or editing the production geometry:
+    blender --background art/blender/titan/titan-production.blend --python art/blender/titan/render_weathered.py
+  Gallery: art/blender/titan/previews/phase3/index.html
+  Twenty 1400 x 900 previews include Palm, Brow, Halo, Breach, Ribcage, both
+  Hull routes, Sword, distant overview, and closeups of guards, attachments,
+  damage and sand. framing.json records each camera and production SHA.
+  The blue road and flat white Z=0 ground plane are review context only.
+
+POSE / EXPORT / SCOPE
+  No departure from pose.json or rig-pose.json targets. All 51 supplied rig
+  matrices are retained, including the head's 45-degree pitch and 25m lift,
+  120m burial, halo placement/axis/radius, sword direction/radius and 26m grip
+  break. No road, fit input, game code, tests or titan-top.json was changed.
+  The only changed file under src/ is titan.glb. The source standing model
+  and unrelated art/model-sheet edits were left untouched.
+  All objects retain titan/<bone>/<what>, part and titan_part; all ten named
+  material slots remain. Export is applied mesh-only GLB, +Y up, with normals
+  and extras, no skins, UVs or images. No Phase 4 LODs were produced.
+  Final total: 196,114 triangles / 386 meshes (budget 600,000 triangles).
+  Model/export/target validation: 2,852 checks, zero failures or warnings.
+
+PALM SEATING, EVERY 50 M
+  Measured from the actual 6.2m slab underside along the road up vector;
+  longitudinal samples about 4m apart, transverse stations at most 2m apart,
+  including both road edges. These are real triangle intersections, not
+  armour vertex heights. Percentages include misses; finite sampling is not
+  a continuous mathematical proof.
+
+  s range (m)       gap under slab (m)      coverage       within 1–6m
+  300–350           no hand footprint       0.00%          0.00%
+  350–400           no hand footprint       0.00%          0.00%
+  400–450           no hand footprint       0.00%          0.00%
+  450–500           1.36–4.00               66.67%         66.67%
+  500–550           1.76–4.00               100.00%        100.00%
+  550–600           3.80–3.80               100.00%        100.00%
+  600–650           3.80–4.49               100.00%        100.00%
+  650–700           1.93–4.33               100.00%        100.00%
+  700–722.817       2.99–4.00               100.00%        100.00%
+
+  s300–464.045 is still the approach ahead of the hand, not a hand gap to
+  bridge. The new bent leading guard begins at s468.045; all 1,728 rays from
+  there to the wrist are seated across the full width (1.36–4.49m).
+  The original fingertip-contact span s476.046–720.070 is 1,674/1,674 rays
+  seated. The called-out knuckle transition s548.053–568.055 is 3.80m under
+  the slab across its full width (previously up to 22.26m there).
+
+OTHER ON STRETCHES / RETAINED LIMITS
+  Refit against the new road, retaining the reviewed Phase 2 choices:
+  the Arm: 3.84–7.56m; 92.76% of full-width rays within 1–6m.
+  the Shoulder: 3.87–130.11m; 8.92% of full-width rays within 1–6m.
+  the Collar: 3.05–7.66m; 92.59% of full-width rays within 1–6m.
+  T1 the Chin: 1.99–6.74m; 96.50% of full-width rays within 1–6m.
+  the Brow: 3.93–5.14m; 100.00% of full-width rays within 1–6m.
+  The Shoulder remains the approved pylon-supported climb; its larger gaps
+  were deliberately retained. Local Arm/Collar/Chin edge gaps above 6m are
+  reported rather than silently treated as seated. Brow is fully seated.
+  The crossguard is no longer ON: the new road passes over it, as specified.
+  Full samples and per-stretch interpretation: phase3-seating.json.
+
+TRIANGLES BY PART
+  chest                      69,201
+  foot.L                      1,412
+  foot.R                      1,412
+  forearm.L                   5,208
+  forearm.R                  30,769
+  halo                        3,240
+  hand.L                      1,224
+  hand.R                     12,220
+  head                       13,727
+  index.01.L                    776
+  index.01.R                  1,032
+  index.02.L                    776
+  index.02.R                  1,032
+  index.03.L                    776
+  index.03.R                  1,032
+  middle.01.L                   776
+  middle.01.R                 1,064
+  middle.02.L                   776
+  middle.02.R                 1,064
+  middle.03.L                   448
+  middle.03.R                 1,437
+  neck                          800
+  pelvis                        958
+  pinky.01.L                    612
+  pinky.01.R                  1,032
+  pinky.02.R                  1,032
+  pinky.03.R                  1,032
+  ring.01.L                     776
+  ring.01.R                   1,032
+  ring.02.L                     478
+  ring.02.R                   1,032
+  ring.03.R                   1,364
+  shin.L                      2,919
+  shin.R                      3,044
+  shoulder.L                 10,078
+  shoulder.R                 10,073
+  spine                         228
+  sword                       1,348
+  thigh.L                       812
+  thigh.R                       736
+  thumb.01.L                    776
+  thumb.01.R                  1,104
+  thumb.02.L                    776
+  thumb.02.R                  1,088
+  thumb.03.L                    776
+  thumb.03.R                  1,084
+  upper_arm.L                   906
+  upper_arm.R                   816
+  The same wholly buried finger parts from Phase 2 have no exported mesh:
+  pinky.02.L, pinky.03.L, ring.03.L. The root remains rig-only.
+
+CHECKS
+  blender --background art/blender/titan/titan-production.blend --python art/blender/titan/fit/check_clearance.py -- --strict
+  Exit 0; Clear of the road. No hard-space hits. Only 13 permitted sky
+  objects: twelve Hull roof/crossmembers and forearm.L over the Long Flank
+  (190 surface points). No additional exception was introduced.
+  Full output follows below and is also reports/phase3-final/clearance.txt.
+
+  npx vitest run tests/titan.test.ts tests/scenery.test.ts
+  10 passed, 1 existing skip, 1 expected failure: the saved titan-top.json
+  differs from the new model. The exported mesh clearance and material/
+  triangle-budget tests pass; scenery.test.ts passes. No other test fails.
+  The game side must regenerate titan-top.json with npx tsx tools/titan/top.ts
+  after taking this export, then rerun the tests. It was intentionally not
+  regenerated here, per this task's src/ restriction.
+  Complete test output: reports/phase3-final/tests.txt; compact test result:
+  reports/phase3-final/tests-summary.txt. Structured validation is in
+  phase3-validation.json; clipping decisions in phase3-clipping.json.
+
+FULL FINAL STRICT CLEARANCE OUTPUT
+  00:00.649  blend            | Read blend: "/Users/alexanderkelley/.codex/worktrees/titan-blockout/igpx/art/blender/titan/titan-production.blend"
+  Checking TITAN against the road: the space round it 3.8 m past each edge, 6.5 m under the deck to 18 m over it; the sky to 40 m.
+    titan/chest/breach-east-jamb: 8390 points, clear
+    titan/chest/breach-header: 2719 points, clear
+    titan/chest/breach-west-jamb: 8410 points, clear
+    titan/chest/breastplate-L-1: 12200 points, clear
+    titan/chest/breastplate-L-2: 11352 points, clear
+    titan/chest/breastplate-L-3: 11539 points, clear
+    titan/chest/breastplate-L-4: 17610 points, clear
+    titan/chest/breastplate-R-1: 11991 points, clear
+    titan/chest/breastplate-R-2: 11107 points, clear
+    titan/chest/breastplate-R-3: 11306 points, clear
+    titan/chest/breastplate-R-4: 18458 points, clear
+    titan/chest/breastplate-groove-bed: 74173 points, clear
+    titan/chest/chamber-edge-trim-1: 9924 points, clear
+    titan/chest/chamber-edge-trim-6: 9629 points, clear
+    titan/chest/chamber-longitudinal-frame-1: 21278 points, clear
+    titan/chest/chamber-longitudinal-frame-3: 21278 points, clear
+    titan/chest/chamber-longitudinal-frame-4: 21278 points, clear
+    titan/chest/chamber-longitudinal-frame-5: 21278 points, clear
+    titan/chest/chamber-longitudinal-frame-6: 16213 points, clear
+    titan/chest/chamber-longitudinal-frame-7: 23039 points, clear
+    titan/chest/chamber-rib-1: 13763 points, clear
+    titan/chest/chamber-rib-3: 12882 points, clear
+    titan/chest/chamber-rib-6: 12909 points, clear
+    titan/chest/chamber-west-backing: 38806 points, clear
+    titan/chest/closed-thorax: 57056 points, clear
+    titan/chest/collar-sector-00-ivory: 1744 points, clear
+    titan/chest/collar-sector-00-rim: 3586 points, clear
+    titan/chest/collar-sector-01-ivory: 1744 points, clear
+    titan/chest/collar-sector-01-rim: 3538 points, clear
+    titan/chest/collar-sector-02-ivory: 2116 points, clear
+    titan/chest/collar-sector-02-rim: 4804 points, clear
+    titan/chest/collar-sector-03-ivory: 2116 points, clear
+    titan/chest/collar-sector-03-rim: 4899 points, clear
+    titan/chest/collar-sector-04-ivory: 1744 points, clear
+    titan/chest/collar-sector-04-rim: 4334 points, clear
+    titan/chest/collar-sector-05-ivory: 2651 points, clear
+    titan/chest/collar-sector-05-rim: 4734 points, clear
+    titan/chest/collar-sector-06-ivory: 2966 points, clear
+    titan/chest/collar-sector-06-rim: 4830 points, clear
+    titan/chest/collar-sector-07-ivory: 3615 points, clear
+    titan/chest/collar-sector-07-rim: 5555 points, clear
+    titan/chest/collar-sector-08-ivory: 3609 points, clear
+    titan/chest/collar-sector-08-rim: 6117 points, clear
+    titan/chest/collar-sector-09-ivory: 2854 points, clear
+    titan/chest/collar-sector-09-rim: 5133 points, clear
+    titan/chest/collar-sector-10-ivory: 2384 points, clear
+    titan/chest/collar-sector-10-rim: 4149 points, clear
+    titan/chest/collar-sector-11-ivory: 1744 points, clear
+    titan/chest/collar-sector-11-rim: 3586 points, clear
+    titan/chest/cut-cable-core-red-lower: 12 points, clear
+    titan/chest/cut-cable-core-red-upper: 12 points, clear
+    titan/chest/cut-cable-core-slate-lower: 12 points, clear
+    titan/chest/cut-cable-core-slate-upper: 12 points, clear
+    titan/chest/cut-cable-core-south-red: 12 points, clear
+    titan/chest/cut-cable-core-south-wall: 12 points, clear
+    titan/chest/cut-conduit-red-lower: 2607 points, clear
+    titan/chest/cut-conduit-red-upper: 4891 points, clear
+    titan/chest/cut-conduit-slate-lower: 2828 points, clear
+    titan/chest/cut-conduit-slate-upper: 3825 points, clear
+    titan/chest/cut-conduit-south-red: 3660 points, clear
+    titan/chest/cut-conduit-south-wall: 5246 points, clear
+    titan/chest/hull-corridor-inner-upright-0: 382 points, clear
+    titan/chest/hull-corridor-inner-upright-1: 388 points, clear
+    titan/chest/hull-corridor-inner-upright-10: 355 points, clear
+    titan/chest/hull-corridor-inner-upright-2: 1359 points, clear
+    titan/chest/hull-corridor-inner-upright-3: 1799 points, clear
+    titan/chest/hull-corridor-inner-upright-4: 1276 points, clear
+    titan/chest/hull-corridor-inner-upright-5: 1515 points, clear
+    titan/chest/hull-corridor-inner-upright-6: 1603 points, clear
+    titan/chest/hull-corridor-inner-upright-7: 1249 points, clear
+    titan/chest/hull-corridor-inner-upright-8: 1311 points, clear
+    titan/chest/hull-corridor-inner-upright-9: 295 points, clear
+    titan/chest/hull-corridor-outer-upright-0: 580 points, clear
+    titan/chest/hull-corridor-outer-upright-1: 1214 points, clear
+    titan/chest/hull-corridor-outer-upright-10: 1321 points, clear
+    titan/chest/hull-corridor-outer-upright-2: 1252 points, clear
+    titan/chest/hull-corridor-outer-upright-3: 1166 points, clear
+    titan/chest/hull-corridor-outer-upright-4: 1276 points, clear
+    titan/chest/hull-corridor-outer-upright-5: 1252 points, clear
+    titan/chest/hull-corridor-outer-upright-6: 1278 points, clear
+    titan/chest/hull-corridor-outer-upright-7: 1264 points, clear
+    titan/chest/hull-corridor-outer-upright-8: 1252 points, clear
+    titan/chest/hull-corridor-outer-upright-9: 1579 points, clear
+    titan/chest/hull-gallery-inner-frame: 8028 points, clear
+    titan/chest/hull-gallery-sill: 31330 points, clear
+    titan/chest/hull-left-floor: 25166 points, clear
+    titan/chest/hull-left-inner-wall: 18193 points, clear
+    titan/chest/hull-left-outer-wall: 23056 points, clear
+    titan/chest/hull-left-roof: 30788 points; in the sky over the road: 24931 points (the Hull 24931)
+    titan/chest/hull-roof-crossmember-0: 1579 points; in the sky over the road: 1579 points (the Hull 1579)
+    titan/chest/hull-roof-crossmember-1: 1500 points; in the sky over the road: 1500 points (the Hull 1500)
+    titan/chest/hull-roof-crossmember-10: 1648 points; in the sky over the road: 1482 points (the Hull 1482)
+    titan/chest/hull-roof-crossmember-2: 1648 points; in the sky over the road: 1304 points (the Hull 1304)
+    titan/chest/hull-roof-crossmember-3: 1648 points; in the sky over the road: 1320 points (the Hull 1320)
+    titan/chest/hull-roof-crossmember-4: 1648 points; in the sky over the road: 1320 points (the Hull 1320)
+    titan/chest/hull-roof-crossmember-5: 1648 points; in the sky over the road: 1200 points (the Hull 1200)
+    titan/chest/hull-roof-crossmember-6: 1648 points; in the sky over the road: 1320 points (the Hull 1320)
+    titan/chest/hull-roof-crossmember-7: 1648 points; in the sky over the road: 1320 points (the Hull 1320)
+    titan/chest/hull-roof-crossmember-8: 1648 points; in the sky over the road: 1304 points (the Hull 1304)
+    titan/chest/hull-roof-crossmember-9: 1648 points; in the sky over the road: 1482 points (the Hull 1482)
+    titan/chest/hull-wall-conduit-0: 3143 points, clear
+    titan/chest/hull-wall-conduit-1: 3206 points, clear
+    titan/chest/peeled-exit-shell-east: 856 points, clear
+    titan/chest/peeled-exit-shell-west: 700 points, clear
+    titan/chest/peeled-wound-red-band: 682 points, clear
+    titan/chest/peeled-wound-shell-crown: 1184 points, clear
+    titan/chest/peeled-wound-shell-west: 858 points, clear
+    titan/chest/rib-base-L-1: 10955 points, clear
+    titan/chest/rib-base-L-2: 3359 points, clear
+    titan/chest/rib-base-R-1: 12474 points, clear
+    titan/chest/rib-base-R-2: 710 points, clear
+    titan/chest/rib-plate-L-1: 3004 points, clear
+    titan/chest/rib-plate-L-2: 361 points, clear
+    titan/chest/rib-plate-R-1: 3031 points, clear
+    titan/chest/rib-plate-R-2: 353 points, clear
+    titan/chest/sand-drift-north-wound: 7581 points, clear
+    titan/chest/sand-drift-ribcage-hollow: 7605 points, clear
+    titan/chest/sand-drift-south-exit: 5092 points, clear
+    titan/chest/snapped-longitudinal-frame-east: 4448 points, clear
+    titan/chest/snapped-longitudinal-frame-west: 2160 points, clear
+    titan/chest/snapped-rib-2: 12135 points, clear
+    titan/chest/snapped-rib-2-bent-fork: 643 points, clear
+    titan/chest/snapped-rib-4: 12083 points, clear
+    titan/chest/snapped-rib-4-bent-fork: 534 points, clear
+    titan/chest/snapped-rib-5: 12272 points, clear
+    titan/chest/snapped-rib-5-bent-fork: 524 points, clear
+    titan/chest/wound-debris-0: 312 points, clear
+    titan/chest/wound-debris-1: 677 points, clear
+    titan/chest/wound-debris-2: 300 points, clear
+    titan/chest/wound-debris-3: 312 points, clear
+    titan/chest/wound-frame-held-scrap: 626 points, clear
+    titan/foot.L/ankle-disc: 3582 points, clear
+    titan/foot.L/ankle-disc-inset: 1572 points, clear
+    titan/foot.L/ankle-gimbal: 5882 points, clear
+    titan/foot.L/foot-shell: 48261 points, clear
+    titan/foot.L/sole: 42716 points, clear
+    titan/foot.L/toe-gold-cap: 14500 points, clear
+    titan/foot.L/toe-side--73: 10468 points, clear
+    titan/foot.L/toe-side-73: 10468 points, clear
+    titan/foot.R/ankle-disc: 3619 points, clear
+    titan/foot.R/ankle-disc-inset: 1515 points, clear
+    titan/foot.R/ankle-gimbal: 5882 points, clear
+    titan/foot.R/foot-shell: 48261 points, clear
+    titan/foot.R/sole: 42716 points, clear
+    titan/foot.R/toe-gold-cap: 14500 points, clear
+    titan/foot.R/toe-side--73: 10468 points, clear
+    titan/foot.R/toe-side-73: 10468 points, clear
+    titan/forearm.L/elbow-gimbal: 8906 points, clear
+    titan/forearm.L/elbow-outer-bezel: 4799 points, clear
+    titan/forearm.L/elbow-outer-cap: 2830 points, clear
+    titan/forearm.L/forearm-armour: 46736 points; in the sky over the road: 190 points (the Long Flank 190)
+    titan/forearm.L/forearm-core: 85086 points, clear
+    titan/forearm.L/inner-flat-panel-1: 4346 points, clear
+    titan/forearm.L/inner-flat-panel-2: 4254 points, clear
+    titan/forearm.L/inner-flat-panel-3: 4414 points, clear
+    titan/forearm.L/inner-gold-rail: 4684 points, clear
+    titan/forearm.L/inner-panel-groove-bed: 19784 points, clear
+    titan/forearm.L/outer-gold-rail: 4870 points, clear
+    titan/forearm.R/elbow-gimbal: 12146 points, clear
+    titan/forearm.R/elbow-outer-bezel: 5230 points, clear
+    titan/forearm.R/elbow-outer-cap: 3949 points, clear
+    titan/forearm.R/forearm-armour: 49211 points, clear
+    titan/forearm.R/forearm-core: 80914 points, clear
+    titan/forearm.R/inner-flat-panel-1: 6443 points, clear
+    titan/forearm.R/inner-flat-panel-2: 6222 points, clear
+    titan/forearm.R/inner-flat-panel-3: 6334 points, clear
+    titan/forearm.R/inner-gold-rail: 7255 points, clear
+    titan/forearm.R/inner-panel-groove-bed: 25836 points, clear
+    titan/forearm.R/outer-gold-rail: 6947 points, clear
+    titan/halo/inner-rim: 14080 points, clear
+    titan/halo/inward-spoke-left: 1136 points, clear
+    titan/halo/inward-spoke-right: 1136 points, clear
+    titan/halo/inward-spoke-top: 1072 points, clear
+    titan/halo/main-ring: 25984 points, clear
+    titan/halo/mount-bearing-1: 1850 points, clear
+    titan/halo/mount-bearing-2: 1850 points, clear
+    titan/halo/mount-bearing-3: 1850 points, clear
+    titan/halo/mount-strut-1: 2146 points, clear
+    titan/halo/mount-strut-2: 2153 points, clear
+    titan/halo/mount-strut-3: 4274 points, clear
+    titan/halo/outer-rim: 16640 points, clear
+    titan/hand.L/backhand-plate: 5466 points, clear
+    titan/hand.L/palm-bezel: 8614 points, clear
+    titan/hand.L/palm-frame: 11103 points, clear
+    titan/hand.L/palm-plate: 6640 points, clear
+    titan/hand.L/wrist-gimbal: 3962 points, clear
+    titan/hand.R/backhand-plate: 8468 points, clear
+    titan/hand.R/fingertip-bent-bearing-1: 7056 points, clear
+    titan/hand.R/fingertip-bent-bearing-2: 7056 points, clear
+    titan/hand.R/fingertip-bent-bearing-3: 7056 points, clear
+    titan/hand.R/knuckle-guard-hinge-rail--1: 436 points, clear
+    titan/hand.R/knuckle-guard-hinge-rail-1: 436 points, clear
+    titan/hand.R/knuckle-line-bent-guard: 12142 points, clear
+    titan/hand.R/palm-bearing-edge--1: 3682 points, clear
+    titan/hand.R/palm-bearing-edge-1: 3682 points, clear
+    titan/hand.R/palm-bezel: 10150 points, clear
+    titan/hand.R/palm-frame: 15720 points, clear
+    titan/hand.R/palm-plate: 7668 points, clear
+    titan/hand.R/palm-wrist-bearing-armour: 13854 points, clear
+    titan/hand.R/wrist-gimbal: 4134 points, clear
+    titan/hand.R/wrist-seam-bent-guard: 6366 points, clear
+    titan/head/cheek-L: 754 points, clear
+    titan/head/cheek-R: 754 points, clear
+    titan/head/chin-mask: 1742 points, clear
+    titan/head/forehead-bearing-plate: 10736 points, clear
+    titan/head/forehead-jewel: 376 points, clear
+    titan/head/helmet: 16146 points, clear
+    titan/head/horn-L: 9736 points, clear
+    titan/head/horn-R: 9923 points, clear
+    titan/head/jewel-bezel: 917 points, clear
+    titan/head/skull-pivot-yoke: 11596 points, clear
+    titan/head/temple-L: 1467 points, clear
+    titan/head/temple-R: 1508 points, clear
+    titan/head/temple-disc-L: 632 points, clear
+    titan/head/temple-disc-R: 602 points, clear
+    titan/head/visor-band: 1890 points, clear
+    titan/head/visor-surround: 3378 points, clear
+    titan/index.01.L/ivory-segment: 1704 points, clear
+    titan/index.01.L/knuckle: 266 points, clear
+    titan/index.01.L/phalange-core: 812 points, clear
+    titan/index.01.R/ivory-segment: 1602 points, clear
+    titan/index.01.R/knuckle: 344 points, clear
+    titan/index.01.R/phalange-core: 1042 points, clear
+    titan/index.02.L/ivory-segment: 1704 points, clear
+    titan/index.02.L/knuckle: 266 points, clear
+    titan/index.02.L/phalange-core: 812 points, clear
+    titan/index.02.R/ivory-segment: 1602 points, clear
+    titan/index.02.R/knuckle: 314 points, clear
+    titan/index.02.R/phalange-core: 1070 points, clear
+    titan/index.03.L/ivory-segment: 1704 points, clear
+    titan/index.03.L/knuckle: 266 points, clear
+    titan/index.03.L/phalange-core: 812 points, clear
+    titan/index.03.R/ivory-segment: 1602 points, clear
+    titan/index.03.R/knuckle: 314 points, clear
+    titan/index.03.R/phalange-core: 1054 points, clear
+    titan/middle.01.L/ivory-segment: 1768 points, clear
+    titan/middle.01.L/knuckle: 266 points, clear
+    titan/middle.01.L/phalange-core: 972 points, clear
+    titan/middle.01.R/ivory-segment: 2390 points, clear
+    titan/middle.01.R/knuckle: 374 points, clear
+    titan/middle.01.R/phalange-core: 1198 points, clear
+    titan/middle.02.L/ivory-segment: 1554 points, clear
+    titan/middle.02.L/knuckle: 266 points, clear
+    titan/middle.02.L/phalange-core: 880 points, clear
+    titan/middle.02.R/ivory-segment: 2386 points, clear
+    titan/middle.02.R/knuckle: 314 points, clear
+    titan/middle.02.R/phalange-core: 1198 points, clear
+    titan/middle.03.L/ivory-segment: 406 points, clear
+    titan/middle.03.L/knuckle: 479 points, clear
+    titan/middle.03.L/phalange-core: 162 points, clear
+    titan/middle.03.R/ivory-segment: 2465 points, clear
+    titan/middle.03.R/knuckle: 314 points, clear
+    titan/middle.03.R/phalange-core: 1274 points, clear
+    titan/neck/fallen-collar-upper-bearing: 16106 points, clear
+    titan/neck/forward-neck-core: 15505 points, clear
+    titan/neck/head-support-east-yoke: 3814 points, clear
+    titan/neck/head-support-lower-collar: 12468 points, clear
+    titan/neck/head-support-upper-collar: 9188 points, clear
+    titan/neck/head-support-west-yoke: 3814 points, clear
+    titan/neck/neck-bearing: 10080 points, clear
+    titan/neck/neck-yoke-L: 5010 points, clear
+    titan/neck/neck-yoke-R: 5019 points, clear
+    titan/neck/neck-yoke-pad-L: 916 points, clear
+    titan/neck/neck-yoke-pad-R: 916 points, clear
+    titan/neck/sand-drift-fallen-collar: 8634 points, clear
+    titan/pelvis/front-central-tasset: 14198 points, clear
+    titan/pelvis/hip-frame: 35142 points, clear
+    titan/pelvis/hip-skirt-L: 15647 points, clear
+    titan/pelvis/hip-skirt-R: 15647 points, clear
+    titan/pelvis/hip-skirt-trim-L: 36295 points, clear
+    titan/pelvis/hip-skirt-trim-R: 36295 points, clear
+    titan/pelvis/waist-chevron-L: 10430 points, clear
+    titan/pelvis/waist-chevron-R: 10430 points, clear
+    titan/pinky.01.L/ivory-segment: 532 points, clear
+    titan/pinky.01.L/knuckle: 445 points, clear
+    titan/pinky.01.L/phalange-core: 241 points, clear
+    titan/pinky.01.R/ivory-segment: 1605 points, clear
+    titan/pinky.01.R/knuckle: 446 points, clear
+    titan/pinky.01.R/phalange-core: 662 points, clear
+    titan/pinky.02.R/ivory-segment: 1562 points, clear
+    titan/pinky.02.R/knuckle: 308 points, clear
+    titan/pinky.02.R/phalange-core: 654 points, clear
+    titan/pinky.03.R/ivory-segment: 1562 points, clear
+    titan/pinky.03.R/knuckle: 308 points, clear
+    titan/pinky.03.R/phalange-core: 654 points, clear
+    titan/ring.01.L/ivory-segment: 1547 points, clear
+    titan/ring.01.L/knuckle: 266 points, clear
+    titan/ring.01.L/phalange-core: 852 points, clear
+    titan/ring.01.R/ivory-segment: 1692 points, clear
+    titan/ring.01.R/knuckle: 434 points, clear
+    titan/ring.01.R/phalange-core: 1194 points, clear
+    titan/ring.02.L/ivory-segment: 410 points, clear
+    titan/ring.02.L/knuckle: 482 points, clear
+    titan/ring.02.L/phalange-core: 162 points, clear
+    titan/ring.02.R/ivory-segment: 1662 points, clear
+    titan/ring.02.R/knuckle: 314 points, clear
+    titan/ring.02.R/phalange-core: 1198 points, clear
+    titan/ring.03.R/ivory-segment: 1844 points, clear
+    titan/ring.03.R/knuckle: 314 points, clear
+    titan/ring.03.R/phalange-core: 1317 points, clear
+    titan/shin.L/greave-armour: 20783 points, clear
+    titan/shin.L/greave-lower-rim: 21125 points, clear
+    titan/shin.L/greave-side-shell: 68815 points, clear
+    titan/shin.L/knee-disc: 9256 points, clear
+    titan/shin.L/knee-disc-inset: 4200 points, clear
+    titan/shin.L/knee-gimbal: 15434 points, clear
+    titan/shin.L/knee-shield: 13346 points, clear
+    titan/shin.L/rear-actuator: 26445 points, clear
+    titan/shin.L/shin-frame: 73288 points, clear
+    titan/shin.R/greave-armour: 21056 points, clear
+    titan/shin.R/greave-lower-rim: 21125 points, clear
+    titan/shin.R/greave-side-shell: 68815 points, clear
+    titan/shin.R/knee-disc: 9256 points, clear
+    titan/shin.R/knee-disc-inset: 4200 points, clear
+    titan/shin.R/knee-gimbal: 15434 points, clear
+    titan/shin.R/knee-shield: 13346 points, clear
+    titan/shin.R/rear-actuator: 26445 points, clear
+    titan/shin.R/sand-drift-shin-R-lee: 11206 points, clear
+    titan/shin.R/shin-frame: 73288 points, clear
+    titan/shoulder.L/pauldron-hub: 21006 points, clear
+    titan/shoulder.L/pauldron-inner-rib-1: 2407 points, clear
+    titan/shoulder.L/pauldron-inner-rib-2: 1294 points, clear
+    titan/shoulder.L/pauldron-inner-rib-3: 2398 points, clear
+    titan/shoulder.L/pauldron-ivory-1: 17142 points, clear
+    titan/shoulder.L/pauldron-ivory-2: 18480 points, clear
+    titan/shoulder.L/pauldron-ivory-3: 4063 points, clear
+    titan/shoulder.L/pauldron-outer-bearing: 7269 points, clear
+    titan/shoulder.L/pauldron-outer-inset: 4017 points, clear
+    titan/shoulder.L/pauldron-shell: 75916 points, clear
+    titan/shoulder.R/pauldron-hub: 21006 points, clear
+    titan/shoulder.R/pauldron-inner-rib-1: 2403 points, clear
+    titan/shoulder.R/pauldron-inner-rib-2: 1289 points, clear
+    titan/shoulder.R/pauldron-inner-rib-3: 2403 points, clear
+    titan/shoulder.R/pauldron-ivory-1: 17142 points, clear
+    titan/shoulder.R/pauldron-ivory-2: 18480 points, clear
+    titan/shoulder.R/pauldron-ivory-3: 4063 points, clear
+    titan/shoulder.R/pauldron-outer-bearing: 7339 points, clear
+    titan/shoulder.R/pauldron-outer-inset: 4017 points, clear
+    titan/shoulder.R/pauldron-shell: 75891 points, clear
+    titan/spine/abdomen-core: 14306 points, clear
+    titan/spine/bronze-rib-750: 16394 points, clear
+    titan/spine/bronze-rib-797: 9604 points, clear
+    titan/spine/cage-L-0: 6650 points, clear
+    titan/spine/cage-L-1: 1974 points, clear
+    titan/spine/cage-R-0: 6293 points, clear
+    titan/spine/cage-R-1: 2202 points, clear
+    titan/spine/oxidized-inset-L-0: 316 points, clear
+    titan/spine/oxidized-inset-R-0: 316 points, clear
+    titan/sword/assembly: 109439 points, clear
+    titan/sword/broken-grip-and-pommel: 15558 points, clear
+    titan/sword/sand-drift-broken-pommel: 2725 points, clear
+    titan/thigh.L/hip-gimbal: 8906 points, clear
+    titan/thigh.L/sand-drift-thigh-L-lee: 10629 points, clear
+    titan/thigh.L/thigh-armour: 45274 points, clear
+    titan/thigh.L/thigh-frame: 64416 points, clear
+    titan/thigh.R/hip-gimbal: 8906 points, clear
+    titan/thigh.R/thigh-armour: 45274 points, clear
+    titan/thigh.R/thigh-frame: 64416 points, clear
+    titan/thumb.01.L/ivory-segment: 1948 points, clear
+    titan/thumb.01.L/knuckle: 650 points, clear
+    titan/thumb.01.L/phalange-core: 812 points, clear
+    titan/thumb.01.R/ivory-segment: 1901 points, clear
+    titan/thumb.01.R/knuckle: 626 points, clear
+    titan/thumb.01.R/phalange-core: 918 points, clear
+    titan/thumb.02.L/ivory-segment: 1904 points, clear
+    titan/thumb.02.L/knuckle: 650 points, clear
+    titan/thumb.02.L/phalange-core: 812 points, clear
+    titan/thumb.02.R/ivory-segment: 1798 points, clear
+    titan/thumb.02.R/knuckle: 638 points, clear
+    titan/thumb.02.R/phalange-core: 750 points, clear
+    titan/thumb.03.L/ivory-segment: 1602 points, clear
+    titan/thumb.03.L/knuckle: 650 points, clear
+    titan/thumb.03.L/phalange-core: 668 points, clear
+    titan/thumb.03.R/ivory-segment: 1757 points, clear
+    titan/thumb.03.R/knuckle: 638 points, clear
+    titan/thumb.03.R/phalange-core: 702 points, clear
+    titan/upper_arm.L/elbow-actuator--1: 4430 points, clear
+    titan/upper_arm.L/elbow-actuator-1: 4413 points, clear
+    titan/upper_arm.L/shoulder-gimbal: 11786 points, clear
+    titan/upper_arm.L/upper-arm-armour: 19098 points, clear
+    titan/upper_arm.L/upper-arm-core: 75894 points, clear
+    titan/upper_arm.R/elbow-actuator--1: 4435 points, clear
+    titan/upper_arm.R/elbow-actuator-1: 4451 points, clear
+    titan/upper_arm.R/shoulder-gimbal: 11786 points, clear
+    titan/upper_arm.R/upper-arm-armour: 19098 points, clear
+    titan/upper_arm.R/upper-arm-core: 71792 points, clear
+  Clear of the road.
+  Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:49:19)
+
+  Blender quit
+
+Phase 3 is complete for review. STOP: Phase 4 (LODs) waits for approval.

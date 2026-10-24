@@ -1,0 +1,3002 @@
+{
+  "scope": "Original fingertip first-contact through wrist; finite sampled full-width coverage, not continuous proof. Prior no-footprint approach not counted as hand.",
+  "production_sha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212",
+  "s_first": 476.046,
+  "s_last": 720.07,
+  "gap_min": 1.3597,
+  "gap_max": 4.4929,
+  "hits": 1674,
+  "rays": 1674,
+  "seated_percent": 100.0,
+  "coverage": 100.0,
+  "knuckle_samples": [
+    {
+      "i": 137,
+      "s": 548.053,
+      "centre": {
+        "d": 0.0,
+        "rise": 0.0,
+        "gap": 3.8,
+        "object": "titan/hand.R/knuckle-line-bent-guard",
+        "part": "hand.R",
+        "surface": [
+          0.0,
+          536.2828,
+          88.4322
+        ],
+        "surface_normal": [
+          0.0,
+          -0.4518,
+          0.8921
+        ]
+      },
+      "all_width": {
+        "rays": 27,
+        "hits": 27,
+        "misses": 0,
+        "gap_min": 3.8,
+        "gap_max": 3.8,
+        "less_than_1m": 0,
+        "within_1_to_6m": 27,
+        "over_6m": 0,
+        "seated_percent_of_all_rays": 100.0,
+        "covered_percent": 100.0,
+        "parts": {
+          "hand.R": 27
+        }
+      },
+      "rays": [
+        {
+          "d": -26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -26.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -24.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -22.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -20.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -18.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -16.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -14.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -12.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -10.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -8.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -6.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -4.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": -2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -2.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 0.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            0.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            2.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            4.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            6.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            8.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            10.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            12.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            14.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            16.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            18.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            20.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            22.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            24.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        },
+        {
+          "d": 26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            26.0,
+            536.2828,
+            88.4322
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4518,
+            0.8921
+          ]
+        }
+      ],
+      "status": "seated_across_sampled_width"
+    },
+    {
+      "i": 138,
+      "s": 552.054,
+      "centre": {
+        "d": 0.0,
+        "rise": 0.0,
+        "gap": 3.8,
+        "object": "titan/hand.R/knuckle-line-bent-guard",
+        "part": "hand.R",
+        "surface": [
+          0.0,
+          539.7512,
+          90.1888
+        ],
+        "surface_normal": [
+          0.0,
+          -0.4422,
+          0.8969
+        ]
+      },
+      "all_width": {
+        "rays": 27,
+        "hits": 27,
+        "misses": 0,
+        "gap_min": 3.8,
+        "gap_max": 3.8,
+        "less_than_1m": 0,
+        "within_1_to_6m": 27,
+        "over_6m": 0,
+        "seated_percent_of_all_rays": 100.0,
+        "covered_percent": 100.0,
+        "parts": {
+          "hand.R": 27
+        }
+      },
+      "rays": [
+        {
+          "d": -26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -26.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -24.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -22.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -20.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -18.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -16.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -14.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -12.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -10.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -8.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -6.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -4.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -2.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 0.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            0.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            2.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            4.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            6.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            8.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            10.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            12.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            14.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            16.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            18.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            20.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            22.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            24.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            26.0,
+            539.7512,
+            90.1888
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        }
+      ],
+      "status": "seated_across_sampled_width"
+    },
+    {
+      "i": 139,
+      "s": 556.054,
+      "centre": {
+        "d": 0.0,
+        "rise": 0.0,
+        "gap": 3.8,
+        "object": "titan/hand.R/knuckle-line-bent-guard",
+        "part": "hand.R",
+        "surface": [
+          0.0,
+          543.2428,
+          91.9103
+        ],
+        "surface_normal": [
+          0.0,
+          -0.4422,
+          0.8969
+        ]
+      },
+      "all_width": {
+        "rays": 27,
+        "hits": 27,
+        "misses": 0,
+        "gap_min": 3.8,
+        "gap_max": 3.8,
+        "less_than_1m": 0,
+        "within_1_to_6m": 27,
+        "over_6m": 0,
+        "seated_percent_of_all_rays": 100.0,
+        "covered_percent": 100.0,
+        "parts": {
+          "hand.R": 27
+        }
+      },
+      "rays": [
+        {
+          "d": -26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -26.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -24.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -22.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -20.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -18.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -16.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -14.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -12.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -10.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -8.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -6.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -4.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": -2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -2.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 0.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            0.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            2.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            4.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            6.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            8.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            10.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            12.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            14.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            16.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            18.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            20.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            22.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            24.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        },
+        {
+          "d": 26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            26.0,
+            543.2428,
+            91.9103
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4422,
+            0.8969
+          ]
+        }
+      ],
+      "status": "seated_across_sampled_width"
+    },
+    {
+      "i": 140,
+      "s": 560.054,
+      "centre": {
+        "d": 0.0,
+        "rise": 0.0,
+        "gap": 3.8,
+        "object": "titan/hand.R/knuckle-line-bent-guard",
+        "part": "hand.R",
+        "surface": [
+          0.0,
+          546.75,
+          93.5919
+        ],
+        "surface_normal": [
+          0.0,
+          -0.4324,
+          0.9017
+        ]
+      },
+      "all_width": {
+        "rays": 27,
+        "hits": 27,
+        "misses": 0,
+        "gap_min": 3.8,
+        "gap_max": 3.8,
+        "less_than_1m": 0,
+        "within_1_to_6m": 27,
+        "over_6m": 0,
+        "seated_percent_of_all_rays": 100.0,
+        "covered_percent": 100.0,
+        "parts": {
+          "hand.R": 27
+        }
+      },
+      "rays": [
+        {
+          "d": -26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -26.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -24.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -22.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -20.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -18.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -16.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -14.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -12.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -10.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -8.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -6.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -4.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": -2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -2.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 0.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            0.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            2.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            4.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            6.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            8.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            10.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            12.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            14.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            16.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            18.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            20.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            22.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            24.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        },
+        {
+          "d": 26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            26.0,
+            546.75,
+            93.5919
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4324,
+            0.9017
+          ]
+        }
+      ],
+      "status": "seated_across_sampled_width"
+    },
+    {
+      "i": 141,
+      "s": 564.055,
+      "centre": {
+        "d": 0.0,
+        "rise": 0.0,
+        "gap": 3.8,
+        "object": "titan/hand.R/knuckle-line-bent-guard",
+        "part": "hand.R",
+        "surface": [
+          0.0,
+          550.2819,
+          95.2385
+        ],
+        "surface_normal": [
+          0.0,
+          -0.4225,
+          0.9063
+        ]
+      },
+      "all_width": {
+        "rays": 27,
+        "hits": 27,
+        "misses": 0,
+        "gap_min": 3.8,
+        "gap_max": 3.8,
+        "less_than_1m": 0,
+        "within_1_to_6m": 27,
+        "over_6m": 0,
+        "seated_percent_of_all_rays": 100.0,
+        "covered_percent": 100.0,
+        "parts": {
+          "hand.R": 27
+        }
+      },
+      "rays": [
+        {
+          "d": -26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -26.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -24.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -22.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -20.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -18.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -16.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -14.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -12.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -10.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -8.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -6.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -4.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": -2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -2.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 0.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            0.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            2.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            4.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            6.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            8.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            10.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            12.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            14.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            16.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            18.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            20.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            22.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            24.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        },
+        {
+          "d": 26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            26.0,
+            550.2819,
+            95.2385
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4225,
+            0.9063
+          ]
+        }
+      ],
+      "status": "seated_across_sampled_width"
+    },
+    {
+      "i": 142,
+      "s": 568.055,
+      "centre": {
+        "d": 0.0,
+        "rise": 0.0,
+        "gap": 3.8,
+        "object": "titan/hand.R/knuckle-line-bent-guard",
+        "part": "hand.R",
+        "surface": [
+          0.0,
+          553.8279,
+          96.8451
+        ],
+        "surface_normal": [
+          0.0,
+          -0.4127,
+          0.9109
+        ]
+      },
+      "all_width": {
+        "rays": 27,
+        "hits": 27,
+        "misses": 0,
+        "gap_min": 3.8,
+        "gap_max": 3.8,
+        "less_than_1m": 0,
+        "within_1_to_6m": 27,
+        "over_6m": 0,
+        "seated_percent_of_all_rays": 100.0,
+        "covered_percent": 100.0,
+        "parts": {
+          "hand.R": 27
+        }
+      },
+      "rays": [
+        {
+          "d": -26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -26.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -24.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -22.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -20.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -18.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -16.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -14.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -12.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -10.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -8.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -6.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -4.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": -2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            -2.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 0.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            0.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 2.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            2.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 4.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            4.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 6.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            6.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 8.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            8.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 10.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            10.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 12.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            12.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 14.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            14.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 16.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            16.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 18.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            18.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 20.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            20.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 22.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            22.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 24.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            24.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        },
+        {
+          "d": 26.0,
+          "rise": 0.0,
+          "gap": 3.8,
+          "object": "titan/hand.R/knuckle-line-bent-guard",
+          "part": "hand.R",
+          "surface": [
+            26.0,
+            553.8279,
+            96.8451
+          ],
+          "surface_normal": [
+            0.0,
+            -0.4127,
+            0.9109
+          ]
+        }
+      ],
+      "status": "seated_across_sampled_width"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "object": "titan/chest/peeled-wound-red-band",
+    "target": "titan/chest/peeled-wound-shell-crown",
+    "triangle_intersections": 31
+  },
+  {
+    "object": "titan/chest/cut-cable-core-red-upper",
+    "target": "titan/chest/cut-conduit-red-upper",
+    "triangle_intersections": 16
+  },
+  {
+    "object": "titan/chest/cut-cable-core-slate-upper",
+    "target": "titan/chest/cut-conduit-slate-upper",
+    "triangle_intersections": 16
+  },
+  {
+    "object": "titan/chest/cut-cable-core-red-lower",
+    "target": "titan/chest/cut-conduit-red-lower",
+    "triangle_intersections": 16
+  },
+  {
+    "object": "titan/chest/cut-cable-core-slate-lower",
+    "target": "titan/chest/cut-conduit-slate-lower",
+    "triangle_intersections": 12
+  },
+  {
+    "object": "titan/chest/cut-cable-core-south-wall",
+    "target": "titan/chest/cut-conduit-south-wall",
+    "triangle_intersections": 14
+  },
+  {
+    "object": "titan/chest/cut-cable-core-south-red",
+    "target": "titan/chest/cut-conduit-south-red",
+    "triangle_intersections": 14
+  }
+]

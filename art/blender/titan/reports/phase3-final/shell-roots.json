@@ -1,0 +1,57 @@
+[
+  {
+    "object": "titan/chest/peeled-wound-shell-west",
+    "ivory_shell_intersections": [
+      {
+        "source": "titan/chest/rib-plate-L-2",
+        "material": "armour",
+        "intersections": 3
+      }
+    ]
+  },
+  {
+    "object": "titan/chest/peeled-wound-shell-crown",
+    "ivory_shell_intersections": [
+      {
+        "source": "titan/chest/breastplate-groove-bed",
+        "material": "armour",
+        "intersections": 40
+      },
+      {
+        "source": "titan/chest/breastplate-L-4",
+        "material": "armour",
+        "intersections": 47
+      }
+    ]
+  },
+  {
+    "object": "titan/chest/peeled-exit-shell-west",
+    "ivory_shell_intersections": [
+      {
+        "source": "titan/chest/rib-plate-R-1",
+        "material": "armour",
+        "intersections": 8
+      }
+    ]
+  },
+  {
+    "object": "titan/chest/peeled-exit-shell-east",
+    "ivory_shell_intersections": [
+      {
+        "source": "titan/chest/breastplate-groove-bed",
+        "material": "armour",
+        "intersections": 18
+      },
+      {
+        "source": "titan/chest/breastplate-R-2",
+        "material": "armour",
+        "intersections": 11
+      }
+    ]
+  },
+  {
+    "object": "titan/chest/peeled-wound-red-band",
+    "carrier": "titan/chest/peeled-wound-shell-crown",
+    "intersections": 31
+  }
+]

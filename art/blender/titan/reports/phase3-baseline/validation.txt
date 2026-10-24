@@ -1,0 +1,51 @@
+00:00.731  blend            | Read blend: "/Users/alexanderkelley/.codex/worktrees/titan-blockout/igpx/art/blender/titan/titan-production.blend"
+Titan Phase 2 validation: 2496 checks, 0 failures, 0 warnings; 169,945 triangles.
+{
+  "head": {
+    "rig_pitch_degrees": 45.00000808242825,
+    "rig_lift_m": 24.999961853027344,
+    "note": "Rig target only. The fitted head mesh contains local seating refinements; its surface is not a rigid 45-degree copy."
+  },
+  "burial_m_before_below_sand_trimming": 119.99971008300781,
+  "halo": {
+    "center_blender": [
+      -518.83349609375,
+      1421.9998779296875,
+      189.9996337890625
+    ],
+    "axis_blender": [
+      -1.0,
+      -0.0,
+      -0.0
+    ],
+    "inner_radius_surface_min_m": 93.99988052685227,
+    "target_min_m": 37.247,
+    "note": "Exact radial minimum over ring/tab triangle interiors; separate mounting struts excluded from ring-opening measurement and covered by strict road clearance."
+  },
+  "sword": {
+    "guard_blender": [
+      401.24700927734375,
+      452.6239013671875,
+      160.29901123046875
+    ],
+    "axis_blender": [
+      0.0,
+      -0.8831546902656555,
+      -0.4690818190574646
+    ],
+    "blade_radial_max_m": 11.500000000080984,
+    "target_radius_max_m": 21.997,
+    "grip_remaining_m": 26.000015258789062,
+    "broken_grip_center_blender": [
+      499.4932861328125,
+      341.8359375,
+      4.0
+    ],
+    "broken_grip_min_z": -7.0,
+    "broken_grip_max_z": 15.0
+  }
+}
+Report: art/blender/titan/reports/phase3-baseline/validation.json
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:49:19)
+
+Blender quit

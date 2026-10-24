@@ -88,9 +88,6 @@ def pose_source():
             for o in c.all_objects:o.hide_set(True)
     log('PHASE2_POSED',len(objects),'objects')
 
-pose_source()
-# A staging file enables independent measurement without changing approved source.
-bpy.ops.wm.save_as_mainfile(filepath='/private/tmp/titan-phase2-posed.blend',compress=True)
 
 def densify(o,spacing=12):
     bm=bmesh.new();bm.from_mesh(o.data);bmesh.ops.triangulate(bm,faces=bm.faces[:])
@@ -256,7 +253,7 @@ def corridors():
         o=tube('chest',f'hull-roof-crossmember-{j}',[point(s,lo,h+24.5),point(s,hi,h+24.5)],2,'frame');o['titan_sky_exceptions']='the Hull'
     log('HULL_CORRIDORS_BUILT')
 
-def export_wreck():
+def export_wreck(phase=2, refinements=None):
     for o in TITAN.all_objects:
         if o.type!='MESH':continue
         bm=bmesh.new();bm.from_mesh(o.data)
@@ -283,8 +280,9 @@ def export_wreck():
     bpy.context.view_layer.objects.active=objects[0]
     bpy.ops.export_scene.gltf(filepath=str(ROOT/'src/client/render/titan/assets/titan.glb'),export_format='GLB',use_selection=True,export_yup=True,export_apply=True,export_normals=True,export_texcoords=False,export_animations=False,export_skins=False,export_extras=True,export_cameras=False,export_lights=False)
     bpy.ops.wm.save_as_mainfile(filepath=str(HERE/'titan-production.blend'),compress=True)
-    report={'phase':2,'blender':bpy.app.version_string,'source':'titan-standing.blend','source_sha256':hashlib.sha256(SOURCE.read_bytes()).hexdigest(),'fit_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in (HERE/'fit').iterdir() if p.suffix in ('.json','.obj')},'triangles_by_part':dict(sorted(counts.items())),'triangles_total':sum(counts.values()),'meshes':len(objects),'pose':'rig-pose.json applied; rigid body matrix and all rig pose matrices preserved','refinements':['Right hand/fingers lifted by a continuous Y-dependent field20..55m; right forearm armour blended0..13m. No road changed.','Head/neck targetrig retained45degree pitch+25m lift; local brow/head crown facets raised0..42m toward slab.','Collar/breastplate upper facets raised up to38m within local road bearing area.','Shoulder rise deliberately left for game pylons.','Broken grip and pommel placed east of blade, centre(505,350,4)Blender.','G4 chest chamber, north breach, south exit, enclosed left Hull corridor and open outside gallery.','Load-bearing fallen collar plates/yokes under propped head; no Phase3 weathering.']}
-    (HERE/'phase2-report.json').write_text(json.dumps(report,indent=2)+'\n');log('PHASE2_REPORT',json.dumps(report))
+    report={'phase':phase,'blender':bpy.app.version_string,'source':'titan-standing.blend','source_sha256':hashlib.sha256(SOURCE.read_bytes()).hexdigest(),'fit_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in (HERE/'fit').iterdir() if p.suffix in ('.json','.obj')},'triangles_by_part':dict(sorted(counts.items())),'triangles_total':sum(counts.values()),'meshes':len(objects),'pose':'rig-pose.json applied; rigid body matrix and all rig pose matrices preserved','refinements':['Right hand/fingers lifted by a continuous Y-dependent field20..55m; right forearm armour blended0..13m. No road changed.','Head/neck targetrig retained45degree pitch+25m lift; local brow/head crown facets raised0..42m toward slab.','Collar/breastplate upper facets raised up to38m within local road bearing area.','Shoulder rise deliberately left for game pylons.','Broken grip and pommel placed east of blade, centre(505,350,4)Blender.','G4 chest chamber, north breach, south exit, enclosed left Hull corridor and open outside gallery.','Load-bearing fallen collar plates/yokes under propped head; no Phase3 weathering.']}
+    if refinements is not None: report['refinements']=refinements
+    (HERE/f'phase{phase}-report.json').write_text(json.dumps(report,indent=2)+'\n');log(f'PHASE{phase}_REPORT',json.dumps(report))
 
 def bearing_plates():
     # Broad helmet forehead plate, still faceted at its shoulders. The shaped
@@ -331,13 +329,20 @@ def palm_bearing():
         tube('hand.R','palm-bearing-edge-'+str(side),[(side*(w-2),y,z-12) for (y,w),z in zip([(548,32),(564,45),(595,48),(632,48),(663,43),(690,34)],[r[1][2] for r in rings])],2,'gold')
 
 
-seat_surfaces();chamber();corridors();bearing_plates();palm_bearing()
-for o in list(TITAN.all_objects):
-    if o.type=='MESH':
-        if o['part'] in ('upper_arm.L','forearm.L'):o['titan_sky_exceptions']='the Long Flank'
-        if o['part']=='halo':o['titan_sky_exceptions']='the Halo'
-        cut_plane(o,(0,0,-20),(0,0,1),True)
-from wreck_clearance import clip_objects
-stats=clip_objects([o for o in TITAN.all_objects if o.type=='MESH'],HERE/'fit/road.json',margin=1.0)
-(HERE/'phase2-clipping.json').write_text(json.dumps(stats,indent=2)+'\n')
-export_wreck()
+def build_wreck():
+    pose_source()
+    # Saved staging is outside the repository; the approved source stays immutable.
+    bpy.ops.wm.save_as_mainfile(filepath='/private/tmp/titan-phase2-posed.blend',compress=True)
+    seat_surfaces();chamber();corridors();bearing_plates();palm_bearing()
+    for o in list(TITAN.all_objects):
+        if o.type=='MESH':
+            if o['part'] in ('upper_arm.L','forearm.L'):o['titan_sky_exceptions']='the Long Flank'
+            if o['part']=='halo':o['titan_sky_exceptions']='the Halo'
+            cut_plane(o,(0,0,-20),(0,0,1),True)
+    from wreck_clearance import clip_objects
+    stats=clip_objects([o for o in TITAN.all_objects if o.type=='MESH'],HERE/'fit/road.json',margin=1.0)
+    (HERE/'phase2-clipping.json').write_text(json.dumps(stats,indent=2)+'\n')
+    export_wreck()
+
+if __name__=='__main__':
+    build_wreck()

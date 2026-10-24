@@ -1,0 +1,40 @@
+00:00.578  blend            | Read blend: "/Users/alexanderkelley/.codex/worktrees/titan-blockout/igpx/art/blender/titan/titan-production.blend"
+Road seating: 196,114 evaluated TITAN triangles; slab bottom 6.2 m below deck; cross-width spacing <= 2.0 m.
+the Palm: all width gap 1.36..4.49 m; seated 60.4%; coverage 60.4%; misses 1134/2862; centre gap 3.80..4.49 m; seated 60.4%; coverage 60.4%; misses 42/106
+  approach before TITAN footprint: s 300.0..464.0
+  s 300.0..350.0: gap no hits; seated 0.0%; coverage 0.0%; misses 351/351
+  s 350.0..400.0: gap no hits; seated 0.0%; coverage 0.0%; misses 324/324
+  s 400.0..450.0: gap no hits; seated 0.0%; coverage 0.0%; misses 351/351
+  s 450.0..500.0: gap 1.36..4.00 m; seated 66.7%; coverage 66.7%; misses 108/324
+  s 500.0..550.0: gap 1.76..4.00 m; seated 100.0%; coverage 100.0%; misses 0/351
+  s 550.0..600.0: gap 3.80..3.80 m; seated 100.0%; coverage 100.0%; misses 0/324
+  s 600.0..650.0: gap 3.80..4.49 m; seated 100.0%; coverage 100.0%; misses 0/351
+  s 650.0..700.0: gap 1.93..4.33 m; seated 100.0%; coverage 100.0%; misses 0/324
+  s 700.0..722.8: gap 2.99..4.00 m; seated 100.0%; coverage 100.0%; misses 0/162
+the Arm: all width gap 3.84..7.56 m; seated 92.8%; coverage 100.0%; misses 0/649; centre gap 4.00..4.00 m; seated 100.0%; coverage 100.0%; misses 0/25
+  s 722.8..772.8: gap 3.84..7.56 m; seated 93.4%; coverage 100.0%; misses 0/349
+  s 772.8..822.8: gap 3.87..6.98 m; seated 92.0%; coverage 100.0%; misses 0/300
+the Shoulder: all width gap 3.87..130.11 m; seated 8.9%; coverage 100.0%; misses 0/3149; centre gap 3.99..125.11 m; seated 9.6%; coverage 100.0%; misses 0/125
+  s 822.8..872.8: gap 3.87..10.73 m; seated 79.4%; coverage 100.0%; misses 0/325
+  s 872.8..922.8: gap 5.67..52.64 m; seated 1.7%; coverage 100.0%; misses 0/300
+  s 922.8..972.8: gap 35.17..65.75 m; seated 0.0%; coverage 100.0%; misses 0/325
+  s 972.8..1022.8: gap 42.01..50.75 m; seated 0.0%; coverage 100.0%; misses 0/300
+  s 1022.8..1072.8: gap 48.84..76.86 m; seated 0.0%; coverage 100.0%; misses 0/325
+  s 1072.8..1122.8: gap 34.27..91.96 m; seated 0.0%; coverage 100.0%; misses 0/300
+  s 1122.8..1172.8: gap 26.75..38.02 m; seated 0.0%; coverage 100.0%; misses 0/325
+  s 1172.8..1222.8: gap 29.35..55.11 m; seated 0.0%; coverage 100.0%; misses 0/300
+  s 1222.8..1272.8: gap 54.12..130.11 m; seated 0.0%; coverage 100.0%; misses 0/325
+  s 1272.8..1322.8: gap 5.70..87.31 m; seated 5.6%; coverage 100.0%; misses 0/324
+the Collar: all width gap 3.05..7.66 m; seated 92.6%; coverage 100.0%; misses 0/351; centre gap 3.43..6.65 m; seated 92.3%; coverage 100.0%; misses 0/13
+  s 1323.9..1373.9: gap 3.05..7.66 m; seated 92.6%; coverage 100.0%; misses 0/351
+T1 the Chin: all width gap 1.99..6.74 m; seated 96.5%; coverage 100.0%; misses 0/972; centre gap 2.90..6.67 m; seated 97.2%; coverage 100.0%; misses 0/36
+  s 1375.9..1425.9: gap 3.43..6.74 m; seated 93.5%; coverage 100.0%; misses 0/351
+  s 1425.9..1475.9: gap 1.99..6.69 m; seated 96.6%; coverage 100.0%; misses 0/324
+  s 1475.9..1517.3: gap 2.49..4.00 m; seated 100.0%; coverage 100.0%; misses 0/297
+the Brow: all width gap 3.93..5.14 m; seated 100.0%; coverage 100.0%; misses 0/405; centre gap 4.00..4.00 m; seated 100.0%; coverage 100.0%; misses 0/15
+  s 1517.3..1567.3: gap 3.93..5.14 m; seated 100.0%; coverage 100.0%; misses 0/324
+  s 1567.3..1577.3: gap 3.97..4.03 m; seated 100.0%; coverage 100.0%; misses 0/81
+Seating report: art/blender/titan/phase3-seating.json
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:49:19)
+
+Blender quit

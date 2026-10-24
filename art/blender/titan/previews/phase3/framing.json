@@ -1,0 +1,373 @@
+{
+  "phase": 3,
+  "blender": "5.2.2 LTS",
+  "source": "titan-production.blend",
+  "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212",
+  "engine": "EEVEE",
+  "samples": 16,
+  "resolutionPercent": 100,
+  "reviewSandZ": 0,
+  "productionSaved": false,
+  "views": {
+    "palm": {
+      "title": "Palm \u00b7 fingertips to wrist",
+      "caption": "Approach over the open right hand. Inspect the road support across its full width.",
+      "image": "palm.png",
+      "camera": [
+        -260.0,
+        340.0,
+        255.0
+      ],
+      "target": [
+        0.0,
+        610.0,
+        90.0
+      ],
+      "lens": 44.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "breach": {
+      "title": "Breach \u00b7 north flank entrance",
+      "caption": "The northern wound, seen from outside along the approach into the chest.",
+      "image": "breach.png",
+      "camera": [
+        420.0,
+        1900.0,
+        205.0
+      ],
+      "target": [
+        231.0,
+        1600.0,
+        70.0
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "ribcage": {
+      "title": "Ribcage \u00b7 chamber overview",
+      "caption": "The northern chest opening, bronze ribs and frame surrounding the loop.",
+      "image": "ribcage.png",
+      "camera": [
+        300.0,
+        1830.0,
+        399.9999694824219
+      ],
+      "target": [
+        198.0,
+        1500.0,
+        90.0
+      ],
+      "lens": 26.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "knuckles": {
+      "title": "Palm \u00b7 knuckle support",
+      "caption": "Close inspection of the bent support at s 550\u2013565. The fingers remain spread around the supported central route.",
+      "image": "knuckles.png",
+      "camera": [
+        -240.60110473632812,
+        572.9871215820312,
+        126.20616149902344
+      ],
+      "target": [
+        0.0,
+        544.114990234375,
+        90.11599731445312
+      ],
+      "lens": 43.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "fingertip-support": {
+      "title": "Palm \u00b7 fingertip bearing from the side",
+      "caption": "Low side inspection of the bent fingertip supports and their attachment to the spread fingers.",
+      "image": "fingertip-support.png",
+      "camera": [
+        -250.13360595703125,
+        429.2589111328125,
+        103.07105255126953
+      ],
+      "target": [
+        0.0,
+        504.2989807128906,
+        58.047000885009766
+      ],
+      "lens": 46.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "wound-roots": {
+      "title": "Breach \u00b7 roots of the peeled armour",
+      "caption": "Looking into the north wound from above, showing where the peeled lips join the surviving ivory shell.",
+      "image": "wound-roots.png",
+      "camera": [
+        288.99017333984375,
+        1754.5301513671875,
+        299.400146484375
+      ],
+      "target": [
+        140.25,
+        1581.0,
+        175.4499969482422
+      ],
+      "lens": 47.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "peeled-wound": {
+      "title": "Breach \u00b7 peeled wound plates",
+      "caption": "Armour folded outward around the north chest wound, with the road entrance and exposed bronze frame visible.",
+      "image": "peeled-wound.png",
+      "camera": [
+        524.49365234375,
+        1858.833251953125,
+        375.7063293457031
+      ],
+      "target": [
+        185.75,
+        1458.5,
+        175.53965759277344
+      ],
+      "lens": 45.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "ribs-cables": {
+      "title": "Ribcage \u00b7 snapped ribs and cut cables",
+      "caption": "The damaged rib ends and hanging services around the chamber. The complete model remains visible, including the loop.",
+      "image": "ribs-cables.png",
+      "camera": [
+        633.6412353515625,
+        2003.50537109375,
+        398.384033203125
+      ],
+      "target": [
+        194.5,
+        1454.5789794921875,
+        105.623291015625
+      ],
+      "lens": 45.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "sand-drift": {
+      "title": "Burial \u00b7 sand at the north wound",
+      "caption": "Modelled sand gathered against the wreck and in its hollows, using an existing production material slot.",
+      "image": "sand-drift.png",
+      "camera": [
+        439.2535095214844,
+        1915.910888671875,
+        160.70249938964844
+      ],
+      "target": [
+        204.97738647460938,
+        1564.4967041015625,
+        8.423022270202637
+      ],
+      "lens": 45.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "overview": {
+      "title": "The fallen titan",
+      "caption": "Full wreck on the unchanged road. White review sand marks Z = 0; buried geometry is intentionally occluded.",
+      "image": "overview.png",
+      "camera": [
+        -1412.5465087890625,
+        -834.9031982421875,
+        2090.543701171875
+      ],
+      "target": [
+        274.5836181640625,
+        1158.977783203125,
+        173.35025024414062
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "arm-shoulder": {
+      "title": "Arm and shoulder",
+      "caption": "Forearm seating and the approved pylon-supported climb above the upper arm.",
+      "image": "arm-shoulder.png",
+      "camera": [
+        -430.0,
+        770.0,
+        440.0
+      ],
+      "target": [
+        0.0,
+        1000.0,
+        125.0
+      ],
+      "lens": 42.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "brow": {
+      "title": "Brow \u00b7 face and propped head",
+      "caption": "Face, chin and forehead beneath the road, with the broken-neck supports below.",
+      "image": "brow.png",
+      "camera": [
+        179.99996948242188,
+        1030.0,
+        710.0
+      ],
+      "target": [
+        -125.0,
+        1422.0,
+        190.0
+      ],
+      "lens": 44.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "collar": {
+      "title": "Collar and chin",
+      "caption": "Transition from the chest to the lifted head; collar plates and frame remain visible.",
+      "image": "collar.png",
+      "camera": [
+        310.0,
+        1150.0,
+        390.0
+      ],
+      "target": [
+        -40.0,
+        1365.0,
+        200.0
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "halo": {
+      "title": "Halo \u00b7 full roll",
+      "caption": "Detached halo standing beyond the crown. The road rolls through the opening.",
+      "image": "halo.png",
+      "camera": [
+        -1269.905029296875,
+        948.8763427734375,
+        432.43914794921875
+      ],
+      "target": [
+        -518.8330078125,
+        1422.0,
+        190.0
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "ribcage-high": {
+      "title": "Ribcage \u00b7 inside the chamber",
+      "caption": "Wide view from inside the chest: the complete loop and the surrounding bronze frame.",
+      "image": "ribcage-high.png",
+      "camera": [
+        300.0,
+        1550.0,
+        100.0
+      ],
+      "target": [
+        198.0,
+        1500.0,
+        90.0
+      ],
+      "lens": 10.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "hull-left": {
+      "title": "Hull \u00b7 left bronze corridor",
+      "caption": "Inside the left route. Inspect the bronze walls and roof clearance over the road.",
+      "image": "hull-left.png",
+      "camera": [
+        197.26800537109375,
+        1380.1280517578125,
+        25.99599838256836
+      ],
+      "target": [
+        185.72207641601562,
+        1292.1190185546875,
+        30.674055099487305
+      ],
+      "lens": 21.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "hull-gallery": {
+      "title": "Hull \u00b7 right open gallery",
+      "caption": "Looking toward the south exit along the raised right route, beside the ribs and the bronze left corridor; the gallery has no enclosing outer wall or roof.",
+      "image": "hull-gallery.png",
+      "camera": [
+        138.2310028076172,
+        1412.1309814453125,
+        52.00699996948242
+      ],
+      "target": [
+        119.84199523925781,
+        1320.1219482421875,
+        42.16999816894531
+      ],
+      "lens": 24.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "exit": {
+      "title": "Exit \u00b7 south flank",
+      "caption": "The opening where the two routes leave the southern flank.",
+      "image": "exit.png",
+      "camera": [
+        410.0,
+        920.0,
+        175.0
+      ],
+      "target": [
+        160.0,
+        1220.0,
+        45.0
+      ],
+      "lens": 44.0,
+      "wholeAssemblyFramed": false,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "sword": {
+      "title": "Sword \u00b7 blade, guard and broken grip",
+      "caption": "The road around the buried blade. The snapped grip and pommel rest east of it.",
+      "image": "sword.png",
+      "camera": [
+        1065.75537109375,
+        -206.0391845703125,
+        540.5899047851562
+      ],
+      "target": [
+        401.24700927734375,
+        351.0789794921875,
+        106.36399841308594
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    },
+    "armour-wear": {
+      "title": "Shoulder \u00b7 chipped and dented armour",
+      "caption": "A broad capped edge chip and shallow dent on the surviving right pauldron; primary markings and silhouette remain recognizable.",
+      "image": "armour-wear.png",
+      "camera": [
+        459.5931396484375,
+        903.3687133789062,
+        455.46978759765625
+      ],
+      "target": [
+        -45.66947937011719,
+        1156.0,
+        101.78592681884766
+      ],
+      "lens": 48.0,
+      "wholeAssemblyFramed": true,
+      "sourceSha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212"
+    }
+  }
+}

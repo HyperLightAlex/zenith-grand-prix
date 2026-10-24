@@ -1,0 +1,278 @@
+[
+  {
+    "object": "titan/hand.R/fingertip-bent-bearing-1",
+    "baseline_triangle_intersections": 580,
+    "nearest_vertex_to_baseline_m": 0.04155496135354042,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/hand.R/fingertip-bent-bearing-2",
+    "baseline_triangle_intersections": 1237,
+    "nearest_vertex_to_baseline_m": 0.0721745416522026,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/hand.R/fingertip-bent-bearing-3",
+    "baseline_triangle_intersections": 531,
+    "nearest_vertex_to_baseline_m": 0.1499382108449936,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/hand.R/knuckle-line-bent-guard",
+    "baseline_triangle_intersections": 1692,
+    "nearest_vertex_to_baseline_m": 0.003236482385545969,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/hand.R/knuckle-guard-hinge-rail--1",
+    "baseline_triangle_intersections": 134,
+    "nearest_vertex_to_baseline_m": 0.063232421875,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/hand.R/knuckle-guard-hinge-rail-1",
+    "baseline_triangle_intersections": 146,
+    "nearest_vertex_to_baseline_m": 0.01691443845629692,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/hand.R/wrist-seam-bent-guard",
+    "baseline_triangle_intersections": 921,
+    "nearest_vertex_to_baseline_m": 0.0010986328125,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/peeled-wound-shell-west",
+    "baseline_triangle_intersections": 86,
+    "nearest_vertex_to_baseline_m": 0.0,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/peeled-wound-shell-crown",
+    "baseline_triangle_intersections": 153,
+    "nearest_vertex_to_baseline_m": 0.7189171314239502,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/peeled-wound-red-band",
+    "baseline_triangle_intersections": 45,
+    "nearest_vertex_to_baseline_m": 1.9580020904541016,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/wound-frame-held-scrap",
+    "baseline_triangle_intersections": 97,
+    "nearest_vertex_to_baseline_m": 0.1977919191122055,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/peeled-exit-shell-west",
+    "baseline_triangle_intersections": 33,
+    "nearest_vertex_to_baseline_m": 0.2317943423986435,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/peeled-exit-shell-east",
+    "baseline_triangle_intersections": 58,
+    "nearest_vertex_to_baseline_m": 3.0044541358947754,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-rib-2",
+    "baseline_triangle_intersections": 641,
+    "nearest_vertex_to_baseline_m": 0.02324744500219822,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-rib-2-bent-fork",
+    "baseline_triangle_intersections": 27,
+    "nearest_vertex_to_baseline_m": 0.2165311872959137,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-rib-4",
+    "baseline_triangle_intersections": 720,
+    "nearest_vertex_to_baseline_m": 0.002376433927565813,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-rib-4-bent-fork",
+    "baseline_triangle_intersections": 14,
+    "nearest_vertex_to_baseline_m": 0.27314144372940063,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-rib-5",
+    "baseline_triangle_intersections": 280,
+    "nearest_vertex_to_baseline_m": 0.046636853367090225,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-rib-5-bent-fork",
+    "baseline_triangle_intersections": 33,
+    "nearest_vertex_to_baseline_m": 0.10561889410018921,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-longitudinal-frame-west",
+    "baseline_triangle_intersections": 168,
+    "nearest_vertex_to_baseline_m": 0.0,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/snapped-longitudinal-frame-east",
+    "baseline_triangle_intersections": 169,
+    "nearest_vertex_to_baseline_m": 0.0,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-conduit-red-upper",
+    "baseline_triangle_intersections": 214,
+    "nearest_vertex_to_baseline_m": 0.0018145132344216108,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-cable-core-red-upper",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 10.444169998168945,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-conduit-slate-upper",
+    "baseline_triangle_intersections": 284,
+    "nearest_vertex_to_baseline_m": 0.2579493224620819,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-cable-core-slate-upper",
+    "baseline_triangle_intersections": 7,
+    "nearest_vertex_to_baseline_m": 0.0683731883764267,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-conduit-red-lower",
+    "baseline_triangle_intersections": 113,
+    "nearest_vertex_to_baseline_m": 0.05551911145448685,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-cable-core-red-lower",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 3.0366480350494385,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-conduit-slate-lower",
+    "baseline_triangle_intersections": 118,
+    "nearest_vertex_to_baseline_m": 0.19124607741832733,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-cable-core-slate-lower",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 7.796678066253662,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-conduit-south-wall",
+    "baseline_triangle_intersections": 166,
+    "nearest_vertex_to_baseline_m": 0.60308837890625,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-cable-core-south-wall",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 9.14869213104248,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-conduit-south-red",
+    "baseline_triangle_intersections": 42,
+    "nearest_vertex_to_baseline_m": 0.26799044013023376,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/cut-cable-core-south-red",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 11.32237720489502,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/hull-wall-conduit-0",
+    "baseline_triangle_intersections": 296,
+    "nearest_vertex_to_baseline_m": 0.008333719335496426,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/hull-wall-conduit-1",
+    "baseline_triangle_intersections": 295,
+    "nearest_vertex_to_baseline_m": 0.008334695361554623,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/sand-drift-north-wound",
+    "baseline_triangle_intersections": 32,
+    "nearest_vertex_to_baseline_m": 0.8647695779800415,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/sand-drift-ribcage-hollow",
+    "baseline_triangle_intersections": 467,
+    "nearest_vertex_to_baseline_m": 0.024269526824355125,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/sand-drift-south-exit",
+    "baseline_triangle_intersections": 565,
+    "nearest_vertex_to_baseline_m": 0.0050592320039868355,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/neck/sand-drift-fallen-collar",
+    "baseline_triangle_intersections": 36,
+    "nearest_vertex_to_baseline_m": 0.243133544921875,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/sword/sand-drift-broken-pommel",
+    "baseline_triangle_intersections": 446,
+    "nearest_vertex_to_baseline_m": 0.1448221355676651,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/thigh.L/sand-drift-thigh-L-lee",
+    "baseline_triangle_intersections": 113,
+    "nearest_vertex_to_baseline_m": 0.12633754312992096,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/shin.R/sand-drift-shin-R-lee",
+    "baseline_triangle_intersections": 43,
+    "nearest_vertex_to_baseline_m": 0.4798051416873932,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/wound-debris-0",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 29.519039154052734,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/wound-debris-1",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 54.52195739746094,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/wound-debris-2",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 18.506755828857422,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  },
+  {
+    "object": "titan/chest/wound-debris-3",
+    "baseline_triangle_intersections": 0,
+    "nearest_vertex_to_baseline_m": 9.50772762298584,
+    "note": "No intersection can be valid for intentional loose debris/sand, cable cores, or additions rooted in other additions; visually review."
+  }
+]

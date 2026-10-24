@@ -1,0 +1,33 @@
+{
+  "stage": "regenerated Phase 2 before any Phase 3 modifications",
+  "strict_clearance_exit": 0,
+  "strict_clearance_last_result": "Clear of the road.",
+  "hard_hit_objects": [],
+  "sky_hit_lines": [
+    "  titan/chest/hull-left-roof: 30031 points; in the sky over the road: 24206 points (the Hull 24206)",
+    "  titan/chest/hull-roof-crossmember-0: 1440 points; in the sky over the road: 1440 points (the Hull 1440)",
+    "  titan/chest/hull-roof-crossmember-1: 1208 points; in the sky over the road: 1208 points (the Hull 1208)",
+    "  titan/chest/hull-roof-crossmember-10: 1648 points; in the sky over the road: 1482 points (the Hull 1482)",
+    "  titan/chest/hull-roof-crossmember-2: 1648 points; in the sky over the road: 1304 points (the Hull 1304)",
+    "  titan/chest/hull-roof-crossmember-3: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-4: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-5: 1648 points; in the sky over the road: 1200 points (the Hull 1200)",
+    "  titan/chest/hull-roof-crossmember-6: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-7: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-8: 1648 points; in the sky over the road: 1304 points (the Hull 1304)",
+    "  titan/chest/hull-roof-crossmember-9: 1648 points; in the sky over the road: 1482 points (the Hull 1482)",
+    "  titan/forearm.L/forearm-armour: 37812 points; in the sky over the road: 195 points (the Long Flank 195)"
+  ],
+  "unclassified_sky": [],
+  "validation_exit": 0,
+  "seating_exit": 0,
+  "vitest_exit": 1,
+  "vitest_result": {
+    "passed": 10,
+    "skipped": 1,
+    "expected_failure": "titan-top.json is still the prior exported model's top grid; user explicitly reserves regeneration for the game side",
+    "failure_count": 1
+  },
+  "test_log_note": "Large serialized top-grid diff values omitted from tests.txt; full original runtime log was /private/tmp/titan-phase3-baseline-tests.log.",
+  "sky_summary": "12 Hull corridor roof/crossmember objects; 1 left forearm object over the Long Flank; all allowed. No halo sky hits."
+}

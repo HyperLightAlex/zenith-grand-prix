@@ -1,0 +1,40 @@
+{
+  "stage": "Final clean default source + Phase2 + Phase3 rebuild",
+  "production_sha256": "3536303a5c62ef0a0b633f277804fdcb99f3233691b6c578db0d244bb20ac212",
+  "export_sha256": "01d05dca1f842bdb47860a3515d928bca09d9c3c0327ab712f19c326c9cde32a",
+  "strict_clearance_exit": 0,
+  "strict_clearance_last_result": "Clear of the road.",
+  "hard_hit_objects": [],
+  "sky_hit_lines": [
+    "  titan/chest/hull-left-roof: 30788 points; in the sky over the road: 24931 points (the Hull 24931)",
+    "  titan/chest/hull-roof-crossmember-0: 1579 points; in the sky over the road: 1579 points (the Hull 1579)",
+    "  titan/chest/hull-roof-crossmember-1: 1500 points; in the sky over the road: 1500 points (the Hull 1500)",
+    "  titan/chest/hull-roof-crossmember-10: 1648 points; in the sky over the road: 1482 points (the Hull 1482)",
+    "  titan/chest/hull-roof-crossmember-2: 1648 points; in the sky over the road: 1304 points (the Hull 1304)",
+    "  titan/chest/hull-roof-crossmember-3: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-4: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-5: 1648 points; in the sky over the road: 1200 points (the Hull 1200)",
+    "  titan/chest/hull-roof-crossmember-6: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-7: 1648 points; in the sky over the road: 1320 points (the Hull 1320)",
+    "  titan/chest/hull-roof-crossmember-8: 1648 points; in the sky over the road: 1304 points (the Hull 1304)",
+    "  titan/chest/hull-roof-crossmember-9: 1648 points; in the sky over the road: 1482 points (the Hull 1482)",
+    "  titan/forearm.L/forearm-armour: 46736 points; in the sky over the road: 190 points (the Long Flank 190)"
+  ],
+  "unclassified_sky": [],
+  "sky_summary": "12 Hull corridor roof/crossmember objects; 1 left forearm object over the Long Flank; all allowed. No halo sky hits.",
+  "validation_exit": 0,
+  "validation_checks": 2852,
+  "validation_failures": [],
+  "validation_warnings": [],
+  "triangles_total": 196114,
+  "export_meshes": 386,
+  "seating_exit": 0,
+  "vitest_exit": 1,
+  "vitest_result": {
+    "passed": 10,
+    "skipped": 1,
+    "expected_failure": "titan-top.json is still the prior exported model's top grid; user explicitly reserves regeneration for the game side",
+    "failure_count": 1
+  },
+  "test_log_note": "Complete test output including serialized top-grid diff retained in tests.txt; tests-summary.txt omits only the two long serialized payload lines."
+}

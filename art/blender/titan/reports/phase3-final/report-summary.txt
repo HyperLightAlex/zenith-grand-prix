@@ -1,0 +1,78 @@
+PHASE 3 FINAL QA
+Strict clearance exit 0: Clear of the road. Zero hard hits. Only 12 Hull roof/crossmember objects and 1 left forearm at Long Flank overlap sky.
+
+Validation: 2852 checks, no failures/warnings; 196,114 triangles; 386 meshes.
+Tests: 10 passed, 1 existing skip; sole expected failure is stale titan-top.json requiring game-side regeneration.
+
+PALM: full width, actual slab bottom, 50 m bins
+s0..s1 | gap m | seated % | coverage %
+300.000..350.000 | no footprint (approach) | 0.00 | 0.00
+350.000..400.000 | no footprint (approach) | 0.00 | 0.00
+400.000..450.000 | no footprint (approach) | 0.00 | 0.00
+450.000..500.000 | 1.36..4.00 | 66.67 | 66.67
+500.000..550.000 | 1.76..4.00 | 100.00 | 100.00
+550.000..600.000 | 3.80..3.80 | 100.00 | 100.00
+600.000..650.000 | 3.80..4.49 | 100.00 | 100.00
+650.000..700.000 | 1.93..4.33 | 100.00 | 100.00
+700.000..722.817 | 2.99..4.00 | 100.00 | 100.00
+
+Original fingertip contact s476.046 through wrist s720.070: 1,674/1,674 rays within 1–6m; gap 1.3597–4.4929 m.
+Knuckle s548.053 through 568.055: all rays 3.8 m.
+New bent slats begin at s468.045; earlier approach remains unsupported.
+
+OTHER ON STRETCHES
+the Arm: 3.8430..7.5649m; 92.76% seated; 100.00% coverage
+the Shoulder: 3.8650..130.1066m; 8.92% seated; 100.00% coverage
+the Collar: 3.0510..7.6588m; 92.59% seated; 100.00% coverage
+T1 the Chin: 1.9892..6.7407m; 96.50% seated; 100.00% coverage
+the Brow: 3.9347..5.1371m; 100.00% seated; 100.00% coverage
+
+TRIANGLES BY PART
+chest: 69,201
+foot.L: 1,412
+foot.R: 1,412
+forearm.L: 5,208
+forearm.R: 30,769
+halo: 3,240
+hand.L: 1,224
+hand.R: 12,220
+head: 13,727
+index.01.L: 776
+index.01.R: 1,032
+index.02.L: 776
+index.02.R: 1,032
+index.03.L: 776
+index.03.R: 1,032
+middle.01.L: 776
+middle.01.R: 1,064
+middle.02.L: 776
+middle.02.R: 1,064
+middle.03.L: 448
+middle.03.R: 1,437
+neck: 800
+pelvis: 958
+pinky.01.L: 612
+pinky.01.R: 1,032
+pinky.02.R: 1,032
+pinky.03.R: 1,032
+ring.01.L: 776
+ring.01.R: 1,032
+ring.02.L: 478
+ring.02.R: 1,032
+ring.03.R: 1,364
+shin.L: 2,919
+shin.R: 3,044
+shoulder.L: 10,078
+shoulder.R: 10,073
+spine: 228
+sword: 1,348
+thigh.L: 812
+thigh.R: 736
+thumb.01.L: 776
+thumb.01.R: 1,104
+thumb.02.L: 776
+thumb.02.R: 1,088
+thumb.03.L: 776
+thumb.03.R: 1,084
+upper_arm.L: 906
+upper_arm.R: 816
