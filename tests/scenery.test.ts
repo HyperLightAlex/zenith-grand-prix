@@ -5,7 +5,9 @@
 // the ground must lie under the deck everywhere, not come up through it.
 // Built in Node, with the canvas and image loading the scenery asks for
 // stubbed (only its geometry is looked at).
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { readTitanLevel } from '../src/client/render/titan/read';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { buildTrack, type Track } from '../src/sim/track';
@@ -16,6 +18,7 @@ import { themeFor } from '../src/client/render/themes';
 import { buildWorld } from '../src/client/render/world';
 import { buildTrackVisual } from '../src/client/render/trackMesh';
 
+const TITAN_MODEL = new URL('../src/client/render/titan/assets/titan.glb', import.meta.url);
 /** How far under the deck counts: the ground may lie against the slab under the road, not within this of its top. */
 const UNDER = 0.5;
 
@@ -174,7 +177,7 @@ describe('the scenery and the road', () => {
   for (const def of TRACKS) {
     if (!ids.includes(def.id)) continue;
     const skip = !process.env.SCENERY && def.id in NOT_YET;
-    (skip ? it.skip : it)(`${def.id}: nothing stands in the road's space, and the ground lies under the deck${skip ? ` (not yet: ${NOT_YET[def.id]})` : ''}`, () => {
+    (skip ? it.skip : it)(`${def.id}: nothing stands in the road's space, and the ground lies under the deck${skip ? ` (not yet: ${NOT_YET[def.id]})` : ''}`, async () => {
       const track = buildTrack(def);
       const theme = themeFor(def.theme);
       const world = buildWorld(track, theme);
@@ -184,6 +187,32 @@ describe('the scenery and the road', () => {
         if (o.name === 'pylons') supports.add(o.clone());
       });
       world.group.add(supports);
+      if (def.id === 'titan' && existsSync(TITAN_MODEL)) {
+        // On the titan, each support reaches down to the model's surface under it, and stands no more than its sink into it.
+        const bytes = readFileSync(TITAN_MODEL);
+        const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+        const body = [...readTitanLevel(gltf.scene).values()].flatMap((geo) => Object.values(geo).map((g) => new THREE.Mesh(g!, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))));
+        const ray = new THREE.Raycaster();
+        const m = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+        const bad: string[] = [];
+        let on = 0;
+        supports.traverse((o) => {
+          const inst = o as THREE.InstancedMesh;
+          if (!inst.isInstancedMesh) return;
+          for (let k = 0; k < inst.count; k++) {
+            inst.getMatrixAt(k, m);
+            m.decompose(p, q, sc);
+            const foot = p.y - sc.y;
+            if (foot < 1) continue;
+            on++;
+            ray.set(new THREE.Vector3(p.x, p.y - 0.5, p.z), new THREE.Vector3(0, -1, 0));
+            const hit = ray.intersectObjects(body, false)[0];
+            if (!hit || hit.point.y < foot || hit.point.y - foot > 12) bad.push(`at (${p.x.toFixed(0)}, ${p.z.toFixed(0)}): foot ${foot.toFixed(1)}, the titan ${hit ? hit.point.y.toFixed(1) : 'not under it'}`);
+          }
+        });
+        expect(on).toBeGreaterThan(0);
+        expect(bad).toEqual([]);
+      }
       const hits = audit(track, def, world.group);
       // The report: per mesh and piece, how many samples and how deep.
       const groups = new Map<string, Hit[]>();

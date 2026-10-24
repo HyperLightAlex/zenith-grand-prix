@@ -6,7 +6,9 @@
 // Until it is in, Titan's Rest shows the placeholder (placeholder.ts).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { readTitanLevel, type TitanAsset, type TitanPartGeometry, type TitanSlot } from './read';
+import type { Track } from '../../../sim/track';
+import { titanGround, type TitanGround } from './placeholder';
+import { readTitanLevel, topGridHeights, type TitanAsset, type TitanPartGeometry, type TitanSlot, type TitanTopGrid } from './read';
 
 export { readTitanLevel, slotOf, TITAN_SLOTS, type TitanAsset, type TitanPartGeometry, type TitanSlot } from './read';
 
@@ -15,6 +17,35 @@ const urls = import.meta.glob(['./assets/titan.glb', './assets/titan-lod1.glb', 
 
 /** Whether the model is in the build at all. */
 export const hasTitanModel = (): boolean => './assets/titan.glb' in urls;
+
+// The model's top from above (tools/titan/top.ts), small enough to build in.
+const tops = import.meta.glob('./assets/titan-top.json', { eager: true, import: 'default' }) as Record<string, TitanTopGrid>;
+
+const grounds = new WeakMap<Track, TitanGround | null>();
+/**
+ * Where the titan is from above, for the road's supports to stand on and the
+ * scenery to keep off: the model's own top when it is in the build, the
+ * placeholder's otherwise (and on any other track, null).
+ */
+export function titanGroundOf(track: Track): TitanGround | null {
+  if (grounds.has(track)) return grounds.get(track)!;
+  const grid = tops['./assets/titan-top.json'];
+  let g: TitanGround | null;
+  if (track.def.id !== 'titan' || !hasTitanModel() || !grid) g = titanGround(track);
+  else {
+    const h = topGridHeights(grid);
+    const at = (a: number, b: number) => (a < 0 || b < 0 || a >= grid.nx || b >= grid.nz || h[b * grid.nx + a] === -32768 ? -Infinity : h[b * grid.nx + a] / 10);
+    g = {
+      topAt: (x, z) => at(Math.floor((x - grid.x0) / grid.cell), Math.floor((z - grid.z0) / grid.cell)),
+      minX: grid.x0,
+      maxX: grid.x0 + grid.nx * grid.cell,
+      minZ: grid.z0,
+      maxZ: grid.z0 + grid.nz * grid.cell,
+    };
+  }
+  grounds.set(track, g);
+  return g;
+}
 
 let loading: Promise<TitanAsset | null> | undefined;
 /** Load the model's levels of detail, or null if it is not in the build. */

@@ -102,3 +102,72 @@ function mergeTriangles(gs: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return out;
 }
 
+
+/**
+ * The model's top from above, for the road's supports to stand on and the
+ * scenery to keep off: the highest point of its surface in each `cell`-unit
+ * square (parts more than 5 under the sand left out), as decimetres in a
+ * grid, -32768 where it is not. Made from titan.glb by tools/titan/top.ts
+ * into assets/titan-top.json; the tests check the two agree.
+ */
+export interface TitanTopGrid {
+  cell: number;
+  x0: number;
+  z0: number;
+  nx: number;
+  nz: number;
+  /** nx * nz Int16 decimetres, x fastest, base64. */
+  dm: string;
+}
+
+export function titanTopGrid(level: Map<string, TitanPartGeometry>, cell = 10): TitanTopGrid {
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (const geo of level.values()) {
+    for (const g of Object.values(geo)) {
+      const p = g!.attributes.position.array as Float32Array;
+      for (let k = 0; k < p.length; k += 3) {
+        if (p[k + 1] < -5) continue;
+        x0 = Math.min(x0, p[k]); x1 = Math.max(x1, p[k]);
+        z0 = Math.min(z0, p[k + 2]); z1 = Math.max(z1, p[k + 2]);
+      }
+    }
+  }
+  x0 = Math.floor(x0 / cell) * cell;
+  z0 = Math.floor(z0 / cell) * cell;
+  const nx = Math.floor((x1 - x0) / cell) + 1;
+  const nz = Math.floor((z1 - z0) / cell) + 1;
+  const top = new Int16Array(nx * nz).fill(-32768);
+  const put = (x: number, y: number, z: number) => {
+    if (y < -5) return;
+    const a = Math.floor((x - x0) / cell);
+    const b = Math.floor((z - z0) / cell);
+    if (a < 0 || b < 0 || a >= nx || b >= nz) return;
+    const v = Math.round(y * 10);
+    if (v > top[b * nx + a]) top[b * nx + a] = v;
+  };
+  const step = cell * 0.5;
+  for (const geo of level.values()) {
+    for (const g of Object.values(geo)) {
+      const p = g!.attributes.position.array as Float32Array;
+      for (let k = 0; k + 8 < p.length; k += 9) {
+        const ax = p[k], ay = p[k + 1], az = p[k + 2];
+        const bx = p[k + 3] - ax, by = p[k + 4] - ay, bz = p[k + 5] - az;
+        const cx = p[k + 6] - ax, cy = p[k + 7] - ay, cz = p[k + 8] - az;
+        const n = Math.max(1, Math.min(64, Math.ceil(Math.max(Math.hypot(bx, bz), Math.hypot(cx, cz), Math.hypot(cx - bx, cz - bz)) / step)));
+        for (let i = 0; i <= n; i++) for (let j = 0; j <= n - i; j++) put(ax + bx * (i / n) + cx * (j / n), ay + by * (i / n) + cy * (j / n), az + bz * (i / n) + cz * (j / n));
+      }
+    }
+  }
+  const bytes = new Uint8Array(top.buffer);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return { cell, x0, z0, nx, nz, dm: btoa(bin) };
+}
+
+/** The grid's heights back (decimetres, -32768 where the titan is not). */
+export function topGridHeights(grid: TitanTopGrid): Int16Array {
+  const bin = atob(grid.dm);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Int16Array(bytes.buffer);
+}

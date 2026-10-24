@@ -22,8 +22,8 @@ import { HORIZON_RINGS, SUN_DISC, UNTONE, paintedCardMaterial, paintedSet, paint
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { THEMES, type Theme } from './themes';
 import { trackMatrix, trackPoint } from './trackSpace';
-import { titanGround, titanPlaceholder } from './titan/placeholder';
-import { loadTitan, titanModel, type TitanSlot } from './titan/asset';
+import { titanPlaceholder } from './titan/placeholder';
+import { loadTitan, titanGroundOf, titanModel, type TitanSlot } from './titan/asset';
 import type { TitanMat } from './titan/pose';
 
 const skyVertex = /* glsl */ `
@@ -2218,7 +2218,7 @@ function buildTitansRest(ctx: Ctx): void {
     putTitan('frame', sweepLeft((i) => [[outer(i) - 6, -10], [outer(i) - 6, roof], [outer(i), roof], [outer(i), -10]]));
     putTitan('verdigris', sweepLeft((i) => [[outer(i) - 6, roof], [outer(i) - 6, roof + 6], [-0.4, roof + 6], [-0.4, roof]]));
   }
-  const body = titanGround(track);
+  const body = titanGroundOf(track);
   const placeholder = new THREE.Group();
   placeholder.name = 'titan placeholder';
   group.add(placeholder);

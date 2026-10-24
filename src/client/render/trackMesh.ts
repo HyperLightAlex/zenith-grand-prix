@@ -6,7 +6,7 @@ import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { look } from './look';
 import { paintedSignMaterial, paintedSurfaceMaterial, paintedTexture, paintedTrack, type PaintedSign } from './painted';
 import { frostOf } from './frost';
-import { titanGround } from './titan/placeholder';
+import { titanGroundOf } from './titan/asset';
 import { pitOf } from './pit';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
@@ -800,7 +800,7 @@ export function buildTrackVisual(
   };
   const pit = pitOf(track);
   const frost = frostOf(track);
-  const titan = titanGround(track);
+  const titan = titanGroundOf(track);
   const groundAt = (x: number, z: number) => (pit ? pit.groundAt(x, z) : frost ? frost.groundAt(x, z) : theme.groundY);
   {
     const spacing = 30; // samples

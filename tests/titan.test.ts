@@ -2,7 +2,7 @@
 // is laid to (render/titan/pose.ts), the placeholder built from it, and the
 // Blender model when it is in (render/titan/assets/titan*.glb). None of it may
 // reach into the space the road needs.
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -12,7 +12,7 @@ import { pieceStarts } from '../src/sim/circuit';
 import { KEEP_OUT, RoadIndex } from '../src/client/render/titan/keepout';
 import { fitToRoad, STANDING, titanJoints, titanShapes, TITAN_POSE } from '../src/client/render/titan/pose';
 import { titanGround, titanPlaceholder } from '../src/client/render/titan/placeholder';
-import { readTitanLevel, slotOf, TITAN_SLOTS } from '../src/client/render/titan/read';
+import { readTitanLevel, slotOf, titanTopGrid, TITAN_SLOTS, type TitanTopGrid } from '../src/client/render/titan/read';
 import type * as THREE from 'three';
 
 const t = buildTrack(TITANS_REST);
@@ -137,6 +137,14 @@ describe.skipIf(!model)("Titan's Rest: the titan's Blender model", () => {
       else contract = keys;
     }
     expect(TITAN_SLOTS.length).toBe(10);
+  });
+
+  it('has its top from above (titan-top.json, for the supports and the scenery) made from this model: npx tsx tools/titan/top.ts', async () => {
+    const { parts } = await level('titan.glb');
+    const file = new URL('titan-top.json', ASSETS);
+    expect(existsSync(file)).toBe(true);
+    const saved = JSON.parse(readFileSync(file, 'utf8')) as TitanTopGrid;
+    expect(saved).toEqual(titanTopGrid(parts));
   });
 
   it('leaves the space round the road empty', async () => {
