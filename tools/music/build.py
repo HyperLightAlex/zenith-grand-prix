@@ -26,6 +26,10 @@ carries on and only the energy changes. Or, with `phrase`, it waits for the
 next phrase to start (a bar numbered `first` + n x `bars`) and goes in at
 the finale's start (Canyon: a key change, which only sounds meant on one).
 
+The end (optional, `end`: seconds into the song): where the files stop. A
+song whose last chord rings down to near silence would leave a gap before
+the menu music; stopped once the ring has died to a murmur, it does not.
+
 The mastering. Suno's stems are the mix before mastering: summed, they come
 out louder and a little duller than song.wav. The song file says how to
 match it (a gain and two shelves); applied to every layer it is the same as
@@ -147,7 +151,8 @@ def main():
         if (FB - FA) % cyc or (B - A) % cyc:
             print('warning: a loop that is not a whole number of chord cycles (%d bars)' % cyc)
         cut.append((int(round((bars[F0] - PAD) * sr)), int(round(bars[FB] * sr))))
-    cut.append((int(round((bars[E] - PAD) * sr)), n))
+    stop = min(n, int(round(cfg['end'] * sr))) if 'end' in cfg else n
+    cut.append((int(round((bars[E] - PAD) * sr)), stop))
     offs = np.cumsum([0] + [b - a for a, b in cut])
     def file_pos(t, piece):
         """Song time t (s), in cut piece `piece`, as a position in the files (s)."""

@@ -4,10 +4,10 @@ A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
 The game plays these by default; `?music=synth` in the address plays the
 synthesised music instead.
-Every circuit but Abyss Line and Monsoon Ruins has a song: Meridian (海空の速さ), Corkscrew Canyon
+Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
 (疾走の回路), Helios Drop (午間の雲上レース), Neon Crucible (Neon
-Fire), Frostline (Aurora Dash), Titan's Rest (White Desert Charge) and
-Zenith Ring (天頂の環).
+Fire), Frostline (Aurora Dash), Titan's Rest (White Desert Charge), Abyss
+Line (深海ライン), Monsoon Ruins (雷雨の神殿) and Zenith Ring (天頂の環).
 The menus have a title
 theme (Blue Night Sky), and the results one for when the player's team
 wins (トロフィーセレモニー) and one for when it loses (Minor Theme; see
@@ -23,7 +23,7 @@ What each song was asked for, and what is still to make, is in
 | 3 | the rest: the full song, at full volume, with the kick and bass lifted (+5 dB below 140 Hz) |
 | finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
-| Layer | Meridian | Canyon | Helios | Crucible, Frostline, Titan's Rest, Zenith Ring |
+| Layer | Meridian | Canyon | Helios | Crucible, Frostline, Titan's Rest, Abyss Line, Monsoon Ruins, Zenith Ring |
 |---|---|---|---|---|
 | melody | keys, synth, strings, guitar | synth, keys, guitar, strings, brass, voices | keys, synth | synth, keys, guitar, strings, brass, woodwinds, voices |
 | bass | bass | bass | bass | bass |
@@ -173,6 +173,36 @@ starts the pre-chorus), so the bridge is heard first on lap 3. It ends
 from bar 136, A flat, B flat, onto its last C major hit (its outro from
 bar 128 is twice as long, 21 s, longer than the wait for the results).
 
+Abyss Line's 深海ライン (about 135 BPM, stems only) came back in C minor,
+not the F minor asked for, and without the step up for its last chorus.
+Its stems come apart as Meridian's do: the guitar, strings and brass were
+carved out of one another (0.49 to 0.60) and the synth out of the strings
+and keys (0.45 to 0.56); the drums, bass, percussion and effects are clean
+(0.16 at most). Laps 1 and 2 loop bars 20 to 56 (64 s, phrase to phrase:
+Ab back to the Gm the song itself goes to from Bb). Lap 3 waits for the
+next 4-bar phrase (from bar 0) and goes to its last chorus (bar 88, after
+its drumless bridge, the loudest part of it), looping its twelve bars
+(88 to 100, 21 s: Ab back to Fm) to the finish. It ends from bar 106: A
+flat, B flat, onto a held C major and its last hit. Its last chord rings
+down to a murmur, so the files stop at 201 s (`end`), else the ring leaves
+over a second near silence before the menu music.
+
+Monsoon Ruins' 雷雨の神殿 (146 BPM, steady, stems only; the first of two
+takes: the second stops mid-bar with the band still playing, no ending)
+is in B♭ minor, without the step up for its last chorus: its last section
+(from bar 96) turns bright, round B♭ and E♭, and ends G♭, A♭, B♭ onto its
+last hit. Its stems come apart as White Desert Charge's do: its vocal
+stem (quiet, and following the synth's melody: the lead, not singing) is
+carved out of the guitar, strings and brass (0.64 to 0.72), the guitar
+out of the strings and brass (0.52 to 0.65), the synth out of the strings
+(0.50); the drums (0.33 at most, against the vocal stem), bass, percussion
+and effects are clean. Laps 1 and 2 loop bars 40 to 82 (69 s: from its
+first chorus, through the heavy guitar section, the climb on F and its
+two-bar break of drums and marimba, to the same place in its second
+chorus). Lap 3 waits for the next 4-bar phrase (from bar 0) and goes in
+at bar 92, the climb (G♭, E♭, A♭) into the last section, and loops that
+(92 to 104, 20 s: E♭ back to G♭) to the finish. It ends from bar 108.
+
 Every layer's last 80 ms is faded out (`TAIL` in build.py): Suno's stems
 stop short on a step, and an MP3 rings on it as a loud click right at
 the end (Canyon's melody layer: 0.63 in its last 20 ms after 0.02 before
@@ -196,8 +226,11 @@ own (`stingers` in the recipe, semitones from the written key):
 - Aurora Dash is centred on C# minor and ends on C# major: the lap chime
   is on C# and G#, the battle stab resolves to C# minor, the final-lap
   fanfare's open chord is on C# and the flag is in C# major.
-- 天頂の環 is mostly in C minor and ends on C major, so its stingers are
-  White Desert Charge's.
+- 天頂の環 and 深海ライン are mostly in C minor and end on C major, so
+  their stingers are White Desert Charge's.
+- 雷雨の神殿 is in B♭ minor and ends on B♭: the lap chime is on B♭ and F,
+  the battle stab resolves to B♭ minor, the final-lap fanfare's open chord
+  is on B♭ and the flag is in B♭ major.
 - White Desert Charge is in C minor and its last section in C major: the
   lap chime is on C and G, the battle stab resolves to C minor, the
   final-lap fanfare's open chord is on C (the finale it goes into) and

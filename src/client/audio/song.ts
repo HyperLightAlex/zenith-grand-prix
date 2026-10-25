@@ -45,6 +45,8 @@ export const SONGS: Record<string, string> = {
   crucible: 'music/crucible/',
   frostline: 'music/frostline/',
   titan: 'music/titan/',
+  abyss: 'music/abyss/',
+  monsoon: 'music/monsoon/',
   zenith: 'music/zenith/',
 };
 
