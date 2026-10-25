@@ -122,6 +122,16 @@ CIRCUITS = {
         # map of them lit, some warm, a few cold, the rest left dark.
         portholes={'facade': 'facadeLit'},
     ),
+    'monsoon': dict(
+        # A storm: no sun, only a paler patch in the cloud at the middle of J1.
+        sky=['bg-j1-sky.png', 'bg-j1b-sky.png'],
+        sun_col=768,
+        # On magenta: the jungle is green.
+        horizon='bg-j2-horizon.png',
+        clouds='bg-j3-clouds.png',
+        surfaces='bg-j4-surfaces.png',
+        tiles=['floor', 'limestone', 'frieze', 'cenote', 'paving', 'canopy'],
+    ),
     'zenith': dict(
         sky=['bg-z1-sky.png', 'bg-z1b-sky.png'],
         # The Milky Way is brighter than the sun's small glare: its column on Z1, by hand.

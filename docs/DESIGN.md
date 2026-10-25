@@ -313,7 +313,7 @@ its door, the Ring standing on two pillars in the gorge, the river pouring
 off a lip of rock into the cenote, the Corkscrew on a shelf round its wall
 behind the falls, the halls roofed over the inside route of the last bend
 and the causeway's walls round the outside: `src/client/render/monsoon.ts`,
-a stand-in until its painted background is made; Abyss Line: on the sea floor a hundred
+painted from sheets J1 to J4 with the painted background; Abyss Line: on the sea floor a hundred
 metres down, the road in glass tubes (one round each strand of the Braid, a
 wide one round the Twist, broken off at the Trench Leap), the trench carved
 into the floor under it, the town's great glass dome with the town lit on

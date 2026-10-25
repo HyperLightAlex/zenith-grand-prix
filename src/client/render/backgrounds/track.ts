@@ -20,19 +20,21 @@ import frostlineBoard from './track/board-frostline.webp';
 import titanBoard from './track/board-titan.webp';
 import zenithRingBoard from './track/board-zenithRing.webp';
 import abyssBoard from './track/board-abyss.webp';
+import monsoonBoard from './track/board-monsoon.webp';
 import bannerBoard from './track/board-banner.webp';
 import crucibleSignBoard from './track/board-crucibleSign.webp';
 import frostlineSignBoard from './track/board-frostlineSign.webp';
 import titanSignBoard from './track/board-titanSign.webp';
 import zenithRingSignBoard from './track/board-zenithRingSign.webp';
 import abyssSignBoard from './track/board-abyssSign.webp';
+import monsoonSignBoard from './track/board-monsoonSign.webp';
 
 const kit: PaintedTrack = {
   surfaces: { road, armour, steel, concrete, gantry, crowd },
   crowdAspect: 1.0579,
   boards: [{ url: kestrelBoard, aspect: 2.9317 }, { url: novaBoard, aspect: 2.9312 }, { url: aokiBoard, aspect: 2.95 }, { url: halcyonBoard, aspect: 2.9438 }, { url: zgpLiveBoard, aspect: 2.913 }, { url: zenithBoard, aspect: 2.9438 }],
-  circuits: { meridian: { url: meridianBoard, aspect: 2.2864 }, canyon: { url: canyonBoard, aspect: 2.2754 }, helios: { url: heliosBoard, aspect: 2.2754 }, crucible: { url: crucibleBoard, aspect: 3.2603 }, frostline: { url: frostlineBoard, aspect: 3.1218 }, titan: { url: titanBoard, aspect: 2.5981 }, abyss: { url: abyssBoard, aspect: 2.3274 }, zenith: { url: zenithRingBoard, aspect: 2.3933 } },
+  circuits: { meridian: { url: meridianBoard, aspect: 2.2864 }, canyon: { url: canyonBoard, aspect: 2.2754 }, helios: { url: heliosBoard, aspect: 2.2754 }, crucible: { url: crucibleBoard, aspect: 3.2603 }, frostline: { url: frostlineBoard, aspect: 3.1218 }, titan: { url: titanBoard, aspect: 2.5981 }, abyss: { url: abyssBoard, aspect: 2.3274 }, monsoon: { url: monsoonBoard, aspect: 3.2603 }, zenith: { url: zenithRingBoard, aspect: 2.3933 } },
   banner: { url: bannerBoard, aspect: 10.1338 },
-  circuitSigns: { crucible: { url: crucibleSignBoard, aspect: 3.2297 }, frostline: { url: frostlineSignBoard, aspect: 4.1361 }, titan: { url: titanSignBoard, aspect: 4.6411 }, zenith: { url: zenithRingSignBoard, aspect: 5.0418 }, abyss: { url: abyssSignBoard, aspect: 4.6395 } },
+  circuitSigns: { crucible: { url: crucibleSignBoard, aspect: 3.2297 }, frostline: { url: frostlineSignBoard, aspect: 4.1361 }, titan: { url: titanSignBoard, aspect: 4.6411 }, zenith: { url: zenithRingSignBoard, aspect: 5.0418 }, abyss: { url: abyssSignBoard, aspect: 4.6395 }, monsoon: { url: monsoonSignBoard, aspect: 3.2297 } },
 };
 export default kit;

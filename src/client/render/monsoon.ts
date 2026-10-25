@@ -12,13 +12,18 @@
 // lightning. Everything is checked against the space the road needs
 // (titan/keepout.ts) and left out where it would stand in it.
 //
-// A stand-in until its painted background is made.
+// With the painted background (sheets J1 to J4), the same shapes take the
+// painted surfaces: the jungle floor, the plaza's paving, the pyramid's
+// limestone, the carved friezes on the temple, the Ring and the halls, the
+// cenote's wet rock and the canopy; low storm clouds stand round the
+// circuit, lit by the lightning, and each strike is the painted cloud with
+// the bolt out of its belly.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
 import { STONE_RING } from '../../sim/tracks/monsoon';
-import { paintedTexture, paintedTrack } from './painted';
+import { paintedSurfaceMaterial, paintedTexture, paintedTrack, swapWhenPainted, UNTONE, type PaintedMaps, type PaintedSet } from './painted';
 import { toonMaterial } from './palette';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT } from './titan/keepout';
@@ -31,8 +36,45 @@ export interface JungleCtx {
   updates: Array<(time: number, camera: THREE.Camera) => void>;
   /** The switch between the plain look and the painted background. */
   swaps: Array<(painted: boolean) => void>;
+  /** The painted background, if there is one, and what is shown only with it. */
+  painted: PaintedSet | null;
+  plainOnly: THREE.Object3D[];
+  paintedOnly: THREE.Object3D[];
   /** Lightning: the sky and the light, `v` (0..1) toward `dir`. */
   flash(v: number, dir: THREE.Vector3): void;
+}
+
+/** The plaza round the line, paved (x0, z0, x1, z1). */
+const PLAZA: [number, number, number, number] = [-210, -520, 210, 140];
+
+/** A painted storm cloud: as painted, outside the fog, lit from inside by the lightning (uFlash) and faded by uOpacity. */
+function stormCardMaterial(map: THREE.Texture, rect: [number, number, number, number]): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: { uMap: { value: map }, uRect: { value: new THREE.Vector4(...rect) }, uFlash: { value: 0 }, uOpacity: { value: 1 } },
+    vertexShader: /* glsl */ `
+      uniform vec4 uRect;
+      varying vec2 vUv;
+      void main() {
+        vUv = uRect.xy + uv * uRect.zw;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D uMap;
+      uniform float uFlash;
+      uniform float uOpacity;
+      varying vec2 vUv;
+      ${UNTONE}
+      void main() {
+        vec4 t = texture2D(uMap, vUv);
+        if (t.a < 0.01) discard;
+        vec3 c = unTone(t.rgb);
+        c += vec3(0.75, 0.78, 0.95) * uFlash * (0.25 + dot(c, vec3(0.6)));
+        gl_FragColor = vec4(c, t.a * uOpacity);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
 }
 
 const f = makeFrame();
@@ -646,6 +688,10 @@ export function buildMonsoon(ctx: JungleCtx): void {
   const { cx, cz } = cenote;
   const stone: THREE.BufferGeometry[] = [];
   const glow: THREE.BufferGeometry[] = [];
+  // (The carved stone, apart so the painted look can carve it: the temple's lintel and comb, the Ring.)
+  const carved: THREE.BufferGeometry[] = [];
+  // (The lintel's lit glyphs: the painted frieze carves its own.)
+  const lintelGlow: THREE.BufferGeometry[] = [];
   const keep = (g: THREE.BufferGeometry, c: number | THREE.Color, step = 3, list = stone) => {
     if (ctx.inRoad(g, step)) return false;
     list.push(colour(g, c));
@@ -658,6 +704,24 @@ export function buildMonsoon(ctx: JungleCtx): void {
   const pyrAt = (x: number, z: number) => {
     const p = sampleGrid(land.pyramid, x, z);
     return Number.isNaN(p) ? -Infinity : p;
+  };
+  // The painted surfaces (J4), each texture loaded once.
+  const S = ctx.painted?.surfaces;
+  const maps: PaintedMaps = new Map();
+  // (`gain` brightens the painting to stand up to the storm's dim light as the pale plain colours do.)
+  const paint = (mesh: THREE.Mesh | THREE.Mesh[], wall: string, top: string, wallSize: number, topSize: number, gain: number, side: THREE.Side = THREE.FrontSide, dip = 0) => {
+    if (!S?.[wall] || !S[top]) return;
+    swapWhenPainted(
+      ctx.swaps,
+      mesh,
+      [S[wall], S[top]],
+      ([w, t]) => {
+        const m = paintedSurfaceMaterial(w, t, wallSize, topSize, side, { toon: true, dip });
+        m.color.setScalar(gain);
+        return m;
+      },
+      maps,
+    );
   };
 
   // ---- the jungle floor and the plateau ----
@@ -684,7 +748,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
         const sz = (h[Math.min(o + nx, nx * nz - 1)] - h[Math.max(o - nx, 0)]) / (2 * cell);
         const steep = clamp(Math.hypot(sx, sz) * 0.9, 0, 1);
         const base = h[o] > 60 ? moss : floor;
-        const plaza = Math.abs(x) < 210 && z > -520 && z < 140;
+        const plaza = x > PLAZA[0] && x < PLAZA[2] && z > PLAZA[1] && z < PLAZA[3];
         c.copy(plaza ? paving : base).lerp(mud, vnoise(x / 70, z / 70) * 0.35).lerp(rock, smooth(steep, 0.35, 0.8)).lerp(wet, h[o] < cenote.pool + 2 ? 0.8 : 0);
         c.multiplyScalar(0.88 + vnoise(x / 11, z / 11) * 0.24);
         col[o * 3] = c.r;
@@ -728,6 +792,19 @@ export function buildMonsoon(ctx: JungleCtx): void {
     const far = new THREE.Mesh(mergeGeometries(out), mat);
     far.name = 'jungle floor beyond';
     group.add(far);
+    // Painted: the leaf litter on top, wet rock down the steep banks, the plaza paved.
+    if (S?.floor && S.cenote && S.paving)
+      swapWhenPainted(
+        ctx.swaps,
+        [mesh, far],
+        [S.cenote, S.floor, S.paving],
+        ([w, t, pv]) => {
+          const m = paintedSurfaceMaterial(w, t, 30, 20, THREE.FrontSide, { toon: true, dip: 0.6, patch: { map: pv, size: 14, rect: PLAZA, edge: 10 } });
+          m.color.setScalar(1.3);
+          return m;
+        },
+        maps,
+      );
   }
 
   // ---- the pyramid ----
@@ -784,6 +861,8 @@ export function buildMonsoon(ctx: JungleCtx): void {
     const mesh = new THREE.Mesh(g, toonMaterial({ color: 0xffffff }));
     mesh.name = 'pyramid';
     group.add(mesh);
+    // Painted: the limestone courses up the risers (a course to a tier), paving on the treads and the ramps.
+    paint(mesh, 'limestone', 'paving', 7, 14, 1.7);
   }
 
   // ---- the temple on the summit, the road through its door ----
@@ -809,13 +888,13 @@ export function buildMonsoon(ctx: JungleCtx): void {
     }
     // The lintel over the door, and the roof comb on it, carved.
     const lintelY = deck + DOOR + 4;
-    keep(block(F.p.clone().setY(lintelY), across, up, along, 2 * (half + WALL), 8, DEPTH), 0x9a967e);
-    keep(block(F.p.clone().setY(lintelY + 4 + 9), across, up, along, 2 * half + WALL, 18, DEPTH * 0.55), 0x8a866e);
-    keep(block(F.p.clone().setY(lintelY + 4 + 18 + 7), across, up, along, half * 1.4, 14, DEPTH * 0.3), 0x8a866e);
+    keep(block(F.p.clone().setY(lintelY), across, up, along, 2 * (half + WALL), 8, DEPTH), 0x9a967e, 3, carved);
+    keep(block(F.p.clone().setY(lintelY + 4 + 9), across, up, along, 2 * half + WALL, 18, DEPTH * 0.55), 0x8a866e, 3, carved);
+    keep(block(F.p.clone().setY(lintelY + 4 + 18 + 7), across, up, along, half * 1.4, 14, DEPTH * 0.3), 0x8a866e, 3, carved);
     // A band of glyphs across the lintel, glowing faintly jade.
     for (let k = -9; k <= 9; k++) {
       const g = block(F.p.clone().addScaledVector(across, k * (half / 5)).addScaledVector(along, -DEPTH / 2 - 0.4).setY(lintelY + (k % 2 ? 1.2 : -1.2)), across, up, along, 2.2, 2.2, 0.8);
-      keep(g, 0x1f7a58, 2, glow);
+      keep(g, 0x1f7a58, 2, lintelGlow);
     }
   }
 
@@ -831,7 +910,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
     torus.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(v3(0, 0, 1), axis));
     torus.translate(centre.x, centre.y, centre.z);
     torus.computeVertexNormals();
-    keep(torus, 0x8f8a72, 2);
+    keep(torus, 0x8f8a72, 2, carved);
     // Carved blocks round it, and its glyphs lit.
     const across = F.r.clone().normalize();
     const upA = v3().crossVectors(axis, across).normalize();
@@ -840,7 +919,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
       const dir = across.clone().multiplyScalar(Math.cos(a)).addScaledVector(upA, Math.sin(a));
       const c = centre.clone().addScaledVector(dir, STONE_RING.radius + 3.4);
       const tang = v3().crossVectors(axis, dir);
-      keep(block(c, tang, dir, axis, 7, 4, 9), k % 2 ? 0x777260 : 0x8f8a72, 2);
+      keep(block(c, tang, dir, axis, 7, 4, 9), k % 2 ? 0x777260 : 0x8f8a72, 2, carved);
       if (k % 2 === 0) keep(block(centre.clone().addScaledVector(dir, STONE_RING.radius - 3.2), tang, dir, axis, 4, 0.8, 5), 0x56f0b0, 2, glow);
     }
     // The pillars, from the gorge's floor to either side of it.
@@ -888,6 +967,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
       const m = new THREE.Mesh(mergeGeometries(panels), toonMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
       m.name = 'cenote wall';
       group.add(m);
+      paint(m, 'cenote', 'cenote', 26, 26, 1.35, THREE.DoubleSide, 0.4);
     }
     // The shelf under the road, round the wall: from the road's inside edge out to the wall, a slab of rock under the deck.
     const shelf: THREE.BufferGeometry[] = [];
@@ -923,11 +1003,6 @@ export function buildMonsoon(ctx: JungleCtx): void {
       }
       prev = ring;
     }
-    if (shelf.length) {
-      const m = new THREE.Mesh(mergeGeometries(shelf), toonMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
-      m.name = 'cenote shelf';
-      group.add(m);
-    }
     // The lip the river pours off: a tongue of rock out from the rim.
     {
       const tops: THREE.Vector3[][] = [];
@@ -948,7 +1023,13 @@ export function buildMonsoon(ctx: JungleCtx): void {
         tops.push([at(a, y0, lip.r), at(a, y1, lip.r), at(a, y1, wallR(rim) + 4), at(a, y0, wallR(rim) + 4)]);
       }
       const g = quads(tops);
-      if (g) keep(g, 0x5a5646, 2);
+      if (g) keep(g, 0x5a5646, 2, shelf);
+    }
+    if (shelf.length) {
+      const m = new THREE.Mesh(mergeGeometries(shelf), toonMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+      m.name = 'cenote shelf';
+      group.add(m);
+      paint(m, 'cenote', 'floor', 26, 20, 1.35, THREE.DoubleSide, 0.4);
     }
     // The falls: a curtain from the lip's edge to the pool, the pool, and the spray.
     {
@@ -1054,6 +1135,9 @@ export function buildMonsoon(ctx: JungleCtx): void {
     // half width; the causeway's edges. Walls and roofs run from sample to
     // sample following the routes as the track draws them apart.
     const walls: THREE.Vector3[][] = [];
+    // (The band along the walls' top, carved: over the colonnade, all of the wall.)
+    const band: THREE.Vector3[][] = [];
+    const BAND = 6;
     const roofs: THREE.Vector3[][] = [];
     const retaining: THREE.Vector3[][] = [];
     let maxShift = 0;
@@ -1096,9 +1180,14 @@ export function buildMonsoon(ctx: JungleCtx): void {
             const b0 = cut.c.clone().addScaledVector(cut.across, sd * cut.half);
             const b1 = cut.c.clone().addScaledVector(cut.across, sd * (cut.half + T));
             const y1a = wallTop(prev), y1b = wallTop(cut);
-            const y0a = open ? y1a - 6 : prev.c.y - 2, y0b = open ? y1b - 6 : cut.c.y - 2;
-            walls.push([a0.clone().setY(y0a), b0.clone().setY(y0b), b0.clone().setY(y1b), a0.clone().setY(y1a)]);
-            walls.push([a1.clone().setY(y0a), b1.clone().setY(y0b), b1.clone().setY(y1b), a1.clone().setY(y1a)]);
+            const y0a = prev.c.y - 2, y0b = cut.c.y - 2;
+            for (const [a, b] of [
+              [a0, b0],
+              [a1, b1],
+            ]) {
+              if (!open) walls.push([a.clone().setY(y0a), b.clone().setY(y0b), b.clone().setY(y1b - BAND), a.clone().setY(y1a - BAND)]);
+              band.push([a.clone().setY(y1a - BAND), b.clone().setY(y1b - BAND), b.clone().setY(y1b), a.clone().setY(y1a)]);
+            }
             walls.push([a0.clone().setY(y1a), b0.clone().setY(y1b), b1.clone().setY(y1b), a1.clone().setY(y1a)]);
             // The corbelled vault, from the wall's top in to the ridge over the middle.
             const ra = prev.c.clone().setY(y1a + prev.half * 0.7);
@@ -1121,19 +1210,28 @@ export function buildMonsoon(ctx: JungleCtx): void {
       prev = cut;
     }
     const pieces: THREE.BufferGeometry[] = [];
-    const add = (list: THREE.Vector3[][], c: number) => {
+    const frieze: THREE.BufferGeometry[] = [];
+    const add = (list: THREE.Vector3[][], c: number, to = pieces) => {
       for (const q of list) {
         const g = quads([q]);
-        if (g && !ctx.inRoad(g, 1.5)) pieces.push(colour(g, new THREE.Color(c).multiplyScalar(0.88 + vnoise(q[0].x / 30, q[0].z / 30) * 0.2)));
+        if (g && !ctx.inRoad(g, 1.5)) to.push(colour(g, new THREE.Color(c).multiplyScalar(0.88 + vnoise(q[0].x / 30, q[0].z / 30) * 0.2)));
       }
     };
     add(walls, 0x9a967e);
+    add(band, 0x9a967e, frieze);
     add(roofs, 0x7a7662);
     add(retaining, 0xa29e86);
     if (pieces.length) {
       const m = new THREE.Mesh(mergeGeometries(pieces), toonMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
       m.name = 'temple halls';
       group.add(m);
+      paint(m, 'limestone', 'limestone', 7, 9, 1.7, THREE.DoubleSide);
+    }
+    if (frieze.length) {
+      const m = new THREE.Mesh(mergeGeometries(frieze), toonMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+      m.name = 'temple halls frieze';
+      group.add(m);
+      paint(m, 'frieze', 'limestone', BAND, 9, 1.7, THREE.DoubleSide);
     }
   }
 
@@ -1311,6 +1409,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
       const m = new THREE.Mesh(mergeGeometries(leaves), toonMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
       m.name = 'canopy';
       group.add(m);
+      paint(m, 'canopy', 'canopy', 18, 18, 1.25, THREE.DoubleSide);
     }
   }
 
@@ -1356,11 +1455,24 @@ export function buildMonsoon(ctx: JungleCtx): void {
     const mesh = new THREE.Mesh(mergeGeometries(stone), toonMaterial({ color: 0xffffff }));
     mesh.name = 'ruins';
     group.add(mesh);
+    paint(mesh, 'limestone', 'paving', 8, 14, 1.7);
+  }
+  if (carved.length) {
+    const mesh = new THREE.Mesh(mergeGeometries(carved), toonMaterial({ color: 0xffffff }));
+    mesh.name = 'carved stone';
+    group.add(mesh);
+    paint(mesh, 'frieze', 'limestone', 8, 9, 1.7);
   }
   if (glow.length) {
     const mesh = new THREE.Mesh(mergeGeometries(glow), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
     mesh.name = 'glyphs';
     group.add(mesh);
+  }
+  if (lintelGlow.length) {
+    const mesh = new THREE.Mesh(mergeGeometries(lintelGlow), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
+    mesh.name = 'lintel glyphs';
+    group.add(mesh);
+    if (ctx.painted) ctx.plainOnly.push(mesh);
   }
 
   // ---- the rain, round the camera ----
@@ -1388,6 +1500,61 @@ export function buildMonsoon(ctx: JungleCtx): void {
       rain.position.set(Math.round(p.x / 20) * 20 - ((time * 9) % 20), Math.round(p.y / 20) * 20 - fall + BOX[1] / 2, Math.round(p.z / 20) * 20);
     });
   }
+
+  // ---- painted: low storm clouds round the circuit (J3), each turning about the upright to face the camera ----
+  const storm: Array<{ m: THREE.Mesh; mat: THREE.ShaderMaterial; dir: THREE.Vector3 }> = [];
+  let strikeCard: { m: THREE.Mesh; mat: THREE.ShaderMaterial; aspect: number } | null = null;
+  let paintedOn = false;
+  const set = ctx.painted;
+  if (set && set.clouds.cards.length >= 6) {
+    const { url, cards } = set.clouds;
+    const map = paintedTexture(url);
+    const geo = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
+    const clouds = new THREE.Group();
+    // Round the land the circuit stands on, beyond it.
+    const { x0, z0, cell, nx, nz } = land.land;
+    const mx = x0 + ((nx - 1) * cell) / 2;
+    const mz = z0 + ((nz - 1) * cell) / 2;
+    const reach = Math.hypot(nx * cell, nz * cell) / 2;
+    const crnd = mulberry(9431);
+    const COUNT = 15;
+    for (let k = 0; k < COUNT; k++) {
+      const a = ((k + crnd() * 0.8) / COUNT) * TAU;
+      const r = reach + 1200 + crnd() * 3600;
+      // Mostly the rain clouds (1 to 3) standing on their curtains' level foot; now and then the anvil (4) or the long roll (5), up off the ground.
+      const kind = crnd() < 0.7 ? Math.floor(crnd() * 3) : 3 + Math.floor(crnd() * 2);
+      const card = cards[kind];
+      // About as wide in view wherever it stands.
+      const w = r * (kind === 4 ? 0.42 : kind === 3 ? 0.24 : 0.3) * (0.8 + crnd() * 0.4);
+      const base = kind < 3 ? -20 : kind === 3 ? r * 0.02 : r * 0.07;
+      const mat = stormCardMaterial(map, [card.u0, card.v0, card.u1 - card.u0, card.v1 - card.v0]);
+      const m = new THREE.Mesh(geo, mat);
+      m.scale.set(crnd() < 0.5 ? -w : w, w / card.aspect, 1);
+      m.position.set(mx + Math.cos(a) * r, base, mz + Math.sin(a) * r);
+      m.renderOrder = -6;
+      m.frustumCulled = false;
+      clouds.add(m);
+      storm.push({ m, mat, dir: v3(Math.cos(a), 0, Math.sin(a)) });
+    }
+    group.add(clouds);
+    ctx.paintedOnly.push(clouds);
+    // The strike: the cloud lit from inside, the bolt out of its belly (6), shown with the flash.
+    const card = cards[5];
+    const mat = stormCardMaterial(map, [card.u0, card.v0, card.u1 - card.u0, card.v1 - card.v0]);
+    const m = new THREE.Mesh(geo, mat);
+    m.renderOrder = -5;
+    m.frustumCulled = false;
+    m.visible = false;
+    group.add(m);
+    strikeCard = { m, mat, aspect: card.aspect };
+    const cam = v3();
+    ctx.updates.push((_time, camera) => {
+      if (!clouds.visible) return;
+      camera.getWorldPosition(cam);
+      for (const { m } of storm) m.rotation.y = Math.atan2(cam.x - m.position.x, cam.z - m.position.z);
+    });
+  }
+  ctx.swaps.push((on) => (paintedOn = on));
 
   // ---- lightning ----
   {
@@ -1430,6 +1597,13 @@ export function buildMonsoon(ctx: JungleCtx): void {
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       bolt.geometry.dispose();
       bolt.geometry = g;
+      // Painted, the strike is the painted cloud there, its bolt's tip well up off the jungle, facing the camera.
+      if (strikeCard) {
+        const w = far * 0.36;
+        strikeCard.m.scale.set(zap() < 0.5 ? -w : w, w / strikeCard.aspect, 1);
+        strikeCard.m.position.copy(base).setY(far * 0.05);
+        strikeCard.m.rotation.y = Math.atan2(camera.position.x - base.x, camera.position.z - base.z);
+      }
     };
     ctx.updates.push((time, camera) => {
       if (time >= next) {
@@ -1442,8 +1616,15 @@ export function buildMonsoon(ctx: JungleCtx): void {
         const dt = t - at;
         if (dt >= 0) v = Math.max(v, Math.exp(-dt * 16));
       }
-      bolt.visible = v > 0.3;
+      bolt.visible = v > 0.3 && !(paintedOn && strikeCard);
       ctx.flash(v * 0.9, dir);
+      if (strikeCard) {
+        strikeCard.m.visible = paintedOn && v > 0.04;
+        strikeCard.mat.uniforms.uOpacity.value = Math.min(1, v * 2.5);
+        strikeCard.mat.uniforms.uFlash.value = v * 0.3;
+      }
+      // The clouds that way lit up with it, the rest a little.
+      for (const c of storm) c.mat.uniforms.uFlash.value = v * (0.12 + 0.6 * Math.max(0, c.dir.x * dir.x + c.dir.z * dir.z) ** 4);
     });
   }
 }

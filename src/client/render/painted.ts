@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { toonMaterial } from './palette';
 import abyss from './backgrounds/abyss';
+import monsoon from './backgrounds/monsoon';
 import canyon from './backgrounds/canyon';
 import crucible from './backgrounds/crucible';
 import frostline from './backgrounds/frostline';
@@ -87,7 +88,7 @@ export interface PaintedHangar {
 
 export const paintedHangar: PaintedHangar = hangarKit;
 
-const SETS: Record<string, PaintedSet> = { meridian, canyon, helios, crucible, frostline, titan, abyss, zenith };
+const SETS: Record<string, PaintedSet> = { meridian, canyon, helios, crucible, frostline, titan, abyss, monsoon, zenith };
 
 /** The painted background for a circuit's setting, if it has one. */
 export function paintedSet(themeId: string): PaintedSet | null {
@@ -148,6 +149,14 @@ export const HORIZON_RINGS: Record<string, Array<{ radius: number; degrees: numb
     { radius: 11000, degrees: 2.6, repeats: 14 },
     { radius: 8500, degrees: 2.2, repeats: 24 },
   ],
+  // In the rain: forested mountains half lost in it, jungle hills with
+  // temples rising out of the canopy, then the jungle's edge (tall trees,
+  // upright, so drawn about as wide as painted).
+  monsoon: [
+    { radius: 14000, degrees: 3.0, repeats: 10 },
+    { radius: 11000, degrees: 3.2, repeats: 13 },
+    { radius: 8500, degrees: 3.0, repeats: 20 },
+  ],
 };
 
 /**
@@ -170,6 +179,8 @@ export const SUN_DISC: Record<string, { elevation: number; color: [number, numbe
   // Under the sea there is no disc: A1 paints the sun as a bright patch on
   // the surface overhead. (Under the horizon, where the disc is never drawn.)
   abyss: { elevation: -30, color: [1, 1, 1] },
+  // Nor in the storm: J1 paints only a paler patch in the cloud.
+  monsoon: { elevation: -30, color: [1, 1, 1] },
 };
 
 /**
@@ -207,6 +218,65 @@ export function paintedTexture(url: string, opts: { repeat?: boolean; onReady?: 
     t.wrapT = THREE.RepeatWrapping;
   }
   return t;
+}
+
+/** Repeating painted textures by URL, so a world loads each one once however many materials use it. */
+export type PaintedMaps = Map<string, { map: THREE.Texture; ready: boolean; waiting: Array<() => void> }>;
+
+/** The repeating painted texture at `url` (from `cache` when given), and `done` called once it is in. */
+function repeatingMap(url: string, done: () => void, cache?: PaintedMaps): THREE.Texture {
+  if (!cache) return paintedTexture(url, { repeat: true, onReady: done });
+  let e = cache.get(url);
+  if (!e) {
+    const entry = { map: null as unknown as THREE.Texture, ready: false, waiting: [] as Array<() => void> };
+    entry.map = paintedTexture(url, {
+      repeat: true,
+      onReady: () => {
+        entry.ready = true;
+        for (const w of entry.waiting.splice(0)) w();
+      },
+    });
+    cache.set(url, entry);
+    e = entry;
+  }
+  if (e.ready) queueMicrotask(done);
+  else e.waiting.push(done);
+  return e.map;
+}
+
+/**
+ * Use a painted material on `mesh` (or each of several) with the painted
+ * background (when the look's switch, through `swaps`, says so), made from
+ * the painted textures `urls` once they are all in (until then a painted
+ * material draws black); its own material otherwise.
+ */
+export function swapWhenPainted(
+  swaps: Array<(painted: boolean) => void>,
+  mesh: THREE.Mesh | THREE.Mesh[],
+  urls: string[],
+  make: (maps: THREE.Texture[]) => THREE.Material,
+  cache?: PaintedMaps,
+): void {
+  const meshes = Array.isArray(mesh) ? mesh : [mesh];
+  const plain = meshes.map((m) => m.material as THREE.Material);
+  let on = false;
+  let ready = 0;
+  const apply = () => meshes.forEach((m, i) => (m.material = on && ready === urls.length ? painted : plain[i]));
+  const maps = urls.map((u) =>
+    repeatingMap(
+      u,
+      () => {
+        ready++;
+        if (ready === urls.length) apply();
+      },
+      cache,
+    ),
+  );
+  const painted = make(maps);
+  swaps.push((p) => {
+    on = p;
+    apply();
+  });
 }
 
 /** A plain white 1x1 texture: stands in for a painted map in the plain look, so swapping maps never recompiles. */
@@ -271,6 +341,8 @@ float surfNoise(vec2 p) {
  * cliff's strata, dipping gently across the world by `dip` repeats, so no two
  * mesas band alike); across them, it runs along the face. Works on instanced
  * meshes; `toon` shades it in cel bands like the plain toon materials.
+ * `patch` paints another top inside a rectangle in plan (x0, z0, x1, z1),
+ * its edge ragged over about `edge` metres: a plaza's paving in a jungle floor.
  */
 export function paintedSurfaceMaterial(
   wall: THREE.Texture,
@@ -278,8 +350,9 @@ export function paintedSurfaceMaterial(
   wallSize: number,
   topSize: number,
   side: THREE.Side = THREE.FrontSide,
-  opts: { toon?: boolean; dip?: number } = {},
+  opts: { toon?: boolean; dip?: number; patch?: { map: THREE.Texture; size: number; rect: [number, number, number, number]; edge?: number } } = {},
 ): THREE.MeshLambertMaterial | THREE.MeshToonMaterial {
+  const patch = opts.patch;
   const mat = opts.toon ? toonMaterial({ side, vertexColors: false }) : new THREE.MeshLambertMaterial({ side });
   const dip = opts.dip ?? 1.2;
   mat.onBeforeCompile = (sh) => {
@@ -288,6 +361,12 @@ export function paintedSurfaceMaterial(
     sh.uniforms.uWallSize = { value: wallSize };
     sh.uniforms.uTopSize = { value: topSize };
     sh.uniforms.uDip = { value: dip };
+    if (patch) {
+      sh.uniforms.uPatch = { value: patch.map };
+      sh.uniforms.uPatchSize = { value: patch.size };
+      sh.uniforms.uPatchRect = { value: new THREE.Vector4(...patch.rect) };
+      sh.uniforms.uPatchEdge = { value: patch.edge ?? 8 };
+    }
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vSurfPos;').replace(
       '#include <project_vertex>',
       `#include <project_vertex>
@@ -309,6 +388,7 @@ uniform float uWallSize;
 uniform float uTopSize;
 uniform float uDip;
 varying vec3 vSurfPos;
+${patch ? 'uniform sampler2D uPatch;\nuniform float uPatchSize;\nuniform vec4 uPatchRect;\nuniform float uPatchEdge;' : ''}
 ${surfaceNoise}`,
       )
       .replace(
@@ -325,11 +405,22 @@ ${surfaceNoise}`,
   // coordinates jump) do not pull in the smallest mip.
   vec3 wallC = textureGrad(uWall, wuv, vec2(dot(dpx.xz, t), dpx.y) / uWallSize, vec2(dot(dpy.xz, t), dpy.y) / uWallSize).rgb;
   vec3 topC = textureGrad(uTop, vSurfPos.xz / uTopSize, dpx.xz / uTopSize, dpy.xz / uTopSize).rgb;
+  ${
+    patch
+      ? `{
+    vec2 q = vSurfPos.xz;
+    float inside = min(min(q.x - uPatchRect.x, uPatchRect.z - q.x), min(q.y - uPatchRect.y, uPatchRect.w - q.y));
+    inside += (surfNoise(q * 0.045) - 0.5) * uPatchEdge * 2.0;
+    vec3 patchC = textureGrad(uPatch, q / uPatchSize, dpx.xz / uPatchSize, dpy.xz / uPatchSize).rgb;
+    topC = mix(topC, patchC, smoothstep(-uPatchEdge * 0.5, uPatchEdge * 0.5, inside));
+  }`
+      : ''
+  }
   diffuseColor.rgb *= mix(wallC, topC, up) * (0.9 + 0.2 * surfNoise(vSurfPos.xz * 0.004 + 9.0));
 }`,
       );
   };
-  mat.customProgramCacheKey = () => (opts.toon ? 'paintedSurfaceToon' : 'paintedSurface');
+  mat.customProgramCacheKey = () => (opts.toon ? 'paintedSurfaceToon' : 'paintedSurface') + (patch ? 'Patch' : '');
   return mat;
 }
 

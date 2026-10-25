@@ -166,6 +166,9 @@ to one brief per circuit and checked one at a time.
   paints its glow; at Zenith Ring the sun in space, hard and white, where Z1
   paints its small glare. Abyss Line's "sky" is the water, its surface
   bright overhead and the sun a bright patch on it (A1), with no disc drawn.
+  Monsoon Ruins' sky is the storm, with no sun: J1 paints the cloud a little
+  paler where it would be, and no disc is drawn. Its lightning lights the
+  painted sky toward the strike, as it does the plain one.
   Frostline's sky has the aurora painted into it (the plain look
   draws its own, swaying). Zenith Ring's sky is space: its painting (stars
   and the Milky Way) goes on down past eye level, mirrored, to the Earth's
@@ -182,7 +185,8 @@ to one brief per circuit and checked one at a time.
   glaciers, icebergs in the pack ice; Titan's Rest: worn mountains, a
   graveyard of other fallen giants, dunes with wreckage; Abyss Line: rock
   ridges and sea mounts faded into the water, the undersea town's outskirts,
-  a kelp forest; Zenith Ring, with
+  a kelp forest; Monsoon Ruins: forested mountains half lost in the rain,
+  jungle hills with temples rising out of them, the jungle's edge; Zenith Ring, with
   no horizon, has none), standing on the ground and repeating
   round the circle. They move against each other a little as the circuit
   turns, as layered paintings would.
@@ -202,7 +206,12 @@ to one brief per circuit and checked one at a time.
   jellyfish, a whale, a turtle, reef fish), in the water well clear of the
   road and in its fog, each facing the camera and swimming slowly round a
   small circle of its own, turned to face the way it goes (the jellyfish
-  bob).
+  bob). Monsoon Ruins has low storm clouds (sheet J3) standing round the
+  circuit beyond the jungle, the rain clouds on their curtains' feet and the
+  anvil and the long roll up off the ground, lit toward each lightning
+  strike; the strike itself is J3's sixth cloud, lit from inside with the
+  bolt out of its belly, shown with the flash where the plain look draws
+  its bolt.
 - **Surfaces**, as repeating painted textures:
   - Meridian: the sea, three kinds of tower facade (glass offices, hotels,
     dark glass), the platforms the towers stand on, and white panels on the
@@ -243,6 +252,16 @@ to one brief per circuit and checked one at a time.
     and the town's facades, their portholes painted dark and lit by the
     build (some warm, a few cold). Its sign over the road into the town is
     on track sheet T8.
+  - Monsoon Ruins: the jungle floor (wet rock down its steep banks, the
+    plaza round the line paved, its edge ragged), the pyramid's limestone up
+    its risers (a course to each tier) and paving on its treads and ramps,
+    limestone on the temples, the ruins, the halls and the causeway's walls,
+    the carved frieze on the summit temple's lintel and comb, round the Ring
+    and in a band along the top of the halls' walls, the cenote's wet rock
+    on its wall and the Corkscrew's shelf, and the canopy on the trees. The
+    stone is painted brighter than the sheet, as the plain look's pale
+    stone is, to stand up to the storm's dim light. Its sign on the gateway
+    at the foot of the Stairway is on track sheet T9.
   - Zenith Ring: the station's white plating, gold foil, solar cells,
     radiators, dark machinery, and the Ring band's windowed face (the
     stand-in station, `render/zenith.ts`, is drawn in kinds of surface so

@@ -20,7 +20,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
 import { DOME, TWIST } from '../../sim/tracks/abyss';
-import { paintedTexture, paintedTrack, paintedSurfaceMaterial, UNTONE, whiteTexture, type PaintedSet } from './painted';
+import { paintedTexture, paintedTrack, paintedSurfaceMaterial, swapWhenPainted, UNTONE, whiteTexture, type PaintedSet } from './painted';
 import { toonMaterial } from './palette';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT } from './titan/keepout';
@@ -40,29 +40,9 @@ export interface SeaCtx {
   clearance(x: number, z: number): number;
 }
 
-/**
- * Use a painted material on `mesh` with the painted background, made from
- * the painted textures `urls` once they are all in (until then a painted
- * material draws black); its own material otherwise.
- */
+/** A painted material on `mesh` with the painted background (painted.ts). */
 function paintedSwap(ctx: SeaCtx, mesh: THREE.Mesh, urls: string[], make: (maps: THREE.Texture[]) => THREE.Material): void {
-  const plain = mesh.material as THREE.Material;
-  let on = false;
-  let ready = 0;
-  const maps = urls.map((u) =>
-    paintedTexture(u, {
-      repeat: true,
-      onReady: () => {
-        ready++;
-        if (ready === urls.length) mesh.material = on ? painted : plain;
-      },
-    }),
-  );
-  const painted = make(maps);
-  ctx.swaps.push((p) => {
-    on = p;
-    mesh.material = on && ready === urls.length ? painted : plain;
-  });
+  swapWhenPainted(ctx.swaps, mesh, urls, make);
 }
 
 const f = makeFrame();
