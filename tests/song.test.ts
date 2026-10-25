@@ -175,6 +175,41 @@ describe('holding one song at a time', () => {
     }
   });
 
+  it('downloads nothing until it is wanted', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', (url: string) => (urls.push(url), fakeFetch(url)));
+    try {
+      const src = new SongSource('music/x/');
+      await settle();
+      expect(urls).toEqual([]);
+      expect(src.fetched).toBe(false);
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      expect(urls).toEqual(['music/x/song.json', 'music/x/a.mp3', 'music/x/b.mp3', 'music/x/c.mp3', 'music/x/d.mp3']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('forgets its download when told, and fetches it again when wanted', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', (url: string) => (urls.push(url), fakeFetch(url)));
+    try {
+      const src = new SongSource('music/x/');
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      src.forget();
+      expect(src.state).toBe('loading');
+      expect(src.buffers).toHaveLength(0);
+      expect(src.fetched).toBe(false);
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      expect(urls.filter((u) => u.endsWith('song.json'))).toHaveLength(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('drops a decode let go of halfway', async () => {
     vi.stubGlobal('fetch', fakeFetch);
     try {

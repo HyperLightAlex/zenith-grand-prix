@@ -69,6 +69,7 @@ import { Renderer } from '../render/renderer';
 import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
 import { buildWorld, type World } from '../render/world';
 import { disposeTree, themeFor } from '../render/themes';
+import { freezeStill, updateOnlyWhileShown } from '../render/still';
 import { CEL, celify, drawClock, look, readLook, setCelTheme, tickDrawings } from '../render/look';
 import { setPaintedMarkings } from '../render/mech/decals';
 import { setHullOutlines } from '../render/mech/kit';
@@ -300,11 +301,14 @@ export class Game {
     this.audio = opts.audio ?? new NullAudio();
     this.renderer = new Renderer(canvas);
     this.renderer.scene.add(this.hangar.root);
+    // (Hidden during a race: its matrices are left alone.)
+    updateOnlyWhileShown(this.hangar.root);
     this.hangar.preload(LIVERIES.map((_, f) => emblemUrl(f)));
     if (opts.track && trackById(opts.track)) this.free.track = opts.track;
     // The circuit and its surroundings are built when it is chosen and
-    // shared by every race on it.
-    this.useTrack(this.free.track);
+    // shared by every race on it. (Built for the title's race here: not yet
+    // named for the music, which waits for a screen that leads to a race.)
+    this.useTrack(this.free.track, false);
     this.hud = new Hud(uiRoot);
     this.eyecatch = new Eyecatch(uiRoot);
     this.nowPlaying = new NowPlaying(uiRoot, () => this.nextTrack());
@@ -365,6 +369,7 @@ export class Game {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.state === 'race') this.pause();
     });
+    this.watchContext(canvas);
     this.gpRunner.onResult = () => {
       const s = this.menus.screen;
       if (s === 'briefing' || s === 'standings' || s === 'gp') this.menus.refresh();
@@ -607,6 +612,8 @@ export class Game {
     this.world.group.visible = true;
     // The mechs (and anything else the view made) take the cel shading too.
     celify(this.renderer.scene);
+    // Their shaders compiling in the background before the first frame needs them.
+    this.renderer.precompile();
     this.view.onImpact = (strength) => {
       // Only the race you are flying shakes the pad: not the race behind the
       // menus, nor yours run on by the computer behind the results.
@@ -643,7 +650,7 @@ export class Game {
       this.raceFactions = [a, (a + 1 + ((Math.random() * (LIVERIES.length - 1)) | 0)) % LIVERIES.length];
     } else this.raceFactions = [...setup.factions];
     const { seats, localId } = this.seats(setup);
-    if (!keepTrack) this.useTrack(setup?.track ?? this.trackId);
+    if (!keepTrack) this.useTrack(setup?.track ?? this.trackId, !!setup);
     // A Sprint's grid: by lot for its first race, then the standings reversed.
     const sprint = !!setup?.sprint;
     const grid = sprint ? sprintGrid(this.match, seats.length, seed) : undefined;
@@ -651,8 +658,11 @@ export class Game {
     this.attach(session, keepTrack);
   }
 
-  /** Build the circuit and its scenery, replacing the last one's. */
-  private useTrack(id: string): void {
+  /**
+   * Build the circuit and its scenery, replacing the last one's. `ahead`: a
+   * race on it is coming (not the title's), so its music gets ready.
+   */
+  private useTrack(id: string, ahead = true): void {
     const def = trackById(id) ?? TRACKS[0];
     if (def.id === this.trackId) return;
     this.trackId = def.id;
@@ -671,8 +681,14 @@ export class Game {
     setCelTheme(theme);
     celify(this.trackVis.group);
     celify(this.world.group);
+    // What stands still has its matrices computed once; hidden in the
+    // hangar, none are kept up (render/still.ts).
+    for (const g of [this.trackVis.group, this.world.group]) {
+      freezeStill(g);
+      updateOnlyWhileShown(g);
+    }
     scene.add(this.trackVis.group, this.world.group);
-    this.circuitAhead(def.id);
+    if (ahead) this.circuitAhead(def.id);
   }
 
   /**
@@ -841,6 +857,8 @@ export class Game {
     this.world.group.visible = false;
     this.view.solo = true;
     this.view.cam.orbitFrame = this.hangarFrame;
+    // The hangar's shaders too, now it is on show.
+    this.renderer.precompile();
     this.renderer.reviewProbe?.recordPreview(performance.now() - started);
   }
 
@@ -2095,6 +2113,28 @@ export class Game {
     } else this.view.cam.orbitFov = 50;
   }
 
+  /**
+   * The 3D picture's WebGL context can be taken away (a phone short of
+   * memory, a browser left in the background, a GPU reset): the picture
+   * stops and goes black. Say so, hold an offline race, and offer a reload
+   * (Grand Prix, settings and medals are kept on this device). When the
+   * browser gives the context back, reload straight away: everything the GPU
+   * held has to be built again.
+   */
+  private watchContext(canvas: HTMLCanvasElement): void {
+    let lost: HTMLElement | null = null;
+    canvas.addEventListener('webglcontextlost', () => {
+      if (this.state === 'race') this.pause();
+      if (lost) return;
+      lost = document.createElement('div');
+      lost.className = 'rotate-hint context-lost';
+      lost.innerHTML = '<b>The 3D picture was lost</b><span>The device needed its graphics memory back. Tap to reload: your Grand Prix and settings are kept.</span>';
+      lost.addEventListener('click', () => location.reload());
+      document.body.append(lost);
+    });
+    canvas.addEventListener('webglcontextrestored', () => location.reload());
+  }
+
   /** Full screen from a tap on the title (a phone: the browser's bars take a lot of a small screen). */
   enterFullscreenFromTap(): void {
     if (this.input.device === 'touch' && !isFullscreen()) void setFullscreen(true);
@@ -2325,10 +2365,20 @@ export class Game {
     sc.finished = (!!own && own.finished) || cur.phase === PHASE.FINISHED;
     this.audio.update(dt, sc);
 
-    if (drawDt > 0) {
+    if (drawDt > 0 && !this.titleCovered()) {
       this.renderer.reviewProbe?.setContext(`${this.state} · tick ${cur.tick} · lap ${f.lap}`, this.view.reviewDetailLevels());
       this.renderer.render(drawDt, this.time);
     }
+  }
+
+  /**
+   * The anime look's title card is the show's cover, filling the screen: none
+   * of the 3D behind it shows, so none is drawn (once the cover is in).
+   */
+  private titleCovered(): boolean {
+    if (this.state !== 'title' || this.menus.screen !== 'title' || !look.on) return false;
+    const cover = this.menus.root.querySelector<HTMLImageElement>('img.cover');
+    return !!cover && cover.complete && cover.naturalWidth > 0 && this.menus.root.classList.contains('anime');
   }
 
   /** The results, once the flag has fallen and the moment after it has passed. */

@@ -14,6 +14,8 @@
 // the band's windowed face), and things far off in orbit (Z3) hang in the
 // sky round it. A stand-in until the station has a model of its own.
 import * as THREE from 'three';
+import { alsoWears } from './owned';
+import { moves } from './still';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
@@ -562,6 +564,7 @@ export function buildZenith(ctx: StationCtx): void {
         },
       });
       const painted = paintedSurfaceMaterial(map, map, REPEAT[kind], REPEAT[kind], THREE.FrontSide, { toon: true, dip: 0 });
+      alsoWears(mesh, plain, painted);
       ctx.swaps.push((p) => {
         on = p;
         mesh.material = on && ready ? painted : plain;
@@ -614,7 +617,7 @@ function farOff(ctx: StationCtx, rf: RingFrame | null): void {
     m.renderOrder = -6;
     m.frustumCulled = false;
     group.add(m);
-    meshes.push({ m, spin: (k % 2 ? 1 : -1) * (0.004 + (k * 0.0013) % 0.004) });
+    meshes.push({ m: moves(m), spin: (k % 2 ? 1 : -1) * (0.004 + (k * 0.0013) % 0.004) });
   }
   ctx.group.add(group);
   ctx.paintedOnly.push(group);

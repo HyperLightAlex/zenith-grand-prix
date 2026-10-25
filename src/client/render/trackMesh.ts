@@ -1,6 +1,7 @@
 // Builds everything bolted to the circuit: the road surface (a procedural
 // shader), barriers, gantries, support pylons and trackside boards.
 import * as THREE from 'three';
+import { alsoWears, ownTextures } from './owned';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { look } from './look';
@@ -339,6 +340,7 @@ const KIT_SIZE = [1, 3, 3, 8];
  */
 function kitMaterial(armour: THREE.Texture, steel: THREE.Texture, concrete: THREE.Texture): THREE.MeshToonMaterial {
   const mat = toonMaterial({ side: THREE.DoubleSide });
+  ownTextures(mat, armour, steel, concrete);
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uArmour = { value: armour };
     sh.uniforms.uSteel = { value: steel };
@@ -444,6 +446,7 @@ export function buildTrackVisual(
   const tex = (name: keyof typeof kit.surfaces) => (kitTex[name] ??= paintedTexture(kit.surfaces[name], { repeat: true }));
   const swapMaterial = (mesh: THREE.Mesh, painted: THREE.Material) => {
     const plain = mesh.material as THREE.Material;
+    alsoWears(mesh, plain, painted);
     swaps.push((on) => (mesh.material = on ? painted : plain));
   };
   const hw = track.halfWidth;
@@ -1168,6 +1171,7 @@ export function buildTrackVisual(
     // enough for its colours to carry at a distance), and concrete stands.
     const crowdPainted = paintedTexture(kit.surfaces.crowd, { repeat: true });
     crowdPainted.repeat.set(120 / (18 * kit.crowdAspect), 26 / 18);
+    ownTextures(standMat, crowdPainted, crowdTex);
     swaps.push((on) => (standMat.map = on ? crowdPainted : crowdTex));
     const baseMat = paintedSurfaceMaterial(tex('concrete'), tex('concrete'), 8, 8, THREE.FrontSide, { dip: 0 });
     // None hanging out over a pit.

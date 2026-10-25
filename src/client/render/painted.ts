@@ -9,6 +9,7 @@
 // first undo it (`unTone`), so the paintings come out of it as painted; only
 // the brightest whites are held a little under the bloom threshold.
 import * as THREE from 'three';
+import { alsoWears, ownTextures } from './owned';
 import { toonMaterial } from './palette';
 import abyss from './backgrounds/abyss';
 import monsoon from './backgrounds/monsoon';
@@ -273,6 +274,8 @@ export function swapWhenPainted(
     ),
   );
   const painted = make(maps);
+  // Each mesh wears one or the other: both freed with it.
+  meshes.forEach((m, i) => alsoWears(m, plain[i], painted));
   swaps.push((p) => {
     on = p;
     apply();
@@ -355,6 +358,8 @@ export function paintedSurfaceMaterial(
   const patch = opts.patch;
   const mat = opts.toon ? toonMaterial({ side, vertexColors: false }) : new THREE.MeshLambertMaterial({ side });
   const dip = opts.dip ?? 1.2;
+  // (Handed to the shader below, not set on the material: named so they are freed with it.)
+  ownTextures(mat, wall, top, patch?.map);
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uWall = { value: wall };
     sh.uniforms.uTop = { value: top };

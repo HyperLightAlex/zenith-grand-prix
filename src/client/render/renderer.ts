@@ -193,7 +193,11 @@ export class Renderer {
   private viewport = { width: 0, height: 0, ratio: 0 };
 
   constructor(readonly canvas: HTMLCanvasElement) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    // No multisampling on the canvas itself: the scene is drawn (multisampled)
+    // into the composer's buffer, and all that reaches the canvas is the last
+    // pass's full-screen picture, which has no edges to smooth. A
+    // multisampled canvas would only cost memory and a resolve every frame.
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     if (this.reviewProbe) this.renderer.info.autoReset = false;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.02;
@@ -373,6 +377,54 @@ export class Renderer {
     this.speedPass.uniforms.uNear.value = this.camera.near;
     this.speedPass.uniforms.uFar.value = this.camera.far;
     if (drawClock.fresh) this.speedPass.uniforms.uLineSeed.value = drawClock.drawing % 89;
+  }
+
+  /**
+   * Get the shaders of what is on show (and of the passes over it) compiling
+   * in the background, where the browser can (KHR_parallel_shader_compile),
+   * so the first frame that draws them does not stall while they compile.
+   * Call it once a scene is built: the title's race, a circuit, the hangar.
+   * What is hidden now (a far level of detail, a swapped-out material)
+   * still compiles when first drawn, as before. Without the extension it
+   * does nothing: compiling now would only move the stall.
+   */
+  precompile(): void {
+    const r = this.renderer;
+    if (!r.extensions.has('KHR_parallel_shader_compile')) return;
+    const prev = r.getRenderTarget();
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
+    const flat = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    try {
+      // As the scene is drawn: into the composer's buffer (which decides the
+      // shaders' output: no tone mapping, linear colour), and its travellers
+      // in their flat white.
+      r.setRenderTarget(this.composer.readBuffer);
+      void r.compileAsync(this.scene, this.camera).catch(() => {});
+      const passes: THREE.Material[] = [
+        this.travelMat,
+        this.inkPass.material,
+        this.inkPass.maskMaterial,
+        this.bloom.materialHighPassFilter,
+        ...this.bloom.separableBlurMaterials,
+        this.bloom.compositeMaterial,
+        this.bloom.blendMaterial,
+        this.speedPass.material,
+        this.filmPass.material,
+      ];
+      for (const m of passes) {
+        quad.material = m;
+        r.compile(quad, flat);
+      }
+      // The last pass draws on the canvas itself.
+      r.setRenderTarget(null);
+      quad.material = this.mechSmooth.material;
+      r.compile(quad, flat);
+    } catch (err) {
+      console.warn('precompile:', err);
+    } finally {
+      r.setRenderTarget(prev);
+      quad.geometry.dispose();
+    }
   }
 
   /** The CRT screen video setting. */

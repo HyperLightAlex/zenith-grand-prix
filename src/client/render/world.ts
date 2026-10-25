@@ -9,6 +9,8 @@
 // in the anime look a circuit with a painted background (painted.ts) has its
 // sky, far hills, clouds and surfaces painted instead.
 import * as THREE from 'three';
+import { alsoWears, ownTextures } from './owned';
+import { freezeStill, moves } from './still';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, hwAt, makeFrame, type Track } from '../../sim/track';
@@ -685,6 +687,7 @@ function strata(base: THREE.Color, seed: number): (x: number, y: number, z: numb
 /** Use `painted` on `mesh` with the painted background, its own material otherwise. */
 function swapMaterial(ctx: Ctx, mesh: THREE.Mesh, painted: THREE.Material): void {
   const plain = mesh.material as THREE.Material;
+  alsoWears(mesh, plain, painted);
   ctx.swaps.push((on) => (mesh.material = on ? painted : plain));
 }
 
@@ -809,7 +812,7 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
     depthWrite: false,
     depthTest: true,
   });
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), skyMat);
+  const sky = moves(new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), skyMat));
   sky.frustumCulled = false;
   sky.renderOrder = -10;
   group.add(sky);
@@ -964,7 +967,7 @@ function cumulus(ctx: Ctx, seed: number, count: number, place: (rnd: () => numbe
   const mat = toonMaterial({ color: 0xffffff, emissive: ctx.theme.cloudShade, emissiveIntensity: 0.3, fog: false });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;
-  const clouds = new THREE.Group();
+  const clouds = moves(new THREE.Group());
   clouds.add(mesh);
   ctx.group.add(clouds);
   ctx.updates.push((time) => {
@@ -1001,7 +1004,7 @@ function paintedClouds(ctx: Ctx, clouds: THREE.Group, banks: Array<[number, numb
     m.renderOrder = -6;
     m.frustumCulled = false;
     group.add(m);
-    meshes.push(m);
+    meshes.push(moves(m));
   }
   clouds.add(group);
   ctx.paintedOnly.push(group);
@@ -1137,6 +1140,7 @@ function buildMeridian(ctx: Ctx): void {
       if (surf?.[name]) {
         const facade = paintedTexture(surf[name], { repeat: true });
         facade.repeat.setScalar(26 / facades[kind][1]);
+        ownTextures(cityMat, facade, windows);
         ctx.swaps.push((on) => (cityMat.map = on ? facade : windows));
       }
     });
@@ -1147,6 +1151,7 @@ function buildMeridian(ctx: Ctx): void {
     group.add(deckMesh);
     if (surf?.concrete) {
       const concrete = paintedTexture(surf.concrete, { repeat: true });
+      ownTextures(deckMat, concrete, blank);
       ctx.swaps.push((on) => {
         deckMat.map = on ? concrete : blank;
         deckMat.color.set(on ? 0xffffff : 0xb9c2cf);
@@ -1194,6 +1199,7 @@ function buildMeridian(ctx: Ctx): void {
       // White panels round the hoop and round its tube.
       const ringPanels = paintedTexture(panels, { repeat: true });
       ringPanels.repeat.set(40, 3);
+      ownTextures(ringMat, ringPanels, blank);
       ctx.swaps.push((on) => {
         ringMat.map = on ? ringPanels : blank;
         ringMat.color.set(on ? 0xffffff : 0xf1f4f9);
@@ -1214,6 +1220,7 @@ function buildMeridian(ctx: Ctx): void {
       if (panels) {
         const towerPanels = paintedTexture(panels, { repeat: true });
         towerPanels.repeat.set(2, 18);
+        ownTextures(towerMat, towerPanels, windowsMap);
         ctx.swaps.push((on) => {
           towerMat.map = on ? towerPanels : windowsMap;
           towerMat.color.set(on ? 0xffffff : 0xf2f5fa);
@@ -1594,6 +1601,7 @@ function buildHelios(ctx: Ctx): void {
   if (goldTex) {
     goldTex.repeat.set(28, 1);
     const blank = gold.map;
+    ownTextures(gold, goldTex, blank);
     ctx.swaps.push((on) => {
       gold.map = on ? goldTex : blank;
       gold.color.set(on ? 0xffffff : 0xffcf6a);
@@ -1628,7 +1636,7 @@ function buildHelios(ctx: Ctx): void {
       collar.position.set(sx, theme.groundY + height * 0.62, sz);
       const disc = new THREE.Mesh(new THREE.SphereGeometry(30, 20, 14), glow);
       disc.position.set(sx, theme.groundY + height + 34, sz);
-      const halo = new THREE.Mesh(new THREE.TorusGeometry(56, 2, 6, 48), glow);
+      const halo = moves(new THREE.Mesh(new THREE.TorusGeometry(56, 2, 6, 48), glow));
       halo.position.copy(disc.position);
       group.add(shaft, collar, disc, halo);
       // Three fins round the foot.
@@ -1794,7 +1802,10 @@ function iceBlock(ctx: Ctx, outline: Array<[number, number]>, y0: number, y1: nu
   mesh.frustumCulled = false;
   ctx.group.add(mesh);
   // Painted: the ice cliff down the sides; the top keeps its own (painted) snow.
-  if (paintedSide) ctx.swaps.push((on) => (mesh.material = on ? paintedSide : side));
+  if (paintedSide) {
+    alsoWears(mesh, side, paintedSide);
+    ctx.swaps.push((on) => (mesh.material = on ? paintedSide : side));
+  }
   const cap = new THREE.Mesh(
     topSurface(outline, (x, z) => dips.at(x, z), (x0, z0, x1, z1) => dips.touches(x0, z0, x1, z1, 0)),
     top,
@@ -2516,11 +2527,14 @@ function buildTitansRest(ctx: Ctx): void {
         const sw = kindOf[slot] ? swaps[kindOf[slot]!] : null;
         if (!sw) return;
         const plain = mesh.material as THREE.Material;
+        alsoWears(mesh, plain, sw);
         ctx.swaps.push((p) => (mesh.material = p ? sw : plain));
         mesh.material = on ? sw : plain;
       },
     );
     group.add(model);
+    // (It stands still: its levels of detail switch by showing and hiding.)
+    freezeStill(model);
     placeholder.visible = false;
   }).catch((err) => {
     // Not loaded (no network, or outside a browser): the placeholder stays.
@@ -2830,6 +2844,7 @@ const UP = new THREE.Vector3(0, 1, 0);
  */
 function paintedWallMaterial(rock: THREE.Texture, low: THREE.Texture, size: number, lowFrom: number, lowTo: number, glow: THREE.Texture, glowK: number): THREE.MeshLambertMaterial {
   const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: glowK });
+  ownTextures(mat, rock, low);
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uRock = { value: rock };
     sh.uniforms.uLow = { value: low };
@@ -3000,7 +3015,7 @@ function stars(ctx: Ctx): THREE.Object3D {
     p.renderOrder = -9;
     return p;
   };
-  const sky = new THREE.Group();
+  const sky = moves(new THREE.Group());
   sky.add(make(1400, 1.4, 0.9), make(140, 2.4, 1.3));
   ctx.group.add(sky);
   ctx.updates.push((_time, camera) => sky.position.copy(camera.position));
@@ -3468,12 +3483,12 @@ function buildCrucible(ctx: Ctx): void {
         // thrown up round the stream, and sparks flicked out of it in arcs.
         const flat = (r: number, g: number, b: number, side: THREE.Side = THREE.FrontSide) => new THREE.MeshBasicMaterial({ color: new THREE.Color(r, g, b), toneMapped: false, side });
         const splash = new THREE.Group();
-        const ring = new THREE.Mesh(new THREE.RingGeometry(4.5, 12, 32), flat(1.0, 0.24, 0.03));
+        const ring = moves(new THREE.Mesh(new THREE.RingGeometry(4.5, 12, 32), flat(1.0, 0.24, 0.03)));
         ring.rotation.x = -Math.PI / 2;
         const pool = new THREE.Mesh(new THREE.CircleGeometry(4.5, 24), flat(1.15, 0.72, 0.28));
         pool.rotation.x = -Math.PI / 2;
         pool.position.y = 0.05;
-        const crown = new THREE.Mesh(new THREE.CylinderGeometry(7, 4, 6, 16, 1, true).translate(0, 3, 0), flat(1.0, 0.24, 0.03, THREE.DoubleSide));
+        const crown = moves(new THREE.Mesh(new THREE.CylinderGeometry(7, 4, 6, 16, 1, true).translate(0, 3, 0), flat(1.0, 0.24, 0.03, THREE.DoubleSide)));
         splash.add(ring, pool, crown);
         splash.position.set(px, floor + 0.3, pz);
         group.add(splash);
@@ -3576,7 +3591,7 @@ function buildCrucible(ctx: Ctx): void {
       flame.geometry.translate(0, 15, 0);
       flame.position.set(x, rim + h, z);
       group.add(flame);
-      flames.push(flame);
+      flames.push(moves(flame));
       beacons.push(new THREE.Vector3(x, rim + h + 1, z));
       puffSources.push({ x, y: rim + h + 6, z, kind: 'smoke' });
     }
@@ -3678,6 +3693,7 @@ function buildCrucible(ctx: Ctx): void {
       // stay windows at a distance instead of breaking into speckle.
       pf.repeat.setScalar(0.66);
       pl.repeat.setScalar(0.66);
+      ownTextures(cityMat, pf, facade, pl, lit);
       ctx.swaps.push((on) => {
         cityMat.map = on ? pf : facade;
         cityMat.emissiveMap = on ? pl : lit;

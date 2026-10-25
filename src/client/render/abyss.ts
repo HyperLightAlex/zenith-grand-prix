@@ -16,6 +16,7 @@
 // painted surfaces (A4: the town's portholes lit by the build), and sea life
 // drifts by (A3), in the water, as cards.
 import * as THREE from 'three';
+import { moves } from './still';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
@@ -823,7 +824,7 @@ export function buildAbyss(ctx: SeaCtx): void {
     for (let k = 0; k < 1500; k++) pos.push((rnd() - 0.5) * 300, (rnd() - 0.5) * 200, (rnd() - 0.5) * 300);
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    const snow = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xcfefff, size: 0.6, transparent: true, opacity: 0.55, depthWrite: false }));
+    const snow = moves(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xcfefff, size: 0.6, transparent: true, opacity: 0.55, depthWrite: false })));
     snow.name = 'marine snow';
     snow.frustumCulled = false;
     group.add(snow);
@@ -982,7 +983,7 @@ function seaLife(ctx: SeaCtx, sea: Abyss): void {
         m.frustumCulled = false;
         m.renderOrder = 3;
         group.add(m);
-        swimmers.push({ m, mat, c: v3(x, y, z), r, w: (kind.speed / r) * (rnd() < 0.5 ? 1 : -1), ph: rnd() * TAU_, face: kind.face, bob: kind.speed > 0 ? 3 : 10 });
+        swimmers.push({ m: moves(m), mat, c: v3(x, y, z), r, w: (kind.speed / r) * (rnd() < 0.5 ? 1 : -1), ph: rnd() * TAU_, face: kind.face, bob: kind.speed > 0 ? 3 : 10 });
         break;
       }
     }

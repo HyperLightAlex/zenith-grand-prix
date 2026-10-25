@@ -14,7 +14,7 @@ import { MechRig, type FrameDims } from './rig';
 import { buildSunhawk } from './solstice/sunhawk';
 import { buildSwift } from './swift';
 import { buildImportedSunhawk } from './importedSunhawk';
-import { sunhawkAsset } from './sunhawkAsset';
+import { hasSunhawkAsset, sunhawkAsset } from './sunhawkAsset';
 import { getSunhawkModel } from './sunhawkSelection';
 import { getRosterModel } from './rosterSelection';
 import { hasRosterAsset } from './rosterAsset';
@@ -71,7 +71,9 @@ export function useOldSwift(on: boolean): void {
 }
 
 export function buildFrame(role: Role, livery: Livery, number: string): MechRig {
-  const model = getSunhawkModel();
+  // (The earlier design only when it was loaded for a comparison.)
+  const chosen = getSunhawkModel();
+  const model = chosen === 'current' && !hasSunhawkAsset('current') ? 'updated' : chosen;
   if (!oldSwift && role === ROLE.FW && livery.id === 'solstice' && model !== 'game') {
     const rig = new MechRig(sunhawkAsset(model).dims);
     buildImportedSunhawk(frameCtx(rig,livery),number,model);
