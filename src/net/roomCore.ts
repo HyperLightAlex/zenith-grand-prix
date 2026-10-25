@@ -9,7 +9,8 @@
 // standings follow each pilot; someone who arrives during one races in the
 // next.
 //
-// A room can also be a squad's Grand Prix: a cup or a season as offline,
+// A room can also be a squad's Grand Prix: a cup, the Grand Tour or a
+// season (the short one: five matchdays) as offline,
 // the squad on team 1 and every rival a computer pilot. The room keeps the
 // event, sets each round up from it (its circuit, format and rival), races
 // the other factions' fixtures a slice at a time between everything else,
@@ -46,6 +47,7 @@ import {
   matchFormat,
   newCup,
   newSeason,
+  newTour,
   pendingFixtures,
   recordYours,
   roundComplete,
@@ -198,11 +200,13 @@ export class RoomCore {
   ) {
     this.lobby = createLobby(code, version, firstFaction);
     const req = opts.gp;
-    if (req && (req.kind === 'cup' || req.kind === 'season')) {
+    if (req && (req.kind === 'cup' || req.kind === 'tour' || req.kind === 'season')) {
       const faction = this.lobby.factions[0];
       const seed = Math.floor(io.random() * 1e9);
       const difficulty = Number.isInteger(req.difficulty) ? req.difficulty : 1;
-      const event = req.kind === 'cup' ? newCup(CUPS[0].id, faction, difficulty, seed) : newSeason(faction, difficulty, seed);
+      // Online, a season is the short one: a room cannot be put away and taken up later.
+      const cup = CUPS.find((c) => c.id === req.cup)?.id ?? CUPS[0].id;
+      const event = req.kind === 'cup' ? newCup(cup, faction, difficulty, seed) : req.kind === 'tour' ? newTour(faction, difficulty, seed) : newSeason(faction, difficulty, seed, { short: true });
       this.gp = { event, squad: null, devices: new Set(), sim: null };
       this.lobby.fixed = true;
       this.setUpRound();

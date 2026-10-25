@@ -49,7 +49,9 @@ import {
   medalFor,
   newCup,
   newSeason,
+  newTour,
   playedRounds,
+  singleRaces,
   recordYours,
   yourRoundNumber,
   type GpEvent,
@@ -243,7 +245,7 @@ export class Game {
   loadout: { team: number; role: Role } = readJson('zgp.loadout', { team: 0, role: ROLE.FW as Role });
   /** Free Play's setup, remembered. */
   free: GarageChoice = readJson('zgp.free', { role: ROLE.FW as Role, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian', mode: 'teams', sprint: 1 });
-  private gpEvents: Record<GpKind, GpEvent | null> = { cup: gpStore.loadEvent('cup'), season: gpStore.loadEvent('season') };
+  private gpEvents: Record<GpKind, GpEvent | null> = { cup: gpStore.loadEvent('cup'), tour: gpStore.loadEvent('tour'), season: gpStore.loadEvent('season') };
   /** The Grand Prix event being played. */
   gpKind: GpKind = 'cup';
   private setup: RoundSetup | null = null;
@@ -1082,38 +1084,45 @@ export class Game {
     this.menus.refresh();
   }
 
-  gpMedals(): { cup: Record<number, Medal | undefined>; season: Record<number, number> } {
-    return { cup: gpStore.medals()[CUPS[0].id] ?? {}, season: gpStore.cupsWon() };
+  /** Medals won, by cup id (and the Grand Tour's), each by difficulty; Zenith Cups won, by difficulty. */
+  gpMedals(): { byCup: Record<string, Record<number, Medal | undefined>>; season: Record<number, number> } {
+    return { byCup: gpStore.medals(), season: gpStore.cupsWon() };
   }
 
-  /** From the hub: carry on with the event, or pick a faction and start one. */
-  openGp(kind: GpKind): void {
+  /**
+   * From the hub: carry on with the event, or pick a faction and start one
+   * (`cup`: which cup; one cup is under way at a time, and the hub asks
+   * before another is started in its place).
+   */
+  openGp(kind: GpKind, cup = CUPS[0].id): void {
     this.mode = 'gp';
     this.gpKind = kind;
     const ev = this.gpEvents[kind];
-    if (ev) {
+    if (ev && (kind !== 'cup' || ev.cup === cup)) {
       this.gpRunner.run(ev);
       if (isOver(ev)) {
         const place = finalPlace(ev);
-        this.menus.push('award', { kind, place, medal: kind === 'cup' ? medalFor(place) : null });
+        this.menus.push('award', { kind, place, medal: singleRaces(ev) ? medalFor(place) : null });
       } else if (ev.rounds[ev.current].you?.result) this.menus.push('standings', { kind });
       else this.menus.push('briefing', { kind });
       return;
     }
-    const name = kind === 'cup' ? CUPS[0].name : 'Zenith Cup season';
+    const name = kind === 'cup' ? (CUPS.find((c) => c.id === cup)?.name ?? 'Cup') : kind === 'tour' ? 'Grand Tour' : 'Zenith Cup season';
     this.menus.push<HangarData>('hangar', {
       context: `Grand Prix · ${name} · pick the faction you will race for`,
-      confirm: kind === 'cup' ? 'Start the cup' : 'Start the season',
+      confirm: kind === 'cup' ? 'Start the cup' : kind === 'tour' ? 'Start the Grand Tour' : 'Start the season',
       onConfirm: () => {
-        this.newGp(kind);
+        this.newGp(kind, cup);
         this.menus.replace('briefing', { kind });
       },
     });
   }
 
-  newGp(kind: GpKind): void {
+  newGp(kind: GpKind, cup = CUPS[0].id): void {
     const seed = (Math.random() * 1e9) | 0;
-    const ev = kind === 'cup' ? newCup(CUPS[0].id, this.loadout.team, this.gpDifficulty(), seed) : newSeason(this.loadout.team, this.gpDifficulty(), seed);
+    const team = this.loadout.team;
+    const diff = this.gpDifficulty();
+    const ev = kind === 'cup' ? newCup(cup, team, diff, seed) : kind === 'tour' ? newTour(team, diff, seed) : newSeason(team, diff, seed);
     gpStore.saveEvent(ev);
     this.gpEvents[kind] = ev;
     this.gpKind = kind;
@@ -1134,7 +1143,7 @@ export class Game {
       confirm: 'Done',
       onConfirm: () => this.menus.pop(),
       team: ev.faction,
-      factionLock: `Your faction is fixed for the whole ${kind === 'cup' ? 'cup' : 'season'}`,
+      factionLock: `Your faction is fixed for the whole ${kind === 'cup' ? 'cup' : kind === 'tour' ? 'Grand Tour' : 'season'}`,
       onChange: (_t, r) => this.setLoadout({ team: this.loadout.team, role: r }),
     });
   }
@@ -1171,10 +1180,12 @@ export class Game {
     const ev = this.gpEvents[kind];
     if (!ev || !advance(ev)) return;
     gpStore.saveEvent(ev);
+    // (The Grand Tour's decider only now has its other race to run.)
+    this.gpRunner.run(ev);
     if (isOver(ev)) {
       const place = finalPlace(ev);
-      const medal = kind === 'cup' ? medalFor(place) : null;
-      if (kind === 'cup') gpStore.awardMedal(ev.cup, ev.difficulty, medal);
+      const medal = singleRaces(ev) ? medalFor(place) : null;
+      if (singleRaces(ev)) gpStore.awardMedal(ev.cup, ev.difficulty, medal);
       else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
       this.menus.replace('award', { kind, place, medal });
       // (The music first: the jingle is only for the synthesised music.)
@@ -1287,15 +1298,15 @@ export class Game {
     this.menus.push('online-gp');
   }
 
-  /** A room that is the squad's cup or season; the squad follows the leader in. */
-  async createGpRoom(kind: GpKind): Promise<void> {
+  /** A room that is the squad's cup, Grand Tour or (short) season; the squad follows the leader in. */
+  async createGpRoom(kind: GpKind, cup?: string): Promise<void> {
     const why = gpBlocked(this);
     const ticket = this.squadTicket();
     if (why || !ticket) return this.menus.toast(why ?? 'The Grand Prix online is for a squad of two or three');
-    this.onlineStatus = kind === 'cup' ? 'Setting up the cup…' : 'Setting up the season…';
+    this.onlineStatus = kind === 'cup' ? 'Setting up the cup…' : kind === 'tour' ? 'Setting up the Grand Tour…' : 'Setting up the season…';
     this.menus.refresh();
     try {
-      await this.online.createRoom(this.loadoutMsg(), ticket, { kind, difficulty: this.gpDifficulty() });
+      await this.online.createRoom(this.loadoutMsg(), ticket, { kind, difficulty: this.gpDifficulty(), ...(cup ? { cup } : {}) });
       this.onlineStatus = '';
       if (this.online.room) this.online.sendSquad('go', { code: this.online.room.roomId });
       this.toRoom();
@@ -1419,7 +1430,7 @@ export class Game {
       },
       factionLock: () => {
         const gp = o.lobby?.gp;
-        if (gp) return `Your faction is fixed for the whole ${gp.kind === 'cup' ? 'cup' : 'season'}`;
+        if (gp) return `Your faction is fixed for the whole ${gp.kind === 'cup' ? 'cup' : gp.kind === 'tour' ? 'Grand Tour' : 'season'}`;
         return captain() ? null : "Your team's captain or the host picks its faction";
       },
       factionTaken: (f) => {

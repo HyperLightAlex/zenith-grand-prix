@@ -64,6 +64,19 @@ describe("a Grand Prix room's continue", () => {
 const result = (winner: 0 | 1): GpFixtureResult => ({ wins: winner === 0 ? [2, 1] : [1, 2], points: [40, 38], races: 3, winner });
 
 describe("a squad's Grand Prix online", () => {
+  it('sets up the cup asked for, the Grand Tour, or a short season (a room cannot be put away for later)', () => {
+    const made = (gp: { kind: 'cup' | 'tour' | 'season'; difficulty: number; cup?: string }) => new TestNet({ laps: 1, faction: 2, gp }).core.gp!.event;
+    expect(made({ kind: 'cup', difficulty: 1, cup: 'ascent' }).rounds.map((r) => r.circuit)).toEqual(['abyss', 'monsoon', 'zenith']);
+    expect(made({ kind: 'cup', difficulty: 1, cup: 'nonsense' }).cup).toBe('horizon');
+    const tour = made({ kind: 'tour', difficulty: 2 });
+    expect(tour.kind).toBe('tour');
+    expect(tour.rounds).toHaveLength(9);
+    const season = made({ kind: 'season', difficulty: 0 });
+    expect(season.short).toBe(true);
+    expect(season.rounds).toHaveLength(5);
+    expect(season.rounds[4].circuit).toBe('zenith');
+  });
+
   it('takes only its squad, on team 1, against computer pilots, with the event setting the round', () => {
     const net = new TestNet({ laps: 1, faction: 2, gp: { kind: 'cup', difficulty: 0 } });
     // Not a squad: refused, and the event is still waiting for its squad.

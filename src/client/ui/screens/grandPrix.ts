@@ -1,16 +1,20 @@
-// Grand Prix: the hub (cups and the season), the round briefing, the
-// standings after a round, and the award at the end.
+// Grand Prix: the hub (the cups, the Grand Tour and the season), the round
+// briefing, the standings after a round, and the award at the end.
 
 import { TRACKS } from '../../../sim/index';
 import {
   CUPS,
   GP_DIFFICULTY,
+  TOUR_ID,
   average,
+  cupOpen,
   eventName,
   isOver,
   playedRounds,
   roundComplete,
+  singleRaces,
   standings,
+  tourOpen,
   yourRoundNumber,
   type GpEvent,
   type GpFixture,
@@ -43,7 +47,7 @@ export function circuitName(id: string): string {
 /** The five-faction table after rounds 0..upTo. */
 export function gpTable(ev: GpEvent, upTo: number): HTMLElement {
   const rows = standings(ev, upTo);
-  const cup = ev.kind === 'cup';
+  const cup = singleRaces(ev);
   const table = h<'table'>('table.gptable');
   const head = h<'tr'>('tr');
   const cols = cup ? ['', 'Team', 'Races', 'Won', 'Points', 'Average'] : ['', 'Team', 'Played', 'Won', 'Lost', 'Rounds', 'Points'];
@@ -65,7 +69,7 @@ export function fixtureLine(f: GpFixture, ev: GpEvent): HTMLElement {
   const a = factionName(LIVERIES[f.a]);
   const b = factionName(LIVERIES[f.b]);
   const r = f.result;
-  const score = !r ? 'racing…' : ev.kind === 'cup' ? `${r.points[0]}–${r.points[1]}` : `${r.wins[0]}–${r.wins[1]}`;
+  const score = !r ? 'racing…' : singleRaces(ev) ? `${r.points[0]}–${r.points[1]}` : `${r.wins[0]}–${r.wins[1]}`;
   return h('div.fixture' + (f.a === ev.faction ? '.me' : ''), emblem(f.a), h('span', a), h('b', score), h('span', b), emblem(f.b));
 }
 
@@ -73,7 +77,7 @@ export function fixtureLine(f: GpFixture, ev: GpEvent): HTMLElement {
 export function awardLines(ev: GpEvent, place: number, medal: string | null): HTMLElement[] {
   let headline: string;
   let line: string;
-  if (ev.kind === 'cup') {
+  if (singleRaces(ev)) {
     headline = medal ? `${MEDAL_NAMES[medal]} medal` : `${ORD[place - 1]} place`;
     line = medal ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: ${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}: a medal needs the top three.`;
   } else {
@@ -91,33 +95,59 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       const list = h('div.list');
       const diff = g.gpDifficulty();
       const medals = g.gpMedals();
-      for (const kind of ['cup', 'season'] as GpKind[]) {
-        const ev = g.gpEvent(kind);
-        const name = kind === 'cup' ? CUPS[0].name : 'Zenith Cup season';
-        let note: string;
-        if (ev && !isOver(ev)) note = `Continue: round ${Math.min(playedRounds(ev), yourRoundNumber(ev))} of ${playedRounds(ev)}, ${GP_DIFFICULTY[ev.difficulty]}, ${factionName(LIVERIES[ev.faction])}`;
-        else if (kind === 'cup') {
-          const won = GP_DIFFICULTY.map((d, i) => `${d}: ${medals.cup[i] ? MEDAL_NAMES[medals.cup[i]!] : '–'}`).join(', ');
-          note = `Three races, a medal for the top three. ${won}`;
-        } else {
-          const n = medals.season[diff] ?? 0;
-          note = `Five matchdays, best of 3 each. Zenith Cups won at ${GP_DIFFICULTY[diff]}: ${n}`;
-        }
-        m.button(list, name, () => g.openGp(kind), { key: kind, note });
-      }
+      const won = (id: string) => GP_DIFFICULTY.map((d, i) => `${d}: ${medals.byCup[id]?.[i] ? MEDAL_NAMES[medals.byCup[id][i]!] : '–'}`).join(', ');
+      const under = (ev: GpEvent) => `Continue: round ${Math.min(playedRounds(ev), yourRoundNumber(ev))} of ${playedRounds(ev)}, ${GP_DIFFICULTY[ev.difficulty]}, ${factionName(LIVERIES[ev.faction])}`;
+      // The cups, each open once the one before it has given a medal. One is under way at a time.
+      const cupEv = g.gpEvent('cup');
+      const going = cupEv && !isOver(cupEv) ? cupEv : null;
+      CUPS.forEach((c, i) => {
+        const open = cupOpen(c.id, medals.byCup);
+        const mine = cupEv && cupEv.cup === c.id ? cupEv : null;
+        const note = mine && !isOver(mine) ? under(mine) : !open ? `Opens with a medal in the ${CUPS[i - 1].name}` : `${c.circuits.map(circuitName).join(', ')}. ${won(c.id)}`;
+        m.button(
+          list,
+          c.name,
+          () => {
+            if (going && going.cup !== c.id) {
+              confirmDialog(m, `Put the ${eventName(going)} away?`, `One cup at a time: the ${eventName(going)} under way is abandoned (its races so far are lost) and the ${c.name} starts. Medals already won are kept.`, `Start the ${c.name}`, () => {
+                g.abandonGp('cup');
+                g.openGp('cup', c.id);
+              });
+            } else g.openGp('cup', c.id);
+          },
+          { key: 'cup-' + c.id, note, locked: open ? null : `A medal in the ${CUPS[i - 1].name} opens it` },
+        );
+      });
+      const tour = g.gpEvent('tour');
+      const tourIsOpen = tourOpen(medals.byCup);
+      m.button(list, 'Grand Tour', () => g.openGp('tour'), {
+        key: 'tour',
+        locked: tourIsOpen || tour ? null : 'A medal in each of the three cups opens it',
+        note: tour && !isOver(tour) ? under(tour) : !tourIsOpen ? 'Opens with a medal in each of the three cups' : `Nine races, every circuit from Meridian to Zenith Ring, the last a decider. ${won(TOUR_ID)}`,
+      });
+      const season = g.gpEvent('season');
+      m.button(list, 'Zenith Cup season', () => g.openGp('season'), {
+        key: 'season',
+        note: season && !isOver(season) ? under(season) : `Ten matchdays: every other faction twice, best of 3. Zenith Cups won at ${GP_DIFFICULTY[diff]}: ${medals.season[diff] ?? 0}`,
+      });
       m.choice(list, 'Difficulty', GP_DIFFICULTY[diff], (dir) => g.setGpDifficulty((diff + dir + 3) % 3), { key: 'difficulty' });
-      for (const kind of ['cup', 'season'] as GpKind[]) {
+      for (const kind of ['cup', 'tour', 'season'] as GpKind[]) {
         const ev = g.gpEvent(kind);
         if (ev && !isOver(ev)) {
-          m.button(list, kind === 'cup' ? 'Abandon the cup' : 'Abandon the season', () =>
-            confirmDialog(m, kind === 'cup' ? 'Abandon the cup?' : 'Abandon the season?', 'Its races so far are lost. Medals and cups already won are kept.', 'Abandon', () => {
-              g.abandonGp(kind);
-              m.refresh();
-            }),
-          { key: 'abandon-' + kind });
+          const name = eventName(ev);
+          m.button(
+            list,
+            `Abandon the ${name}`,
+            () =>
+              confirmDialog(m, `Abandon the ${name}?`, 'Its races so far are lost. Medals and cups already won are kept.', 'Abandon', () => {
+                g.abandonGp(kind);
+                m.refresh();
+              }),
+            { key: 'abandon-' + kind },
+          );
         }
       }
-      col.append(h('div.context', 'Grand Prix'), h('h1', 'Grand Prix'), h('p', 'Difficulty sets the rival pilots. It applies to a new cup or season; one under way keeps its own.'), list);
+      col.append(h('div.context', 'Grand Prix'), h('h1', 'Grand Prix'), h('p', 'Difficulty sets the rival pilots. It applies to a new cup, Grand Tour or season; one under way keeps its own.'), list);
       m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, CHANGE, BACK));
     },
   });
@@ -137,7 +167,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
         col.append(
           h('h1', `Round ${yourRoundNumber(ev)} of ${total}`),
           h('div.versus', emblem(ev.faction), h('span', factionName(LIVERIES[ev.faction])), h('b', 'vs'), h('span', factionName(LIVERIES[rival])), emblem(rival)),
-          h('p', `${circuitName(r.circuit)}. ${ev.kind === 'cup' ? 'A single race.' : 'Best of 3.'} ${TRACK_BLURBS[r.circuit] ?? ''}`),
+          h('p', `${circuitName(r.circuit)}. ${singleRaces(ev) ? 'A single race.' : 'Best of 3.'} ${ev.kind === 'tour' && ev.current === ev.rounds.length - 1 ? 'The decider: against the team nearest you on the table.' : ''} ${TRACK_BLURBS[r.circuit] ?? ''}`),
         );
         m.button(list, 'Start round', () => g.startGpRound(d.kind), { key: 'start', go: true });
       } else {
@@ -150,7 +180,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       }
       m.button(list, 'Hangar', () => g.openGpHangar(d.kind), { key: 'hangar' });
       col.append(list);
-      const side = h('div.panel.standings', h('h2', ev.current > 0 ? `Standings after ${ev.kind === 'cup' ? 'round' : 'matchday'} ${ev.current}` : 'Standings'), gpTable(ev, ev.current - 1));
+      const side = h('div.panel.standings', h('h2', ev.current > 0 ? `Standings after ${singleRaces(ev) ? 'round' : 'matchday'} ${ev.current}` : 'Standings'), gpTable(ev, ev.current - 1));
       m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
     },
     press(m, key, d) {
@@ -172,7 +202,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       const r = ev.rounds[ev.current];
       const ready = roundComplete(ev, ev.current);
       const col = h('div.col.standings-screen');
-      col.append(h('div.context', `${eventName(ev)} · ${GP_DIFFICULTY[ev.difficulty]}`), h('h1', ev.kind === 'cup' ? `After round ${ev.current + 1}` : `After matchday ${ev.current + 1}`));
+      col.append(h('div.context', `${eventName(ev)} · ${GP_DIFFICULTY[ev.difficulty]}`), h('h1', singleRaces(ev) ? `After round ${ev.current + 1}` : `After matchday ${ev.current + 1}`));
       const fx = h('div.fixtures');
       for (const f of r.you ? [r.you, ...r.others] : r.others) fx.append(fixtureLine(f, ev));
       col.append(fx);

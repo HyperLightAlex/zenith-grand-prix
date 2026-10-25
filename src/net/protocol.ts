@@ -228,9 +228,11 @@ export interface JoinOptions {
   gp?: GpRequest;
 }
 
-/** A squad's Grand Prix: a cup or a season, at a difficulty, for the leader's faction. */
+/** A squad's Grand Prix: a cup (which), the Grand Tour or a (short) season, at a difficulty, for the leader's faction. */
 export interface GpRequest {
   kind: GpKind;
+  /** Which cup (cups only; the first if absent or unknown). */
+  cup?: string;
   /** 0 rookie, 1 pro, 2 ace. */
   difficulty: number;
 }

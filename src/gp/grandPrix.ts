@@ -1,22 +1,35 @@
-// Grand Prix: the offline events. Two kinds, both against the other four
-// factions, both with a five-faction table filled by races the other
+// Grand Prix: the events. Three kinds, all against the other four
+// factions, all with a five-faction table filled by races the other
 // factions run in the background:
 //
 //   Cup     Three single races, one per circuit, each against a different
-//           faction. Not every faction races every round (five teams cannot
-//           pair off), so the table ranks by average points per race.
-//           First to third win gold, silver and bronze.
-//   Season  A round robin: five matchdays, every faction plays the other
-//           four once in a best-of-3 match and sits one matchday out. The
+//           faction: the Horizon Cup (Meridian, Canyon, Helios), the
+//           Frontier Cup (the Crucible, Frostline, Titan's Rest) and the
+//           Ascent Cup (Abyss Line, Monsoon Ruins, Zenith Ring). Not every
+//           faction races every round (five teams cannot pair off), so the
+//           table ranks by average points per race. First to third win
+//           gold, silver and bronze. A cup opens once the one before it
+//           has given a medal.
+//   Tour    The Grand Tour: nine single races, every circuit in turn, from
+//           Meridian to Zenith Ring. You meet each rival twice in the first
+//           eight; the ninth, at Zenith Ring, is a decider against whoever
+//           is nearest you on the table. Ranked and medalled as a cup; open
+//           once all three cups have given a medal.
+//   Season  A double round robin: ten matchdays, every faction plays every
+//           other twice in a best-of-3 match and sits two matchdays out.
+//           Each half visits four circuits and ends at Zenith Ring. The
 //           table ranks by matches won, then rounds won less lost, then
-//           points. Top it to take the Zenith Cup.
+//           points. Top it to take the Zenith Cup. Online, where an event
+//           cannot be put away and taken up later, a short season: one
+//           round robin, five matchdays, four circuits drawn for it, then
+//           Zenith Ring.
 //
 // This module is plain logic over plain data (no DOM), so it saves as JSON
 // and the background races can run in a worker or in a test.
 
 import { ROLE, createMatch, createRace, recordRound, stepRace, sharedTrack, trackById, PHASE, TRACKS, type SeatConfig, type MatchConfig } from '../sim/index';
 
-export type GpKind = 'cup' | 'season';
+export type GpKind = 'cup' | 'tour' | 'season';
 
 export interface CupDef {
   id: string;
@@ -25,8 +38,17 @@ export interface CupDef {
   circuits: string[];
 }
 
-/** The cups on offer. Each new circuit makes room for another. */
-export const CUPS: CupDef[] = [{ id: 'horizon', name: 'Horizon Cup', circuits: ['meridian', 'canyon', 'helios'] }];
+/** The cups on offer, in the order they open. */
+export const CUPS: CupDef[] = [
+  { id: 'horizon', name: 'Horizon Cup', circuits: ['meridian', 'canyon', 'helios'] },
+  { id: 'frontier', name: 'Frontier Cup', circuits: ['crucible', 'frostline', 'titan'] },
+  { id: 'ascent', name: 'Ascent Cup', circuits: ['abyss', 'monsoon', 'zenith'] },
+];
+
+/** The Grand Tour's id, where its medals are kept with the cups'. */
+export const TOUR_ID = 'tour';
+/** Where every season ends (and its first half). */
+export const FINALE = 'zenith';
 
 /** Difficulty names and the computer pilots' skill at each. */
 export const GP_DIFFICULTY = ['Rookie', 'Pro', 'Ace'] as const;
@@ -61,6 +83,8 @@ export interface GpFixtureResult {
 
 export interface GpRound {
   circuit: string;
+  /** The Grand Tour's last round, its rival not yet chosen (it is the one nearest you on the table once the round before is in). */
+  decider?: boolean;
   /** Your fixture, or null on a matchday you sit out (a season's bye). */
   you: GpFixture | null;
   /** The other factions' fixtures, raced in the background. */
@@ -70,8 +94,10 @@ export interface GpRound {
 export interface GpEvent {
   v: 1;
   kind: GpKind;
-  /** Which cup (cups only). */
+  /** Which cup (cups), or TOUR_ID (the Grand Tour); '' for a season. */
   cup: string;
+  /** A season of one round robin (the short season, online), not two. */
+  short?: boolean;
   difficulty: number;
   /** Your faction, fixed for the whole event. */
   faction: number;
@@ -138,63 +164,164 @@ export function newCup(cupId: string, faction: number, difficulty: number, seed:
   return { v: 1, kind: 'cup', cup: cup.id, difficulty: clampDifficulty(difficulty), faction, rounds, current: 0 };
 }
 
-/** The circuits a season visits, matchday by matchday (the first hosts twice: five matchdays, four circuits). */
-export function seasonCircuits(): string[] {
-  const ids = TRACKS.map((t) => t.id);
-  return Array.from({ length: FACTIONS }, (_, i) => ids[i % ids.length]);
+/** Every circuit but the finale, in the order of the list. */
+function field(): string[] {
+  return TRACKS.map((t) => t.id).filter((id) => id !== FINALE);
 }
 
-/** A new season for `faction`: a five-matchday round robin. */
-export function newSeason(faction: number, difficulty: number, seed: number): GpEvent {
-  const next = rng(seed);
-  // The circle method over five teams and a bye (-1).
+/**
+ * The circuits a season visits, matchday by matchday. A full season's two
+ * halves each visit four circuits, in the list's order, and end at Zenith
+ * Ring; a short season draws four (shown in the list's order) and ends there.
+ */
+export function seasonCircuits(short = false, next: () => number = rng(1)): string[] {
+  const ids = field();
+  if (short) {
+    const drawn = new Set(shuffled(ids, next).slice(0, 4));
+    return [...ids.filter((id) => drawn.has(id)), FINALE];
+  }
+  return [...ids.slice(0, 4), FINALE, ...ids.slice(4, 8), FINALE];
+}
+
+/**
+ * One round robin over the five factions (the circle method, with a bye):
+ * five matchdays of two pairings, each faction sitting one out, yours in
+ * the middle, so it opens and closes with a match of yours.
+ */
+function roundRobin(faction: number, next: () => number): Array<Array<[number, number]>> {
   const teams = [faction, ...shuffled(Array.from({ length: FACTIONS }, (_, f) => f).filter((f) => f !== faction), next), -1];
-  const circuits = seasonCircuits();
-  const rounds: GpRound[] = [];
   const ring = teams.slice(1);
+  const days: Array<Array<[number, number]>> = [];
   for (let day = 0; day < FACTIONS; day++) {
     const order = [teams[0], ...ring];
     const pairs: Array<[number, number]> = [];
-    for (let i = 0; i < order.length / 2; i++) pairs.push([order[i], order[order.length - 1 - i]]);
-    const circuit = circuits[day];
-    let you: GpFixture | null = null;
-    const others: GpFixture[] = [];
-    for (const [a, b] of pairs) {
-      if (a < 0 || b < 0) continue;
-      if (a === faction || b === faction) you = fixture(faction, a === faction ? b : a, circuit, next);
-      else others.push(fixture(a, b, circuit, next));
-    }
-    rounds.push({ circuit, you, others });
+    for (let i = 0; i < order.length / 2; i++) if (order[i] >= 0 && order[order.length - 1 - i] >= 0) pairs.push([order[i], order[order.length - 1 - i]]);
+    days.push(pairs);
     ring.unshift(ring.pop()!);
   }
-  // Your bye falls on the first matchday of the circle; move it into the
-  // middle of the season, so it opens and closes with a match of yours.
-  const bye = rounds.findIndex((r) => !r.you);
+  const bye = days.findIndex((d) => !d.some(([a, b]) => a === faction || b === faction));
   if (bye >= 0) {
-    const [r] = rounds.splice(bye, 1);
-    rounds.splice(2, 0, r);
-    rounds.forEach((rd, i) => {
-      rd.circuit = circuits[i];
-      if (rd.you) rd.you.circuit = circuits[i];
-      for (const f of rd.others) f.circuit = circuits[i];
-    });
+    const [d] = days.splice(bye, 1);
+    days.splice(2, 0, d);
   }
-  return { v: 1, kind: 'season', cup: '', difficulty: clampDifficulty(difficulty), faction, rounds, current: 0 };
+  return days;
+}
+
+/** A matchday's round from its pairings, on `circuit`. */
+function matchday(faction: number, pairs: Array<[number, number]>, circuit: string, next: () => number): GpRound {
+  let you: GpFixture | null = null;
+  const others: GpFixture[] = [];
+  for (const [a, b] of pairs) {
+    if (a === faction || b === faction) you = fixture(faction, a === faction ? b : a, circuit, next);
+    else others.push(fixture(a, b, circuit, next));
+  }
+  return { circuit, you, others };
+}
+
+/**
+ * A new season for `faction`: a double round robin (ten matchdays; the
+ * second half meets everyone again), or with `short` one round robin of five.
+ */
+export function newSeason(faction: number, difficulty: number, seed: number, opts: { short?: boolean } = {}): GpEvent {
+  const next = rng(seed);
+  const short = !!opts.short;
+  const half = roundRobin(faction, next);
+  // The second half: the same pairings, in another order that keeps your
+  // matchday off in its middle and never starts with the rival the first
+  // half ended with.
+  const days = short ? half : [...half, half[3], half[4], half[2], half[0], half[1]];
+  const circuits = seasonCircuits(short, next);
+  const rounds = days.map((pairs, i) => matchday(faction, pairs, circuits[i], next));
+  return { v: 1, kind: 'season', cup: '', ...(short ? { short: true } : {}), difficulty: clampDifficulty(difficulty), faction, rounds, current: 0 };
+}
+
+/**
+ * A new Grand Tour for `faction`: every circuit, in the list's order. You
+ * meet each rival twice in the first eight rounds (never the same one twice
+ * running); in each, of the other three, two race each other and one sits
+ * out, each of them twice. The last round, at Zenith Ring, is settled once
+ * the one before it is in (see advance).
+ */
+export function newTour(faction: number, difficulty: number, seed: number): GpEvent {
+  const next = rng(seed);
+  const circuits = [...field(), FINALE];
+  const rivals = shuffled(
+    Array.from({ length: FACTIONS }, (_, f) => f).filter((f) => f !== faction),
+    next,
+  );
+  let second = shuffled(rivals, next);
+  while (second[0] === rivals[3]) second = shuffled(rivals, next);
+  const order = [...rivals, ...second];
+  const out = new Map<number, number>(rivals.map((f) => [f, 0]));
+  const rounds: GpRound[] = [];
+  for (let r = 0; r < order.length; r++) {
+    const rest = rivals.filter((f) => f !== order[r]);
+    // Who sits out: whoever has sat out least, and has the fewest chances left to.
+    const left = (f: number) => order.slice(r + 1).filter((o) => o !== f).length;
+    const sits = [...rest].sort((x, y) => out.get(x)! - out.get(y)! || left(x) - left(y) || x - y)[0];
+    out.set(sits, out.get(sits)! + 1);
+    const pair = rest.filter((f) => f !== sits);
+    const circuit = circuits[r];
+    rounds.push({ circuit, you: fixture(faction, order[r], circuit, next), others: [fixture(pair[0], pair[1], circuit, next)] });
+  }
+  // The decider: its rival and the others' race chosen when it comes.
+  const circuit = circuits[order.length];
+  rounds.push({ circuit, decider: true, you: fixture(faction, rivals[0], circuit, next), others: [] });
+  return { v: 1, kind: 'tour', cup: TOUR_ID, difficulty: clampDifficulty(difficulty), faction, rounds, current: 0 };
+}
+
+/**
+ * The Grand Tour's decider, once the rounds before it are in: you against
+ * the faction just above you on the table (just below, if you lead it); of
+ * the other three, the one who has raced most sits out and the other two
+ * race each other.
+ */
+function settleDecider(ev: GpEvent, index: number): void {
+  const r = ev.rounds[index];
+  if (!r?.decider || !r.you) return;
+  const table = standings(ev, index - 1);
+  const at = table.findIndex((row) => row.faction === ev.faction);
+  const rival = table[at > 0 ? at - 1 : at + 1].faction;
+  const rest = table.filter((row) => row.faction !== ev.faction && row.faction !== rival);
+  const sits = [...rest].sort((x, y) => y.races - x.races || x.points - y.points || x.faction - y.faction)[0].faction;
+  const pair = rest.map((row) => row.faction).filter((f) => f !== sits);
+  const seed = r.you.seed;
+  r.you = { a: ev.faction, b: rival, circuit: r.circuit, seed, result: null };
+  r.others = [{ a: pair[0], b: pair[1], circuit: r.circuit, seed: (seed * 7 + 12345) % 1e9, result: null }];
+  r.decider = false;
 }
 
 function clampDifficulty(d: number): number {
   return Math.max(0, Math.min(GP_DIFFICULTY.length - 1, Math.round(d) || 0));
 }
 
-/** The match format of an event's fixtures: a single race in a cup, best of 3 in a season. */
-export function matchFormat(ev: GpEvent): MatchConfig {
-  return ev.kind === 'cup' ? { mode: 'series', bestOf: 1, target: 50 } : { mode: 'series', bestOf: 3, target: 50 };
+/** Whether an event is raced in single races, ranked by average points and medalled (a cup or the Grand Tour), rather than a season. */
+export function singleRaces(ev: { kind: GpKind }): boolean {
+  return ev.kind !== 'season';
 }
 
-/** Display name of an event: the cup's, or the season's. */
+/** The match format of an event's fixtures: a single race in a cup or the Grand Tour, best of 3 in a season. */
+export function matchFormat(ev: GpEvent): MatchConfig {
+  return singleRaces(ev) ? { mode: 'series', bestOf: 1, target: 50 } : { mode: 'series', bestOf: 3, target: 50 };
+}
+
+/** Display name of an event: the cup's, the Grand Tour, or the season's. */
 export function eventName(ev: GpEvent): string {
-  if (ev.kind === 'season') return 'Zenith Cup season';
+  if (ev.kind === 'season') return ev.short ? 'Zenith Cup short season' : 'Zenith Cup season';
+  if (ev.kind === 'tour') return 'Grand Tour';
   return CUPS.find((c) => c.id === ev.cup)?.name ?? 'Cup';
+}
+
+/** Whether a cup is open: the first always; each other once the one before it has given a medal (any, at any difficulty). */
+export function cupOpen(cupId: string, medals: Record<string, Record<number, Medal | undefined>>): boolean {
+  const i = CUPS.findIndex((c) => c.id === cupId);
+  if (i <= 0) return true;
+  return Object.values(medals[CUPS[i - 1].id] ?? {}).some((m) => !!m);
+}
+
+/** Whether the Grand Tour is open: every cup has given a medal. */
+export function tourOpen(medals: Record<string, Record<number, Medal | undefined>>): boolean {
+  return CUPS.every((c) => Object.values(medals[c.id] ?? {}).some((m) => !!m));
 }
 
 /** Rounds in which you race (a season has one matchday off). */
@@ -236,6 +363,7 @@ export function recordYours(ev: GpEvent, result: GpFixtureResult): void {
 export function advance(ev: GpEvent): boolean {
   if (isOver(ev) || !roundComplete(ev, ev.current)) return false;
   ev.current++;
+  settleDecider(ev, ev.current);
   return true;
 }
 
@@ -269,7 +397,7 @@ export function standings(ev: GpEvent, upTo = ev.current): GpRow[] {
     }
   });
   const list = [...rows.values()];
-  if (ev.kind === 'cup') list.sort((x, y) => average(y) - average(x) || y.points - x.points || y.won - x.won || x.faction - y.faction);
+  if (singleRaces(ev)) list.sort((x, y) => average(y) - average(x) || y.points - x.points || y.won - x.won || x.faction - y.faction);
   else list.sort((x, y) => y.won - x.won || y.roundsFor - y.roundsAgainst - (x.roundsFor - x.roundsAgainst) || y.points - x.points || x.faction - y.faction);
   return list;
 }

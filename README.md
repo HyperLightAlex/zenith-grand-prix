@@ -10,12 +10,18 @@ is about getting your forward home first and stopping theirs.
 title lives in `index.html` and `src/client/ui/menus.ts` if you want to change
 it.
 
-This is version 0.5: four circuits and three ways to play.
+This is version 0.5: nine circuits and three ways to play.
 
-- **Grand Prix**, offline: a **cup** of three races, each against a different
-  faction, for gold, silver or bronze; or a **season**, a best of 3 against
-  each of the other four factions, for the Zenith Cup. The other factions
-  race each other in the background, so the table is real.
+- **Grand Prix**, offline: three **cups** of three races (the Horizon Cup,
+  then the Frontier and the Ascent Cups, each opened by a medal in the one
+  before), each race against a different faction, for gold, silver or
+  bronze; the **Grand Tour**, opened by a medal in all three: nine races,
+  every circuit from Meridian to Zenith Ring, the last a decider against
+  the team nearest you on the table; or a **season**, a double round robin
+  of ten matchdays, a best of 3 against each of the other four factions
+  twice, each half ending at Zenith Ring, for the Zenith Cup (saved between
+  sittings). The other factions race each other in the background, so the
+  table is real.
 - **Free Play**: any circuit, rival and format against computer pilots.
 - **Online**: private rooms for up to six people, joined by code or invite
   link, with computer pilots in the empty seats. Friends can form a squad of

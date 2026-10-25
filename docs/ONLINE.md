@@ -145,8 +145,9 @@ two players.
   Join a squad only while you are on your own.
 - **Grand Prix with your squad.** The hub's Grand Prix is always there, and
   opens for a squad of two or three, from its leader (highlighted, it says
-  which it is waiting for). The leader picks the Horizon Cup or the Zenith
-  Cup season and the difficulty, and the squad follows into its own room:
+  which it is waiting for). The leader picks a cup (any of the three), the
+  Grand Tour or the Zenith Cup short season (five matchdays, four circuits
+  drawn for it, then Zenith Ring) and the difficulty, and the squad follows into its own room:
   the event as offline, for the squad's faction, the squad on one team (a
   computer teammate in any frame nobody flies) and every rival a computer
   pilot. Each round opens on its briefing (the rival, the circuit, the

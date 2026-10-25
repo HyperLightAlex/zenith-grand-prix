@@ -25,7 +25,7 @@ describe('the background race runner', () => {
     runner.run(ev);
     for (let i = 0; i < 50 && pendingFixtures(ev).length; i++) await new Promise((r) => setTimeout(r, 0));
     expect(pendingFixtures(ev)).toHaveLength(0);
-    // Four matchdays with one other match, and the one you sit out with two.
-    expect(results).toBe(6);
+    // Eight matchdays with one other match, and the two you sit out with two.
+    expect(results).toBe(12);
   });
 });

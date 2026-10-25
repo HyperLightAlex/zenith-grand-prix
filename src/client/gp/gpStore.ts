@@ -1,10 +1,10 @@
-// Grand Prix saves, kept in this browser: the cup and the season in
-// progress (one of each), the medals won and the Zenith Cups.
+// Grand Prix saves, kept in this browser: the cup, the Grand Tour and the
+// season in progress (one of each), the medals won and the Zenith Cups.
 
 import type { GpEvent, GpKind, Medal } from '../../gp/grandPrix';
 import { betterMedal } from '../../gp/grandPrix';
 
-const KEYS = { cup: 'zgp.gp.cup', season: 'zgp.gp.season', medals: 'zgp.gp.medals', cups: 'zgp.gp.cupsWon', difficulty: 'zgp.gp.difficulty' } as const;
+const KEYS = { cup: 'zgp.gp.cup', tour: 'zgp.gp.tour', season: 'zgp.gp.season', medals: 'zgp.gp.medals', cups: 'zgp.gp.cupsWon', difficulty: 'zgp.gp.difficulty' } as const;
 
 function read<T>(k: string, fallback: T): T {
   try {
@@ -37,7 +37,7 @@ export function clearEvent(kind: GpKind): void {
   write(KEYS[kind], null);
 }
 
-/** Best medal per cup, per difficulty. */
+/** Best medal per cup (and the Grand Tour), per difficulty. */
 export function medals(): Record<string, Record<number, Medal>> {
   return read(KEYS.medals, {});
 }

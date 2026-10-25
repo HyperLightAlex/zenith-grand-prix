@@ -83,7 +83,7 @@ export function registerOnline(m: Menus, g: Game): void {
       m.button(list, 'Join room', () => g.askRoomCode(), { key: 'join', locked: follow });
       // Always there; open to a squad of two or three, from its leader.
       const gpWhy = gpBlocked(g);
-      m.button(list, 'Grand Prix', () => g.openOnlineGp(), { key: 'gp', locked: gpWhy, hint: gpWhy ?? 'A cup or a season together, against computer pilots' });
+      m.button(list, 'Grand Prix', () => g.openOnlineGp(), { key: 'gp', locked: gpWhy, hint: gpWhy ?? 'A cup, the Grand Tour or a short season together, against computer pilots' });
       // Invite while there is an open position; join someone else's squad only while on your own.
       if (members.length < 3) m.button(list, 'Invite to squad', () => void g.inviteToSquad(), { key: 'invite' });
       if (members.length <= 1) m.button(list, 'Join a squad', () => g.askSquadCode(), { key: 'joinsquad' });

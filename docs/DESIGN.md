@@ -1033,10 +1033,13 @@ with prediction on the clients, reconnecting, and squads of up to three
 that move between rooms together. Matchmaking is still to come. How online
 works, and how to host it, is in [ONLINE.md](ONLINE.md).
 
-**A squad's Grand Prix online.** A squad of two or three races the cup or
-the season together against computer pilots, in one sitting: the same
-event as offline, kept by the squad's room, with the other factions'
-fixtures raced on the server. Nothing is recorded; an online Grand Prix
+**A squad's Grand Prix online.** A squad of two or three races a cup, the
+Grand Tour or a short season (one round robin: five matchdays, four
+circuits drawn for it, then Zenith Ring) together against computer pilots,
+in one sitting: the same events as offline (the full season, ten
+matchdays, is offline only: a room cannot be put away and taken up later),
+kept by the squad's room, with the other factions' fixtures raced on the
+server. Nothing is recorded; an online Grand Prix
 with results that count waits for matchmaking and accounts.
 
 **M4, done (branch `mobile-ui`): phones, tablets and handhelds.** The

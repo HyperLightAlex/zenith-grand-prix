@@ -132,7 +132,7 @@ export function registerCommon(m: Menus, g: Game): void {
     render(m) {
       const col = h('div.col.modes');
       const list = h('div.list');
-      m.button(list, 'Grand Prix', () => m.push('gp'), { key: 'gp', note: 'Cups for medals, or a season for the Zenith Cup' });
+      m.button(list, 'Grand Prix', () => m.push('gp'), { key: 'gp', note: 'Cups and the Grand Tour for medals, or a season for the Zenith Cup' });
       m.button(list, 'Free Play', () => g.openFreePlay(), { key: 'free', note: 'Any circuit, any rival, any format' });
       m.button(list, 'Online', () => g.openOnline(), {
         key: 'online',

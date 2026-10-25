@@ -5,7 +5,7 @@
 // played in one sitting.
 
 import { ROLE, type Role } from '../../../sim/index';
-import { CUPS, GP_DIFFICULTY, eventName, finalPlace, medalFor, playedRounds, roundComplete, yourRoundNumber, type GpEvent, type GpKind } from '../../../gp/grandPrix';
+import { CUPS, GP_DIFFICULTY, eventName, finalPlace, medalFor, playedRounds, roundComplete, singleRaces, yourRoundNumber, type GpEvent, type GpKind } from '../../../gp/grandPrix';
 import type { LobbyView } from '../../../net/protocol';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
@@ -37,8 +37,11 @@ export function registerOnlineGp(m: Menus, g: Game): void {
       const blocked = gpBlocked(g);
       const col = h('div.col.gp');
       const list = h('div.list');
-      m.button(list, CUPS[0].name, () => void g.createGpRoom('cup'), { key: 'cup', go: !blocked, locked: blocked, note: 'Three races, one per circuit, against a different faction each time' });
-      m.button(list, 'Zenith Cup season', () => void g.createGpRoom('season'), { key: 'season', locked: blocked, note: 'Five matchdays: every other faction once, best of 3, and a day off' });
+      CUPS.forEach((c, i) =>
+        m.button(list, c.name, () => void g.createGpRoom('cup', c.id), { key: 'cup-' + c.id, go: !blocked && i === 0, locked: blocked, note: `${c.circuits.map(circuitName).join(', ')}: a single race on each, against a different faction each time` }),
+      );
+      m.button(list, 'Grand Tour', () => void g.createGpRoom('tour'), { key: 'tour', locked: blocked, note: 'Nine races, every circuit from Meridian to Zenith Ring, the last a decider (about 35 minutes)' });
+      m.button(list, 'Zenith Cup short season', () => void g.createGpRoom('season'), { key: 'season', locked: blocked, note: 'Five matchdays: every other faction once, best of 3, a day off; four circuits drawn, then Zenith Ring' });
       m.choice(list, 'Difficulty', GP_DIFFICULTY[diff], (dir) => g.setGpDifficulty((diff + dir + 3) % 3), { key: 'difficulty' });
       col.append(
         h('div.context', 'Online · Grand Prix'),
@@ -68,7 +71,7 @@ export function renderGpRoom(m: Menus, g: Game, v: LobbyView): void {
   const o = g.online;
   const ev = v.gp!;
   const me = v.players.find((p) => p.pid === o.pid);
-  const cup = ev.kind === 'cup';
+  const cup = singleRaces(ev);
   const context = `${eventName(ev)} · ${GP_DIFFICULTY[ev.difficulty]} · ${factionName(LIVERIES[ev.faction])} · online`;
   const col = h('div.col.briefing');
   const list = h('div.list');
