@@ -7,8 +7,9 @@ import { jump, type CircuitDef, type ForkSpec } from '../circuit';
 // through the Hatch at the top, rolling over onto the outside of the band,
 // and down its far side upside down, the Earth overhead; out from under it
 // and upright again. East up the Spine to the core, then the Möbius: a loop
-// round the core whose road rolls a full turn over its top, so it goes up
-// the inside, over the top on the outside and down the inside again. South
+// round the core whose road barrel rolls all the way round it, a full turn
+// to each third, up the inside, over the top on the outside (half way
+// through the middle roll) and down the inside again. South
 // off the core onto the Mass Driver, a run of speed pads between glowing
 // coils that throws you off its end, across open space and through the
 // docking ring onto the module beyond; the Dock, a fork through the module
@@ -69,13 +70,14 @@ export const ZENITH_RING: CircuitDef = {
     /* 11 */ { straight: 100 },
     /* 12 */ { turn: [160, 90], bank: 12, name: 'T2' },
     /* 13 */ { straight: 300 },
-    // Up the inside of a loop round the core, rolling right over onto its
-    // outside at the top and on round back inside, then down: the roll over
-    // the top third alone (over the whole loop, it turned the road under a
-    // mech nearly 80 degrees one way and back).
-    /* 14 */ { pitch: [MOBIUS.radius, 120, MOBIUS.across / 3], width: 20, name: 'the Möbius' },
+    // A loop round the core, barrel rolling the whole way round: a full roll
+    // up its inside, another over the top (onto its outside half way, over
+    // the core) and a third down its inside, each easing in and out. (One
+    // slow roll over the whole loop turned the road under a mech nearly 80
+    // degrees one way and back; a roll to each third, 25.)
+    /* 14 */ { twist: [MOBIUS.radius, 120, 360, MOBIUS.across / 3], width: 20, name: 'the Möbius' },
     /* 15 */ { twist: [MOBIUS.radius, 120, 360, MOBIUS.across / 3], width: 20, name: 'over the core' },
-    /* 16 */ { pitch: [MOBIUS.radius, 120, MOBIUS.across / 3], width: 20 },
+    /* 16 */ { twist: [MOBIUS.radius, 120, 360, MOBIUS.across / 3], width: 20 },
     /* 17 */ { straight: 60 },
     /* 18 */ { straight: 300, name: 'the Mass Driver' },
     ...jump({ ramp: 10, down: 24, speed: 105, gap: 0.75, land: 160 }), // 19-24 the docking ring

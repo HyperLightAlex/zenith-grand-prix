@@ -168,7 +168,9 @@ to one brief per circuit and checked one at a time.
   bright overhead and the sun a bright patch on it (A1), with no disc drawn.
   Monsoon Ruins' sky is the storm, with no sun: J1 paints the cloud a little
   paler where it would be, and no disc is drawn. Its lightning lights the
-  painted sky toward the strike, as it does the plain one.
+  painted sky toward the strike, as it does the plain one. J1B's far bolt
+  is taken out of the still sky by the build (into its alpha) and shows
+  only while the lightning flashes.
   Frostline's sky has the aurora painted into it (the plain look
   draws its own, swaying). Zenith Ring's sky is space: its painting (stars
   and the Milky Way) goes on down past eye level, mirrored, to the Earth's

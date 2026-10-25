@@ -126,6 +126,8 @@ CIRCUITS = {
         # A storm: no sun, only a paler patch in the cloud at the middle of J1.
         sky=['bg-j1-sky.png', 'bg-j1b-sky.png'],
         sun_col=768,
+        # J1B's far bolt: lit only with the lightning (the alpha), not there all the time.
+        bolt=True,
         # On magenta: the jungle is green.
         horizon='bg-j2-horizon.png',
         clouds='bg-j3-clouds.png',
@@ -221,18 +223,66 @@ def soften_seams(p, xs, r=10):
     return p
 
 
+def take_out_bolt(sky):
+    """A lightning bolt painted into a sky, taken out: the sky with the cloud
+    and rain behind it filled in, and how much of the bolt each pixel was
+    (0..1). Its trunk is the biggest bright, cool, thin streak; its branches
+    and glow are the fainter ones joined to it."""
+    lum = sky.mean(2)
+    diff = lum - ndimage.median_filter(lum, size=21)
+    cool = sky[..., 2] - sky[..., 0]
+    hz = horizon_row(sky)
+    strong = (diff > 0.12) & (cool > 0)
+    strong[hz:] = False
+    lab, n = ndimage.label(ndimage.binary_dilation(strong, iterations=3))
+    if n == 0:
+        return sky, np.zeros(sky.shape[:2], np.float32)
+    trunk = lab == 1 + int(np.argmax(ndimage.sum(strong, lab, range(1, n + 1))))
+    # The fainter strokes that touch it, grown out to it a few pixels at a time.
+    faint = (diff > 0.05) & (cool > -0.01)
+    faint[hz:] = False
+    bolt = trunk & strong
+    for _ in range(12):
+        grown = ndimage.binary_dilation(bolt, iterations=2) & faint
+        if grown.sum() == bolt.sum():
+            break
+        bolt = grown | bolt
+    weight = np.clip(diff / 0.25, 0, 1) * ndimage.binary_dilation(bolt, iterations=1)
+    weight = np.maximum(weight, bolt * 0.6)
+    weight = ndimage.gaussian_filter(weight.astype(np.float32), 0.7)
+    # Filled from round it: the sky blurred without the bolt, over where it was.
+    hole = ndimage.binary_dilation(bolt, iterations=3).astype(np.float32)
+    keep = 1 - hole
+    fill = np.stack([ndimage.gaussian_filter(sky[..., c] * keep, 5) for c in range(3)], -1)
+    fill /= np.maximum(ndimage.gaussian_filter(keep, 5), 1e-3)[..., None]
+    soft = ndimage.gaussian_filter(hole, 1.5)[..., None]
+    return sky * (1 - soft) + fill * soft, np.clip(weight, 0, 1)
+
+
 def build_sky(spec):
+    """The sky all round, horizon to zenith (and, with `bolt`: a bolt painted
+    into the second half taken out, its alpha 1 less the bolt, so the game can
+    light it with the lightning)."""
     halves = [load(n) for n in spec['sky']]
     a, hz = sky_half(halves[0], SKY_W // 2)
     sun = (spec['sun_col'] if 'sun_col' in spec else sun_column(halves[0], hz)) / halves[0].shape[1] * 0.5
+    bolt = None
     if len(halves) > 1:
-        b, _ = sky_half(halves[1], SKY_W // 2)
+        second = halves[1]
+        if spec.get('bolt'):
+            second, weight = take_out_bolt(second)
+            bolt, _ = sky_half(np.repeat(weight[..., None], 3, 2), SKY_W // 2)
+        b, _ = sky_half(second, SKY_W // 2)
         b = match_joins(a, b, spec.get('join_band', 320))
     else:
         b = a.copy()
     pano = np.concatenate([a, b], 1)
     pano = soften_seams(pano, [0, SKY_W // 2])
-    return np.clip(pano, 0, 1), sun
+    pano = np.clip(pano, 0, 1)
+    if bolt is not None:
+        alpha = np.concatenate([np.ones(a.shape[:2]), 1 - np.clip(bolt[..., 0], 0, 1)], 1)
+        pano = np.concatenate([pano, alpha[..., None]], -1)
+    return pano, sun
 
 
 # ---- keyed sheets ------------------------------------------------------------

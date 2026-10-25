@@ -40,6 +40,31 @@ void main() {
   gl_FragColor = vec4(uColor * a * 1.7, a);
 }`;
 
+/**
+ * How far up from `from` over a gate (its frame `m`, model space left, up,
+ * forward) is clear, up to `most`: to 4 short of the slab under any other
+ * stretch of road over it.
+ */
+function clearAbove(track: Track, s: number, m: THREE.Matrix4, from: number, most: number): number {
+  const base = new THREE.Vector3().setFromMatrixPosition(m);
+  const up = new THREE.Vector3().setFromMatrixColumn(m, 1).normalize();
+  const p = new THREE.Vector3();
+  for (let h = from; h <= from + most; h += 1) {
+    p.copy(base).addScaledVector(up, h);
+    for (let i = 0; i < track.n; i++) {
+      let gap = Math.abs(i * track.ds - s);
+      gap = Math.min(gap, track.length - gap);
+      if (gap < 80) continue;
+      const dx = p.x - track.px[i], dy = p.y - track.py[i], dz = p.z - track.pz[i];
+      if (Math.abs(dx * track.tx[i] + dy * track.ty[i] + dz * track.tz[i]) > track.ds) continue;
+      const across = dx * track.rx[i] + dy * track.ry[i] + dz * track.rz[i];
+      const vert = dx * track.ux[i] + dy * track.uy[i] + dz * track.uz[i];
+      if (Math.abs(across) < track.hw[i] + 6 && vert > -10 && vert < 20) return Math.max(0, h - from - 4);
+    }
+  }
+  return most;
+}
+
 export function buildGates(track: Track): GateVisual {
   const group = new THREE.Group();
   const lit: number[] = [];
@@ -99,10 +124,15 @@ export function buildGates(track: Track): GateVisual {
     sheet.renderOrder = 5;
     node.add(sheet);
 
-    // Beacon: a thin shaft of light well above the arch.
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.5, 46, 0.5), glow);
-    beam.position.set(0, top + 23.5, 0);
-    node.add(beam);
+    // Beacon: a thin shaft of light well above the arch, stopping short of
+    // any road over it (the turn above in a corkscrew), and none at all
+    // where there is too little room.
+    const room = clearAbove(track, g.s, m, top, 46);
+    if (room > 8) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.5, room, 0.5), glow);
+      beam.position.set(0, top + 0.5 + room / 2, 0);
+      node.add(beam);
+    }
 
     const icon = new THREE.Mesh(new THREE.OctahedronGeometry(1.5, 0), glow);
     icon.position.set(0, top + 3.4, 0);

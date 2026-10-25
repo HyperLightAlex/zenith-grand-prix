@@ -326,7 +326,11 @@ void main() {
     vec2 dy = dFdy(uv);
     dx.x -= floor(dx.x + 0.5);
     dy.x -= floor(dy.x + 0.5);
-    vec3 painted = unTone(textureGrad(uPano, vec2(fract(uv.x), uv.y), dx, dy).rgb);
+    vec4 pano = textureGrad(uPano, vec2(fract(uv.x), uv.y), dx, dy);
+    vec3 painted = unTone(pano.rgb);
+    // A bolt painted into the sky (Monsoon Ruins' far one, in the alpha):
+    // there only while the lightning flashes.
+    painted += vec3(0.85, 0.9, 1.0) * 2.4 * (1.0 - pano.a) * smoothstep(0.15, 0.55, uFlash);
     float sdp = max(dot(dir, uDiscDir), 0.0);
     painted = mix(painted, uDiscColor, smoothstep(0.9990, 0.9993, sdp) * smoothstep(-0.0005, 0.0005, h));
     gl_FragColor = vec4(painted + flashOf(dir), 1.0);

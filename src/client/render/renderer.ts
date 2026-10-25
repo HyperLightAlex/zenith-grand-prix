@@ -265,7 +265,11 @@ export class Renderer {
     (this.filmPass.uniforms.uShadowGrade.value as THREE.Color).setRGB(...pal.shadowGrade);
     (this.filmPass.uniforms.uLightGrade.value as THREE.Color).setRGB(...pal.lightGrade);
     (this.filmPass.uniforms.uLift.value as THREE.Color).setRGB(...pal.lift);
+    this.rain = pal.rain ?? 0;
   }
+
+  /** Rain on the mechs for this circuit (LOOK_PALETTES). */
+  private rain = 0;
 
   /**
    * Cut to an impact frame for `seconds`, if the look allows: a drawing in
@@ -333,6 +337,9 @@ export class Renderer {
     this.mechSmooth.enabled = this.inking && !original;
     film.tMech.value = this.inkPass.mask.texture;
     film.uMechSharp.value = this.inking && !original ? 1 : 0;
+    // (Rain on the mechs needs the mask of where they are, which inking draws.)
+    film.uRain.value = this.inking && on ? this.rain : 0;
+    if (drawClock.fresh) film.uRainSeed.value = (drawClock.drawing % 89) * 1.13;
     if (this.inkPass.enabled) {
       ink.uInk.value = look.ink;
       ink.uBoil.value = look.boil;

@@ -27,6 +27,8 @@ import { paintedSurfaceMaterial, paintedTexture, paintedTrack, swapWhenPainted, 
 import { toonMaterial } from './palette';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT } from './titan/keepout';
+import { box, column, frustum, shrine, steppedPyramid, type Put } from './monsoonTemples';
+import { buildRain } from './rain';
 
 /** What the world builder hands over (world.ts's context has all of it, and the lightning). */
 export interface JungleCtx {
@@ -540,11 +542,7 @@ function colour(g: THREE.BufferGeometry, c: number | THREE.Color): THREE.BufferG
 
 /** A box with its own frame: centre, the directions of its width, height and depth, and those sizes. */
 function block(c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3, az: THREE.Vector3, w: number, h: number, d: number): THREE.BufferGeometry {
-  const g = new THREE.BoxGeometry(w, h, d).toNonIndexed();
-  g.deleteAttribute('uv');
-  const m = new THREE.Matrix4().makeBasis(ax.clone().normalize(), ay.clone().normalize(), az.clone().normalize()).setPosition(c);
-  g.applyMatrix4(m);
-  return g;
+  return box(c, ax, ay, az, w, h, d);
 }
 
 /** Triangles from a list of corner quads (a, b, c, d in order round), as one geometry. */
@@ -692,11 +690,15 @@ export function buildMonsoon(ctx: JungleCtx): void {
   const carved: THREE.BufferGeometry[] = [];
   // (The lintel's lit glyphs: the painted frieze carves its own.)
   const lintelGlow: THREE.BufferGeometry[] = [];
+  // (Doorways and the dark behind them.)
+  const dark: THREE.BufferGeometry[] = [];
   const keep = (g: THREE.BufferGeometry, c: number | THREE.Color, step = 3, list = stone) => {
     if (ctx.inRoad(g, step)) return false;
     list.push(colour(g, c));
     return true;
   };
+  // The temples' pieces (monsoonTemples.ts), each to its list by kind.
+  const put: Put = (g, c, kind) => keep(g, c, 2, kind === 'carved' ? carved : kind === 'dark' ? dark : stone);
   const frameOf = (s: number) => {
     frameAt(track, s, f);
     return { p: v3(f.px, f.py, f.pz), t: v3(f.tx, f.ty, f.tz), r: v3(f.rx, f.ry, f.rz), u: v3(f.ux, f.uy, f.uz) };
@@ -878,22 +880,40 @@ export function buildMonsoon(ctx: JungleCtx): void {
     const DEPTH = 46;
     const WALL = 26;
     const DOOR = 24;
+    const tone = new THREE.Color(0x9a967e);
+    const at = (x: number, y: number, z = 0) => F.p.clone().addScaledVector(across, x).setY(deck + y).addScaledVector(along, z);
+    const wallTop = DOOR + 4;
     for (const side of [-1, 1]) {
-      // The temple's two halves, either side of the door.
-      const c = F.p.clone().addScaledVector(across, side * (half + WALL / 2)).setY(deck - 8 + (DOOR + 18) / 2);
-      keep(block(c, across, up, along, WALL, DOOR + 18, DEPTH), 0x9a967e);
-      // Its stepped base.
-      const b = F.p.clone().addScaledVector(across, side * (half + WALL / 2 + 4)).setY(deck - 6);
-      keep(block(b, across, up, along, WALL + 8, 6, DEPTH + 8), 0x7e7a66);
+      const mid = side * (half + WALL / 2);
+      // Its stepped platform, two steps, then the wall with a molding at its foot.
+      put(box(at(side * (half + WALL / 2 + 3), -5), across, up, along, WALL + 6, 6, DEPTH + 12), tone.clone().multiplyScalar(0.8), 'stone');
+      put(box(at(side * (half + WALL / 2 + 1.5), -1), across, up, along, WALL + 3, 2, DEPTH + 6), tone.clone().multiplyScalar(0.86), 'stone');
+      put(box(at(mid, wallTop / 2), across, up, along, WALL, wallTop, DEPTH), tone, 'stone');
+      put(box(at(side * (half + WALL / 2 + 0.6), 1.2), across, up, along, WALL + 1.2, 2.4, DEPTH + 2.4), tone.clone().multiplyScalar(0.84), 'stone');
+      // A jamb either side of the door, carved, standing out from the wall's face.
+      for (const end of [-1, 1]) put(box(at(side * (half + 2.2), DOOR / 2, end * (DEPTH / 2 + 0.6)), across, up, along, 4.4, DOOR, 1.6), tone.clone().multiplyScalar(0.92), 'carved');
+      // Two dark doorways in each half's faces, front and back, with their lintels.
+      for (const end of [-1, 1])
+        for (const k of [0.3, 0.72]) {
+          const x = side * (half + WALL * k);
+          put(box(at(x, 6, end * (DEPTH / 2 - 0.4)), across, up, along, 4.2, 11, 1.6), new THREE.Color(0x10140f), 'dark');
+          put(box(at(x, 12.6, end * (DEPTH / 2 + 0.3)), across, up, along, 6.4, 1.4, 0.8), tone.clone().multiplyScalar(0.88), 'carved');
+        }
+      // A carved band along the passage's walls.
+      put(box(at(side * (half + 0.3), DOOR - 3, 0), across, up, along, 0.8, 3, DEPTH - 2), tone.clone().multiplyScalar(0.9), 'carved');
     }
-    // The lintel over the door, and the roof comb on it, carved.
+    // Over the door and the two halves: the medial molding, the lintel's
+    // carved band, the sloping upper face, the cornice, and the roof comb.
+    const span = 2 * (half + WALL);
+    put(box(at(0, wallTop + 0.6), across, up, along, span + 2, 1.2, DEPTH + 2), tone.clone().multiplyScalar(0.8), 'stone');
+    put(box(at(0, wallTop + 3.6), across, up, along, span, 4.8, DEPTH), tone, 'carved');
+    put(frustum(at(0, wallTop + 6), across, along, span + 1, DEPTH + 1, span - 10, DEPTH - 16, 9), tone.clone().multiplyScalar(0.95), 'carved');
+    put(box(at(0, wallTop + 15.5), across, up, along, span - 9, 1.2, DEPTH - 15), tone.clone().multiplyScalar(0.8), 'stone');
+    shrine(put, at(0, wallTop + 16), along, half * 1.6, 14, 18, tone.clone().multiplyScalar(0.92), true);
     const lintelY = deck + DOOR + 4;
-    keep(block(F.p.clone().setY(lintelY), across, up, along, 2 * (half + WALL), 8, DEPTH), 0x9a967e, 3, carved);
-    keep(block(F.p.clone().setY(lintelY + 4 + 9), across, up, along, 2 * half + WALL, 18, DEPTH * 0.55), 0x8a866e, 3, carved);
-    keep(block(F.p.clone().setY(lintelY + 4 + 18 + 7), across, up, along, half * 1.4, 14, DEPTH * 0.3), 0x8a866e, 3, carved);
-    // A band of glyphs across the lintel, glowing faintly jade.
+    // A band of glyphs across the lintel, glowing faintly jade (the plain look; the painting carves its own).
     for (let k = -9; k <= 9; k++) {
-      const g = block(F.p.clone().addScaledVector(across, k * (half / 5)).addScaledVector(along, -DEPTH / 2 - 0.4).setY(lintelY + (k % 2 ? 1.2 : -1.2)), across, up, along, 2.2, 2.2, 0.8);
+      const g = block(F.p.clone().addScaledVector(across, k * (half / 5)).addScaledVector(along, -DEPTH / 2 - 0.4).setY(lintelY + 3.6 + (k % 2 ? 1.2 : -1.2)), across, up, along, 2.2, 2.2, 0.8);
       keep(g, 0x1f7a58, 2, lintelGlow);
     }
   }
@@ -1133,18 +1153,36 @@ export function buildMonsoon(ctx: JungleCtx): void {
   {
     // Each sample of the fork: the halls route's middle, its way across and
     // half width; the causeway's edges. Walls and roofs run from sample to
-    // sample following the routes as the track draws them apart.
+    // sample following the routes as the track draws them apart. Each wall
+    // is solid: an inner and an outer face, its top, a molding along its
+    // foot and a carved band under a cornice along its top, closed at its
+    // ends. The courtyard side, toward the causeway, is a colonnade: square
+    // columns under the band. The roof over each hall is a corbelled vault:
+    // a fascia over the cornice, then the slope up to its ridge, a roof comb
+    // standing along the ridge of every other hall, its ends closed by gables.
     const walls: THREE.Vector3[][] = [];
-    // (The band along the walls' top, carved: over the colonnade, all of the wall.)
     const band: THREE.Vector3[][] = [];
     const BAND = 6;
     const roofs: THREE.Vector3[][] = [];
+    const combs: THREE.Vector3[][] = [];
     const retaining: THREE.Vector3[][] = [];
+    const cols: Array<[THREE.Vector3, THREE.Vector3, THREE.Vector3, number, number]> = [];
     let maxShift = 0;
     for (let i = 0; i < n; i++) maxShift = Math.max(maxShift, track.shiftR[i]);
-    type Cut = { c: THREE.Vector3; across: THREE.Vector3; half: number; roofed: boolean; cw: { l: THREE.Vector3; r: THREE.Vector3; g0: number; g1: number } | null };
+    type Cut = { c: THREE.Vector3; across: THREE.Vector3; half: number; roofed: boolean; hall: number; cw: { l: THREE.Vector3; r: THREE.Vector3; g0: number; g1: number } | null };
     let prev: Cut | null = null;
     let run = 0;
+    let hallNo = 0;
+    let colAt = 0;
+    const T = 3.5;
+    const wallTop = (q: Cut) => q.c.y + KEEP_OUT.up + 3;
+    const ridgeOf = (q: Cut) => wallTop(q) + 2.2 + q.half * 0.62;
+    // Where a run of wall starts or ends, its end closed.
+    const cap = (q: Cut, sd: number, y0: number, y1: number) => {
+      const i0 = q.c.clone().addScaledVector(q.across, sd * q.half);
+      const o0 = q.c.clone().addScaledVector(q.across, sd * (q.half + T));
+      walls.push([i0.clone().setY(y0), o0.clone().setY(y0), o0.clone().setY(y1), i0.clone().setY(y1)]);
+    };
     for (let i = 0; i <= n; i++) {
       const j = i % n;
       if (track.median[j] < 1) {
@@ -1159,6 +1197,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
       const c = p.clone().addScaledVector(across, hall.d).setY(p.y + hall.rise);
       run += track.ds;
       const roofed = run % 72 < 52 && track.shiftR[j] > maxShift * 0.5;
+      if (roofed && !(prev && prev.roofed)) hallNo++;
       // The causeway's edges, and the ground under them.
       const cwl = ln[0];
       let cw: Cut['cw'] = null;
@@ -1167,40 +1206,73 @@ export function buildMonsoon(ctx: JungleCtx): void {
         const r = p.clone().addScaledVector(across, cwl.d + cwl.half + 2.6).setY(p.y + cwl.rise - 1.2);
         cw = { l, r, g0: land.groundAt(l.x, l.z) - 2, g1: land.groundAt(r.x, r.z) - 2 };
       }
-      const cut: Cut = { c, across, half: hall.half + KEEP_OUT.side + 2.2, roofed, cw };
+      const cut: Cut = { c, across, half: hall.half + KEEP_OUT.side + 2.2, roofed, hall: hallNo, cw };
       if (prev) {
         if (prev.roofed && cut.roofed) {
-          const T = 3.5;
-          const wallTop = (q: Cut) => q.c.y + KEEP_OUT.up + 3;
+          colAt++;
           for (const sd of [-1, 1]) {
-            // (The courtyard side, toward the causeway, is a colonnade: a pillar every few samples, and the wall over them.)
-            const open = sd < 0 && Math.floor(run / track.ds) % 3 !== 0;
-            const a0 = prev.c.clone().addScaledVector(prev.across, sd * prev.half);
-            const a1 = prev.c.clone().addScaledVector(prev.across, sd * (prev.half + T));
-            const b0 = cut.c.clone().addScaledVector(cut.across, sd * cut.half);
-            const b1 = cut.c.clone().addScaledVector(cut.across, sd * (cut.half + T));
+            // (The courtyard side, toward the causeway: a column every third sample, open between.)
+            const colonnade = sd < 0;
+            const solid = !colonnade;
+            const at = (q: Cut, off: number, y: number) => q.c.clone().addScaledVector(q.across, sd * (q.half + off)).setY(y);
             const y1a = wallTop(prev), y1b = wallTop(cut);
             const y0a = prev.c.y - 2, y0b = cut.c.y - 2;
-            for (const [a, b] of [
-              [a0, b0],
-              [a1, b1],
-            ]) {
-              if (!open) walls.push([a.clone().setY(y0a), b.clone().setY(y0b), b.clone().setY(y1b - BAND), a.clone().setY(y1a - BAND)]);
-              band.push([a.clone().setY(y1a - BAND), b.clone().setY(y1b - BAND), b.clone().setY(y1b), a.clone().setY(y1a)]);
+            const bandA = y1a - BAND, bandB = y1b - BAND;
+            // Faces (inner, outer) of the wall below the band, and the band.
+            for (const off of [0, T]) {
+              if (solid) walls.push([at(prev, off, y0a), at(cut, off, y0b), at(cut, off, bandB), at(prev, off, bandA)]);
+              band.push([at(prev, off, bandA), at(cut, off, bandB), at(cut, off, y1b), at(prev, off, y1a)]);
             }
-            walls.push([a0.clone().setY(y1a), b0.clone().setY(y1b), b1.clone().setY(y1b), a1.clone().setY(y1a)]);
-            // The corbelled vault, from the wall's top in to the ridge over the middle.
-            const ra = prev.c.clone().setY(y1a + prev.half * 0.7);
-            const rb = cut.c.clone().setY(y1b + cut.half * 0.7);
-            roofs.push([a1.clone().setY(y1a), b1.clone().setY(y1b), rb, ra]);
+            // Its top, and under the band where the colonnade is open below.
+            walls.push([at(prev, 0, y1a), at(cut, 0, y1b), at(cut, T, y1b), at(prev, T, y1a)]);
+            if (colonnade) walls.push([at(prev, 0, bandA), at(cut, 0, bandB), at(cut, T, bandB), at(prev, T, bandA)]);
+            // The molding along its foot, outside (and inside, by the road, a low plinth).
+            if (solid) {
+              const m = 1.0, mh = 2.6;
+              walls.push([at(prev, T + m, y0a), at(cut, T + m, y0b), at(cut, T + m, y0b + mh), at(prev, T + m, y0a + mh)]);
+              walls.push([at(prev, T, y0a + mh), at(cut, T, y0b + mh), at(cut, T + m, y0b + mh), at(prev, T + m, y0a + mh)]);
+            }
+            // The cornice over the band, standing out both sides: its face, top and underside.
+            for (const [off, out] of [
+              [T, 1.1],
+              [0, -0.7],
+            ] as const) {
+              const o = off + out;
+              walls.push([at(prev, o, y1a - 0.9), at(cut, o, y1b - 0.9), at(cut, o, y1b + 0.5), at(prev, o, y1a + 0.5)]);
+              walls.push([at(prev, off, y1a - 0.9), at(cut, off, y1b - 0.9), at(cut, o, y1b - 0.9), at(prev, o, y1a - 0.9)]);
+              walls.push([at(prev, off, y1a + 0.5), at(cut, off, y1b + 0.5), at(cut, o, y1b + 0.5), at(prev, o, y1a + 0.5)]);
+            }
+            if (colonnade && colAt % 3 === 1) {
+              // A column, its foot on the causeway side's ground under the hall.
+              const mid = prev.c.clone().lerp(cut.c, 0.5);
+              const acr = prev.across.clone().add(cut.across).normalize();
+              const fwd = cut.c.clone().sub(prev.c).setY(0).normalize();
+              const foot = mid.clone().addScaledVector(acr, sd * (prev.half + T / 2)).setY(Math.min(y0a, y0b));
+              cols.push([foot, acr, fwd, T, (bandA + bandB) / 2 - foot.y]);
+            }
+            // The vault: a fascia over the cornice, then the slope in to the ridge.
+            const fa = (q: Cut, y: number) => q.c.clone().addScaledVector(q.across, sd * (q.half + T + 0.4)).setY(y);
+            roofs.push([fa(prev, y1a + 0.5), fa(cut, y1b + 0.5), fa(cut, y1b + 2.2), fa(prev, y1a + 2.2)]);
+            roofs.push([fa(prev, y1a + 2.2), fa(cut, y1b + 2.2), cut.c.clone().setY(ridgeOf(cut)), prev.c.clone().setY(ridgeOf(prev))]);
+          }
+          // A roof comb along the ridge of every other hall: slabs, with gaps between (its lattice).
+          if (cut.hall % 2 === 0 && colAt % 4 !== 0) {
+            const h = 7;
+            const ra = prev.c.clone().setY(ridgeOf(prev) - 0.5), rb = cut.c.clone().setY(ridgeOf(cut) - 0.5);
+            for (const sd of [-0.6, 0.6]) {
+              const a0 = ra.clone().addScaledVector(prev.across, sd), b0 = rb.clone().addScaledVector(cut.across, sd);
+              combs.push([a0, b0, b0.clone().setY(b0.y + h), a0.clone().setY(a0.y + h)]);
+            }
+            combs.push([ra.clone().addScaledVector(prev.across, -0.6).setY(ra.y + h), rb.clone().addScaledVector(cut.across, -0.6).setY(rb.y + h), rb.clone().addScaledVector(cut.across, 0.6).setY(rb.y + h), ra.clone().addScaledVector(prev.across, 0.6).setY(ra.y + h)]);
           }
         } else if (prev.roofed !== cut.roofed) {
-          // The gable end of a hall, over its door.
+          // The gable end of a hall, over its door, and the walls' ends closed.
           const q = prev.roofed ? prev : cut;
-          const top = q.c.y + KEEP_OUT.up + 3;
-          const l = q.c.clone().addScaledVector(q.across, -q.half - 3.5).setY(top);
-          const r = q.c.clone().addScaledVector(q.across, q.half + 3.5).setY(top);
-          walls.push([l, r, q.c.clone().setY(top + q.half * 0.7), q.c.clone().setY(top + q.half * 0.7)]);
+          const top = wallTop(q) + 0.5;
+          const l = q.c.clone().addScaledVector(q.across, -q.half - T - 0.4).setY(top);
+          const r = q.c.clone().addScaledVector(q.across, q.half + T + 0.4).setY(top);
+          roofs.push([l, r, q.c.clone().setY(ridgeOf(q)), q.c.clone().setY(ridgeOf(q))]);
+          for (const sd of [-1, 1]) cap(q, sd, q.c.y - 2, wallTop(q) + 0.5);
         }
         if (prev.cw && cut.cw) {
           retaining.push([prev.cw.l.clone().setY(prev.cw.g0), cut.cw.l.clone().setY(cut.cw.g0), cut.cw.l, prev.cw.l]);
@@ -1219,8 +1291,10 @@ export function buildMonsoon(ctx: JungleCtx): void {
     };
     add(walls, 0x9a967e);
     add(band, 0x9a967e, frieze);
+    add(combs, 0x8a866e, frieze);
     add(roofs, 0x7a7662);
     add(retaining, 0xa29e86);
+    for (const [foot, acr, fwd, w, h] of cols) column(put, foot, acr, fwd, w, h, new THREE.Color(0x9a967e));
     if (pieces.length) {
       const m = new THREE.Mesh(mergeGeometries(pieces), toonMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
       m.name = 'temple halls';
@@ -1235,24 +1309,14 @@ export function buildMonsoon(ctx: JungleCtx): void {
     }
   }
 
-  // ---- the plaza at the line: paving, and a stepped temple either side ----
+  // ---- the plaza at the line: paving, and a stepped temple either side, its stair toward the road ----
   {
     const start = frameOf(160);
     const across = v3(start.r.x, 0, start.r.z).normalize();
-    const along = v3(start.t.x, 0, start.t.z).normalize();
     for (const side of [-1, 1]) {
       const c = start.p.clone().addScaledVector(across, side * 150);
-      let y = land.groundAt(c.x, c.z) - 2;
-      let w = 96;
-      for (let t = 0; t < 6; t++) {
-        const hgt = 8;
-        keep(block(c.clone().setY(y + hgt / 2), across, v3(0, 1, 0), along, w, hgt, w), new THREE.Color(0xc0baa0).multiplyScalar(t % 2 ? 0.92 : 1));
-        y += hgt;
-        w -= 13;
-      }
-      // Its shrine, and the stair up its face toward the road.
-      keep(block(c.clone().setY(y + 8), across, v3(0, 1, 0), along, w * 0.8, 16, w * 0.7), 0x9a967e);
-      keep(block(c.clone().addScaledVector(across, -side * 44).setY(land.groundAt(c.x, c.z) + 20), across, v3(0, 1, 0), along, 26, 40, 18), 0xb0aa92);
+      c.y = land.groundAt(c.x, c.z) - 2;
+      steppedPyramid(put, c, across.clone().multiplyScalar(-side), { w: 96, tiers: 6, tierH: 8, setback: 6.5, tone: new THREE.Color(0xc0baa0), comb: true });
     }
   }
 
@@ -1287,25 +1351,44 @@ export function buildMonsoon(ctx: JungleCtx): void {
       const ax = v3(Math.cos(rot), 0, Math.sin(rot));
       const az = v3(-ax.z, 0, ax.x);
       const tone = new THREE.Color(0x9a967e).multiplyScalar(0.75 + rnd() * 0.3);
+      const upv = v3(0, 1, 0);
       if (kind < 0.12) {
-        // A small stepped temple.
-        let w = size;
-        let yy = y - 2;
-        for (let t = 0; t < 4; t++) {
-          const hgt = 6 + rnd() * 3;
-          keep(block(v3(x, yy + hgt / 2, z), ax, v3(0, 1, 0), az, w, hgt, w * 0.85), tone);
-          yy += hgt;
-          w *= 0.74;
-        }
-        keep(block(v3(x, yy + 6, z), ax, v3(0, 1, 0), az, w * 0.9, 12, w * 0.6), tone.clone().multiplyScalar(0.85));
+        // A small stepped temple, its stair up one face, half ruined.
+        const tiers = 3 + Math.floor(rnd() * 2);
+        steppedPyramid(put, v3(x, y - 2, z), az, { w: size, depth: 0.9, tiers, tierH: 6 + rnd() * 3, setback: size * 0.11, tone, stair: rnd() < 0.8, shrine: rnd() < 0.75, comb: rnd() < 0.5, ruined: 0.35, rnd });
       } else if (kind < 0.5) {
-        // A broken wall or a platform.
-        if (rnd() < 0.5) keep(block(v3(x, y + 3, z), ax, v3(0, 1, 0), az, size, 8, size * 0.8), tone);
-        else keep(block(v3(x, y + 5, z), ax, v3(0, 1, 0), az, size * 1.4, 10 + rnd() * 8, 3), tone);
+        if (rnd() < 0.5) {
+          // A platform: its talud, a band, a stair up one side.
+          put(frustum(v3(x, y - 1, z), ax, az, size, size * 0.8, size - 3, size * 0.8 - 3, 6), tone, 'stone');
+          put(box(v3(x, y + 6, z), ax, upv, az, size - 2.4, 2, size * 0.8 - 2.4), tone.clone().multiplyScalar(0.88), 'carved');
+        } else {
+          // A broken wall: a molding at its foot, its top stepped down where
+          // it has fallen, and the fallen blocks at its foot.
+          const len = size * 1.4;
+          const hgt = 10 + rnd() * 8;
+          put(box(v3(x, y + 0.8, z), ax, upv, az, len + 1.4, 1.6, 4.4), tone.clone().multiplyScalar(0.85), 'stone');
+          const pieces = 3;
+          for (let k = 0; k < pieces; k++) {
+            const hk = hgt * (k === 1 ? 1 : 0.55 + rnd() * 0.35);
+            const off = (k - 1) * (len / pieces);
+            put(box(v3(x, y + hk / 2, z).addScaledVector(ax, off), ax, upv, az, len / pieces - 0.2, hk, 3), tone.clone().multiplyScalar(0.94 + k * 0.03), 'stone');
+          }
+          put(box(v3(x, y + hgt - 1.4, z), ax, upv, az, len / pieces + 0.8, 1.6, 3.8), tone.clone().multiplyScalar(0.86), 'carved');
+          for (let k = 0; k < 3; k++) {
+            const r = rnd() * Math.PI;
+            const bx = v3(Math.cos(r), 0, Math.sin(r));
+            put(box(v3(x, y + 0.9, z).addScaledVector(ax, (rnd() - 0.5) * len).addScaledVector(az, 4 + rnd() * 5), bx, upv, v3(-bx.z, 0, bx.x), 3 + rnd() * 2, 1.8, 2.4), tone.clone().multiplyScalar(0.8), 'stone');
+          }
+        }
       } else {
-        // A stela.
+        // A stela, carved, on a base, with a round altar stone before it.
         const hgt = 9 + rnd() * 8;
-        keep(block(v3(x, y + hgt / 2 - 1, z), ax, v3(0, 1, 0), az, size, hgt, 1.6), tone);
+        put(box(v3(x, y + 0.6, z), ax, upv, az, size + 1.6, 1.2, 3.4), tone.clone().multiplyScalar(0.85), 'stone');
+        put(box(v3(x, y + hgt / 2, z), ax, upv, az, size, hgt, 1.6), tone, 'carved');
+        const altar = new THREE.CylinderGeometry(2.2, 2.4, 1.6, 10).toNonIndexed();
+        altar.deleteAttribute('uv');
+        altar.translate(x + az.x * 5, y + 0.5, z + az.z * 5);
+        put(altar, tone.clone().multiplyScalar(0.9), 'carved');
       }
       placed++;
     }
@@ -1463,6 +1546,13 @@ export function buildMonsoon(ctx: JungleCtx): void {
     group.add(mesh);
     paint(mesh, 'frieze', 'limestone', 8, 9, 1.7);
   }
+  if (dark.length) {
+    // Doorways: dark in both looks (the painted look's wet rock, very dim).
+    const mesh = new THREE.Mesh(mergeGeometries(dark), toonMaterial({ color: 0xffffff }));
+    mesh.name = 'doorways';
+    group.add(mesh);
+    paint(mesh, 'cenote', 'cenote', 6, 6, 0.3);
+  }
   if (glow.length) {
     const mesh = new THREE.Mesh(mergeGeometries(glow), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
     mesh.name = 'glyphs';
@@ -1475,31 +1565,8 @@ export function buildMonsoon(ctx: JungleCtx): void {
     if (ctx.painted) ctx.plainOnly.push(mesh);
   }
 
-  // ---- the rain, round the camera ----
-  {
-    const pos: number[] = [];
-    const BOX = [260, 160, 260];
-    for (let k = 0; k < 6000; k++) {
-      const x = (rnd() - 0.5) * BOX[0];
-      const y = (rnd() - 0.5) * BOX[1];
-      const z = (rnd() - 0.5) * BOX[2];
-      pos.push(x, y, z, x + 0.6, y + 4.5, z + 0.25);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    const mat = new THREE.LineBasicMaterial({ color: 0xa8b8bc, transparent: true, opacity: 0.2, depthWrite: false, fog: true });
-    const rain = new THREE.LineSegments(g, mat);
-    rain.name = 'rain';
-    rain.frustumCulled = false;
-    rain.renderOrder = 4;
-    group.add(rain);
-    ctx.updates.push((time, camera) => {
-      const p = camera.position;
-      const fall = (time * 70) % BOX[1];
-      // Wrapped round the camera, and falling.
-      rain.position.set(Math.round(p.x / 20) * 20 - ((time * 9) % 20), Math.round(p.y / 20) * 20 - fall + BOX[1] / 2, Math.round(p.z / 20) * 20);
-    });
-  }
+  // ---- the rain, round the camera: streaks, and splashes on the road (rain.ts) ----
+  const rain = buildRain({ track, group, updates: ctx.updates, lanes: (i) => lanes(track, i) });
 
   // ---- painted: low storm clouds round the circuit (J3), each turning about the upright to face the camera ----
   const storm: Array<{ m: THREE.Mesh; mat: THREE.ShaderMaterial; dir: THREE.Vector3 }> = [];
@@ -1618,6 +1685,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
       }
       bolt.visible = v > 0.3 && !(paintedOn && strikeCard);
       ctx.flash(v * 0.9, dir);
+      rain.flash(v);
       if (strikeCard) {
         strikeCard.m.visible = paintedOn && v > 0.04;
         strikeCard.mat.uniforms.uOpacity.value = Math.min(1, v * 2.5);

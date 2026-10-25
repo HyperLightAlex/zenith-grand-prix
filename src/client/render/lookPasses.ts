@@ -314,13 +314,16 @@ const FilmShader = {
     /** Where the mechs are (InkPass.mask), and whether to use it: the lens's blur, fringe and weave leave them sharp. */
     tMech: { value: null as THREE.Texture | null },
     uMechSharp: { value: 0 },
+    /** Rain on the mechs (Monsoon Ruins): how much, and the drawing its splashes are on. */
+    uRain: { value: 0 },
+    uRainSeed: { value: 0 },
   },
   vertexShader: VERTEX,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform sampler2D tMech;
     uniform vec2 uRes, uWeave;
-    uniform float uFilm, uGrainSeed, uImpact, uStill, uStillZoom, uPaperSeed, uMechSharp;
+    uniform float uFilm, uGrainSeed, uImpact, uStill, uStillZoom, uPaperSeed, uMechSharp, uRain, uRainSeed;
     uniform vec3 uShadowGrade, uLightGrade, uLift, uInkColor, uImpactDark, uImpactLight, uImpactLine;
     varying vec2 vUv;
     ${COMMON}
@@ -385,6 +388,55 @@ const FilmShader = {
       c += gr * 0.036 * uFilm * (0.2 + min(y, 1.2));
       // Vignette.
       c *= 1.0 - 0.18 * min(uFilm, 1.5) * smoothstep(0.35, 0.95, length(to * vec2(1.3, 1.0)));
+
+      // Rain on the mechs, as the anime drew it: a pale veil of spray over
+      // a mech's top and round its sides, its top edges catching the wet
+      // light, and splashes breaking along them, drawn afresh on every
+      // drawing. From where the mechs are (the ink pass's mask).
+      if (uRain > 0.0) {
+        float sc = max(1.0, uRes.y / 720.0);
+        vec2 pm = px * sc;
+        float me = texture2D(tMech, vUv).r;
+        float below = 0.0;
+        float side = 0.0;
+        float above = 0.0;
+        for (int i = 1; i <= 6; i++) {
+          float fi = float(i);
+          float fade = 1.0 - fi / 7.0;
+          below = max(below, texture2D(tMech, vUv - vec2(0.0, pm.y * fi * 1.7)).r * fade);
+          side = max(side, max(texture2D(tMech, vUv + vec2(pm.x * fi * 1.4, 0.0)).r, texture2D(tMech, vUv - vec2(pm.x * fi * 1.4, 0.0)).r) * fade);
+          if (i <= 3) above = max(above, texture2D(tMech, vUv + vec2(0.0, pm.y * fi)).r);
+        }
+        vec3 spray = vec3(0.84, 0.9, 0.93);
+        // The veil, outside the mech: over its top most, a little round its sides, broken up.
+        float veil = (1.0 - me) * max(below, side * 0.5) * (0.65 + 0.35 * noise(vUv * uRes / (9.0 * sc) + uRainSeed));
+        c = mix(c, spray * max(luma(c) * 1.4, 0.55), veil * 0.42 * uRain);
+        // Its top edges, wet and catching the light.
+        c = mix(c, spray * 1.25, me * (1.0 - above) * 0.5 * uRain);
+        // Splashes along its top: in cells a few pixels across, a lit cell
+        // that sits on the edge (the mech at its foot, not at its middle)
+        // draws a crown of three strokes thrown up and out.
+        vec2 cellPx = vec2(9.0 * sc);
+        vec2 cell = floor(vUv * uRes / cellPx);
+        float lit = step(hash(cell + uRainSeed * 1.7), 0.32);
+        vec2 foot = (cell + vec2(0.5, 0.0)) * cellPx / uRes;
+        vec2 mid = (cell + vec2(0.5, 0.6)) * cellPx / uRes;
+        float onEdge = texture2D(tMech, foot - vec2(0.0, pm.y)).r * (1.0 - texture2D(tMech, mid).r);
+        if (lit * onEdge > 0.5) {
+          vec2 q = (vUv * uRes / cellPx - cell) - vec2(0.5, 0.0);
+          q.x += (hash(cell + 3.1 + uRainSeed) - 0.5) * 0.3;
+          float d = 1.0;
+          for (int k = -1; k <= 1; k++) {
+            vec2 tip = vec2(float(k) * 0.32, 0.75 - abs(float(k)) * 0.2);
+            vec2 pa = q - vec2(float(k) * 0.08, 0.02);
+            vec2 ba = tip - vec2(float(k) * 0.08, 0.02);
+            float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+            d = min(d, length(pa - ba * h) - 0.07);
+            d = min(d, length(q - tip * 1.25) - 0.06);
+          }
+          c = mix(c, vec3(1.15, 1.2, 1.25), step(d, 0.0) * uRain);
+        }
+      }
 
       // The painted still: the frame laid down again as a painting, the way
       // a series stopped on a held, fully painted cel at its big moments.
@@ -454,6 +506,8 @@ export interface LookPalette {
   shadowGrade: [number, number, number];
   lightGrade: [number, number, number];
   lift: [number, number, number];
+  /** Rain on the mechs (the film's veil and splashes): how much; none if absent. */
+  rain?: number;
 }
 
 export const LOOK_PALETTES: Record<string, LookPalette> = {
@@ -472,7 +526,7 @@ export const LOOK_PALETTES: Record<string, LookPalette> = {
   // Under the sea: deep teal ink, blue-green shadows, cool clear light.
   abyss: { ink: 0x06202c, shadowGrade: [0.92, 1.0, 1.06], lightGrade: [0.98, 1.03, 1.03], lift: [0.002, 0.008, 0.012] },
   // In the rain in the jungle: deep green-black ink, cool green shadows, soft grey light.
-  monsoon: { ink: 0x0c1a14, shadowGrade: [0.94, 1.0, 0.99], lightGrade: [0.99, 1.02, 1.0], lift: [0.004, 0.008, 0.007] },
+  monsoon: { ink: 0x0c1a14, shadowGrade: [0.94, 1.0, 0.99], lightGrade: [0.99, 1.02, 1.0], lift: [0.004, 0.008, 0.007], rain: 1 },
   // In orbit: blue-black ink, cold blue shadows lit by the Earth, white light.
   zenith: { ink: 0x0a0e1e, shadowGrade: [0.93, 0.97, 1.09], lightGrade: [1.02, 1.02, 1.01], lift: [0.002, 0.004, 0.01] },
 };

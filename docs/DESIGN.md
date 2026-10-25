@@ -201,8 +201,10 @@ round each other as a double helix: Abyss Line's Braid; or on a bend, so its
 inside route is the shorter way round and the tighter: Monsoon Ruins' Temple
 Halls) or hold mechs to it whatever their
 speed (the outside of Zenith Ring's band). Where a twist's road is rolled
-across its arc, the arc turns under a mech: the Möbius rolls only over its
-top third, so it turns the road about 25 degrees one way and back.
+across its arc, the arc turns under a mech: the Möbius barrel rolls the
+whole way round, but a full turn to each third of the loop, so each roll
+turns the road about 25 degrees one way and back (one slow roll over the
+whole loop turned it nearly 80).
 The builder drives a frame (forward, right, up) through the pieces, lengthens
 two straights and sets one climb so the lap closes, then resamples every 4
 units. Every sample carries its own width, wall flags, a middle wall's half
@@ -305,14 +307,25 @@ pilots carve by the line they want, so they rarely hold a carve tight: a
 person who does will reach the higher tiers far more often.)
 
 Each circuit has its own setting (Monsoon Ruins: a jungle temple city in a
-downpour under a low storm sky, lightning now and then, the rain round the
-camera; the jungle floor and the plateau east of the gorge worked out from
+downpour under a low storm sky, lightning now and then; the rain drawn as
+the anime drew it (`src/client/render/rain.ts`): streaks in three layers
+round the camera, raking in toward it at speed, crowns splashing on the
+road ahead over three drawings with rings spreading under them, the road
+wet (darker, puddles mirroring the sky, rings in them), spray thrown off
+the mechs' skates, and on the mechs a pale veil of spray over their tops
+with splashes breaking along their top edges (the film pass, from where the
+ink pass marks the mechs); the jungle floor and the plateau east of the gorge worked out from
 the road (cut down round it, banked up under it), the great pyramid stepped
 round the Stairway's ramps, the temple on its summit with the road through
 its door, the Ring standing on two pillars in the gorge, the river pouring
 off a lip of rock into the cenote, the Corkscrew on a shelf round its wall
 behind the falls, the halls roofed over the inside route of the last bend
-and the causeway's walls round the outside: `src/client/render/monsoon.ts`,
+and the causeway's walls round the outside; the temples built in the round
+(`src/client/render/monsoonTemples.ts`): stepped pyramids, each tier a
+sloping face under a carved band, a stair between balustrades and a shrine
+on top with a dark doorway and a roof comb; the halls' walls solid, with
+moldings, a carved band under a cornice, columns along the courtyard and
+gabled vaults: `src/client/render/monsoon.ts`,
 painted from sheets J1 to J4 with the painted background; Abyss Line: on the sea floor a hundred
 metres down, the road in glass tubes (one round each strand of the Braid, a
 wide one round the Twist, broken off at the Trench Leap), the trench carved

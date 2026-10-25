@@ -647,6 +647,14 @@ export class Fx {
     }
   }
 
+  /** Spray off a wet road: mist thrown up a little that hangs where it was left, and spreads. */
+  mist(at: THREE.Vector3, base: THREE.Vector3, count: number, color: number, size = 2.4, life = 0.6): void {
+    this.tmpColor.set(color);
+    for (let i = 0; i < count; i++) {
+      this.smoke.emit(at, base.x + (Math.random() - 0.5) * 5, base.y + 1 + Math.random() * 3, base.z + (Math.random() - 0.5) * 5, this.tmpColor, size * (0.7 + Math.random() * 0.6), life * (0.7 + Math.random() * 0.6), 2.6, 0);
+    }
+  }
+
   puff(at: THREE.Vector3, base: THREE.Vector3, count: number, color: number, size = 2.2, life = 1.2): void {
     this.tmpColor.set(color);
     for (let i = 0; i < count; i++) {

@@ -181,10 +181,10 @@ describe('the scenery and the road', () => {
       const track = buildTrack(def);
       const theme = themeFor(def.theme);
       const world = buildWorld(track, theme);
-      // The road's supports too (only them: the rest of the road is the road).
+      // The road's supports and the grandstands too (only them: the rest of the road is the road).
       const supports = new THREE.Group();
       buildTrackVisual(track, theme).group.traverse((o) => {
-        if (o.name === 'pylons') supports.add(o.clone());
+        if (o.name === 'pylons' || o.name === 'grandstand') supports.add(o.clone());
       });
       world.group.add(supports);
       if (def.id === 'titan' && existsSync(TITAN_MODEL)) {

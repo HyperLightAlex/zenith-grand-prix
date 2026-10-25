@@ -13,6 +13,7 @@ import { pitOf } from './pit';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
+import { KEEP_OUT, RoadIndex, inRoadSpace } from './titan/keepout';
 
 const MAX_STRIPS = 12;
 const MAX_GATES = 8;
@@ -117,6 +118,7 @@ uniform vec3 uCellColor;
 uniform float uWeapons;
 uniform float uPainted;
 uniform sampler2D uRoadMap;
+uniform float uWet;
 varying vec2 vTc;
 varying float vKappa;
 /** Half width, the half width of a fork's middle wall, and 1 where this side's edge has no barrier. */
@@ -292,6 +294,28 @@ void main() {
     glow += vec3(1.0, 0.6, 0.1) * near * box(before, 0.0, 1.2) * 2.0;
   }
   glow += vec3(1.0, 0.15, 0.25) * lip * 1.1;
+  if (uWet > 0.0) {
+    // A wet road (Monsoon Ruins): darker, a sheen of the pale sky off it
+    // toward the distance, puddles that mirror it more, and in them rings
+    // spreading where the drops land.
+    vec3 V = normalize(cameraPosition - vWorld);
+    float fres = pow(1.0 - clamp(dot(V, normalize(vNormalW)), 0.0, 1.0), 4.0);
+    vec2 pw = vWorld.xz * 0.045;
+    vec2 pi = floor(pw), pf = fract(pw);
+    pf = pf * pf * (3.0 - 2.0 * pf);
+    float pn = mix(mix(hash21(pi), hash21(pi + vec2(1.0, 0.0)), pf.x), mix(hash21(pi + vec2(0.0, 1.0)), hash21(pi + vec2(1.0, 1.0)), pf.x), pf.y);
+    float puddle = smoothstep(0.58, 0.68, pn) * (1.0 - smoothstep(uHalfW - 2.0, uHalfW, ad));
+    vec3 sky = uSkyColor * 0.95;
+    lit *= 1.0 - 0.16 * uWet;
+    lit = mix(lit, sky, (0.12 + 0.55 * puddle) * (0.25 + 0.75 * fres) * uWet);
+    vec2 rc = vWorld.xz / 1.7;
+    vec2 ci = floor(rc);
+    float ph = fract(uTime * 1.4 + hash21(ci));
+    vec2 o = vec2(hash21(ci + 7.0), hash21(ci + 13.0)) * 0.5 + 0.25;
+    float rr = length(fract(rc) - o);
+    float ring = (1.0 - smoothstep(0.0, 0.05, abs(rr - ph * 0.42))) * (1.0 - ph) * puddle * detail;
+    lit += vec3(0.75, 0.82, 0.86) * ring * 0.5 * uWet;
+  }
   lit += glow;
 
   gl_FragColor = vec4(lit, 1.0);
@@ -587,6 +611,8 @@ export function buildTrackVisual(
           uWeapons: { value: 0 },
           uPainted: { value: 0 },
           uRoadMap: { value: null },
+          // Wet in the rain.
+          uWet: { value: theme.id === 'monsoon' ? 1 : 0 },
         },
       ]),
       fog: true,
@@ -1151,6 +1177,9 @@ export function buildTrackVisual(
         frameAt(track, s + ds, f);
         return pit.groundAt(f.px + f.rx * d, f.pz + f.rz * d) < pit.rim - 1;
       });
+    // None reaching into another stretch of road's space either (where the
+    // circuit comes back past the start: Abyss Line's tubes).
+    let roads: RoadIndex | null = null;
     for (const side of [-1, 1]) {
       for (let seg = 0; seg < 4; seg++) {
         const s = -260 + seg * 130;
@@ -1161,17 +1190,25 @@ export function buildTrackVisual(
         stand.applyMatrix4(tilt);
         trackMatrix(track, s, side * (hw + 20), 13, side > 0 ? -Math.PI / 2 : Math.PI / 2, m);
         stand.applyMatrix4(m);
-        group.add(stand);
         const base = new THREE.Mesh(new THREE.BoxGeometry(120, 30, 20), backMat);
         base.applyMatrix4(new THREE.Matrix4().makeTranslation(0, -10, -12));
         base.applyMatrix4(m);
-        group.add(base);
-        swapMaterial(base, baseMat);
         const roof = new THREE.Mesh(new THREE.BoxGeometry(124, 1.2, 26), roofMat);
         roof.applyMatrix4(new THREE.Matrix4().makeRotationX(0.12));
         roof.applyMatrix4(new THREE.Matrix4().makeTranslation(0, 17, -8));
         roof.applyMatrix4(m);
-        group.add(roof);
+        roads ??= new RoadIndex(track);
+        // (Down to the slab under a deck, too.)
+        const placed = (o: THREE.Mesh) => {
+          o.updateMatrix();
+          return o.geometry.clone().applyMatrix4(o.matrix).toNonIndexed();
+        };
+        if ([stand, base, roof].some((o) => inRoadSpace(roads!, placed(o), 2, KEEP_OUT.up, 8))) continue;
+        for (const o of [stand, base, roof]) {
+          o.name = 'grandstand';
+          group.add(o);
+        }
+        swapMaterial(base, baseMat);
       }
     }
   }

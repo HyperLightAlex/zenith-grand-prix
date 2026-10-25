@@ -190,6 +190,8 @@ export class RaceView {
 
   /** Colour of the dust a landing kicks up: red sand in the canyon, cloud white up high. */
   private readonly dust: number;
+  /** A wet circuit (Monsoon Ruins' downpour): the mechs throw spray off the road. */
+  private readonly wet: boolean;
 
   /** Each race team's livery: the factions racing (in a Sprint, a pilot flying for none wears the league's in their colour). */
   readonly liveries: Livery[];
@@ -206,6 +208,7 @@ export class RaceView {
     const race = session.race;
     this.liveries = teamLooks(race, factions).map((t) => t.livery);
     this.dust = DUST[session.track.def.theme ?? 'meridian'] ?? DUST.meridian;
+    this.wet = session.track.def.theme === 'monsoon';
     this.focusId = session.localId >= 0 ? session.localId : 0;
     this.mechIds = previewOnly ? [this.focusId] : race.mechs.map((m) => m.id);
     this.solo = previewOnly;
@@ -547,6 +550,18 @@ export class RaceView {
         if (m.snareT > 0 && !m.retired && !look.on) {
           trackPoint(track, v.s, v.d, 3 + Math.random() * 3, v1);
           this.fx.burst(v1, v.vel, 1, 10, COLORS.snare, 0.3, 0.3);
+        }
+        if (this.wet && !m.retired && m.speed > 25 && v.h < 3) {
+          // Spray off the wet road: a little mist thrown up behind, left
+          // hanging as the mech goes, and drops flung back off its skates;
+          // more the faster it goes.
+          trackPoint(track, v.s, v.d + (Math.random() - 0.5) * 2.5, 0.8, v1);
+          v3.copy(v.vel).multiplyScalar(0.45);
+          if (Math.random() < 0.2 + sf * 0.45) this.fx.mist(v1, v3, 1, 0xe4ecee, 1.0 + sf * 1.1, 0.38);
+          v.rig.heels[Math.random() < 0.5 ? 0 : 1].getWorldPosition(v1);
+          trackDir(track, v.s, -0.6, (Math.random() - 0.5) * 0.8, v2);
+          v2.y += 0.5;
+          this.fx.spray(v1, v3, v2, 1 + Math.round(sf * 2), 8 + sf * 10, 0xeef4f6, 0.24, 0.3);
         }
       }
       if (m.retired || m.hp < m.maxHp * 0.25) {
