@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`) but Abyss Line's, which are to be made.
+Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`) but Abyss Line's and Monsoon Ruins', which are to be made.
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -649,4 +649,87 @@ SHEET A1B: THE WATER, THE HALF FACING AWAY (make it after A1, with A1 attached)
 - Same size, style and palette as A1, the eye-level line at exactly the same height, the same flat deep water below it and the same pale aqua along the top edge.
 - The other half of the water, behind the viewer, facing away from the sun. Its left edge must continue seamlessly from A1's right edge, and its right edge seamlessly into A1's left edge, so the two side by side make the whole round.
 - No bright patch of the sun here: the surface above still rippling and bright but evener, fainter shafts of light coming down at a slant from the A1 side, the water a little deeper blue-green, more marine snow.
+```
+
+## Monsoon Ruins
+
+A racing circuit through a jungle temple city in a monsoon downpour: a low
+sky of dark rolling cloud with rain hanging from it in curtains, lightning
+now and then, the light grey and green under it and no sun; the jungle
+dense and dripping, a great stepped pyramid with the road zigzagging up its
+face, a stone ring standing in the gorge beyond its summit, a river on the
+plateau pouring into a round sinkhole (the cenote), temple halls and a
+raised causeway, everything wet. Its sky is the storm: the half facing
+where the sun would be, a little paler behind the cloud, and the half facing
+away, darker, with lightning. Its horizon is the jungle and the ruins far off
+in the rain; its cards are low storm clouds; its surfaces are the jungle
+floor, the pyramid's limestone, carved glyphs, the cenote's wet rock, the
+plaza's paving and the canopy. Its board along the track and the sign over
+the road at the foot of the Stairway are on track sheet T9
+(`art/track-sheets`).
+
+| Sheet | File |
+|---|---|
+| J1 Storm sky, facing the light | bg-j1-sky.png |
+| J1B Storm sky, facing away | bg-j1b-sky.png |
+| J2 Horizon | bg-j2-horizon.png |
+| J3 Storm clouds | bg-j3-clouds.png |
+| J4 Surfaces | bg-j4-surfaces.png |
+
+```
+ZENITH GP: CIRCUIT BACKGROUNDS. MONSOON RUINS (five sheets; make them one at a time, in order J1, J2, J3, J4, then J1B with J1 attached, each as its own image)
+
+The setting: a racing circuit through an ancient jungle temple city in a monsoon downpour: the road climbs in steep switchbacks up the face of a great stepped pyramid, launches off its summit through a giant ring of carved stone over a gorge, runs along a river on a plateau to where it pours into a round sinkhole, corkscrews down round the sinkhole's wall behind the waterfall, and comes home through roofed temple halls and along a raised stone causeway. A low sky of heavy, dark rolling cloud, rain falling in sheets, lightning now and then; no sun. The game draws the road, the mechs, the pyramid, the ring, the halls and the jungle near the road; these sheets are the painted sky, the far scenery, the clouds and the surfaces around them.
+
+STYLE, ALL SHEETS
+- Background art from a 1980s Japanese TV mecha anime, the jungle and storm episodes, painted by hand the way the background department did it: poster colour (gouache) on illustration board, the sky airbrushed in smooth gradients, everything else painted in a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture. Rain painted the way those backgrounds painted it: fine, straight, slanting strokes of pale grey over the scene, and grey curtains hanging from the cloud in the distance.
+- No ink outlines anywhere; background paintings had none.
+- Distance shown the way rain shows it: the further away, the more it fades into the grey-green of the rain haze, losing its colour first and then its shape.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, depth-of-field blur, film grain or noise (the game adds its own grain and glow).
+- Nothing but scenery: no people, animals, mechs, vehicles, text, numbers, labels, logos, borders, signatures or watermarks.
+- Palette: storm slate #262E33 high in the sky, cloud grey #4C5A5C, the haze at the horizon grey-green #8E9C98, cloud bellies dark slate #1E2428 with paler tops #6E7A78, rain grey #A8B8BC, lightning blue-white #E8ECFF, jungle canopy deep green #2F5A2A to #55803A with wet highlights #8AA868, the jungle's shadows #1A2A18, limestone pale grey-ochre #C8C2A6 with moss #6A7C48 and wet dark streaks #5A5646, the river and pools grey-teal #4A6E5C, mud #5A4A34.
+- Every sheet is 1536x1024, landscape.
+
+SHEETS 2 AND 3 ARE CUT OUT BY THE GAME
+- Paint them on perfectly flat pure magenta, #FF00FF: no shading, texture, gradient, glow or shadow on the magenta. (Not green: the jungle is green.)
+- Nothing in the art itself may be magenta, pink or purple, or close to them: the lightning stays blue-white, nothing violet.
+- Crisp edges against the magenta, with no soft halo.
+
+SHEET J1: STORM SKY, THE HALF FACING THE LIGHT (full bleed, no magenta)
+- Half the sky all round the viewer, the half facing where the sun would be, unrolled into one painting from the horizon at the bottom to straight overhead at the top edge. Its left edge should also continue seamlessly into its right edge.
+- A perfectly straight, level line exactly three quarters of the way down (768 px from the top) is the horizon. Below it, only flat grey-green haze (#8E9C98); paint nothing there.
+- A low, heavy ceiling of storm cloud over all of it: big rolling masses with dark bellies and paler grey tops, painted the way a cel background painter painted storm cloud: defined, billowing shapes in three or four flat tones, separated crisply; no wispy, see-through or blurred edges.
+- No sun disc: in the middle of the image, about a quarter of the way up, the cloud a little thinner and paler, a soft brighter patch where the sun is hidden behind it.
+- Grey curtains of rain hanging from the cloud base down to the horizon here and there, and fine slanting rain over everything.
+- The top edge is the cloud's even dark slate (#262E33) across the full width.
+
+SHEET J2: HORIZON (three strips on magenta)
+- Three separate horizontal strips stacked top to bottom with magenta between them. Each runs the full width of the image and is about 260 px tall.
+- Each strip's bottom edge is a perfectly straight, level line (it stands on the ground), with the strip filled solid down to it. Each strip repeats: its left end must continue seamlessly into its right end.
+- Top strip, farthest: a range of steep, forested mountains half lost in the rain, pale grey-green, very low contrast, cloud lying along their tops.
+- Middle strip: rolling jungle hills with the tops of ruined temples and stepped pyramids rising out of the canopy here and there, softened by the rain haze.
+- Bottom strip, nearest: the edge of the jungle: tall rainforest trees with buttressed trunks and broad crowns, palms and hanging vines, dark and dripping, a few broken stone walls at their feet.
+
+SHEET J3: STORM CLOUDS (six cards on magenta)
+- Six separate low storm clouds, one in each cell of an invisible 3x2 grid (cells 512x512), each centred in its cell and filling about 80% of it without touching the cell's edges or another one.
+- Lit dimly from above through the overcast: dark slate bellies, paler grey tops, the tones separated crisply as a cel background painter would, with only a little soft blending inside each tone.
+- 1, 2 and 3: low ragged rain clouds, wide and heavy, each with a grey curtain of rain hanging from its belly, the curtain's bottom edge straight and level.
+- 4: a towering storm cloud, its top spreading into an anvil.
+- 5: a long, low roll of cloud, wider than it is tall.
+- 6: a storm cloud lit from inside by lightning, its middle glowing blue-white, a short forked bolt coming out of its belly.
+
+SHEET J4: SURFACES (six tiling squares, full bleed)
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge must continue into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective) and evenly lit, with no cast shadows across it, no glow and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats. Everything wet.
+- 1, top left: the jungle floor seen from straight above: dark leaf litter, mud, ferns and roots, small puddles catching a little grey light.
+- 2, top middle: the pyramid's limestone: large weathered blocks in courses, pale grey-ochre, moss in the joints, dark wet streaks running down.
+- 3, top right: a carved frieze: a band of stone glyphs and stylised faces in low relief, worn and mossy, pale limestone.
+- 4, bottom left: the cenote's wall: dark wet rock in rough layers, ferns and hanging moss growing from its ledges.
+- 5, bottom middle: the plaza's paving: big worn stone slabs, grass and moss in the cracks, shallow puddles.
+- 6, bottom right: the jungle canopy seen from straight above: a dense mass of rounded crowns in many greens, glistening with rain.
+
+SHEET J1B: STORM SKY, THE HALF FACING AWAY (make it after J1, with J1 attached)
+- Same size, style and palette as J1, the horizon at exactly the same height, the same flat grey-green haze below it and the same dark slate along the top edge.
+- The other half of the sky, behind the viewer, facing away from the light. Its left edge must continue seamlessly from J1's right edge, and its right edge seamlessly into J1's left edge, so the two side by side make the whole sky round.
+- No brighter patch here: darker, heavier cloud, more rain curtains, and one far-off lightning bolt forking down from the cloud to the horizon, blue-white.
 ```

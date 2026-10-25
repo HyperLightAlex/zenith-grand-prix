@@ -471,6 +471,8 @@ export const LOOK_PALETTES: Record<string, LookPalette> = {
   titan: { ink: 0x1c1a2a, shadowGrade: [0.96, 0.96, 1.05], lightGrade: [1.05, 1.02, 0.95], lift: [0.006, 0.006, 0.008] },
   // Under the sea: deep teal ink, blue-green shadows, cool clear light.
   abyss: { ink: 0x06202c, shadowGrade: [0.92, 1.0, 1.06], lightGrade: [0.98, 1.03, 1.03], lift: [0.002, 0.008, 0.012] },
+  // In the rain in the jungle: deep green-black ink, cool green shadows, soft grey light.
+  monsoon: { ink: 0x0c1a14, shadowGrade: [0.94, 1.0, 0.99], lightGrade: [0.99, 1.02, 1.0], lift: [0.004, 0.008, 0.007] },
   // In orbit: blue-black ink, cold blue shadows lit by the Earth, white light.
   zenith: { ink: 0x0a0e1e, shadowGrade: [0.93, 0.97, 1.09], lightGrade: [1.02, 1.02, 1.01], lift: [0.002, 0.004, 0.01] },
 };

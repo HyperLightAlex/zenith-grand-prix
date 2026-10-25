@@ -27,8 +27,8 @@ export interface Theme {
   fogDensity: number;
   /** The aurora's curtains in the plain sky: how bright (0 or absent: none). */
   aurora?: number;
-  /** What the circuit stands on, and how far down it is ('orbit': nothing; the sky is space, with the Earth below. 'seabed': the sea floor, the sky is the sea). */
-  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice' | 'wreck' | 'orbit' | 'seabed';
+  /** What the circuit stands on, and how far down it is ('orbit': nothing; the sky is space, with the Earth below. 'seabed': the sea floor, the sky is the sea. 'jungle': the jungle floor and the plateau over it, under a storm). */
+  ground: 'sea' | 'desert' | 'clouds' | 'pit' | 'ice' | 'wreck' | 'orbit' | 'seabed' | 'jungle';
   groundY: number;
   groundDeep: number;
   groundLight2: number;
@@ -221,6 +221,34 @@ export const THEMES: Record<string, Theme> = {
     groundLight2: 0xcfc6a2,
     ridge: 0x0f3a50,
     cloudShade: 0x2a6a80,
+    clouds: 0,
+  },
+  // A jungle in a downpour: a low sky of dark rolling cloud, the light grey
+  // and green under it, no sun; rain haze swallowing everything past a
+  // kilometre or so; lightning now and then (monsoon.ts).
+  monsoon: {
+    id: 'monsoon',
+    sunLight: 0xc4d4cc,
+    sunIntensity: 0.9,
+    skyLight: 0xa8bcb6,
+    groundLight: 0x34452e,
+    hemiIntensity: 1.55,
+    skyZenith: 0x262e33,
+    skyMid: 0x4c5a5c,
+    skyHorizon: 0x8e9c98,
+    halo: [0.5, 0.55, 0.52],
+    disc: [0.42, 0.48, 0.47],
+    discGlow: [0.12, 0.13, 0.12],
+    cirrus: [0.5, 0.55, 0.55],
+    cirrusAmount: 0,
+    fog: 0x7a8985,
+    fogDensity: 0.00042,
+    ground: 'jungle',
+    groundY: 0,
+    groundDeep: 0x24361f,
+    groundLight2: 0x5c7a3a,
+    ridge: 0x3a4842,
+    cloudShade: 0x48524f,
     clouds: 0,
   },
   // In orbit: black sky and hard white sunlight, the Earth filling the sky

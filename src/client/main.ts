@@ -22,7 +22,7 @@ import { installFrame, video } from './video';
 //   &mute=1         no sound                      ?debug=mechs  model viewer
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   ?sprint=0..4    jump straight into a Sprint in this format (single race, 3 races, 5 races, first to 2 wins, first to 3)
-//   &track=canyon   circuit: meridian, canyon, helios, crucible, frostline, titan, abyss or zenith
+//   &track=canyon   circuit: meridian, canyon, helios, crucible, frostline, titan, abyss, monsoon or zenith
 //   &music=suno     race music from a recorded song where a circuit has one
 //                   (Meridian), built up lap by lap: see src/client/audio/song.ts
 //   &sunhawk=current|updated|game   model comparison; B cycles without restarting

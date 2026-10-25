@@ -21,6 +21,10 @@ import {
   LANDING_AIR_TICKS,
   MERIDIAN,
   MODE,
+  MONSOON_RUINS,
+  CORKSCREW,
+  STAIRWAY,
+  STONE_RING,
   PHASE,
   TITANS_REST,
   TRACKS,
@@ -52,9 +56,9 @@ import { pitOf } from '../src/client/render/pit';
 import { frameAt, makeFrame } from '../src/sim/track';
 import { findNonFinite, hash, makeSeats, snapshot } from './helpers';
 
-const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ABYSS_LINE, ZENITH_RING];
+const CIRCUITS: CircuitDef[] = [CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ABYSS_LINE, MONSOON_RUINS, ZENITH_RING];
 /** The circuits with a fork. */
-const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE, TITANS_REST, ABYSS_LINE, ZENITH_RING];
+const FORKED: CircuitDef[] = [CANYON, HELIOS, FROSTLINE, TITANS_REST, ABYSS_LINE, MONSOON_RUINS, ZENITH_RING];
 const BUILT = new Map<string, Track>(CIRCUITS.map((d) => [d.id, buildTrack(d)]));
 const track = (def: CircuitDef) => BUILT.get(def.id)!;
 
@@ -75,7 +79,7 @@ const openRuns = (t: Track) => runs(t, (i) => !t.wallL[i] && !t.wallR[i] && t.ro
 
 describe('the circuit list', () => {
   it('has Meridian first, then the 3D circuits, each found by id', () => {
-    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan', 'abyss', 'zenith']);
+    expect(TRACKS.map((d) => d.id)).toEqual(['meridian', 'canyon', 'helios', 'crucible', 'frostline', 'titan', 'abyss', 'monsoon', 'zenith']);
     for (const d of TRACKS) expect(trackById(d.id)).toBe(d);
     // An unknown id falls back to Meridian rather than failing.
     expect(trackById('nowhere')).toBe(MERIDIAN);
@@ -166,15 +170,22 @@ describe.each(CIRCUITS)('$name: geometry', (def) => {
     expect(gaps(t).length).toBeGreaterThanOrEqual(1);
     expect(t.forks.length).toBe(FORKED.includes(def) ? 1 : 0);
     expect(t.pads.length).toBeGreaterThanOrEqual(2);
-    // Loops and corkscrews hold mechs on, and somewhere the road is upside down.
+    // Loops and corkscrews hold mechs on, and somewhere the road is upside
+    // down; but not in the rain at Monsoon Ruins, whose road keeps its
+    // feet on the ground (its features climb, fly and wind instead).
     let mag = 0;
     let minUp = 1;
     for (let i = 0; i < t.n; i++) {
       mag += t.mag[i];
       minUp = Math.min(minUp, t.upY[i]);
     }
-    expect(mag).toBeGreaterThan(20);
-    expect(minUp).toBeLessThan(-0.9);
+    if (def === MONSOON_RUINS) {
+      expect(mag).toBe(0);
+      expect(minUp).toBeGreaterThan(0.9);
+    } else {
+      expect(mag).toBeGreaterThan(20);
+      expect(minUp).toBeLessThan(-0.9);
+    }
     if (def === CANYON) expect(openRuns(t).length).toBeGreaterThanOrEqual(1);
   });
 
@@ -973,6 +984,160 @@ describe('Abyss Line', () => {
   });
 });
 
+describe('Monsoon Ruins', () => {
+  const def = MONSOON_RUINS;
+  const t = track(def);
+  const starts = pieceStarts(def);
+  const piece = (name: string): [number, number] => {
+    const i = def.pieces.findIndex((p) => p.name === name);
+    if (i < 0) throw new Error(`no piece ${name}`);
+    return [starts[i], i + 1 < starts.length ? starts[i + 1] : t.length];
+  };
+  const at = (s: number) => Math.floor(wrapS(t, s) / t.ds) % t.n;
+  /** The plan heading at s, radians. */
+  const heading = (s: number) => Math.atan2(t.tz[at(s)], t.tx[at(s)]);
+
+  it('climbs the Stairway: three steep ramps zigzagging up, two hairpins between, onto the summit, the highest level road', () => {
+    const ramps = ['the Stairway', 'second ramp', 'top ramp'].map(piece);
+    // The ramps run one way, back, and the first way again; each climbs steeply.
+    const dirs = ramps.map(([a, b]) => heading((a + b) / 2));
+    expect(Math.cos(dirs[0] - dirs[1])).toBeLessThan(-0.99);
+    expect(Math.cos(dirs[0] - dirs[2])).toBeGreaterThan(0.99);
+    for (const [a, b] of ramps) {
+      const grade = (t.py[at(b - 2)] - t.py[at(a + 2)]) / (b - a);
+      expect(grade).toBeGreaterThan(0.1);
+    }
+    // The hairpins: tight, of their radius.
+    for (const name of ['first hairpin', 'second hairpin']) {
+      const [a, b] = piece(name);
+      const k = Math.abs(t.kappa[at((a + b) / 2)]);
+      expect(1 / k).toBeGreaterThan(STAIRWAY.hairpin - 3);
+      expect(1 / k).toBeLessThan(STAIRWAY.hairpin + 3);
+    }
+    // Up and up, never down, from the foot of the Stairway to the summit.
+    const [s0] = piece('the Stairway');
+    const [s1, s2] = piece('the summit');
+    for (let s = s0 + 8; s < s1; s += 8) expect(t.py[at(s)]).toBeGreaterThanOrEqual(t.py[at(s - 8)] - 0.01);
+    let top = -Infinity;
+    for (let i = 0; i < t.n; i++) if (Math.abs(t.ty[i]) < 0.01 && t.roadL[i]) top = Math.max(top, t.py[i]);
+    expect(t.py[at((s1 + s2) / 2)]).toBeCloseTo(top, 0);
+  });
+
+  const [g0, g1] = (() => {
+    const [p0, p1] = piece('gap');
+    return gaps(t).find(([a, b]) => a < p1 && b > p0)!;
+  })();
+
+  it('clears the Summit Leap at the formation-lap limiter off the summit pad; well short of it, it falls into the gorge', () => {
+    const run = (limiter: number) => {
+      const race = createRace(t, { seed: 1, seats: makeSeats('all'), rules: { limiter1: limiter } });
+      const inputs = race.mechs.map(() => emptyInput());
+      while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
+      place(race, t, 0, g0 - 70, 0, limiter);
+      race.mechs.forEach((o, k) => {
+        if (k) o.s = wrapS(t, g0 - 2500 - k * 30);
+      });
+      inputs[0].throttle = 1;
+      let landed = -1;
+      let fell = false;
+      for (let i = 0; i < 600 && landed < 0 && !fell; i++) {
+        stepRace(race, t, inputs);
+        for (const e of race.events) {
+          if (e.type === 'land' && e.mech === 0 && race.mechs[0].s > g0) landed = race.mechs[0].s;
+          if (e.type === 'fall' && e.mech === 0) fell = true;
+        }
+      }
+      return { landed, fell };
+    };
+    const lap1 = run(110);
+    expect(lap1.fell).toBe(false);
+    expect(lap1.landed).toBeGreaterThan(g1);
+    expect(run(75).fell).toBe(true);
+  });
+
+  it('flies the Leap through the middle of the Ring at any pace that clears it, the road\'s space inside its stone', () => {
+    // The Ring: square to the road over the middle of the gap, lifted over the arc.
+    const f = frameAt(t, (g0 + g1) / 2, makeFrame());
+    const c = [f.px + f.ux * STONE_RING.lift, f.py + f.uy * STONE_RING.lift, f.pz + f.uz * STONE_RING.lift];
+    const inner = STONE_RING.radius - 3.6;
+    // The road's space there (its width and a margin, from its deck to 18 over it) lies inside the stone.
+    for (const d of [-1, 1]) for (const h of [-0.5, 18]) {
+      const x = f.rx * d * (t.hw[at((g0 + g1) / 2)] + 3.8) + f.ux * (h - STONE_RING.lift);
+      const y = f.ry * d * (t.hw[at((g0 + g1) / 2)] + 3.8) + f.uy * (h - STONE_RING.lift);
+      const z = f.rz * d * (t.hw[at((g0 + g1) / 2)] + 3.8) + f.uz * (h - STONE_RING.lift);
+      expect(Math.hypot(x, y, z)).toBeLessThan(inner);
+    }
+    // Off the lip at 100 to 160, in free flight: through the Ring's plane well inside it.
+    const lip = frameAt(t, g0, makeFrame());
+    for (const v of [100, 110, 130, 160]) {
+      let p = [lip.px, lip.py, lip.pz];
+      let w = [lip.tx * v, lip.ty * v, lip.tz * v];
+      const side = (q: number[]) => (q[0] - c[0]) * f.tx + (q[1] - c[1]) * f.ty + (q[2] - c[2]) * f.tz;
+      let crossed = false;
+      for (let k = 0; k < 400 && !crossed; k++) {
+        const next = [p[0] + w[0] / 120, p[1] + w[1] / 120, p[2] + w[2] / 120];
+        w = [w[0], w[1] - 45 / 120, w[2]];
+        if (side(p) < 0 && side(next) >= 0) {
+          crossed = true;
+          expect(Math.hypot(next[0] - c[0], next[1] - c[1], next[2] - c[2])).toBeLessThan(inner - 8);
+        }
+        p = next;
+      }
+      expect(crossed).toBe(true);
+    }
+  });
+
+  it('winds the Waterfall Corkscrew twice round the cenote, tightening, down its drop', () => {
+    const [a, b] = piece('the Waterfall Corkscrew');
+    const f = frameAt(t, a + 1, makeFrame());
+    const l = Math.hypot(f.rx, f.rz);
+    const c = [f.px + (f.rx / l) * CORKSCREW.r0, f.pz + (f.rz / l) * CORKSCREW.r0];
+    let turned = 0;
+    let prev = Math.atan2(t.pz[at(a)] - c[1], t.px[at(a)] - c[0]);
+    for (let s = a + 4; s <= b; s += 4) {
+      const i = at(s);
+      const r = Math.hypot(t.px[i] - c[0], t.pz[i] - c[1]);
+      expect(r).toBeGreaterThan(CORKSCREW.r1 - 2);
+      expect(r).toBeLessThan(CORKSCREW.r0 + 2);
+      const ang = Math.atan2(t.pz[i] - c[1], t.px[i] - c[0]);
+      let d = ang - prev;
+      d -= Math.round(d / (2 * Math.PI)) * 2 * Math.PI;
+      turned += d;
+      prev = ang;
+    }
+    expect(Math.abs(turned * 180) / Math.PI).toBeCloseTo(CORKSCREW.degrees, -1);
+    expect(t.py[at(a)] - t.py[at(b)]).toBeCloseTo(CORKSCREW.drop, 0);
+    // Each turn clear of the one below it.
+    expect(t.py[at(a + (b - a) * 0.25)] - t.py[at(a + (b - a) * 0.75)]).toBeGreaterThan(40);
+  });
+
+  it('forks on the last bend: the halls on its inside, shorter, with the gate and a strip; the causeway round the outside with the pads', () => {
+    const fork = t.forks.find((fk) => fk.s0 > piece('closing A')[0])!;
+    expect(fork).toBeTruthy();
+    // The bend turns right, so the right route is its inside.
+    const [b0, b1] = piece('the Temple Halls');
+    const bend = def.pieces[def.pieces.findIndex((p) => p.name === 'the Temple Halls') + 1];
+    expect('turn' in bend && bend.turn[1] > 0).toBe(true);
+    expect(fork.right.gates).toBe(1);
+    expect(fork.right.strips).toBe(1);
+    expect(fork.right.pads).toBe(0);
+    expect(fork.left.pads).toBe(2);
+    expect(fork.left.gates).toBe(0);
+    // Round the middle of each route, the halls' way is the shorter.
+    let left = 0;
+    let right = 0;
+    for (let s = fork.s0; s < fork.s1; s += t.ds) {
+      const i = at(s);
+      const mid = (t.hw[i] + t.median[i]) / 2;
+      left += t.ds * (1 + t.kappa[i] * mid);
+      right += t.ds * (1 - t.kappa[i] * mid);
+    }
+    expect(right).toBeLessThan(left - 40);
+    void b0;
+    void b1;
+  });
+});
+
 describe('Zenith Ring', () => {
   const def = ZENITH_RING;
   const t = track(def);
@@ -1130,7 +1295,8 @@ describe('speed pads', () => {
 
 describe('loops and corkscrews', () => {
   it('hold a mech to the road all the way round, even at a crawl', () => {
-    for (const def of CIRCUITS) {
+    // (Every circuit but Monsoon Ruins, which has none.)
+    for (const def of CIRCUITS.filter((d) => d !== MONSOON_RUINS)) {
       const t = track(def);
       const held = runs(t, (i) => t.mag[i] === 1 && t.upY[i] < 0)[0];
       expect(held, def.name).toBeDefined();

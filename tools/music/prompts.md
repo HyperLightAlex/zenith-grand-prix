@@ -22,6 +22,7 @@ build matches its mastering).
 | Frostline race | Aurora Dash (asked for as 極光ライン, Aurora Line) | C# minor and E major, ends in C# major, 150 BPM | in the game (stems only; it came back in another key and without the key change, so it has no finale) |
 | Titan's Rest race | White Desert Charge (asked for as 巨神の眠り, The Sleeping Giant) | C minor (C major last section), ~140 BPM | in the game (stems only; lap 3 goes to its last section) |
 | Abyss Line race | 深海ライン (Deep Sea Line) | F minor (F# minor last chorus), 132 BPM | to be made |
+| Monsoon Ruins race | 雷雨の神殿 (Temple in the Thunderstorm) | B♭ minor (B minor last chorus), 146 BPM | to be made |
 | Zenith Ring race | 天頂の環 (The Ring at the Zenith) | B minor (C# minor last chorus), 158 BPM | to be made |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
@@ -42,7 +43,8 @@ step up (Canyon) or a build and drop (Helios). Keep the lead on one
 instrument: vocal chops and choirs get carved out of the other stems and
 tangle them. Export the stems and the full song as WAVs. The circuits'
 songs so far are in A, G, E, D, C# and C minor, so a new one takes another
-key (Zenith Ring's is asked for in B minor, Abyss Line's in F minor).
+key (Zenith Ring's is asked for in B minor, Abyss Line's in F minor,
+Monsoon Ruins' in B♭ minor).
 
 ## Frostline race
 
@@ -144,6 +146,41 @@ Lyrics (structure only):
 [Pre-Chorus]
 [Chorus]
 [Bridge: electric piano and guitar arpeggios over the beat, the drums keep going]
+[Final Chorus: key change up a semitone, everything in]
+[Outro: cadence onto a final hit]
+```
+
+## Monsoon Ruins race
+
+The eighth circuit: a race through a jungle temple city in a monsoon
+downpour: steep switchbacks up the face of a great stepped pyramid, a launch
+off its summit through a ring of carved stone, down a corkscrew round a
+waterfall in a sinkhole, and home through the temple halls. Primal and
+driving, the most percussive of them: pounding drums like the storm, wood
+and marimba ostinatos like rain on stone, thunder in the low end, an
+adventurous synth hook over it all. Lap 3 is the last chorus a semitone up.
+
+Title: 雷雨の神殿 (Temple in the Thunderstorm)
+
+Styles:
+
+```
+1980s mecha anime racing BGM, instrumental, 146 BPM, B-flat minor, urgent and primal, a biting analog synth lead carrying an adventurous hook, pounding tribal toms and big taiko-like drums, punchy gated reverb snare, marimba and wood-block ostinatos, slap bass, crunchy rhythm guitar, shimmering rain-like synth arpeggios, deep timpani rolls and rumbling low drones like thunder, a race up a jungle pyramid and down a waterfall in a monsoon storm, driving and adventurous, tight modern mix
+```
+
+Exclude: `vocals, choir, chanting, flute`
+
+Lyrics (structure only):
+
+```
+[Intro: full band from the first bar, the hook on the synth lead over the drums]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Bridge: marimba and drums, a thunder roll, the beat keeps going]
 [Final Chorus: key change up a semitone, everything in]
 [Outro: cadence onto a final hit]
 ```

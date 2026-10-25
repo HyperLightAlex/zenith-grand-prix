@@ -8,6 +8,7 @@ import { paintedSignMaterial, paintedSurfaceMaterial, paintedTexture, paintedTra
 import { frostOf } from './frost';
 import { titanGroundOf } from './titan/asset';
 import { abyssOf } from './abyss';
+import { monsoonOf } from './monsoon';
 import { pitOf } from './pit';
 import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
@@ -806,7 +807,8 @@ export function buildTrackVisual(
   const frost = frostOf(track);
   const titan = titanGroundOf(track);
   const abyss = abyssOf(track);
-  const groundAt = (x: number, z: number) => (pit ? pit.groundAt(x, z) : frost ? frost.groundAt(x, z) : abyss ? abyss.groundAt(x, z) : theme.groundY);
+  const jungle = monsoonOf(track);
+  const groundAt = (x: number, z: number) => (pit ? pit.groundAt(x, z) : frost ? frost.groundAt(x, z) : abyss ? abyss.groundAt(x, z) : jungle ? jungle.groundAt(x, z) : theme.groundY);
   {
     const spacing = 30; // samples
     const spots: Array<[number, number]> = [];

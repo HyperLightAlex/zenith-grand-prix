@@ -16,6 +16,7 @@ background sheets in `art/bg-sheets`.
 | T6 Titan's Rest | Its board on green, in T3's design, and the sign over the road onto the titan's hand | Its board along its track, and the sign where the road climbs onto the titan |
 | T7 Zenith Ring | Its board on green, in T3's design, and the sign over the road into the Ring | Its board along its track, and the sign where the road goes into the Ring |
 | T8 Abyss Line | Its board on green, in T3's design, and the sign over the road into the town | Its board along its track, and the sign where the road comes in under the town's dome |
+| T9 Monsoon Ruins | Its board on green, in T3's design, and the sign over the road at the foot of the Stairway | Its board along its track, and the sign on the gateway where the road starts up the pyramid |
 
 What stays as the game draws it: the lane lines, edge lines, kerbs, chevrons,
 the start line and grid boxes, the charge strips, speed pads, cell gates,
@@ -34,6 +35,7 @@ stay crisp and bright, so the paintings go underneath them, never over them.
 | T5 Frostline | track-t5-frostline.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the aurora's arcs in cyan and violet), cut cleanly. The board came out 3.12:1 and the sign 4.14:1 |
 | T7 Zenith Ring | track-t7-zenith.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the ring station over the Earth's edge), cut cleanly. The board came out 2.39:1 and the sign 5.04:1. In the kit they are `zenithRing` and `zenithRingSign` (`zenith` is the Zenith Grand Prix's board on T2) |
 | T8 Abyss Line | track-t8-abyss.png | to be made |
+| T9 Monsoon Ruins | track-t9-monsoon.png | to be made |
 | T6 Titan's Rest | track-t6-titan.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the titan's helmet half buried, its sword beside it), cut cleanly. The board came out 2.60:1 and the sign 4.64:1; the sign is drawn on a panel of its own shape in the plain sign's frame (Frostline's too, 4.14:1) |
 
 ## The prompt
@@ -173,4 +175,22 @@ The same kit and style as the attached sheet, for the seventh circuit: Abyss Lin
 
 - Top half: one board in the middle 512x512 cell of the top row, exactly 480 px wide and 150 px tall, centred in its cell, in exactly the design of the three circuit boards on the attached sheet: deep teal board #103B3F, pale cyan #E9FBFF lettering, an electric-cyan #35F0FF stripe, and a small flat emblem of the circuit at the left. ABYSS LINE, the emblem two glass tubes twisting round each other over a glass dome. Nothing in the other two cells of the top row.
 - Bottom half: the sign over the road where it comes in under the town's dome, one board exactly 960 px wide and 300 px tall, centred left to right with its middle 768 px from the top: a deep sea-blue board #062A3A with ABYSS LINE across it in one line of bold pale cyan-white #E8FBFF capitals, a band beneath the lettering shading from aqua-blue #2AC0E8 to deep blue #3A7CFF, a small white bubble emblem (three rising circles) at each end of the band, and a thin pale cyan #9FF0FF line running round the board just inside its edge.
+```
+
+T9, made later than the others for the eighth circuit, with sheet T3
+attached so the board matches the other circuits' boards:
+
+```
+ZENITH GP: TRACK KIT. SHEET T9: MONSOON RUINS (attach sheet T3; one sheet, on green)
+
+The same kit and style as the attached sheet, for the eighth circuit: Monsoon Ruins, raced through a jungle temple city in a monsoon downpour, up the switchbacks of a great stepped pyramid and off its summit through a ring of carved stone.
+
+- Art from a 1980s Japanese TV mecha anime: signs painted as clean, flat graphic design, the way background artists painted signage into a scene.
+- Not a photo, not a 3D render, not a modern digital painting: no bloom, lens flare, blur, film grain or noise (the game adds its own grain and glow).
+- 1536x1024, landscape. Paint it on perfectly flat pure green, #00FF00: no shading, texture, gradient, glow or shadow on the green. Nothing in the art itself may be green or close to it. Crisp edges against the green, with no soft halo.
+- Every board is seen straight-on, flat, a perfect rectangle with square corners, evenly lit, with no frame, posts, stand, reflections or perspective (the game builds the frames).
+- Lettering: spell every word exactly as given, in capitals, and nothing else.
+
+- Top half: one board in the middle 512x512 cell of the top row, exactly 480 px wide and 150 px tall, centred in its cell, in exactly the design of the three circuit boards on the attached sheet: deep teal board #103B3F, pale cyan #E9FBFF lettering, an electric-cyan #35F0FF stripe, and a small flat emblem of the circuit at the left. MONSOON RUINS, the emblem a stepped pyramid with a stone ring before it and slanting lines of rain. Nothing in the other two cells of the top row.
+- Bottom half: the sign on the gateway over the road at the foot of the pyramid's stairway, one board exactly 960 px wide and 300 px tall, centred left to right with its middle 768 px from the top: a dark slate board #2A2F38 with MONSOON RUINS across it in one line of bold bone-white #EEE8D8 capitals, a band beneath the lettering shading from temple gold #D8A83A to terracotta #C8643A, a small bone-white stepped-pyramid emblem at each end of the band, and a thin gold #D8A83A line running round the board just inside its edge.
 ```

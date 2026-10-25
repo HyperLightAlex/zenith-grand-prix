@@ -197,7 +197,9 @@ rolls over as it goes, and can move out from the arc's centre: Zenith Ring's
 Hatch, from the inside of its band to the outside, and the top of its
 Möbius), each of which can set the road's width and banking, cut a gap,
 leave an edge open, split the road (its two routes drawn apart, or twisted
-round each other as a double helix: Abyss Line's Braid) or hold mechs to it whatever their
+round each other as a double helix: Abyss Line's Braid; or on a bend, so its
+inside route is the shorter way round and the tighter: Monsoon Ruins' Temple
+Halls) or hold mechs to it whatever their
 speed (the outside of Zenith Ring's band). Where a twist's road is rolled
 across its arc, the arc turns under a mech: the Möbius rolls only over its
 top third, so it turns the road about 25 degrees one way and back.
@@ -302,7 +304,16 @@ hairpin gets a carve held loosely to the third.
 pilots carve by the line they want, so they rarely hold a carve tight: a
 person who does will reach the higher tiers far more often.)
 
-Each circuit has its own setting (Abyss Line: on the sea floor a hundred
+Each circuit has its own setting (Monsoon Ruins: a jungle temple city in a
+downpour under a low storm sky, lightning now and then, the rain round the
+camera; the jungle floor and the plateau east of the gorge worked out from
+the road (cut down round it, banked up under it), the great pyramid stepped
+round the Stairway's ramps, the temple on its summit with the road through
+its door, the Ring standing on two pillars in the gorge, the river pouring
+off a lip of rock into the cenote, the Corkscrew on a shelf round its wall
+behind the falls, the halls roofed over the inside route of the last bend
+and the causeway's walls round the outside: `src/client/render/monsoon.ts`,
+a stand-in until its painted background is made; Abyss Line: on the sea floor a hundred
 metres down, the road in glass tubes (one round each strand of the Braid, a
 wide one round the Twist, broken off at the Trench Leap), the trench carved
 into the floor under it, the town's great glass dome with the town lit on

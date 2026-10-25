@@ -27,6 +27,7 @@ import { loadTitan, titanGroundOf, titanModel, type TitanSlot } from './titan/as
 import type { TitanMat } from './titan/pose';
 import { buildZenith } from './zenith';
 import { buildAbyss } from './abyss';
+import { buildMonsoon } from './monsoon';
 
 const skyVertex = /* glsl */ `
 varying vec3 vDir;
@@ -221,6 +222,32 @@ vec3 seaSky(vec3 d, vec3 sunDir, vec3 zenith, vec3 mid, vec3 horizon, vec3 discC
   return col;
 }`;
 
+/**
+ * A storm (Monsoon Ruins): the plain sky's gradient under a low deck of
+ * heavy cloud rolling slowly over, darker in its bellies, rain hanging from
+ * it in curtains toward the horizon; lit from inside by lightning (uFlash).
+ */
+const STORM = /* glsl */ `
+vec3 stormSky(vec3 d, vec3 zenith, vec3 mid, vec3 horizon, float time) {
+  float h = d.y;
+  vec3 col = mix(horizon, mid, smoothstep(-0.02, 0.25, h));
+  col = mix(col, zenith, smoothstep(0.2, 0.9, h));
+  if (h > -0.05) {
+    vec2 uv = d.xz / (max(h, 0.0) + 0.12);
+    float c = fbm(uv * 0.55 + vec2(time * 0.01, time * 0.004));
+    float c2 = fbm(uv * 1.4 - vec2(time * 0.018, 0.0));
+    float lump = smoothstep(0.35, 0.75, c * 0.7 + c2 * 0.45);
+    vec3 belly = zenith * 0.72;
+    vec3 top = mix(mid, horizon, 0.35);
+    col = mix(col, mix(belly, top, smoothstep(0.55, 0.8, c2)), lump * smoothstep(-0.05, 0.08, h) * 0.85);
+    float az = atan(d.z, d.x);
+    float curtain = smoothstep(0.5, 0.8, noise(vec2(az * 6.0, time * 0.02))) * (1.0 - smoothstep(0.02, 0.3, h));
+    float streak = noise(vec2(az * 220.0, h * 6.0 + time * 1.5));
+    col = mix(col, mid * 0.85, curtain * (0.45 + 0.25 * streak));
+  }
+  return mix(col, horizon * 0.9, smoothstep(0.0, -0.1, h));
+}`;
+
 const skyFragment = /* glsl */ `
 uniform vec3 uZenith;
 uniform vec3 uMid;
@@ -243,6 +270,9 @@ uniform vec3 uGlowPlain;
 uniform float uAurora;
 uniform float uSpace;
 uniform float uSea;
+uniform float uStorm;
+uniform float uFlash;
+uniform vec3 uFlashDir;
 uniform vec3 uEarthSun;
 uniform sampler2D uEarth0;
 uniform sampler2D uEarth1;
@@ -255,9 +285,21 @@ ${NOISE}
 ${UNTONE}
 ${SPACE}
 ${SEA}
+${STORM}
+/** Lightning: the cloud lit from inside, most round where it struck. */
+vec3 flashOf(vec3 d) {
+  float fl = max(dot(d, uFlashDir), 0.0);
+  return vec3(0.75, 0.78, 0.95) * uFlash * (0.22 + pow(fl, 6.0) * 1.5) * smoothstep(-0.1, 0.1, d.y);
+}
 void main() {
   vec3 dir = normalize(vDir);
   float h = dir.y;
+  if (uStorm > 0.5 && uPainted < 0.5) {
+    gl_FragColor = vec4(stormSky(dir, uZenith, uMid, uHorizon, uTime) + flashOf(dir), 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    return;
+  }
   if (uSea > 0.5) {
     gl_FragColor = vec4(seaSky(dir, uSunDir, uZenith, uMid, uHorizon, uDiscPlain, uTime), 1.0);
     #include <tonemapping_fragment>
@@ -287,7 +329,7 @@ void main() {
     vec3 painted = unTone(textureGrad(uPano, vec2(fract(uv.x), uv.y), dx, dy).rgb);
     float sdp = max(dot(dir, uDiscDir), 0.0);
     painted = mix(painted, uDiscColor, smoothstep(0.9990, 0.9993, sdp) * smoothstep(-0.0005, 0.0005, h));
-    gl_FragColor = vec4(painted, 1.0);
+    gl_FragColor = vec4(painted + flashOf(dir), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
     return;
@@ -715,7 +757,8 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   const sun = new THREE.DirectionalLight(theme.sunLight, theme.sunIntensity);
   sun.position.copy(SUN_DIR).multiplyScalar(1000);
   group.add(sun);
-  group.add(new THREE.HemisphereLight(theme.skyLight, theme.groundLight, theme.hemiIntensity));
+  const hemi = new THREE.HemisphereLight(theme.skyLight, theme.groundLight, theme.hemiIntensity);
+  group.add(hemi);
 
   // ---- sky ----------------------------------------------------------------
   // The painted sky is shown once its pictures are in (the sky, and in orbit the Earth's).
@@ -750,6 +793,9 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
       uAurora: { value: theme.aurora ?? 0 },
       uSpace: { value: theme.ground === 'orbit' ? 1 : 0 },
       uSea: { value: theme.ground === 'seabed' ? 1 : 0 },
+      uStorm: { value: theme.ground === 'jungle' ? 1 : 0 },
+      uFlash: { value: 0 },
+      uFlashDir: { value: new THREE.Vector3(0, 1, 0) },
       // The Earth's sun: the station's, nearer the horizon (see SPACE).
       uEarthSun: { value: new THREE.Vector3(SUN_DIR.x, 0, SUN_DIR.z).normalize().multiplyScalar(Math.cos(0.14)).setY(Math.sin(0.14)) },
       // The Earth's painted squares (Z2), for a circuit in orbit with a painted set.
@@ -780,6 +826,17 @@ export function buildWorld(track: Track, theme: Theme = THEMES.meridian): World 
   else if (theme.ground === 'wreck') buildTitansRest(ctx);
   else if (theme.ground === 'orbit') buildZenith(ctx);
   else if (theme.ground === 'seabed') buildAbyss(ctx);
+  else if (theme.ground === 'jungle')
+    buildMonsoon({
+      ...ctx,
+      // Lightning: the sky lit from inside toward `dir`, and the light on everything with it.
+      flash(v: number, dir: THREE.Vector3) {
+        skyMat.uniforms.uFlash.value = v;
+        skyMat.uniforms.uFlashDir.value.copy(dir);
+        hemi.intensity = theme.hemiIntensity * (1 + v * 1.4);
+        sun.intensity = theme.sunIntensity * (1 + v * 2.2);
+      },
+    });
   else buildMeridian(ctx);
   if (painted) horizonRings(ctx);
 

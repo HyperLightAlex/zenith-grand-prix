@@ -173,6 +173,8 @@ const STINGER_KEY: Record<string, Partial<Record<SfxName, number>>> = {
   titan: { lap: 1, lap_phase: -5, final_lap: -6, finish: -1 },
   // Meridian's synthesised music, until it has a song of its own.
   abyss: {},
+  // Canyon's synthesised music, until it has a song of its own.
+  monsoon: { lap: 1, lap_phase: -5, final_lap: -6, finish: -1 },
   // Helios's synthesised music, until it has a song of its own.
   zenith: { lap_phase: 2, final_lap: 5, finish: 2 },
 };
