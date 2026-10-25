@@ -18,7 +18,7 @@ What it does to the sheets:
   plain rectangles), trimmed a pixel inside its edge, kept at its own shape.
 - T4, Neon Crucible's: its board (in with the others) and the neon sign over
   the way into its pit. T5, Frostline's: its board and the sign over the Ice
-  Barrel's mouth.
+  Barrel's mouth. T6 to T8 likewise (Titan's Rest, Zenith Ring, Abyss Line).
 """
 import json
 import os
@@ -116,7 +116,9 @@ def main():
     # (Zenith Ring's board and sign: 'zenith' is the Zenith Grand Prix's board on T2.)
     zenith = cut_out(sheet('track-t7-zenith.png'))
     assert len(zenith) == 2, f'{len(zenith)} boards on T7'
-    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('crucible', crucible[0]), ('frostline', frostline[0]), ('titan', titan[0]), ('zenithRing', zenith[0]), ('banner', circuit[3]), ('crucibleSign', crucible[1]), ('frostlineSign', frostline[1]), ('titanSign', titan[1]), ('zenithRingSign', zenith[1])]
+    abyss = cut_out(sheet('track-t8-abyss.png'))
+    assert len(abyss) == 2, f'{len(abyss)} boards on T8'
+    signs = list(zip(BOARDS, boards)) + list(zip(CIRCUITS, circuit[:3])) + [('crucible', crucible[0]), ('frostline', frostline[0]), ('titan', titan[0]), ('zenithRing', zenith[0]), ('abyss', abyss[0]), ('banner', circuit[3]), ('crucibleSign', crucible[1]), ('frostlineSign', frostline[1]), ('titanSign', titan[1]), ('zenithRingSign', zenith[1]), ('abyssSign', abyss[1])]
     aspect = {}
     for name, b in signs:
         files[name] = save(b, os.path.join(d, f'board-{name}.webp'), 90)
@@ -136,9 +138,9 @@ def main():
         f"  surfaces: {{ {', '.join(surfaces)} }},",
         f"  crowdAspect: {round(surfaces['crowd'].shape[1] / surfaces['crowd'].shape[0], 4)},",
         f"  boards: [{', '.join(sign(n) for n in BOARDS)}],",
-        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS + ['crucible', 'frostline', 'titan'])}, zenith: {sign('zenithRing')} }},",
+        f"  circuits: {{ {', '.join(f'{n}: {sign(n)}' for n in CIRCUITS + ['crucible', 'frostline', 'titan', 'abyss'])}, zenith: {sign('zenithRing')} }},",
         f"  banner: {sign('banner')},",
-        f"  circuitSigns: {{ crucible: {sign('crucibleSign')}, frostline: {sign('frostlineSign')}, titan: {sign('titanSign')}, zenith: {sign('zenithRingSign')} }},",
+        f"  circuitSigns: {{ crucible: {sign('crucibleSign')}, frostline: {sign('frostlineSign')}, titan: {sign('titanSign')}, zenith: {sign('zenithRingSign')}, abyss: {sign('abyssSign')} }},",
         '};',
         'export default kit;',
         '',

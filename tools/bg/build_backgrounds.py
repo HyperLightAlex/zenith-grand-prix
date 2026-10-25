@@ -18,7 +18,8 @@ What it does to the sheets:
   sheet its middle falls in) and packed into an atlas.
 - Surfaces: each square cut to the length that wraps best both ways, its
   seams blended, so it repeats. A surface can also give a map of its lights
-  alone (Neon Crucible's facades: the lit windows, for their glow).
+  alone (Neon Crucible's facades: the lit windows, for their glow; Abyss
+  Line's: its portholes, painted dark, lit by the build).
 - Signs (Neon Crucible's neon signs): each cut out of the green by its
   outline, as the track kit's boards are.
 - The Earth (Zenith Ring, in orbit): its surface's squares seen from orbit,
@@ -105,6 +106,21 @@ CIRCUITS = {
         clouds='bg-r3-clouds.png',
         surfaces='bg-r4-surfaces.png',
         tiles=['sand', 'armour', 'armourRed', 'frame', 'blade', 'bronze'],
+    ),
+    'abyss': dict(
+        # The water: the sun a bright patch on the surface overhead, at the
+        # middle of A1; no disc is drawn under the water (painted.ts).
+        sky=['bg-a1-sky.png', 'bg-a1b-sky.png'],
+        sun_col=768,
+        # Painted on magenta: the kelp and the water are green and blue-green.
+        horizon='bg-a2-horizon.png',
+        # Sea life drifting by, in place of clouds.
+        clouds='bg-a3-life.png',
+        surfaces='bg-a4-surfaces.png',
+        tiles=['sand', 'rock', 'trench', 'facade', 'frame', 'coral'],
+        # The facades' portholes are painted dark (the game lights them): a
+        # map of them lit, some warm, a few cold, the rest left dark.
+        portholes={'facade': 'facadeLit'},
     ),
     'zenith': dict(
         sky=['bg-z1-sky.png', 'bg-z1b-sky.png'],
@@ -404,6 +420,29 @@ def lights(t):
     return t * m
 
 
+def porthole_lights(t, seed=7):
+    """A facade's dark windows (portholes) lit: each window found as one dark
+    patch, and lit warm, cold or not at all, at random; black elsewhere."""
+    lum = t @ np.array([0.2126, 0.7152, 0.0722])
+    dark = lum < np.percentile(lum, 22)
+    dark = ndimage.binary_opening(dark, iterations=2)
+    lab, n = ndimage.label(dark)
+    rng = np.random.default_rng(seed)
+    warm, cold = np.array([1.0, 0.82, 0.54]), np.array([0.62, 0.94, 1.0])
+    out = np.zeros_like(t)
+    sizes = ndimage.sum(np.ones(lab.shape), lab, range(1, n + 1))
+    for k in range(1, n + 1):
+        if sizes[k - 1] < 200:
+            continue
+        r = rng.random()
+        if r < 0.45:
+            out[lab == k] = warm
+        elif r < 0.65:
+            out[lab == k] = cold
+    # A soft edge, as glass glows.
+    return np.stack([ndimage.gaussian_filter(out[..., c], 1.2, mode='wrap') for c in range(3)], -1)
+
+
 def build_surfaces(spec, sheet_key='surfaces', tiles_key='tiles'):
     sheet = load(spec[sheet_key])
     out = {}
@@ -412,6 +451,9 @@ def build_surfaces(spec, sheet_key='surfaces', tiles_key='tiles'):
         out[name] = seamless(sheet[r * 512:(r + 1) * 512, c * 512:(c + 1) * 512])
     for name, lit in spec.get('lit', {}).items():
         out[lit] = lights(out[name])
+    if sheet_key == 'surfaces':
+        for name, lit in spec.get('portholes', {}).items():
+            out[lit] = porthole_lights(out[name])
     return out
 
 

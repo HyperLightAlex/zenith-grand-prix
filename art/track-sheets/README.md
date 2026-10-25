@@ -34,7 +34,7 @@ stay crisp and bright, so the paintings go underneath them, never over them.
 | T4 Neon Crucible | track-t4-crucible.png | in the game. Made with T3 attached; both spelt right, the emblem as asked, cut cleanly. The board came out 3.26:1 (the others 2.25:1) and the sign 3.23:1 |
 | T5 Frostline | track-t5-frostline.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the aurora's arcs in cyan and violet), cut cleanly. The board came out 3.12:1 and the sign 4.14:1 |
 | T7 Zenith Ring | track-t7-zenith.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the ring station over the Earth's edge), cut cleanly. The board came out 2.39:1 and the sign 5.04:1. In the kit they are `zenithRing` and `zenithRingSign` (`zenith` is the Zenith Grand Prix's board on T2) |
-| T8 Abyss Line | track-t8-abyss.png | to be made |
+| T8 Abyss Line | track-t8-abyss.png | in the game. Made with T3 attached; both spelt right, cut cleanly; the second try, whose emblem is the two tubes twisting round each other as asked (the first's was one tube coiling). The board came out 2.33:1 and the sign 4.64:1 |
 | T9 Monsoon Ruins | track-t9-monsoon.png | to be made |
 | T6 Titan's Rest | track-t6-titan.png | in the game. Made with T3 attached; both spelt right, the emblem as asked (the titan's helmet half buried, its sword beside it), cut cleanly. The board came out 2.60:1 and the sign 4.64:1; the sign is drawn on a panel of its own shape in the plain sign's frame (Frostline's too, 4.14:1) |
 

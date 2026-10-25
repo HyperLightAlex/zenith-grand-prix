@@ -164,7 +164,9 @@ to one brief per circuit and checked one at a time.
   at the Crucible and Frostline it is the moon, cold white, where its halo
   is painted; at Titan's Rest the morning sun, low and white-gold, where R1
   paints its glow; at Zenith Ring the sun in space, hard and white, where Z1
-  paints its small glare. Frostline's sky has the aurora painted into it (the plain look
+  paints its small glare. Abyss Line's "sky" is the water, its surface
+  bright overhead and the sun a bright patch on it (A1), with no disc drawn.
+  Frostline's sky has the aurora painted into it (the plain look
   draws its own, swaying). Zenith Ring's sky is space: its painting (stars
   and the Milky Way) goes on down past eye level, mirrored, to the Earth's
   limb, and below it the Earth is laid with painted squares of its surface
@@ -178,7 +180,9 @@ to one brief per circuit and checked one at a time.
   nearer peaks, a wall of cumulus; the Crucible: mountains, the far side of
   the city, the foundry district; Frostline: snowy mountains, a coast of
   glaciers, icebergs in the pack ice; Titan's Rest: worn mountains, a
-  graveyard of other fallen giants, dunes with wreckage; Zenith Ring, with
+  graveyard of other fallen giants, dunes with wreckage; Abyss Line: rock
+  ridges and sea mounts faded into the water, the undersea town's outskirts,
+  a kelp forest; Zenith Ring, with
   no horizon, has none), standing on the ground and repeating
   round the circle. They move against each other a little as the circuit
   turns, as layered paintings would.
@@ -194,7 +198,11 @@ to one brief per circuit and checked one at a time.
   has things far off in orbit instead (sheet Z3: a satellite, another
   station, a freighter, a spent stage, a radio telescope, wreckage), hung a
   few kilometres out and facing the camera, turning slowly as things adrift
-  do.
+  do. Abyss Line has sea life (sheet A3: a shoal of silver fish, a manta,
+  jellyfish, a whale, a turtle, reef fish), in the water well clear of the
+  road and in its fog, each facing the camera and swimming slowly round a
+  small circle of its own, turned to face the way it goes (the jellyfish
+  bob).
 - **Surfaces**, as repeating painted textures:
   - Meridian: the sea, three kinds of tower facade (glass offices, hotels,
     dark glass), the platforms the towers stand on, and white panels on the
@@ -229,6 +237,12 @@ to one brief per circuit and checked one at a time.
     `art/model-sheets`) and fitted to the road (`art/blender/titan`);
     until it is in, the game draws a placeholder from simple shapes in the
     same pose (`render/titan/pose.ts`).
+  - Abyss Line: the sand on the sea floor and the trench's layered rock down
+    its slopes (with the light still rippling over them), rock, coral, the
+    dome's steel frame on the dome, the tubes' ribs and the sign's frame,
+    and the town's facades, their portholes painted dark and lit by the
+    build (some warm, a few cold). Its sign over the road into the town is
+    on track sheet T8.
   - Zenith Ring: the station's white plating, gold foil, solar cells,
     radiators, dark machinery, and the Ring band's windowed face (the
     stand-in station, `render/zenith.ts`, is drawn in kinds of surface so

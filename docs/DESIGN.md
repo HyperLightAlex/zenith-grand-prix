@@ -318,8 +318,8 @@ metres down, the road in glass tubes (one round each strand of the Braid, a
 wide one round the Twist, broken off at the Trench Leap), the trench carved
 into the floor under it, the town's great glass dome with the town lit on
 its floor, the water for a sky, light coming down in shafts:
-`src/client/render/abyss.ts`, a stand-in until its painted background is
-made; Zenith Ring: in orbit, a ring station
+`src/client/render/abyss.ts`, which with the painted background takes its
+painted water, surfaces and drifting sea life; Zenith Ring: in orbit, a ring station
 built round the road, the Earth below filling the sky under its limb, its
 night side lit with cities, and no ground at all, so no support pylons:
 `src/client/render/zenith.ts`, a stand-in until it has a model; Meridian:

@@ -10,13 +10,17 @@
 // where it would stand in it: the dome's glass opens where the road comes
 // in and goes out.
 //
-// A stand-in until its painted background is made.
+// With the painted background (the anime look, art/bg-sheets A1 to A4) the
+// water is painted (the sky), the far scenery stands round it in rings
+// (world.ts), the floor, rock, coral, the frames and the town take the
+// painted surfaces (A4: the town's portholes lit by the build), and sea life
+// drifts by (A3), in the water, as cards.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
 import { DOME, TWIST } from '../../sim/tracks/abyss';
-import { paintedTexture, paintedTrack } from './painted';
+import { paintedTexture, paintedTrack, paintedSurfaceMaterial, UNTONE, whiteTexture, type PaintedSet } from './painted';
 import { toonMaterial } from './palette';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT } from './titan/keepout';
@@ -29,6 +33,36 @@ export interface SeaCtx {
   updates: Array<(time: number, camera: THREE.Camera) => void>;
   /** The switch between the plain look and the painted background. */
   swaps: Array<(painted: boolean) => void>;
+  /** The painted background, if there is one, and what is shown only with it. */
+  painted: PaintedSet | null;
+  paintedOnly: THREE.Object3D[];
+  /** Distance from a point to the nearest bit of road, in plan. */
+  clearance(x: number, z: number): number;
+}
+
+/**
+ * Use a painted material on `mesh` with the painted background, made from
+ * the painted textures `urls` once they are all in (until then a painted
+ * material draws black); its own material otherwise.
+ */
+function paintedSwap(ctx: SeaCtx, mesh: THREE.Mesh, urls: string[], make: (maps: THREE.Texture[]) => THREE.Material): void {
+  const plain = mesh.material as THREE.Material;
+  let on = false;
+  let ready = 0;
+  const maps = urls.map((u) =>
+    paintedTexture(u, {
+      repeat: true,
+      onReady: () => {
+        ready++;
+        if (ready === urls.length) mesh.material = on ? painted : plain;
+      },
+    }),
+  );
+  const painted = make(maps);
+  ctx.swaps.push((p) => {
+    on = p;
+    mesh.material = on && ready === urls.length ? painted : plain;
+  });
 }
 
 const f = makeFrame();
@@ -168,7 +202,8 @@ function findAbyss(track: Track): Abyss | null {
 /** The sea floor: sand, darker and bluer down the trench, with the surface's light rippling across it. */
 function floorMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 } }]),
+    // (Painted: the sand on what faces up and the trench's wall down the slopes, A4; plain until they are in.)
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 }, uPaint: { value: 0 }, uSand: { value: null }, uWall: { value: null } }]),
     vertexShader: /* glsl */ `
       attribute vec3 color;
       varying vec3 vColor;
@@ -187,6 +222,9 @@ function floorMaterial(): THREE.ShaderMaterial {
       }`,
     fragmentShader: /* glsl */ `
       uniform float uTime;
+      uniform float uPaint;
+      uniform sampler2D uSand;
+      uniform sampler2D uWall;
       varying vec3 vColor;
       varying vec3 vWorld;
       varying vec3 vNormal;
@@ -207,7 +245,19 @@ function floorMaterial(): THREE.ShaderMaterial {
         float c2 = n2(p * 1.7 - vec2(uTime * 0.17, -uTime * 0.11));
         float net = pow(1.0 - abs(c1 - c2), 8.0);
         float deep = clamp(-vWorld.y / 140.0, 0.0, 1.0);
-        vec3 col = vColor * light + vec3(0.55, 0.85, 0.9) * net * 0.22 * (1.0 - deep) * max(n.y, 0.0);
+        vec3 base = vColor;
+        if (uPaint > 0.5) {
+          // The painting, sand on top and the trench's layered rock down the
+          // slopes (level bands, running along the face), deeper and bluer
+          // down the trench as the plain floor is.
+          float up = smoothstep(0.55, 0.8, n.y);
+          vec2 t = normalize(vec2(-n.z, n.x) + vec2(1e-5, 0.0));
+          vec3 wall = texture2D(uWall, vec2(dot(vWorld.xz, t), vWorld.y) / 46.0).rgb;
+          vec3 sand = texture2D(uSand, vWorld.xz / 70.0).rgb;
+          base = mix(wall, sand, up);
+          base = mix(base, base * vec3(0.4, 0.6, 0.75), deep * 0.8);
+        }
+        vec3 col = base * light + vec3(0.55, 0.85, 0.9) * net * 0.22 * (1.0 - deep) * max(n.y, 0.0);
         gl_FragColor = vec4(col, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -450,6 +500,27 @@ export function buildAbyss(ctx: SeaCtx): void {
     far.name = 'sea floor beyond';
     group.add(far);
     ctx.updates.push((time) => (mat.uniforms.uTime.value = time));
+    const set = ctx.painted;
+    if (set?.surfaces.sand && set.surfaces.trench) {
+      let on = false;
+      let ready = 0;
+      const load = (url: string) =>
+        paintedTexture(url, {
+          repeat: true,
+          onReady: () => {
+            ready++;
+            mat.uniforms.uPaint.value = on && ready === 2 ? 1 : 0;
+          },
+        });
+      mat.uniforms.uSand.value = load(set.surfaces.sand);
+      mat.uniforms.uWall.value = load(set.surfaces.trench);
+      ctx.swaps.push((p) => {
+        on = p;
+        mat.uniforms.uPaint.value = on && ready === 2 ? 1 : 0;
+      });
+    } else {
+      mat.uniforms.uSand.value = mat.uniforms.uWall.value = whiteTexture();
+    }
   }
 
   // ---- the glass tubes round the road ----
@@ -618,12 +689,18 @@ export function buildAbyss(ctx: SeaCtx): void {
       const mesh = new THREE.Mesh(mergeGeometries(blocks), mat);
       mesh.name = 'town';
       group.add(mesh);
+      // Painted: the facades (A4), their portholes lit (the build's map of them).
+      const set = ctx.painted;
+      if (set?.surfaces.facade && set.surfaces.facadeLit) {
+        paintedSwap(ctx, mesh, [set.surfaces.facade, set.surfaces.facadeLit], ([map, lit]) => new THREE.MeshLambertMaterial({ map, emissive: 0xffffff, emissiveMap: lit, emissiveIntensity: 1.2 }));
+      }
     }
   }
 
   // ---- smaller domes about the sea floor, rocks and kelp ----
   {
     const rocks: THREE.BufferGeometry[] = [];
+    const coral: THREE.BufferGeometry[] = [];
     const kelp: THREE.BufferGeometry[] = [];
     const domes: THREE.BufferGeometry[] = [];
     const { x0, z0, cell, nx, nz } = sea.grid;
@@ -641,6 +718,15 @@ export function buildAbyss(ctx: SeaCtx): void {
         g.deleteAttribute('uv');
         g.translate(x, y - 2, z);
         if (!ctx.inRoad(g, 4)) domes.push(g);
+      } else if (kind < 0.16) {
+        // A coral head: rounded, low, in rose and orange.
+        const s = 5 + rnd() * 9;
+        const g = new THREE.IcosahedronGeometry(s, 1).toNonIndexed();
+        g.deleteAttribute('uv');
+        g.scale(1 + rnd() * 0.5, 0.45 + rnd() * 0.25, 1 + rnd() * 0.5);
+        g.translate(x, y + s * 0.1, z);
+        g.computeVertexNormals();
+        if (!ctx.inRoad(g, 4)) coral.push(colour(g, new THREE.Color([0xd87a8a, 0xe89a5a, 0xe8d8b8][Math.floor(rnd() * 3)]).multiplyScalar(0.8 + rnd() * 0.3)));
       } else if (kind < 0.5) {
         const s = 4 + rnd() * 14;
         const g = new THREE.IcosahedronGeometry(s, 0).toNonIndexed();
@@ -664,7 +750,20 @@ export function buildAbyss(ctx: SeaCtx): void {
         }
       }
     }
-    if (rocks.length) group.add(new THREE.Mesh(mergeGeometries(rocks), toonMaterial({ color: 0xffffff })));
+    // Painted: the rock and the coral (A4), wrapped on in world space.
+    const set = ctx.painted;
+    if (rocks.length) {
+      const m = new THREE.Mesh(mergeGeometries(rocks), toonMaterial({ color: 0xffffff }));
+      m.name = 'rocks';
+      group.add(m);
+      if (set?.surfaces.rock) paintedSwap(ctx, m, [set.surfaces.rock], ([t]) => paintedSurfaceMaterial(t, t, 26, 26, THREE.FrontSide, { toon: true, dip: 0 }));
+    }
+    if (coral.length) {
+      const m = new THREE.Mesh(mergeGeometries(coral), toonMaterial({ color: 0xffffff }));
+      m.name = 'coral';
+      group.add(m);
+      if (set?.surfaces.coral) paintedSwap(ctx, m, [set.surfaces.coral], ([t]) => paintedSurfaceMaterial(t, t, 22, 22, THREE.FrontSide, { toon: true, dip: 0 }));
+    }
     if (domes.length) {
       const m = new THREE.Mesh(mergeGeometries(domes), glassMaterial(0x7fd8e8, 0xffe6b0, 0.12, 0.55));
       m.renderOrder = 2;
@@ -806,10 +905,126 @@ export function buildAbyss(ctx: SeaCtx): void {
     const mesh = new THREE.Mesh(mergeGeometries(ribs), toonMaterial({ color: 0xffffff }));
     mesh.name = 'tube ribs';
     group.add(mesh);
+    // Painted: the dome's frame (A4) on the ribs, the dome's frame and the sign's.
+    const set = ctx.painted;
+    if (set?.surfaces.frame) paintedSwap(ctx, mesh, [set.surfaces.frame], ([t]) => paintedSurfaceMaterial(t, t, 9, 9, THREE.FrontSide, { toon: true, dip: 0 }));
   }
+  seaLife(ctx, sea);
   if (lights.length) {
     const mesh = new THREE.Mesh(mergeGeometries(lights), new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }));
     mesh.name = 'tube lights';
     group.add(mesh);
   }
 }
+
+// ---- sea life (painted only) ----------------------------------------------------------
+
+/** Which way each A3 card faces as painted (-1 left, 1 right, 0 neither), its width (m), and how many. */
+const LIFE: Array<{ face: number; width: number; count: number; speed: number }> = [
+  { face: -1, width: 80, count: 4, speed: 6 }, // a shoal of silver fish
+  { face: 0, width: 40, count: 3, speed: 4 }, // a manta ray, seen from below
+  { face: 0, width: 26, count: 5, speed: 0 }, // jellyfish, drifting
+  { face: -1, width: 95, count: 2, speed: 5 }, // a whale, far off
+  { face: 1, width: 18, count: 3, speed: 3 }, // a turtle
+  { face: -1, width: 26, count: 4, speed: 4 }, // reef fish
+];
+
+/** A painted card in the water: the painting as painted, see-through where it is, in the water's fog, flipped to face its way. */
+function lifeMaterial(map: THREE.Texture, rect: [number, number, number, number]): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uMap: { value: null }, uRect: { value: new THREE.Vector4(...rect) }, uFlip: { value: 0 } }]),
+    vertexShader: /* glsl */ `
+      uniform vec4 uRect;
+      uniform float uFlip;
+      varying vec2 vUv;
+      #include <common>
+      #include <fog_pars_vertex>
+      void main() {
+        vUv = uRect.xy + vec2(uFlip > 0.5 ? 1.0 - uv.x : uv.x, uv.y) * uRect.zw;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D uMap;
+      varying vec2 vUv;
+      #include <common>
+      #include <fog_pars_fragment>
+      ${UNTONE}
+      void main() {
+        vec4 t = texture2D(uMap, vUv);
+        if (t.a < 0.02) discard;
+        gl_FragColor = vec4(unTone(t.rgb), t.a);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        #include <fog_fragment>
+      }`,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    fog: true,
+  });
+}
+
+/**
+ * Sea life drifting by, with the painted background: A3's cards (shoals,
+ * mantas, jellyfish, whales, turtles, reef fish) in the water well clear of
+ * the road, each turning to the camera and swimming slowly round a small
+ * circle of its own (the jellyfish bob), flipped so it faces the way it goes.
+ */
+function seaLife(ctx: SeaCtx, sea: Abyss): void {
+  const set = ctx.painted;
+  if (!set || set.clouds.cards.length < LIFE.length) return;
+  const map = paintedTexture(set.clouds.url);
+  const rnd = mulberry(9157);
+  const { x0, z0, cell, nx, nz } = sea.grid;
+  const group = new THREE.Group();
+  group.name = 'sea life';
+  const swimmers: Array<{ m: THREE.Mesh; mat: THREE.ShaderMaterial; c: THREE.Vector3; r: number; w: number; ph: number; face: number; bob: number }> = [];
+  const geo = new THREE.PlaneGeometry(1, 1);
+  const pad = 600;
+  LIFE.forEach((kind, k) => {
+    const card = set.clouds.cards[k];
+    for (let q = 0; q < kind.count; q++) {
+      for (let tries = 0; tries < 40; tries++) {
+        const x = x0 + pad + rnd() * ((nx - 1) * cell - 2 * pad);
+        const z = z0 + pad + rnd() * ((nz - 1) * cell - 2 * pad);
+        const r = kind.speed > 0 ? 30 + rnd() * 50 : 8;
+        // Clear of the road by its circle and its size, and of the dome.
+        if (ctx.clearance(x, z) < r + kind.width + 120) continue;
+        if (Math.hypot(x - sea.dome.centre.x, z - sea.dome.centre.z) < sea.dome.radius + r + kind.width) continue;
+        const y = sea.groundAt(x, z) + 50 + rnd() * 180;
+        const mat = lifeMaterial(map, [card.u0, card.v0, card.u1 - card.u0, card.v1 - card.v0]);
+        mat.uniforms.uMap.value = map;
+        const m = new THREE.Mesh(geo, mat);
+        m.scale.set(kind.width, kind.width / card.aspect, 1);
+        m.position.set(x + r, y, z);
+        m.frustumCulled = false;
+        m.renderOrder = 3;
+        group.add(m);
+        swimmers.push({ m, mat, c: v3(x, y, z), r, w: (kind.speed / r) * (rnd() < 0.5 ? 1 : -1), ph: rnd() * TAU_, face: kind.face, bob: kind.speed > 0 ? 3 : 10 });
+        break;
+      }
+    }
+  });
+  ctx.group.add(group);
+  ctx.paintedOnly.push(group);
+  const right = v3();
+  const vel = v3();
+  ctx.updates.push((time, camera) => {
+    if (!group.visible) return;
+    right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    for (const s of swimmers) {
+      const a = s.ph + time * s.w;
+      s.m.position.set(s.c.x + Math.cos(a) * s.r, s.c.y + Math.sin(time * 0.4 + s.ph) * s.bob, s.c.z + Math.sin(a) * s.r);
+      s.m.quaternion.copy(camera.quaternion);
+      if (s.face !== 0) {
+        // Which way it moves across the picture, against the way it was painted facing.
+        vel.set(-Math.sin(a) * s.w, 0, Math.cos(a) * s.w);
+        s.mat.uniforms.uFlip.value = Math.sign(vel.dot(right)) === s.face ? 0 : 1;
+      }
+    }
+  });
+}
+
+const TAU_ = Math.PI * 2;

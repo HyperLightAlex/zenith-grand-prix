@@ -10,6 +10,7 @@
 // the brightest whites are held a little under the bloom threshold.
 import * as THREE from 'three';
 import { toonMaterial } from './palette';
+import abyss from './backgrounds/abyss';
 import canyon from './backgrounds/canyon';
 import crucible from './backgrounds/crucible';
 import frostline from './backgrounds/frostline';
@@ -86,7 +87,7 @@ export interface PaintedHangar {
 
 export const paintedHangar: PaintedHangar = hangarKit;
 
-const SETS: Record<string, PaintedSet> = { meridian, canyon, helios, crucible, frostline, titan, zenith };
+const SETS: Record<string, PaintedSet> = { meridian, canyon, helios, crucible, frostline, titan, abyss, zenith };
 
 /** The painted background for a circuit's setting, if it has one. */
 export function paintedSet(themeId: string): PaintedSet | null {
@@ -140,6 +141,13 @@ export const HORIZON_RINGS: Record<string, Array<{ radius: number; degrees: numb
     { radius: 11000, degrees: 3.4, repeats: 16 },
     { radius: 8500, degrees: 2.4, repeats: 20 },
   ],
+  // Under the sea: rock ridges and sea mounts faded into the water, the
+  // town's outskirts (domes and towers), then a kelp forest.
+  abyss: [
+    { radius: 14000, degrees: 2.8, repeats: 10 },
+    { radius: 11000, degrees: 2.6, repeats: 14 },
+    { radius: 8500, degrees: 2.2, repeats: 24 },
+  ],
 };
 
 /**
@@ -159,6 +167,9 @@ export const SUN_DISC: Record<string, { elevation: number; color: [number, numbe
   titan: { elevation: 15.5, color: [2.0, 1.88, 1.6] },
   // Zenith Ring's sun, hard and white, where Z1 paints its glare.
   zenith: { elevation: 24.6, color: [3.2, 3.1, 2.9] },
+  // Under the sea there is no disc: A1 paints the sun as a bright patch on
+  // the surface overhead. (Under the horizon, where the disc is never drawn.)
+  abyss: { elevation: -30, color: [1, 1, 1] },
 };
 
 /**

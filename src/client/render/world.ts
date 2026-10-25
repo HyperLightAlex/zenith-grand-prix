@@ -300,7 +300,7 @@ void main() {
     #include <colorspace_fragment>
     return;
   }
-  if (uSea > 0.5) {
+  if (uSea > 0.5 && uPainted < 0.5) {
     gl_FragColor = vec4(seaSky(dir, uSunDir, uZenith, uMid, uHorizon, uDiscPlain, uTime), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>

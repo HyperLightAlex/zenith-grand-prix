@@ -24,7 +24,7 @@ of the edge pixels; nothing painted on these sheets is green.
 
 ## Status
 
-Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`) but Abyss Line's and Monsoon Ruins', which are to be made.
+Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`) but Monsoon Ruins', which are to be made.
 
 | Sheet | File | Notes |
 |---|---|---|
@@ -62,6 +62,11 @@ Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`) but Aby
 | Z2 The Earth | bg-z2-earth.png | cut and blended like M4: ocean, desert, cloud, green country, the night side's cities, mountains; the game lays them across the Earth below and lights them |
 | Z3 Far off | bg-z3-far.png | all six, cut by their outlines; the radio telescope's mast runs off the bottom of the sheet, so its cut end is faded out |
 | Z4 Surfaces | bg-z4-surfaces.png | cut and blended like M4: plating, gold foil, solar cells, radiator, machinery, the band's windowed face |
+| A1 The water, facing the sun | bg-a1-sky.png | eye level at 3/4 down as asked; the sun a bright patch on the surface overhead at the middle (column 768, given by hand); no disc is drawn under the water |
+| A1B The water, facing away | bg-a1b-sky.png | eye level level with A1's; the surface's ripples carry on across both joins |
+| A2 Horizon | bg-a2-horizon.png | three strips on magenta (rock ridges, the town's outskirts, a kelp forest), bottoms level, ends matching; cut cleanly by the magenta key |
+| A3 Sea life | bg-a3-life.png | all six, cut by their outlines (the shoals kept together as one card each); the game knows which way each faces (left: the silver shoal, the whale, the reef fish; right: the turtle) |
+| A4 Surfaces | bg-a4-surfaces.png | cut and blended like M4: sand, rock, the trench's wall, the facades, the dome's frame, coral. The facades' portholes are painted dark, as asked; the build lights some of them (`facadeLit`: a map of the dark windows, some warm, a few cold) |
 
 ## Meridian Skyway
 
