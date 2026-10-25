@@ -41,6 +41,7 @@ import pyloudnorm as pyln  # pip install pyloudnorm
 PAD = 0.05          # seconds kept before the ending, for the cross-fade into it
 CEILING = -1.5      # dBFS: the loudest layer's peak, so the encoder has room
 SYNC_SECONDS = 2    # how much of the start the decoder check compares
+TAIL = 0.08         # seconds faded out at the very end (see where it is used)
 # From the song's output to the speakers at the game's default volumes: the
 # music trim (0.8, synth.ts), the music volume (0.45) and the master (0.8).
 OUTPUT_DB = 20 * np.log10(0.8 * 0.45 * 0.8)
@@ -172,6 +173,11 @@ def main():
     scale = min(1.0, 10 ** (CEILING / 20) / peak)
     for lid in layers:
         layers[lid] *= scale
+        # Suno's stems stop short, still sounding, on a step that an MP3
+        # rings on as a loud click at the very end: faded out over its last
+        # moment (by then the ending has died away, so it is not heard).
+        k = int(TAIL * sr)
+        layers[lid][-k:] *= (0.5 + 0.5 * np.cos(np.linspace(0, np.pi, k)))[:, None]
 
     # Loudness on each lap (LUFS, as ears hear it), in the stretch each lap
     # mostly plays: lap 1 the song's start up to the loop, laps 2 and 3 the

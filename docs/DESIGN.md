@@ -358,21 +358,25 @@ finish goes to the song's ending, then the menu music (what the results
 play) so there is no silence while the others finish. The build is in what
 comes in, more than in how loud it gets. Each change waits for the next bar
 line, and the middle of the song loops for as long as the race lasts.
-Three songs go somewhere for lap 3. Helios's has a drop: on the lap change
+Four songs go somewhere for lap 3. Helios's has a drop: on the lap change
 it jumps to the build into the drop, at the same place in its 16-bar
 chord cycle, so only the energy changes, and loops the drop to the
 finish. Canyon's (疾走の回路) lifts a key for its last chorus: the lap
 change waits for the next 4-bar phrase (a key change lands as meant only
 on one) and goes into it. Titan's Rest's (White Desert Charge, C minor,
 about 140 BPM) goes on the next bar line into its last section, where it
-turns to C major. The Crucible's, Neon Fire (D minor, about 193
+turns to C major. Zenith Ring's (天頂の環, B minor verses and C minor
+choruses, about 160 BPM) waits for the next 4-bar phrase and goes into
+its bridge, climbing into B major, then up into its last chorus, which it
+loops to the finish. The Crucible's, Neon Fire (D minor, about 193
 BPM), loops 50 bars (62 s) from after its first chorus through its second;
 Frostline's, Aurora Dash (C# minor, 150 BPM), 45 bars (72 s). All
-six circuits have one; only the circuit coming up has its song decoded.
+the circuits but Abyss Line and Monsoon Ruins have one; only the circuit
+coming up has its song decoded.
 While a song plays the stingers can take keys of its own (Helios's E minor,
 Canyon's G minor rising to A minor, the Crucible's D minor ending in D
-major, Frostline's C# minor ending in C# major, Titan's Rest's C minor
-turning to C major).
+major, Frostline's C# minor ending in C# major, Titan's Rest's and Zenith
+Ring's C minor turning to C major).
 The results have a song for each outcome of the round (and the Grand Prix
 award, first place or not): トロフィーセレモニー when the player's team
 won, Minor Theme when it lost, each looping until the screen is left. The

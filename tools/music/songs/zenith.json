@@ -1,0 +1,16 @@
+{
+  "id": "zenith",
+  "title": "天頂の環",
+  "layers": {"drums": ["Drums"], "bass": ["Bass"], "melody": ["Synth", "Keyboard", "Guitar", "Strings", "Brass", "Woodwinds", "Lead Vocals"], "percussion": ["Percussion", "Other"]},
+  "laps": {"drums": [null, 0, 0], "bass": [0, 0, 0], "melody": [0, 0, 0], "percussion": [null, null, 0]},
+  "filter": null,
+  "lowShelf": {"layers": ["drums", "bass"], "hz": 140, "db": [0, 0, 5]},
+  "loop": [48, 84],
+  "finale": {"lap": 3, "from": 88, "loop": [112, 128], "cycle": 4, "phrase": {"bars": 4, "first": 0}},
+  "ending": 136,
+  "master": {"gain": -4.6, "lowShelf": [200, 3.0], "highShelf": [4000, 2.0]},
+  "loudness": [-23.5, -17, -15.5],
+  "stingers": {"lap": -4, "lap_phase": 3, "final_lap": 1, "finish": -2},
+  "codec": "mp3",
+  "quality": 0
+}

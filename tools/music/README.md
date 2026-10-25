@@ -4,9 +4,10 @@ A circuit's race music can be a recorded song (made in Suno) instead of the
 synthesised one, and still build lap by lap as the synthesised music does.
 The game plays these by default; `?music=synth` in the address plays the
 synthesised music instead.
-Every circuit has a song: Meridian (海空の速さ), Corkscrew Canyon
+Every circuit but Abyss Line and Monsoon Ruins has a song: Meridian (海空の速さ), Corkscrew Canyon
 (疾走の回路), Helios Drop (午間の雲上レース), Neon Crucible (Neon
-Fire), Frostline (Aurora Dash) and Titan's Rest (White Desert Charge).
+Fire), Frostline (Aurora Dash), Titan's Rest (White Desert Charge) and
+Zenith Ring (天頂の環).
 The menus have a title
 theme (Blue Night Sky), and the results one for when the player's team
 wins (トロフィーセレモニー) and one for when it loses (Minor Theme; see
@@ -22,7 +23,7 @@ What each song was asked for, and what is still to make, is in
 | 3 | the rest: the full song, at full volume, with the kick and bass lifted (+5 dB below 140 Hz) |
 | finish | on to the song's ending, every layer in; once it has played out, the menu music |
 
-| Layer | Meridian | Canyon | Helios | Crucible, Frostline, Titan's Rest |
+| Layer | Meridian | Canyon | Helios | Crucible, Frostline, Titan's Rest, Zenith Ring |
 |---|---|---|---|---|
 | melody | keys, synth, strings, guitar | synth, keys, guitar, strings, brass, voices | keys, synth | synth, keys, guitar, strings, brass, woodwinds, voices |
 | bass | bass | bass | bass | bass |
@@ -151,6 +152,32 @@ its last C major hit. Laps 1 and 2 loop bars 31 to 90 (59 bars, 101 s:
 both come after the same climb, Bb, Eb, Fm, Gm, Ab, Bb, onto C minor), so
 two laps at a normal pace hear the song through with nothing repeated.
 
+Zenith Ring's 天頂の環 (about 160 BPM, stems only; the second of two
+takes of it, the first having a choir carved into its guitar and strings
+all through its choruses, against the brief) comes apart as White Desert
+Charge does: the vocal stem is carved out of the guitar and strings (0.65
+to 0.67), the guitar out of the strings (0.72), the synth out of the
+strings and keys (0.46 to 0.52); the drums (0.18 at most), bass,
+percussion and effects are clean. Its backing-vocal stem is silent and is
+left out. It came back without the asked-for step up for its last chorus:
+its verses are in B minor and it lifts a semitone to C minor at its first
+chorus (bar 48), then its bridge rises G, A, B (bars 88 to 95) into B
+major (bars 96 to 111) and its last chorus comes back up to C minor (bar
+112), ending on C major. So lap 3 is the bridge and the last chorus: the
+lap change waits for the next 4-bar phrase (from bar 0) and goes in at
+bar 88, the climb, then the bridge, the lift into the last chorus, and
+loops that chorus (bars 112 to 128, 24 s: Bb back to C minor, as the song
+itself goes) to the finish. Laps 1 and 2 loop bars 48 to 84 (54 s, the
+first chorus and what follows, phrase to phrase: C back to the F that
+starts the pre-chorus), so the bridge is heard first on lap 3. It ends
+from bar 136, A flat, B flat, onto its last C major hit (its outro from
+bar 128 is twice as long, 21 s, longer than the wait for the results).
+
+Every layer's last 80 ms is faded out (`TAIL` in build.py): Suno's stems
+stop short on a step, and an MP3 rings on it as a loud click right at
+the end (Canyon's melody layer: 0.63 in its last 20 ms after 0.02 before
+it). The songs built before this have it still; rebuilt, they lose it.
+
 **Stingers.** The race stingers are written for Meridian's synthesised
 music, and each circuit moves them into its own key, including the key
 change its synthesised music makes on the last lap. A song can give its
@@ -169,6 +196,8 @@ own (`stingers` in the recipe, semitones from the written key):
 - Aurora Dash is centred on C# minor and ends on C# major: the lap chime
   is on C# and G#, the battle stab resolves to C# minor, the final-lap
   fanfare's open chord is on C# and the flag is in C# major.
+- 天頂の環 is mostly in C minor and ends on C major, so its stingers are
+  White Desert Charge's.
 - White Desert Charge is in C minor and its last section in C major: the
   lap chime is on C and G, the battle stab resolves to C minor, the
   final-lap fanfare's open chord is on C (the finale it goes into) and
@@ -344,7 +373,8 @@ browser (the setup plays it, the corner shows it, M and a tap go on).
    once four layers are summed. Canyon: 145 s of its 192, 17.9 MB;
    Helios: 157 s of its 203, 19.2 MB; Neon Fire: 156 s of its 160, 18.5
    MB; Aurora Dash: 161 s of its 188, 20.5 MB; White Desert Charge, the
-   longest loop: 187 s of its 197, 23.8 MB).
+   longest loop: 187 s of its 197, 23.8 MB; 天頂の環: 195 s of its 213,
+   23.9 MB, with its finale).
 5. **Add it** to `SONGS` in `src/client/audio/song.ts` (a screen's: to
    `SCREEN_SONGS`, as one layer with every stem in it, `laps` all 0, and
    one `loudness`; see `songs/results-win.json`).
@@ -382,7 +412,7 @@ for the difference (Chromium's matches to the sample).
 
 Decoded, each layer takes 8 bytes a sample frame: Meridian's four take
 about 225 MB at 48 kHz, Canyon's 222 MB, Helios's 241 MB, Neon Fire's 239 MB,
-Aurora Dash's 247 MB, White Desert Charge's 287 MB. So only one song is held decoded:
+Aurora Dash's 247 MB, White Desert Charge's 287 MB, 天頂の環's 300 MB. So only one song is held decoded:
 the one for the circuit coming up. The game names it as soon as it knows
 (the circuit it has built, and the circuit shown on the race setup, the
 online room and the Grand Prix briefing, once it has stayed there a

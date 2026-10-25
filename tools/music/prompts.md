@@ -23,7 +23,7 @@ build matches its mastering).
 | Titan's Rest race | White Desert Charge (asked for as 巨神の眠り, The Sleeping Giant) | C minor (C major last section), ~140 BPM | in the game (stems only; lap 3 goes to its last section) |
 | Abyss Line race | 深海ライン (Deep Sea Line) | F minor (F# minor last chorus), 132 BPM | to be made |
 | Monsoon Ruins race | 雷雨の神殿 (Temple in the Thunderstorm) | B♭ minor (B minor last chorus), 146 BPM | to be made |
-| Zenith Ring race | 天頂の環 (The Ring at the Zenith) | B minor (C# minor last chorus), 158 BPM | to be made |
+| Zenith Ring race | 天頂の環 (The Ring at the Zenith) | asked for in B minor (C# minor last chorus), 158 BPM; came back B minor verses and C minor choruses, ~160 BPM | in the game (stems only, the second of two takes; no step up for its last chorus, so lap 3 goes to its bridge and last chorus) |
 | Title theme (the menus) | Blue Night Sky | E major, 152 BPM | in the game |
 | Results, win (and the Grand Prix award) | トロフィーセレモニー | G major, 123 BPM, brass-led | in the game |
 | Results, loss (and the Grand Prix award below first) | Minor Theme | E minor, 100 BPM | in the game (from the second brief below: the first was too hopeful, not synth or anime enough) |

@@ -9,6 +9,7 @@
 //           with the kick and bass lifted (a low shelf). A song can also go
 //           somewhere else for it (Helios: into its drop; Canyon: its last
 //           chorus, a key up; Titan's Rest: its last section, in the major;
+//           Zenith Ring: its bridge, rising into B major, and its last chorus;
 //           see `finale`)
 //   finish  on to the song's ending; once it has played out, the engine
 //           moves on to the menu music (see SynthAudio.afterSong)
@@ -44,6 +45,7 @@ export const SONGS: Record<string, string> = {
   crucible: 'music/crucible/',
   frostline: 'music/frostline/',
   titan: 'music/titan/',
+  zenith: 'music/zenith/',
 };
 
 /**
