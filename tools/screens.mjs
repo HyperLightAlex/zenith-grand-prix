@@ -109,6 +109,12 @@ async function tour(name) {
   await shot('pilot', () => g(() => window.game.menus.push('pilot')), 1500);
   await shot('setup', () => g(() => { if (window.game.menus.has('pilot')) window.game.menus.pop(); window.game.menus.push('setup'); }), 1500);
   await shot('gp', () => g(() => window.game.menus.reset('gp', undefined, ['title', 'modes'])), 1500);
+  await shot('gp-season', () => g(() => window.game.menus.focus('season')), 500);
+  // The cups with a medal won in the first (so the second is open, the third not yet).
+  await shot('gp-cups', () => g(() => {
+    localStorage.setItem('zgp.gp.medals', JSON.stringify({ horizon: { 1: 'silver', 2: 'bronze' } }));
+    window.game.menus.reset('gp-cups', undefined, ['title', 'modes', 'gp']);
+  }), 1500);
   await shot('briefing', () => g(() => window.game.openGp('season')), 2000);
   await shot('callsign', () => g(() => window.game.askCallsign()));
   await shot('online', async () => {

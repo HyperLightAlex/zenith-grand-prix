@@ -33,6 +33,7 @@ export type ScreenId =
   | 'custom-paint'
   | 'setup'
   | 'gp'
+  | 'gp-cups'
   | 'briefing'
   | 'standings'
   | 'award'

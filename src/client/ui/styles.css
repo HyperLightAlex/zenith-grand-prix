@@ -1155,6 +1155,73 @@ html.narrow:not(.compact):not(.portrait) .controls .grid { grid-template-columns
 .medal.cup { border-radius: 0.6em 0.6em 2em 2em; background: linear-gradient(180deg, #fff6c8, #f2c133 55%, #a3740d); }
 .medal.none { display: none; }
 
+/* The Grand Prix hub: what the highlighted entry holds, beside the list. */
+.menu .panel.gp-preview { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 40em; display: flex; flex-direction: column; gap: 0.7em; }
+.menu .panel.gp-preview h2 { margin: 0; font-size: 1.6em; }
+.menu .panel.gp-preview p { font-size: 1.15em; max-width: none; opacity: 0.9; }
+.prev-cup { display: grid; grid-template-columns: 3.2em 1fr auto; grid-template-rows: auto auto; column-gap: 0.9em; row-gap: 0.35em; align-items: center; padding: 0.55em 0.7em; background: rgba(255, 255, 255, 0.06); }
+.prev-cup .trophy { grid-row: 1 / 3; font-size: 0.8em; }
+.prev-cup .prev-name b { font-size: 1.3em; font-weight: 800; }
+.prev-cup .prev-name small { display: block; font-size: 0.95em; opacity: 0.8; }
+.prev-cup .prev-boards { grid-column: 2 / 4; }
+.prev-cup.locked { opacity: 0.5; }
+.prev-boards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.35em; }
+.prev-grid { display: grid; gap: 0.35em; }
+.prev-grid.nine { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.prev-grid.locked, .prev-cup.locked .board { filter: grayscale(1) brightness(0.65); }
+.prev-half small { display: block; margin-bottom: 0.25em; font-size: 1em; font-weight: 700; color: var(--signal); }
+.prev-foot { display: flex; align-items: center; gap: 0.9em; font-size: 1.15em; }
+.prev-foot .trophy { font-size: 0.8em; margin: 0; }
+.prev-cup .pips { font-size: 1.1em; }
+.item.cupcard .pips { font-size: 1.2em; gap: 0.5em; flex-wrap: wrap; }
+html:is(.compact, .lay-cols, .lay-single) .item.cupcard .pips { font-size: 0.95em; }
+html:is(.compact, .lay-cols, .lay-single) .item.cupcard h3 { font-size: 1.5em; }
+html:is(.compact, .lay-cols, .lay-single) .item.cupcard { padding: 0.9em 0.8em; gap: 0.55em; }
+.prev-levels { display: grid; gap: 0.3em; }
+.prev-levels > div { display: grid; grid-template-columns: 5em 1fr; align-items: baseline; gap: 0.6em; padding: 0.35em 0.7em; background: rgba(255, 255, 255, 0.06); font-size: 1.15em; }
+.prev-levels > div.on { background: var(--paper); color: var(--ink); }
+.prev-levels small { font-size: 0.9em; opacity: 0.85; }
+.board { display: block; width: 100%; height: auto; user-select: none; }
+.board.plain { padding: 0.4em; background: #103b3f; color: #e9fbff; font-weight: 800; font-size: 0.8em; text-align: center; }
+
+/* Medals given, one place for each difficulty. */
+.pips { display: flex; justify-content: center; gap: 0.8em; }
+.pip { display: flex; flex-direction: column; align-items: center; gap: 0.2em; font-size: 0.85em; font-weight: 600; opacity: 0.9; }
+.pip i { width: 1.35em; height: 1.35em; border-radius: 50%; box-shadow: inset 0 0 0 0.16em rgba(0, 0, 0, 0.25); }
+.pip i.empty { background: none; box-shadow: inset 0 0 0 0.14em rgba(255, 255, 255, 0.35); }
+.pip i.gold { background: radial-gradient(circle at 35% 30%, #fff6c8, #f2c133 45%, #a3740d); }
+.pip i.silver { background: radial-gradient(circle at 35% 30%, #ffffff, #c4ccd8 45%, #77808f); }
+.pip i.bronze { background: radial-gradient(circle at 35% 30%, #ffe0c4, #c9824a 45%, #7c4a22); }
+
+/* A trophy: a bowl on a stem and a foot, in its cup's colours. */
+.trophy { --t1: #fff6c8; --t2: #f2c133; --t3: #a3740d; position: relative; width: 4em; height: 4.4em; margin: 0 auto; }
+.trophy::before { content: ''; position: absolute; left: 0.45em; right: 0.45em; top: 0; height: 2.5em; border-radius: 0.25em 0.25em 1.6em 1.6em; background: linear-gradient(160deg, var(--t1), var(--t2) 50%, var(--t3)); box-shadow: inset 0 -0.3em 0 rgba(0, 0, 0, 0.18); }
+.trophy::after { content: ''; position: absolute; left: 1.05em; right: 1.05em; bottom: 0; height: 0.65em; border-radius: 0.15em; background: linear-gradient(180deg, var(--t2), var(--t3)); }
+.trophy i { position: absolute; left: 1.72em; right: 1.72em; top: 2.4em; bottom: 0.6em; background: var(--t3); }
+.trophy i::before, .trophy i::after { content: ''; position: absolute; top: -2.05em; width: 0.8em; height: 1.1em; border: 0.28em solid var(--t2); border-radius: 50%; }
+.trophy i::before { right: 1.1em; border-right-color: transparent; }
+.trophy i::after { left: 1.1em; border-left-color: transparent; }
+.trophy.frontier { --t1: #f2fbff; --t2: #8fd4f0; --t3: #2f6f9a; }
+.trophy.ascent { --t1: #f4ecff; --t2: #b48cff; --t3: #4d2f9a; }
+.trophy.tour { --t1: #ffffff; --t2: #ff9a4a; --t3: #a3480d; }
+.trophy.season { --t1: #fff6c8; --t2: #f2c133; --t3: #a3740d; }
+
+/* The cup select: the three cups side by side, the highlighted one lifted. */
+.menu .col.gp-cups-side { width: 26em; }
+.menu .panel.cups { position: absolute; left: 33em; right: 3em; top: 50%; transform: translateY(-50%); padding: 0; background: none; border: 0; }
+.cuprow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.3em; align-items: stretch; }
+.item.cupcard { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0.75em; padding: 1.2em 1.1em 1.1em; font-size: 1em; clip-path: polygon(0.9em 0, 100% 0, calc(100% - 0.9em) 100%, 0 100%); transition: transform 0.14s ease-out; }
+.item.cupcard h3 { margin: 0; font-size: 1.9em; font-weight: 800; text-align: center; line-height: 1; }
+.item.cupcard .boards { display: grid; gap: 0.4em; }
+.item.cupcard .status { min-height: 1.2em; font-size: 1.05em; font-weight: 600; text-align: center; }
+.item.cupcard.going .status { color: var(--signal); }
+.item.cupcard.sel { transform: translateY(-0.6em) scale(1.03); }
+.item.cupcard.sel .status { color: var(--ink); }
+.item.cupcard.sel .pip { opacity: 1; }
+.item.cupcard.sel .pip i.empty { box-shadow: inset 0 0 0 0.14em rgba(15, 21, 36, 0.35); }
+.item.cupcard.locked .boards, .item.cupcard.locked .trophy { filter: grayscale(1) brightness(0.65); }
+@media (prefers-reduced-motion: reduce) { .item.cupcard { transition: none; } .item.cupcard.sel { transform: none; } }
+
 /* Dialogs and text entry. */
 .menu .dialog, .menu .entry { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(40em, 90vw); padding: 1.4em 1.8em 1.6em; background: var(--ink); border-left: 0.4em solid var(--signal); }
 .menu .dialog h2, .menu .entry h2 { margin: 0 0 0.4em; font-size: 2.2em; font-weight: 800; }
@@ -1326,7 +1393,21 @@ html.lay-single .menu .panes::before, html.lay-single .menu .panes::after { cont
 html.lay-single .menu .panes > * { flex: none; }
 /* On a sideways screen the one column keeps to the left, clear of the hangar's mech. */
 html.lay-single:not(.portrait) .menu .panes { right: auto; width: min(36em, 100% - 2 * var(--gut)); }
-html.lay-single:not(.portrait) .menu:is([data-screen='room'], [data-screen='results'], [data-screen='controls']) .panes { right: calc(var(--gut) + var(--sr, 0px)); width: auto; }
+html.lay-single:not(.portrait) .menu:is([data-screen='room'], [data-screen='results'], [data-screen='controls'], [data-screen='gp-cups']) .panes { right: calc(var(--gut) + var(--sr, 0px)); width: auto; }
+/* The cup select, side by side: the cups take most of the width. */
+html.lay-cols .menu[data-screen='gp-cups'] .panes { grid-auto-flow: row; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.6fr); grid-auto-columns: unset; }
+/* Upright: the cups one under another, each across the screen. */
+html.portrait .cuprow { grid-template-columns: 1fr; }
+/* A short screen, one column: the cups' boards a little smaller, so a cup shows whole. */
+html.lay-single:not(.portrait) .item.cupcard .board { width: 80%; margin: 0 auto; }
+html.lay-single:not(.portrait) .item.cupcard .trophy { font-size: 0.75em; }
+html.portrait .item.cupcard { display: grid; grid-template-columns: 4.5em 1fr; grid-template-areas: 'trophy name' 'trophy pips' 'boards boards' 'status status'; align-items: center; column-gap: 0.8em; }
+html.portrait .item.cupcard .trophy { grid-area: trophy; }
+html.portrait .item.cupcard h3 { grid-area: name; text-align: left; }
+html.portrait .item.cupcard .pips { grid-area: pips; justify-content: flex-start; }
+html.portrait .item.cupcard .boards { grid-area: boards; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+html.portrait .item.cupcard .status { grid-area: status; }
+html.portrait .item.cupcard.sel { transform: none; }
 
 /* The bottom bar, in a strip of its own under the panes. */
 html.lay-cols .menu .footer-hints,

@@ -1,5 +1,7 @@
-// Grand Prix: the hub (the cups, the Grand Tour and the season), the round
-// briefing, the standings after a round, and the award at the end.
+// Grand Prix: the hub (Cup, Grand Tour, Season and the difficulty, with what
+// the highlighted one holds shown beside it), the cup select (the three cups
+// side by side, each with its circuits and the medals it has given), the
+// round briefing, the standings after a round, and the award at the end.
 
 import { TRACKS } from '../../../sim/index';
 import {
@@ -22,9 +24,11 @@ import {
 } from '../../../gp/grandPrix';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
+import { paintedTrack } from '../../render/painted';
 import { h } from '../dom';
 import { emblemUrl } from '../factionArt';
 import { TRACK_BLURBS, type Menus } from '../menus';
+import type { Medal } from '../../../gp/grandPrix';
 import { BACK, CHANGE, SELECT, confirmDialog } from './common';
 
 export interface GpData {
@@ -88,25 +92,149 @@ export function awardLines(ev: GpEvent, place: number, medal: string | null): HT
   return [badge, h('h1', headline), h('p', line)];
 }
 
+/** A circuit's board (its name and emblem, painted), for the cups and the previews. */
+function board(id: string): HTMLElement {
+  const own = paintedTrack.circuits[id];
+  if (!own) return h('div.board.plain', circuitName(id));
+  const img = h<'img'>('img.board');
+  img.src = own.url;
+  img.alt = circuitName(id);
+  img.draggable = false;
+  return img;
+}
+
+/** The medals an event has given, one place for each difficulty. */
+function pips(won: Record<number, Medal | undefined> | undefined): HTMLElement {
+  return h(
+    'div.pips',
+    ...GP_DIFFICULTY.map((d, i) => {
+      const m = won?.[i];
+      const el = h('span.pip', h('i.' + (m ?? 'empty')), d);
+      el.title = `${d}: ${m ? MEDAL_NAMES[m] : 'no medal yet'}`;
+      return el;
+    }),
+  );
+}
+
+/** A trophy, in a cup's colours (or the Grand Tour's, or the Zenith Cup's). */
+function trophy(id: string): HTMLElement {
+  return h('div.trophy.' + id, h('i'));
+}
+
+/** Where an event under way is: "round 2 of 3". */
+function progress(ev: GpEvent): string {
+  return `${singleRaces(ev) ? 'Round' : 'Matchday'} ${singleRaces(ev) ? Math.min(playedRounds(ev), yourRoundNumber(ev)) : ev.current + 1} of ${singleRaces(ev) ? playedRounds(ev) : ev.rounds.length}`;
+}
+
+/** The hub's preview pane, filled for the highlighted item. */
+let preview: HTMLElement | null = null;
+
 export function registerGrandPrix(m: Menus, g: Game): void {
+  const fill = (key: string) => {
+    const side = preview;
+    if (!side) return;
+    const medals = g.gpMedals();
+    const diff = g.gpDifficulty();
+    side.replaceChildren();
+    if (key === 'cup') {
+      const cupEv = g.gpEvent('cup');
+      side.append(h('h2', 'Cups'), h('p', 'Three races, each against a different faction: gold, silver or bronze for the top three. A medal opens the next cup.'));
+      CUPS.forEach((c, i) => {
+        const open = cupOpen(c.id, medals.byCup);
+        const going = cupEv && cupEv.cup === c.id && !isOver(cupEv) ? cupEv : null;
+        side.append(
+          h(
+            'div.prev-cup' + (open ? '' : '.locked'),
+            trophy(c.id),
+            h('div.prev-name', h('b', c.name), h('small', going ? `Under way: ${progress(going)}` : open ? '' : `A medal in the ${CUPS[i - 1].name} opens it`)),
+            pips(medals.byCup[c.id]),
+            h('div.prev-boards', ...c.circuits.map(board)),
+          ),
+        );
+      });
+    } else if (key === 'tour') {
+      const tour = g.gpEvent('tour');
+      const open = tourOpen(medals.byCup) || !!tour;
+      side.append(
+        h('h2', 'Grand Tour'),
+        h('p', open ? 'Nine races, every circuit in turn. Each rival twice, then a decider at Zenith Ring against the team nearest you on the table.' : 'Opens with a medal in each of the three cups.'),
+        h('div.prev-grid.nine' + (open ? '' : '.locked'), ...TRACKS.map((t) => board(t.id))),
+        h('div.prev-foot', trophy('tour'), tour && !isOver(tour) ? h('b', `Under way: ${progress(tour)}`) : pips(medals.byCup[TOUR_ID])),
+      );
+    } else if (key === 'season') {
+      const season = g.gpEvent('season');
+      const ids = TRACKS.map((t) => t.id).filter((id) => id !== 'zenith');
+      side.append(
+        h('h2', 'Zenith Cup season'),
+        h('p', 'Ten matchdays: every other faction twice, best of 3, two days off. Top the table for the Zenith Cup. It keeps between sittings.'),
+        h('div.prev-half', h('small', 'First half'), h('div.prev-boards', ...[...ids.slice(0, 4), 'zenith'].map(board))),
+        h('div.prev-half', h('small', 'Second half'), h('div.prev-boards', ...[...ids.slice(4, 8), 'zenith'].map(board))),
+        h('div.prev-foot', trophy('season'), h('b', season && !isOver(season) ? `Under way: ${progress(season)}` : `Zenith Cups won: ${GP_DIFFICULTY.map((d, i) => `${d} ${medals.season[i] ?? 0}`).join(' · ')}`)),
+      );
+    } else {
+      side.append(
+        h('h2', 'Difficulty'),
+        h('p', 'How well the rival pilots race. Your teammates race the same at every difficulty. It applies to a new cup, Grand Tour or season; one under way keeps its own.'),
+        h('div.prev-levels', ...GP_DIFFICULTY.map((d, i) => h('div' + (i === diff ? '.on' : ''), h('b', d), h('small', ['New to it: rivals who leave room.', 'A fair fight.', 'Rivals who race to win, and know the lines.'][i])))),
+      );
+    }
+  };
+
   m.register('gp', {
     render(m) {
       const col = h('div.col.gp');
       const list = h('div.list');
       const diff = g.gpDifficulty();
       const medals = g.gpMedals();
-      const won = (id: string) => GP_DIFFICULTY.map((d, i) => `${d}: ${medals.byCup[id]?.[i] ? MEDAL_NAMES[medals.byCup[id][i]!] : '–'}`).join(', ');
-      const under = (ev: GpEvent) => `Continue: round ${Math.min(playedRounds(ev), yourRoundNumber(ev))} of ${playedRounds(ev)}, ${GP_DIFFICULTY[ev.difficulty]}, ${factionName(LIVERIES[ev.faction])}`;
-      // The cups, each open once the one before it has given a medal. One is under way at a time.
+      const cupEv = g.gpEvent('cup');
+      const tour = g.gpEvent('tour');
+      const season = g.gpEvent('season');
+      const tourIsOpen = tourOpen(medals.byCup) || !!tour;
+      m.button(list, 'Cup', () => m.push('gp-cups'), { key: 'cup', note: cupEv && !isOver(cupEv) ? `${eventName(cupEv)}: ${progress(cupEv).toLowerCase()}` : 'Three cups, three races each' });
+      m.button(list, 'Grand Tour', () => g.openGp('tour'), {
+        key: 'tour',
+        locked: tourIsOpen ? null : 'A medal in each of the three cups opens it',
+        note: tour && !isOver(tour) ? progress(tour) : tourIsOpen ? 'Nine races, every circuit' : 'A medal in each cup opens it',
+      });
+      m.button(list, 'Season', () => g.openGp('season'), { key: 'season', note: season && !isOver(season) ? progress(season) : 'Ten matchdays for the Zenith Cup' });
+      m.choice(list, 'Difficulty', GP_DIFFICULTY[diff], (dir) => g.setGpDifficulty((diff + dir + 3) % 3), { key: 'difficulty' });
+      col.append(h('div.context', 'Grand Prix'), h('h1', 'Grand Prix'), list);
+      preview = h('div.panel.gp-preview');
+      m.root.append(h('div.shade'), m.panes(col, preview), m.footer(SELECT, CHANGE, BACK));
+    },
+    selected(_m, key) {
+      fill(key);
+    },
+  });
+
+  m.register('gp-cups', {
+    spatial: true,
+    render(m) {
+      const medals = g.gpMedals();
+      const diff = g.gpDifficulty();
       const cupEv = g.gpEvent('cup');
       const going = cupEv && !isOver(cupEv) ? cupEv : null;
+      const col = h('div.col.gp-cups-side');
+      col.append(
+        h('div.context', `Grand Prix · ${GP_DIFFICULTY[going ? going.difficulty : diff]}`),
+        h('h1', 'Choose a cup'),
+        h('p', going ? `The ${eventName(going)} is under way (${progress(going).toLowerCase()}). Choosing another cup puts it away.` : 'Three races, each against a different faction. A medal in one cup opens the next.'),
+      );
+      const row = h('div.cuprow');
       CUPS.forEach((c, i) => {
         const open = cupOpen(c.id, medals.byCup);
-        const mine = cupEv && cupEv.cup === c.id ? cupEv : null;
-        const note = mine && !isOver(mine) ? under(mine) : !open ? `Opens with a medal in the ${CUPS[i - 1].name}` : `${c.circuits.map(circuitName).join(', ')}. ${won(c.id)}`;
-        m.button(
-          list,
-          c.name,
+        const mine = going && going.cup === c.id ? going : null;
+        const card = h(
+          'div.item.cupcard' + (mine ? '.going' : ''),
+          trophy(c.id),
+          h('h3', c.name),
+          h('div.boards', ...c.circuits.map(board)),
+          pips(medals.byCup[c.id]),
+          h('div.status', mine ? `Continue: ${progress(mine).toLowerCase()}` : open ? '' : `A medal in the ${CUPS[i - 1].name} opens it`),
+        );
+        m.addItem(
+          row,
+          card,
           () => {
             if (going && going.cup !== c.id) {
               confirmDialog(m, `Put the ${eventName(going)} away?`, `One cup at a time: the ${eventName(going)} under way is abandoned (its races so far are lost) and the ${c.name} starts. Medals already won are kept.`, `Start the ${c.name}`, () => {
@@ -115,40 +243,15 @@ export function registerGrandPrix(m: Menus, g: Game): void {
               });
             } else g.openGp('cup', c.id);
           },
-          { key: 'cup-' + c.id, note, locked: open ? null : `A medal in the ${CUPS[i - 1].name} opens it` },
+          undefined,
+          { key: c.id, locked: open ? null : `A medal in the ${CUPS[i - 1].name} opens it` },
         );
       });
-      const tour = g.gpEvent('tour');
-      const tourIsOpen = tourOpen(medals.byCup);
-      m.button(list, 'Grand Tour', () => g.openGp('tour'), {
-        key: 'tour',
-        locked: tourIsOpen || tour ? null : 'A medal in each of the three cups opens it',
-        note: tour && !isOver(tour) ? under(tour) : !tourIsOpen ? 'Opens with a medal in each of the three cups' : `Nine races, every circuit from Meridian to Zenith Ring, the last a decider. ${won(TOUR_ID)}`,
-      });
-      const season = g.gpEvent('season');
-      m.button(list, 'Zenith Cup season', () => g.openGp('season'), {
-        key: 'season',
-        note: season && !isOver(season) ? under(season) : `Ten matchdays: every other faction twice, best of 3. Zenith Cups won at ${GP_DIFFICULTY[diff]}: ${medals.season[diff] ?? 0}`,
-      });
-      m.choice(list, 'Difficulty', GP_DIFFICULTY[diff], (dir) => g.setGpDifficulty((diff + dir + 3) % 3), { key: 'difficulty' });
-      for (const kind of ['cup', 'tour', 'season'] as GpKind[]) {
-        const ev = g.gpEvent(kind);
-        if (ev && !isOver(ev)) {
-          const name = eventName(ev);
-          m.button(
-            list,
-            `Abandon the ${name}`,
-            () =>
-              confirmDialog(m, `Abandon the ${name}?`, 'Its races so far are lost. Medals and cups already won are kept.', 'Abandon', () => {
-                g.abandonGp(kind);
-                m.refresh();
-              }),
-            { key: 'abandon-' + kind },
-          );
-        }
-      }
-      col.append(h('div.context', 'Grand Prix'), h('h1', 'Grand Prix'), h('p', 'Difficulty sets the rival pilots. It applies to a new cup, Grand Tour or season; one under way keeps its own.'), list);
-      m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, CHANGE, BACK));
+      const pane = h('div.panel.cups', row);
+      m.root.append(h('div.shade'), m.panes(col, pane), m.footer(SELECT, BACK));
+      // The cup under way, or else the furthest one open.
+      const first = going ? going.cup : [...CUPS].reverse().find((c) => cupOpen(c.id, medals.byCup))?.id;
+      if (first) m.focus(first);
     },
   });
 
@@ -179,6 +282,16 @@ export function registerGrandPrix(m: Menus, g: Game): void {
         m.button(list, ready ? 'Continue' : 'Waiting for the other races…', () => (ready ? g.gpAdvance(d.kind) : m.toast('The other races are still running')), { key: 'start', go: ready });
       }
       m.button(list, 'Hangar', () => g.openGpHangar(d.kind), { key: 'hangar' });
+      m.button(
+        list,
+        `Abandon the ${eventName(ev)}`,
+        () =>
+          confirmDialog(m, `Abandon the ${eventName(ev)}?`, 'Its races so far are lost. Medals and cups already won are kept.', 'Abandon', () => {
+            g.abandonGp(d.kind);
+            if (!m.popTo('gp')) m.reset('gp', undefined, ['title', 'modes']);
+          }),
+        { key: 'abandon' },
+      );
       col.append(list);
       const side = h('div.panel.standings', h('h2', ev.current > 0 ? `Standings after ${singleRaces(ev) ? 'round' : 'matchday'} ${ev.current}` : 'Standings'), gpTable(ev, ev.current - 1));
       m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
