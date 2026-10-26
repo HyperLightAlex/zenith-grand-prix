@@ -20,6 +20,8 @@ how each piece is built) are in [ART.md](ART.md); this is the front door.
 | The mechs' ink lines (geometry ink), with how to reproduce the comparison | [docs/mech-lines-report.md](mech-lines-report.md), `art/blender/ink_geometry.py`, `ink-overrides.json` |
 | Pictures of the game for checking: scripted cameras, before and after, finding moments | [tools/capture/README.md](../tools/capture/README.md) |
 | Every screen at every screen size | `tools/screens.mjs` |
+| A change that should not alter the picture: the same moments on every circuit, both looks, desktop and phone, against main | `tools/visual-check.mjs`, then `tools/capture/diff.py` |
+| What the game asks of a phone: downloads, memory, draw calls, a frame's CPU time, GPU memory left behind by a change of circuit | `tools/perf-audit.mjs` (a baseline from one build, `--compare` another) |
 | The mechs' line work, build A against build B | `tools/ink-compare.mjs`, `tools/ink-perf.mjs` |
 | The anime opening, from shot list to encode | [tools/trailer/README.md](../tools/trailer/README.md) |
 

@@ -66,6 +66,33 @@ describe('batched authored mech ink',()=>{
     markCharacter(new THREE.Group(),4);expect(geometryMarks[4]).toBe(0);
   });
 
+  it('sends the joints to the GPU once when they move, however many passes draw the mech, and not while it holds still',async()=>{
+    const asset=await load(2);
+    const rig=new MechRig(asset.dims);
+    const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
+    const ink=new MechInkBuilder(rig,joints);
+    const groups:THREE.Object3D[]=[];ink.addLevel(asset.parts,asset.lines,groups);rig.detailLevels.push(groups);
+    const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();scene.add(rig.root);
+    const hull=groups[0].children[0] as THREE.Mesh,mat=hull.material as THREE.ShaderMaterial;
+    const tex=mat.uniforms.uJointTex.value as THREE.DataTexture;
+    const draw=()=>hull.onBeforeRender({} as THREE.WebGLRenderer,scene,camera,hull.geometry,mat,null as never);
+    rig.apply(POSES.standby);scene.updateMatrixWorld(true);
+    draw();
+    const v0=tex.version;
+    // The same frame drawn by another pass (the speed mask, say): nothing to send.
+    draw();draw();
+    expect(tex.version).toBe(v0);
+    // A joint moves: sent once.
+    rig.apply(POSES.boost);scene.updateMatrixWorld(true);
+    draw();draw();
+    expect(tex.version).toBe(v0+1);
+    // The whole mech moving, its joints still: root-relative, so nothing to send.
+    rig.root.position.x+=5;scene.updateMatrixWorld(true);
+    draw();
+    expect(tex.version).toBe(v0+1);
+    rig.root.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();(o.material as THREE.Material).dispose();}});
+  });
+
   it('patches the installed r186 fat-line shader and keeps an opaque mark after its colour/fog output',()=>{
     const shader={vertexShader:THREE.ShaderLib.line.vertexShader,fragmentShader:THREE.ShaderLib.line.fragmentShader};
     patchInkLineShader(shader);

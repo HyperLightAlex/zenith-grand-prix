@@ -3,6 +3,7 @@
 // the opening, a spinning cell above it and a tall beacon so it can be picked
 // out from a long way back.
 import * as THREE from 'three';
+import { moves } from './still';
 import type { Track } from '../../sim/track';
 import { COLORS, toonMaterial } from './palette';
 import { trackMatrix } from './trackSpace';
@@ -138,7 +139,7 @@ export function buildGates(track: Track): GateVisual {
     icon.position.set(0, top + 3.4, 0);
     icon.scale.set(1, 1.5, 1);
     node.add(icon);
-    icons.push(icon);
+    icons.push(moves(icon));
 
     group.add(node);
     lit.push(1);

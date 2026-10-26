@@ -491,9 +491,27 @@ export class Hud {
     return [this.mapPath[i * 2] + (this.mapPath[j * 2] - this.mapPath[i * 2]) * k, this.mapPath[i * 2 + 1] + (this.mapPath[j * 2 + 1] - this.mapPath[i * 2 + 1]) * k];
   }
 
+  /**
+   * The map's width on the page, kept by a ResizeObserver: read from the
+   * element every few frames it would make the browser lay the page out
+   * mid-frame, after the frame's other changes to the HUD (-1: not known yet).
+   */
+  private mapCss = -1;
+  /** The portrait last set on the target panel. */
+  private targetPortrait = '';
+  private mapWatch: ResizeObserver | null = null;
+
   private drawMap(race: RaceState): void {
     const c = this.map;
-    const size = Math.round(c.clientWidth * Math.min(2, window.devicePixelRatio || 1));
+    if (!this.mapWatch && typeof ResizeObserver === 'function') {
+      // (Read in the observer's callback, the layout is already done: nothing is forced.)
+      this.mapWatch = new ResizeObserver(() => {
+        this.mapCss = c.clientWidth;
+      });
+      this.mapWatch.observe(c);
+    }
+    const css = this.mapWatch && this.mapCss >= 0 ? this.mapCss : c.clientWidth;
+    const size = Math.round(css * Math.min(2, window.devicePixelRatio || 1));
     if (size <= 0) return;
     if (c.width !== size) {
       c.width = size;
@@ -770,8 +788,12 @@ export class Hud {
       setText(this.targetName, t.name);
       setText(this.targetRole, `${mechName(t, lookOf(t.team).livery.models[t.role])}, ${lookOf(t.team).name}`);
       setIcon(this.targetRoleIco, ROLE_ICON[t.role]);
+      // (Compared with what was set, not read back: the browser gives it back as url("...").)
       const portrait = `url(${pilotOf(t)})`;
-      if (this.targetPilot.style.backgroundImage !== portrait) this.targetPilot.style.backgroundImage = portrait;
+      if (this.targetPortrait !== portrait) {
+        this.targetPortrait = portrait;
+        this.targetPilot.style.backgroundImage = portrait;
+      }
       const dist = Math.hypot(deltaS(this.track, t.s, focus.s), t.d - focus.d);
       setText(this.targetDist, dist > LOCK_BREAK * 0.8 ? 'Losing lock' : `${Math.round(dist)} m`);
       this.targetHp.style.transform = `scaleX(${Math.max(0, t.hp / t.maxHp).toFixed(3)})`;
@@ -855,8 +877,9 @@ export class Hud {
         }
       }
       if (offscreen) {
-        const W = this.root.clientWidth || window.innerWidth;
-        const H = this.root.clientHeight || window.innerHeight;
+        // (The frame's size: see placeUnderMech.)
+        const W = Math.round(frame.w) || window.innerWidth;
+        const H = Math.round(frame.h) || window.innerHeight;
         const len = Math.hypot(p.ex, p.ey) || 1;
         const ux = p.ex / len;
         const uy = p.ey / len;
@@ -972,8 +995,10 @@ export class Hud {
       if (this.device === 'touch') for (const b of boxes) b.style.left = b.style.top = '';
       return;
     }
-    const H = this.root.clientHeight || window.innerHeight;
-    const W = this.root.clientWidth || window.innerWidth;
+    // The HUD fills the frame: its size from the frame, not read off the page
+    // (which would make the browser lay out the HUD's changes mid-frame).
+    const H = Math.round(frame.h) || window.innerHeight;
+    const W = Math.round(frame.w) || window.innerWidth;
     const em = frame.em;
     const feet = p.cy + (p.cy - p.y) * 0.92;
     const top = Math.max(H * 0.42, Math.min(H - (frame.compact ? 6.6 : 9.4) * em, feet + 0.3 * em));

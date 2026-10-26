@@ -336,10 +336,10 @@ export function decodeInto(ctx: BaseAudioContext): BaseAudioContext {
 }
 
 /**
- * A song's files: downloaded as soon as this is made and kept for the visit
- * (about 20 MB). Decoded when a race on its circuit asks for it, and let go
- * of when a race on another circuit with a song does: decoded, a song takes
- * over 200 MB, so only one is held at a time.
+ * A song's files (a race song's are about 20 MB): downloaded the first time
+ * it is wanted, not before, and kept until forgotten. Decoded when it is
+ * wanted, and let go of when it is not: decoded, a race song takes over 200
+ * MB, so only one circuit's is held at a time, and only that circuit's files.
  */
 export class SongSource {
   /** 'loading' until it is decoded (or while it is not, once let go of). */
@@ -348,36 +348,58 @@ export class SongSource {
   buffers: AudioBuffer[] = [];
   /** How much later than the manifest's times this browser's decoder puts the audio, in seconds. */
   shift = 0;
-  private readonly files: Promise<{ manifest: SongManifest; data: ArrayBuffer[] }>;
+  /** The download, once started (null: not yet, or forgotten), and how to call it off. */
+  private files: Promise<{ manifest: SongManifest; data: ArrayBuffer[] }> | null = null;
+  private abort: AbortController | null = null;
+  /** When it last failed to load (performance.now() ms; -Infinity: never). */
+  failedAt = -Infinity;
   private decoding = false;
   /** Counts the times the decoded song was let go of, so a decode under way then is dropped. */
   private released = 0;
 
-  constructor(readonly base: string) {
-    this.files = (async () => {
-      const res = await fetch(base + 'song.json');
-      if (!res.ok) throw new Error(`${base}song.json: ${res.status}`);
-      const manifest = (await res.json()) as SongManifest;
-      const data = await Promise.all(
-        manifest.layers.map(async (l) => {
-          const r = await fetch(base + l.file);
-          if (!r.ok) throw new Error(`${base}${l.file}: ${r.status}`);
-          return r.arrayBuffer();
-        }),
-      );
-      return { manifest, data };
-    })();
-    this.files.catch((err) => this.fail(err));
+  constructor(readonly base: string) {}
+
+  /** Whether the files have been asked for (and not forgotten since). */
+  get fetched(): boolean {
+    return this.files !== null;
   }
 
-  /** Decode into buffers for `ctx`, unless that is done or under way. */
+  /** Download the files, unless that is done or under way. */
+  prefetch(): Promise<{ manifest: SongManifest; data: ArrayBuffer[] }> {
+    if (!this.files) {
+      const base = this.base;
+      const abort = typeof AbortController === 'function' ? new AbortController() : null;
+      const signal = abort?.signal;
+      this.abort = abort;
+      const files = (async () => {
+        const res = await fetch(base + 'song.json', { signal });
+        if (!res.ok) throw new Error(`${base}song.json: ${res.status}`);
+        const manifest = (await res.json()) as SongManifest;
+        const data = await Promise.all(
+          manifest.layers.map(async (l) => {
+            const r = await fetch(base + l.file, { signal });
+            if (!r.ok) throw new Error(`${base}${l.file}: ${r.status}`);
+            return r.arrayBuffer();
+          }),
+        );
+        return { manifest, data };
+      })();
+      this.files = files;
+      files.catch((err) => {
+        if (this.files === files) this.fail(err);
+      });
+    }
+    return this.files;
+  }
+
+  /** Decode into buffers for `ctx` (downloading first if need be), unless that is done or under way. */
   decode(ctx: BaseAudioContext): void {
     if (this.decoding || this.state !== 'loading') return;
     this.decoding = true;
     const round = this.released;
     const current = () => round === this.released;
     void (async () => {
-      const { manifest, data } = await this.files;
+      const { manifest, data } = await this.prefetch();
       const into = decodeInto(ctx);
       // Two at a time (where there are cores to spare, that is near half the
       // wait, and only two layers are mid-decode at once), each from a copy:
@@ -416,9 +438,25 @@ export class SongSource {
     this.state = 'loading';
   }
 
+  /**
+   * Let go of the download as well (and any decode): if the song is wanted
+   * again its files are fetched again, from the browser's cache when it has
+   * kept them.
+   */
+  forget(): void {
+    // A download still under way is called off; a song that failed to load
+    // can be tried again (a network that dropped may be back).
+    this.abort?.abort();
+    this.abort = null;
+    this.files = null;
+    if (this.state === 'failed') this.state = 'loading';
+    this.release();
+  }
+
   private fail(err: unknown): void {
     if (this.state === 'failed') return;
     this.state = 'failed';
+    this.failedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
     console.warn(`[audio] the song in ${this.base} could not be loaded; the race music is synthesised instead:`, err);
   }
 }

@@ -19,6 +19,7 @@
 // circuit, lit by the lightning, and each strike is the painted cloud with
 // the bolt out of its belly.
 import * as THREE from 'three';
+import { moves } from './still';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
@@ -1601,7 +1602,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
       m.renderOrder = -6;
       m.frustumCulled = false;
       clouds.add(m);
-      storm.push({ m, mat, dir: v3(Math.cos(a), 0, Math.sin(a)) });
+      storm.push({ m: moves(m), mat, dir: v3(Math.cos(a), 0, Math.sin(a)) });
     }
     group.add(clouds);
     ctx.paintedOnly.push(clouds);
@@ -1613,7 +1614,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
     m.frustumCulled = false;
     m.visible = false;
     group.add(m);
-    strikeCard = { m, mat, aspect: card.aspect };
+    strikeCard = { m: moves(m), mat, aspect: card.aspect };
     const cam = v3();
     ctx.updates.push((_time, camera) => {
       if (!clouds.visible) return;

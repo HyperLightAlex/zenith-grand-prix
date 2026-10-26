@@ -140,7 +140,7 @@ export class TouchControls {
     if (!on) {
       this.release();
       const root = document.documentElement.style;
-      for (const v of ['--tc-br-w', '--tc-br-h', '--tc-tr']) root.setProperty(v, '0px');
+      for (const v of ['--tc-br-w', '--tc-tr']) root.setProperty(v, '0px');
     } else this.layout();
   }
 
@@ -407,7 +407,8 @@ export class TouchControls {
     const frameRight = W - (f.x + f.w);
     const root = document.documentElement.style;
     root.setProperty('--tc-br-w', `${Math.max(0, reachX - frameRight).toFixed(0)}px`);
-    root.setProperty('--tc-br-h', `${Math.max(0, reachY - (H - (f.y + f.h))).toFixed(0)}px`);
+    // (How tall they reach is not used by the HUD; set on the page's root it
+    // only made the browser restyle the whole page on each change of buttons.)
     const pauseReach = 0.3 * u + 0.8 * u;
     root.setProperty('--tc-tr', `${Math.max(0, pauseReach - frameRight).toFixed(0)}px`);
   }

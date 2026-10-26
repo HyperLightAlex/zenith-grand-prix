@@ -431,6 +431,23 @@ normal/paint seams; the current reference remains at 23,876 triangles.
 across all passes, resolution, quality and active Sunhawk detail levels. It sends
 no telemetry. Timing reflects the current machine, browser load and quality settings.
 
+For performance work, `tools/perf-audit.mjs` measures a build at a phone's size
+(what it downloads before and after the title, the page's memory, draw calls and
+triangles by pass, matrices and textures updated each frame, a frame's CPU time,
+the GPU memory a change of circuit leaves behind) and compares it with a
+baseline; `tools/visual-check.mjs` and `tools/capture/diff.py` check that the
+picture has not changed. Rules the code keeps for a phone's sake:
+
+- Scenery that moves after it is built is marked with `moves()` where it is made
+  (`render/still.ts`): everything else has its matrices computed once, and
+  `tests/still-scenery.test.ts` fails if a circuit's updates move anything frozen.
+- A material that hands a texture to its shader itself (`onBeforeCompile`), or a
+  mesh that changes material with the look, names what it holds (`ownTextures`,
+  `alsoWears` in `render/owned.ts`), so a change of circuit frees it.
+- A circuit's song is downloaded when the circuit is named for a race, and only
+  that circuit's song is kept; shaders compile in the background as soon as a
+  scene is built (`Renderer.precompile`).
+
 To reproduce preparation from the archived study: run `polish_updated.py`, then
 `fix_hands.py`; generate the atlas with `paint_details.py` (Python + Pillow), run
 `uv_details.py` in Blender, then `export_game.py`. Export decimation is temporary;

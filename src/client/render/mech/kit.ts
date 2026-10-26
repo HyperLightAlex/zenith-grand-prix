@@ -5,7 +5,8 @@
 // data change. Each slot also carries a surface type (painted armour, bare
 // metal, rubber, glass) that the armour shader lights differently.
 import * as THREE from 'three';
-import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { weldVertices } from './weld';
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
 import { COLORS, toonGradient, type Livery } from '../palette';
 import { PANELS } from './mechArt';
@@ -388,7 +389,7 @@ export class Kit {
     // All merged parts carry the same custom attributes, including procedural additions.
     if(!geo.hasAttribute('_outline_normal'))geo.setAttribute('_outline_normal',geo.getAttribute('normal').clone());
     if(!geo.hasAttribute('_ink_width'))geo.setAttribute('_ink_width',new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count).fill(1),1));
-    if (this.indexed && !geo.index) geo = mergeVertices(geo, 1e-5);
+    if (this.indexed && !geo.index) geo = weldVertices(geo, 1e-5);
     if (slot === 'G') {
       this.glow.push(geo);
     } else {
@@ -608,7 +609,7 @@ export class Kit {
       const hull = new THREE.BufferGeometry();
       hull.setAttribute('position', geo.attributes.position.clone());
       if (geo.index) hull.setIndex(geo.index.clone());
-      const welded = mergeVertices(hull, 1e-3);
+      const welded = weldVertices(hull, 1e-3);
       welded.computeVertexNormals();
       const line = new THREE.Mesh(welded, outlineMat(this.outlineWidth));
       group.add(line);

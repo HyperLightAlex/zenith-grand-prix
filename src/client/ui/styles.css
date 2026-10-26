@@ -1752,6 +1752,8 @@ html.touch.compact .hud .mapbox { right: calc(1em + var(--sr, 0px) + var(--tc-tr
   border-radius: 50%;
   background: rgba(243, 245, 250, 0.85);
   box-shadow: 0 0 0 2px rgba(15, 21, 36, 0.45), 0 0.15em 0.6em rgba(15, 21, 36, 0.4);
+  /* Moved on every touch of the stick: a layer of its own, so moving it repaints nothing. */
+  will-change: transform;
 }
 
 .touchpad .tbtn {
@@ -1836,6 +1838,8 @@ html.touch.compact .hud .mapbox { right: calc(1em + var(--sr, 0px) + var(--tc-tr
   pointer-events: none;
 }
 .rotate-hint[hidden] { display: none; }
+/* The WebGL context lost (game.ts watchContext): over everything, and tapped to reload. */
+.rotate-hint.context-lost { z-index: 95; pointer-events: auto; cursor: pointer; }
 .rotate-hint .phone { width: 26px; height: 44px; margin-bottom: 4px; border: 3px solid var(--paper); border-radius: 6px; animation: turn-phone 2s ease-in-out infinite; }
 .rotate-hint b { font-size: 22px; font-weight: 800; }
 .rotate-hint span { font-size: 15px; font-weight: 500; opacity: 0.85; }

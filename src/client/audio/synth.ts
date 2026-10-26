@@ -46,6 +46,8 @@ export const MASTER = {
 
 /** Seconds a circuit has to stay named (prepareMusic) before its song is decoded. */
 const PREPARE_AFTER = 1;
+/** Seconds before a song that failed to load is tried again. */
+const RETRY_AFTER = 30;
 
 /** How far ahead of the audio clock music is queued, before allowing for the frame rate. */
 const LOOKAHEAD = 0.2;
@@ -136,12 +138,14 @@ export class SynthAudio implements AudioEngine {
 
   /**
    * `songs`: recorded race music, by circuit (style), as the folder each one's
-   * files are in. Their download starts now; each is decoded when a race on
-   * its circuit starts (one at a time: see prepareSong), and a circuit with
-   * one plays it instead of its synthesised music. `screenSongs`: songs for
-   * screens (see SCREEN_SONGS in song.ts), decoded as soon as there is an
-   * audio context and kept. `sfx`: where the recorded sound effects are;
-   * each sound with recordings plays one of them instead of its recipe.
+   * files are in. Each is downloaded and decoded when its circuit is named
+   * for a race (one at a time, the others' files let go of: see
+   * prepareSong), and a circuit with one plays it instead of its synthesised
+   * music. `screenSongs`: songs for screens (see SCREEN_SONGS in song.ts),
+   * downloaded and decoded as soon as there is an audio context, and kept
+   * (they start at once whenever they are wanted). `sfx`: where the recorded
+   * sound effects are; each sound with recordings plays one of them instead
+   * of its recipe.
    */
   constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string>; setlist?: string; sfx?: string } = {}) {
     for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
@@ -304,6 +308,9 @@ export class SynthAudio implements AudioEngine {
         clearTimeout(this.prepareTimer);
       }
       this.nextSong = style;
+      // Its download starts now (the decode waits for the circuit to stay named):
+      // a race song is some 20 MB, worth every second there is before the race.
+      this.songs.get(style)?.prefetch().catch(() => {});
       this.prepareTimer = setTimeout(() => {
         this.prepareTimer = null;
         this.guard(() => {
@@ -609,7 +616,11 @@ export class SynthAudio implements AudioEngine {
     if (!g || !song) return;
     // Never the song of the race on now, for one coming after it.
     if (this.want === 'race' && this.raceStyle() !== style && this.songs.has(this.raceStyle())) return;
-    for (const [s, other] of this.songs) if (s !== style) other.release();
+    // The others let go of, their files too: only one circuit's song is held.
+    for (const [s, other] of this.songs) if (s !== style) other.forget();
+    // One that failed to load is tried again, but not straight away (a race
+    // falling back to its synthesised music would ask again at once).
+    if (song.state === 'failed' && performance.now() - song.failedAt > RETRY_AFTER * 1000) song.forget();
     song.decode(g.ctx);
   }
 

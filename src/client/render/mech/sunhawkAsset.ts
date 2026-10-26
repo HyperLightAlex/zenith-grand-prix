@@ -50,12 +50,21 @@ export function readSunhawkAsset(scene: THREE.Group, variant: SunhawkAssetVarian
 }
 
 let loading: Promise<void> | undefined;
-/** The files preloadSunhawks loads: four models and the detail atlas. */
-export const SUNHAWK_FILES = 5;
+/**
+ * The files preloadSunhawks loads: the updated design's three levels of
+ * detail and the detail atlas, and the earlier design ('current', only for
+ * comparing the two) when asked for.
+ */
+export const sunhawkFiles = (comparison: boolean): number => (comparison ? 5 : 4);
 
-/** Loads both Sunhawks and the detail atlas. `loaded` hears of each file as it lands (the boot screen's progress). */
-export function preloadSunhawks(loaded?: () => void): Promise<void> {
-  const exports: Array<[SunhawkAssetVariant, number, string]> = [['current',0,currentUrl],['updated',0,updatedUrl],['updated',1,mediumUrl],['updated',2,farUrl]];
+/**
+ * Loads the Sunhawk and the detail atlas, and with `comparison` the earlier
+ * design too (?sunhawk=current, or art review, where B switches between
+ * them). `loaded` hears of each file as it lands (the boot screen's progress).
+ */
+export function preloadSunhawks(loaded?: () => void, comparison = false): Promise<void> {
+  const exports: Array<[SunhawkAssetVariant, number, string]> = [['updated',0,updatedUrl],['updated',1,mediumUrl],['updated',2,farUrl]];
+  if (comparison) exports.unshift(['current',0,currentUrl]);
   return loading ??= Promise.all([preloadSunhawkDetails().then(() => loaded?.()), ...exports.map(async ([variant, level, url]) => {
     const gltf = await new GLTFLoader().loadAsync(url);
     assets.set(`${variant}:${level}`, readSunhawkAsset(gltf.scene, variant));
@@ -67,6 +76,8 @@ export function preloadSunhawks(loaded?: () => void): Promise<void> {
     });
   })]).then(() => {});
 }
+/** Whether a design of the Sunhawk was loaded (the earlier one is only for comparisons). */
+export const hasSunhawkAsset = (variant: SunhawkAssetVariant): boolean => assets.has(`${variant}:0`);
 export function sunhawkAsset(variant: SunhawkAssetVariant, level = 0): SunhawkAsset {
   const asset = assets.get(`${variant}:${level}`);
   if (!asset) throw new Error('Sunhawk assets must load before constructing a frame');

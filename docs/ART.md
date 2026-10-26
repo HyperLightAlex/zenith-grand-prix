@@ -30,7 +30,7 @@ each limit is one piece of the code.
 | Each drawing traced again by hand, so lines shimmer | A background's lines are traced a fraction of a pixel off on every new drawing ("boil") and break here and there. A mech's are clean: steady, unbroken, one ink in any light, sharp through the film and smoothed at the end (see "Clean mech lines") |
 | Animation on twos (12 drawings a second) and threes for held poses | Mech poses at 12 a second, 8 when held (boosting, carving, a burst); effects change shape on the same drawings. The human pilot's banking and foot placement respond every display frame, so steering never waits for a drawing; movement and the camera stay smooth, and the race simulates at 60 Hz. |
 | Effects drawn by hand: sparks as stars, smoke as shapes, glows as flat rings | The big effects are painted cel animation, a few drawings each (see Drawn effects below); the small sparks are four-pointed stars with a white core, light trails flat bands, the bloom cut into rings |
-| Speed shown with drawn lines | Drawn speed lines, mostly white and a few in ink, new on every drawing, more of them the faster it goes. Under them, in both looks, the world stretches past: each pixel smears away from the middle of the frame (the way the camera is going, so the streaks never lean into a bend ahead) by as far as the camera travels in a seventh of a frame over that pixel's distance (from the depth buffer), so the road, the barriers and the stands streak and the sky and the far hills hold still. The mechs, which travel with the camera, are drawn into a small mask each frame and left sharp. (The look first cut the blur to a third, and the road's dashes then went past crisp and read slower than the plain look.) |
+| Speed shown with drawn lines | Drawn speed lines, mostly white and a few in ink, new on every drawing, more of them the faster it goes. Under them, in both looks, the world stretches past: each pixel smears away from the middle of the frame (the way the camera is going, so the streaks never lean into a bend ahead) by as far as the camera travels in a seventh of a frame over that pixel's distance (from the depth buffer), so the road, the barriers and the stands streak and the sky and the far hills hold still. The mechs, which travel with the camera, are left sharp: in this look by the ink pass's mask of where they are, in the plain look by drawing them again into a small mask of their own. (The look first cut the blur to a third, and the road's dashes then went past crisp and read slower than the plain look.) |
 | Shot on film | A film pass: halation (bright light bleeding orange into the emulsion), a little colour fringe and softness, gate weave, grain at 24 frames a second, a grade toward the painted palette, blacks that are paint rather than black |
 | Big moments cut to something else | Impact frames on heavy blows, the knockout held as a painted still, title cards for the lap phases, an eyecatch before the results |
 
@@ -510,8 +510,9 @@ quads at 0.72 times the traced inner width. Paint boundaries thin out from
 full set, LOD1 keeps longer boundaries/rims and stronger creases, and LOD2
 has only the shell. Lines follow the same rigid joint matrices as armour.
 Both are batched per mech: one shell draw and one line draw per visible LOD,
-with the existing LOD selection and hysteresis. The traveller mask uses the
-same joint shader, so the speed blur keeps these lines sharp too.
+with the existing LOD selection and hysteresis. The speed blur keeps these
+lines sharp too: it leaves the ink pass's mech mask alone (and in the plain
+look its traveller mask uses the same joint shader).
 
 Both shaders write the pilot's alpha mark (`0.1 + 0.065 * (id % 6)`).
 The existing mask, film exemption, MSAA4 and final mech FXAA remain active.
@@ -539,10 +540,14 @@ should only change on a new drawing (a pose, an effect's shape, the boil of
 the lines, the speed lines) keys off that clock.
 
 ```
-RenderPass (MSAA4) → DepthTap → Ink → Bloom → Speed → Film → Output → MechSmooth → CRT
-     armour / hull / lines       │                 ▲                  ▲
-        write alpha marks       └── mech mask ────┴──────────────────┘
+RenderPass → DepthTap → Ink → Bloom → Speed → Film → Output → MechSmooth → CRT
+                         │              ▲      ▲                  ▲
+                         └─ mech mask ──┴──────┴──────────────────┘
 ```
+
+The scene is drawn into a multisampled buffer of its own (the armour, hulls
+and lines writing their alpha marks); the passes after it ping-pong between
+two plain buffers, since a full-screen picture has no edges to smooth.
 
 - `src/client/render/look.ts`: the switch and its settings, the drawing
   clock, and the cel shading. `celify()` patches every toon and Lambert
@@ -591,7 +596,9 @@ come out thinner and softer, and on a handheld the automatic drop took the
 geometry outlines' weight with it.
 
 Geometry ink adds up to two draws per visible mech per scene render (one
-at LOD2), including the traveller-mask render when active. The measured
+at LOD2), including the plain look's traveller-mask render when active (the
+anime look takes the mechs from the ink pass's mask and does not draw them
+again). The measured
 six-mech Helios run added about 1.7% draw calls and 48–50% submitted triangles
 across all passes. Mean controlled frame work changed from 4.59 to 4.71 ms
 at 1280×720 and 5.94 to 5.95 ms at the Nova viewport on an M1 Pro. These

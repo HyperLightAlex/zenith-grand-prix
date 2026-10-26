@@ -285,34 +285,34 @@ export function themeFor(id: string | undefined): Theme {
   return THEMES[id ?? 'meridian'] ?? THEMES.meridian;
 }
 
-/** Free the GPU side of everything under `root`: geometry, materials and their textures. */
+/**
+ * Free the GPU side of everything under `root`: geometry, materials and
+ * their textures, including the materials a mesh wears only in the other
+ * look and the textures a material hands its shader itself (owned.ts).
+ */
 export function disposeTree(root: THREE.Object3D): void {
   const seen = new Set<object>();
+  const texture = (v: unknown) => {
+    if (v instanceof THREE.Texture && !seen.has(v) && !v.userData.shared) {
+      seen.add(v);
+      v.dispose();
+    }
+  };
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (mesh.geometry && !seen.has(mesh.geometry)) {
       seen.add(mesh.geometry);
       mesh.geometry.dispose();
     }
-    const mats = mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : [];
+    const worn = mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : [];
+    const mats = [...worn, ...((o.userData.alsoWears as THREE.Material[] | undefined) ?? [])];
     for (const m of mats) {
       if (seen.has(m)) continue;
       seen.add(m);
-      for (const v of Object.values(m as unknown as Record<string, unknown>)) {
-        if (v instanceof THREE.Texture && !seen.has(v) && !v.userData.shared) {
-          seen.add(v);
-          v.dispose();
-        }
-      }
+      for (const v of Object.values(m as unknown as Record<string, unknown>)) texture(v);
       const u = (m as THREE.ShaderMaterial).uniforms;
-      if (u) {
-        for (const e of Object.values(u)) {
-          if (e && e.value instanceof THREE.Texture && !seen.has(e.value) && !e.value.userData.shared) {
-            seen.add(e.value);
-            e.value.dispose();
-          }
-        }
-      }
+      if (u) for (const e of Object.values(u)) texture(e?.value);
+      for (const t of (m.userData.ownTextures as THREE.Texture[] | undefined) ?? []) texture(t);
       m.dispose();
     }
     if ((o as THREE.InstancedMesh).isInstancedMesh) (o as THREE.InstancedMesh).dispose();

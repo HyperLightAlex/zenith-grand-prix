@@ -20,6 +20,7 @@ pip install pillow                  # for the sheets
 | `capture.mjs <shots.json> <dir> [ids...]` | Renders shots: moments of a seeded race through scripted cameras, a JPEG a frame, into `<dir>/<shot id>/` |
 | `sheet.py <dir> <out.png> [per-row] [width] [ids...]` | A contact sheet: a row of evenly picked frames per shot |
 | `compare.py <before dir> <after dir> <shot> <out.png> [frames]` | Before above after, frame for frame |
+| `diff.py <before dir> <after dir> <report dir>` | How two sets of pictures differ, picture by picture (the share of pixels changed, the largest change), with before, after and the difference side by side for each that changed: for `tools/visual-check.mjs`'s pictures of two builds |
 | `build-ref.sh <ref> [port]` | Builds the game as it was at a git ref and serves it on a second port (8091), for "before" |
 | `events.mjs <seed> <track> <from> <to> <types>` | Lists sim events (boost, shot, swing, hit, ability, ko...) between two ticks: where to point a camera |
 | `scan.mjs <seed> <out.json> [team] [rival] [track]` | A whole race's events and mech states, for `fights.py` |

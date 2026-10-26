@@ -251,6 +251,11 @@ export class InkPass extends ShaderPass {
     super(InkShader);
   }
 
+  /** The mask's material (for compiling it ahead: Renderer.precompile). */
+  get maskMaterial(): THREE.Material {
+    return this.maskQuad.material as THREE.Material;
+  }
+
   override setSize(width: number, height: number): void {
     this.mask.setSize(Math.max(1, width), Math.max(1, height));
     ((this.maskQuad.material as THREE.ShaderMaterial).uniforms.uRes.value as THREE.Vector2).set(width, height);

@@ -169,7 +169,6 @@ export class MechInkBuilder {
   private jointData=new Float32Array(BONES*16);
   private jointTex=new THREE.DataTexture(this.jointData,4,BONES,THREE.RGBAFormat,THREE.FloatType);
   private joint=new THREE.Matrix4();
-  private lastFrame=-1;
   private inverse=new THREE.Matrix4();
   private center=new THREE.Vector3();
   private names: string[];
@@ -198,14 +197,20 @@ export class MechInkBuilder {
   jointMatrix(i: number, out = new THREE.Matrix4()): THREE.Matrix4 {
     return out.fromArray(this.jointData, i*16);
   }
-  private update(camera: THREE.Camera, scene: THREE.Scene, frame?: number): void {
-    // The joints once a frame (the hull, the lines and the speed mask share them).
-    if (frame === undefined || frame !== this.lastFrame) {
-      this.lastFrame = frame ?? -1;
-      this.inverse.copy(this.rig.root.matrixWorld).invert();
-      this.names.forEach((n,i)=>this.joint.multiplyMatrices(this.inverse,this.joints[n].matrixWorld).toArray(this.jointData,i*16));
-      this.jointTex.needsUpdate=true;
+  private update(camera: THREE.Camera, scene: THREE.Scene): void {
+    // The joints (the hull, the lines and the speed mask share them), sent
+    // to the GPU only when one has moved: once a frame while the mech
+    // moves, however many passes draw it, and not at all while it holds still.
+    this.inverse.copy(this.rig.root.matrixWorld).invert();
+    let moved=false;
+    for(let i=0;i<this.names.length;i++) {
+      const e=this.joint.multiplyMatrices(this.inverse,this.joints[this.names[i]].matrixWorld).elements;
+      for(let k=0,o=i*16;k<16;k++,o++) {
+        const v=Math.fround(e[k]);
+        if(this.jointData[o]!==v){this.jointData[o]=v;moved=true;}
+      }
     }
+    if(moved)this.jointTex.needsUpdate=true;
     this.center.set(0,this.rig.dims.height*.5,0).applyMatrix4(this.rig.root.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
     const z=Math.max(0,-this.center.z);
     this.uniforms.uDistance.value=z;
@@ -229,7 +234,7 @@ export class MechInkBuilder {
     // Conservative root-space bounds enclose every rigid animation, including
     // outstretched arms and fins. Joint-local transport bounds cannot cull these.
     h.geometry.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,this.rig.dims.height*.5,0),this.rig.dims.height);
-    h.onBeforeRender=(r,s,c)=>this.update(c,s,r.info?.render?.frame);
+    h.onBeforeRender=(_r,s,c)=>this.update(c,s);
     group.add(h);geometries.forEach(g=>g.dispose());
     if(lines.length) {
       const positions:number[]=[],joints:number[]=[],kinds:number[]=[];
@@ -239,7 +244,7 @@ export class MechInkBuilder {
       g.setAttribute('instanceKind',new THREE.InstancedBufferAttribute(new Float32Array(kinds),1));
       const l=new LineSegments2(g,this.line);l.name='Batched authored ink';l.frustumCulled=true;g.boundingSphere=h.geometry.boundingSphere.clone();l.castShadow=false;l.userData.ownMaterial=true;
       const object: THREE.Object3D=l;
-      object.onBeforeRender=(r,s,c)=>this.update(c,s,r.info?.render?.frame);
+      object.onBeforeRender=(_r,s,c)=>this.update(c,s);
       group.add(l);
     }
     this.rig.root.add(group);groups.push(group);

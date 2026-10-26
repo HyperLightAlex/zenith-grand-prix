@@ -7,7 +7,7 @@ import { ROLE, type Role } from '../sim/index';
 import { NullAudio, type AudioEngine } from './audio/audio';
 import { Game } from './game/game';
 import { useOldSwift } from './render/mech/frames';
-import { preloadSunhawks, SUNHAWK_FILES } from './render/mech/sunhawkAsset';
+import { preloadSunhawks, sunhawkFiles } from './render/mech/sunhawkAsset';
 import { preloadRoster, ROSTER_IDS } from './render/mech/rosterAsset';
 import { BootScreen } from './ui/boot';
 import { setRosterModel } from './render/mech/rosterSelection';
@@ -50,15 +50,19 @@ async function boot(): Promise<void> {
   // The boot screen (drawn by the page) counts the model files as they land,
   // and logs each mech once all its levels of detail are in.
   const bootScreen = new BootScreen();
+  // The Sunhawk's earlier design only for comparing the two (?sunhawk=current,
+  // art review's B, the model viewer's &compare).
+  const comparison = model === 'current' || q.get('artReview') === '1' || q.get('debug') === 'mechs';
+  const SUNHAWK_FILES = sunhawkFiles(comparison);
   bootScreen.start(SUNHAWK_FILES + ROSTER_IDS.length * 3, ROSTER_IDS.length + 1);
-  let sunhawkFiles = 0;
+  let sunhawkLoaded = 0;
   const rosterLevels = new Map<string, number>();
   try {
     await Promise.all([
       preloadSunhawks(() => {
         bootScreen.file();
-        if (++sunhawkFiles === SUNHAWK_FILES) bootScreen.frame('sunhawk');
-      }),
+        if (++sunhawkLoaded === SUNHAWK_FILES) bootScreen.frame('sunhawk');
+      }, comparison),
       preloadRoster((id) => {
         bootScreen.file();
         const n = (rosterLevels.get(id) ?? 0) + 1;

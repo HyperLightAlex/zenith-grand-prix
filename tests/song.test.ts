@@ -175,6 +175,84 @@ describe('holding one song at a time', () => {
     }
   });
 
+  it('downloads nothing until it is wanted', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', (url: string) => (urls.push(url), fakeFetch(url)));
+    try {
+      const src = new SongSource('music/x/');
+      await settle();
+      expect(urls).toEqual([]);
+      expect(src.fetched).toBe(false);
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      expect(urls).toEqual(['music/x/song.json', 'music/x/a.mp3', 'music/x/b.mp3', 'music/x/c.mp3', 'music/x/d.mp3']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('forgets its download when told, and fetches it again when wanted', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', (url: string) => (urls.push(url), fakeFetch(url)));
+    try {
+      const src = new SongSource('music/x/');
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      src.forget();
+      expect(src.state).toBe('loading');
+      expect(src.buffers).toHaveLength(0);
+      expect(src.fetched).toBe(false);
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      expect(urls.filter((u) => u.endsWith('song.json'))).toHaveLength(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('calls off a download under way when forgotten', async () => {
+    const signals: AbortSignal[] = [];
+    vi.stubGlobal('fetch', (_url: string, init?: { signal?: AbortSignal }) => {
+      if (init?.signal) signals.push(init.signal);
+      return new Promise((_ok, fail) => init?.signal?.addEventListener('abort', () => fail(new Error('aborted'))));
+    });
+    try {
+      const src = new SongSource('music/x/');
+      src.prefetch().catch(() => {});
+      await settle();
+      expect(signals.length).toBe(1);
+      src.forget();
+      expect(signals[0].aborted).toBe(true);
+      await settle();
+      // Called off is not failed: it can be asked for again.
+      expect(src.state).toBe('loading');
+      expect(src.fetched).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('tries a song that failed to load again once forgotten', async () => {
+    let up = false;
+    vi.stubGlobal('fetch', (url: string) => (up ? fakeFetch(url) : Promise.reject(new Error('offline'))));
+    try {
+      const src = new SongSource('music/x/');
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('failed'));
+      expect(src.failedAt).toBeGreaterThan(-Infinity);
+      // Still failed if only decoded again (the race plays its synthesised music)...
+      src.decode(ctx([]));
+      expect(src.state).toBe('failed');
+      // ...but forgotten, it loads afresh.
+      up = true;
+      src.forget();
+      src.decode(ctx([]));
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('drops a decode let go of halfway', async () => {
     vi.stubGlobal('fetch', fakeFetch);
     try {
