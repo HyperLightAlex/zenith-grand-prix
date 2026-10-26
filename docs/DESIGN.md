@@ -205,6 +205,17 @@ across its arc, the arc turns under a mech: the Möbius barrel rolls the
 whole way round, but a full turn to each third of the loop, so each roll
 turns the road about 25 degrees one way and back (one slow roll over the
 whole loop turned it nearly 80).
+On a barrel or a twist the bend a mech steers by is the road's own turn
+within its surface, worked out from the built road (a barrel's plan has
+none, but its road swings out round its column or tube and back: the Sword
+63 degrees each way, the Twist 31; a twist's plan missed the kink where it
+joins the road). With no bend there, the road used to carry a mech round
+the swing as a lock-on does; now, hands off, it runs wide, as on any
+corner. Round them the skates' hold grips as hard as the swing needs for
+any frame to follow it at 175 u/s (`HOLD_TURN_SPEED`, Track.hold, up to six
+times on the Sword); how fast a frame can swing round is still its own, so
+the tightest of the Sword is a stretch in Overdrive.
+`tests/steering.test.ts` drives them both ways.
 The builder drives a frame (forward, right, up) through the pieces, lengthens
 two straights and sets one climb so the lap closes, then resamples every 4
 units. Every sample carries its own width, wall flags, a middle wall's half

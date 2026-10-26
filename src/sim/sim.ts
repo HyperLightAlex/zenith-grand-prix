@@ -140,7 +140,7 @@ import {
 } from './core';
 import { approach, approachAngle, clamp, lerp, rngNext, wrapAngle } from './math';
 import { makeRules, ticks } from './rules';
-import { deltaS, gateCrossed, gripAt, hwAt, kappaAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
+import { deltaS, gateCrossed, gripAt, holdAt, hwAt, kappaAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
 import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceState } from './types';
 
 export { packBonus, speedCap } from './core';
@@ -476,7 +476,8 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // Carving digs the skates in: far more grip, and a tighter turn.
   const carving = m.carving && !m.air;
   const grip = c.grip * gripAt(track, m.s) * (carving ? race.rules.carveGrip * (m.overdriveT > 0 ? OVERDRIVE_CARVE_GRIP : 1) : 1);
-  const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
+  // (Round a barrel or a twist, the skates' hold grips harder: Track.hold.)
+  const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), (grip * holdAt(track, m.s)) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
   const kappa = kappaAt(track, m.s);
   const sdot = (m.speed * Math.cos(m.heading)) / Math.max(0.35, 1 - kappa * m.d);
   const align = -m.heading * ALIGN_RATE * (1 - Math.abs(m.steer));

@@ -173,6 +173,12 @@ export interface Track {
   mag: Uint8Array;
   /** Cornering grip multiplier: a turn banked toward its inside can be taken faster. */
   grip: Float32Array;
+  /**
+   * How much harder than usual a mech grips here (1 almost everywhere):
+   * round a barrel or a twist the skates hold the road, as hard as its bend
+   * needs for any frame at HOLD_TURN_SPEED.
+   */
+  hold: Float32Array;
   pads: Pad[];
   forks: Fork[];
   /** Mechs can leave the road here (jumps, crests, open edges). False on a plan track. */
@@ -355,7 +361,7 @@ export function registerCircuitBuilder(fn: (def: CircuitDef) => Track): void {
 }
 
 /** Neutral 3D feature arrays for a flat plan track of n samples. */
-export function flatFeatures(n: number, halfWidth: number): Pick<Track, 'hw' | 'roadL' | 'roadR' | 'wallL' | 'wallR' | 'median' | 'shiftL' | 'riseL' | 'shiftR' | 'riseR' | 'kv' | 'upY' | 'mag' | 'grip' | 'pads' | 'forks' | 'air' | 'minHw' | 'maxHw'> {
+export function flatFeatures(n: number, halfWidth: number): Pick<Track, 'hw' | 'roadL' | 'roadR' | 'wallL' | 'wallR' | 'median' | 'shiftL' | 'riseL' | 'shiftR' | 'riseR' | 'kv' | 'upY' | 'mag' | 'grip' | 'hold' | 'pads' | 'forks' | 'air' | 'minHw' | 'maxHw'> {
   return {
     hw: new Float32Array(n).fill(halfWidth),
     roadL: new Uint8Array(n).fill(1),
@@ -371,6 +377,7 @@ export function flatFeatures(n: number, halfWidth: number): Pick<Track, 'hw' | '
     upY: new Float32Array(n).fill(1),
     mag: new Uint8Array(n),
     grip: new Float32Array(n).fill(1),
+    hold: new Float32Array(n).fill(1),
     pads: [],
     forks: [],
     air: false,
@@ -619,6 +626,11 @@ export function upYAt(track: Track, s: number): number {
 
 export function gripAt(track: Track, s: number): number {
   return sampleArray(track, track.grip, s);
+}
+
+/** How much harder than usual a mech grips at s (Track.hold). */
+export function holdAt(track: Track, s: number): number {
+  return sampleArray(track, track.hold, s);
 }
 
 export function magAt(track: Track, s: number): boolean {

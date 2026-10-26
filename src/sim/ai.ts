@@ -26,7 +26,7 @@ import {
 import { carveStick, classOf, distance, hpFraction, inPlay, lockable, sameRoute, setTarget, speedCap } from './core';
 import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
-import { deltaS, forkAt, gripAt, hwAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
+import { deltaS, forkAt, gripAt, holdAt, hwAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
 import type { AttackDef } from './config';
 import type { MechInput, MechState, RaceState } from './types';
 
@@ -383,7 +383,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // harder, so the same turn needs less stick.
   const kappa = kappaAt(track, m.s + m.speed * 0.12);
   const carveGrip = m.carving ? rules.carveGrip * (m.overdriveT > 0 ? OVERDRIVE_CARVE_GRIP : 1) : 1;
-  const omegaMax = Math.min(c.turnMax * (m.carving ? CARVE_TURN : 1), (c.grip * carveGrip) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) || 1;
+  const omegaMax = Math.min(c.turnMax * (m.carving ? CARVE_TURN : 1), (c.grip * carveGrip * holdAt(track, m.s)) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) || 1;
   const headingWant = clamp(Math.atan2(dWant - m.d, look), -0.5, 0.5);
   const sdot = m.speed * Math.cos(m.heading);
   const rate = kappa * sdot + (headingWant - m.heading) * 3.2;
