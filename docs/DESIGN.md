@@ -216,6 +216,19 @@ any frame to follow it at 175 u/s (`HOLD_TURN_SPEED`, Track.hold, up to six
 times on the Sword); how fast a frame can swing round is still its own, so
 the tightest of the Sword is a stretch in Overdrive.
 `tests/steering.test.ts` drives them both ways.
+A fork's routes are drawn moved apart from the road (across and up). Where
+a fork has the room (Canyon's Crossover, Helios's Split Decision,
+Frostline's Aurora Split, Monsoon's Temple Halls) its routes part gently,
+no tighter than radius 300 where it fits (Canyon's crossing routes 229),
+and a route's parting is a bend like any other: a mech moves along its
+route and steers against the route's own bend over the road's
+(Track.slopeL/R, bendL/R), so it steers into its route, and hands off it
+runs off its line. On Monsoon's last bend the causeway's return to the
+road comes in the bend, so the outside route tightens to about radius 130
+there: a carve, or a lift. The Hull (250 long, inside the titan), the Dock
+(round the station's module) and the Braid (its strands round each other)
+are too short or twisted too hard to part gently: their routes still carry
+a mech apart (ForkSpec.carried), turned to face along its route.
 The builder drives a frame (forward, right, up) through the pieces, lengthens
 two straights and sets one climb so the lap closes, then resamples every 4
 units. Every sample carries its own width, wall flags, a middle wall's half

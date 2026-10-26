@@ -28,6 +28,10 @@ import { registerCircuitBuilder, smoothRing, type Fork, type Gate, type GateDef,
 export const BANK_GRIP = 1.2;
 const STEP = 0.5;
 const SAMPLE = 4;
+/** The tightest a steered fork's routes bend as they part (see ForkSpec.carried): about what a mech can follow flat out. */
+const ROUTE_BEND_RADIUS = 300;
+/** How long a steered fork's routes run fully apart at the least, in its middle. */
+const ROUTE_APART = 40;
 
 export interface ForkSpec {
   /** Pieces carrying the same id, one after another, form one fork. */
@@ -45,6 +49,14 @@ export interface ForkSpec {
    * again at the end.
    */
   braid?: { turns: number; radius: number };
+  /**
+   * The routes carry a mech as they are drawn apart: moved with its route
+   * and turned to face along it, it steers as if the road ran straight on.
+   * For a fork too short, or twisted too hard, to part gently enough to
+   * steer (Titan's Rest's Hull, Zenith Ring's Dock, Abyss Line's Braid).
+   * Otherwise a route's parting is a bend like any other, steered into.
+   */
+  carried?: boolean;
 }
 
 export interface PieceProps {
@@ -694,7 +706,14 @@ export function buildCircuit(def: CircuitDef): Track {
     // on the lower (rising and swinging together, the decks met with 5
     // units between them and the mechs below drove through the one above).
     const crossing = (fs.spec.left?.shift ?? 0) > 0 || (fs.spec.right?.shift ?? 0) < 0;
-    const ramp = clamp((len - 2 * OPEN) / (crossing ? 2.7 : 2), 0, 170);
+    // A carried fork parts as it always has. A steered one parts as gently
+    // as it has room for: no tighter than ROUTE_BEND_RADIUS (a smoothstep
+    // across S over L bends at most 6 S / L^2), short of a stretch of
+    // ROUTE_APART fully apart in the middle.
+    const S = Math.max(Math.abs(fs.spec.left?.shift ?? 0), Math.abs(fs.spec.right?.shift ?? 0));
+    const gentle = Math.sqrt(6 * S * ROUTE_BEND_RADIUS);
+    const room = len / 2 - OPEN - ROUTE_APART / 2;
+    const ramp = fs.spec.carried ? clamp((len - 2 * OPEN) / (crossing ? 2.7 : 2), 0, 170) : clamp(gentle, 0, room);
     for (let k = 0; k < n; k++) {
       const s = k * ds;
       if (s < fs.s0 || s > fs.s1) continue;
@@ -704,14 +723,47 @@ export function buildCircuit(def: CircuitDef): Track {
       let up = 0;
       if (ramp > 0 && !crossing) {
         across = up = smoothstep(fs.s0 + OPEN, fs.s0 + OPEN + ramp, s) * (1 - smoothstep(fs.s1 - OPEN - ramp, fs.s1 - OPEN, s));
-      } else if (ramp > 0) {
+      } else if (ramp > 0 && fs.spec.carried) {
         up = smoothstep(fs.s0 + 20, fs.s0 + OPEN + 0.7 * ramp, s) * (1 - smoothstep(fs.s1 - OPEN - 0.7 * ramp, fs.s1 - 20, s));
         across = smoothstep(fs.s0 + OPEN + 0.35 * ramp, fs.s0 + OPEN + 1.35 * ramp, s) * (1 - smoothstep(fs.s1 - OPEN - 1.35 * ramp, fs.s1 - OPEN - 0.35 * ramp, s));
+      } else if (ramp > 0) {
+        // Steered and crossing: across over the whole ramp, and up a good
+        // deal sooner, so that where the decks first overlap (about a fifth
+        // of the way across) the upper one is already well clear of a mech
+        // on the lower.
+        up = smoothstep(fs.s0 + 20, fs.s0 + OPEN + 0.45 * ramp, s) * (1 - smoothstep(fs.s1 - OPEN - 0.45 * ramp, fs.s1 - 20, s));
+        across = smoothstep(fs.s0 + OPEN, fs.s0 + OPEN + ramp, s) * (1 - smoothstep(fs.s1 - OPEN - ramp, fs.s1 - OPEN, s));
       }
       shiftL[k] = (fs.spec.left?.shift ?? 0) * across;
       riseL[k] = (fs.spec.left?.rise ?? 0) * up;
       shiftR[k] = (fs.spec.right?.shift ?? 0) * across;
       riseR[k] = (fs.spec.right?.rise ?? 0) * up;
+    }
+  }
+
+  // Steered forks: how fast each route moves across as it goes (its slope
+  // off the road's line) and how its heading turns (its own bend, over the
+  // road's), for the sim to move and steer a mech by its route.
+  const slopeL = new Float32Array(n);
+  const slopeR = new Float32Array(n);
+  const bendL = new Float32Array(n);
+  const bendR = new Float32Array(n);
+  for (const fs of forkSpans) {
+    if (fs.spec.carried) continue;
+    const k0 = Math.floor(fs.s0 / ds);
+    const k1 = Math.ceil(fs.s1 / ds);
+    for (const [shift, slope, bend] of [
+      [shiftL, slopeL, bendL],
+      [shiftR, slopeR, bendR],
+    ] as const) {
+      for (let k = k0; k <= k1; k++) {
+        const j = (k + n) % n;
+        slope[j] = (shift[(j + 1) % n] - shift[(j - 1 + n) % n]) / (2 * ds);
+      }
+      for (let k = k0; k <= k1; k++) {
+        const j = (k + n) % n;
+        bend[j] = (Math.atan(slope[(j + 1) % n]) - Math.atan(slope[(j - 1 + n) % n])) / (2 * ds);
+      }
     }
   }
 
@@ -759,7 +811,7 @@ export function buildCircuit(def: CircuitDef): Track {
         jump: jumpGap,
       };
     };
-    return { s0: fs.s0, s1: fs.s1, median: fs.spec.median, left: route(-1), right: route(1) };
+    return { s0: fs.s0, s1: fs.s1, median: fs.spec.median, left: route(-1), right: route(1), carried: !!fs.spec.carried };
   });
 
   let minHw = Infinity;
@@ -800,6 +852,10 @@ export function buildCircuit(def: CircuitDef): Track {
     wallR,
     median,
     shiftL,
+    slopeL,
+    slopeR,
+    bendL,
+    bendR,
     riseL,
     shiftR,
     riseR,

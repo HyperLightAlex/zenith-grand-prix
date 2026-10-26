@@ -140,7 +140,7 @@ import {
 } from './core';
 import { approach, approachAngle, clamp, lerp, rngNext, wrapAngle } from './math';
 import { makeRules, ticks } from './rules';
-import { deltaS, gateCrossed, gripAt, holdAt, hwAt, kappaAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
+import { deltaS, gateCrossed, gripAt, holdAt, hwAt, kappaAt, routeBendAt, routeShiftAt, routeSlopeAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
 import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceState } from './types';
 
 export { packBonus, speedCap } from './core';
@@ -478,10 +478,12 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   const grip = c.grip * gripAt(track, m.s) * (carving ? race.rules.carveGrip * (m.overdriveT > 0 ? OVERDRIVE_CARVE_GRIP : 1) : 1);
   // (Round a barrel or a twist, the skates' hold grips harder: Track.hold.)
   const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), (grip * holdAt(track, m.s)) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
+  // The bend steered against: the road's, and in a steered fork the route's own over it.
   const kappa = kappaAt(track, m.s);
-  const sdot = (m.speed * Math.cos(m.heading)) / Math.max(0.35, 1 - kappa * m.d);
+  const p = routeSlopeAt(track, m.s, m.d);
+  const sdot = (m.speed * Math.cos(m.heading + Math.atan(p))) / Math.max(0.35, 1 - kappa * (m.d + routeShiftAt(track, m.s, m.d)));
   const align = -m.heading * ALIGN_RATE * (1 - Math.abs(m.steer));
-  m.heading = clamp(m.heading + (m.steer * omegaMax - kappa * sdot + align) * DT, -MAX_HEADING, MAX_HEADING);
+  m.heading = clamp(m.heading + (m.steer * omegaMax - (kappa + routeBendAt(track, m.s, m.d)) * sdot + align) * DT, -MAX_HEADING, MAX_HEADING);
   m.facing = m.heading;
   syncFromSpeed(m);
   chargeCarve(race, track, m, sharp);
@@ -536,8 +538,10 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     // fight's, so nothing is flung on when the swing ends or is cut short.
     m.vs = t.vs;
     m.vd = t.vd;
-    m.s = wantS - (m.vs / Math.max(0.35, 1 - kappaAt(track, wantS) * wantD)) * DT;
-    m.d = wantD - m.vd * DT;
+    // (Back from where it is wanted by one tick's move, which integrate makes.)
+    trackRates(track, wantS, wantD, m.vs, m.vd);
+    m.s = wantS - rates[0] * DT;
+    m.d = wantD - rates[1] * DT;
     m.facing = Math.atan2(td - wantD, ts - wantS);
   } else if (m.act === ACT.DASH) {
     // The dash impulse was applied when it started; just let it run out.
@@ -782,12 +786,37 @@ function stepFalling(race: RaceState, track: Track, m: MechState, c: ClassDef): 
   race.events.push({ type: 'recover', mech: m.id });
 }
 
+const rates: [number, number] = [0, 0];
+
+/**
+ * How fast a mech at (s, d) moving at (vs, vd) goes along the road and
+ * across it, into `rates`. Its velocity is along and across its own way:
+ * the road, or in a steered fork its route, which runs off the road's line
+ * as it parts (at slope p): turned onto the road's line, with d held to the
+ * route. The inside of a bend is the shorter way round (counting where the
+ * route is drawn on the road).
+ */
+function trackRates(track: Track, s: number, d: number, vs: number, vd: number, kappa = kappaAt(track, s)): [number, number] {
+  const p = routeSlopeAt(track, s, d);
+  let along = vs;
+  let across = vd;
+  if (p !== 0) {
+    const ca = 1 / Math.sqrt(1 + p * p);
+    along = (vs - vd * p) * ca;
+    across = (vs * p + vd) * ca;
+  }
+  const sdot = along / Math.max(0.35, 1 - kappa * (d + routeShiftAt(track, s, d)));
+  rates[0] = sdot;
+  rates[1] = across - p * sdot;
+  return rates;
+}
+
 function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): void {
   const kappa = kappaAt(track, m.s);
   const home = m.d >= 0 ? 1 : -1;
-  // The inside of a bend is the shorter way round.
-  m.s += (m.vs / Math.max(0.35, 1 - kappa * m.d)) * DT;
-  m.d += m.vd * DT;
+  trackRates(track, m.s, m.d, m.vs, m.vd, kappa);
+  m.s += rates[0] * DT;
+  m.d += rates[1] * DT;
 
   // The lane this mech may use: the road, less the wall down the middle of a
   // fork if it is in one. An edge with no barrier lets it go over.

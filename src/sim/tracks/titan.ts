@@ -23,6 +23,8 @@ const HULL: ForkSpec = {
   // The corridors keep low through the chest on the left; the gallery runs high along its ribs on the right.
   left: { shift: -26, rise: -4 },
   right: { shift: 30, rise: 28 },
+  // Too short (inside the titan) to part gently enough to steer: the routes carry a mech apart.
+  carried: true,
 };
 const inHull = { width: 40, fork: HULL };
 

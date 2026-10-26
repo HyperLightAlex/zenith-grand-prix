@@ -2025,10 +2025,12 @@ function buildFrostline(ctx: Ctx): void {
         out.push([dout, wall], [dout, 0]);
         return out;
       };
-      // Only where the caves have swung all the way out, and run straight on (their mouths open where they swing).
+      // Only where the caves have swung all the way out, and run straight on
+      // (their mouths open where they swing; the route steered, its parting
+      // is long and gentle, so out to within a little of all the way).
       let widest = 0;
       for (let s = fork.s0; s < fork.s1; s += 4) widest = Math.max(widest, Math.abs(track.shiftR[Math.floor(s / track.ds) % track.n]));
-      const caved = (i: number) => Math.abs(track.shiftR[i]) > widest - 2;
+      const caved = (i: number) => Math.abs(track.shiftR[i]) > widest - 0.75;
       for (let s = fork.s0 + 40; s < fork.s1 - 40; s += 4) {
         const i = Math.floor(s / track.ds) % track.n;
         // Under the bridge, where it stands well up: an ice pillar every so often.
