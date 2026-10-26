@@ -272,6 +272,13 @@ export class Renderer {
   private rain = 0;
 
   /**
+   * Out on the circuit (false in the hangar): the circuit's weather, its
+   * rain on the mechs, only shows out there. The hangar keeps the circuit
+   * built behind it, palette and all, so this is said apart.
+   */
+  outdoors = true;
+
+  /**
    * Cut to an impact frame for `seconds`, if the look allows: a drawing in
    * negative, then one in two flat tones with the lines in red. No more than
    * one every 1.2 s unless `force`d (a strobe of them would be hard on the
@@ -338,7 +345,7 @@ export class Renderer {
     film.tMech.value = this.inkPass.mask.texture;
     film.uMechSharp.value = this.inking && !original ? 1 : 0;
     // (Rain on the mechs needs the mask of where they are, which inking draws.)
-    film.uRain.value = this.inking && on ? this.rain : 0;
+    film.uRain.value = this.inking && on && this.outdoors ? this.rain : 0;
     if (drawClock.fresh) film.uRainSeed.value = (drawClock.drawing % 89) * 1.13;
     if (this.inkPass.enabled) {
       ink.uInk.value = look.ink;

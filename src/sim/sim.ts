@@ -107,6 +107,7 @@ import {
   CARVE_TIERS,
   CARVE_TRIGGER,
   CARVE_TURN,
+  OVERDRIVE_CARVE_GRIP,
   LANDING_AIR_TICKS,
   PASS_COOLDOWN,
   PASS_JUMP,
@@ -474,7 +475,7 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // banked toward its inside grips harder; in the air there is little grip at all.
   // Carving digs the skates in: far more grip, and a tighter turn.
   const carving = m.carving && !m.air;
-  const grip = c.grip * gripAt(track, m.s) * (carving ? race.rules.carveGrip : 1);
+  const grip = c.grip * gripAt(track, m.s) * (carving ? race.rules.carveGrip * (m.overdriveT > 0 ? OVERDRIVE_CARVE_GRIP : 1) : 1);
   const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), grip / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
   const kappa = kappaAt(track, m.s);
   const sdot = (m.speed * Math.cos(m.heading)) / Math.max(0.35, 1 - kappa * m.d);
@@ -937,6 +938,10 @@ function ram(race: RaceState, track: Track, att: MechState, vic: MechState): voi
   const braced = vic.shieldT > 0 || vic.ramT > 0 || vic.guarding;
   if (!applyHit(race, track, att, vic, def, ATK.DF_RAM)) return;
   att.ramHits |= bit;
+  // Landed on the mech it was driving at, the charge is spent: it ends
+  // there, prow and all. (On the way, or let go of and running on down
+  // the road, it carries on through whatever it runs into.)
+  if (att.target === vic.id) att.ramT = 0;
   if (!isActive(vic)) return;
   // Sideways, away from the attacker; from dead astern, toward the nearer wall.
   const side = Math.abs(dd) > 0.5 ? Math.sign(dd) : vic.d >= 0 ? 1 : -1;

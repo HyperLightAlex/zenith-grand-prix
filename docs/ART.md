@@ -84,7 +84,7 @@ knockout keeps its own colours. They play on the drawing clock.
 | Stun | 13B | A staggered mech shorting out round its head and shoulders, for as long as the stagger lasts |
 | Hammer | 14B | The Breaker and the Breaker Slam coming down; a slam also cracks the road round the mech it hits |
 | Muzzle blasts | 15 | Every shot, along its line: a spike from a rifle, a cone from the scatter cannon (once a volley) |
-| Ram | 16 | The Ram: the charge starting, then the prow's bow shock ahead of the mech while it lasts (seen from behind, smaller and behind the mech, eased in as the charge turns away) |
+| Ram | 16 | The Ram: the charge starting (seen from behind, smaller and behind the mech, eased in as the charge turns away). While the charge lasts its prow is not drawn but built: a four-sided pyramid of amber light over the defender's front (`makeRamProw`, fx.ts), its edges lit and bands streaming back from its point, its open back just behind the mech so that from behind its edges frame it; on twos in the anime look |
 
 `tools/fx/ingest.py` keys out a sheet's magenta and cuts its panels (and
 can take out smoke an image model painted into a glow);

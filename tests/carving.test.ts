@@ -13,6 +13,7 @@ import {
   CARVE_TIERS,
   DT,
   MODE,
+  OVERDRIVE_CARVE_GRIP,
   carveSteer,
   carveStick,
   ticks,
@@ -110,6 +111,38 @@ describe('holding a carve', () => {
     carve(a, FW0, -1, 0);
     a.step(1);
     expect(m.carving).toBe(false);
+  });
+
+  it('in Overdrive (the Forward\'s) a carve grips harder, so it opens out less than the pace would make it', () => {
+    // Carving at full lock on the straight, flat out (Overdrive's pace or
+    // not): the grip it turns with, the turn rate times the speed.
+    const carveGrip = (od: boolean) => {
+      const a = new Arena(2);
+      const m = a.put(FW0, 0, -12, 200);
+      m.overdriveT = od ? 600 : 0;
+      carve(a, FW0, 1);
+      a.step(1);
+      expect(m.carving).toBe(true);
+      // The stick at full lock and the heading straight before each tick: ten ticks' turn.
+      let grip = 0;
+      const hold = () => {
+        m.steer = 1;
+        m.heading = 0;
+      };
+      hold();
+      a.step(10, () => {
+        grip += (m.heading / DT) * m.speed;
+        hold();
+      });
+      return { grip: grip / 10, speed: m.speed };
+    };
+    const plain = carveGrip(false);
+    const od = carveGrip(true);
+    expect(od.speed).toBeGreaterThan(plain.speed * 1.1);
+    expect(od.grip / plain.grip).toBeCloseTo(OVERDRIVE_CARVE_GRIP, 2);
+    // So the carve's radius (speed squared over grip) grows less than the pace's square.
+    const radius = (r: { grip: number; speed: number }) => (r.speed * r.speed) / r.grip;
+    expect(radius(od) / radius(plain)).toBeLessThan((od.speed / plain.speed) ** 2 / 1.15);
   });
 
   it('a blow ends the carve with nothing to show for it', () => {

@@ -99,5 +99,7 @@ export const ABYSS_LINE: CircuitDef = {
   pads: [
     { piece: 3, at: 0.45, len: 60, d: 25, halfW: 6 }, // the Braid's right strand
     { piece: 13, at: 0.35, len: 50, d: 0, halfW: 8 }, // the Run-up to the Leap
+    { piece: 7, at: 0.72, len: 50, d: 10, halfW: 6 }, // down into the trench, on the right: into the Twist fast
+    { piece: 34, at: 0.4, len: 50, d: 12, halfW: 6 }, // out of the town: the pad on the right, or the strip on the left
   ],
 };

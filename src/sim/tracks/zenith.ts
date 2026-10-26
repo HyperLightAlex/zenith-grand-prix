@@ -122,5 +122,7 @@ export const ZENITH_RING: CircuitDef = {
     { piece: 18, at: 0.42, len: 50, d: 10, halfW: 7 },
     { piece: 18, at: 0.72, len: 50, d: 0, halfW: 8 },
     { piece: 26, at: 0.4, len: 60, d: 24, halfW: 6 }, // over the module's back
+    { piece: 10, at: 0.42, len: 50, d: 0, halfW: 7 }, // half way up the Spine, between its strips
+    { piece: 38, at: 0.4, len: 50, d: 12, halfW: 6 }, // the run to the line: the pad on the right, or the strip on the left
   ],
 };

@@ -171,7 +171,7 @@ export function registerGarage(m: Menus, g: Game): void {
       });
       m.button(list, `Pilot: ${g.pilotName}`, () => m.push('pilot'), { key: 'pilot' });
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
-      m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
+      // (Controls: from the title's menu and the pause menu, not here.)
       const strip = h('div.context', now(d.context));
       col.append(strip, card.head, h('h1', 'Hangar'), card.blurb, list, card.info);
       // Who flies what: your squad, or your team in a room.
