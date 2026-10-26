@@ -253,7 +253,11 @@ and whether it holds mechs on.
 - **Banking** adds grip: a turn banked toward its inside grips up to about
   twice as hard (the Bowl, at 58 degrees).
 - **Speed pads** raise the cap 18% for a second and count as a boost for
-  momentum strikes.
+  momentum strikes. Every circuit has one on a fork's route and one into its
+  jump; the two longest laps have two more each: Abyss Line down into the
+  trench before the Twist and out of the town (beside a strip, so the line
+  chooses one), Zenith Ring half way up the Spine and on the run to the line
+  (beside a strip).
 
 Each route of a fork has something the other lacks (on Canyon, the lower
 route has a pad and a strip and the upper route a gate; on Helios, the jump
@@ -328,7 +332,8 @@ moldings, a carved band under a cornice, columns along the courtyard and
 gabled vaults: `src/client/render/monsoon.ts`,
 painted from sheets J1 to J4 with the painted background; Abyss Line: on the sea floor a hundred
 metres down, the road in glass tubes (one round each strand of the Braid, a
-wide one round the Twist, broken off at the Trench Leap), the trench carved
+wide one round the Twist, broken off over the Trench Leap from its gap to
+where the furthest flight, in Overdrive off the pad, comes down), the trench carved
 into the floor under it, the town's great glass dome with the town lit on
 its floor, the water for a sky, light coming down in shafts:
 `src/client/render/abyss.ts`, which with the painted background takes its
@@ -358,6 +363,9 @@ across it and a little past each edge: `titan/keepout.ts`), and pieces
 placed at random that would are left out; `tests/scenery.test.ts` checks
 every circuit's scenery and supports against it (the Crucible's benches,
 rim and pit rock still stand at its road's edge, so it is not checked yet).
+A jump flown as fast as it can be (Overdrive on the speed lap, off a pad)
+goes higher and further than that space reaches: `tests/flights.test.ts`
+flies every jump that way and checks nothing stands where the mech goes.
 
 The race music is a recorded song (`?music=synth` plays the synthesised
 music above instead)
@@ -420,6 +428,10 @@ road. Less stick than 0.35 and the trigger is a brake.
   15%. It never straightens, so the way out of a carve is to let go.
 - **Grip.** While carving the mech grips 1.65 times as hard and can turn 35%
   faster, for a speed loss of 4 to 10 u/s every second (more held tight).
+  In Overdrive (the Forward's) a carve grips 1.2 times as hard again
+  (`OVERDRIVE_CARVE_GRIP`): at that pace the grip, not the frame, limits the
+  turn, and without it the carve opened out by as much as the pace rose. The
+  mech leans further into it too.
 - **Charge.** Per second: how tight the carve is held (0.15 to 1) x the
   bend (250 / its radius, between 0.15 and 1.6; a straight or a carve
   against the bend counts 0.15) x the speed (full from 100 u/s). Tiers at
@@ -490,7 +502,7 @@ weapons at the start of lap 2.
 |---|---|---|
 | Swift | **Overdrive**, from the speed lap (`overdriveLap` 3; refused before it, at no cost): 4 s, top speed +30%, armour penalty ignored, burns off a Snare. Takes the place of boost while it runs | **Break Away**: also works while staggered. Ends the stagger, clears a Snare, 40 ticks of invulnerability, drops every enemy lock on you, no enemy can lock you for 1.5 s, and you are released at 10% over your cap |
 | Vector | **Disruptor**: every enemy within 26 units takes a heavy hit that breaks through armoured wind-ups, and loses 30 Drive. Also the button while escorting a team-mate | **Snare**: a fast bolt at the target, out to 100 units. On a clean hit the target's speed cap is 74% for 3.5 s and it cannot boost |
-| Bulwark | **Aegis**: the defender and every teammate within 34 units take 35% damage and cannot be staggered for 4 s. Also the button while escorting a team-mate | **Ram**: 3.5 s, +12% speed, cannot be staggered, slowed or snared, three times the mass. It drives straight at the target (60 u/s over the fight's own movement) until its front lands; each enemy its front runs into takes 80 damage once and is thrown sideways; a wall on the far side does the rest. Let go of the lock and the charge runs on down the road |
+| Bulwark | **Aegis**: the defender and every teammate within 34 units take 35% damage and cannot be staggered for 4 s. Also the button while escorting a team-mate | **Ram**: 3.5 s, +12% speed, cannot be staggered, slowed or snared, three times the mass. It drives straight at the target (60 u/s over the fight's own movement) until its front lands, and landing on the target ends the charge (its prow, a pyramid of amber light over the defender's front, goes with it); each enemy its front runs into on the way takes 80 damage once and is thrown sideways; a wall on the far side does the rest. Let go of the lock and the charge runs on down the road, through whatever it runs into, for its 3.5 s |
 
 Counters: a guard reduces a Ram or a Disruptor to a block (neither can be
 parried); an Aegis ignores a Snare and takes the sting out of a Ram; a dodge

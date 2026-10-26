@@ -25,7 +25,7 @@ import { inKnockout } from '../game/moments';
 import { TELL_COLOR, tellOf, type TellKind } from '../game/tells';
 import type { Feel } from '../game/tuning';
 import { CameraRig } from './cameraRig';
-import { Fx, Trail, makeBubble, makeLockRing, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
+import { Fx, Trail, makeBubble, makeLockRing, makeRamProw, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
 import { DEPTH, MUZZLE_EDGE, RAM_TIP, WALL_EDGE, wide } from './sprites';
 import { MechAnimator } from './mech/animate';
 import { buildFrame } from './mech/frames';
@@ -49,6 +49,9 @@ interface MechVisual {
   shadow: THREE.Mesh;
   shield: THREE.Mesh;
   shieldPower: number;
+  /** The Ram's prow, a pyramid of light over its front (fx.ts makeRamProw), and how lit. */
+  prow: THREE.Mesh;
+  prowPower: number;
   shieldFlash: number;
   bubble: THREE.Mesh;
   bubblePower: number;
@@ -67,8 +70,6 @@ interface MechVisual {
   sparkT: number;
   /** A Breakaway's drawn crackle, seconds left. */
   crackleT: number;
-  /** How long the current ram has been going, seconds. */
-  ramAge: number;
   /** The tick of the last drawn muzzle blast (a scatter cannon reports every pellet). */
   shotTick: number;
   /** The tier of the carve burst running now, for its colour. */
@@ -228,7 +229,9 @@ export class RaceView {
       markTraveller(rig.root);
       const shield = makeShield(livery.glow);
       const bubble = makeBubble(COLORS.cell, CLASSES[m.role].radius * 1.5 + 2.4);
-      rig.root.add(shield, bubble);
+      const prow = makeRamProw(0xffa030);
+      fitProw(prow, CLASSES[m.role].radius, rig.dims.height);
+      rig.root.add(shield, bubble, prow);
       const snare = makeSnareRing(COLORS.snare);
       const trails = [new Trail(livery.glow), new Trail(livery.glow)];
       const shadow = makeShadow();
@@ -241,6 +244,8 @@ export class RaceView {
         shadow,
         shield,
         shieldPower: 0,
+        prow,
+        prowPower: 0,
         shieldFlash: 0,
         bubble,
         bubblePower: 0,
@@ -257,7 +262,6 @@ export class RaceView {
         smokeT: 0,
         sparkT: 0,
         crackleT: 0,
-        ramAge: 0,
         shotTick: -1,
         burstTier: 0,
         cut: 0,
@@ -290,7 +294,8 @@ export class RaceView {
       rig.root.visible = old.root.visible;
       rig.body.rotation.copy(old.body.rotation);
       rig.flames.forEach((f,i) => { if (old.flames[i]) f.mesh.scale.z = old.flames[i].mesh.scale.z; });
-      rig.root.add(v.shield,v.bubble);
+      rig.root.add(v.shield,v.bubble,v.prow);
+      fitProw(v.prow, CLASSES[m.role].radius, rig.dims.height);
       markCharacter(rig.root,m.id);
       markTraveller(rig.root);
       v.rig = rig;
@@ -325,6 +330,8 @@ export class RaceView {
     for (const id of this.mechIds) {
       const v = this.mechs[id];
       for (const mesh of [v.shield, v.bubble, v.snare, v.shadow, v.trails[0].mesh, v.trails[1].mesh]) (mesh.material as THREE.Material).dispose();
+      v.prow.geometry.dispose();
+      (v.prow.material as THREE.Material).dispose();
     }
     (this.ring.material as THREE.Material).dispose();
     this.fx.dispose();
@@ -433,14 +440,14 @@ export class RaceView {
         v.trails[i].update(v1, v2, glow * 0.8 * this.feel.trails, surge ? 0.5 : m.boosting || bursting ? 0.34 : 0.2);
       }
 
-      // Guard shield, which also serves as the prow of a ram.
+      // Guard shield.
       const su = (v.shield.material as THREE.ShaderMaterial).uniforms;
-      v.shieldPower = toward(v.shieldPower, m.guarding ? 1 : ramming ? 1.25 : 0, 18, dt);
+      v.shieldPower = toward(v.shieldPower, m.guarding ? 1 : 0, 18, dt);
       v.shieldFlash = Math.max(0, v.shieldFlash - dt * 5);
       const sp = v.shieldPower * 0.75 + v.shieldFlash;
       v.shield.visible = sp > 0.02;
       if (v.shield.visible) {
-        (su.uColor.value as THREE.Color).copy(ramming && !m.guarding ? AMBER : v.glow);
+        (su.uColor.value as THREE.Color).copy(v.glow);
         su.uPower.value = sp;
         su.uTime.value = this.time;
       }
@@ -478,13 +485,19 @@ export class RaceView {
       if (!m.retired && m.act === ACT.STAGGER) {
         this.fx.drawnKeep(`stun${m.id}`, 'stun', v.pos, CLASSES[m.role].radius * 3.4, { tint: 0xfff0a0, gain: 1.3, depth: DEPTH.AROUND });
       }
-      // The ram's prow: its bow shock ahead of the mech, once the charge's
-      // own first drawings have played.
-      if (ramming) {
-        v.ramAge += dt;
-        if (v.ramAge > 0.25) this.ramProw(v, m, `ram${m.id}`);
-      } else {
-        v.ramAge = 0;
+      // The Ram's prow: a pyramid of light over the defender's front for as
+      // long as the charge lasts (it ends when it lands on its target),
+      // pushed out from the mech as it lights, gone in a blink after.
+      v.prowPower = toward(v.prowPower, ramming ? 1 : 0, ramming ? 16 : 12, dt);
+      v.prow.visible = v.prowPower > 0.02;
+      if (v.prow.visible) {
+        const pu = (v.prow.material as THREE.ShaderMaterial).uniforms;
+        pu.uPower.value = v.prowPower;
+        // On twos in the anime look, as its drawn effects are.
+        pu.uTime.value = look.on ? Math.floor(this.time * 12) / 12 : this.time;
+        const k = 0.7 + 0.3 * v.prowPower;
+        const base = v.prow.userData.scale as THREE.Vector3;
+        v.prow.scale.set(base.x * k, base.y * k, base.z * k);
       }
 
       // Ambient sparks and smoke.
@@ -812,22 +825,22 @@ export class RaceView {
   }
 
   /**
-   * The ram's prow, its tip just ahead of the mech, pointing the way it
-   * faces: the charge starting (`key` null, riding on the mech) or the loop
-   * while it lasts (kept under `key`). Seen from behind (a ram charging away
-   * up the track, as the player's own does) it is drawn smaller and pushed
-   * back along the line of sight, behind the mech, so the mech stands in
-   * front of it with the prow flaring round it. Returns false in the plain
-   * look.
+   * The charge starting: the drawn burst of the Ram's first moment, its tip
+   * just ahead of the mech, pointing the way it faces (the pyramid of the
+   * prow, makeRamProw, carries the charge from there). Seen from behind (a
+   * ram charging away up the track, as the player's own does) it is drawn
+   * smaller and pushed back along the line of sight, behind the mech, so the
+   * mech stands in front of it with the burst flaring round it. Returns
+   * false in the plain look.
    */
-  private ramProw(v: MechVisual, m: MechState, key: string | null): boolean {
+  private ramProw(v: MechVisual, m: MechState): boolean {
     const r = CLASSES[m.role].radius;
     trackDir(this.session.track, v.s, Math.cos(v.facing), Math.sin(v.facing), v3);
     const cam = this.renderer.camera;
     cam.getWorldDirection(camFwd);
     // How far it charges away from the camera, eased in rather than switched
     // at a line: locked on, the charge swings with the target, and a hard
-    // switch flicked the prow between in front of the mech and behind it.
+    // switch flicked it between in front of the mech and behind it.
     const x = Math.min(1, Math.max(0, (v3.dot(camFwd) - 0.1) / 0.4));
     const away = x * x * (3 - 2 * x);
     let size = (6 + r * 2.4) * (1 - 0.35 * away);
@@ -841,8 +854,7 @@ export class RaceView {
       v4.copy(cam.position).addScaledVector(v2, k);
       size *= k;
     }
-    const o = { row: key ? 1 : 0, tint: 0xffa030, dir: v3, gain: 1.3, depth: DEPTH.ON_MECH, follow: key ? null : v.rig.root };
-    return key ? this.fx.drawnKeep(key, 'ram', v4, size, o) : this.fx.drawnSprite('ram', v4, size, o);
+    return this.fx.drawnSprite('ram', v4, size, { row: 0, tint: 0xffa030, dir: v3, gain: 1.3, depth: DEPTH.ON_MECH, follow: v.rig.root });
   }
 
   /**
@@ -1315,8 +1327,7 @@ export class RaceView {
             if (mine || this.mechs[local].pos.distanceTo(v.pos) < race.rules.pulseRange * 1.4) this.cam.shake(0.45);
             break;
           case ABILITY.RAM:
-            v.ramAge = 0;
-            this.ramProw(v, race.mechs[e.mech], null);
+            this.ramProw(v, race.mechs[e.mech]);
             this.fx.flash(v1, 12, 0xffa030, 0.3, v.rig.root, true, DEPTH.AROUND);
             this.fx.burst(v1, v.vel, 30, 40, 0xffa030, 0.5, 0.45);
             if (mine) {
@@ -1351,3 +1362,16 @@ export class RaceView {
 }
 
 export type { MechState };
+
+/**
+ * Size and place a Ram's prow round a mech (radius `r`, `height` tall): its
+ * open back just behind the mech, wider and taller than it, so that from
+ * behind its edges frame the mech as they run forward; its point a body's
+ * length or so ahead.
+ */
+function fitProw(prow: THREE.Mesh, r: number, height: number): void {
+  const scale = new THREE.Vector3(r * 1.35 + 1, height * 0.62, r * 1.6 + 4);
+  prow.userData.scale = scale;
+  prow.scale.copy(scale);
+  prow.position.set(0, height * 0.52, -r * 0.9);
+}

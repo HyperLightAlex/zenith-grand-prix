@@ -27,7 +27,7 @@ vi.mock('../src/client/render/fx', () => {
   return {
     Fx: class { group = new THREE.Group(); resize() {} update() {} dispose() {} beginTracers() {} endTracers() {} spray() {} },
     Trail: class { mesh = mesh(); setColor() {} update() {} },
-    makeBubble: mesh, makeLockRing: mesh, makeShadow: mesh, makeShield: mesh, makeSnareRing: mesh, shadowTexture: () => null,
+    makeBubble: mesh, makeLockRing: mesh, makeRamProw: mesh, makeShadow: mesh, makeShield: mesh, makeSnareRing: mesh, shadowTexture: () => null,
   };
 });
 

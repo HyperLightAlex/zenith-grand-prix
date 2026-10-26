@@ -1499,7 +1499,8 @@ describe('Ram', () => {
     expect(a.events('hit')).toMatchObject([{ attacker: DF0, victim: FW1, attack: ATK.DF_RAM, damage: 80 }]);
     expect(foe.act).toBe(ACT.STAGGER);
     expect(df.mode).toBe(MODE.BATTLE);
-    // Landed, the drive at the target stops: one hit per charge, as ever.
+    // Landed on its target, the charge is spent and ends: one hit per charge, as ever.
+    expect(df.ramT).toBe(0);
     a.step(40);
     expect(df.ramHits).toBe(1 << FW1);
     expect(a.events('hit').length).toBe(1);

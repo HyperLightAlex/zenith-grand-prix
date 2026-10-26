@@ -242,6 +242,12 @@ export const CARVE_STEER_WIDE = 0.15;
 export const CARVE_MIN_SPEED = 40;
 /** Turn rate ceiling while carving, as a multiple of the frame's own. */
 export const CARVE_TURN = 1.35;
+/**
+ * A carve in Overdrive (the Forward's) grips this much harder again: at
+ * Overdrive's pace the grip, not the frame, is what limits the turn, and
+ * the carve would otherwise open out by as much as the pace rose.
+ */
+export const OVERDRIVE_CARVE_GRIP = 1.2;
 /** Charge for each tier: a carve at full lock through a bend of CARVE_BEND_RADIUS charges 1 a second. */
 export const CARVE_TIERS = [0.5, 1.1, 1.8] as const;
 /** Burst for each tier: extra top speed, and seconds it lasts. */

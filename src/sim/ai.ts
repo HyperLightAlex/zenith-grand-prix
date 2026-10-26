@@ -14,6 +14,7 @@ import {
   CARVE_MIN_STEER,
   CARVE_STEER_WIDE,
   CARVE_TURN,
+  OVERDRIVE_CARVE_GRIP,
   LOCK_RANGE,
   MODE,
   PHASE,
@@ -381,7 +382,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // --- steer: feed forward the bend, correct toward the line. A carve grips
   // harder, so the same turn needs less stick.
   const kappa = kappaAt(track, m.s + m.speed * 0.12);
-  const carveGrip = m.carving ? rules.carveGrip : 1;
+  const carveGrip = m.carving ? rules.carveGrip * (m.overdriveT > 0 ? OVERDRIVE_CARVE_GRIP : 1) : 1;
   const omegaMax = Math.min(c.turnMax * (m.carving ? CARVE_TURN : 1), (c.grip * carveGrip) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) || 1;
   const headingWant = clamp(Math.atan2(dWant - m.d, look), -0.5, 0.5);
   const sdot = m.speed * Math.cos(m.heading);

@@ -15,6 +15,8 @@ const toward = (v: number, target: number, rate: number, dt: number) => v + (tar
 const staggerMirror = mirrorPose(POSES.stagger);
 /** Seconds the push off the line takes to settle into the tuck. */
 const PUSH_SECS = 0.45;
+/** Over the line: the hand up for this long, then back down into the drive (the computer flies it on). */
+const CHEER_SECS = 2.6;
 /** Seconds a gun stays up after a burst with nothing more fired (and as long as its trigger is held). */
 const AIM_KEEP = 0.6;
 const carveLeft = mirrorPose(POSES.carveRight);
@@ -31,6 +33,8 @@ export class MechAnimator {
   private arcW = 0;
   private koW = 0;
   private winW = 0;
+  /** When this mech crossed the line (its own clock), or -1 before. */
+  private finishAt = -1;
   private airW = 0;
   private fallW = 0;
   private stride = 0;
@@ -96,12 +100,19 @@ export class MechAnimator {
     const surging = m.boosting || m.overdriveT > 0 || (m.ramT > 0 && !battle);
     this.boostW = toward(this.boostW, surging ? 1 : 0, 7, dt);
     this.koW = toward(this.koW, m.retired ? 1 : 0, 4, dt);
-    this.winW = toward(this.winW, m.finished && !m.retired ? 1 : 0, 2.5, dt);
+    // Over the line: the hand up for a moment, then down into the drive again.
+    const over = m.finished && !m.retired;
+    if (!over) this.finishAt = -1;
+    else if (this.finishAt < 0) this.finishAt = this.time;
+    const cheering = over && this.time - this.finishAt < CHEER_SECS;
+    this.winW = toward(this.winW, cheering ? 1 : 0, 2.5, dt);
     this.airW = toward(this.airW, m.air && !m.retired ? 1 : 0, 10, dt);
     this.fallW = toward(this.fallW, m.fallT > 0 && !m.retired ? 1 : 0, 6, dt);
     this.carveW = toward(this.carveW, m.carving && !m.air && !m.retired ? m.carveDir : 0, 12, dt);
     this.arcW = toward(this.arcW, m.act === ACT.DASH && m.arcDir !== 0 && !m.retired ? m.arcDir : 0, 22, dt);
-    const speedFrac = clamp01(m.speed / (PACE * 1.25));
+    // After the finish, eased off and flown on by the computer, it still
+    // looks flat out: the racing tuck, not a stroll.
+    const speedFrac = over ? Math.max(clamp01(m.speed / (PACE * 1.25)), 0.85) : clamp01(m.speed / (PACE * 1.25));
     const P = this.pose;
 
     // ---- base: tuck, with a skating stride that settles into a glide
@@ -320,7 +331,8 @@ export class MechAnimator {
       if (m.act === ACT.DASH) want = 1.0;
       // Thrusters hold it level in the air, and fight the drop in a fall.
       if (m.air) want = Math.max(want, m.fallT > 0 ? 1.3 : 0.75);
-      if (m.finished) want = 0.25;
+      // Over the line, the thrusters idle while the hand is up, then drive again.
+      if (m.finished && this.winW > 0.5) want = 0.25;
       // On the grid the thrusters build with the revs; off the line they
       // fire as hard as the start was good; a bog sputters.
       if (this.gridW > 0.5) want = 0.1 + this.revW * 0.95;
@@ -358,7 +370,9 @@ export class MechAnimator {
     const accel = dt > 0 ? (m.speed - this.prevSpeed) / dt : 0;
     this.prevSpeed = m.speed;
     const battle = m.mode === MODE.BATTLE && !m.retired;
-    const wantLean = battle ? this.arcW * 0.45 : m.steer * (0.42 + 0.26 * Math.abs(this.carveW)) * clamp01(m.speed / 40);
+    // Carving, down further on its edges; further again in Overdrive, where the carve grips harder (OVERDRIVE_CARVE_GRIP).
+    const carveLean = Math.abs(this.carveW) * (m.overdriveT > 0 ? 0.36 : 0.26);
+    const wantLean = battle ? this.arcW * 0.45 : m.steer * (0.42 + carveLean) * clamp01(m.speed / 40);
     this.lean = toward(this.lean, wantLean * (1 - this.koW), 8, dt);
     this.pitch = toward(this.pitch, Math.max(-0.12, Math.min(0.1, accel * 0.0022)) * (1 - this.battleW), 5, dt);
     this.rig.body.rotation.set(-this.pitch, 0, this.lean);

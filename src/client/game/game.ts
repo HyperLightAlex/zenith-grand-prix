@@ -610,6 +610,7 @@ export class Game {
     this.garageShown = null;
     this.trackVis.group.visible = true;
     this.world.group.visible = true;
+    this.renderer.outdoors = true;
     // The mechs (and anything else the view made) take the cel shading too.
     celify(this.renderer.scene);
     // Their shaders compiling in the background before the first frame needs them.
@@ -855,6 +856,8 @@ export class Game {
     this.hangar.show(this.hangarFrame);
     this.trackVis.group.visible = false;
     this.world.group.visible = false;
+    // Indoors: none of the circuit's weather (Monsoon's rain on the mechs).
+    this.renderer.outdoors = false;
     this.view.solo = true;
     this.view.cam.orbitFrame = this.hangarFrame;
     // The hangar's shaders too, now it is on show.

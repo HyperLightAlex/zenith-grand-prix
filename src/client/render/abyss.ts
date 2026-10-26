@@ -3,7 +3,7 @@
 // trench carved into it where the road goes down (and a chasm under the
 // Trench Leap); glass tubes round the road (one round each strand through
 // the Braid, a wide one round the Twist), ribbed every so often, broken off
-// at the Leap; the town's dome, the road running round under its roof, and
+// over the Leap (from its gap until the furthest flight is down); the town's dome, the road running round under its roof, and
 // the town on its floor, lit; smaller domes, rocks and kelp about the sea
 // floor, and the shafts of light coming down from the surface. Everything is
 // checked against the space the road needs (titan/keepout.ts) and left out
@@ -511,6 +511,13 @@ export function buildAbyss(ctx: SeaCtx): void {
   {
     const n = track.n;
     const twist = range('the Twist');
+    // Over the Leap, no tube from its gap until the furthest a mech can fly
+    // it comes down (Overdrive, off the pad: past the run-out), at the
+    // straight after: flown that fast, a mech is 40 up over the landing.
+    // (tests/flights.test.ts flies it.)
+    const gap = range('gap');
+    const after = range('closing A');
+    const leap = gap && after ? [gap[0], after[0]] : null;
     const inDome = (i: number) => Math.hypot(track.px[i] - centre.x, track.py[i] - centre.y, track.pz[i] - centre.z) < DR + 6;
     const gapNear = (i: number) => {
       for (let k = -2; k <= 2; k++) {
@@ -556,7 +563,7 @@ export function buildAbyss(ctx: SeaCtx): void {
     for (let i = 0; i <= n; i += 2) {
       const j = i % n;
       const s = j * track.ds;
-      if (inDome(j) || gapNear(j)) put({});
+      if (inDome(j) || gapNear(j) || (leap && s > leap[0] && s < leap[1])) put({});
       else if (twist && s > twist[0] - 4 && s < twist[1] + 4) put({ twist: twistRing(j) });
       else if (track.median[j] > 0.6) {
         const L = strandRing(j, -1);
