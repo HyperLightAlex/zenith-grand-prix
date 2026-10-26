@@ -140,10 +140,10 @@ export class SynthAudio implements AudioEngine {
    * for a race (one at a time, the others' files let go of: see
    * prepareSong), and a circuit with one plays it instead of its synthesised
    * music. `screenSongs`: songs for screens (see SCREEN_SONGS in song.ts),
-   * each decoded while it may be wanted: the title's on the menus, the
-   * results' from a race's last lap until the menus. `sfx`: where the
-   * recorded sound effects are; each sound with recordings plays one of them
-   * instead of its recipe.
+   * downloaded and decoded as soon as there is an audio context, and kept
+   * (they start at once whenever they are wanted). `sfx`: where the recorded
+   * sound effects are; each sound with recordings plays one of them instead
+   * of its recipe.
    */
   constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string>; setlist?: string; sfx?: string } = {}) {
     for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
@@ -222,12 +222,7 @@ export class SynthAudio implements AudioEngine {
       this.lastUpdate = now;
       if (gap > 0) this.frameGap = Math.max(Math.min(gap, 0.5), this.frameGap * 0.97);
       const ahead = LOOKAHEAD + 2 * this.frameGap;
-      const lapPhase = finite(scene.lapPhase, 1);
-      // Into the last lap: the results' songs get ready.
-      if (lapPhase !== this.lapPhase) {
-        this.lapPhase = lapPhase;
-        if (this.want === 'race') this.screenSongsFor('race');
-      }
+      this.lapPhase = finite(scene.lapPhase, 1);
       this.finished = scene.finished === true;
       g.layers.update(now, clamp(finite(dt, 0), 0, 0.25), scene, ahead);
       if (this.track) {
@@ -495,8 +490,9 @@ export class SynthAudio implements AudioEngine {
     this.g = { ctx, live, rng, white, pink, bank: this.bank, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
     this.bank?.decode(ctx);
     // A song is decoded for the circuit named ahead (prepareMusic), or when a
-    // race asks for one; the screens' songs when they may be wanted (applyMusic).
+    // race asks for one; the screens' songs (small) straight away.
     if (this.nextSong) this.prepareSong(this.nextSong);
+    for (const s of this.screenSongs.values()) s.decode(ctx);
     this.applyMusic();
   }
 
@@ -599,30 +595,7 @@ export class SynthAudio implements AudioEngine {
   private menuTrack(now: number): MusicTrack {
     const g = this.g!;
     const song = this.screenSongs.get('title');
-    if (!song || song.state === 'failed') return createTrack('menu', g.ctx, g.white, now);
-    song.decode(g.ctx);
-    return new SongTrack(g.ctx, song, 'menu', 'menu');
-  }
-
-  /**
-   * The screens' songs held decoded only while they may be wanted (each is
-   * 40 MB or so decoded): the title's on the menus, the results' from a
-   * race's last lap to the results. What is playing from one plays on when
-   * it is let go of.
-   */
-  private screenSongsFor(want: TrackName | null): void {
-    const g = this.g;
-    if (!g) return;
-    const results = [this.screenSongs.get('results-win'), this.screenSongs.get('results-loss')];
-    if (want === 'race') {
-      this.screenSongs.get('title')?.release();
-      for (const s of results) if (this.lapPhase >= 3) s?.decode(g.ctx); else s?.release();
-    } else if (want === 'results') {
-      this.screenSongs.get('title')?.release();
-      for (const s of results) s?.decode(g.ctx);
-    } else {
-      for (const s of results) s?.release();
-    }
+    return song && song.state !== 'failed' ? new SongTrack(g.ctx, song, 'menu', 'menu') : createTrack('menu', g.ctx, g.white, now);
   }
 
   /**
@@ -657,7 +630,6 @@ export class SynthAudio implements AudioEngine {
     if (this.want === 'results' && (!results || results.state === 'failed')) this.want = 'menu';
     // The hangar's setlist likewise.
     if (this.want === 'hangar' && (!this.setlist || this.setlist.state === 'failed')) this.want = 'menu';
-    this.screenSongsFor(this.want);
     // Racing on a different circuit is a change of music too.
     const style = this.want === 'race' ? this.raceStyle() : this.want === 'results' ? this.wantStyle : this.want === 'hangar' ? 'hangar' : 'menu';
     if (this.want === 'race') this.prepareSong(style);
