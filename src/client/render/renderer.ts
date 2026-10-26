@@ -392,8 +392,7 @@ export class Renderer {
     const r = this.renderer;
     if (!r.extensions.has('KHR_parallel_shader_compile')) return;
     const prev = r.getRenderTarget();
-    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
-    const flat = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const { quad, flat } = this.compileQuad;
     try {
       // As the scene is drawn: into the composer's buffer (which decides the
       // shaders' output: no tone mapping, linear colour), and its travellers
@@ -423,9 +422,15 @@ export class Renderer {
       console.warn('precompile:', err);
     } finally {
       r.setRenderTarget(prev);
-      quad.geometry.dispose();
     }
   }
+
+  /**
+   * What precompile() draws the passes' materials on, made once. (Made per
+   * call, each would take a few numbers from Math.random for its id, and a
+   * race's sparks, which draw on it too, would come out differently.)
+   */
+  private compileQuad = { quad: new THREE.Mesh(new THREE.PlaneGeometry(2, 2)), flat: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1) };
 
   /** The CRT screen video setting. */
   set crt(on: boolean) {

@@ -7,6 +7,7 @@
 //   BASE=http://127.0.0.1:8091/ node tools/visual-check.mjs before   (a build of main: tools/capture/build-ref.sh main)
 //   node tools/visual-check.mjs after
 //   python3 tools/capture/diff.py before after report
+//   EVAL='window.game.renderer...' node tools/visual-check.mjs ...   code run in the page once it is up
 //
 // Determinism: requestAnimationFrame is stubbed and the game is stepped
 // frame by frame at 60 a second, the page's clock and timers with it;
@@ -15,7 +16,7 @@
 // before the first frame is drawn. Two runs of
 // the same build should give identical pictures (diff.py reports 0).
 import { createRequire } from 'node:module';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/npm-tools/node_modules/playwright')); }
@@ -71,15 +72,35 @@ for (const [key, cases] of groups) {
   // the game draws only when stepped.)
   await page.clock.install({ time: 1_700_000_000_000 });
   let held = 1_800_000_000_000;
-  const hold = async () => { held += 3_600_000; await page.clock.pauseAt(held); };
+  // (And the game's own last frame time set to the same value: the time
+  // between frames it works out from it rounds differently at different
+  // magnitudes, which over a few frames can put a race a tick apart.)
+  const hold = async () => {
+    held += 3_600_000;
+    await page.clock.pauseAt(held);
+    await page.evaluate(() => { if (window.game) window.game.last = 100_000; });
+  };
   await page.addInitScript(() => {
     window.requestAnimationFrame = () => 0;
     let s = 1;
-    Math.random = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0), s / 4294967296);
-    window.__seed = (n) => { s = n >>> 0; };
+    window.__rnd = 0;
+    // (RANDOMS=1, with STATE=1: where each call came from, to find a difference in how many there were.)
+    window.__rndWhere = null;
+    Math.random = () => {
+      window.__rnd++;
+      if (window.__rndWhere) {
+        const at = (new Error().stack ?? '').split('\n')[2]?.trim().replace(/\?[^:)]*/, '').replace(/https?:\/\/[^/]+\//, '') ?? '?';
+        window.__rndWhere[at] = (window.__rndWhere[at] ?? 0) + 1;
+      }
+      return (s = (Math.imul(s, 1664525) + 1013904223) >>> 0), s / 4294967296;
+    };
+    window.__seed = (n) => { s = n >>> 0; window.__rnd = 0; if (window.__rndWhere) window.__rndWhere = {}; };
   });
   await page.goto(`${BASE}?mute=1&demo=1&seed=7${look === 'plain' ? '&look=plain' : '&look=anime'}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.game && !document.getElementById('boot'), null, { timeout: 600000, polling: 250 });
+  // EVAL='...': code run in the page once it is up (an experiment: switch something off, say).
+  if (process.env.EVAL) await page.evaluate(process.env.EVAL);
+  if (process.env.RANDOMS) await page.evaluate(() => { window.__rndWhere = {}; });
   await settle();
   // (Each frame finished before the next, so the software GPU never falls far behind.)
   const step = async (n) => {
@@ -91,6 +112,15 @@ for (const [key, cases] of groups) {
   const shoot = async (name) => {
     await page.evaluate(() => { for (const a of document.getAnimations()) { a.pause(); a.currentTime = 0; } });
     await page.screenshot({ path: `${out}/${name}.png`, timeout: 300000 });
+    // STATE=1: what the game was at, beside each picture (to find why two pictures differ).
+    if (process.env.STATE) {
+      const state = await page.evaluate(() => {
+        const g = window.game, r = g.renderer, u = r.speedPass.uniforms, c = r.camera.position;
+        const round = (v) => (typeof v === 'number' ? +v.toFixed(5) : v);
+        return { randoms: window.__rnd, where: window.__rndWhere, tick: g.session.race.tick, time: round(g.time), worldTime: round(g.worldTime), last: round(g.last), lineSeed: round(u.uLineSeed.value), uTime: round(u.uTime.value), travel: round(u.uTravel.value), speed: round(u.uSpeed.value), cam: [c.x, c.y, c.z].map(round), passes: r.composer.passes.map((p) => (p.enabled ? 1 : 0)).join('') };
+      });
+      writeFileSync(`${out}/${name}.json`, JSON.stringify(state, null, 1));
+    }
     shots++;
   };
   for (const c of cases) {
@@ -100,6 +130,10 @@ for (const [key, cases] of groups) {
         await page.evaluate((screen) => {
           window.__seed(11);
           const g = window.game;
+          // The title's race behind the menus started again from the seed (it
+          // was started at boot, where the two builds may have used Math.random
+          // differently: other teams would be racing behind the menus).
+          g.startAttract();
           if (screen === 'title') g.menus.reset('title');
           else if (screen === 'modes') g.menus.reset('modes', undefined, ['title']);
           else if (screen === 'hangar') { g.menus.reset('modes', undefined, ['title']); g.openFreePlay(); }
