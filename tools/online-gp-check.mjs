@@ -5,7 +5,9 @@
 // Needs the game served and its server running.
 //
 //   URL=http://localhost:8090/ node tools/online-gp-check.mjs [shots dir]
-//   ROUNDS=1: stop after the first round's standings.
+//   ROUNDS=1: stop after the first round's standings (0: once in the room).
+//   EVENT='Ascent Cup' (or 'Frontier Cup', 'Grand Tour', 'Zenith Cup short
+//   season'): the event Alpha starts, instead of the Horizon Cup.
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 const require = createRequire(import.meta.url);
@@ -15,6 +17,16 @@ const base = process.env.URL ?? 'http://localhost:5173/';
 const shots = process.argv[2] ?? null;
 if (shots) mkdirSync(shots, { recursive: true });
 const rounds = Number(process.env.ROUNDS ?? 3);
+const eventName = process.env.EVENT ?? 'Horizon Cup';
+/** What the room's event should be, for the entry Alpha picks. */
+const EXPECT = {
+  'Horizon Cup': { kind: 'cup', cup: 'horizon', rounds: 3 },
+  'Frontier Cup': { kind: 'cup', cup: 'frontier', rounds: 3 },
+  'Ascent Cup': { kind: 'cup', cup: 'ascent', rounds: 3 },
+  'Grand Tour': { kind: 'tour', cup: 'tour', rounds: 9 },
+  'Zenith Cup short season': { kind: 'season', rounds: 5 },
+}[eventName];
+if (!EXPECT) throw new Error(`EVENT: one of Horizon Cup, Frontier Cup, Ascent Cup, Grand Tour, Zenith Cup short season (not ${eventName})`);
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const problems = [];
 const check = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (!ok) problems.push('check failed: ' + what); };
@@ -68,11 +80,13 @@ await a.evaluate(() => window.game.menus.focus('gp'));
 await a.keyboard.press('Enter');
 check(await until(a, () => window.game.menus.screen === 'online-gp'), "Alpha's Grand Prix: the setup");
 await shot(a, '3-setup');
-await a.locator('.menu .item', { hasText: /^Horizon Cup/ }).click();
+await a.locator('.menu .item', { hasText: new RegExp('^' + eventName) }).click();
 await a.mouse.move(2, 2);
-check(await until(a, () => window.game.menus.screen === 'room' && window.game.online.lobby?.gp, null, 60000), 'Alpha is in the cup');
+check(await until(a, () => window.game.menus.screen === 'room' && window.game.online.lobby?.gp, null, 60000), `Alpha is in the ${eventName}`);
 check(await until(c, () => window.game.menus.screen === 'room' && window.game.online.lobby?.gp, null, 60000), 'Charlie follows into it');
 const view = await a.evaluate(() => window.game.online.lobby);
+check(view.gp?.kind === EXPECT.kind && (EXPECT.cup === undefined || view.gp.cup === EXPECT.cup) && view.gp.rounds.length === EXPECT.rounds, `it is the ${eventName} (${view.gp?.kind} ${view.gp?.cup}, ${view.gp?.rounds.length} rounds)`);
+check(view.settings.track === view.gp?.rounds[0].circuit, `round 1 is on ${view.gp?.rounds[0].circuit}`);
 check(view.players.length === 2 && view.players.every((p) => p.side === 0), 'both on the squad\'s team');
 check(view.sides[1].faction === view.gp.rounds[0].you.b && view.sides[0].faction === view.gp.faction, 'the briefing is round 1 against its rival');
 // Charlie takes another frame from the briefing (a click on its row), so both can lock in.
@@ -125,14 +139,14 @@ for (let r = 0; r < rounds; r++) {
     await p.mouse.move(2, 2);
     if (r === 0 && p === a) await shot(a, '6-standings');
   }
-  const next = r === 2 ? 'award' : 'lobby';
+  const next = r === EXPECT.rounds - 1 ? 'award' : 'lobby';
   check(await until(a, (n) => window.game.online.lobby?.phase === n, next, 30000), `round ${r + 1}: on to the ${next === 'lobby' ? 'next briefing' : 'award'}`);
   if (next === 'lobby') {
     const v = await a.evaluate(() => window.game.online.lobby);
     check(v.sides[1].faction === v.gp.rounds[v.gp.current].you.b && v.settings.track === v.gp.rounds[v.gp.current].circuit, `round ${r + 2}: its rival and circuit`);
   }
 }
-if (rounds >= 3) {
+if (rounds >= EXPECT.rounds) {
   await shot(a, '7-award');
   await a.locator('.menu .item', { hasText: /^Back to Online/ }).click();
   check(await until(a, () => window.game.menus.screen === 'online' && !window.game.online.room), 'Back to Online leaves the room for the hub');

@@ -299,6 +299,11 @@ On this sandbox's 2-core Linux machine, with Node 22:
   the hub's Grand Prix (locked alone, open with two), the setup, following
   the leader in, picking frames in the briefing, the races, the standings
   and the award. Start the server with `TEST_LAPS=1` for one-lap races.
+  `EVENT='Ascent Cup'` (or another cup, `'Grand Tour'`, `'Zenith Cup short
+  season'`) starts that instead of the Horizon Cup and checks the room is
+  it; `ROUNDS=0` stops once both are in the room. (The server checks a
+  create's request with `cleanGpRequest`, in `src/net/protocol.ts`; a test
+  goes through it, as the server does.)
 - `npm run bots -- 6 4` puts four rooms of six bots on a running server
   (`npm start`, or `npm run server`), races them, and reports resyncs. It is
   also the load test.

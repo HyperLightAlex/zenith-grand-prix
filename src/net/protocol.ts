@@ -10,7 +10,7 @@
 // answers the stick at once (prediction).
 
 import type { MatchConfig, MatchState, MechInput, RaceState, Role, RoundResult, SeatConfig } from '../sim/index';
-import type { GpEvent, GpKind } from '../gp/grandPrix';
+import { CUPS, type GpEvent, type GpKind } from '../gp/grandPrix';
 import { decodeBuild } from '../custom/mechBuild';
 
 /** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits; 4: custom mechs; 5: Sprint, and pilots' colours.) */
@@ -235,6 +235,22 @@ export interface GpRequest {
   cup?: string;
   /** 0 rookie, 1 pro, 2 ace. */
   difficulty: number;
+}
+
+/**
+ * A create's Grand Prix request as it arrives, checked (the server takes it
+ * through this): a cup, and which one if it is one of CUPS, the Grand Tour or
+ * a season, at a difficulty from 0 to 2 (pro otherwise). Anything else is no
+ * Grand Prix: an ordinary room.
+ */
+export function cleanGpRequest(gp: unknown): GpRequest | undefined {
+  if (!gp || typeof gp !== 'object') return undefined;
+  const { kind, cup, difficulty } = gp as Record<string, unknown>;
+  if (kind !== 'cup' && kind !== 'tour' && kind !== 'season') return undefined;
+  const d = Number(difficulty);
+  const req: GpRequest = { kind, difficulty: Number.isInteger(d) && d >= 0 && d <= 2 ? d : 1 };
+  if (kind === 'cup' && typeof cup === 'string' && CUPS.some((c) => c.id === cup)) req.cup = cup;
+  return req;
 }
 
 /**

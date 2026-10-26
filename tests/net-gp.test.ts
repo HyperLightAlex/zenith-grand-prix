@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ROLE } from '../src/sim/index';
 import { TestNet, type TestClient } from './netHarness';
-import { READY_COUNTDOWN } from '../src/net/protocol';
+import { READY_COUNTDOWN, cleanGpRequest } from '../src/net/protocol';
 import { isOver, roundComplete, standings, type GpFixtureResult } from '../src/gp/grandPrix';
 
 const SQUAD = 'SQ7KX';
@@ -75,6 +75,36 @@ describe("a squad's Grand Prix online", () => {
     expect(season.short).toBe(true);
     expect(season.rounds).toHaveLength(5);
     expect(season.rounds[4].circuit).toBe('zenith');
+  });
+
+  it('...as the server reads the request: every cup, the Grand Tour and the season come through it', () => {
+    // A room is created from what the client sent, taken through
+    // cleanGpRequest (server/raceRoom.ts): the cup asked for and the Grand
+    // Tour must survive it, not fall back to the first cup or a plain room.
+    const made = (sent: unknown) => {
+      const gp = cleanGpRequest(sent);
+      return new TestNet({ laps: 1, faction: 2, gp }).core.gp?.event ?? null;
+    };
+    for (const [cup, circuits] of [
+      ['horizon', ['meridian', 'canyon', 'helios']],
+      ['frontier', ['crucible', 'frostline', 'titan']],
+      ['ascent', ['abyss', 'monsoon', 'zenith']],
+    ] as const) {
+      const ev = made({ kind: 'cup', cup, difficulty: 2 });
+      expect(ev?.cup).toBe(cup);
+      expect(ev?.difficulty).toBe(2);
+      expect(ev?.rounds.map((r) => r.circuit)).toEqual(circuits);
+    }
+    const tour = made({ kind: 'tour', difficulty: 0 });
+    expect(tour?.kind).toBe('tour');
+    expect(tour?.rounds).toHaveLength(9);
+    expect(made({ kind: 'season', difficulty: 1 })?.short).toBe(true);
+    // What it will not take: an unknown cup is the first; an unknown kind, or none, is a plain room.
+    expect(cleanGpRequest({ kind: 'cup', cup: 'nonsense', difficulty: 1 })).toEqual({ kind: 'cup', difficulty: 1 });
+    expect(cleanGpRequest({ kind: 'tour', cup: 'ascent', difficulty: 7 })).toEqual({ kind: 'tour', difficulty: 1 });
+    expect(cleanGpRequest({ kind: 'cup', cup: { id: 'ascent' }, difficulty: '2' })).toEqual({ kind: 'cup', difficulty: 2 });
+    for (const bad of [undefined, null, 'tour', 3, {}, { kind: 'league', difficulty: 1 }]) expect(cleanGpRequest(bad)).toBeUndefined();
+    expect(made({ kind: 'league', difficulty: 1 })).toBeNull();
   });
 
   it('takes only its squad, on team 1, against computer pilots, with the event setting the round', () => {
