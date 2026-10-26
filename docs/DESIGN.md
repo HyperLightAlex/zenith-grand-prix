@@ -211,9 +211,10 @@ none, but its road swings out round its column or tube and back: the Sword
 63 degrees each way, the Twist 31; a twist's plan missed the kink where it
 joins the road). With no bend there, the road used to carry a mech round
 the swing as a lock-on does; now, hands off, it runs wide, as on any
-corner. Round them the skates' hold grips as hard as the swing needs for
-any frame to follow it at 175 u/s (`HOLD_TURN_SPEED`, Track.hold, up to six
-times on the Sword); how fast a frame can swing round is still its own, so
+corner. Round them, and at the kinks where they join the road, the
+skates' hold grips as hard as the swing needs for any frame to follow it at
+175 u/s (`HOLD_TURN_SPEED`, Track.hold, up to six times on the Sword; the
+bots' corner pace counts it too); how fast a frame can swing round is still its own, so
 the tightest of the Sword is a stretch in Overdrive.
 `tests/steering.test.ts` drives them both ways.
 A fork's routes are drawn moved apart from the road (across and up). Where
@@ -223,9 +224,15 @@ no tighter than radius 300 where it fits (Canyon's crossing routes 229),
 and a route's parting is a bend like any other: a mech moves along its
 route and steers against the route's own bend over the road's
 (Track.slopeL/R, bendL/R), so it steers into its route, and hands off it
-runs off its line. On Monsoon's last bend the causeway's return to the
-road comes in the bend, so the outside route tightens to about radius 130
-there: a carve, or a lift. The Hull (250 long, inside the titan), the Dock
+runs off its line. In a bend a route's lines run at their slope over the
+road's stretch there (round the outside, a route parts at a shallower angle
+than on the inside: routeAngleAt, routeBendAt), so a mech that steers by
+that bend alone keeps its line on either side. On Monsoon's last bend the
+causeway's return to the road comes in the bend, so the outside route
+tightens to about radius 130 there: a carve, or a lift (the bots see it
+coming and take it so). Helios's left route jumps as it finishes parting:
+in the air a mech flies straight on, so it lands a little wide, as off any
+jump in a bend. The Hull (250 long, inside the titan), the Dock
 (round the station's module) and the Braid (its strands round each other)
 are too short or twisted too hard to part gently: their routes still carry
 a mech apart (ForkSpec.carried), turned to face along its route.

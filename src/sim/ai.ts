@@ -393,8 +393,11 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // --- slow for corners that are too tight for this speed
   let kMax = 0;
   const reach = 24 + m.speed * 0.75;
-  // A turn banked toward its inside can be taken faster: its grip goes into the sum.
-  for (let a = 0; a <= reach; a += 12) kMax = Math.max(kMax, Math.abs(kappaAt(track, m.s + a)) / gripAt(track, m.s + a));
+  // A turn banked toward its inside can be taken faster: its grip goes into
+  // the sum, as does the skates' hold on rolled road; a fork route's own
+  // bend is part of the turn.
+  const bendAt = (at: number) => (kappaAt(track, at) + routeBendAt(track, at, m.d)) / holdAt(track, at);
+  for (let a = 0; a <= reach; a += 12) kMax = Math.max(kMax, Math.abs(bendAt(m.s + a)) / gripAt(track, m.s + a));
   const vCorner = kMax > 1e-5 ? Math.sqrt((c.grip * 0.95) / kMax) * 1.04 : 999;
   // Carving through it, a turn can be taken this much faster.
   const vCarve = vCorner * Math.sqrt(rules.carveGrip);
@@ -402,7 +405,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // --- carve: through any proper bend, for the burst on the way out. The
   // trigger with the stick over is a carve; on the way in, stick still
   // straight, it is the brake.
-  const bend = kappaAt(track, m.s + m.speed * 0.08);
+  const bend = bendAt(m.s + m.speed * 0.08);
   const bendDir = Math.abs(bend) > 1 / 650 ? Math.sign(bend) : 0;
   if (bendDir !== ai.carveFor) {
     // A new bend: does this pilot carve it? The better the pilot, the likelier.
@@ -410,7 +413,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     ai.carveGo = bendDir !== 0 && rngNext(race) < 0.35 + 0.6 * m.skill;
   }
   // Is the bend running out (or turning the other way) a moment ahead?
-  const exitAhead = kappaAt(track, m.s + m.speed * 0.3);
+  const exitAhead = bendAt(m.s + m.speed * 0.3);
   const endsFor = (dir: number) => Math.abs(exitAhead) < 1 / 900 || Math.sign(exitAhead) !== dir;
   const needGrip = m.speed > vCorner - 2 && bendDir !== 0;
   let carve = false;

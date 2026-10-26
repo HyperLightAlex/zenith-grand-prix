@@ -626,9 +626,19 @@ export function buildCircuit(def: CircuitDef): Track {
   {
     const gripMin = Math.min(...CLASSES.map((c) => c.grip));
     const holdRaw = new Float32Array(n).fill(1);
+    // On the rolled road, and as far either side as its measured bend
+    // reaches into the road it joins (measured three samples in, smoothed
+    // over three more): the kink where a twist meets a straight is its too.
+    const reach = 7;
     for (let k = 0; k < n; k++) {
-      const kind = kindOf(pieces[pieceOf[k]]);
-      if (kind !== 'barrel' && kind !== 'twist') continue;
+      const own = kindOf(pieces[pieceOf[k]]);
+      if (own === 'turn' || own === 'spiral') continue;
+      let rolled = false;
+      for (let q = -reach; q <= reach && !rolled; q++) {
+        const kind = kindOf(pieces[pieceOf[(k + q + n) % n]]);
+        rolled = kind === 'barrel' || kind === 'twist';
+      }
+      if (!rolled) continue;
       holdRaw[k] = Math.max(1, (HOLD_TURN_SPEED * HOLD_TURN_SPEED * Math.abs(kappa[k]) * 1.15) / (gripMin * grip[k]));
     }
     // Eased in and out over a little road either side.

@@ -140,7 +140,7 @@ import {
 } from './core';
 import { approach, approachAngle, clamp, lerp, rngNext, wrapAngle } from './math';
 import { makeRules, ticks } from './rules';
-import { deltaS, gateCrossed, gripAt, holdAt, hwAt, kappaAt, routeBendAt, routeShiftAt, routeSlopeAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
+import { deltaS, gateCrossed, gripAt, holdAt, hwAt, kappaAt, routeAngleAt, routeBendAt, routeSlopeAt, stretchAt, kvAt, laneAt, magAt, medianAt, onPad, onStrip, roadAt, splitApart, upYAt, wallAt, type Track } from './track';
 import { emptyInput, type MechInput, type MechState, type RaceConfig, type RaceState } from './types';
 
 export { packBonus, speedCap } from './core';
@@ -480,8 +480,7 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), (grip * holdAt(track, m.s)) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
   // The bend steered against: the road's, and in a steered fork the route's own over it.
   const kappa = kappaAt(track, m.s);
-  const p = routeSlopeAt(track, m.s, m.d);
-  const sdot = (m.speed * Math.cos(m.heading + Math.atan(p))) / Math.max(0.35, 1 - kappa * (m.d + routeShiftAt(track, m.s, m.d)));
+  const sdot = (m.speed * Math.cos(m.heading + routeAngleAt(track, m.s, m.d))) / stretchAt(track, m.s, m.d, kappa);
   const align = -m.heading * ALIGN_RATE * (1 - Math.abs(m.steer));
   m.heading = clamp(m.heading + (m.steer * omegaMax - (kappa + routeBendAt(track, m.s, m.d)) * sdot + align) * DT, -MAX_HEADING, MAX_HEADING);
   m.facing = m.heading;
@@ -530,8 +529,10 @@ function stepBattleMode(race: RaceState, track: Track, m: MechState, c: ClassDef
     const th = m.arcFrom + m.arcSweep * e;
     const ts = t.s + t.vs * DT;
     const td = t.d + t.vd * DT;
-    const edge = Math.max(0, hwAt(track, ts) - c.radius - 0.5);
-    const wantD = clamp(td + Math.sin(th) * m.arcR, -edge, edge);
+    // Kept to the road, and in a fork to its own route: not swung through
+    // the wall down the middle.
+    const [lo, hi] = laneAt(track, ts, m.d >= 0 ? 1 : -1, c.radius + 0.5);
+    const wantD = lo <= hi ? clamp(td + Math.sin(th) * m.arcR, lo, hi) : (lo + hi) / 2;
     const wantS = ts + Math.cos(th) * m.arcR;
     // Moved round the circle directly, carried down the road at the
     // target's pace like the rest of the fight: its velocity stays the
@@ -792,20 +793,23 @@ const rates: [number, number] = [0, 0];
  * How fast a mech at (s, d) moving at (vs, vd) goes along the road and
  * across it, into `rates`. Its velocity is along and across its own way:
  * the road, or in a steered fork its route, which runs off the road's line
- * as it parts (at slope p): turned onto the road's line, with d held to the
- * route. The inside of a bend is the shorter way round (counting where the
- * route is drawn on the road).
+ * as it parts (at slope p per unit along the road's middle, so at an angle
+ * atan(p / stretch) where it is: routeAngleAt): turned onto the road's
+ * line, with d held to the route. The inside of a bend is the shorter way
+ * round (counting where the route is drawn on the road).
  */
 function trackRates(track: Track, s: number, d: number, vs: number, vd: number, kappa = kappaAt(track, s)): [number, number] {
   const p = routeSlopeAt(track, s, d);
+  const stretch = stretchAt(track, s, d, kappa);
   let along = vs;
   let across = vd;
   if (p !== 0) {
-    const ca = 1 / Math.sqrt(1 + p * p);
-    along = (vs - vd * p) * ca;
-    across = (vs * p + vd) * ca;
+    const q = p / stretch;
+    const ca = 1 / Math.sqrt(1 + q * q);
+    along = (vs - vd * q) * ca;
+    across = (vs * q + vd) * ca;
   }
-  const sdot = along / Math.max(0.35, 1 - kappa * (d + routeShiftAt(track, s, d)));
+  const sdot = along / stretch;
   rates[0] = sdot;
   rates[1] = across - p * sdot;
   return rates;
@@ -944,10 +948,14 @@ function collide(race: RaceState, track: Track): void {
         if (-rv > 9) race.events.push({ type: 'bump', a: a.id, b: b.id, intensity: -rv });
         if (a.team !== b.team && -rv >= RAM_MIN_CLOSING) {
           // Two rams meeting head on: who lands first alternates tick by tick, like every other trade.
+          // A charge that lands on its own target ends, but only once both
+          // have struck: each still meets the other's prow braced.
           const first = race.tick & 1 ? b : a;
           const second = first === a ? b : a;
-          if (first.ramT > 0) ram(race, track, first, second);
-          if (second.ramT > 0 && isActive(a) && isActive(b)) ram(race, track, second, first);
+          const firstSpent = first.ramT > 0 && ram(race, track, first, second);
+          const secondSpent = second.ramT > 0 && isActive(a) && isActive(b) && ram(race, track, second, first);
+          if (firstSpent) first.ramT = 0;
+          if (secondSpent) second.ramT = 0;
           if (!isActive(a)) break;
         }
       }
@@ -955,27 +963,32 @@ function collide(race: RaceState, track: Track): void {
   }
 }
 
-/** A ramming defender has run into `vic`: one heavy hit per target, and a shove toward the wall. */
-function ram(race: RaceState, track: Track, att: MechState, vic: MechState): void {
+/**
+ * A ramming defender has run into `vic`: one heavy hit per target, and a
+ * shove toward the wall. True when it landed on the mech it was driving at,
+ * which spends the charge (the caller ends it).
+ */
+function ram(race: RaceState, track: Track, att: MechState, vic: MechState): boolean {
   const bit = 1 << vic.id;
-  if (att.ramHits & bit || !weaponsFree(race)) return;
+  if (att.ramHits & bit || !weaponsFree(race)) return false;
   // The prow is at the front: something that runs into the back of a ramming mech is not rammed.
   const dd = vic.d - att.d;
-  if (Math.abs(wrapAngle(Math.atan2(dd, deltaS(track, vic.s, att.s)) - att.facing)) > RAM_ARC) return;
+  if (Math.abs(wrapAngle(Math.atan2(dd, deltaS(track, vic.s, att.s)) - att.facing)) > RAM_ARC) return false;
   // A rival mid-dodge slips it for now; the ram is not used up on them.
-  if (vic.iframes > 0) return;
+  if (vic.iframes > 0) return false;
   const def = { ...ATTACKS[ATK.DF_RAM], damage: race.rules.ramDamage };
   const braced = vic.shieldT > 0 || vic.ramT > 0 || vic.guarding;
-  if (!applyHit(race, track, att, vic, def, ATK.DF_RAM)) return;
+  if (!applyHit(race, track, att, vic, def, ATK.DF_RAM)) return false;
   att.ramHits |= bit;
   // Landed on the mech it was driving at, the charge is spent: it ends
   // there, prow and all. (On the way, or let go of and running on down
   // the road, it carries on through whatever it runs into.)
-  if (att.target === vic.id) att.ramT = 0;
-  if (!isActive(vic)) return;
+  const spent = att.target === vic.id;
+  if (!isActive(vic)) return spent;
   // Sideways, away from the attacker; from dead astern, toward the nearer wall.
   const side = Math.abs(dd) > 0.5 ? Math.sign(dd) : vic.d >= 0 ? 1 : -1;
   addVelocity(vic, 0, side * RAM_SHOVE * (braced ? 0.3 : 1));
+  return spent;
 }
 
 // --------------------------------------------------------------------------

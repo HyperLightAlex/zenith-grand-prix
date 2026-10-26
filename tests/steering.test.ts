@@ -20,9 +20,10 @@ import {
   holdAt,
   kappaAt,
   pieceStarts,
+  routeAngleAt,
   routeBendAt,
-  routeSlopeAt,
   stepRace,
+  stretchAt,
   wrapS,
   type CircuitDef,
   type Track,
@@ -84,7 +85,7 @@ describe('steering on rolled road', () => {
    * steered by the bend ahead and back toward the middle. How often it meets
    * the barrier and how far it strays.
    */
-  function drive(def: CircuitDef, s0: number, s1: number, seat: number, steer: boolean, d0 = 0, pace?: number) {
+  function drive(def: CircuitDef, s0: number, s1: number, seat: number, steer: boolean, d0 = 0, pace?: number, correct = true) {
     const t = buildTrack(def);
     const race = createRace(t, { seed: 1, seats: makeSeats('all') });
     const inputs = race.mechs.map(() => emptyInput());
@@ -106,10 +107,12 @@ describe('steering on rolled road', () => {
     for (let i = 0; i < 3000 && deltaS(t, m.s, s0) < s1 - s0; i++) {
       if (pace !== undefined && m.speed > pace) m.speed = pace;
       if (steer) {
-        // Feed forward the bend (the road's, and a steered fork route's own), and back toward the line.
+        // Feed forward the bend (the road's, and a steered fork route's own),
+        // and (unless told not to) back toward the line.
         const can = Math.min(c.turnMax, (c.grip * gripAt(t, m.s) * holdAt(t, m.s)) / Math.max(m.speed, 24));
-        const bend = (kappaAt(t, m.s) + routeBendAt(t, m.s, m.d)) * m.speed * Math.cos(Math.atan(routeSlopeAt(t, m.s, m.d)));
-        inputs[seat].mx = Math.max(-1, Math.min(1, bend / can - m.heading * 2 - (m.d - d0) * 0.05));
+        const sdot = (m.speed * Math.cos(m.heading + routeAngleAt(t, m.s, m.d))) / stretchAt(t, m.s, m.d);
+        const bend = (kappaAt(t, m.s) + routeBendAt(t, m.s, m.d)) * sdot;
+        inputs[seat].mx = Math.max(-1, Math.min(1, bend / can - m.heading * 2 - (correct ? (m.d - d0) * 0.05 : 0)));
       }
       stepRace(race, t, inputs);
       if (m.wall === 1) hits++;
@@ -172,6 +175,19 @@ describe('steering on rolled road', () => {
             expect(held.hits).toBe(0);
             expect(held.widest).toBeLessThan(5);
           }
+          // And steered by the bend alone, nothing pulling it back to its
+          // line, it keeps to its line all the same: the route a mech moves
+          // and steers by is the one drawn, round the outside of a bend as
+          // well as the inside (the angle a route parts at is its slope over
+          // the road's stretch there).
+          // (Up to a jump on its way, if it has one: in the air a mech flies
+          // straight on, and a jump taken while its route still turns lands
+          // it a little wide, as one in any bend does.)
+          let lip = f.s1 - 60;
+          for (let k = Math.floor((f.s0 + 50) / t.ds); k * t.ds < lip; k++) if (!(side < 0 ? t.roadL : t.roadR)[k % t.n]) lip = k * t.ds - 8;
+          const fed = drive(def as CircuitDef, f.s0 + 50, lip, 0, true, d0, pace, false);
+          expect(fed.hits).toBe(0);
+          expect(fed.widest).toBeLessThan(0.75);
         }
       });
     }

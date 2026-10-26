@@ -1404,12 +1404,16 @@ describe('Ram', () => {
    * together, so that each has the other on its beam (inside RAM_ARC) when
    * they meet. `pre` idle ticks first shift the tick of contact by as many.
    */
-  function sideOn(pre = 0, hp?: number) {
+  function sideOn(pre = 0, hp?: number, locked = false) {
     const a = new Arena(2);
     a.step(pre);
     const left = giveCells(a.put(DF0, -200, -6));
     const right = giveCells(a.put(DF1, -200, 6));
     bothRam(a);
+    if (locked) {
+      setTarget(a.race, left, DF1);
+      setTarget(a.race, right, DF0);
+    }
     expect(left.ramT).toBeGreaterThan(0);
     expect(right.ramT).toBeGreaterThan(0);
     left.heading = 0.15;
@@ -1454,6 +1458,27 @@ describe('Ram', () => {
     const runs = [0, 1, 2, 3].map(order);
     for (let i = 1; i < runs.length; i++) expect(runs[i].T).toBe(runs[i - 1].T + 1);
     for (const r of runs) expect([r.T, r.first]).toEqual([r.T, r.T % 2 === 0 ? DF0 : DF1]);
+  });
+
+  it('locked on to each other, both charges land and end there, and each still met the other braced', () => {
+    // A charge spent on its target ends only once both have struck, so
+    // neither tick order leaves one defender staggered and the other not.
+    for (const pre of [0, 1, 2, 3]) {
+      const { a, left, right, hits } = sideOn(pre, undefined, true);
+      expect(hits.map((e) => [e.attacker, e.victim]).sort()).toEqual([
+        [DF0, DF1],
+        [DF1, DF0],
+      ]);
+      for (const m of [left, right]) {
+        expect(m.act).toBe(ACT.NONE);
+        expect(m.hp).toBe(maxHp(m) - 80);
+        expect(m.ramT).toBe(0);
+      }
+      // Thrown apart alike: neither took the full shove of an unbraced hit.
+      expect(Math.abs(left.vd + right.vd)).toBeLessThan(2);
+      a.step(30);
+      expect(a.events('hit').length).toBe(2);
+    }
   });
 
   it('...which decides it when the first of the two blows is a knock-out', () => {

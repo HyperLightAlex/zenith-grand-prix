@@ -169,9 +169,11 @@ export interface Track {
   riseR: Float32Array;
   /**
    * In a fork whose routes are steered (not carried: ForkSpec.carried), how
-   * fast each route moves across as it goes (shift per unit along) and how
-   * its heading turns per unit along (its own bend, over the road's). Zero
-   * elsewhere. A mech there moves and steers by its route (sim.ts).
+   * fast each route moves across as it goes (shift per unit along the road's
+   * middle) and how its heading turns per unit along (its own bend, over the
+   * road's, where the road runs straight). Zero elsewhere. A mech there
+   * moves and steers by its route (sim.ts), at the angle and bend its route
+   * really has where it is: routeAngleAt, routeBendAt.
    */
   slopeL: Float32Array;
   slopeR: Float32Array;
@@ -649,9 +651,34 @@ export function routeSlopeAt(track: Track, s: number, d: number): number {
   return sampleArray(track, d < 0 ? track.slopeL : track.slopeR, s);
 }
 
-/** A steered fork route's own bend at s, on the side of d (Track.bendL/R): 0 elsewhere. */
+/**
+ * The road's stretch across at (s, d): how far a line d across runs per unit
+ * along the road's middle (1 - kappa D, D its offset with the route's shift;
+ * longer round the outside of a bend). Kept off zero as the sim always has.
+ */
+export function stretchAt(track: Track, s: number, d: number, kappa = kappaAt(track, s)): number {
+  return Math.max(0.35, 1 - kappa * (d + routeShiftAt(track, s, d)));
+}
+
+/**
+ * The angle off the road's direction that a steered fork route's lines run
+ * at, at (s, d): its slope (per unit along the road's middle) over the
+ * stretch there, so round the outside of a bend a route parts at a shallower
+ * angle than on the inside. 0 elsewhere.
+ */
+export function routeAngleAt(track: Track, s: number, d: number): number {
+  const p = routeSlopeAt(track, s, d);
+  return p === 0 ? 0 : Math.atan(p / stretchAt(track, s, d));
+}
+
+/**
+ * A steered fork route's own bend at (s, d): how its angle (routeAngleAt)
+ * turns per unit along, at that d. 0 elsewhere. With the road's bend
+ * (kappa), the turn a mech holding to its route makes.
+ */
 export function routeBendAt(track: Track, s: number, d: number): number {
-  return sampleArray(track, d < 0 ? track.bendL : track.bendR, s);
+  if (routeSlopeAt(track, s, d) === 0 && routeSlopeAt(track, s + track.ds, d) === 0 && routeSlopeAt(track, s - track.ds, d) === 0) return 0;
+  return (routeAngleAt(track, s + track.ds, d) - routeAngleAt(track, s - track.ds, d)) / (2 * track.ds);
 }
 
 /** How far a steered fork route is drawn across at s, on the side of d: 0 elsewhere, and in a carried fork. */

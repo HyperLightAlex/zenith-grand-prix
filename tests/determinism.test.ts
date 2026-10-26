@@ -10,8 +10,12 @@ import {
   PHASE,
   POINTS,
   RULE_KEYS,
+  TRACKS,
+  buildTrack,
   createRace,
   emptyInput,
+  holdAt,
+  routeSlopeAt,
   rngNext,
   stepRace,
 } from '../src/sim/index';
@@ -407,6 +411,39 @@ describe('no hidden state: a race is its RaceState and nothing else', () => {
     expect(Object.keys(round.mechs[0]).length).toBe(Object.keys(race.mechs[0]).length);
     expect(Object.keys(round).sort()).toEqual(Object.keys(race).sort());
   });
+});
+
+describe('same seed, same race, on the circuits', () => {
+  // The reference race is Meridian's, a plan track: the circuits add their
+  // own road (barrels and twists steered round with the skates' hold, forks
+  // whose routes are steered), and the same must hold there.
+  for (const id of ['canyon', 'monsoon', 'titan', 'zenith']) {
+    it(`${id}: two all-AI runs agree, and a copy taken in a fork or on rolled road carries on alike`, () => {
+      const t = buildTrack(TRACKS.find((d) => d.id === id)!);
+      const run = () => {
+        const race = createRace(t, { seed: 77, seats: makeSeats() });
+        const at: string[] = [];
+        for (let i = 0; i < 9000; i++) {
+          stepRace(race, t, []);
+          if (i % 500 === 0) at.push(stateHash(race));
+        }
+        return at;
+      };
+      expect(run()).toEqual(run());
+      // Into the race until somebody is on a steered route as it parts, or
+      // on rolled road: copy it there, and run both on.
+      const race = createRace(t, { seed: 78, seats: makeSeats() });
+      const there = () => race.lapPhase >= 1 && race.mechs.some((m) => routeSlopeAt(t, m.s, m.d) !== 0 || holdAt(t, m.s) > 1);
+      for (let i = 0; i < 20000 && !there(); i++) stepRace(race, t, []);
+      expect(there()).toBe(true);
+      const copy = JSON.parse(JSON.stringify(race)) as RaceState;
+      for (let i = 0; i < 1500; i++) {
+        stepRace(race, t, []);
+        stepRace(copy, t, []);
+      }
+      expect(stateHash(copy)).toBe(stateHash(race));
+    }, 120_000);
+  }
 });
 
 describe('the test suite\'s own NaN detector', () => {
