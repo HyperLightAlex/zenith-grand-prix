@@ -34,10 +34,11 @@ const SIZES = {
 };
 // A case: a race moment (circuit, seconds into the race to look at) or a menu.
 const CASES = [
-  ...CIRCUITS.map((t, i) => ({ id: `race-anime-desk-${t}`, size: 'desk', look: 'anime', track: t, pair: PAIRS[i], at: [14, 52] })),
+  // Two moments on the circuits with the most going on (the pack early, a fight later), one on the rest.
+  ...CIRCUITS.map((t, i) => ({ id: `race-anime-desk-${t}`, size: 'desk', look: 'anime', track: t, pair: PAIRS[i], at: ['meridian', 'titan', 'monsoon', 'zenith'].includes(t) ? [14, 52] : [30] })),
   ...['meridian', 'titan', 'monsoon'].map((t) => ({ id: `race-plain-desk-${t}`, size: 'desk', look: 'plain', track: t, pair: PAIRS[CIRCUITS.indexOf(t)], at: [30] })),
   ...['helios', 'abyss', 'zenith'].map((t) => ({ id: `race-anime-phone-${t}`, size: 'phone', look: 'anime', track: t, pair: PAIRS[CIRCUITS.indexOf(t)], at: [30] })),
-  ...['anime', 'plain'].flatMap((look) => ['desk', 'phone'].map((size) => ({ id: `menus-${look}-${size}`, size, look, menus: ['title', 'modes', 'hangar', 'gp'] }))),
+  ...[['anime', 'desk'], ['anime', 'phone'], ['plain', 'desk']].map(([look, size]) => ({ id: `menus-${look}-${size}`, size, look, menus: ['title', 'modes', 'hangar', 'gp'] })),
 ].filter((c) => !only.length || only.some((o) => c.id.startsWith(o)));
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
@@ -179,13 +180,13 @@ for (const [key, cases] of groups) {
     await settle();
     let t = 0;
     for (const at of c.at) {
-      // Most of the way there without drawing, then the last third of a second drawn, so trails and the camera are as in play.
+      // Most of the way there without drawing, then the last fifth of a second drawn, so trails and the camera are as in play.
       // (Math.random reseeded for the drawn frames: building a race takes a
       // different number of its numbers in a build whose caches were filled
       // differently at boot, which would put a different spray of sparks on
       // screen. The race itself is the seeded simulation's, not Math.random's.)
-      await page.evaluate(([dt, seed]) => { window.game.session.fastForward(dt); window.__seed(seed); }, [Math.max(0, at - 1 / 3 - t), 4321 + at]);
-      await step(20);
+      await page.evaluate(([dt, seed]) => { window.game.session.fastForward(dt); window.__seed(seed); }, [Math.max(0, at - 0.2 - t), 4321 + at]);
+      await step(12);
       t = at;
       await shoot(`${c.id}-${String(at).padStart(3, '0')}s`);
     }
