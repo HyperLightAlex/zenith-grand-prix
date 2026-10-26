@@ -243,6 +243,14 @@ export const CARVE_MIN_SPEED = 40;
 /** Turn rate ceiling while carving, as a multiple of the frame's own. */
 export const CARVE_TURN = 1.35;
 /**
+ * Round a barrel or a twist (where the skates hold the road) a mech grips as
+ * hard as the road's own bend needs for any frame to follow it at this pace
+ * (Track.hold); how fast it can swing round is still its frame's. The bend
+ * is the road's real one there, which a barrel's swing round its column
+ * makes tight.
+ */
+export const HOLD_TURN_SPEED = 175;
+/**
  * A carve in Overdrive (the Forward's) grips this much harder again: at
  * Overdrive's pace the grip, not the frame, is what limits the turn, and
  * the carve would otherwise open out by as much as the pace rose.

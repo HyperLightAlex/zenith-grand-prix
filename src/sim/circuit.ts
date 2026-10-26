@@ -20,7 +20,7 @@
 // straights (`closeWith`) to close the plan and sets the height of one climb
 // (`settle`) to close the height.
 
-import { GRAVITY } from './config';
+import { CLASSES, GRAVITY, HOLD_TURN_SPEED } from './config';
 import { clamp } from './math';
 import { registerCircuitBuilder, smoothRing, type Fork, type Gate, type GateDef, type Pad, type Route, type Strip, type StripDef, type Track } from './track';
 
@@ -541,7 +541,7 @@ export function buildCircuit(def: CircuitDef): Track {
   const ux = new Float32Array(n);
   const uy = new Float32Array(n);
   const uz = new Float32Array(n);
-  const kappa = smoothRing(khRaw, 3, 2);
+  let kappa = smoothRing(khRaw, 3, 2);
   const kv = smoothRing(kvRaw, 2, 1);
   const bankRaw = new Float32Array(n);
   for (let k = 0; k < n; k++) {
@@ -577,6 +577,51 @@ export function buildCircuit(def: CircuitDef): Track {
     upY[k] = uy[k];
     const inward = Math.abs(kappa[k]) > 1e-5 && Math.sign(kappa[k]) === Math.sign(bank[k]);
     grip[k] = 1 + (inward ? BANK_GRIP * Math.sin(Math.abs(bank[k])) : 0);
+  }
+
+  // Rolled road (barrels and twists): the bend a mech steers by is the
+  // road's own turn within its surface, worked out from the frames just
+  // built, not the plan's. A barrel's plan has none, but its road swings
+  // out round its column or tube and back; a twist's turns the right way
+  // but misses the kink where it joins the road either side. (Turns and
+  // spirals keep the plan's: a banked turn is steered as the turn it is.)
+  {
+    const raw = Float32Array.from(khRaw);
+    const near = 3;
+    for (let k = 0; k < n; k++) {
+      let rolled = false;
+      for (let q = -near; q <= near && !rolled; q++) {
+        const kind = kindOf(pieces[pieceOf[(k + q + n) % n]]);
+        rolled = kind === 'barrel' || kind === 'twist';
+      }
+      const own = kindOf(pieces[pieceOf[k]]);
+      if (!rolled || own === 'turn' || own === 'spiral') continue;
+      const a = (k - 1 + n) % n;
+      const b = (k + 1) % n;
+      raw[k] = ((tx[b] - tx[a]) * rx[k] + (ty[b] - ty[a]) * ry[k] + (tz[b] - tz[a]) * rz[k]) / (2 * ds);
+    }
+    kappa = smoothRing(raw, 3, 2);
+    for (let k = 0; k < n; k++) {
+      const inward = Math.abs(kappa[k]) > 1e-5 && Math.sign(kappa[k]) === Math.sign(bank[k]);
+      grip[k] = 1 + (inward ? BANK_GRIP * Math.sin(Math.abs(bank[k])) : 0);
+    }
+  }
+  // ...and round them the skates' hold grips as hard as that bend needs for
+  // any frame to follow it at HOLD_TURN_SPEED (with a margin). Only the grip:
+  // how fast a frame can swing round is its own (turnMax), so the tightest
+  // of it, at full speed, is a stretch for the heavier frames.
+  const hold = new Float32Array(n).fill(1);
+  {
+    const gripMin = Math.min(...CLASSES.map((c) => c.grip));
+    const holdRaw = new Float32Array(n).fill(1);
+    for (let k = 0; k < n; k++) {
+      const kind = kindOf(pieces[pieceOf[k]]);
+      if (kind !== 'barrel' && kind !== 'twist') continue;
+      holdRaw[k] = Math.max(1, (HOLD_TURN_SPEED * HOLD_TURN_SPEED * Math.abs(kappa[k]) * 1.15) / (gripMin * grip[k]));
+    }
+    // Eased in and out over a little road either side.
+    const eased = smoothRing(holdRaw, 4, 2);
+    for (let k = 0; k < n; k++) hold[k] = Math.max(1, eased[k], holdRaw[k]);
   }
 
   // Width, gaps, open edges.
@@ -762,6 +807,7 @@ export function buildCircuit(def: CircuitDef): Track {
     upY,
     mag,
     grip,
+    hold,
     pads,
     forks,
     air: true,
