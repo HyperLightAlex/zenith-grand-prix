@@ -93,7 +93,7 @@ import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { gpBlocked, registerOnlineGp } from '../ui/screens/onlineGp';
 import { registerRace } from '../ui/screens/race';
 import { registerVideo } from '../ui/screens/video';
-import { applyFrame, frame, onFrame, RESOLUTIONS, saveVideo, video, type VideoSettings } from '../video';
+import { applyFrame, frame, FRAME_RATES, onFrame, RESOLUTIONS, saveVideo, video, type VideoSettings } from '../video';
 import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
@@ -2321,7 +2321,8 @@ export class Game {
     const cur = this.session.race;
     // Whether this frame is drawn (the anime look's 30 fps option skips every
     // other): the HUD's marks over the mechs move with the picture.
-    this.renderer.frameCap = look.on && this.tuning.feel.lookThirty >= 0.5 ? 30 : 0;
+    // (Or at most 60, the player's choice: half the work on a 120 Hz screen.)
+    this.renderer.frameCap = look.on && this.tuning.feel.lookThirty >= 0.5 ? 30 : (FRAME_RATES.find((r) => r.id === video.frameRate)?.cap ?? 0);
     const drawDt = this.renderer.beginFrame(dt, this.time);
     const flyingNow = this.state === 'race' && this.view.focusId === local;
     // A painted still holds everything, the camera and the sparks included.

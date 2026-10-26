@@ -20,6 +20,7 @@ import { installFrame, video } from './video';
 //   &team=1         fly for Vanta                 &rivals=0..2 (their skill)
 //   &rival=2        race against Mirage          &oldswift=1 Solstice's first Swift design
 //   &mute=1         no sound                      ?debug=mechs  model viewer
+//   &diag=1         a readout of the frame rate, the worst frames and the sound (for testing on a device)
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   ?sprint=0..4    jump straight into a Sprint in this format (single race, 3 races, 5 races, first to 2 wins, first to 3)
 //   &track=canyon   circuit: meridian, canyon, helios, crucible, frostline, titan, abyss, monsoon or zenith
@@ -132,6 +133,10 @@ async function boot(): Promise<void> {
   // is decoded by the time one comes, and starts on it), while the boot
   // screen switches off.
   audio.unlock();
+  if (q.has('diag')) {
+    const { startDiagnostics } = await import('./ui/diag');
+    startDiagnostics(game, audio, canvas);
+  }
   void bootScreen.finish();
 }
 

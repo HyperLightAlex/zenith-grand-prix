@@ -11,6 +11,8 @@
 //   resolution  how sharp the 3D picture is drawn: full, or a share of it
 //           for a slow device, or 'auto' (lowered and raised with the frame
 //           rate). The player's choice: the game never lowers it unasked.
+//   frameRate  how many pictures a second are drawn: as many as the screen
+//           shows ('screen'; 120 on a 120 Hz handheld), or at most 60.
 //
 // And the frame: the part of the window the picture, the HUD and the menus
 // fill (the whole window, or the 4:3 box), how big the interface's type is in
@@ -32,15 +34,25 @@ export const RESOLUTIONS: ReadonlyArray<{ id: Resolution; label: string; scale: 
   { id: 'auto', label: 'Automatic', scale: 'auto' },
 ];
 
+/** How many pictures a second are drawn (see FRAME_RATES). */
+export type FrameRate = 'screen' | '60';
+
+/** The choices, in order: the most a second ('screen': as many as the screen shows, 0). */
+export const FRAME_RATES: ReadonlyArray<{ id: FrameRate; label: string; cap: number }> = [
+  { id: 'screen', label: "The screen's", cap: 0 },
+  { id: '60', label: 'At most 60', cap: 60 },
+];
+
 export interface VideoSettings {
   panels: boolean;
   crt: boolean;
   aspect: Aspect;
   resolution: Resolution;
+  frameRate: FrameRate;
 }
 
 const KEY = 'zgp.video';
-const DEFAULTS: VideoSettings = { panels: true, crt: false, aspect: 'wide', resolution: 'full' };
+const DEFAULTS: VideoSettings = { panels: true, crt: false, aspect: 'wide', resolution: 'full', frameRate: 'screen' };
 
 function load(): VideoSettings {
   try {
@@ -50,6 +62,7 @@ function load(): VideoSettings {
       crt: typeof v.crt === 'boolean' ? v.crt : DEFAULTS.crt,
       aspect: v.aspect === 'classic' ? 'classic' : 'wide',
       resolution: RESOLUTIONS.some((r) => r.id === v.resolution) ? (v.resolution as Resolution) : DEFAULTS.resolution,
+      frameRate: FRAME_RATES.some((r) => r.id === v.frameRate) ? (v.frameRate as FrameRate) : DEFAULTS.frameRate,
     };
   } catch {
     return { ...DEFAULTS };
