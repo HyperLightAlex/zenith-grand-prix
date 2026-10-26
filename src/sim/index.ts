@@ -8,6 +8,7 @@ export * from './core';
 export { abilityFor, weaponsFree } from './combat';
 export { award, AWARD_SLOTS } from './awards';
 export { createRace, stepRace, startGrade, updatePlaces, pointsFor, koBonus, teamPoints, setTactic, mayCall } from './sim';
+export { fastestFlight, type Flight } from './flight';
 export * from './snapshot';
 export * from './match';
 export { MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ABYSS_LINE, MONSOON_RUINS, ZENITH_RING, TRACKS, trackById, type AnyTrackDef } from './tracks/index';
