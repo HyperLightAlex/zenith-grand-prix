@@ -2,8 +2,8 @@
 // circuit's own measures (sim/tracks/abyss.ts): the sea floor, with the
 // trench carved into it where the road goes down (and a chasm under the
 // Trench Leap); glass tubes round the road (one round each strand through
-// the Braid, a wide one round the Twist), ribbed every so often, broken off
-// over the Leap (from its gap until the furthest flight is down); the town's dome, the road running round under its roof, and
+// the Braid, a wide one round the Twist), ribbed every so often, vaulted
+// high over the Leap and open underneath its gap; the town's dome, the road running round under its roof, and
 // the town on its floor, lit; smaller domes, rocks and kelp about the sea
 // floor, and the shafts of light coming down from the surface. Everything is
 // checked against the space the road needs (titan/keepout.ts) and left out
@@ -19,7 +19,8 @@ import * as THREE from 'three';
 import { moves } from './still';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { pieceStarts, type CircuitDef } from '../../sim/circuit';
-import { frameAt, makeFrame, type Track } from '../../sim/track';
+import { deltaS, frameAt, makeFrame, type Track } from '../../sim/track';
+import { fastestFlight } from '../../sim/flight';
 import { DOME, TWIST } from '../../sim/tracks/abyss';
 import { paintedTexture, paintedTrack, paintedSurfaceMaterial, swapWhenPainted, UNTONE, whiteTexture, type PaintedSet } from './painted';
 import { toonMaterial } from './palette';
@@ -304,18 +305,36 @@ function colour(g: THREE.BufferGeometry, c: number | THREE.Color): THREE.BufferG
   return g;
 }
 
-/** Rings (centre, axis, radius, a frame across: right and up) swept into a tube's wall, as triangles. */
-function tubeWall(rings: Array<{ c: THREE.Vector3; r: THREE.Vector3; u: THREE.Vector3; rad: number } | null>, sides = 28): THREE.BufferGeometry | null {
+/**
+ * A ring of a tube: its centre, a frame across it (right and up), its
+ * radius across and (taller, over the Leap) up, and how far round from
+ * straight down either way it is open (radians; 0 closed).
+ */
+interface TubeRing {
+  c: THREE.Vector3;
+  r: THREE.Vector3;
+  u: THREE.Vector3;
+  rad: number;
+  radU?: number;
+  open?: number;
+}
+
+/** Rings swept into a tube's wall, as triangles. */
+function tubeWall(rings: Array<TubeRing | null>, sides = 28): THREE.BufferGeometry | null {
   const pos: number[] = [];
-  const at = (q: { c: THREE.Vector3; r: THREE.Vector3; u: THREE.Vector3; rad: number }, k: number) => {
+  const at = (q: TubeRing, k: number) => {
     const a = (k / sides) * Math.PI * 2;
-    return q.c.clone().addScaledVector(q.r, Math.cos(a) * q.rad).addScaledVector(q.u, Math.sin(a) * q.rad);
+    return q.c.clone().addScaledVector(q.r, Math.cos(a) * q.rad).addScaledVector(q.u, Math.sin(a) * (q.radU ?? q.rad));
   };
+  /** How far round a side's middle is from straight down. */
+  const fromBottom = (k: number) => Math.abs((((k + 0.5) / sides) * Math.PI * 2) - Math.PI * 1.5);
   for (let i = 0; i + 1 < rings.length; i++) {
     const a = rings[i];
     const b = rings[i + 1];
     if (!a || !b) continue;
+    const open = Math.max(a.open ?? 0, b.open ?? 0);
     for (let k = 0; k < sides; k++) {
+      if (open > 0 && fromBottom(k) < open) continue;
       const p0 = at(a, k), p1 = at(a, k + 1), p2 = at(b, k + 1), p3 = at(b, k);
       for (const p of [p0, p1, p2, p0, p2, p3]) pos.push(p.x, p.y, p.z);
     }
@@ -333,6 +352,60 @@ function hoop(centre: THREE.Vector3, axis: THREE.Vector3, radius: number, tube: 
   g.deleteAttribute('uv');
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(v3(0, 0, 1), axis.clone().normalize()));
   g.translate(centre.x, centre.y, centre.z);
+  g.computeVertexNormals();
+  return g;
+}
+
+/** How far round from straight down, either way, the tube is open over the Leap's gap. */
+const LEAP_OPEN = 1.1;
+
+/**
+ * The vault over the Leap: for each sample (every other one, as the tube's
+ * rings are) from a way before its gap to a way past the furthest a mech
+ * can fly it, how tall the tube there must stand over its centre (8 over
+ * the deck) to clear that flight, a mech's height and a margin over it,
+ * and the chase camera behind it; rising to it and falling from it gently.
+ */
+function leapVault(track: Track, gap: [number, number] | null): Map<number, number> {
+  const out = new Map<number, number>();
+  if (!gap) return out;
+  const f = fastestFlight(track, gap[0], 0);
+  const n = track.n;
+  // What has to fit over the deck at each point of the flight: the mech's
+  // body (4.4 to its middle) with 10 round it, and behind, the camera (8.4
+  // over a mech, up to 28 back) with 5 over it.
+  const need: Array<[number, number]> = [];
+  for (let i = 0; i < f.s.length; i++) {
+    need.push([f.s[i], f.h[i] + 4.4 + 10]);
+    for (let back = 4; back <= 28; back += 8) need.push([f.s[i] - back, f.h[i] + 8.4 + 5]);
+  }
+  const RISE = 0.35;
+  for (let j = 0; j < n; j += 2) {
+    const s = j * track.ds;
+    let top = 0;
+    for (const [at, h] of need) {
+      const away = Math.abs(deltaS(track, s, at));
+      if (away < 140) top = Math.max(top, h - away * RISE);
+    }
+    if (top > 0) out.set(j, top - 8);
+  }
+  return out;
+}
+
+/** A tube ring's rib (or lamp, `inset` in from its wall): an ellipse round it, broken where the ring is open. */
+function ringHoop(q: TubeRing, inset: number, tube: number, seg = 32, sides = 6): THREE.BufferGeometry {
+  const open = q.open ?? 0;
+  if (!open && q.radU === undefined) return hoop(q.c, v3().crossVectors(q.u, q.r).normalize(), q.rad - inset, tube, seg, sides);
+  // Round the ellipse from where the opening ends to where it begins.
+  const a0 = -Math.PI / 2 + open;
+  const sweep = Math.PI * 2 - 2 * open;
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i <= seg; i++) {
+    const a = a0 + (sweep * i) / seg;
+    pts.push(q.c.clone().addScaledVector(q.r, Math.cos(a) * (q.rad - inset)).addScaledVector(q.u, Math.sin(a) * ((q.radU ?? q.rad) - inset)));
+  }
+  const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, !open), seg, tube, sides, !open).toNonIndexed();
+  g.deleteAttribute('uv');
   g.computeVertexNormals();
   return g;
 }
@@ -511,13 +584,12 @@ export function buildAbyss(ctx: SeaCtx): void {
   {
     const n = track.n;
     const twist = range('the Twist');
-    // Over the Leap, no tube from its gap until the furthest a mech can fly
-    // it comes down (Overdrive, off the pad: past the run-out), at the
-    // straight after: flown that fast, a mech is 40 up over the landing.
-    // (tests/flights.test.ts flies it.)
-    const gap = range('gap');
-    const after = range('closing A');
-    const leap = gap && after ? [gap[0], after[0]] : null;
+    // Over the Leap the tube goes on unbroken, raised into a tall vault over
+    // as much of the jump as a mech can fly (Overdrive, off the pad: 40 up
+    // over the landing), the chase camera over it and a margin, and open
+    // underneath over the gap: a diving bell, its air holding the sea out,
+    // the chasm below. (tests/flights.test.ts flies it.)
+    const vault = leapVault(track, range('gap'));
     const inDome = (i: number) => Math.hypot(track.px[i] - centre.x, track.py[i] - centre.y, track.pz[i] - centre.z) < DR + 6;
     const gapNear = (i: number) => {
       for (let k = -2; k <= 2; k++) {
@@ -553,7 +625,7 @@ export function buildAbyss(ctx: SeaCtx): void {
       const rad = Math.hypot(half, KEEP_OUT.up - 8) + 5;
       return { c: F.p.clone().addScaledVector(F.r, side * mid + sh).addScaledVector(F.u, rh + 8), r: F.r, u: F.u, rad };
     };
-    type Ring = ReturnType<typeof plainRing>;
+    type Ring = TubeRing;
     const KINDS = ['plain', 'twist', 'left', 'right', 'joint'] as const;
     const runs: Record<(typeof KINDS)[number], Array<Ring | null>> = { plain: [], twist: [], left: [], right: [], joint: [] };
     /** One sample's rings, by kind of tube (a break in every other kind). */
@@ -563,7 +635,11 @@ export function buildAbyss(ctx: SeaCtx): void {
     for (let i = 0; i <= n; i += 2) {
       const j = i % n;
       const s = j * track.ds;
-      if (inDome(j) || gapNear(j) || (leap && s > leap[0] && s < leap[1])) put({});
+      if (inDome(j)) put({});
+      else if (gapNear(j) || vault.has(j)) {
+        const P = plainRing(j);
+        put({ plain: { ...P, radU: Math.max(P.rad, vault.get(j) ?? 0), open: gapNear(j) ? LEAP_OPEN : 0 } });
+      }
       else if (twist && s > twist[0] - 4 && s < twist[1] + 4) put({ twist: twistRing(j) });
       else if (track.median[j] > 0.6) {
         const L = strandRing(j, -1);
@@ -588,9 +664,8 @@ export function buildAbyss(ctx: SeaCtx): void {
         const q = list[a];
         if (!q) continue;
         // (Square to the road, as the tube's rings are.)
-        const axis = v3().crossVectors(q.u, q.r).normalize();
-        const rib = hoop(q.c, axis, q.rad, 0.9, 32, 6);
-        const lamp = hoop(q.c, axis, q.rad - 0.6, 0.35, 32, 4);
+        const rib = ringHoop(q, 0, 0.9, 32, 6);
+        const lamp = ringHoop(q, 0.6, 0.35, 32, 4);
         if (ctx.inRoad(rib, 1.5) || ctx.inRoad(lamp, 1.5)) continue;
         ribs.push(colour(rib, 0x4f5c66));
         lights.push(colour(lamp, (a / 4) % 3 === 0 ? 0xffd28a : 0x7ff4ff));

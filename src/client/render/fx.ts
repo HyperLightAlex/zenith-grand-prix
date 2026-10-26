@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { drawClock, look } from './look';
 import { COLORS } from './palette';
-import { SpriteFx, pullNearer, wide, type Depth, type SpriteKind, type SpriteOptions } from './sprites';
+import { RAM_TIP, SpriteFx, pullNearer, wide, type Depth, type SpriteKind, type SpriteOptions } from './sprites';
+import ramUrl from './sprites/fx-ram.png';
 
 const _v = new THREE.Vector3();
 
@@ -1016,55 +1017,82 @@ export function makeShield(color: number): THREE.Mesh {
 
 const prowVertex = /* glsl */ `
   attribute vec3 bary;
+  attribute float face;
   varying vec3 vB;
   varying vec3 vN;
   varying vec3 vV;
+  varying float vFace;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     vN = normalize(normalMatrix * normal);
     vV = normalize(-mv.xyz);
     vB = bary;
+    vFace = face;
     gl_Position = projectionMatrix * mv;
   }`;
 
 const prowFragment = /* glsl */ `
   uniform vec3 uColor;
-  uniform float uPower, uTime, uFill;
+  uniform float uPower, uTime, uFill, uTip;
+  uniform sampler2D uDraw;
   varying vec3 vB;
   varying vec3 vN;
   varying vec3 vV;
+  varying float vFace;
   void main() {
     // vB: (1, 0, 0) and (0, 1, 0) at a face's two base corners, (0, 0, 1) at
     // the point. Its two slanted edges are lines of light; its base edge is
     // the open back, and fades away.
     float along = vB.z;
     float edge = 1.0 - smoothstep(0.0, 0.07, min(vB.x, vB.y) / max(1.0 - along, 0.05) * (1.0 - along * 0.6));
-    // Bands of light streaming back from the point, as the air piles up on it.
-    float f = fract(along * 4.0 + uTime * 2.6);
-    float band = smoothstep(0.5, 0.62, f) * (1.0 - smoothstep(0.62, 0.8, f));
     float tip = smoothstep(0.75, 1.0, along);
     float body = smoothstep(-0.15, 0.35, along);
     float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+    // On each face, the Ram's drawn bow shock (fx-ram, its loop): the
+    // drawing laid on the face with its tip at the point and its arms along
+    // the face's edges, the face cutting it off at them; each face a drawing
+    // apart from the next, and on to the next drawing every few frames.
+    float frame = mod(floor(uTime * 8.0) + vFace, 3.0);
+    vec2 cell = vec2(along * uTip, 0.5 + 0.5 * (vB.x - vB.y));
+    vec4 d = texture2D(uDraw, vec2((frame + cell.x) / 3.0, cell.y * 0.5));
+    float hi = max(d.r, max(d.g, d.b));
+    float white = min(d.r, min(d.g, d.b)) / max(hi, 1e-3);
+    // Painted as the drawn effects are: the cyan becomes the colour, the white stays white.
+    vec3 drawn = mix(uColor * hi, vec3(hi), white * white) * d.a;
     // Lit along its edges and at its point, the faces a glaze of light: bright
     // enough to read, not so bright that the bloom swallows the shape.
     // (The edges run lit all the way back, so from behind they frame the mech.)
-    float glow = (edge * smoothstep(0.0, 0.1, along) + (band * 0.22 + fres * 0.12 + 0.04) * body + tip * 0.35) * uPower;
+    float glow = (edge * smoothstep(0.0, 0.1, along) * 0.85 + (fres * 0.1 + 0.03) * body + tip * 0.3) * uPower;
     // A tint over what is behind the faces, as the guard's field has, so it
-    // reads against a bright sky as well as a dark road.
-    float cover = min(uFill * (0.6 + fres + band * 0.5) * body * uPower, 0.5);
+    // reads against a bright sky as well as a dark road; more where the
+    // drawing is.
+    float cover = min((uFill * (0.6 + fres) * body + d.a * 0.3) * uPower, 0.6);
     vec3 hot = mix(uColor, vec3(1.0, 0.9, 0.7), clamp(edge * 0.3 + tip * 0.3, 0.0, 1.0));
-    gl_FragColor = vec4(uColor * cover + hot * glow, cover);
+    gl_FragColor = vec4(uColor * cover * 0.6 + hot * glow + drawn * uPower, cover);
   }`;
+
+/** The Ram's drawings (sprites/fx-ram.png), for the prow's faces: loaded once, when a prow is first made. */
+let ramDrawings: THREE.Texture | null = null;
+function ramTexture(): THREE.Texture {
+  if (!ramDrawings) {
+    ramDrawings = new THREE.TextureLoader().load(ramUrl);
+    ramDrawings.colorSpace = THREE.SRGBColorSpace;
+    ramDrawings.minFilter = THREE.LinearMipmapLinearFilter;
+  }
+  return ramDrawings;
+}
 
 /**
  * The Ram's prow: a four-sided pyramid of light over the front of a charging
  * defender, its point ahead, its open back round the mech's middle, so the
- * charge reads from every side. Unit sized (base corners at x, y = +-1 and
- * z = 0, the point at z = 1): placed and sized round each mech by its view.
+ * charge reads from every side, with the Ram's drawn bow shock on each face.
+ * Unit sized (base corners at x, y = +-1 and z = 0, the point at z = 1):
+ * placed and sized round each mech by its view.
  */
 export function makeRamProw(color: number): THREE.Mesh {
   const pts: number[] = [];
   const bary: number[] = [];
+  const face: number[] = [];
   const corners: Array<[number, number]> = [
     [-1, -1],
     [1, -1],
@@ -1076,13 +1104,22 @@ export function makeRamProw(color: number): THREE.Mesh {
     const [bx, by] = corners[(i + 1) % 4];
     pts.push(ax, ay, 0, bx, by, 0, 0, 0, 1);
     bary.push(1, 0, 0, 0, 1, 0, 0, 0, 1);
+    face.push(i, i, i);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
   geo.setAttribute('bary', new THREE.Float32BufferAttribute(bary, 3));
+  geo.setAttribute('face', new THREE.Float32BufferAttribute(face, 1));
   geo.computeVertexNormals();
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(color) }, uPower: { value: 0 }, uTime: { value: 0 }, uFill: { value: 0.22 } },
+    uniforms: {
+      uColor: { value: new THREE.Color(color) },
+      uPower: { value: 0 },
+      uTime: { value: 0 },
+      uFill: { value: 0.22 },
+      uDraw: { value: ramTexture() },
+      uTip: { value: RAM_TIP },
+    },
     vertexShader: prowVertex,
     fragmentShader: prowFragment,
     transparent: true,

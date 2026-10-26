@@ -343,8 +343,11 @@ moldings, a carved band under a cornice, columns along the courtyard and
 gabled vaults: `src/client/render/monsoon.ts`,
 painted from sheets J1 to J4 with the painted background; Abyss Line: on the sea floor a hundred
 metres down, the road in glass tubes (one round each strand of the Braid, a
-wide one round the Twist, broken off over the Trench Leap from its gap to
-where the furthest flight, in Overdrive off the pad, comes down), the trench carved
+wide one round the Twist, and over the Trench Leap a tall vault: as high as
+the furthest flight there needs (Overdrive off the pad, 44 up; worked out
+by flying it, `sim/flight.ts`), the chase camera with it, and open
+underneath over the gap, a diving bell whose air holds the sea out over
+the chasm), the trench carved
 into the floor under it, the town's great glass dome with the town lit on
 its floor, the water for a sky, light coming down in shafts:
 `src/client/render/abyss.ts`, which with the painted background takes its

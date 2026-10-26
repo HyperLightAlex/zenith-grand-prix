@@ -10,17 +10,14 @@
 // stubbed (only its geometry is looked at).
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { buildTrack, deltaS, wrapS, type Track } from '../src/sim/track';
+import { buildTrack, wrapS, type Track } from '../src/sim/track';
 import { TRACKS } from '../src/sim/tracks/index';
 import { pieceStarts, type CircuitDef } from '../src/sim/circuit';
-import { COUNTDOWN_TICKS, MODE } from '../src/sim/config';
-import { createRace, stepRace } from '../src/sim/sim';
-import { emptyInput } from '../src/sim/types';
+import { fastestFlight } from '../src/sim/flight';
 import { themeFor } from '../src/client/render/themes';
 import { buildWorld } from '../src/client/render/world';
 import { buildTrackVisual } from '../src/client/render/trackMesh';
 import { trackPoint } from '../src/client/render/trackSpace';
-import { makeSeats } from './helpers';
 
 /** How far from the middle of a flying mech's body scenery must keep: half a mech's height (8.8) and a margin. */
 const CLEAR = 6.5;
@@ -59,46 +56,11 @@ function jumps(t: Track): Array<{ s: number; side: number }> {
   return out.map((j) => ({ s: j.i0 * t.ds, side: j.side }));
 }
 
-/** The flight over the jump at `s`, flown as fast as it can be: where the middle of the mech's body goes, and how. */
-function fastestFlight(t: Track, s: number, side: number): { path: THREE.Vector3[]; speed: number; peak: number; down: number } {
-  const race = createRace(t, { seed: 1, seats: makeSeats('all') });
-  const inputs = race.mechs.map(() => emptyInput());
-  while (race.tick < COUNTDOWN_TICKS) stepRace(race, t, inputs);
-  // The speed lap: each frame's own top speed, which Overdrive raises.
-  race.lapPhase = 3;
-  race.mechs.forEach((o, k) => {
-    if (k) {
-      o.s = wrapS(t, s + t.length / 2 + k * 30);
-      o.speed = o.vs = o.vd = 0;
-    }
-  });
-  const m = race.mechs[0];
-  const d = side * hwAt(t, s) * 0.5;
-  Object.assign(m, { s: wrapS(t, s - 600), d, h: 0, vh: 0, air: false, speed: 150, vs: 150, vd: 0, heading: 0, facing: 0, mode: MODE.SPEED });
-  inputs[0].throttle = 1;
-  const path: THREE.Vector3[] = [];
-  let speed = 0;
-  let peak = 0;
-  let flying = false;
-  let down = -1;
-  for (let k = 0; k < 2400 && down < 0; k++) {
-    const x = deltaS(t, m.s, s);
-    m.overdriveT = Math.max(m.overdriveT, 10);
-    if (x < -2) m.padT = Math.max(m.padT, 30);
-    // Its line across held (how it steers is not what is looked at here).
-    m.d = d;
-    m.vd = 0;
-    m.heading = 0;
-    stepRace(race, t, inputs);
-    speed = Math.max(speed, m.speed);
-    if (m.air && x > -200) {
-      flying = true;
-      peak = Math.max(peak, m.h);
-      path.push(trackPoint(t, m.s, m.d, m.h + BODY, new THREE.Vector3()));
-    } else if (flying) down = m.s;
-    if (x > 900) break;
-  }
-  return { path, speed, peak, down };
+/** The flight over the jump at `s` (sim/flight.ts), on its own side of the road: where the middle of the mech's body goes. */
+function flightPath(t: Track, s: number, side: number) {
+  const f = fastestFlight(t, s, side * hwAt(t, s) * 0.5);
+  const path = f.s.map((at, i) => trackPoint(t, at, f.d[i], f.h[i] + BODY, new THREE.Vector3()));
+  return { ...f, path };
 }
 
 function hwAt(t: Track, s: number): number {
@@ -193,7 +155,7 @@ describe('the fastest flights clear the scenery', () => {
       world.group.add(supports);
       const bad: string[] = [];
       for (const j of list) {
-        const f = fastestFlight(t, j.s, j.side);
+        const f = flightPath(t, j.s, j.side);
         expect(f.path.length).toBeGreaterThan(10);
         for (const [what, n] of inTheWay(world.group, f.path)) {
           bad.push(`${pieceAt(j.s)} at ${j.s.toFixed(0)} (${f.speed.toFixed(0)} u/s, ${f.peak.toFixed(0)} up, down at ${f.down.toFixed(0)}): ${what}, ${n} triangles`);
