@@ -5,6 +5,7 @@
 // round its column and back, and with kappa 0 there the road used to carry
 // a mech round its swing as a lock-on does. The skates' hold there grips as
 // hard as the swing needs (Track.hold), so it can be steered at full pace.
+// The same goes for a fork's routes as they part (see the end).
 import { describe, expect, it } from 'vitest';
 import {
   CLASSES,
@@ -19,6 +20,8 @@ import {
   holdAt,
   kappaAt,
   pieceStarts,
+  routeBendAt,
+  routeSlopeAt,
   stepRace,
   wrapS,
   type CircuitDef,
@@ -81,7 +84,7 @@ describe('steering on rolled road', () => {
    * steered by the bend ahead and back toward the middle. How often it meets
    * the barrier and how far it strays.
    */
-  function drive(def: CircuitDef, s0: number, s1: number, seat: number, steer: boolean) {
+  function drive(def: CircuitDef, s0: number, s1: number, seat: number, steer: boolean, d0 = 0, pace?: number) {
     const t = buildTrack(def);
     const race = createRace(t, { seed: 1, seats: makeSeats('all') });
     const inputs = race.mechs.map(() => emptyInput());
@@ -95,18 +98,22 @@ describe('steering on rolled road', () => {
     });
     const m = race.mechs[seat];
     const c = CLASSES[m.role];
-    Object.assign(m, { s: s0, d: 0, h: 0, vh: 0, air: false, speed: c.topSpeed, vs: c.topSpeed, vd: 0, heading: 0, facing: 0, mode: MODE.SPEED });
+    const v = pace ?? c.topSpeed;
+    Object.assign(m, { s: s0, d: d0, h: 0, vh: 0, air: false, speed: v, vs: v, vd: 0, heading: 0, facing: 0, mode: MODE.SPEED });
     inputs[seat].throttle = 1;
     let hits = 0;
     let widest = 0;
     for (let i = 0; i < 3000 && deltaS(t, m.s, s0) < s1 - s0; i++) {
+      if (pace !== undefined && m.speed > pace) m.speed = pace;
       if (steer) {
+        // Feed forward the bend (the road's, and a steered fork route's own), and back toward the line.
         const can = Math.min(c.turnMax, (c.grip * gripAt(t, m.s) * holdAt(t, m.s)) / Math.max(m.speed, 24));
-        inputs[seat].mx = Math.max(-1, Math.min(1, (kappaAt(t, m.s) * m.speed) / can - m.heading * 2 - m.d * 0.05));
+        const bend = (kappaAt(t, m.s) + routeBendAt(t, m.s, m.d)) * m.speed * Math.cos(Math.atan(routeSlopeAt(t, m.s, m.d)));
+        inputs[seat].mx = Math.max(-1, Math.min(1, bend / can - m.heading * 2 - (m.d - d0) * 0.05));
       }
       stepRace(race, t, inputs);
       if (m.wall === 1) hits++;
-      widest = Math.max(widest, Math.abs(m.d));
+      widest = Math.max(widest, Math.abs(m.d - d0));
     }
     return { hits, widest, speed: m.speed };
   }
@@ -122,5 +129,51 @@ describe('steering on rolled road', () => {
         expect(held.widest).toBeLessThan(6);
       }
     });
+  }
+
+  // ---- forks ---------------------------------------------------------------
+  // A fork's routes are drawn moved apart from the road. Where it has room
+  // (Canyon, Helios, Frostline, Monsoon) they part gently, and a route's
+  // parting is a bend like any other, steered into; the short or twisted
+  // ones (the Hull, the Dock, the Braid) still carry a mech apart.
+  const forks = TRACKS.flatMap((def) => (buildTrack(def).forks.length ? [def] : []));
+
+  it('the short and the twisted forks carry a mech apart; the rest are steered', () => {
+    const carried = forks.filter((def) => buildTrack(def).forks.every((f) => f.carried)).map((d) => d.id);
+    expect(carried.sort()).toEqual(['abyss', 'titan', 'zenith']);
+    expect(forks.map((d) => d.id).filter((id) => !carried.includes(id)).sort()).toEqual(['canyon', 'frostline', 'helios', 'monsoon']);
+  });
+
+  for (const def of forks) {
+    const t = buildTrack(def);
+    for (const f of t.forks.filter((x) => !x.carried)) {
+      it(`${def.id}: a route's parting bends gently, and steering is what holds a mech to it`, () => {
+        // Its own bend, from its slope, no tighter than about 220.
+        let tightest = 0;
+        for (const bend of [t.bendL, t.bendR]) for (let k = Math.floor(f.s0 / t.ds); k <= Math.ceil(f.s1 / t.ds); k++) tightest = Math.max(tightest, Math.abs(bend[k % t.n]));
+        expect(tightest).toBeGreaterThan(0.001);
+        expect(1 / tightest).toBeGreaterThan(220);
+        // On each route, at a pace its tightest bend (the road's and its own
+        // together) can be held at without a carve, by the heaviest frame
+        // (at most the formation lap's): hands off, the route swings away and
+        // the mech runs off its line; steered by the bend, it holds it, the
+        // light frame and the heavy. (From where the road has widened for the
+        // fork to where its routes have closed up again.)
+        const gripMin = Math.min(...CLASSES.map((c) => c.grip));
+        for (const side of [-1, 1]) {
+          let worst = 0;
+          for (let k = Math.floor(f.s0 / t.ds); k <= Math.ceil(f.s1 / t.ds); k++) worst = Math.max(worst, Math.abs(t.kappa[k % t.n] + (side < 0 ? t.bendL : t.bendR)[k % t.n]));
+          const pace = Math.min(110, 0.9 * Math.sqrt(gripMin / worst));
+          const d0 = side * (t.hw[Math.floor((f.s0 + f.s1) / 2 / t.ds)] + f.median) / 2;
+          const loose = drive(def as CircuitDef, f.s0 + 50, f.s1 - 60, 0, false, d0, pace);
+          expect(loose.widest).toBeGreaterThan(8);
+          for (const seat of [0, 4]) {
+            const held = drive(def as CircuitDef, f.s0 + 50, f.s1 - 60, seat, true, d0, pace);
+            expect(held.hits).toBe(0);
+            expect(held.widest).toBeLessThan(5);
+          }
+        }
+      });
+    }
   }
 });

@@ -112,6 +112,8 @@ export interface Fork {
   median: number;
   left: Route;
   right: Route;
+  /** Its routes carry a mech as they part, rather than being steered into (ForkSpec.carried). */
+  carried: boolean;
 }
 
 export interface Track {
@@ -160,11 +162,21 @@ export interface Track {
   wallR: Uint8Array;
   /** Half width of the wall down the middle of a fork, or 0. */
   median: Float32Array;
-  /** Drawing only: how far each route of a fork is moved across (shift) and up (rise). */
+  /** How far each route of a fork is drawn moved across (shift) and up (rise). */
   shiftL: Float32Array;
   riseL: Float32Array;
   shiftR: Float32Array;
   riseR: Float32Array;
+  /**
+   * In a fork whose routes are steered (not carried: ForkSpec.carried), how
+   * fast each route moves across as it goes (shift per unit along) and how
+   * its heading turns per unit along (its own bend, over the road's). Zero
+   * elsewhere. A mech there moves and steers by its route (sim.ts).
+   */
+  slopeL: Float32Array;
+  slopeR: Float32Array;
+  bendL: Float32Array;
+  bendR: Float32Array;
   /** Curvature toward the road's own up: positive in a dip or a loop, negative over a crest. */
   kv: Float32Array;
   /** Vertical part of the (banked) road up: 1 flat, 0 on a wall, -1 upside down. */
@@ -361,7 +373,7 @@ export function registerCircuitBuilder(fn: (def: CircuitDef) => Track): void {
 }
 
 /** Neutral 3D feature arrays for a flat plan track of n samples. */
-export function flatFeatures(n: number, halfWidth: number): Pick<Track, 'hw' | 'roadL' | 'roadR' | 'wallL' | 'wallR' | 'median' | 'shiftL' | 'riseL' | 'shiftR' | 'riseR' | 'kv' | 'upY' | 'mag' | 'grip' | 'hold' | 'pads' | 'forks' | 'air' | 'minHw' | 'maxHw'> {
+export function flatFeatures(n: number, halfWidth: number): Pick<Track, 'hw' | 'roadL' | 'roadR' | 'wallL' | 'wallR' | 'median' | 'shiftL' | 'riseL' | 'shiftR' | 'riseR' | 'slopeL' | 'slopeR' | 'bendL' | 'bendR' | 'kv' | 'upY' | 'mag' | 'grip' | 'hold' | 'pads' | 'forks' | 'air' | 'minHw' | 'maxHw'> {
   return {
     hw: new Float32Array(n).fill(halfWidth),
     roadL: new Uint8Array(n).fill(1),
@@ -373,6 +385,10 @@ export function flatFeatures(n: number, halfWidth: number): Pick<Track, 'hw' | '
     riseL: new Float32Array(n),
     shiftR: new Float32Array(n),
     riseR: new Float32Array(n),
+    slopeL: new Float32Array(n),
+    slopeR: new Float32Array(n),
+    bendL: new Float32Array(n),
+    bendR: new Float32Array(n),
     kv: new Float32Array(n),
     upY: new Float32Array(n).fill(1),
     mag: new Uint8Array(n),
@@ -626,6 +642,24 @@ export function upYAt(track: Track, s: number): number {
 
 export function gripAt(track: Track, s: number): number {
   return sampleArray(track, track.grip, s);
+}
+
+/** A steered fork route's slope off the road's line at s, on the side of d (Track.slopeL/R): 0 elsewhere. */
+export function routeSlopeAt(track: Track, s: number, d: number): number {
+  return sampleArray(track, d < 0 ? track.slopeL : track.slopeR, s);
+}
+
+/** A steered fork route's own bend at s, on the side of d (Track.bendL/R): 0 elsewhere. */
+export function routeBendAt(track: Track, s: number, d: number): number {
+  return sampleArray(track, d < 0 ? track.bendL : track.bendR, s);
+}
+
+/** How far a steered fork route is drawn across at s, on the side of d: 0 elsewhere, and in a carried fork. */
+export function routeShiftAt(track: Track, s: number, d: number): number {
+  if (track.forks.length === 0) return 0;
+  const f = forkAt(track, s);
+  if (!f || f.carried) return 0;
+  return sampleArray(track, d < 0 ? track.shiftL : track.shiftR, s);
 }
 
 /** How much harder than usual a mech grips at s (Track.hold). */

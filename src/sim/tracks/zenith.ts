@@ -43,6 +43,8 @@ const DOCK: ForkSpec = {
   // runs over its back, open on its outside, with the pad.
   left: { shift: -26, rise: -2 },
   right: { shift: 28, rise: 26 },
+  // Too short (round the station's module) to part gently enough to steer: the routes carry a mech apart.
+  carried: true,
 };
 const inDock = { width: 40, fork: DOCK };
 

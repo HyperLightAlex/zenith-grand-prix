@@ -40,11 +40,17 @@ export function keepBoxes(track: Track, i: number, up: number = KEEP_OUT.up, dow
     return [{ d0: -hw, d1: hw, h0: -down, h1: up }];
   }
   // Each route from its outer edge to the back of the wall down the middle
-  // (its inner edge, the median, less the wall and a margin, as past each edge).
+  // (its inner edge, the median, less the wall and a margin, as past each
+  // edge); as wide again as the route moves across in half a sample either
+  // way, for the road between this sample and the next as a route parts.
   const m = track.median[i] - KEEP_OUT.side;
+  const a = (i - 1 + track.n) % track.n;
+  const b = (i + 1) % track.n;
+  const wL = Math.abs(track.shiftL[b] - track.shiftL[a]) / 4;
+  const wR = Math.abs(track.shiftR[b] - track.shiftR[a]) / 4;
   return [
-    { d0: -hw + sL, d1: -m + sL, h0: -down + rL, h1: up + rL },
-    { d0: m + sR, d1: hw + sR, h0: -down + rR, h1: up + rR },
+    { d0: -hw + sL - wL, d1: -m + sL + wL, h0: -down + rL, h1: up + rL },
+    { d0: m + sR - wR, d1: hw + sR + wR, h0: -down + rR, h1: up + rR },
   ];
 }
 

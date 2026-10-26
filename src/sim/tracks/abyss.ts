@@ -21,7 +21,8 @@ export const DOME = { radius: 330, under: 8, across: 66 };
 /** The Twist: the radius of its tube (the road runs round its inside), its length and turns. */
 export const TWIST = { radius: 26, length: 700, turns: 2 };
 
-const BRAID: ForkSpec = { id: 'braid', median: 6, braid: { turns: 2, radius: 36 } };
+// (Twisted too hard to steer round: the strands carry a mech round each other.)
+const BRAID: ForkSpec = { id: 'braid', median: 6, braid: { turns: 2, radius: 36 }, carried: true };
 const inBraid = { width: 44, fork: BRAID };
 
 // The Dome Run: up from its floor on a tight arc, across under its roof on
