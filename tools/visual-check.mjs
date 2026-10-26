@@ -89,7 +89,8 @@ for (const [key, cases] of groups) {
     Math.random = () => {
       window.__rnd++;
       if (window.__rndWhere) {
-        const at = (new Error().stack ?? '').split('\n')[2]?.trim().replace(/\?[^:)]*/, '').replace(/https?:\/\/[^/]+\//, '') ?? '?';
+        const lines = (new Error().stack ?? '').split('\n').slice(2).map((l) => l.trim().replace(/\?[^:)]*/, '').replace(/https?:\/\/[^/]+\//, '').replace(/:\d+:\d+\)?$/, ''));
+        const at = window.__rndDeep ? lines.filter((l) => !/generateUUID|Object3D|Material|BufferGeometry|Texture\b|Vector|Color/.test(l)).slice(0, 3).join(' < ') : lines[0] ?? '?';
         window.__rndWhere[at] = (window.__rndWhere[at] ?? 0) + 1;
       }
       return (s = (Math.imul(s, 1664525) + 1013904223) >>> 0), s / 4294967296;
@@ -100,8 +101,11 @@ for (const [key, cases] of groups) {
   await page.waitForFunction(() => window.game && !document.getElementById('boot'), null, { timeout: 600000, polling: 250 });
   // EVAL='...': code run in the page once it is up (an experiment: switch something off, say).
   if (process.env.EVAL) await page.evaluate(process.env.EVAL);
-  if (process.env.RANDOMS) await page.evaluate(() => { window.__rndWhere = {}; });
+  // No CSS transitions or animations: the HUD's rows slide and its banners
+  // fade on the real clock, which the stepped frames do not follow.
+  await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation: none !important; }' });
   await settle();
+  if (process.env.RANDOMS) await page.evaluate((deep) => { window.__rndWhere = {}; window.__rndDeep = deep; }, process.env.RANDOMS === 'deep');
   // (Each frame finished before the next, so the software GPU never falls far behind.)
   const step = async (n) => {
     for (let i = 0; i < n; i++) {
@@ -123,6 +127,22 @@ for (const [key, cases] of groups) {
     }
     shots++;
   };
+  // Every team's mechs built once (and their painted markings made) before
+  // any picture: those are made the first time they are wanted, and which
+  // were wanted already depends on the title's race at boot, which differs
+  // from build to build (made in the middle of a picture, their pictures
+  // load late and they take numbers from Math.random).
+  for (const [team, rival] of [[0, 1], [2, 3], [4, 0]]) {
+    await hold();
+    await page.evaluate(([team, rival]) => {
+      const g = window.game;
+      g.menus.reset('modes', undefined, ['title']);
+      g.loadout.team = team; g.loadout.role = 0; g.free.rival = rival; g.free.track = 'meridian'; g.free.mode = 'teams';
+      g.startFree();
+    }, [team, rival]);
+    await step(2);
+    await settle();
+  }
   for (const c of cases) {
     if (c.menus) {
       for (const screen of c.menus) {
@@ -160,7 +180,11 @@ for (const [key, cases] of groups) {
     let t = 0;
     for (const at of c.at) {
       // Most of the way there without drawing, then the last third of a second drawn, so trails and the camera are as in play.
-      await page.evaluate((dt) => window.game.session.fastForward(dt), Math.max(0, at - 1 / 3 - t));
+      // (Math.random reseeded for the drawn frames: building a race takes a
+      // different number of its numbers in a build whose caches were filled
+      // differently at boot, which would put a different spray of sparks on
+      // screen. The race itself is the seeded simulation's, not Math.random's.)
+      await page.evaluate(([dt, seed]) => { window.game.session.fastForward(dt); window.__seed(seed); }, [Math.max(0, at - 1 / 3 - t), 4321 + at]);
       await step(20);
       t = at;
       await shoot(`${c.id}-${String(at).padStart(3, '0')}s`);
