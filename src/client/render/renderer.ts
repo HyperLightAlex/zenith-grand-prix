@@ -428,9 +428,10 @@ export class Renderer {
    * in the background, where the browser can (KHR_parallel_shader_compile),
    * so the first frame that draws them does not stall while they compile.
    * Call it once a scene is built: the title's race, a circuit, the hangar.
-   * What is hidden now (a far level of detail, a swapped-out material)
-   * still compiles when first drawn, as before. Without the extension it
-   * does nothing: compiling now would only move the stall.
+   * Everything in the scene is compiled, hidden or not; a material on no
+   * mesh just now (the other look's) still compiles when first drawn, as
+   * before. Without the extension it does nothing: compiling now would only
+   * move the stall.
    */
   precompile(): void {
     const r = this.renderer;

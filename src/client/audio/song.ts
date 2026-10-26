@@ -348,8 +348,11 @@ export class SongSource {
   buffers: AudioBuffer[] = [];
   /** How much later than the manifest's times this browser's decoder puts the audio, in seconds. */
   shift = 0;
-  /** The download, once started (null: not yet, or forgotten). */
+  /** The download, once started (null: not yet, or forgotten), and how to call it off. */
   private files: Promise<{ manifest: SongManifest; data: ArrayBuffer[] }> | null = null;
+  private abort: AbortController | null = null;
+  /** When it last failed to load (performance.now() ms; -Infinity: never). */
+  failedAt = -Infinity;
   private decoding = false;
   /** Counts the times the decoded song was let go of, so a decode under way then is dropped. */
   private released = 0;
@@ -365,13 +368,16 @@ export class SongSource {
   prefetch(): Promise<{ manifest: SongManifest; data: ArrayBuffer[] }> {
     if (!this.files) {
       const base = this.base;
+      const abort = typeof AbortController === 'function' ? new AbortController() : null;
+      const signal = abort?.signal;
+      this.abort = abort;
       const files = (async () => {
-        const res = await fetch(base + 'song.json');
+        const res = await fetch(base + 'song.json', { signal });
         if (!res.ok) throw new Error(`${base}song.json: ${res.status}`);
         const manifest = (await res.json()) as SongManifest;
         const data = await Promise.all(
           manifest.layers.map(async (l) => {
-            const r = await fetch(base + l.file);
+            const r = await fetch(base + l.file, { signal });
             if (!r.ok) throw new Error(`${base}${l.file}: ${r.status}`);
             return r.arrayBuffer();
           }),
@@ -438,14 +444,19 @@ export class SongSource {
    * kept them.
    */
   forget(): void {
-    if (this.state === 'failed') return;
-    this.release();
+    // A download still under way is called off; a song that failed to load
+    // can be tried again (a network that dropped may be back).
+    this.abort?.abort();
+    this.abort = null;
     this.files = null;
+    if (this.state === 'failed') this.state = 'loading';
+    this.release();
   }
 
   private fail(err: unknown): void {
     if (this.state === 'failed') return;
     this.state = 'failed';
+    this.failedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
     console.warn(`[audio] the song in ${this.base} could not be loaded; the race music is synthesised instead:`, err);
   }
 }

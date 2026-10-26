@@ -27,17 +27,15 @@ export function freezeStill(root: THREE.Object3D): void {
 /**
  * Keep the matrices under `root` up to date only while it is shown: hidden
  * (the hangar during a race, the circuit in the hangar), nothing under it is
- * looked at, and it is skipped. For a root whose parent does not move (a
- * moving parent updates its children whatever this says).
+ * drawn, and the frame's matrix update skips it. (three.js's own
+ * matrixWorldAutoUpdate does not: it still walks every child.) Anything
+ * that asks for a hidden object's place itself (getWorldPosition and the
+ * like) still gets it, worked out then. For a root whose parent does not
+ * move.
  */
 export function updateOnlyWhileShown(root: THREE.Object3D): void {
-  Object.defineProperty(root, 'matrixWorldAutoUpdate', {
-    configurable: true,
-    get(this: THREE.Object3D) {
-      return this.visible;
-    },
-    set() {
-      /* follows visible */
-    },
-  });
+  const update = root.updateMatrixWorld.bind(root);
+  root.updateMatrixWorld = (force?: boolean) => {
+    if (root.visible) update(force);
+  };
 }

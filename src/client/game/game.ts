@@ -2116,10 +2116,10 @@ export class Game {
   /**
    * The 3D picture's WebGL context can be taken away (a phone short of
    * memory, a browser left in the background, a GPU reset): the picture
-   * stops and goes black. Say so, hold an offline race, and offer a reload
-   * (Grand Prix, settings and medals are kept on this device). When the
-   * browser gives the context back, reload straight away: everything the GPU
-   * held has to be built again.
+   * stops. Say so, and hold an offline race. When the browser gives the
+   * context back, three.js builds everything on the GPU again and the game
+   * carries on (an online race with it); if it never does, a tap reloads
+   * (Grand Prix, settings and medals are kept on this device).
    */
   private watchContext(canvas: HTMLCanvasElement): void {
     let lost: HTMLElement | null = null;
@@ -2128,11 +2128,14 @@ export class Game {
       if (lost) return;
       lost = document.createElement('div');
       lost.className = 'rotate-hint context-lost';
-      lost.innerHTML = '<b>The 3D picture was lost</b><span>The device needed its graphics memory back. Tap to reload: your Grand Prix and settings are kept.</span>';
+      lost.innerHTML = '<b>The 3D picture was lost</b><span>The device needed its graphics memory back. It should come back by itself; if it does not, tap to reload: your Grand Prix and settings are kept.</span>';
       lost.addEventListener('click', () => location.reload());
       document.body.append(lost);
     });
-    canvas.addEventListener('webglcontextrestored', () => location.reload());
+    canvas.addEventListener('webglcontextrestored', () => {
+      lost?.remove();
+      lost = null;
+    });
   }
 
   /** Full screen from a tap on the title (a phone: the browser's bars take a lot of a small screen). */

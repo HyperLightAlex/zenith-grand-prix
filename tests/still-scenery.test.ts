@@ -12,7 +12,7 @@ import { themeFor } from '../src/client/render/themes';
 import { buildWorld } from '../src/client/render/world';
 import { buildTrackVisual } from '../src/client/render/trackMesh';
 import { look } from '../src/client/render/look';
-import { freezeStill } from '../src/client/render/still';
+import { freezeStill, updateOnlyWhileShown } from '../src/client/render/still';
 
 function fakeDocument() {
   const ctx2d = new Proxy(
@@ -80,4 +80,24 @@ describe('still scenery', () => {
       expect(movers).toBeLessThan(frozen.size / 4);
     });
   }
+
+  it('skips a hidden subtree in the frame\'s matrix update, and catches up when it is shown', () => {
+    const scene = new THREE.Scene();
+    const root = new THREE.Group();
+    const child = new THREE.Mesh();
+    root.add(child);
+    scene.add(root);
+    updateOnlyWhileShown(root);
+    scene.updateMatrixWorld();
+    root.visible = false;
+    child.position.set(5, 0, 0);
+    scene.updateMatrixWorld();
+    expect(child.matrixWorld.elements[12]).toBe(0);
+    // Asked for itself, its place is still right.
+    expect(child.getWorldPosition(new THREE.Vector3()).x).toBe(5);
+    child.position.set(7, 0, 0);
+    root.visible = true;
+    scene.updateMatrixWorld();
+    expect(child.matrixWorld.elements[12]).toBe(7);
+  });
 });
