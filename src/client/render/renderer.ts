@@ -146,6 +146,47 @@ class DepthTap extends Pass {
   }
 }
 
+/**
+ * The composer, with the scene drawn into a multisampled buffer of its own
+ * and the passes after it ping-ponging between two plain ones. (Given one
+ * multisampled buffer, the stock composer clones it, so every full-screen
+ * pass drew into a multisampled buffer and had it resolved: memory and
+ * bandwidth for nothing, a full-screen picture having no edges to smooth.)
+ * The picture is the same: a full-screen pass writes the same value to
+ * every sample of a pixel.
+ */
+class SceneComposer extends EffectComposer {
+  constructor(
+    renderer: THREE.WebGLRenderer,
+    target: THREE.WebGLRenderTarget,
+    /** The scene's buffer: multisampled, with the depth the passes read. */
+    readonly sceneTarget: THREE.WebGLRenderTarget,
+  ) {
+    super(renderer, target);
+  }
+
+  /** Each frame: the scene is drawn into its own buffer, the first pass after it writes into a plain one. */
+  override render(deltaTime?: number): void {
+    this.readBuffer = this.sceneTarget;
+    this.writeBuffer = this.renderTarget1;
+    super.render(deltaTime);
+  }
+
+  /** As the stock composer, except that the scene's buffer is never written to again. */
+  override swapBuffers(): void {
+    const written = this.writeBuffer;
+    this.writeBuffer = this.readBuffer === this.sceneTarget ? (written === this.renderTarget1 ? this.renderTarget2 : this.renderTarget1) : this.readBuffer;
+    this.readBuffer = written;
+  }
+
+  override setSize(width: number, height: number): void {
+    super.setSize(width, height);
+    // (The same size as the composer's own buffers: CSS size by pixel ratio.)
+    const ratio = this.renderTarget1.width / Math.max(1e-6, width);
+    this.sceneTarget.setSize(width * ratio, height * ratio);
+  }
+}
+
 export type Quality = 'low' | 'medium' | 'high';
 
 export class Renderer {
@@ -154,7 +195,7 @@ export class Renderer {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(66, 16 / 9, 0.5, 40000);
   readonly speedPass: ShaderPass;
-  private composer: EffectComposer;
+  private composer: SceneComposer;
   private bloom: UnrealBloomPass;
   private bloomThreshold = 1;
   private bloomBands = { value: 0 };
@@ -210,10 +251,13 @@ export class Renderer {
     // cannot render to one, fall back to 8-bit and a lower bloom threshold.
     const ext = this.renderer.extensions;
     const hdr = this.renderer.capabilities.isWebGL2 && (ext.has('EXT_color_buffer_float') || ext.has('EXT_color_buffer_half_float'));
-    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4 });
-    // The ink pass traces lines from the depth of the frame.
-    target.depthTexture = new THREE.DepthTexture(size.x, size.y);
-    this.composer = new EffectComposer(this.renderer, target);
+    const type = hdr ? THREE.HalfFloatType : THREE.UnsignedByteType;
+    // The scene, multisampled; the ink pass traces lines from its depth.
+    const sceneTarget = new THREE.WebGLRenderTarget(size.x, size.y, { type, samples: 4 });
+    sceneTarget.depthTexture = new THREE.DepthTexture(size.x, size.y);
+    // The passes over it: full-screen pictures, no multisampling and no depth.
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type, depthBuffer: false });
+    this.composer = new SceneComposer(this.renderer, target, sceneTarget);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.speedPass = new ShaderPass(SpeedShader);
     this.speedPass.uniforms.tTravel.value = this.travelMask.texture;
@@ -397,7 +441,7 @@ export class Renderer {
       // As the scene is drawn: into the composer's buffer (which decides the
       // shaders' output: no tone mapping, linear colour), and its travellers
       // in their flat white.
-      r.setRenderTarget(this.composer.readBuffer);
+      r.setRenderTarget(this.composer.sceneTarget);
       void r.compileAsync(this.scene, this.camera).catch(() => {});
       const passes: THREE.Material[] = [
         this.travelMat,
@@ -529,7 +573,12 @@ export class Renderer {
     if (this.reviewProbe) this.renderer.info.reset();
     this.applyLook(dt);
     this.speedPass.uniforms.uTime.value = now;
-    if (this.speedPass.uniforms.uTravel.value > 0.001) this.drawTravellers();
+    // What travels with the camera, for the stretch: while inking, where the
+    // ink pass found the mechs (its mask, made from the frame itself);
+    // otherwise the mechs drawn again into a mask of their own.
+    const travel = this.speedPass.uniforms.uTravel.value > 0.001;
+    if (travel && !this.inking) this.drawTravellers();
+    this.speedPass.uniforms.tTravel.value = this.inking ? this.inkPass.mask.texture : this.travelMask.texture;
     this.composer.render(dt);
     this.reviewProbe?.record(this.renderer, this.quality, this.scale, this.frameCap);
   }
