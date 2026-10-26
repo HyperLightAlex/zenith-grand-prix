@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { drawClock, look } from './look';
 import { COLORS } from './palette';
 import { RAM_TIP, SpriteFx, pullNearer, wide, type Depth, type SpriteKind, type SpriteOptions } from './sprites';
-import ramUrl from './sprites/fx-ram.png';
 
 const _v = new THREE.Vector3();
 
@@ -753,6 +752,11 @@ export class Fx {
    * A drawn effect from the painted sheets, if the anime look is on. Returns
    * whether it drew one (so the caller can leave out the plain look's).
    */
+  /** A drawn effect's atlas (the sprite system's own copy, freed with it). */
+  spriteTexture(kind: SpriteKind): THREE.Texture {
+    return this.sprites.texture(kind);
+  }
+
   drawnSprite(kind: SpriteKind, at: THREE.Vector3, size: number, o?: SpriteOptions): boolean {
     if (!this.drawn) return false;
     this.sprites.spawn(kind, at, size, o);
@@ -991,6 +995,22 @@ const shieldFragment = /* glsl */ `
     gl_FragColor = vec4(uColor * (cover + a * a * 1.5), cover);
   }`;
 
+/**
+ * Premultiplied colour laid over what is behind, leaving the alpha behind
+ * alone: under a field or a prow a mech keeps the mark in its alpha that
+ * the ink pass finds it by (look.ts markCharacter), so the field neither
+ * draws ink lines along its own strokes nor wipes the mech out of the mask.
+ */
+const OVER_KEEPING_ALPHA = {
+  blending: THREE.CustomBlending,
+  blendEquation: THREE.AddEquation,
+  blendSrc: THREE.OneFactor,
+  blendDst: THREE.OneMinusSrcAlphaFactor,
+  blendEquationAlpha: THREE.AddEquation,
+  blendSrcAlpha: THREE.ZeroFactor,
+  blendDstAlpha: THREE.OneFactor,
+} as const;
+
 /** `fill`: how much of what is behind the field's face it covers, at full power; 0 is a glow alone. */
 function shieldMaterial(color: number, fill: number): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -999,6 +1019,7 @@ function shieldMaterial(color: number, fill: number): THREE.ShaderMaterial {
     fragmentShader: shieldFragment,
     transparent: true,
     premultipliedAlpha: true,
+    ...OVER_KEEPING_ALPHA,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -1071,25 +1092,15 @@ const prowFragment = /* glsl */ `
     gl_FragColor = vec4(uColor * cover * 0.6 + hot * glow + drawn * uPower, cover);
   }`;
 
-/** The Ram's drawings (sprites/fx-ram.png), for the prow's faces: loaded once, when a prow is first made. */
-let ramDrawings: THREE.Texture | null = null;
-function ramTexture(): THREE.Texture {
-  if (!ramDrawings) {
-    ramDrawings = new THREE.TextureLoader().load(ramUrl);
-    ramDrawings.colorSpace = THREE.SRGBColorSpace;
-    ramDrawings.minFilter = THREE.LinearMipmapLinearFilter;
-  }
-  return ramDrawings;
-}
-
 /**
  * The Ram's prow: a four-sided pyramid of light over the front of a charging
  * defender, its point ahead, its open back round the mech's middle, so the
  * charge reads from every side, with the Ram's drawn bow shock on each face.
  * Unit sized (base corners at x, y = +-1 and z = 0, the point at z = 1):
- * placed and sized round each mech by its view.
+ * placed and sized round each mech by its view. `drawings` is the Ram's
+ * sheet (sprites/fx-ram.png), the drawn effects' own copy.
  */
-export function makeRamProw(color: number): THREE.Mesh {
+export function makeRamProw(color: number, drawings: THREE.Texture): THREE.Mesh {
   const pts: number[] = [];
   const bary: number[] = [];
   const face: number[] = [];
@@ -1117,13 +1128,14 @@ export function makeRamProw(color: number): THREE.Mesh {
       uPower: { value: 0 },
       uTime: { value: 0 },
       uFill: { value: 0.22 },
-      uDraw: { value: ramTexture() },
+      uDraw: { value: drawings },
       uTip: { value: RAM_TIP },
     },
     vertexShader: prowVertex,
     fragmentShader: prowFragment,
     transparent: true,
     premultipliedAlpha: true,
+    ...OVER_KEEPING_ALPHA,
     depthWrite: false,
     side: THREE.DoubleSide,
     toneMapped: false,

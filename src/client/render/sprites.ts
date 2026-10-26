@@ -308,7 +308,8 @@ export class SpriteFx {
     }
   }
 
-  private texture(kind: SpriteKind): THREE.Texture {
+  /** A kind's atlas, loaded once and kept until dispose (shared with whatever else draws from it: the Ram's prow). */
+  texture(kind: SpriteKind): THREE.Texture {
     let t = this.textures.get(kind);
     if (!t) {
       t = new THREE.TextureLoader().load(ATLASES[kind].url);

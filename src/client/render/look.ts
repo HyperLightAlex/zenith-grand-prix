@@ -286,10 +286,10 @@ export function markCharacter(root: THREE.Object3D, id = -1): void {
     for (const m of Array.isArray(mats) ? mats : [mats]) {
       m.userData.celChar = true;
       if(m.userData.mechInkMark)m.userData.mechInkMark.value=value;
-      if (m.transparent && m.blending === THREE.NormalBlending && !m.premultipliedAlpha) {
+      if (m.transparent && m.blending === THREE.NormalBlending) {
         m.blending = THREE.CustomBlending;
         m.blendEquation = THREE.AddEquation;
-        m.blendSrc = THREE.SrcAlphaFactor;
+        m.blendSrc = m.premultipliedAlpha ? THREE.OneFactor : THREE.SrcAlphaFactor;
         m.blendDst = THREE.OneMinusSrcAlphaFactor;
         m.blendEquationAlpha = THREE.AddEquation;
         m.blendSrcAlpha = THREE.ZeroFactor;

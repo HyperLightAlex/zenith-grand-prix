@@ -1,6 +1,6 @@
 // Turns track coordinates (s, d, height, facing) into world-space transforms.
 import * as THREE from 'three';
-import { frameAt, makeFrame, sampleArray, type Track } from '../../sim/track';
+import { frameAt, kappaAt, makeFrame, sampleArray, type Track } from '../../sim/track';
 
 const f = makeFrame();
 const vx = new THREE.Vector3();
@@ -41,29 +41,53 @@ export function trackUp(track: Track, s: number, out: THREE.Vector3): THREE.Vect
 }
 
 /**
- * Full transform for something standing on the road. Models face +Z, so the
- * basis is (left, up, forward) with `facing` measured from the driving
- * direction, positive to the right.
+ * The way the road runs at s for something at d across it, into `ahead`,
+ * `right` and `vy` (its up), `f` being the frame at s and (sh, rh) where a
+ * fork draws d's route: the road's own axes, or in a fork its route's,
+ * moved across and up as the route is drawn apart. A route's slope is per
+ * unit along the road's middle, so where the road bends it runs at that over
+ * the road's stretch there (as the sim moves a mech along it: stretchAt).
  */
-export function trackMatrix(track: Track, s: number, d: number, h: number, facing: number, out: THREE.Matrix4): THREE.Matrix4 {
-  frameAt(track, s, f);
-  const [sh, rh] = forkOffset(track, s, d);
-  // In a fork, `facing` is from the way the mech's own route runs, which is
-  // the road's moved across (and up) as the route is drawn apart.
+function routeAxes(track: Track, s: number, d: number, sh: number, rh: number): void {
   let across = 0;
   let rise = 0;
+  let along = 1;
   if (sh !== 0 || rh !== 0) {
     const [sa, ra] = forkOffset(track, s - ROUTE_DS, d);
     const [sb, rb] = forkOffset(track, s + ROUTE_DS, d);
     across = (sb - sa) / (2 * ROUTE_DS);
     rise = (rb - ra) / (2 * ROUTE_DS);
+    along = Math.max(0.35, 1 - kappaAt(track, s) * (d + sh));
   }
-  d += sh;
-  h += rh;
-  // The route's way ahead, its right and its up.
-  ahead.set(f.tx + f.rx * across + f.ux * rise, f.ty + f.ry * across + f.uy * rise, f.tz + f.rz * across + f.uz * rise).normalize();
+  ahead.set(f.tx * along + f.rx * across + f.ux * rise, f.ty * along + f.ry * across + f.uy * rise, f.tz * along + f.rz * across + f.uz * rise).normalize();
   right.set(f.rx, f.ry, f.rz).addScaledVector(ahead, -(f.rx * ahead.x + f.ry * ahead.y + f.rz * ahead.z)).normalize();
   vy.crossVectors(right, ahead).normalize();
+}
+
+/**
+ * World direction of a vector (along = forward, across = right) for
+ * something at (s, d): along its route in a fork, where a mech there faces
+ * and moves (trackMatrix), and along the road elsewhere (as trackDir).
+ */
+export function routeDir(track: Track, s: number, d: number, along: number, across: number, out: THREE.Vector3): THREE.Vector3 {
+  frameAt(track, s, f);
+  const [sh, rh] = forkOffset(track, s, d);
+  routeAxes(track, s, d, sh, rh);
+  return out.copy(ahead).multiplyScalar(along).addScaledVector(right, across).normalize();
+}
+
+/**
+ * Full transform for something standing on the road. Models face +Z, so the
+ * basis is (left, up, forward) with `facing` measured from the driving
+ * direction, positive to the right. In a fork, `facing` is from the way the
+ * mech's own route runs (routeAxes), and it stands up off its route.
+ */
+export function trackMatrix(track: Track, s: number, d: number, h: number, facing: number, out: THREE.Matrix4): THREE.Matrix4 {
+  frameAt(track, s, f);
+  const [sh, rh] = forkOffset(track, s, d);
+  routeAxes(track, s, d, sh, rh);
+  d += sh;
+  h += rh;
   const c = Math.cos(facing);
   const sn = Math.sin(facing);
   vz.copy(ahead).multiplyScalar(c).addScaledVector(right, sn).normalize();

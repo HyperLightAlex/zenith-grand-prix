@@ -128,7 +128,10 @@ export class RoadIndex {
       if (along < -half || along > half) continue;
       const d = vx * t.rx[i] + vy * t.ry[i] + vz * t.rz[i];
       const h = vx * t.ux[i] + vy * t.uy[i] + vz * t.uz[i];
-      // keepBoxes(t, i, up, down), without making them.
+      // keepBoxes(t, i, up, down), without making them; and without their
+      // widening as a route parts, which stands for the road between this
+      // sample and the next: here each sample's slab already reaches a
+      // sample along either way.
       const hw = t.hw[i] + KEEP_OUT.side;
       const sL = t.shiftL[i], rL = t.riseL[i], sR = t.shiftR[i], rR = t.riseR[i];
       if (t.median[i] < 0.01 && sL === 0 && sR === 0 && rL === 0 && rR === 0) {

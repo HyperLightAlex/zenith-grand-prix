@@ -25,7 +25,7 @@ vi.mock('../src/client/render/mech/frames', () => ({
 vi.mock('../src/client/render/fx', () => {
   const mesh = () => new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
   return {
-    Fx: class { group = new THREE.Group(); resize() {} update() {} dispose() {} beginTracers() {} endTracers() {} spray() {} },
+    Fx: class { group = new THREE.Group(); resize() {} update() {} dispose() {} beginTracers() {} endTracers() {} spray() {} spriteTexture() { return null; } },
     Trail: class { mesh = mesh(); setColor() {} update() {} },
     makeBubble: mesh, makeLockRing: mesh, makeRamProw: mesh, makeShadow: mesh, makeShield: mesh, makeSnareRing: mesh, shadowTexture: () => null,
   };
