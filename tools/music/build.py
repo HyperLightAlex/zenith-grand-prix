@@ -107,6 +107,61 @@ def db(x):
     return 20 * np.log10(np.sqrt(np.mean(np.square(x))) + 1e-12)
 
 
+MAX_SHIFT_MS = 60   # the furthest the game looks for a decoder's lag (song.ts)
+
+
+def best_lag(ref, env):
+    """song.ts bestLag: the lag in milliseconds where two level envelopes line up best."""
+    ref = ref.astype(np.float64) - ref.mean()
+    env = env.astype(np.float64) - env.mean()
+    best, score = 0, -np.inf
+    for lag in range(-MAX_SHIFT_MS, MAX_SHIFT_MS + 1):
+        i0 = max(0, -lag)
+        n = min(len(ref), len(env) - lag)
+        s = float(np.dot(ref[i0:n], env[i0 + lag:n + lag])) if n > i0 else -np.inf
+        if s > score:
+            best, score = lag, s
+    return best
+
+
+def misses(y, sr):
+    """At how many of the lags a decoder could add (0 to MAX_SHIFT_MS, every
+    3 ms) a layer's fingerprint fails to find it: one whose start is quiet,
+    or the same over and over, finds a long lag as none."""
+    ref = fingerprint(y, sr)
+    wrong = 0
+    for ms in range(0, MAX_SHIFT_MS + 1, 3):
+        late = np.concatenate([np.zeros((ms * sr // 1000, y.shape[1]), y.dtype), y[:sr * SYNC_SECONDS + sr // 10]])
+        env = fingerprint(late, sr, SYNC_SECONDS * 1000 + MAX_SHIFT_MS + 1)
+        wrong += best_lag(ref, env) != ms
+    return wrong
+
+
+def sync_layer(decoded, laps, sr):
+    """The layer the decoder check is made on: one of those the first lap
+    plays (the game starts a race's song as soon as those are decoded, the
+    others following while it plays, so the check must not wait for
+    another). Of those, one with something to hear at the start (a layer near
+    silent there fingerprints only its noise floor, which another decoder
+    rounds differently); then the one that finds the most lags (a sustained
+    part finds a long one as none, though every one finds the 20 to 30 ms
+    an MP3 decoder that keeps the encoder's priming adds); then the loudest."""
+    first = [l for l in decoded if laps.get(l, [None])[0] is not None] or list(decoded)
+    heard = [l for l in first if db(decoded[l][:sr * SYNC_SECONDS]) > -45] or first
+    return min(heard, key=lambda l: (misses(decoded[l], sr), -db(decoded[l])))
+
+
+def fingerprint(y, sr, ms=SYNC_SECONDS * 1000):
+    """A fingerprint of the start (SYNC_SECONDS of ffmpeg's decoding of a
+    layer's file), so the game can tell whether its browser's decoder starts
+    the audio on the same sample as ffmpeg's (some leave the encoder's
+    priming in): the level, millisecond by millisecond."""
+    y = np.abs(y[:sr * ms // 1000]).max(axis=1)
+    step = sr // 1000
+    env = 20 * np.log10(y[:len(y) // step * step].reshape(-1, step).max(axis=1) + 1e-9) + 90
+    return np.clip(np.round(env), 0, 90).astype(np.uint8)
+
+
 def main():
     if len(sys.argv) < 3:
         sys.exit(__doc__)
@@ -244,15 +299,8 @@ def main():
             print('  %-7s %6.0f kB  peak %5.1f dBFS  decoded %+d samples long, %+d samples late' %
                   (lid, os.path.getsize(dst) / 1024, 20 * np.log10(np.abs(x).max() + 1e-12), len(y) - len(x), lag))
 
-    # A fingerprint of the start, so the game can tell whether its browser's
-    # decoder starts the audio on the same sample as ffmpeg's (some leave the
-    # encoder's priming in): the loudest layer's level, millisecond by
-    # millisecond, from ffmpeg's decoding of the file.
-    lid = max(decoded, key=lambda l: db(decoded[l]))
-    y = np.abs(decoded[lid]).max(axis=1)
-    step = sr // 1000
-    env = 20 * np.log10(y[:len(y) // step * step].reshape(-1, step).max(axis=1) + 1e-9) + 90
-    env = np.clip(np.round(env), 0, 90).astype(np.uint8)
+    lid = sync_layer(decoded, laps_out, sr)
+    env = fingerprint(decoded[lid], sr)
     manifest = {
         'id': cfg['id'],
         'title': cfg.get('title', cfg['id']),

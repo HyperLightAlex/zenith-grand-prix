@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { bestLag, SCREEN_SONGS, SONGS, SongPlan, SongSource, syncShift, type SongManifest } from '../src/client/audio/song';
+import { bestLag, firstLayers, SCREEN_SONGS, SONGS, SongPlan, SongSource, syncShift, type SongManifest } from '../src/client/audio/song';
 
 // A song with a bar every 2 s from 1 s: bar 3 (7 s) to bar 10 (21 s) loops,
 // and the ending sits in the files just after the loop's end.
@@ -127,8 +127,13 @@ describe("the decoder check", () => {
 describe('holding one song at a time', () => {
   // A song of four layers, served by a stand-in fetch, decoded by a stand-in
   // context that checks it is given data it can have (the browser takes over
-  // what it decodes, so the source has to hand over a copy).
-  const manifest = { layers: ['a', 'b', 'c', 'd'].map((id) => ({ id, file: `${id}.mp3` })), sync: { layer: 'a', env: Buffer.from([0, 0, 0]).toString('base64') } };
+  // what it decodes, so the source has to hand over a copy). Its first lap
+  // plays a and b (the decoder check is on a); c comes in on lap 2, d on 3.
+  const manifest = {
+    layers: ['a', 'b', 'c', 'd'].map((id) => ({ id, file: `${id}.mp3` })),
+    laps: { a: [-3, 0, 0], b: [-3, 0, 0], c: [null, 0, 0], d: [null, null, 0] },
+    sync: { layer: 'a', env: Buffer.from([0, 0, 0]).toString('base64') },
+  };
   const fakeFetch = async (url: string) => ({
     ok: true,
     status: 200,
@@ -253,6 +258,55 @@ describe('holding one song at a time', () => {
     }
   });
 
+  it("starts on the first lap's layers, decoded together; the later laps' follow, two at a time", async () => {
+    vi.stubGlobal('fetch', fakeFetch);
+    try {
+      const src = new SongSource('music/x/');
+      let go = () => {};
+      const gate = new Promise<void>((r) => (go = r));
+      const decoded: number[] = [];
+      // a and b decode at once; c and d wait at the gate.
+      const c = ctx(decoded);
+      const slow = ctx(decoded, gate);
+      const both = { ...c, decodeAudioData: (d: ArrayBuffer, ok: (b: unknown) => void, no: (e: unknown) => void) => (d.byteLength <= 16 ? c : slow).decodeAudioData(d, ok, no) } as unknown as BaseAudioContext;
+      src.decode(both);
+      await vi.waitFor(() => expect(src.startable).toBe(true));
+      expect(src.state).toBe('loading');
+      expect(src.buffers.map((x) => x !== null)).toEqual([true, true, false, false]);
+      await vi.waitFor(() => expect(decoded).toEqual([8, 16, 24, 32]));
+      go();
+      await vi.waitFor(() => expect(src.state).toBe('ready'));
+      expect(src.buffers.every((x) => x !== null)).toBe(true);
+      // Let go of, it can start no longer.
+      src.release();
+      expect(src.startable).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("downloads the first lap's layers first, and the others once those are in", async () => {
+    const asked: string[] = [];
+    const hold: Record<string, () => void> = {};
+    vi.stubGlobal('fetch', (url: string) => {
+      asked.push(url.slice(8));
+      if (url.endsWith('.json')) return fakeFetch(url);
+      return new Promise((ok) => (hold[url.slice(8)] = () => ok(fakeFetch(url))));
+    });
+    try {
+      const src = new SongSource('music/x/');
+      src.prefetch().catch(() => {});
+      await vi.waitFor(() => expect(asked).toEqual(['song.json', 'a.mp3', 'b.mp3']));
+      hold['a.mp3']();
+      await settle();
+      expect(asked).toHaveLength(3);
+      hold['b.mp3']();
+      await vi.waitFor(() => expect(asked).toEqual(['song.json', 'a.mp3', 'b.mp3', 'c.mp3', 'd.mp3']));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('drops a decode let go of halfway', async () => {
     vi.stubGlobal('fetch', fakeFetch);
     try {
@@ -260,7 +314,7 @@ describe('holding one song at a time', () => {
       let go = () => {};
       const decoded: number[] = [];
       src.decode(ctx(decoded, new Promise((r) => (go = r))));
-      // Two at a time: the first two under way.
+      // The first lap's two under way.
       await vi.waitFor(() => expect(decoded).toEqual([8, 16]));
       src.release();
       go();
@@ -283,6 +337,9 @@ describe('the songs shipped', () => {
       const dir = `public/${base}`;
       const m = JSON.parse(readFileSync(`${dir}song.json`, 'utf8')) as SongManifest;
       for (const l of m.layers) expect(existsSync(dir + l.file), l.file).toBe(true);
+      // It can start on the first lap's layers: the decoder check is on one of them.
+      expect(m.laps[m.sync.layer]?.[0], `the decoder check (${m.sync.layer}) is on a layer the first lap plays`).not.toBeNull();
+      expect(firstLayers(m)).toEqual(m.layers.map((l, i) => (m.laps[l.id][0] !== null ? i : -1)).filter((i) => i >= 0));
       // Bars in order, the loop on two of them, the ending after the loop.
       for (let i = 1; i < m.bars.length; i++) expect(m.bars[i]).toBeGreaterThan(m.bars[i - 1]);
       expect(m.bars).toContain(m.loop[0]);

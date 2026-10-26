@@ -232,6 +232,8 @@ export class SynthAudio implements AudioEngine {
       const ahead = LOOKAHEAD + 2 * this.frameGap;
       this.lapPhase = finite(scene.lapPhase, 1);
       this.finished = scene.finished === true;
+      // Over the line: the title theme back for what follows the song's ending.
+      if (this.finished) this.screenSongs.get('title')?.decode(g.ctx);
       g.layers.update(now, clamp(finite(dt, 0), 0, 0.25), scene, ahead);
       if (this.track) {
         this.track.schedule(now, this.lapPhase, ahead, this.finished);
@@ -647,6 +649,13 @@ export class SynthAudio implements AudioEngine {
     // Racing on a different circuit is a change of music too.
     const style = this.want === 'race' ? this.raceStyle() : this.want === 'results' ? this.wantStyle : this.want === 'hangar' ? 'hangar' : 'menu';
     if (this.want === 'race') this.prepareSong(style);
+    // The title theme is not held through a race, the race's song being
+    // as much as most phones can hold besides the circuit; it is decoded
+    // again from its download for the screens after (the results have songs
+    // of their own to cover it).
+    const title = this.screenSongs.get('title');
+    if (title && this.want === 'race') title.release();
+    else title?.decode(g.ctx);
     const same = (this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style);
     if (same && !(fresh && this.track?.restartsWithRace)) return;
     const now = g.ctx.currentTime;

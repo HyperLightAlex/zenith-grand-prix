@@ -257,7 +257,11 @@ them.
 How it plays (`src/client/audio/song.ts`): each layer is one decoded
 buffer, and every stretch of the song (the start, each pass of the loop,
 the jump to the finale, the ending) starts all of them together, on a
-whole sample, so they can never drift apart. A loop pass, the finale or
+whole sample, so they can never drift apart. A song starts once the first
+lap's layers are decoded; a layer decoded after that (the drums, the rest)
+joins every stretch playing or queued, in step, from a moment later, and
+is silent until its lap as it would have been (the audio check starts
+every song that way and holds the result to the sample). A loop pass, the finale or
 the ending is queued ahead against the audio clock, with a 12 ms
 cross-fade that ends on the bar line. A lap change
 moves each layer's level at the bar line, and the filtered drums go over
@@ -271,7 +275,10 @@ loaded or decoded, the circuit's synthesised music plays instead.
 A screen can have a song too (`SCREEN_SONGS` in `song.ts`). It plays whole,
 every layer in (it is built as one layer), from its top, then round its
 loop until the screen moves on, when the menu music comes back. Small, so
-it is decoded as soon as there is an audio context and kept.
+it is decoded as soon as there is an audio context and kept; but for the
+title theme through a race, when it is let go of (the race's song is as
+much as a phone can hold besides the circuit) and decoded again at the
+finish, from the download it kept.
 
 The menus play the title theme, Blue Night Sky (E major, 152 BPM, like the
 opening): on the title screen and every menu after it, and in the wait
@@ -441,7 +448,13 @@ open-source Chromium, Opus from older Safari). Decoders differ in how much
 of the encoder's delay they trim, so `song.json` carries a fingerprint of
 the start (one layer's level, millisecond by millisecond, as ffmpeg
 decodes it) and the game measures its own decoder against it and allows
-for the difference (Chromium's matches to the sample).
+for the difference (Chromium's matches to the sample). The fingerprint is
+of one of the layers the first lap plays (`build.py`'s `sync_layer`: one
+with something to hear at the start, then the one that finds the most
+lags), so that the song can start before the others are decoded;
+`resync.py` redid it so for the songs built before (Meridian, Frostline,
+Monsoon and Zenith had theirs on the drums). Every song's finds the 20 to
+30 ms an MP3 decoder that keeps the encoder's priming adds.
 
 Decoded, each layer takes 8 bytes a sample frame: Meridian's four take
 about 225 MB at 48 kHz, Canyon's 222 MB, Helios's 241 MB, Neon Fire's 239 MB,
@@ -449,12 +462,18 @@ Aurora Dash's 247 MB, White Desert Charge's 287 MB, 天頂の環's 300 MB. So on
 the one for the circuit coming up. The game names it as soon as it knows
 (the circuit it has built, and the circuit shown on the race setup, the
 online room and the Grand Prix briefing, once it has stayed there a
-second), and the engine decodes that song and lets go of any other. A
-race on a circuit nobody named decodes its song as it starts, and the song
-comes in when that is done, a second or two into the countdown (about 1.5 s
-in desktop Chromium, two layers at a time). Only on a device that says it
-has 2 GB of memory or less are the layers decoded at 32 kHz instead (a
-third less): the browser then resamples them as they play, which dulls the
-top end. The files (about 20 MB a song) download when the game starts with
-the switch on, whichever circuit is raced, and are kept for the visit, so a
-song can be decoded again without downloading it again.
+second), and the engine downloads and decodes that song and lets go of any
+other, its files too. The layers the first lap plays (the melody and the
+bass) are downloaded first and decoded together, and the song can start on
+them; the others are downloaded once those are in and decoded two at a
+time while lap 1 plays. On a 20 Mbit/s line Monsoon's song can start about
+6 s after it is asked for (it was 10 s, waiting for all four); at 100
+Mbit/s, 2 s (3.4). A race on a circuit nobody named downloads and decodes
+its song as it starts, and the song comes in when the first lap's layers
+are in. On a phone or a tablet (a touch screen for pointing), or a device
+that says it has 4 GB of memory or less, the layers are decoded at 32 kHz
+(a third less: Monsoon's 168 MB instead of 232): the browser resamples
+them as they play, which takes off the top end above 16 kHz, little of
+which a phone's speakers or earbuds give back. A song's files (about 20
+MB) are kept while it is the circuit's, so it can be decoded again
+without downloading it again.

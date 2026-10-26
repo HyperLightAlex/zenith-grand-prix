@@ -18,7 +18,7 @@ import { mtof } from '../src/client/audio/dsp';
 import { SFX_META, SFX_NAMES } from '../src/client/audio/sfx';
 import { MASTER, MAX_VOICES, MUSIC_TRIM, SynthAudio } from '../src/client/audio/synth';
 import { GAP, SETLISTS, SKIP_FADE, type SetlistInfo, type SetlistManifest, type ShuffleBag } from '../src/client/audio/setlist';
-import { SCREEN_SONGS, SONGS, XFADE, type SongInfo, type SongManifest, type SongSource } from '../src/client/audio/song';
+import { SCREEN_SONGS, SONGS, XFADE, firstLayers, type SongInfo, type SongManifest, type SongSource } from '../src/client/audio/song';
 
 type Cell = string | number;
 type Row = Record<string, Cell>;
@@ -1288,7 +1288,24 @@ async function offlineSong(style: string): Promise<void> {
   const sceneAt = (t: number): AudioScene => ({ ...OFF, lapPhase: t >= T_P3 ? 3 : t >= T_P2 ? 2 : 1, finished: t >= T_FIN });
   let info: SongInfo | null = null;
   let menuAt = NaN;
-  const { buf, audio, warnings } = await render(T_END, [{ t: T_RACE, run: (a) => a.setMusic('race', style) }], sceneAt, (t, a) => {
+  // The song starts as a race's does when its later layers are still
+  // decoding: on the first lap's alone, the others joining it a few seconds
+  // in (SongTrack.join), which the comparisons below then hold to the sample.
+  let held: Array<AudioBuffer | null> = [];
+  const hide = (a: SynthAudio) => {
+    const src = a.debugSongs().get(style)!;
+    const first = firstLayers(src.manifest!);
+    held = src.buffers.slice();
+    src.buffers.forEach((_, i) => {
+      if (!first.includes(i)) src.buffers[i] = null;
+    });
+  };
+  const join = (a: SynthAudio) => held.forEach((b, i) => (a.debugSongs().get(style)!.buffers[i] = b));
+  const cues = [
+    { t: T_RACE, run: (a: SynthAudio) => (hide(a), a.setMusic('race', style)) },
+    { t: T_RACE + 8.3, run: join },
+  ];
+  const { buf, audio, warnings } = await render(T_END, cues, sceneAt, (t, a) => {
     const music = a.debugInfo().music;
     info = music?.song ?? info;
     if (music?.name === 'menu' && Number.isNaN(menuAt)) menuAt = t;
@@ -1373,8 +1390,10 @@ async function offlineSong(style: string): Promise<void> {
     const g = m.laps[id]?.[lap - 1];
     return g === null || g === undefined ? 0 : 10 ** (g / 20);
   };
-  const chans = src.buffers.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
-  const rate = src.buffers[0].sampleRate;
+  // (Every layer decoded: debugSongsLoaded waits for that.)
+  const bufs = src.buffers.map((b) => b!);
+  const chans = bufs.map((b) => [b.getChannelData(0), b.getChannelData(1)]);
+  const rate = bufs[0].sampleRate;
   if (rate !== SR) fail(`${style}: the song was decoded at ${rate} Hz, not the render's ${SR}`);
   const out = [buf.getChannelData(2), buf.getChannelData(3)];
   /**
@@ -1514,7 +1533,7 @@ async function offlineSong(style: string): Promise<void> {
 function matchFile(buf: AudioBuffer, src: SongSource, t0: number, t1: number, pos0: number): { lag: number; residual: number } {
   const m = src.manifest!;
   const scale = VOL.music * MUSIC_TRIM * 10 ** (m.level / 20) * 10 ** ((m.laps[m.layers[0].id][2] ?? 0) / 20);
-  const data = src.buffers[0].getChannelData(0);
+  const data = src.buffers[0]!.getChannelData(0);
   const out = buf.getChannelData(2);
   const n = Math.floor((t1 - t0) * SR);
   const i0 = Math.round(t0 * SR);
@@ -1560,17 +1579,26 @@ async function offlineTitle(): Promise<void> {
   let first: SongInfo | null = null;
   let again: SongInfo | null = null;
   let raceName = '';
+  // Through a race the theme is let go of (decoded, a race's song is as much
+  // as a phone can hold besides the circuit), and decoded again for the
+  // menus after it: the render waits for that decode, as the results' screen
+  // would give it the time.
+  let heldInRace = true;
   const { buf, audio, warnings } = await render(T_END, cues, () => OFF, (t, a) => {
     const music = a.debugInfo().music;
     if (music?.name === 'menu' && music.song && t < T_RACE) first = music.song;
     if (music?.name === 'menu' && music.song && t > T_BACK + 0.5) again = music.song;
     if (t > T_RACE + 1 && t < T_BACK) raceName = music?.name ?? '';
+    const theme = a.debugScreenSongs().get('title');
+    if (t > T_RACE + 0.1 && t < T_BACK && theme?.startable) heldInRace = false;
+    if (t >= T_BACK && theme && !theme.startable && theme.state !== 'failed') return new Promise<void>((ok) => { const wait = () => (theme.startable || theme.state === 'failed' ? ok() : setTimeout(wait, 20)); wait(); });
   }, undefined, true, undefined, { title: '/' + SCREEN_SONGS.title });
+  if (!heldInRace) fail('title: the theme was still held (decoded) through the race');
   if (warnings) fail(`title: the engine swallowed ${warnings} Web Audio error(s)`);
   const src = audio.debugScreenSongs().get('title');
   const song = first as SongInfo | null;
   const back = again as SongInfo | null;
-  if (!src || src.state !== 'ready' || !src.manifest || !song) {
+  if (!src || !src.startable || !src.manifest || !song) {
     fail(`title: the title theme did not play as the menus' music (${src?.state ?? 'no song'})`);
     return;
   }

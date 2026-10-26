@@ -30,10 +30,12 @@
 // with a phrase for that phrase's first. The song plays from its start;
 // when it reaches the end of its loop it goes back to the loop's start, as
 // often as the race needs, and the finish jumps to its ending. All layers
-// play from one buffer each, started together, so they can never drift apart.
+// play from one buffer each, started together, so they can never drift apart;
+// the song starts once the first lap's are decoded, and a layer decoded later
+// joins what plays in step (SongTrack.join).
 //
-// Experimental: only with ?music=suno in the address (see main.ts). Without
-// it, nothing here loads.
+// Played unless ?music=synth is in the address, which plays the synthesised
+// music instead (see main.ts).
 
 import type { MusicTrack, TrackInfo, TrackName } from './music';
 
@@ -316,15 +318,26 @@ export const decodeOne = (ctx: BaseAudioContext, data: ArrayBuffer): Promise<Aud
   });
 
 /**
- * What to decode recorded music with for `ctx`. Decoded, audio takes 8 bytes
- * a sample frame: a race song's layers over 200 MB at 48 kHz. Only on a
- * device with very little memory (2 GB or less) is it decoded at 32 kHz
- * instead: a third less, but the browser then has to resample it as it
- * plays, which dulls the top end.
+ * Whether recorded music is decoded at a lower rate here: a phone or a tablet
+ * (a touch screen is what it is pointed with), or any device that says it
+ * has 4 GB or less. Decoded, audio takes 8 bytes a sample frame: a race
+ * song's layers 200 to 300 MB at 48 kHz, which a phone's browser holds
+ * alongside a circuit's scenery and may close the page over.
+ */
+export function smallDevice(): boolean {
+  const nav = globalThis.navigator as (Navigator & { deviceMemory?: number }) | undefined;
+  if (nav?.deviceMemory !== undefined) return nav.deviceMemory <= 4;
+  return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+}
+
+/**
+ * What to decode recorded music with for `ctx`: the context itself, or on a
+ * small device (smallDevice) one at 32 kHz: a third less to hold and to
+ * make, the browser resampling it as it plays (which takes off the top end
+ * above 16 kHz, little of which a phone's speakers or earbuds give back).
  */
 export function decodeInto(ctx: BaseAudioContext): BaseAudioContext {
-  const mem = (globalThis.navigator as (Navigator & { deviceMemory?: number }) | undefined)?.deviceMemory;
-  const rate = mem !== undefined && mem < 4 ? Math.min(32000, ctx.sampleRate) : ctx.sampleRate;
+  const rate = smallDevice() ? Math.min(32000, ctx.sampleRate) : ctx.sampleRate;
   if (rate !== ctx.sampleRate && typeof OfflineAudioContext !== 'undefined') {
     try {
       return new OfflineAudioContext(2, 1, rate);
@@ -336,20 +349,36 @@ export function decodeInto(ctx: BaseAudioContext): BaseAudioContext {
 }
 
 /**
+ * The layers a song can start on: those its first lap plays, and the one its
+ * decoder check is made on (SongManifest.sync, built to be one of them), in
+ * the manifest's order. The others are not heard until later laps.
+ */
+export function firstLayers(m: Pick<SongManifest, 'layers' | 'laps' | 'sync'>): number[] {
+  const first = m.layers.map((l, i) => (m.laps?.[l.id]?.[0] !== null && m.laps?.[l.id]?.[0] !== undefined) || l.id === m.sync?.layer ? i : -1).filter((i) => i >= 0);
+  return first.length ? first : m.layers.map((_, i) => i);
+}
+
+/**
  * A song's files (a race song's are about 20 MB): downloaded the first time
- * it is wanted, not before, and kept until forgotten. Decoded when it is
- * wanted, and let go of when it is not: decoded, a race song takes over 200
- * MB, so only one circuit's is held at a time, and only that circuit's files.
+ * it is wanted, not before, and kept until forgotten; the first lap's layers
+ * first (firstLayers), and the others once those are in. Decoded when it is
+ * wanted, and let go of when it is not: decoded, a race song takes 130 to
+ * 300 MB, so only one circuit's is held at a time, and only that circuit's
+ * files. It can start (`startable`) as soon as the first lap's layers are
+ * decoded; the others are decoded after them, while it plays.
  */
 export class SongSource {
-  /** 'loading' until it is decoded (or while it is not, once let go of). */
+  /** 'loading' until every layer is decoded (or while it is not, once let go of). */
   state: 'loading' | 'ready' | 'failed' = 'loading';
+  /** The first lap's layers are decoded (and the decoder check made): the song can start. */
+  startable = false;
   manifest: SongManifest | null = null;
-  buffers: AudioBuffer[] = [];
+  /** The decoded layers, in the manifest's order once it can start: null until each is decoded. */
+  buffers: Array<AudioBuffer | null> = [];
   /** How much later than the manifest's times this browser's decoder puts the audio, in seconds. */
   shift = 0;
-  /** The download, once started (null: not yet, or forgotten), and how to call it off. */
-  private files: Promise<{ manifest: SongManifest; data: ArrayBuffer[] }> | null = null;
+  /** The download, once started (null: not yet, or forgotten): the manifest, then each layer's file. */
+  private files: Promise<{ manifest: SongManifest; data: Promise<ArrayBuffer>[] }> | null = null;
   private abort: AbortController | null = null;
   /** When it last failed to load (performance.now() ms; -Infinity: never). */
   failedAt = -Infinity;
@@ -364,24 +393,43 @@ export class SongSource {
     return this.files !== null;
   }
 
-  /** Download the files, unless that is done or under way. */
+  /** Download the files, unless that is done or under way; resolves once all are in. */
   prefetch(): Promise<{ manifest: SongManifest; data: ArrayBuffer[] }> {
+    return this.download().then(async ({ manifest, data }) => ({ manifest, data: await Promise.all(data) }));
+  }
+
+  /**
+   * The download (started if need be): the manifest, and a promise of each
+   * layer's file. The first lap's layers are fetched at once, the others when
+   * those are in, so on a slow line the song can start sooner.
+   */
+  private download(): Promise<{ manifest: SongManifest; data: Promise<ArrayBuffer>[] }> {
     if (!this.files) {
       const base = this.base;
       const abort = typeof AbortController === 'function' ? new AbortController() : null;
       const signal = abort?.signal;
       this.abort = abort;
+      const get = async (file: string) => {
+        const r = await fetch(base + file, { signal });
+        if (!r.ok) throw new Error(`${base}${file}: ${r.status}`);
+        return r.arrayBuffer();
+      };
       const files = (async () => {
         const res = await fetch(base + 'song.json', { signal });
         if (!res.ok) throw new Error(`${base}song.json: ${res.status}`);
         const manifest = (await res.json()) as SongManifest;
-        const data = await Promise.all(
-          manifest.layers.map(async (l) => {
-            const r = await fetch(base + l.file, { signal });
-            if (!r.ok) throw new Error(`${base}${l.file}: ${r.status}`);
-            return r.arrayBuffer();
-          }),
-        );
+        const first = firstLayers(manifest);
+        const data: Promise<ArrayBuffer>[] = new Array(manifest.layers.length);
+        for (const i of first) data[i] = get(manifest.layers[i].file);
+        const firstIn = Promise.all(first.map((i) => data[i]));
+        manifest.layers.forEach((l, i) => {
+          if (!data[i]) data[i] = firstIn.then(() => get(l.file));
+        });
+        // (Each is awaited where it is decoded; a failure fails the song.)
+        for (const d of data) d.catch(() => {});
+        void Promise.all(data).catch((err) => {
+          if (this.files === files) this.fail(err);
+        });
         return { manifest, data };
       })();
       this.files = files;
@@ -392,29 +440,42 @@ export class SongSource {
     return this.files;
   }
 
-  /** Decode into buffers for `ctx` (downloading first if need be), unless that is done or under way. */
+  /**
+   * Decode into buffers for `ctx` (downloading first if need be), unless that
+   * is done or under way: the first lap's layers together, then (the song
+   * startable) the others, two at a time.
+   */
   decode(ctx: BaseAudioContext): void {
     if (this.decoding || this.state !== 'loading') return;
     this.decoding = true;
     const round = this.released;
     const current = () => round === this.released;
     void (async () => {
-      const { manifest, data } = await this.prefetch();
+      const { manifest, data } = await this.download();
       const into = decodeInto(ctx);
-      // Two at a time (where there are cores to spare, that is near half the
-      // wait, and only two layers are mid-decode at once), each from a copy:
-      // the browser takes over the data it decodes, and the download is kept
-      // to decode again after a release.
-      const buffers: AudioBuffer[] = [];
-      for (let i = 0; i < data.length; i += 2) {
-        if (!current()) return;
-        buffers.push(...(await Promise.all(data.slice(i, i + 2).map((d) => decodeOne(into, d.slice(0))))));
-      }
+      // Each from a copy: the browser takes over the data it decodes, and
+      // the download is kept to decode again after a release.
+      const one = async (i: number) => decodeOne(into, (await data[i]).slice(0));
+      const first = firstLayers(manifest);
+      const buffers: Array<AudioBuffer | null> = manifest.layers.map(() => null);
+      const got = await Promise.all(first.map(one));
       if (!current()) return;
+      first.forEach((i, k) => (buffers[i] = got[k]));
       const s = manifest.layers.findIndex((l) => l.id === manifest.sync.layer);
-      this.shift = s >= 0 ? syncShift(buffers[s], manifest.sync.env) : 0;
+      const sync = s >= 0 ? buffers[s] : null;
+      this.shift = sync ? syncShift(sync, manifest.sync.env) : 0;
       this.manifest = manifest;
       this.buffers = buffers;
+      this.startable = true;
+      // The rest, two at a time (where there are cores to spare, that is
+      // near half the wait, and only two layers are mid-decode at once).
+      const rest = manifest.layers.map((_, i) => i).filter((i) => !first.includes(i));
+      for (let k = 0; k < rest.length; k += 2) {
+        const part = rest.slice(k, k + 2);
+        const done = await Promise.all(part.map(one));
+        if (!current()) return;
+        part.forEach((i, n) => (buffers[i] = done[n]));
+      }
       this.state = 'ready';
     })()
       .catch((err) => {
@@ -435,6 +496,7 @@ export class SongSource {
     this.released++;
     this.decoding = false;
     this.buffers = [];
+    this.startable = false;
     this.state = 'loading';
   }
 
@@ -547,8 +609,13 @@ interface Layer {
 
 interface Playing {
   seg: Segment;
-  srcs: AudioBufferSourceNode[];
-  envs: GainNode[];
+  /** By layer: null for a layer not decoded when it was started (joined: see join). */
+  srcs: Array<AudioBufferSourceNode | null>;
+  envs: Array<GainNode | null>;
+  /** When its sources start (before seg.at when it cross-fades in). */
+  t0: number;
+  /** When it is cross-faded out of (-1: not yet). */
+  fadeAt: number;
 }
 
 /**
@@ -581,6 +648,8 @@ export class SongTrack implements MusicTrack {
   /** Gone on to the finale (see SongManifest.finale). */
   private inFinale = false;
   private readonly log: SongInfo['log'] = [];
+  /** How many layers have their sources in what plays (see join). */
+  private joined = 0;
   private startTime = -1;
   private disposed = false;
 
@@ -607,10 +676,12 @@ export class SongTrack implements MusicTrack {
     }
     if (!this.plan) {
       if (this.source.state === 'failed') this.broken = true;
-      else if (this.source.state === 'ready') this.begin(now + 0.05, phaseOf(lapPhase));
+      else if (this.source.startable) this.begin(now + 0.05, phaseOf(lapPhase));
       return;
     }
     const plan = this.plan;
+    // Layers decoded since it started (the later laps'): into what plays.
+    if (this.joined < this.layers.length) this.join(now);
     // The loop's next pass, queued well before it is due.
     for (const seg of plan.extend(now + QUEUE_AHEAD)) this.play(seg, true);
     // If the game stalled for longer than that while the audio ran on, pick
@@ -693,7 +764,7 @@ export class SongTrack implements MusicTrack {
         pos: pos ?? -1,
         ending: this.ending,
         shiftMs: Math.round(this.source.shift * 1000),
-        rate: this.source.buffers[0]?.sampleRate ?? 0,
+        rate: this.source.buffers.find((b) => b)?.sampleRate ?? 0,
         log: this.log.slice(),
       },
     };
@@ -801,46 +872,80 @@ export class SongTrack implements MusicTrack {
       return;
     }
     const ctx = this.ctx;
-    const shift = this.source.shift;
     const x = xfade ? XFADE : 0;
-    // On whole samples, start and offset both: a source started between
-    // samples is interpolated, which takes the edge off the top end.
     const t0 = Math.ceil(Math.max(ctx.currentTime, seg.at - x) * ctx.sampleRate) / ctx.sampleRate;
-    const rate = this.source.buffers[0].sampleRate;
-    const offset = Math.max(0, Math.round((seg.from - (seg.at - t0) + shift) * rate) / rate);
-    const stopAt = seg.kind === 'body' && this.plan ? this.plan.endOf(seg) + 0.01 : null;
-    const srcs: AudioBufferSourceNode[] = [];
-    const envs: GainNode[] = [];
-    this.layers.forEach((l, i) => {
-      const src = ctx.createBufferSource();
-      src.buffer = this.source.buffers[i];
-      const env = ctx.createGain();
-      if (x > 0 && t0 < seg.at) {
-        env.gain.setValueAtTime(0, t0);
-        env.gain.linearRampToValueAtTime(1, seg.at);
-      }
-      src.connect(env);
-      env.connect(l.gain);
-      src.start(t0, offset);
-      if (stopAt !== null) src.stop(stopAt);
-      srcs.push(src);
-      envs.push(env);
+    const p: Playing = { seg, srcs: [], envs: [], t0, fadeAt: -1 };
+    this.layers.forEach((_, i) => {
+      p.srcs.push(null);
+      p.envs.push(null);
+      this.layerInto(p, i, t0);
     });
     // What plays before it fades out over the same moment.
-    if (x > 0) for (const p of this.playing) if (p.seg !== seg && Math.abs(this.plan!.endOf(p.seg) - seg.at) < 1e-6) this.fadeOut(p, seg.at);
-    this.playing.push({ seg, srcs, envs });
+    if (x > 0) for (const q of this.playing) if (q.seg !== seg && Math.abs(this.plan!.endOf(q.seg) - seg.at) < 1e-6) this.fadeOut(q, seg.at);
+    this.playing.push(p);
     if (!jumped && seg.kind === 'body' && seg.from === this.plan!.loop[0] && seg.at > this.startTime) this.note('loop', seg.at, this.source.manifest!.bars.indexOf(seg.from));
   }
 
+  /**
+   * Layer `i`'s source for the stretch `p`, from `from` (its start, or later
+   * for a layer joining it): where the stretch has got to by then, with its
+   * cross-fades in and out. Nothing for a layer not decoded yet.
+   */
+  private layerInto(p: Playing, i: number, from: number): void {
+    const buf = this.source.buffers[i];
+    const seg = p.seg;
+    const end = seg.kind === 'body' && this.plan ? this.plan.endOf(seg) : Infinity;
+    if (!buf || from >= Math.min(end, p.fadeAt >= 0 ? p.fadeAt : Infinity)) return;
+    const ctx = this.ctx;
+    const rate = buf.sampleRate;
+    // On whole samples, start and offset both: a source started between
+    // samples is interpolated, which takes the edge off the top end.
+    const offset = Math.max(0, Math.round((seg.from - (seg.at - from) + this.source.shift) * rate) / rate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const env = ctx.createGain();
+    if (from < seg.at && p.t0 < seg.at) {
+      env.gain.setValueAtTime((from - p.t0) / (seg.at - p.t0), from);
+      env.gain.linearRampToValueAtTime(1, seg.at);
+    }
+    if (p.fadeAt >= 0) {
+      env.gain.setValueAtTime(1, p.fadeAt - XFADE);
+      env.gain.linearRampToValueAtTime(0, p.fadeAt);
+    }
+    src.connect(env);
+    env.connect(this.layers[i].gain);
+    src.start(from, offset);
+    if (p.fadeAt >= 0) src.stop(p.fadeAt + 0.01);
+    else if (end !== Infinity) src.stop(end + 0.01);
+    p.srcs[i] = src;
+    p.envs[i] = env;
+  }
+
+  /**
+   * The layers decoded since the song started (the later laps', which it
+   * did not wait for): each into every stretch playing or queued, in step,
+   * from a moment from now. Silent until their lap, as they would have been.
+   */
+  private join(now: number): void {
+    const from = Math.ceil((now + 0.03) * this.ctx.sampleRate) / this.ctx.sampleRate;
+    while (this.joined < this.layers.length && this.source.buffers[this.joined]) {
+      const i = this.joined++;
+      for (const p of this.playing) if (!p.srcs[i]) this.layerInto(p, i, Math.max(from, p.t0));
+    }
+    // (A layer further on may be in before one ahead of it: that waits its turn.)
+  }
+
   private fadeOut(p: Playing, at: number): void {
+    p.fadeAt = at;
     for (const env of p.envs) {
+      if (!env) continue;
       env.gain.cancelScheduledValues(at - XFADE);
       env.gain.setValueAtTime(1, at - XFADE);
       env.gain.linearRampToValueAtTime(0, at);
     }
     for (const s of p.srcs) {
       try {
-        s.stop(at + 0.01);
+        s?.stop(at + 0.01);
       } catch {
         /* an older browser that only takes one stop: the fade has it silent anyway */
       }
@@ -849,6 +954,7 @@ export class SongTrack implements MusicTrack {
 
   private release(p: Playing): void {
     for (const s of p.srcs) {
+      if (!s) continue;
       try {
         s.stop();
       } catch {
@@ -856,7 +962,7 @@ export class SongTrack implements MusicTrack {
       }
       s.disconnect();
     }
-    for (const e of p.envs) e.disconnect();
+    for (const e of p.envs) e?.disconnect();
   }
 
   /** Lap phase `to` from the beat at `at` (a filtered layer may open up from now until then). */
