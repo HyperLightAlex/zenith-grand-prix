@@ -127,7 +127,11 @@ async function boot(): Promise<void> {
     audio,
   });
   (window as unknown as { game: Game }).game = game;
-  // The title is up behind it: the boot screen switches off.
+  // The title is up behind it: its theme starts now, if the browser lets a
+  // page play sound before a key press, click or tap (most want one: then it
+  // is decoded by the time one comes, and starts on it), while the boot
+  // screen switches off.
+  audio.unlock();
   void bootScreen.finish();
 }
 

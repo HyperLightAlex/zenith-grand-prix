@@ -80,7 +80,13 @@ export interface AudioScene {
 }
 
 export interface AudioEngine {
-  /** Must be called from a key press, click or button press before anything can sound. */
+  /**
+   * Make the audio context and start what is wanted: called as soon as the
+   * title is up, and again on the first key press, click or tap. Before a
+   * gesture most browsers keep it waiting (suspended), so the music asked
+   * for is ready and starts on the gesture; one that lets a page play sound
+   * first starts it at once.
+   */
   unlock(): void;
   setVolumes(master: number, music: number, sfx: number): void;
   /** Turn the continuous layers (engine, wind, afterburner...) up or down, 0..1 each. */
@@ -121,7 +127,7 @@ export interface AudioEngine {
   skipTrack?(): void;
 }
 
-/** Silent stand-in, used until the page has had a user gesture and in tests. */
+/** Silent stand-in: with &mute=1, where there is no Web Audio, and in tests. */
 export class NullAudio implements AudioEngine {
   unlock(): void {}
   setVolumes(): void {}

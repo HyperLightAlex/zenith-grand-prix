@@ -8,7 +8,10 @@
 //   layers.ts  engine, wind, alarm ───────► engineBus ─┼─► mix ─► compressor ─► soft clip ─► master ─► out
 //   reverb sends (music, sfx) ─► convolver ─► return ──┘
 //
-// Nothing here touches Web Audio until unlock() is called from a user gesture.
+// Nothing here touches Web Audio until unlock(): the game calls it as soon as
+// the title is up, so the title theme starts there if the browser lets a page
+// play sound before a key press, click or tap, and is decoded and waiting for
+// the first one if not (most browsers want one); and again on that gesture.
 //
 // Levels were set by measurement, not by ear: `node tools/audio-check.mjs`
 // renders every sound, layer and music state and prints its peak, loudness and
@@ -142,14 +145,16 @@ export class SynthAudio implements AudioEngine {
    * for a race (one at a time, the others' files let go of: see
    * prepareSong), and a circuit with one plays it instead of its synthesised
    * music. `screenSongs`: songs for screens (see SCREEN_SONGS in song.ts),
-   * downloaded and decoded as soon as there is an audio context, and kept
-   * (they start at once whenever they are wanted). `sfx`: where the recorded
+   * decoded as soon as there is an audio context, and kept (they start at
+   * once whenever they are wanted); the title theme's files are downloaded
+   * straight away, while the page is still loading. `sfx`: where the recorded
    * sound effects are; each sound with recordings plays one of them instead
    * of its recipe.
    */
   constructor(opts: { songs?: Record<string, string>; screenSongs?: Record<string, string>; setlist?: string; sfx?: string } = {}) {
     for (const [style, base] of Object.entries(opts.songs ?? {})) this.songs.set(style, new SongSource(base));
     for (const [id, base] of Object.entries(opts.screenSongs ?? {})) this.screenSongs.set(id, new SongSource(base));
+    this.screenSongs.get('title')?.prefetch().catch(() => {});
     if (opts.setlist) this.setlist = new Setlist(opts.setlist);
     if (opts.sfx) this.bank = new SfxBank(opts.sfx);
   }
@@ -174,11 +179,12 @@ export class SynthAudio implements AudioEngine {
           void ctx.close().catch(() => {});
           throw err;
         }
-        // The game only reports its first gesture, so listen for later ones
-        // too: a phone can suspend the context whenever it likes.
+        // Made before any gesture, the context waits (suspended) for one; and
+        // the game only reports its first, so listen for later ones too: a
+        // phone can suspend the context whenever it likes. A tap lets sound
+        // start as the finger lifts (pointerup, touchend), not as it lands.
         document.addEventListener('visibilitychange', this.onVisibility);
-        window.addEventListener('pointerdown', this.wake, { passive: true });
-        window.addEventListener('keydown', this.wake, { passive: true });
+        for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) window.addEventListener(type, this.wake, { passive: true });
       }
       this.wake();
     });
