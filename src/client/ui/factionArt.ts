@@ -125,6 +125,37 @@ export function paintLeagueBadge(g: CanvasRenderingContext2D, disc: string | nul
   g.restore();
 }
 
+/** The colours the league's badge is struck in on a medal: the cut of it, and the light catching its edge and its star. */
+const STRUCK: Record<string, { ink: string; edge: string; star: string }> = {
+  gold: { ink: 'rgba(110, 72, 4, 0.72)', edge: 'rgba(255, 248, 210, 0.75)', star: '#fffbe8' },
+  silver: { ink: 'rgba(58, 66, 80, 0.7)', edge: 'rgba(255, 255, 255, 0.8)', star: '#ffffff' },
+  bronze: { ink: 'rgba(78, 40, 14, 0.72)', edge: 'rgba(255, 228, 200, 0.7)', star: '#fff0e0' },
+};
+
+/**
+ * The league's badge struck into a medal (gold, silver or bronze; the
+ * Zenith Cup takes the gold): cut in a darker shade of the metal, with the
+ * light catching its lower edges, the star bright. An image URL, drawn once.
+ */
+export function medalBadgeUrl(metal: string): string {
+  const key = `medal-${metal}`;
+  let url = drawn.get(key);
+  if (!url) {
+    const s = STRUCK[metal] ?? STRUCK.gold;
+    const [c, g] = canvas(192);
+    // The light on the edges of the cut, a touch below and right of it...
+    g.save();
+    g.translate(2.5, 3);
+    paintLeagueBadge(g, null, s.edge, s.edge);
+    g.restore();
+    // ...and the cut itself.
+    paintLeagueBadge(g, null, s.ink, s.star);
+    url = c.toDataURL('image/png');
+    drawn.set(key, url);
+  }
+  return url;
+}
+
 /** A faction's emblem, as an image URL; for -1 (no faction), the league's badge. */
 export function emblemUrl(f: number): string {
   if (EMBLEMS[f]) return EMBLEMS[f];

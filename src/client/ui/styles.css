@@ -1148,11 +1148,12 @@ html.narrow:not(.compact):not(.portrait) .controls .grid { grid-template-columns
 .fixture b { min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; color: var(--signal); }
 .fixture.me { outline: 0.12em solid var(--signal); }
 .fixture .emb { margin: 0; }
-.medal { width: 6em; height: 6em; border-radius: 50%; margin-bottom: 0.4em; box-shadow: inset 0 0 0 0.35em rgba(0, 0, 0, 0.25), 0 0.4em 1.2em rgba(0, 0, 0, 0.4); }
-.medal.gold { background: radial-gradient(circle at 35% 30%, #fff6c8, #f2c133 45%, #a3740d); }
-.medal.silver { background: radial-gradient(circle at 35% 30%, #ffffff, #c4ccd8 45%, #77808f); }
-.medal.bronze { background: radial-gradient(circle at 35% 30%, #ffe0c4, #c9824a 45%, #7c4a22); }
-.medal.cup { border-radius: 0.6em 0.6em 2em 2em; background: linear-gradient(180deg, #fff6c8, #f2c133 55%, #a3740d); }
+/* A medal: the metal, and the league's badge struck into it (--badge, set with the medal). */
+.medal { --badge: none; width: 6em; height: 6em; border-radius: 50%; margin-bottom: 0.4em; box-shadow: inset 0 0 0 0.35em rgba(0, 0, 0, 0.25), 0 0.4em 1.2em rgba(0, 0, 0, 0.4); }
+.medal.gold { background: var(--badge) center / 74% no-repeat, radial-gradient(circle at 35% 30%, #fff6c8, #f2c133 45%, #a3740d); }
+.medal.silver { background: var(--badge) center / 74% no-repeat, radial-gradient(circle at 35% 30%, #ffffff, #c4ccd8 45%, #77808f); }
+.medal.bronze { background: var(--badge) center / 74% no-repeat, radial-gradient(circle at 35% 30%, #ffe0c4, #c9824a 45%, #7c4a22); }
+.medal.cup { border-radius: 0.6em 0.6em 2em 2em; background: var(--badge) center 30% / 64% no-repeat, linear-gradient(180deg, #fff6c8, #f2c133 55%, #a3740d); }
 .medal.none { display: none; }
 
 /* The Grand Prix hub: what the highlighted entry holds, beside the list. */
@@ -1187,11 +1188,11 @@ html:is(.compact, .lay-cols, .lay-single) .item.cupcard { padding: 0.9em 0.8em; 
 /* Medals given, one place for each difficulty. */
 .pips { display: flex; justify-content: center; gap: 0.8em; }
 .pip { display: flex; flex-direction: column; align-items: center; gap: 0.2em; font-size: 0.85em; font-weight: 600; opacity: 0.9; }
-.pip i { width: 1.35em; height: 1.35em; border-radius: 50%; box-shadow: inset 0 0 0 0.16em rgba(0, 0, 0, 0.25); }
+.pip i { --badge: none; width: 1.6em; height: 1.6em; border-radius: 50%; box-shadow: inset 0 0 0 0.12em rgba(0, 0, 0, 0.25); }
 .pip i.empty { background: none; box-shadow: inset 0 0 0 0.14em rgba(255, 255, 255, 0.35); }
-.pip i.gold { background: radial-gradient(circle at 35% 30%, #fff6c8, #f2c133 45%, #a3740d); }
-.pip i.silver { background: radial-gradient(circle at 35% 30%, #ffffff, #c4ccd8 45%, #77808f); }
-.pip i.bronze { background: radial-gradient(circle at 35% 30%, #ffe0c4, #c9824a 45%, #7c4a22); }
+.pip i.gold { background: var(--badge) center / 84% no-repeat, radial-gradient(circle at 35% 30%, #fff6c8, #f2c133 45%, #a3740d); }
+.pip i.silver { background: var(--badge) center / 84% no-repeat, radial-gradient(circle at 35% 30%, #ffffff, #c4ccd8 45%, #77808f); }
+.pip i.bronze { background: var(--badge) center / 84% no-repeat, radial-gradient(circle at 35% 30%, #ffe0c4, #c9824a 45%, #7c4a22); }
 
 /* A trophy: a bowl on a stem and a foot, in its cup's colours. */
 .trophy { --t1: #fff6c8; --t2: #f2c133; --t3: #a3740d; position: relative; width: 4em; height: 4.4em; margin: 0 auto; }

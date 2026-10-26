@@ -26,7 +26,7 @@ import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
 import { paintedTrack } from '../../render/painted';
 import { h } from '../dom';
-import { emblemUrl } from '../factionArt';
+import { emblemUrl, medalBadgeUrl } from '../factionArt';
 import { TRACK_BLURBS, type Menus } from '../menus';
 import type { Medal } from '../../../gp/grandPrix';
 import { BACK, CHANGE, SELECT, confirmDialog } from './common';
@@ -88,7 +88,9 @@ export function awardLines(ev: GpEvent, place: number, medal: string | null): HT
     headline = place === 1 ? 'The Zenith Cup' : `${ORD[place - 1]} in the season`;
     line = place === 1 ? `${factionName(LIVERIES[ev.faction])} top the table at ${GP_DIFFICULTY[ev.difficulty]}. The cup is yours.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}. Only the top of the table takes the cup.`;
   }
-  const badge = h('div.medal.' + (ev.kind === 'season' ? (place === 1 ? 'cup' : 'none') : (medal ?? 'none')));
+  const kind = ev.kind === 'season' ? (place === 1 ? 'cup' : 'none') : (medal ?? 'none');
+  const badge = h('div.medal.' + kind);
+  if (kind !== 'none') badge.style.setProperty('--badge', `url(${medalBadgeUrl(kind === 'cup' ? 'gold' : kind)})`);
   return [badge, h('h1', headline), h('p', line)];
 }
 
@@ -109,7 +111,10 @@ function pips(won: Record<number, Medal | undefined> | undefined): HTMLElement {
     'div.pips',
     ...GP_DIFFICULTY.map((d, i) => {
       const m = won?.[i];
-      const el = h('span.pip', h('i.' + (m ?? 'empty')), d);
+      const disc = h('i.' + (m ?? 'empty'));
+      // The league's badge struck into it.
+      if (m) disc.style.setProperty('--badge', `url(${medalBadgeUrl(m)})`);
+      const el = h('span.pip', disc, d);
       el.title = `${d}: ${m ? MEDAL_NAMES[m] : 'no medal yet'}`;
       return el;
     }),
