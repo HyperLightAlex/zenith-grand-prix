@@ -1,12 +1,22 @@
 // Helpers shared by movement, combat and AI.
 
-import { CARVE_STEER_MID, CARVE_STEER_WIDE, CLASSES, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, ROLE, type ClassDef } from './config';
+import { CARVE_STEER_MID, CARVE_STEER_WIDE, CLASSES, LESSON_ARMOUR_FLOOR, LOCK_BREAK, LOCK_RANGE, MAX_HEADING, MODE, PACK_BONUS, PACK_FULL, PACK_SLACK, ROLE, type ClassDef } from './config';
 import { clamp, wrapAngle } from './math';
 import { deltaS, splitApart, type Track } from './track';
 import type { MechState, RaceState } from './types';
 
 export function classOf(m: MechState): ClassDef {
   return CLASSES[m.role];
+}
+
+/**
+ * The most armour `m` can lose to one blow, fall or ring-out: all it has,
+ * except that a lesson's pupil keeps LESSON_ARMOUR_FLOOR of it (a tutorial
+ * race is not lost to a knockout).
+ */
+export function armourToLose(race: RaceState, m: MechState): number {
+  const l = race.lesson;
+  return l && m.id === l.pupil ? Math.max(0, m.hp - m.maxHp * LESSON_ARMOUR_FLOOR) : m.hp;
 }
 
 /** Still racing: not knocked out and not across the line. */

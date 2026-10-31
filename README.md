@@ -23,6 +23,10 @@ This is version 0.5: nine circuits and three ways to play.
   sittings). The other factions race each other in the background, so the
   table is real.
 - **Free Play**: any circuit, rival and format against computer pilots.
+- **Tutorial**: a guided first race that stops at each new thing (revving,
+  boosting, carving, gates, a duel with a sparring partner, the speed lap)
+  to show what to press, then lets you try it. Offered the first time you
+  open Play; `?tutorial=1` goes straight to it.
 - **Online**: private rooms for up to six people, joined by code or invite
   link, with computer pilots in the empty seats. Friends can form a squad of
   up to three that stays together from room to room.

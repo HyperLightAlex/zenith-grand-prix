@@ -38,6 +38,7 @@ import {
   ATTACK_TRACK_RATE,
   FACE_RATE,
   FINISH_GRACE_TICKS,
+  LESSON_GRACE_TICKS,
   LAPS,
   LINK_RANGE,
   LOCK_BREAK,
@@ -119,6 +120,7 @@ import type { StartGrade } from './config';
 import { freshAwardTicks, freshHurtBy, onPass, onRingout } from './awards';
 import {
   addVelocity,
+  armourToLose,
   classOf,
   backToFight,
   carveSteer,
@@ -167,6 +169,14 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
     events: [],
     gateDark: track.gates.map(() => 0),
   };
+  if (cfg.lesson) {
+    const { pupil, spar } = cfg.lesson;
+    const seat = (id: number) => (Number.isInteger(id) && id >= 0 && id < cfg.seats.length ? cfg.seats[id] : null);
+    const p = seat(pupil);
+    const q = seat(spar);
+    // (A partner on the pupil's own side, or none at all: a lesson without the duel.)
+    if (p) race.lesson = { pupil, spar: q && q.team !== p.team ? spar : -1, lockedAt: -1, hits: 0 };
+  }
   cfg.seats.forEach((seat, id) => {
     const c = CLASSES[seat.role];
     // Grid: forwards on the front row, defenders at the back. The teams swap
@@ -746,7 +756,7 @@ function startFall(race: RaceState, track: Track, m: MechState): void {
   for (const o of race.mechs) if (o.target === m.id) retarget(race, track, o, m.id);
   const credit = m.lastHitBy >= 0 && race.tick - m.lastHitTick <= SPLAT_CREDIT_TICKS;
   const by = credit ? race.mechs[m.lastHitBy] : null;
-  const dmg = Math.min(m.hp, FALL_DAMAGE);
+  const dmg = Math.min(armourToLose(race, m), FALL_DAMAGE);
   m.hp -= dmg;
   m.dmgTaken += dmg;
   if (by) by.dmgDealt += dmg;
@@ -855,7 +865,7 @@ function integrate(race: RaceState, track: Track, m: MechState, c: ClassDef): vo
         if (ringOut) {
           // Knocked into the barrier while reeling: a ring-out. Heavy damage,
           // a long tumble, and thrown back off the wall into the fight.
-          const dmg = Math.min(m.hp, race.rules.ringoutDamage + into * WALL_SPLAT_DAMAGE);
+          const dmg = Math.min(armourToLose(race, m), race.rules.ringoutDamage + into * WALL_SPLAT_DAMAGE);
           m.hp -= dmg;
           m.dmgTaken += dmg;
           setStagger(m, RINGOUT_STAGGER);
@@ -1106,6 +1116,25 @@ export function teamPoints(race: RaceState, team: number): number {
   let sum = 0;
   for (const m of race.mechs) if (m.team === team) sum += pointsFor(m, race.sprint) + koBonus(race, m) + m.support;
   return sum;
+}
+
+/**
+ * A lesson's bookkeeping, at the end of each tick: when the pupil took its
+ * lock on the sparring partner, and how many clean blows it has landed on it
+ * since (the partner waits for a few before it swings back; see ai.ts).
+ */
+function stepLesson(race: RaceState): void {
+  const l = race.lesson;
+  if (!l || l.spar < 0) return;
+  const p = race.mechs[l.pupil];
+  if (p.target === l.spar && p.mode === MODE.BATTLE) {
+    if (l.lockedAt < 0) {
+      l.lockedAt = race.tick;
+      l.hits = 0;
+    }
+  } else l.lockedAt = -1;
+  if (l.lockedAt < 0) return;
+  for (const e of race.events) if (e.type === 'hit' && e.attacker === l.pupil && e.victim === l.spar && !e.blocked) l.hits++;
 }
 
 function finalize(race: RaceState): void {
@@ -1484,6 +1513,9 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     // a battle lap. A finisher counts as being on the last lap, not beyond it.
     let leaderLap = 0;
     for (const m of ms) if (!m.retired) leaderLap = Math.max(leaderLap, Math.min(m.lap, race.laps - 1));
+    // A lesson goes at the pupil's pace: the battle lap is theirs, whoever leads.
+    const lesson = race.lesson;
+    if (lesson) leaderLap = Math.min(ms[lesson.pupil].lap, race.laps - 1);
     const phase = leaderLap <= 0 ? 1 : leaderLap >= race.laps - 1 ? 3 : 2;
     if (phase > race.lapPhase) {
       race.lapPhase = phase;
@@ -1495,7 +1527,11 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     if (running === 0) {
       if (race.endTick < 0) race.endTick = tick + 90;
     }
-    if (race.firstFinishTick >= 0 && tick >= race.firstFinishTick + FINISH_GRACE_TICKS) finalize(race);
+    if (lesson) stepLesson(race);
+    // A lesson waits for its pupil, however far behind, and then not long for anyone else.
+    const home = lesson ? ms[lesson.pupil] : null;
+    const flagAt = home ? (home.finished ? Math.ceil(home.finishTime / DT) + LESSON_GRACE_TICKS : -1) : race.firstFinishTick >= 0 ? race.firstFinishTick + FINISH_GRACE_TICKS : -1;
+    if (flagAt >= 0 && tick >= flagAt) finalize(race);
     else if (race.endTick >= 0 && tick >= race.endTick) finalize(race);
     else if (tick >= MAX_RACE_TICKS) finalize(race);
   }

@@ -20,6 +20,10 @@ import {
   PHASE,
   ROLE,
   CALLER,
+  SPAR_FIRST,
+  SPAR_HITS,
+  SPAR_RHYTHM,
+  SPAR_WAIT,
   TACTIC,
   type Tactic,
 } from './config';
@@ -28,7 +32,7 @@ import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
 import { deltaS, forkAt, gripAt, holdAt, hwAt, routeBendAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
 import type { AttackDef } from './config';
-import type { MechInput, MechState, RaceState } from './types';
+import type { Lesson, MechInput, MechState, RaceState } from './types';
 
 const INTENT = { RACE: 0, ENGAGE: 1, ESCORT: 2 } as const;
 /** In a Sprint, how far down the road a pilot will go after the leader (metres): out of reach of a lock, it runs them down. */
@@ -71,9 +75,39 @@ function ownForward(race: RaceState, m: MechState): MechState | null {
   return null;
 }
 
+/**
+ * In a lesson (see Lesson), whether `m` must leave `e` alone: the pupil and
+ * its sparring partner fight each other and nobody else, and nobody else
+ * fights them.
+ */
+function offLimits(race: RaceState, m: MechState, e: MechState): boolean {
+  const l = race.lesson;
+  if (!l) return false;
+  if (e.id === l.pupil) return m.id !== l.spar;
+  if (e.id === l.spar) return m.id !== l.pupil;
+  return m.id === l.spar || m.id === l.pupil;
+}
+
+/** The sparring partner of a lesson, on the laps it spars (the speed lap is a race). */
+function sparring(race: RaceState, m: MechState): Lesson | null {
+  const l = race.lesson;
+  return l && l.spar === m.id && race.lapPhase < 3 ? l : null;
+}
+
 function think(race: RaceState, track: Track, m: MechState): void {
   const ai = m.ai;
   ai.nextThink = race.tick + 8 + Math.floor(rngNext(race) * 5);
+  const lesson = sparring(race, m);
+  if (lesson) {
+    // The partner duels the pupil for as long as the pupil is locked on to
+    // it, and otherwise keeps it company (see race_).
+    const p = race.mechs[lesson.pupil];
+    const duel = weaponsFree(race) && !m.finished && inPlay(p) && p.target === m.id;
+    ai.intent = duel ? INTENT.ENGAGE : INTENT.RACE;
+    ai.intentTarget = duel ? p.id : -1;
+    ai.nextThink = race.tick + 6;
+    return;
+  }
   if (!weaponsFree(race) || m.finished) {
     ai.intent = INTENT.RACE;
     ai.intentTarget = -1;
@@ -92,7 +126,7 @@ function think(race: RaceState, track: Track, m: MechState): void {
   let best = -1;
   let bestScore = 28;
   for (const e of race.mechs) {
-    if (e.team === m.team || !inPlay(e)) continue;
+    if (e.team === m.team || !inPlay(e) || offLimits(race, m, e)) continue;
     const ds = deltaS(track, e.s, m.s);
     const dist = Math.hypot(ds, e.d - m.d);
     // In a Sprint whoever leads is the one to beat: they are run down from
@@ -174,7 +208,7 @@ function think(race: RaceState, track: Track, m: MechState): void {
       ai.intent = INTENT.RACE;
       ai.intentTarget = -1;
     }
-  } else if (tactic === TACTIC.SHIELD && m.role !== ROLE.FW && fw && fw !== m && distance(track, m, fw) < 150) {
+  } else if (tactic === TACTIC.SHIELD && m.role !== ROLE.FW && fw && fw !== m && fw.id !== race.lesson?.spar && distance(track, m, fw) < 150) {
     ai.intent = INTENT.ESCORT;
     ai.intentTarget = fw.id;
   } else {
@@ -244,6 +278,18 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   let threading = false;
   // A ramming defender steers at this mech instead of around it.
   let ramAt: MechState | null = null;
+
+  // A lesson's sparring partner keeps the pupil company: a few lengths ahead,
+  // where it can be drafted on the formation lap and locked on the battle
+  // lap; it lifts to let the pupil come up, and races to catch up.
+  const spar = sparring(race, m);
+  const pupil = spar ? race.mechs[spar.pupil] : null;
+  if (pupil && inPlay(pupil) && !m.finished) {
+    const ahead = deltaS(track, m.s, pupil.s);
+    const want = race.lapPhase <= 1 ? 16 : 10;
+    if (ahead > want) throttle = clamp(1 - (ahead - want) / 24, 0, 1);
+    if (ahead > 0) wantBoost = false;
+  }
 
   const chase0 = ai.intentTarget >= 0 ? race.mechs[ai.intentTarget] : null;
   // Someone on the other route of a fork cannot be chased down.
@@ -328,7 +374,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     // Mid-ram: aim the charge at the nearest rival it has not hit yet.
     let nearest = 70;
     for (const e of race.mechs) {
-      if (e.team === m.team || !inPlay(e) || (m.ramHits & (1 << e.id)) !== 0) continue;
+      if (e.team === m.team || !inPlay(e) || (m.ramHits & (1 << e.id)) !== 0 || offLimits(race, m, e)) continue;
       const ahead = deltaS(track, e.s, m.s);
       if (ahead < -8 || ahead > nearest) continue;
       nearest = ahead;
@@ -477,7 +523,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     const a = ATTACKS[idx];
     if ((slot === 0 ? m.cdPrimary : m.cdSecondary) === 0 && a.shot) {
       for (const e of race.mechs) {
-        if (e.team === m.team || !inPlay(e)) continue;
+        if (e.team === m.team || !inPlay(e) || offLimits(race, m, e)) continue;
         const ds = deltaS(track, e.s, m.s);
         const dd = e.d - m.d;
         const dist = Math.hypot(ds, dd);
@@ -497,6 +543,9 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
  */
 function wantAegis(race: RaceState, track: Track, m: MechState): boolean {
   if (m.shieldT > 0) return false;
+  // (Not over a lesson's sparring partner: a shielded partner cannot be staggered, or parried.)
+  const spar = race.lesson && race.lesson.spar >= 0 ? race.mechs[race.lesson.spar] : null;
+  if (spar && spar !== m && spar.team === m.team && inPlay(spar) && distance(track, spar, m) < race.rules.aegisRange + 4) return false;
   const lap3 = race.lapPhase >= 3;
   const hot = (o: MechState) => race.tick - o.lastHitTick < 50;
   if (hpFraction(m) < (lap3 ? 0.4 : 0.3) && hot(m)) return true;
@@ -554,6 +603,8 @@ function wantFreeAbility(race: RaceState, track: Track, m: MechState, flatOut: b
       for (const e of race.mechs) {
         if (e.team === m.team || !inPlay(e) || e.iframes > 0 || !sameRoute(track, m, e)) continue;
         const dist = distance(track, e, m);
+        // (A pulse is everyone's: never one with a lesson's pupil, or its partner, in reach.)
+        if (offLimits(race, m, e) && dist < rules.pulseRange + 4) return false;
         if (dist > rules.pulseRange * 0.9) continue;
         near++;
         if (e.target === m.id && e.act === ACT.ATTACK && ATTACKS[e.attack].kind === 'melee' && e.actT < ATTACKS[e.attack].windup && dist < 16) pressing = true;
@@ -598,6 +649,7 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
       for (const e of race.mechs) {
         if (e.team === m.team || !inPlay(e)) continue;
         const dist = distance(track, e, m);
+        if (offLimits(race, m, e) && dist < rules.pulseRange + 4) return false;
         if (dist > rules.pulseRange * 0.9) continue;
         near++;
         if (e.act === ACT.ATTACK && ATTACKS[e.attack].kind === 'melee' && e.actT < ATTACKS[e.attack].windup) {
@@ -658,6 +710,15 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   // Melee pilots hang back between bursts, then step in to strike.
   let pref = c.aiRange > 0 ? c.aiRange : radii + 4.2;
   if (c.aiRange === 0 && m.act === ACT.NONE && tick < ai.attackAt - 24) pref = radii + (m.role === ROLE.FW ? 15 : 9);
+  // A sparring partner stays in reach while the pupil gets its blows in,
+  // then stands off at the Lance's range, the blow it teaches with (closing
+  // in for the blade string when the Lance is not to hand).
+  const drill = sparring(race, m);
+  const drillReady = !!drill && sparReady(race, drill);
+  if (drill && m.act === ACT.NONE && ai.comboLeft === 0) {
+    const lance = m.cdSecondary === 0 && m.drive >= ATTACKS[c.secondary].driveCost;
+    pref = !drillReady ? radii + 3 : lance || tick < ai.attackAt - 24 ? radii + 14 : radii + 4.2;
+  }
   // A midfielder gunning at range now and then closes in to kick: on a rival
   // its carbine has staggered, or between bursts, the better pilot more often.
   if (m.role === ROLE.MF && m.cdSecondary === 0 && tick >= ai.closeUntil + 60 && weaponsFree(race)) {
@@ -683,7 +744,9 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   lockPace(m, ds, dist - pref, out, weaponsFree(race));
 
   // --- attack
-  if (m.act === ACT.NONE && tick >= ai.attackAt && weaponsFree(race)) {
+  if (drill && m.act === ACT.NONE && tick >= ai.attackAt && weaponsFree(race)) {
+    sparSwing(race, m, t, dist, radii, drill, out);
+  } else if (m.act === ACT.NONE && tick >= ai.attackAt && weaponsFree(race)) {
     const primary = ATTACKS[c.primary];
     const secondary = ATTACKS[c.secondary];
     const r = rngNext(race);
@@ -736,8 +799,10 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     }
   }
 
-  // --- defend against a blow that is winding up
+  // --- defend against a blow that is winding up (a sparring partner lets
+  // the pupil's first few through)
   for (const e of race.mechs) {
+    if (drill && !drillReady) break;
     if (e.team === m.team || !inPlay(e) || e.act !== ACT.ATTACK) continue;
     const a = ATTACKS[e.attack];
     if (a.kind !== 'melee' || e.actT >= a.windup) continue;
@@ -800,6 +865,42 @@ function fight(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     }
     press(out, m, BTN.A);
   }
+}
+
+/** Whether a sparring partner has let the pupil have its turn (SPAR_HITS clean blows, or SPAR_WAIT). */
+function sparReady(race: RaceState, l: Lesson): boolean {
+  if (l.lockedAt < 0) return false;
+  const t = race.tick - l.lockedAt;
+  return (l.hits >= SPAR_HITS && t >= SPAR_FIRST) || t >= SPAR_WAIT;
+}
+
+/**
+ * A sparring partner's blow: only once the pupil has had a few of its own
+ * (see sparReady), never at a pupil already badly
+ * hurt, and only heavies, each with a breather after it (SPAR_RHYTHM) so the
+ * tell can be read and answered. The Lance from its range; close in, out of
+ * Drive or with it recharging, the blade string, whose last blow is a heavy.
+ */
+function sparSwing(race: RaceState, m: MechState, t: MechState, dist: number, radii: number, l: Lesson, out: MechInput): void {
+  const ai = m.ai;
+  const tick = race.tick;
+  if (!sparReady(race, l) || t.id !== l.pupil || hpFraction(t) < 0.4) {
+    ai.attackAt = tick + 12;
+    return;
+  }
+  const c = classOf(m);
+  const lance = ATTACKS[c.secondary];
+  if (m.cdSecondary === 0 && m.drive >= lance.driveCost && dist > 10 && dist < 30) {
+    press(out, m, BTN.Y);
+  } else if (dist <= ATTACKS[c.primary].reach + radii + 1.5) {
+    press(out, m, BTN.X);
+    ai.comboLeft = 2;
+  } else {
+    // Not in reach of either yet: close in (the spacing lets it).
+    ai.attackAt = tick + 8;
+    return;
+  }
+  ai.attackAt = tick + SPAR_RHYTHM + Math.floor(rngNext(race) * 40);
 }
 
 /**
@@ -875,7 +976,7 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
         if (dist < LOCK_RANGE - 6 || (m.target === t.id && dist < LOCK_RANGE + 20)) want = t.id;
       }
     }
-    if (want >= 0 && want !== m.target && flyInHot(race, track, m, want, out)) want = m.target;
+    if (want >= 0 && want !== m.target && !sparring(race, m) && flyInHot(race, track, m, want, out)) want = m.target;
     if (want !== m.target) setTarget(race, m, want);
   }
 
@@ -887,7 +988,7 @@ export function aiControl(race: RaceState, track: Track, m: MechState, out: Mech
   const inFight = m.mode === MODE.BATTLE && m.target >= 0;
   if (
     inPlay(m) && weaponsFree(race) && m.cells >= 1 && m.cdAbility === 0 && race.tick >= ai.abilityAt &&
-    (m.act === ACT.STAGGER ? breaker : inFight)
+    (m.act === ACT.STAGGER ? breaker : inFight) && !sparring(race, m)
   ) {
     ai.abilityAt = race.tick + 10;
     if (wantLockedAbility(race, track, m) && rngNext(race) < 0.25 + 0.6 * m.skill) {

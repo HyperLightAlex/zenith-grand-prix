@@ -50,18 +50,13 @@ import { factionLook, teamLooks, type TeamLook } from './sides';
 import { COUNT, ICONS, type IconName } from './hudArt';
 import { Dash } from './dash';
 import type { Device } from '../input/input';
+import { KEYS } from './keyNames';
 import { frame } from '../video';
 
 const ORD = ['st', 'nd', 'rd', 'th', 'th', 'th'];
 const PHASE_NAMES = ['', 'Formation lap', 'Battle lap', 'Speed lap'];
 const TACTIC_LABEL = ['Free', 'Blitz', 'Run', 'Shield', 'Mark'];
 
-const KEYS: Record<Device, Record<string, string>> = {
-  pad: { accel: 'RT', brake: 'LT', carve: 'LT + stick', boost: 'A', dash: 'A', swing: 'LT + ◀▶ + A', lock: 'LB', ally: 'L3', ability: 'B', x: 'X', y: 'Y', guard: 'LT', swap: 'R stick ◀ ▶', up: '▲', right: '▶', down: '▼', left: '◀', pause: 'Start' },
-  keys: { accel: 'W', brake: 'S', carve: 'S + A/D', boost: 'Space', dash: 'Space', swing: 'L + A/D + Space', lock: 'Q', ally: 'E', ability: 'R', x: 'J', y: 'K', guard: 'L', swap: 'Z C', up: '1', right: '2', down: '3', left: '4', pause: 'Esc' },
-  // The on-screen buttons go by their names, and the HUD shows no keys for them (no hints bar, no plays diamond).
-  touch: { accel: '', brake: 'Carve', carve: 'Carve', boost: 'Boost', dash: 'Dash', swing: 'Guard + Dash', lock: '◎', ally: 'Escort', ability: '', x: 'Attack', y: 'Special', guard: 'Guard', swap: 'Switch', up: '', right: '', down: '', left: '', pause: '' },
-};
 
 /** Radio lines. {t} is replaced by a target's callsign. */
 const LINES = {

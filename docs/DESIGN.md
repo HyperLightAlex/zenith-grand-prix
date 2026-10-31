@@ -866,6 +866,58 @@ Online, the host sets a room to a Sprint (see [ONLINE.md](ONLINE.md)): its
 places are fixed for the match when it starts, so the standings follow
 each pilot. The Grand Prix stays a team event.
 
+### The tutorial
+
+The first playtest's main note was that nobody knew how to play. The
+tutorial is a **guided first race**: one ordinary three-lap team race on
+Meridian Skyway, in a Forward, in which the game stops at each new thing to
+say what it is and what to press, then leaves a **try-it** up until it is
+done. Nothing is failed: a try-it that has had its chance goes, with a word
+if it deserves one. It is offered once, the first time Play is opened, and
+heads the Play menu until it has been finished or skipped; the pause menu
+skips it (the race goes on as an ordinary one) or starts it over.
+
+**Cards** (`src/client/game/tutorial.ts`) come from the race as it runs, not
+from a script of times: on the grid, revving; a charge strip coming up; Drive
+enough to boost on a straight; a gold gate coming up, lit; a tight corner
+coming up (carving); sitting in a slipstream; the battle lap starting;
+the partner in lock range; the lock taken; the partner's first heavy winding
+up; then dashing and swinging, leaving the fight, and on the speed lap the
+limiter coming off, Overdrive on a straight, the tow, and team plays. Each
+shows at most once, one lesson at a time, at least 3.5 s of racing apart,
+except those about what is happening right now (the grid, the battle and
+speed laps, the lock taken, a heavy winding up, a knockout), which come at
+once, or for a new lap or a knockout once the HUD's own banner for it has
+played. A card holds the race and cannot be closed for its first 0.6 s, so a
+press meant for the race cannot close it unread; the button that closes it
+is swallowed so it does not also boost or dash. The words name each control
+for the device in hand (`ui/keyNames.ts`). While the parry is being learnt,
+the partner's heavies at you run at 0.4 speed.
+
+**The race is a lesson** (`RaceConfig.lesson`, `src/sim`), so the duel can
+be taught and the race cannot be lost to the lesson:
+
+- **One sparring partner**, the rival forward. Nobody else fights you and
+  nobody else fights it (no locks, no shots at racing speed, no Disruptor
+  with either in reach, no Aegis over it, no escort on it). On the first two
+  laps it keeps you company, 16 m ahead on the formation lap (somewhere to
+  draft) and 10 m on the battle lap (somewhere to lock), lifting to let you
+  come up. It duels you while, and only while, you are locked on to it:
+  lets you land three clean blows first, without guarding (and gives you
+  at least two seconds, and at most six, to land them), then throws only
+  heavies, the Lance from its range or
+  the blade string, whose last blow is one, about every 2.5 to 3 seconds,
+  and never at a pupil below 40% armour. No Break Away, no flying in hot. On
+  the speed lap it races.
+- **The race goes at your pace.** The lap phase follows your lap, not the
+  leader's, so the battle lap begins when you start it; and the flag falls
+  10 seconds after you are home (not 25 after the winner), however far
+  behind you are.
+- **You cannot be knocked out**: you keep 15% of your armour whatever hits
+  you.
+
+The rival team's computer pilots fly at 0.3 skill, yours at 0.35.
+
 ## 3. How it is built
 
 ```

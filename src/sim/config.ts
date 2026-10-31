@@ -77,6 +77,17 @@ export const BOG_TICKS = 30;
 export const FINISH_GRACE_TICKS = 25 * TICK_RATE;
 /** Hard stop: a race that somehow has no finisher is flagged after this long. */
 export const MAX_RACE_TICKS = 10 * 60 * TICK_RATE;
+/** A lesson (RaceConfig.lesson): the race stays open this long after the pupil is home. */
+export const LESSON_GRACE_TICKS = 10 * TICK_RATE;
+/** ...and the pupil keeps this share of its armour whatever hits it: it cannot be knocked out. */
+export const LESSON_ARMOUR_FLOOR = 0.15;
+/** The sparring partner swings back once the pupil has landed this many clean blows since locking on (and had SPAR_FIRST to land them)... */
+export const SPAR_HITS = 3;
+export const SPAR_FIRST = 2 * TICK_RATE;
+/** ...or this long after the lock, whichever comes first. */
+export const SPAR_WAIT = 6 * TICK_RATE;
+/** Ticks between the partner's heavies, at the least (a little more is added each time). */
+export const SPAR_RHYTHM = 150;
 
 export const ROLE = { FW: 0, MF: 1, DF: 2 } as const;
 export type Role = (typeof ROLE)[keyof typeof ROLE];

@@ -45,7 +45,7 @@ import {
   type AttackDef,
 } from './config';
 import { bodyguard, onHit, onKnockout, onSnare } from './awards';
-import { addVelocity, classOf, clearEffects, dropCarve, inPlay, pickTarget, retarget, sameRoute, setTarget, speedCap, syncFromSpeed } from './core';
+import { addVelocity, armourToLose, classOf, clearEffects, dropCarve, inPlay, pickTarget, retarget, sameRoute, setTarget, speedCap, syncFromSpeed } from './core';
 import { ticks } from './rules';
 import { rngNext, wrapAngle } from './math';
 import { deltaS, hwAt, medianAt, type Track } from './track';
@@ -509,7 +509,7 @@ export function applyHit(
   // What the shield kept off is what would have landed without it: the guard
   // takes its share of a blow whether or not there is a shield over it.
   if (shielded && rules.aegisDamage > 0.001) prevented = dmg * (1 / rules.aegisDamage - 1);
-  dmg = Math.min(dmg, victim.hp);
+  dmg = Math.min(dmg, armourToLose(race, victim));
   victim.hp -= dmg;
   victim.dmgTaken += dmg;
   att.dmgDealt += dmg;

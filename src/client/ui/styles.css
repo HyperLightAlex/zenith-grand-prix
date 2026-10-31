@@ -779,6 +779,10 @@ html.crt-on .crt-layer {
 .results .sprintstand .sr.me .flag { background: var(--tc); }
 .results td.pts { font-weight: 800; font-size: 1.15em; }
 .results .suphead { margin-top: 0.9em; font-size: 1.05em; font-weight: 500; opacity: 0.7; }
+/* The tutorial's last word under its results (screens/race.ts). */
+.results .lesson-debrief { margin: 1em 0 0.6em; padding: 0.8em 1.2em 0.9em 1.3em; max-width: 46em; background: rgba(10, 15, 28, 0.6); box-shadow: inset 0.3em 0 0 var(--charge); }
+.results .lesson-debrief h2 { margin: 0 0 0.35em; font-size: 1.6em; font-weight: 800; }
+.menu .results .lesson-debrief p { margin: 0.3em 0 0; max-width: 40em; font-size: 1.15em; font-style: normal; font-weight: 500; line-height: 1.3; }
 .results .supportlist { display: grid; gap: 0.2em; max-width: 62em; margin-top: 0.25em; font-size: 1.05em; }
 .results .supportlist .row { display: flex; align-items: center; gap: 0.8em; padding: 0.22em 0.7em; background: var(--ink-soft); border-left: 0.4em solid var(--team0); }
 .results .supportlist .row.t1 { border-left-color: var(--team1); }
@@ -1858,3 +1862,78 @@ html.portrait .menu[data-screen='pause'] .panes { top: calc(7.5em + var(--st, 0p
 @media (prefers-reduced-motion: reduce) {
   .rotate-hint .phone { animation: none; transform: rotate(-90deg); }
 }
+
+/* ---- the tutorial (game/tutorial.ts, ui/tutorialPanel.ts) ----------------
+   A card that holds the race while it is up, docked at the side so the mech
+   and whatever the card is about (a gate, a strip, the partner's ring) stay
+   in view; and the try-it line under the score, kept until it is done. The
+   tutorial's voice is the charge cyan, the colour of a lesson's pace. */
+.tutorial { z-index: 61; }
+.tcard {
+  position: absolute;
+  right: calc(2.2 * var(--ui-em, 1em) + var(--sr, 0px));
+  top: 47%;
+  width: min(29em, 46%);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+  padding: 1.15em 1.4em 1em 1.5em;
+  background: rgba(10, 15, 28, 0.92);
+  box-shadow: inset 0.36em 0 0 var(--charge), 0 0.6em 1.8em rgba(0, 0, 0, 0.45);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 1.1em), calc(100% - 1.1em) 100%, 0 100%);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: tcard-in 0.2s ease-out both;
+}
+.tcard[hidden] { display: none; }
+@keyframes tcard-in { from { opacity: 0; translate: 1.2em 0; } }
+.tcard .tc-title { font-size: 2.05em; font-weight: 800; line-height: 0.95; color: var(--paper); }
+.tcard .tc-body { display: flex; flex-direction: column; gap: 0.55em; font-size: 1.22em; font-style: normal; font-weight: 500; line-height: 1.3; color: #dfe5f1; }
+.tcard .tc-body p { margin: 0; }
+.tcard .key { margin: 0 0.12em; font-size: 0.82em; vertical-align: 0.08em; }
+.tcard .tc-legend { display: flex; flex-direction: column; gap: 0.45em; font-size: 1.12em; font-style: normal; font-weight: 500; line-height: 1.25; }
+.tcard .tc-legend .row { display: flex; align-items: center; gap: 0.7em; }
+.tcard .tc-legend .ring { flex: none; width: 1.25em; height: 1.25em; border-radius: 50%; border: 0.2em solid var(--c); box-shadow: 0 0 0.45em var(--c); }
+.tcard .tc-foot { display: flex; justify-content: flex-end; font-size: 1.05em; font-weight: 700; opacity: 0.3; transition: opacity 0.2s; }
+.tcard.ready .tc-foot { opacity: 1; }
+.tcard .tc-foot .key { margin-right: 0.45em; }
+
+/* The try-it sits where the card was (the card folds into it), clear of the
+   map above it and the gauges below. */
+.tgoal {
+  position: absolute;
+  right: calc(2.2 * var(--ui-em, 1em) + var(--sr, 0px));
+  top: 27%;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  max-width: min(26em, 40%);
+  padding: 0.45em 1.2em 0.5em 0.85em;
+  background: rgba(10, 15, 28, 0.86);
+  box-shadow: inset 0.3em 0 0 var(--charge);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 0.6em), calc(100% - 0.6em) 100%, 0 100%);
+  font-size: 1.12em;
+  pointer-events: none;
+  animation: tgoal-in 0.2s ease-out both;
+}
+@keyframes tgoal-in { from { opacity: 0; translate: 0.8em 0; } }
+.tgoal[hidden] { display: none; }
+.tgoal .mark { flex: none; width: 1.15em; height: 1.15em; border: 0.16em solid var(--charge); transform: rotate(45deg) scale(0.78); font-style: normal; font-size: 0.95em; line-height: 0.9; text-align: center; color: var(--ink); }
+.tgoal .gt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15em 0.5em; font-weight: 500; font-style: normal; line-height: 1.2; }
+.tgoal .gt b { font-weight: 800; font-style: italic; color: var(--charge); }
+.tgoal .gt small { flex-basis: 100%; font-size: 0.86em; opacity: 0.75; }
+.tgoal .key { margin: 0 0.1em; font-size: 0.8em; }
+.tgoal.done .mark { border-color: var(--ally); background: var(--ally); transform: none; border-radius: 50%; }
+.tgoal.done .gt { color: var(--ally); font-weight: 700; }
+.tgoal.missed .mark { border-color: var(--mute); transform: none; border-radius: 50%; }
+.tgoal.missed .gt { color: var(--mute); }
+
+html.compact .tcard { right: calc(1 * var(--ui-em) + var(--sr, 0px)); width: min(30em, 54%); font-size: 0.92em; }
+/* A phone: the on-screen buttons stand aside while a card is up, so it sits
+   low on the right, under the target panel and clear of the gauges. */
+html.compact.touch .tcard { top: auto; bottom: calc(0.8 * var(--ui-em) + var(--sb, 0px)); transform: none; }
+html.compact .tgoal { right: calc(1 * var(--ui-em) + var(--sr, 0px)); top: calc(14.6 * var(--ui-em) + var(--st, 0px)); max-width: 48%; font-size: 1em; }
+.tgoal.done { box-shadow: inset 0.3em 0 0 var(--ally); }
+.tgoal.missed { box-shadow: inset 0.3em 0 0 var(--mute); }
+@media (prefers-reduced-motion: reduce) { .tcard, .tgoal { animation: none; } }

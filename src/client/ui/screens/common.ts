@@ -122,8 +122,12 @@ export function registerCommon(m: Menus, g: Game): void {
         g.enterFullscreenFromTap();
         m.handle(['confirm']);
       };
-      // Confirm anywhere on the title: an invisible item takes it.
-      m.addItem(h('div'), h('div'), () => m.push('modes'));
+      // Confirm anywhere on the title: an invisible item takes it. The first
+      // time, the tutorial is offered on the way in (once).
+      m.addItem(h('div'), h('div'), () => {
+        m.push('modes');
+        if (!g.tutorialOffered && !g.tutorialDone) offerTutorial(m, g);
+      });
     },
     back() {},
   });
@@ -132,12 +136,16 @@ export function registerCommon(m: Menus, g: Game): void {
     render(m) {
       const col = h('div.col.modes');
       const list = h('div.list');
+      // New here: the tutorial heads the list. Done, it goes down among the rest.
+      const tutorial = () => m.button(list, 'Tutorial', () => g.startTutorial(), { key: 'tutorial', note: g.tutorialDone ? 'The guided first race, again' : 'A guided first race: the controls, a duel, the speed lap' });
+      if (!g.tutorialDone) tutorial();
       m.button(list, 'Grand Prix', () => m.push('gp'), { key: 'gp', note: 'Cups and the Grand Tour for medals, or a season for the Zenith Cup' });
       m.button(list, 'Free Play', () => g.openFreePlay(), { key: 'free', note: 'Any circuit, any rival, any format' });
       m.button(list, 'Online', () => g.openOnline(), {
         key: 'online',
         note: g.online.available ? 'Private rooms with friends, by code or link' : 'Needs the game from its server: not this saved copy',
       });
+      if (g.tutorialDone) tutorial();
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
       m.button(list, 'Video', () => m.push('video'), { key: 'video', note: 'Panel lines, CRT screen, animation, screen shape' });
       col.append(h('h1', 'Play'), list);
@@ -296,6 +304,19 @@ export function registerCommon(m: Menus, g: Game): void {
       if (d.cancel) d.cancel();
       else m.pop();
     },
+  });
+}
+
+/** The first time Play opens: the tutorial, offered once. */
+function offerTutorial(m: Menus, g: Game): void {
+  g.markTutorialOffered();
+  m.push<DialogData>('dialog', {
+    title: 'New to Zenith GP?',
+    text: 'The tutorial is a guided first race. It stops at each new thing to show you the controls: boosting, carving, a duel with a sparring partner, the speed lap. About five minutes.',
+    options: [
+      { label: 'Take the tutorial', go: true, run: () => (m.pop(), g.startTutorial()) },
+      { label: 'Not now', run: () => m.pop() },
+    ],
   });
 }
 

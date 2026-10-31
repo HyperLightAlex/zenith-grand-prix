@@ -12,6 +12,7 @@ import { art, type Menus } from '../menus';
 import { DEV_TOOLS } from '../../devTools';
 import { SELECT, confirmDialog } from './common';
 import { teamLooks, type TeamLook } from '../sides';
+import { debrief } from '../../game/tutorial';
 
 const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 const fmtTime = (t: number) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
@@ -109,7 +110,9 @@ export function registerRace(m: Menus, g: Game): void {
       const list = h('div.list');
       const online = g.mode === 'online';
       m.button(list, 'Resume', () => g.resume(), { key: 'resume' });
-      if (!online) m.button(list, 'Restart this race', () => g.restart(), { key: 'restart' });
+      const teaching = g.mode === 'tutorial' && !!g.tutorial && !g.tutorial.over;
+      if (teaching) m.button(list, 'Skip the tutorial', () => g.skipTutorial(), { key: 'skiptut', note: 'No more tips: finish the race as it is' });
+      if (!online) m.button(list, g.mode === 'tutorial' ? 'Restart the tutorial' : 'Restart this race', () => g.restart(), { key: 'restart' });
       // Tools for working on the game, not player settings (see devTools.ts).
       if (DEV_TOOLS) {
         m.button(list, online ? 'Tuning (camera and look)' : 'Tuning', () => g.openTuning(), { key: 'tuning' });
@@ -126,7 +129,7 @@ export function registerRace(m: Menus, g: Game): void {
         // A Grand Prix match plays to its end.
         if (g.online.lobby?.host === g.online.pid && !gp) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the room.', 'End match', () => g.online.sendRoom('endMatch')), { key: 'end' });
       } else {
-        m.button(list, g.mode === 'gp' ? 'Back to the briefing' : 'Back to setup', () => g.toSetup(), { key: 'setup' });
+        m.button(list, g.mode === 'gp' ? 'Back to the briefing' : g.mode === 'tutorial' ? 'Leave the tutorial' : 'Back to setup', () => g.toSetup(), { key: 'setup' });
         m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
       }
       const card = h('div.ec-pause', h('div.ec-kick', 'Paused'), art(LOGO.url, 'img', 'Zenith Grand Prix'));
@@ -205,6 +208,12 @@ export function registerRace(m: Menus, g: Game): void {
         if (round.tied) lines.push(`Level on points, so the round goes to ${names[round.winner]}, who came home first.`);
       }
       box.append(h('div.subline', lines.join(' ')));
+      if (g.mode === 'tutorial') {
+        // The tutorial's last word, before the detail: how the points came, and where next.
+        const lesson = h('div.lesson-debrief', h('h2', 'Tutorial complete'));
+        for (const line of debrief(race, local)) lesson.append(h('p', line));
+        box.append(lesson);
+      }
       if (match && !single) {
         const strip = h('div.matchstrip');
         if (match.cfg.mode === 'series') {
@@ -297,6 +306,11 @@ function resultButtons(m: Menus, g: Game, box: HTMLElement, over: boolean, singl
     m.button(list, gp ? 'Leave the Grand Prix' : 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
   } else if (g.mode === 'gp') {
     m.button(list, over ? 'Continue' : 'Next round', () => g.next(), { key: 'next', go: true });
+    m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
+  } else if (g.mode === 'tutorial') {
+    m.button(list, 'Free Play', () => g.afterTutorial('free'), { key: 'free', go: true, note: 'Any circuit, any rival, any format' });
+    m.button(list, 'Grand Prix', () => g.afterTutorial('gp'), { key: 'gp', note: 'Cups and the Grand Tour for medals' });
+    m.button(list, 'Race the tutorial again', () => g.next(), { key: 'next' });
     m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
   } else {
     m.button(list, over ? (single ? 'Race again' : sprint ? 'New Sprint' : 'New match') : sprint ? 'Next race' : 'Next round', () => g.next(), { key: 'next', go: true });

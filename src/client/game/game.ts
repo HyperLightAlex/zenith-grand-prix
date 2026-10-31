@@ -104,9 +104,11 @@ import { inKnockout } from './moments';
 import { NetSession } from './netSession';
 import { LocalSession } from './session';
 import { TUNE_GROUPS, Tuning } from './tuning';
+import { CARD_MIN, Tutorial } from './tutorial';
+import { TutorialPanel } from '../ui/tutorialPanel';
 
 type State = 'title' | 'garage' | 'race' | 'paused' | 'results';
-export type GameMode = 'free' | 'gp' | 'online';
+export type GameMode = 'free' | 'gp' | 'online' | 'tutorial';
 
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
 /** The garage's mech sits this far right of centre (of the screen's width), clear of the menu. */
@@ -141,6 +143,8 @@ export interface GameOptions {
   match?: number;
   /** A Sprint in this format (an index into SPRINT_OPTIONS) rather than a team race. */
   sprint?: number;
+  /** Start the tutorial race at once. */
+  tutorial?: boolean;
   /** Open the tuning panel at once. */
   tune?: boolean;
   /** Circuit id to race on (see TRACKS). */
@@ -201,6 +205,8 @@ interface RoundSetup {
   teamSkill: number;
   track: string;
   cfg: MatchConfig;
+  /** The tutorial race: a lesson round your seat (RaceConfig.lesson), against the rival forward. */
+  lesson?: boolean;
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -283,6 +289,13 @@ export class Game {
   private garageShown: { team: number; role: Role; sprint: boolean; colour: number } | null = null;
   /** The race behind the title is on screen. */
   private attracting = false;
+  /** The tutorial's director, during the tutorial race (null otherwise). */
+  tutorial: Tutorial | null = null;
+  private readonly tutorialPanel: TutorialPanel;
+  /** A tutorial card is up: the race is held. */
+  private tutorialHeld = false;
+  /** The tutorial, done (or skipped) and offered, on this device. */
+  private tutorialSave: { done: boolean; offered: boolean } = readJson('zgp.tutorial', { done: false, offered: false });
   /** The player's revs on the grid, by band (0 below the green, 2 in it, 3 past it), for the tick into the green. */
   private revZone = 0;
   private scene: AudioScene = { racing: false, speed: 0, throttle: 0, boosting: false, battle: false, lapPhase: 1, onStrip: false, drafting: false, scraping: false, critical: false, finished: false };
@@ -310,6 +323,8 @@ export class Game {
     // named for the music, which waits for a screen that leads to a race.)
     this.useTrack(this.free.track, false);
     this.hud = new Hud(uiRoot);
+    this.tutorialPanel = new TutorialPanel(uiRoot);
+    this.tutorialPanel.onContinue = () => this.tutorialContinue();
     this.eyecatch = new Eyecatch(uiRoot);
     this.nowPlaying = new NowPlaying(uiRoot, () => this.nextTrack());
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
@@ -388,7 +403,9 @@ export class Game {
       this.free.mode = 'sprint';
       this.free.sprint = SPRINT_OPTIONS[opts.sprint] ? opts.sprint : 0;
     } else if (opts.auto !== undefined) this.free.mode = 'teams';
-    if (opts.auto !== undefined || opts.sprint !== undefined) {
+    if (opts.tutorial) {
+      this.startTutorial();
+    } else if (opts.auto !== undefined || opts.sprint !== undefined) {
       this.startFree();
     } else {
       this.showTitle();
@@ -656,7 +673,9 @@ export class Game {
     // A Sprint's grid: by lot for its first race, then the standings reversed.
     const sprint = !!setup?.sprint;
     const grid = sprint ? sprintGrid(this.match, seats.length, seed) : undefined;
-    const session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip, mode: sprint ? 'sprint' : 'teams', grid }, localId);
+    // The tutorial: a lesson round your seat, the rival forward its sparring partner.
+    const lesson = setup?.lesson && localId >= 0 ? { pupil: localId, spar: seats.findIndex((x) => x.team !== seats[localId].team && x.role === ROLE.FW) } : undefined;
+    const session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip, mode: sprint ? 'sprint' : 'teams', grid, lesson }, localId);
     this.attach(session, keepTrack);
   }
 
@@ -705,6 +724,7 @@ export class Game {
 
   showTitle(): void {
     this.mode = null;
+    this.tutorial = null;
     if (this.online.room) void this.online.leaveRoom();
     this.hud.hide();
     this.menus.reset('title');
@@ -982,7 +1002,11 @@ export class Game {
     this.hud.hide();
     this.eyecatch.hide();
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') this.state = 'garage';
-    if (this.mode === 'gp') {
+    if (this.mode === 'tutorial') {
+      this.tutorial = null;
+      this.mode = null;
+      this.menus.reset('modes', undefined, ['title']);
+    } else if (this.mode === 'gp') {
       const ev = this.gpEvents[this.gpKind];
       if (ev && ev.rounds[ev.current]?.you && !ev.rounds[ev.current].you!.result) this.menus.reset('briefing', { kind: this.gpKind }, ['title', 'modes', 'gp']);
       else this.menus.reset('gp', undefined, ['title', 'modes']);
@@ -998,6 +1022,7 @@ export class Game {
     if (this.mode === 'online') return void this.online.sendRoom('continue', { at: this.online.lobby?.phase });
     if (this.match && this.match.winner < 0) return this.startRound();
     if (this.mode === 'gp') return this.gpMatchDone();
+    if (this.mode === 'tutorial') return this.startTutorial();
     this.startFree();
   }
 
@@ -1010,6 +1035,7 @@ export class Game {
 
   /** What the HUD shows under the score: the format, the round, and how the match stands. */
   private matchLabel(): string {
+    if (this.mode === 'tutorial') return 'Tutorial race';
     const m = this.match;
     if (this.session.race.sprint) return m ? this.sprintLabel(m) : 'Sprint';
     const a = factionName(LIVERIES[this.raceFactions[0]]);
@@ -1060,6 +1086,10 @@ export class Game {
     this.setSession(setup, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
     const local = this.session as LocalSession;
     if (this.opts.demo) local.race.mechs[local.localId].human = false;
+    // The tutorial starts over with the race (a restart teaches it again).
+    const lesson = local.race.lesson;
+    this.tutorial = lesson ? new Tutorial(local.track, lesson.pupil, lesson.spar) : null;
+    this.tutorialHeld = false;
     if (this.opts.skip) local.fastForward(this.opts.skip);
     this.beginRace();
   }
@@ -1089,6 +1119,76 @@ export class Game {
     this.menus.show(null);
     // The button that chose "Resume" must not also fire a boost, a dash or an ability.
     this.input.swallowHeld();
+  }
+
+  // ---- the tutorial --------------------------------------------------------------
+
+  /** The tutorial has been finished (or skipped) on this device. */
+  get tutorialDone(): boolean {
+    return this.tutorialSave.done;
+  }
+
+  /** The first time Play is opened, the tutorial is offered (once). */
+  get tutorialOffered(): boolean {
+    return this.tutorialSave.offered;
+  }
+
+  private saveTutorial(change: Partial<{ done: boolean; offered: boolean }>): void {
+    this.tutorialSave = { ...this.tutorialSave, ...change };
+    writeJson('zgp.tutorial', this.tutorialSave);
+  }
+
+  /** Offered and declined, or offered and taken: not offered again. */
+  markTutorialOffered(): void {
+    this.saveTutorial({ offered: true });
+  }
+
+  /**
+   * The tutorial race: your Forward, in your faction's colours, on Meridian
+   * Skyway, against a rival team of slow computer pilots whose own forward
+   * spars with you. One race; the cards come as it runs.
+   */
+  startTutorial(): void {
+    if (this.online.room) void this.online.leaveRoom();
+    this.mode = 'tutorial';
+    this.saveTutorial({ offered: true });
+    const others = LIVERIES.map((_, f) => f).filter((f) => f !== this.loadout.team);
+    const rival = others[(Math.random() * others.length) | 0];
+    const cfg = MATCH_OPTIONS[0].cfg;
+    this.setup = { factions: [this.loadout.team, rival], role: ROLE.FW, rivalSkill: 0.3, teamSkill: 0.35, track: TRACKS[0].id, cfg, lesson: true };
+    this.match = createMatch(cfg);
+    this.startRound();
+  }
+
+  /** From the tutorial's results: on to Free Play or the Grand Prix. */
+  afterTutorial(to: 'free' | 'gp'): void {
+    this.hud.hide();
+    this.eyecatch.hide();
+    this.tutorial = null;
+    this.state = 'garage';
+    this.music('menu');
+    if (to === 'free') {
+      this.mode = 'free';
+      this.menus.reset<HangarData>('hangar', this.freeHangar(), ['title', 'modes']);
+    } else {
+      this.mode = null;
+      this.menus.reset('gp', undefined, ['title', 'modes']);
+    }
+  }
+
+  /** From the pause menu: no more cards. The race goes on as an ordinary one. */
+  skipTutorial(): void {
+    this.tutorial?.stop();
+    this.tutorialHeld = false;
+    this.saveTutorial({ done: true });
+    this.resume();
+  }
+
+  /** The card's Continue (a press, a tap or a click on it). */
+  private tutorialContinue(): void {
+    if (this.state !== 'race' || !this.tutorial?.card) return;
+    // The button that closed it must not also fire a boost or a dash.
+    if (this.tutorial.dismiss()) this.input.swallowHeld();
   }
 
   // ---- Grand Prix ----------------------------------------------------------------
@@ -2047,6 +2147,10 @@ export class Game {
     if (this.resultsAt > 0) return;
     const race = this.session.race;
     this.resultsAt = this.time + 2.8;
+    if (this.mode === 'tutorial') {
+      this.saveTutorial({ done: true });
+      this.tutorial?.stop();
+    }
     // Bank the round. A round restarted from the pause menu never gets here.
     // Online the room scores it and says so (roundEnd).
     if (this.mode !== 'online' && this.match && !this.roundScored) {
@@ -2085,7 +2189,7 @@ export class Game {
     if (this.state !== 'paused') this.rotatePaused = false;
     this.rotateEl.hidden = !(upright && this.rotatePaused);
     // The controls.
-    const racing = this.state === 'race' && !!me && !upright;
+    const racing = this.state === 'race' && !!me && !upright && !this.tutorialHeld;
     this.touchPad.show(touch && racing);
     if (touch && racing && me) {
       const battle = me.mode === MODE.BATTLE && me.target >= 0 && !me.retired;
@@ -2179,7 +2283,8 @@ export class Game {
     // offline; online the race behind the pause menu goes on.)
     readLook(this.tuning.feel);
     if (this.lookParam !== null) look.on = this.lookParam >= 0.5;
-    const paused = this.state === 'paused' && !online;
+    const held = this.state === 'race' && this.tutorialHeld;
+    const paused = (this.state === 'paused' && !online) || held;
     tickDrawings(this.renderer.stillShowing || paused ? 0 : dt * (this.state === 'race' ? this.session.timeScale : 1));
     this.eyecatch.update(paused ? 0 : dt);
     this.renderer.paused = paused;
@@ -2278,6 +2383,14 @@ export class Game {
           this.pause();
           break;
         }
+        const tut = this.tutorial && !this.tutorial.over ? this.tutorial : null;
+        if (tut?.card) {
+          // A tutorial card is up: the race waits for it.
+          tut.held(dt);
+          simDt = 0;
+          if (menu.includes('confirm')) this.tutorialContinue();
+          break;
+        }
         const me = race.mechs[local];
         // Slow motion around a knockout you were part of (offline only: online
         // the race does not wait for anyone).
@@ -2288,9 +2401,12 @@ export class Game {
           this.slowmo = 0;
           this.session.timeScale = 1;
         }
+        // (The tutorial slows the partner's heavies while the parry is learnt.)
+        if (tut && !online) this.session.timeScale *= tut.timeScale;
         const flying = me.human && !me.retired && !me.finished;
         this.session.update(dt, flying || me.retired ? this.input.state : null);
         for (const e of this.session.events) this.onEvent(e);
+        tut?.update(race, this.session.events, dt);
         // Out of the race: the lock button changes whose camera you ride.
         const pressed = this.input.state.buttons & ~this.prevButtons;
         this.prevButtons = this.input.state.buttons;
@@ -2320,6 +2436,17 @@ export class Game {
         break;
     }
 
+    const tutOn = this.state === 'race' && !!this.tutorial && !this.tutorial.over;
+    this.tutorialHeld = tutOn && !!this.tutorial!.card;
+    this.tutorialPanel.show(tutOn);
+    if (tutOn) {
+      const t = this.tutorial!;
+      const d = this.input.device;
+      this.tutorialPanel.setCard(t.cardText(this.session.race, d), d, t.cardAge >= CARD_MIN);
+      // The try-it shows once its card is closed.
+      this.tutorialPanel.setGoal(t.card ? null : t.goalView(this.session.race, d), d);
+    }
+
     this.touchFrame(dt);
 
     const cur = this.session.race;
@@ -2332,7 +2459,7 @@ export class Game {
     // A painted still holds everything, the camera and the sparks included.
     const viewDt = this.renderer.stillShowing ? 0 : simDt * (this.state === 'race' ? this.session.timeScale : 1);
     this.view.update(viewDt, flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
-    if ((this.state === 'race' || (this.state === 'paused' && online)) && drawDt > 0) this.hud.update(drawDt, cur, this.view.plates, this.view.focusId);
+    if ((this.state === 'race' || (this.state === 'paused' && online)) && drawDt > 0) this.hud.update(this.tutorialHeld ? 0 : drawDt, cur, this.view.plates, this.view.focusId);
     // The scenery's own motion (water, lights) holds for a painted still too.
     if (!this.renderer.stillShowing) this.worldTime += dt;
     this.trackVis.update(this.worldTime);
@@ -2352,7 +2479,7 @@ export class Game {
     // Continuous sound follows whoever the camera is on.
     const f = cur.mechs[this.view.focusId];
     const sc = this.scene;
-    sc.racing = (this.state === 'race' || this.state === 'results' || (this.state === 'paused' && online)) && cur.phase !== PHASE.COUNTDOWN && !f.retired;
+    sc.racing = (this.state === 'race' || this.state === 'results' || (this.state === 'paused' && online)) && cur.phase !== PHASE.COUNTDOWN && !f.retired && !this.tutorialHeld;
     sc.speed = f.speed;
     // (Home, the computer drives it on: the engine is its throttle, not the pad's.)
     sc.throttle = this.state === 'race' && f.id === local && !f.finished ? Math.max(this.input.state.throttle, f.mode === MODE.BATTLE ? 0.6 : 0) : 0.8;
@@ -2450,6 +2577,7 @@ export class Game {
       phase: r.phase,
       lapPhase: r.lapPhase,
       focus: this.view.focusId,
+      tutorial: this.tutorial ? { card: this.tutorial.card, shown: [...this.tutorial.shown], over: this.tutorial.over, goal: this.tutorial.goalView(r, this.input.device) } : null,
       online: { room: this.online.room?.roomId ?? null, squad: this.online.squad?.roomId ?? null, pid: this.online.pid, phase: this.online.lobby?.phase ?? null, rtt: Math.round(this.online.rtt) },
       net: net ? { confirmed: net.confirmed.tick, predicted: net.predicted.tick, ahead: net.ahead, rebuilds: net.rebuilds, gaps: net.gaps } : null,
       mechs: r.mechs.map((m) => ({ name: m.name, s: Math.round(m.s), speed: Math.round(m.speed), hp: Math.round(m.hp), drive: Math.round(m.drive), cells: m.cells, place: m.place, mode: m.mode, retired: m.retired, finished: m.finished })),

@@ -23,6 +23,7 @@ import { installFrame, video } from './video';
 //   &diag=1         a readout of the frame rate, the worst frames and the sound (for testing on a device)
 //   &match=0..4     match format                  &tune=1   tuning panel open
 //   ?sprint=0..4    jump straight into a Sprint in this format (single race, 3 races, 5 races, first to 2 wins, first to 3)
+//   ?tutorial=1     jump straight into the tutorial race
 //   &track=canyon   circuit: meridian, canyon, helios, crucible, frostline, titan, abyss, monsoon or zenith
 //   &music=suno     race music from a recorded song where a circuit has one
 //                   (Meridian), built up lap by lap: see src/client/audio/song.ts
@@ -121,6 +122,7 @@ async function boot(): Promise<void> {
     rivals: q.has('rivals') ? Number(q.get('rivals')) : undefined,
     match: q.has('match') ? Number(q.get('match')) : undefined,
     sprint: q.has('sprint') ? Number(q.get('sprint')) : undefined,
+    tutorial: q.has('tutorial'),
     tune: q.has('tune'),
     track: q.get('track') ?? undefined,
     room: q.get('room') ?? undefined,

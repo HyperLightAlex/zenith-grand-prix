@@ -367,7 +367,7 @@ export interface RaceState {
   /** Tunable rules for this race. Plain numbers, part of the state. */
   rules: Rules;
   laps: number;
-  /** 1 formation, 2 battle, 3 speed. Follows the race leader. */
+  /** 1 formation, 2 battle, 3 speed. Follows the race leader (in a lesson, the pupil). */
   lapPhase: number;
   /** Distance of the leading mech still racing. */
   leaderS: number;
@@ -379,6 +379,11 @@ export interface RaceState {
   endTick: number;
   /** Tick until which each Cell gate is dark after being taken; lit once the tick passes it. */
   gateDark: number[];
+  /**
+   * A tutorial race (RaceConfig.lesson). Absent otherwise: the state holds
+   * no nulls (a null in it would be a NaN that went through JSON).
+   */
+  lesson?: Lesson;
   /** Events raised during the most recent step. */
   events: SimEvent[];
 }
@@ -413,4 +418,25 @@ export interface RaceConfig {
   mode?: 'teams' | 'sprint';
   /** Sprint: the grid, mech ids from pole back (by seat order if left out). */
   grid?: number[];
+  /** A tutorial race round one learner (see Lesson). Offline only. */
+  lesson?: { pupil: number; spar: number };
+}
+
+/**
+ * A tutorial race: the guided first race, round one learner. The race
+ * follows them (the lap phase is their lap, the flag falls once they are
+ * home) and the field gives them room to learn: nobody but their sparring
+ * partner fights them, nobody but they fight it, and they cannot be
+ * knocked out. The partner, the rival forward, keeps near them on the first
+ * two laps, answers a lock with a duel on the battle lap, takes a few blows
+ * before it swings back, and then throws only heavies, slowly, so the tell
+ * can be read.
+ */
+export interface Lesson {
+  pupil: number;
+  spar: number;
+  /** When the pupil took its present lock on the partner (-1: not locked on it). */
+  lockedAt: number;
+  /** Clean blows the pupil has landed on the partner since that lock. */
+  hits: number;
 }
