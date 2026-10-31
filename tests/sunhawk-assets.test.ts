@@ -275,12 +275,15 @@ describe('updated Sunhawk production preparation', () => {
     }
   });
 
-  it('uses valid UV details up close and smaller, complete exports at distance', async () => {
+  it('uses solid native paint and smaller, complete exports at distance', async () => {
     const levels = await Promise.all([0,1,2].map(load));
     const counts = levels.map((a) => a.parts.reduce((n,p) => n + (p.geometry.index?.count ?? p.geometry.getAttribute('position').count) / 3, 0));
     expect(counts[1]).toBeLessThan(counts[0] * .60);
     expect(counts[2]).toBeLessThan(counts[0] * .32);
-    expect(levels[0].parts.filter((p) => p.detail)).toHaveLength(7);
+    // Markings now use reviewed runtime decal geometry rather than UV overlays
+    // baked into the armour (covered independently in prepared-markings tests).
+    expect(levels[0].sourceTextureSchema).toBe(1);
+    expect(levels[0].parts.filter((p) => p.detail)).toHaveLength(0);
     // A joint/paint slot can be split into several customization parts. Compare
     // its combined bounds, preserving the original LOD silhouette check.
     const bounds = (parts: typeof levels[number]['parts']) => {
@@ -303,13 +306,8 @@ describe('updated Sunhawk production preparation', () => {
           if (![pos.getX(i),pos.getY(i),pos.getZ(i)].every(Number.isFinite)) throw new Error('Nonfinite LOD');
           if (Math.abs(Math.hypot(normal.getX(i),normal.getY(i),normal.getZ(i))-1)>.001) throw new Error('Invalid LOD normal');
         }
-        if (p.detail) {
-          expect(level).toBe(0);
-          const uv = p.geometry.getAttribute('uv');
-          expect(uv.count).toBe(pos.count);
-          expect(Math.min(...uv.array)).toBeGreaterThanOrEqual(0);
-          expect(Math.max(...uv.array)).toBeLessThanOrEqual(1);
-        }
+        expect(p.detail).toBe(false);
+        expect(p.geometry.hasAttribute('uv')).toBe(false);
       }
       for (const [key,box] of bounds(asset.parts)) {
         const original = originalBounds.get(key);

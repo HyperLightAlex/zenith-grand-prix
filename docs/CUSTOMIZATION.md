@@ -17,10 +17,9 @@ faction's frames have the same stats), so none of it needs balancing.
 
 Parts swap only between designs of the same frame: Swift with Swift,
 Vector with Vector, Bulwark with Bulwark. That is where swapping works:
-within a frame, the roster's designs share one skeleton (every bone length
-and joint position is equal across them), so a part from one lands on
-another's joints exactly, with no fitting or scaling. The Sunhawk is the
-exception: it was built on a skeleton of its own (shorter thighs, longer
+within a frame, designs share a mechanical joint contract. Their authored
+armour and accessory sockets can differ, so rigid modules are seated against
+the selected receiving surfaces. The Sunhawk also has different body lengths: it was built on a skeleton of its own (shorter thighs, longer
 ankles, narrower shoulders, shorter upper arms, taller overall). So a custom
 mech stands on a skeleton made from its parts: each length comes from the
 part whose armour spans it (the thighs' length from the thighs, the
@@ -47,12 +46,12 @@ again as wide as a Swift's), and nothing would fit.
 
 | Slot | Tag | What it is (joints) |
 |---|---|---|
-| Head | `head` | `head` |
+| Head | `head` | `head`, plus head-owned fixed enclosure pieces on `chest` (Maul cowl/teeth and Sobek nape) |
 | Shoulders (a pair) | `shoulders` | the shoulder armour on `shL` and `shR` (outboard of and above the shoulder joint), and the Sunhawk's `towerL`/`towerR` |
 | Chest | `chest` | `chest`, except what is on its back |
 | Back thrusters | `backpack` | `wingL`, `wingR`, and the pieces on the back of `chest` (the tag keeps its first name; the game calls it Back thrusters) |
 | Waist | `waist` | `spine` (it varies little within a frame: the game may fold it into Hips) |
-| Hips | `hips` | `hips`, and the Sunhawk's `skirtL`, `skirtR`, `skirtBack` |
+| Hips | `hips` | `hips`, `skirtL`, `skirtR`, `skirtBack`, `skirtFront` where authored |
 | Left arm | `armL` | the upper arm on `shL` (the shoulder bearing and the shell down to the elbow), `elL`, `wrL` |
 | Right arm | `armR` | the same on the right: `shR`, `elR`, `wrR`; it carries the weapon (modelled into the right hand), always the same kind of weapon within a frame |
 | Thighs (both legs) | `thighs` | `hipL`, `hipR` |
@@ -62,6 +61,42 @@ again as wide as a Swift's), and nothing would fit.
 Each arm is set on its own; the hangar links them by default (one choice
 sets both, and they can be unlinked). The shoulders, thighs, shins and feet
 are each one choice for both sides.
+
+### Accepted roster production sources (31 October 2026)
+
+The accepted roster is the fifteen production designs, each at three levels of
+detail. Its standalone Blender sources, exporter, manifests and verification
+are in `art/blender/roster/production/`. Historical experiment pages, supplied
+textured models and reconstructed-base alternatives are not shipped. See that
+package's README before editing or exporting; the earlier procedural exporters
+below describe the first parts/insignia pass and must not overwrite these assets.
+
+All accepted armour uses solid paint slots. The legacy `source_texture_schema=1`
+extra now signals authored rigid fittings; it does not mean the model is textured.
+`fittings_json` contains accessory joints, weapon/number/hand/heel anchors and
+reviewed mounting interfaces. `main_thrusters_json` and `calf_thrusters_json`
+include physical outlets/rotations and separate `effectWidth`/`effectLength`,
+so nozzle geometry does not accidentally shrink an approved exhaust effect.
+
+`nativeMounts.ts` samples the head's narrow bearing and the torso's matching
+surface, and a backpack's central saddle against the receiving chest. It moves
+the complete rigid module, including ink, decals, accessories and emitters.
+The same LOD0-derived seat is used for all detail levels; stock assembly keeps
+its authored position. Reviewed hidden-neck insertion/capacity and waist-axis
+metadata handle differing sockets. The sole reviewed donor-specific exception
+is Fujin on Daystar (`headSeatOffsets.fujin=-0.08` metres).
+
+Maul's cowl and both tooth rows travel with the head customization slot but stay
+rigidly attached to the chest during head rotation. Back fins, wings and rings
+travel with the backpack; Longbow's helmet halo/plume are head-owned.
+
+Retained procedural warning/emblem decals are captured in the small
+`assets/roster/prepared-markings.json` cache. Their joint/part ownership and
+transforms are authored data, cloned for each assembled mech and recoloured
+with its team's atlas. Production does not load the old reference models to
+reconstruct them. Modelled faction insignias still use the separate replacement
+contract below. The production tests cover both paths, all fifteen designs,
+all three LODs, four engines per design, and same-frame mounting combinations.
 
 ### The export contract
 

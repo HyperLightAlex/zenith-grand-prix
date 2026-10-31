@@ -1,3 +1,10 @@
+ACCEPTED ROSTER RELEASE EXPORT — 31 OCTOBER 2026
+The current approved roster and updated Sunhawk are now authored/exported by
+art/blender/roster/production/README.txt. Use that standalone package for release
+changes. The procedural exporter documented below is historical; running it on
+production paths would replace the approved hybrids with the earlier designs.
+The preserved current-A Sunhawk comparison remains unchanged.
+
 SUNHAWK EXPORT NOTES — GEOMETRY INK
 
 The production scene remains SUNHAWK • Art comparison. Variant B is the

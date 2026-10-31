@@ -1,0 +1,967 @@
+{
+  "summary": {
+    "designs": 15,
+    "files": 45,
+    "byte_exact": 39,
+    "geometry_and_ink_exact": 45,
+    "metadata_only_files": 6
+  },
+  "designs": {
+    "sunhawk": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/sunhawk-updated.glb",
+        "accepted_sha256": "c72abab7f0d11a3b257432c2dad5bdbeb815f580d3b925e17c6f99706c2a91ae",
+        "production_sha256": "c72abab7f0d11a3b257432c2dad5bdbeb815f580d3b925e17c6f99706c2a91ae",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 120,
+        "stream_sha256": "441ac89cda5eb1772a86403ba23516e2a68abd347dd11b37748dca6c96944f76"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/sunhawk-updated-lod1.glb",
+        "accepted_sha256": "fb01e7dab112f7c59e5c5acbeef25a49629c0e5ef0c4f19f40a4cdb247a7728a",
+        "production_sha256": "fb01e7dab112f7c59e5c5acbeef25a49629c0e5ef0c4f19f40a4cdb247a7728a",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 120,
+        "stream_sha256": "eb8613e47f8e868dabb1c19dc03042b1d67fa42102649ed49cca9a53acd0890f"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/sunhawk-updated-lod2.glb",
+        "accepted_sha256": "9313d2286e53b46ae5f570ab6e3960e3dabbb65b468876791c0319ab241d439f",
+        "production_sha256": "9313d2286e53b46ae5f570ab6e3960e3dabbb65b468876791c0319ab241d439f",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 96,
+        "stream_sha256": "27c9ad73f77c2dbe917eb311cc4f42e5a9f012ff5d65c2866cd7cd3a90a45608"
+      }
+    ],
+    "daystar": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/daystar.glb",
+        "accepted_sha256": "e27bc23dd2a3f27326b1db71715dff6972f0d654eeadbebfb94bd7f7d24749de",
+        "production_sha256": "e27bc23dd2a3f27326b1db71715dff6972f0d654eeadbebfb94bd7f7d24749de",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 125,
+        "stream_sha256": "7c73a860d936e1c3cb4e8d0c37919bb2668c4bce06e6fefbb98b50f57f6baa64"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/daystar-lod1.glb",
+        "accepted_sha256": "ca1857087def1d7b12e59d67c69d08e9a78d0285d48e59b7f9bd5d808bd54d69",
+        "production_sha256": "ca1857087def1d7b12e59d67c69d08e9a78d0285d48e59b7f9bd5d808bd54d69",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 125,
+        "stream_sha256": "e3524b5b3e152cbc620328fbb7cb79b4cd1f0a8c3af48886563666e073e89ef6"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/daystar-lod2.glb",
+        "accepted_sha256": "f2998105f7d76464c664c7623d1c259d12410dacd3ccbe2d5ba3d3bf00d79bce",
+        "production_sha256": "f2998105f7d76464c664c7623d1c259d12410dacd3ccbe2d5ba3d3bf00d79bce",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 101,
+        "stream_sha256": "6bbcbfcc3fae1044611f28bffa7e7ca820fdd2e48189c2abfb23ff81d6bd970a"
+      }
+    ],
+    "rampart": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/rampart.glb",
+        "accepted_sha256": "261fd19a6884c8517701f93d1a743828c7d297878288e6091cdc86975e418d40",
+        "production_sha256": "261fd19a6884c8517701f93d1a743828c7d297878288e6091cdc86975e418d40",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 139,
+        "stream_sha256": "fd43693df2b9200d14fcf0c52cf67d02abb7a2afe2b6cef3894bf04c10d6697d"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/rampart-lod1.glb",
+        "accepted_sha256": "b89bb4c5a1e4dfd6334ec1c3b93712a7aa0baa37a65edc58703243f7580887c7",
+        "production_sha256": "b89bb4c5a1e4dfd6334ec1c3b93712a7aa0baa37a65edc58703243f7580887c7",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 134,
+        "stream_sha256": "f9629e548de8fc0a9c7b17b068b54f2f0895a4ec3b7f5b4bfca3d71e932a5e31"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/rampart-lod2.glb",
+        "accepted_sha256": "80e103ecfd1781d358bf24a409905d6eea2e33c2af8aee6843d0306a1640144c",
+        "production_sha256": "80e103ecfd1781d358bf24a409905d6eea2e33c2af8aee6843d0306a1640144c",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 115,
+        "stream_sha256": "f2f53cdf44b45cc049e10acdb87bbf267aae0d596732a6db50ac73b1cbadc8d2"
+      }
+    ],
+    "razor": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/razor.glb",
+        "accepted_sha256": "9e29c727c90fa3f13d055be213ddbb9bd3c9bf571fce21b4fbc3f9ead7f457eb",
+        "production_sha256": "9e29c727c90fa3f13d055be213ddbb9bd3c9bf571fce21b4fbc3f9ead7f457eb",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 125,
+        "stream_sha256": "c5ce20b2609b5a7b7dc50b8a483a3717ad44d106f13ef3b34615a2b7066f98e3"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/razor-lod1.glb",
+        "accepted_sha256": "e3d18793446787670b59e3ad89bd60a631696ed31956cab880e4f61878bd7fa4",
+        "production_sha256": "e3d18793446787670b59e3ad89bd60a631696ed31956cab880e4f61878bd7fa4",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 121,
+        "stream_sha256": "6c08009ee01a3aa6915ae80d9984468c76d8f4e4894bfccd918a5d4c78fd33a4"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/razor-lod2.glb",
+        "accepted_sha256": "caf55c4f820be884ab2d05121834782c7573243061be1be0a302f70b6bc0545f",
+        "production_sha256": "caf55c4f820be884ab2d05121834782c7573243061be1be0a302f70b6bc0545f",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 104,
+        "stream_sha256": "c38edc785c8863e39ab696d1ad241d09cb1fb9977cdde2cc7776d31231cddf13"
+      }
+    ],
+    "stinger": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/stinger.glb",
+        "accepted_sha256": "1d9a8b57263055be8513295365f23c959d5f7b56e314b68aa6ed8136aea9e834",
+        "production_sha256": "1d9a8b57263055be8513295365f23c959d5f7b56e314b68aa6ed8136aea9e834",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 122,
+        "stream_sha256": "62565715ab575e5d409e73440e0f782b6e793c0e0f8e57a899682e67e86ffa34"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/stinger-lod1.glb",
+        "accepted_sha256": "5a6b04d88d1b37cdf0ca221b4022bed653289eafa85a1a6edf1f576f444c1202",
+        "production_sha256": "5a6b04d88d1b37cdf0ca221b4022bed653289eafa85a1a6edf1f576f444c1202",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 118,
+        "stream_sha256": "d7b4b96502258f2337e319320367f6b1a59f818d6505f397a2d9d22433e0a48b"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/stinger-lod2.glb",
+        "accepted_sha256": "f5c6ea73ba1a3c6e83d4907dee41e9e07c959700d132718fdcb78d03ab3f59a9",
+        "production_sha256": "f5c6ea73ba1a3c6e83d4907dee41e9e07c959700d132718fdcb78d03ab3f59a9",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 101,
+        "stream_sha256": "8eb0abadddfd108dcde30dea7c95f53d341fdac95e7added67e72b502a83bfd7"
+      }
+    ],
+    "maul": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/maul.glb",
+        "accepted_sha256": "a5931b14809b8b3e51ee56a403795c45ac1b30d7579e07889f448f9e496cfb7b",
+        "production_sha256": "a5931b14809b8b3e51ee56a403795c45ac1b30d7579e07889f448f9e496cfb7b",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 133,
+        "stream_sha256": "592e4eba8061b7ddc1c58a753a07c455e2245409223a531b45508e86e3c19afa"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/maul-lod1.glb",
+        "accepted_sha256": "cc526ef78039d83cbbf0f7da02ba023a39cd6bb68013d11eceae5cdf6b6243a5",
+        "production_sha256": "cc526ef78039d83cbbf0f7da02ba023a39cd6bb68013d11eceae5cdf6b6243a5",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 128,
+        "stream_sha256": "2d888ee95984fef3ffa36fbf22aff68e5adcc2ec388c09ebd4dc7756d4110f89"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/maul-lod2.glb",
+        "accepted_sha256": "f80cee438b2f87262f147a43c25ed5685d5870b8cfcce9601a9174057a3f6643",
+        "production_sha256": "f80cee438b2f87262f147a43c25ed5685d5870b8cfcce9601a9174057a3f6643",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 110,
+        "stream_sha256": "e4553982bfe56761706199ef0118ffad9374c32ba0da02bf87ffc1992d65b910"
+      }
+    ],
+    "anubis": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/anubis.glb",
+        "accepted_sha256": "3eb5c4b0df650cd6610d87883d0dfa0c9a0c44d02298d079f0ba0c457517416a",
+        "production_sha256": "3eb5c4b0df650cd6610d87883d0dfa0c9a0c44d02298d079f0ba0c457517416a",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 132,
+        "stream_sha256": "c4d046843c354b12bcc3c120d539e27fa8f2155edbea462204cecff661d6ac3e"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/anubis-lod1.glb",
+        "accepted_sha256": "794c04b67b13fd5536178d49a9c31b297a84d278263abd2025d5545ac0295140",
+        "production_sha256": "794c04b67b13fd5536178d49a9c31b297a84d278263abd2025d5545ac0295140",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 127,
+        "stream_sha256": "840b0e0cdb9a402e064c9ce8aaba41269d6644f749c37318616922bc5699592f"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/anubis-lod2.glb",
+        "accepted_sha256": "530f816e8f258e4506059569e906041f2091a3b85c5b46ebf59c24a4078951a4",
+        "production_sha256": "530f816e8f258e4506059569e906041f2091a3b85c5b46ebf59c24a4078951a4",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 108,
+        "stream_sha256": "122c14b4fca81c285cad982f794db80fc913f70ddbf8b50aa97a4e9c94cbb9d7"
+      }
+    ],
+    "horus": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/horus.glb",
+        "accepted_sha256": "fe0bec9edad067a56669abfbdf711054f66b99cb0713739e68a053024dbb5017",
+        "production_sha256": "fe0bec9edad067a56669abfbdf711054f66b99cb0713739e68a053024dbb5017",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 140,
+        "stream_sha256": "1022859f64af74eacc8a984e79ba5f91a75d3ca93dba9ad50d7735740c062685"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/horus-lod1.glb",
+        "accepted_sha256": "5f700baac6b697fa883da8a8e5325b4f06488457af74e0b6377e783976a7fd97",
+        "production_sha256": "5f700baac6b697fa883da8a8e5325b4f06488457af74e0b6377e783976a7fd97",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 137,
+        "stream_sha256": "5b31065e65d7b83e74b1f143225f671a8695b6bb29d4bad7c5eb977ced445d36"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/horus-lod2.glb",
+        "accepted_sha256": "a73c496143c8c259a3f6ad46eef2749faa1b90ea56c7070abb98ef70332a7790",
+        "production_sha256": "a73c496143c8c259a3f6ad46eef2749faa1b90ea56c7070abb98ef70332a7790",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 117,
+        "stream_sha256": "6fd8012b399d64ff30d53cb339836ea5aebad1d2d0681f09315253e93ce61a1c"
+      }
+    ],
+    "sobek": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/sobek.glb",
+        "accepted_sha256": "2acfebdebc15c9b1f7bc33bd8b405b917237d0a3e3d796b762065a890da78739",
+        "production_sha256": "2acfebdebc15c9b1f7bc33bd8b405b917237d0a3e3d796b762065a890da78739",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 145,
+        "stream_sha256": "62cdff9fe753cde93587c8d9f20b54526bbc647ddaece4b755641501d4c0d733"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/sobek-lod1.glb",
+        "accepted_sha256": "7e57892def1cb1ae1c0f436445f5194183151771806bfe6f91fc4c9e1c2e9bb9",
+        "production_sha256": "7e57892def1cb1ae1c0f436445f5194183151771806bfe6f91fc4c9e1c2e9bb9",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 142,
+        "stream_sha256": "eed7ebfb979e818b28abfc485878a912d5d0fd08b38c519c365993eb5236125b"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/sobek-lod2.glb",
+        "accepted_sha256": "2a4c983271c1d7a2e2919c75dccb5b26bb924784f3d2ef06b89733a7663974b2",
+        "production_sha256": "2a4c983271c1d7a2e2919c75dccb5b26bb924784f3d2ef06b89733a7663974b2",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 120,
+        "stream_sha256": "00dfb9cfa9d7a0a4773a62d87465fe9ab40b50749927c27fa53c683ff7c8af10"
+      }
+    ],
+    "seraph": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/seraph.glb",
+        "accepted_sha256": "013ec307f81c228f381524c2d1edfd5837ee203d77683569ee4f0d6de523a0ea",
+        "production_sha256": "013ec307f81c228f381524c2d1edfd5837ee203d77683569ee4f0d6de523a0ea",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 115,
+        "stream_sha256": "0fe17890295d2ec7974c842069256362e2624909095bd643abb1cf41a5c21231"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/seraph-lod1.glb",
+        "accepted_sha256": "dc0dbd1d11fec314ff190376e7d35afff4075e2dbfc52150fd366f9758d4a549",
+        "production_sha256": "dc0dbd1d11fec314ff190376e7d35afff4075e2dbfc52150fd366f9758d4a549",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 115,
+        "stream_sha256": "e3be9e8c643fd4100b6caa45a5f218de5a5a70471a506d1700075014ad3f99f9"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/seraph-lod2.glb",
+        "accepted_sha256": "02b617b196c8322d4a4733a450b0bb01857312c4e213f7d9763600e835de89b1",
+        "production_sha256": "02b617b196c8322d4a4733a450b0bb01857312c4e213f7d9763600e835de89b1",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 90,
+        "stream_sha256": "881ebc4e9c4c2c3848f9e0883bccc9c400d0cefe84c507f1ba09c4e77a5cd928"
+      }
+    ],
+    "longbow": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/longbow.glb",
+        "accepted_sha256": "bc1391dd8cce44c042f66c2aab68f945bef5d2e5242b86fce9dc1c3c74a7ab4b",
+        "production_sha256": "bc1391dd8cce44c042f66c2aab68f945bef5d2e5242b86fce9dc1c3c74a7ab4b",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 143,
+        "stream_sha256": "236cad002bf796070cc3d3496e03bcce49b35fd389f6c6a0cb540fc52aa4015d"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/longbow-lod1.glb",
+        "accepted_sha256": "20b93d545317bfaf898e0357f2d0860f022fa0d3082a10f407b6513890041e34",
+        "production_sha256": "20b93d545317bfaf898e0357f2d0860f022fa0d3082a10f407b6513890041e34",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 139,
+        "stream_sha256": "cb57d5f93b05d28a599eacf5d6e136df379989b0c0ad4bff3e1b77c2bcf6041f"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/longbow-lod2.glb",
+        "accepted_sha256": "a419ba5fa2a313f143c93a5741277eb14209293e6435c949f59b10c94360205b",
+        "production_sha256": "a419ba5fa2a313f143c93a5741277eb14209293e6435c949f59b10c94360205b",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 118,
+        "stream_sha256": "6167bc53d8cccfc839509f1fa190d7679d876c996fea0eb57825d06f4d9bd67f"
+      }
+    ],
+    "paladin": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/paladin.glb",
+        "accepted_sha256": "3b0e5e4ef5ebd11379af44ada483c9c4bd47d8d9d2e0932e5c314ad7b23b0318",
+        "production_sha256": "3b0e5e4ef5ebd11379af44ada483c9c4bd47d8d9d2e0932e5c314ad7b23b0318",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 141,
+        "stream_sha256": "dbd9d1c464bbec3b5d8cf02f19b34ba6f6b6ee1e450964430061b4fb855187d2"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/paladin-lod1.glb",
+        "accepted_sha256": "193aa95508a12f907582ad4240aa46f1cc7306b01f3c174d4c71f898a63daa48",
+        "production_sha256": "193aa95508a12f907582ad4240aa46f1cc7306b01f3c174d4c71f898a63daa48",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 138,
+        "stream_sha256": "80a2c673adc8767a37da65cd061c3a5bb687e9e1e975f73f08f6477b647ffe8a"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/paladin-lod2.glb",
+        "accepted_sha256": "13627e5fc58ea412538e3a9eee2409dedd1725f95dfb971379dd17e1ff99d6db",
+        "production_sha256": "13627e5fc58ea412538e3a9eee2409dedd1725f95dfb971379dd17e1ff99d6db",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 115,
+        "stream_sha256": "424700596dbd3de451c94c3d838545ea4f3ad6b5f3700c0121ccf3bd3323f3a7"
+      }
+    ],
+    "kamaitachi": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/kamaitachi.glb",
+        "accepted_sha256": "a6c6d8fc8c912e53b23f6c50eeec6d17604cfe58f6945dae969db2b30d8f32c2",
+        "production_sha256": "de2897a695b437748a611b5e560175c92237cc3399f5e384e84b871b959d8bde",
+        "bytes_exact": false,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [
+          {
+            "insignia": "chest",
+            "field": "center",
+            "before": [
+              0,
+              0.57,
+              1.184
+            ],
+            "after": [
+              -0.011,
+              0.582499996,
+              1.184
+            ]
+          },
+          {
+            "insignia": "chest",
+            "field": "width",
+            "before": 0.84,
+            "after": 0.897749989
+          },
+          {
+            "insignia": "shoulderL",
+            "field": "width",
+            "before": 0.55,
+            "after": 0.661500011
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "width",
+            "before": 0.55,
+            "after": 0.661500011
+          }
+        ],
+        "groups": 133,
+        "stream_sha256": "d0a3867ec2970a4592a32cf9c89f6531fb8715c30f41e419a535df62fe7f370c"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/kamaitachi-lod1.glb",
+        "accepted_sha256": "561f380474294a558a7f23d164061d4c662797e1507c94c860698171da622e68",
+        "production_sha256": "2c3b3c053a7d60c2df93c4c27dee5d45be0c0fd153609d20f0687922e81ef549",
+        "bytes_exact": false,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [
+          {
+            "insignia": "chest",
+            "field": "center",
+            "before": [
+              0,
+              0.57,
+              1.184
+            ],
+            "after": [
+              -0.011,
+              0.582499996,
+              1.184
+            ]
+          },
+          {
+            "insignia": "chest",
+            "field": "width",
+            "before": 0.84,
+            "after": 0.897749989
+          },
+          {
+            "insignia": "shoulderL",
+            "field": "width",
+            "before": 0.55,
+            "after": 0.661500011
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "width",
+            "before": 0.55,
+            "after": 0.661500011
+          }
+        ],
+        "groups": 133,
+        "stream_sha256": "1261dc0cf743d0d283816d85b9569f16e83ffa2b9e699645215eb33d384bf073"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/kamaitachi-lod2.glb",
+        "accepted_sha256": "53c10bf004bbf388cb710ee37c0b5b04ef9e948de72dc441560a442b5acbf0a5",
+        "production_sha256": "b06ac60083eeab4a12ff57ffe84f6b74c6993060abc577f20881b32e0f993618",
+        "bytes_exact": false,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [
+          {
+            "insignia": "chest",
+            "field": "center",
+            "before": [
+              0,
+              0.57,
+              1.184
+            ],
+            "after": [
+              -0.011,
+              0.582499996,
+              1.184
+            ]
+          },
+          {
+            "insignia": "chest",
+            "field": "width",
+            "before": 0.84,
+            "after": 0.897749989
+          },
+          {
+            "insignia": "shoulderL",
+            "field": "width",
+            "before": 0.55,
+            "after": 0.661500011
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "width",
+            "before": 0.55,
+            "after": 0.661500011
+          }
+        ],
+        "groups": 110,
+        "stream_sha256": "b384c00a1c2d3b2ada679a6c7b99b1592d82de4eb51c7bd9bb38e9abc00c860a"
+      }
+    ],
+    "fujin": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/fujin.glb",
+        "accepted_sha256": "9669c05c9ef733622a665893ad5789318d39273abdc53198a27ffa4e577a191a",
+        "production_sha256": "d6d2c88f82778b4af77b508a5da86fe8039331a7b490c0708f79a6ecd05f5032",
+        "bytes_exact": false,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [
+          {
+            "insignia": "shoulderL",
+            "field": "center",
+            "before": [
+              0.08,
+              0.1,
+              0.655
+            ],
+            "after": [
+              0.083250001,
+              0.1065,
+              0.655
+            ]
+          },
+          {
+            "insignia": "shoulderL",
+            "field": "width",
+            "before": 0.51,
+            "after": 0.641550002
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "center",
+            "before": [
+              -0.08,
+              0.1,
+              0.655
+            ],
+            "after": [
+              -0.083250001,
+              0.1065,
+              0.655
+            ]
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "width",
+            "before": 0.51,
+            "after": 0.641550002
+          }
+        ],
+        "groups": 128,
+        "stream_sha256": "00e047a144a1f572edfc46c89f0ff7428556b7c03cebda804882d0d039407516"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/fujin-lod1.glb",
+        "accepted_sha256": "d415640c03d6cd7b58778b617fa26c3a21da15ccb6d7353f659aaec3b41738db",
+        "production_sha256": "fa7da6880ceb6d3422e2283e60aac94acfc23705400a4ea59fece0fa580cf938",
+        "bytes_exact": false,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [
+          {
+            "insignia": "shoulderL",
+            "field": "center",
+            "before": [
+              0.08,
+              0.1,
+              0.655
+            ],
+            "after": [
+              0.083250001,
+              0.1065,
+              0.655
+            ]
+          },
+          {
+            "insignia": "shoulderL",
+            "field": "width",
+            "before": 0.51,
+            "after": 0.641550002
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "center",
+            "before": [
+              -0.08,
+              0.1,
+              0.655
+            ],
+            "after": [
+              -0.083250001,
+              0.1065,
+              0.655
+            ]
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "width",
+            "before": 0.51,
+            "after": 0.641550002
+          }
+        ],
+        "groups": 128,
+        "stream_sha256": "81d96baa86fda066d6045f1b8d4cfaefd0eff10b52ffc361fb3cd7a698828fba"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/fujin-lod2.glb",
+        "accepted_sha256": "65eac5e48bf6a0ea7dded37a051f34b0c8540aaa3df9e82720373e5477b6be5f",
+        "production_sha256": "d78958b1ff8f93f8e5cd956074cb802e2b4cd93125ea7f6cb9d4a4648da30af3",
+        "bytes_exact": false,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [
+          {
+            "insignia": "shoulderL",
+            "field": "center",
+            "before": [
+              0.08,
+              0.1,
+              0.655
+            ],
+            "after": [
+              0.083250001,
+              0.1065,
+              0.655
+            ]
+          },
+          {
+            "insignia": "shoulderL",
+            "field": "width",
+            "before": 0.51,
+            "after": 0.641550002
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "center",
+            "before": [
+              -0.08,
+              0.1,
+              0.655
+            ],
+            "after": [
+              -0.083250001,
+              0.1065,
+              0.655
+            ]
+          },
+          {
+            "insignia": "shoulderR",
+            "field": "width",
+            "before": 0.51,
+            "after": 0.641550002
+          }
+        ],
+        "groups": 106,
+        "stream_sha256": "1581e35eb61d27dc132f3b8f1d5262d2a2d98ca9020920407f206cbbbab550a3"
+      }
+    ],
+    "raijin": [
+      {
+        "level": 0,
+        "file": "src/client/render/mech/assets/roster/raijin.glb",
+        "accepted_sha256": "b8ffb161abcb0bda036fe0cbb0c788f5beecd106be5415ce4794ff43925393fb",
+        "production_sha256": "b8ffb161abcb0bda036fe0cbb0c788f5beecd106be5415ce4794ff43925393fb",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 129,
+        "stream_sha256": "1ed839d4712c8390615bb11075f16002109a9fe070a30a7a55474404d200a441"
+      },
+      {
+        "level": 1,
+        "file": "src/client/render/mech/assets/roster/raijin-lod1.glb",
+        "accepted_sha256": "0af059d2397361d7e469b75c1c780aa478ac9008da09f27320521bfdf96dc321",
+        "production_sha256": "0af059d2397361d7e469b75c1c780aa478ac9008da09f27320521bfdf96dc321",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 129,
+        "stream_sha256": "f1c5c41ab70401c160302a24c49c1fcfb25a24ba763fc3b4d42e9cf890f6ade5"
+      },
+      {
+        "level": 2,
+        "file": "src/client/render/mech/assets/roster/raijin-lod2.glb",
+        "accepted_sha256": "1cdd1736d8cdc62f10c25e0b3b9ef1ef5d8ec697afa55081251d04c9b9f8084e",
+        "production_sha256": "1cdd1736d8cdc62f10c25e0b3b9ef1ef5d8ec697afa55081251d04c9b9f8084e",
+        "bytes_exact": true,
+        "expanded_triangle_and_ink_streams_exact": true,
+        "binary_payload_exact": true,
+        "mesh_groups_and_extras_exact": true,
+        "approved_metadata_only_changes": [],
+        "groups": 105,
+        "stream_sha256": "a94a1aeae425aeb5cfc5e3030d8afb393273e4d945a317f41e88c6ff2fe9bd4d"
+      }
+    ]
+  },
+  "insignia_anchor_audit": {
+    "sunhawk": [],
+    "daystar": [],
+    "rampart": [],
+    "razor": [],
+    "stinger": [],
+    "maul": [],
+    "anubis": [],
+    "horus": [],
+    "sobek": [],
+    "seraph": [
+      {
+        "id": "chest",
+        "center_error": 4.149973364953041e-09,
+        "coverage_error": 0.0,
+        "tangent_span": 0.6845000069588423,
+        "width": 0.74,
+        "pass": true
+      }
+    ],
+    "longbow": [
+      {
+        "id": "chest",
+        "center_error": 1.369212112856122e-07,
+        "coverage_error": 0.0,
+        "tangent_span": 0.7864317176939941,
+        "width": 0.8021603682565384,
+        "pass": true
+      }
+    ],
+    "paladin": [
+      {
+        "id": "chest",
+        "center_error": 5.2076065154560425e-08,
+        "coverage_error": 0.0,
+        "tangent_span": 0.8262992507657587,
+        "width": 0.8428252582139442,
+        "pass": true
+      }
+    ],
+    "kamaitachi": [
+      {
+        "id": "chest",
+        "center_error": 1.7232515414633554e-10,
+        "coverage_error": 0.0,
+        "tangent_span": 0.8549999892711639,
+        "width": 0.897749989,
+        "pass": true
+      },
+      {
+        "id": "shoulderL",
+        "center_error": 3.427267081246299e-09,
+        "coverage_error": 0.0,
+        "tangent_span": 0.6300000101327896,
+        "width": 0.661500011,
+        "pass": true
+      },
+      {
+        "id": "shoulderR",
+        "center_error": 3.427267081246299e-09,
+        "coverage_error": 0.0,
+        "tangent_span": 0.6300000101327896,
+        "width": 0.661500011,
+        "pass": true
+      }
+    ],
+    "fujin": [
+      {
+        "id": "chest",
+        "center_error": 2.0608514247899556e-07,
+        "coverage_error": 0.0,
+        "tangent_span": 0.9504704643810911,
+        "width": 0.9694799011818305,
+        "pass": true
+      },
+      {
+        "id": "shoulderL",
+        "center_error": 2.3841856267026174e-10,
+        "coverage_error": 0.0,
+        "tangent_span": 0.6110000014305115,
+        "width": 0.641550002,
+        "pass": true
+      },
+      {
+        "id": "shoulderR",
+        "center_error": 2.3841856267026174e-10,
+        "coverage_error": 0.0,
+        "tangent_span": 0.6110000014305115,
+        "width": 0.641550002,
+        "pass": true
+      }
+    ],
+    "raijin": [
+      {
+        "id": "chest",
+        "center_error": 2.8702904053545808e-08,
+        "coverage_error": 0.0,
+        "tangent_span": 1.040141715355233,
+        "width": 1.0609445231046266,
+        "pass": true
+      },
+      {
+        "id": "shoulderL",
+        "center_error": 8.044665905648785e-09,
+        "coverage_error": 0.0,
+        "tangent_span": 0.6503073024974135,
+        "width": 0.6633134270660821,
+        "pass": true
+      },
+      {
+        "id": "shoulderR",
+        "center_error": 8.044699795206611e-09,
+        "coverage_error": 0.0,
+        "tangent_span": 0.6503073024957193,
+        "width": 0.6633134270660821,
+        "pass": true
+      }
+    ]
+  }
+}

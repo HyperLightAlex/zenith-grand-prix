@@ -1,26 +1,18 @@
-// How high each design's head sits on each other design's chest of its frame
-// (docs/CUSTOMIZATION.md, "Heads on other chests"), written to
-// src/client/render/mech/headSeats.ts.
+// Derive a checked seating snapshot from the shipped head/chest geometry.
+// Native assets use nativeMounts.ts directly at runtime, including their authored
+// neck interfaces and reviewed exceptions. This independent full-grid sampler
+// verifies that policy against all same-frame pairs; HEAD_SEATS remains the
+// fallback for legacy-only pairs and an inspectable generated diagnostic.
 //
-// The designs share a skeleton, so every head hangs from the same point on
-// the chest; but their chests' tops and their heads' necks differ (Razor's
-// low head sinks deep into a chest cut away at the front for it; Seraph's
-// tall chest plate takes a head only a little way), so a head on another
-// chest can vanish into it or stand clear of it.
-//
-// So each head is set down on the chest from above until its neck touches
-// the chest's top, and sunk into it as far as the shallower of the two allows:
-// as far as the head sinks into its own chest, and as far as the chest's
-// own head sinks into it. On its own chest a head sits where it always has.
-// A chest's top is its highest surface under the head below a cap over the
-// neck, so Maul's hood, which arches over its head, is not its top.
-//
-//   npx tsx tools/head-seats.ts            (writes the table; prints a report)
-//   npx tsx tools/head-seats.ts --check    (fails if the table is not what it would write)
+//   npx tsx tools/head-seats.ts            (write the table and print a report)
+//   npx tsx tools/head-seats.ts --check    (verify the checked-in snapshot)
 
 import { readFile, writeFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { prepareAssetGeometry } from '../src/client/render/mech/assetGeometry';
+import { nativeHeadSeat, type HeadSeatAsset } from '../src/client/render/mech/nativeMounts';
+import type { RosterFittings } from '../src/client/render/mech/rosterAsset';
 
 const FRAMES = [
   ['sunhawk', 'razor', 'anubis', 'seraph', 'kamaitachi'],
@@ -34,6 +26,8 @@ const CAP = 0.6;
 const NECK = 0.3;
 
 interface Design {
+  native: boolean;
+  asset: HeadSeatAsset;
   headY: number;
   headZ: number;
   /** Triangles, nine numbers each: the chest in the chest joint's space, the head in the head joint's. */
@@ -47,13 +41,20 @@ async function load(id: string): Promise<Design> {
   const { scene } = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
   scene.updateMatrixWorld(true);
   let dims: { headY: number; headZ: number } | undefined;
+  let native = false, fittings: RosterFittings | undefined;
+  const parts: HeadSeatAsset['parts'][number][] = [];
   const chest: number[] = [];
   const head: number[] = [];
   const v = new THREE.Vector3();
   scene.traverse((o) => {
     if (o.userData.dims) dims ??= o.userData.dims;
+    if (o.userData.roster_schema === 1 && o.userData.model === id) {
+      native = o.userData.source_texture_schema === 1;
+      fittings = o.userData.fittings_json === undefined ? undefined : JSON.parse(o.userData.fittings_json);
+    }
     if (!(o instanceof THREE.Mesh)) return;
-    const into = o.userData.joint === 'chest' && o.userData.part === 'chest' ? chest : o.userData.joint === 'head' ? head : null;
+    parts.push({ joint:o.userData.joint, part:o.userData.part, geometry:prepareAssetGeometry(o.geometry,o.matrixWorld) });
+    const into = o.userData.joint === 'chest' && o.userData.part === 'chest' ? chest : o.userData.joint === 'head' && o.userData.part === 'head' ? head : null;
     if (!into) return;
     const g = o.geometry as THREE.BufferGeometry;
     const p = g.getAttribute('position');
@@ -64,7 +65,7 @@ async function load(id: string): Promise<Design> {
     }
   });
   if (!dims || !chest.length || !head.length) throw new Error(`${id}: no chest, head or skeleton`);
-  return { headY: dims.headY, headZ: dims.headZ, chest: new Float32Array(chest), head: new Float32Array(head) };
+  return { native, asset:{ dims, fittings, parts }, headY: dims.headY, headZ: dims.headZ, chest: new Float32Array(chest), head: new Float32Array(head) };
 }
 
 // ---- height maps from above and below, cell by cell (x across, z along) ---------
@@ -142,15 +143,34 @@ for (const id of FRAMES.flat()) designs.set(id, await load(id));
 const own = new Map([...designs].map(([id, d]) => [id, sunk(d, d)]));
 
 const table: Record<string, Record<string, number>> = {};
+let nativePairs = 0;
 const report: string[] = [`each head in its own chest: ${[...own].map(([id, s]) => `${id} ${s.toFixed(2)}`).join(', ')}`];
 for (const frame of FRAMES) {
   for (const c of frame) {
     table[c] = {};
     for (const h of frame) {
-      if (h === c) continue;
-      const now = sunk(designs.get(c)!, designs.get(h)!);
-      const want = Math.min(own.get(h)!, own.get(c)!);
-      const dy = Math.round((now - want) * 50) / 50;
+      const chest = designs.get(c)!, head = designs.get(h)!;
+      const native = chest.native || head.native;
+      if (h === c) {
+        if (native) {
+          if (nativeHeadSeat(chest.asset,head.asset) !== 0) throw new Error(`${c}: stock head was displaced`);
+          nativePairs++;
+        }
+        continue;
+      }
+      const now = sunk(chest,head);
+      const cm = native ? chest.asset.fittings?.mounts : undefined;
+      const hm = native ? head.asset.fittings?.mounts : undefined;
+      const want = Math.min(hm?.headInsertion ?? own.get(h)!, (cm?.headCapacity ?? own.get(c)!) - (cm?.headClearance ?? 0));
+      const correction = native ? chest.asset.fittings?.headSeatOffsets?.[h] ?? 0 : 0;
+      const dy = Math.round((now - want) * 50) / 50 + correction;
+      if (native) {
+        const measured = nativeHeadSeat(chest.asset,head.asset);
+        if (measured === undefined || Math.abs(measured + correction - dy) > 1e-8) {
+          throw new Error(`${c}/${h}: independent head seating ${dy} differs from runtime ${measured} + reviewed ${correction}`);
+        }
+        nativePairs++;
+      }
       if (dy !== 0) table[c][h] = dy;
       report.push(`${c.padEnd(10)} ${h.padEnd(10)} ${(dy >= 0 ? '+' : '') + dy.toFixed(2)}  (sunk ${now.toFixed(2)}, to ${want.toFixed(2)})`);
     }
@@ -162,15 +182,17 @@ const lines = Object.entries(table)
   .map(([c, row]) => `  ${c}: { ${Object.entries(row).map(([h, dy]) => `${h}: ${dy}`).join(', ')} },`);
 const text = `// Written by tools/head-seats.ts: do not edit by hand (run it again instead).
 //
-// How far (metres, up) a design's head is moved on another design's chest of
-// its frame, so it sits on that chest's top, sunk into it only as far as the
-// shallower of the two takes a head. By chest, then head; a head not listed
-// sits where the skeleton puts it.
+// Shipped geometry's seating snapshot: metres up, by chest then donor head.
+// Includes authored neck interfaces and reviewed pair corrections. Native
+// assets use nativeMounts.ts directly; the generator independently verifies
+// every native pair against it. Legacy-only pairs use this fallback table.
+// An omitted pair preserves the receiving skeleton's head position.
 export const HEAD_SEATS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
 ${lines.join('\n')}
 };
 `;
 console.log(report.join('\n'));
+console.log(`validated ${nativePairs} native head/chest pairs against runtime seating`);
 if (process.argv.includes('--check')) {
   const now = await readFile(OUT, 'utf8').catch(() => '');
   if (now !== text) {

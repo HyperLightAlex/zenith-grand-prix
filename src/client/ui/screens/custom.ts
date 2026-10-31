@@ -57,23 +57,23 @@ function swatch(p: Paint, follow = false): HTMLElement {
   return el;
 }
 
-/** The right stick (or a drag across the bay) turns the mech. */
-const TURN = { pad: 'R stick', keys: 'Drag', label: 'Turn' };
+/** The right stick (or a drag across the bay) inspects the mech from any side and elevation. */
+const TURN = { pad: 'R stick', keys: 'Drag', label: 'Inspect' };
 
-/** The shade over the bay: a drag across it (the mouse, or a finger) turns the mech. */
+/** The shade over the bay: a mouse or finger drag orbits the mech on both axes. */
 function bayShade(g: Game): HTMLElement {
   const el = h('div.shade.spin');
-  let from: number | null = null;
+  let from: { x: number; y: number } | null = null;
   let id = -1;
   el.addEventListener('pointerdown', (e) => {
-    from = e.clientX;
+    from = { x: e.clientX, y: e.clientY };
     id = e.pointerId;
     el.setPointerCapture(e.pointerId);
   });
   el.addEventListener('pointermove', (e) => {
     if (from === null || e.pointerId !== id) return;
-    g.turnHangar(e.clientX - from);
-    from = e.clientX;
+    g.turnHangar(e.clientX - from.x, e.clientY - from.y);
+    from = { x: e.clientX, y: e.clientY };
   });
   const end = (e: PointerEvent) => {
     if (e.pointerId === id) from = null;
@@ -96,7 +96,7 @@ function card(g: Game, d: CustomData, b: MechBuild, bar: string): HTMLElement {
   const face = h('i');
   face.style.backgroundImage = `url(${faceUrl(d.team, d.role, g.portrait)})`;
   return h(
-    'div.hh',
+    'div.hh.custom-heading',
     h('div.hh-bar', h('span', `${livery.name.replace('Team ', '')} hangar`), h('span', bar)),
     h('div.hh-name', emblem, h('b', customName(d.role, b)), h('span', `${CLASSES[d.role].frame} class, ${ROLE_NAMES[d.role].toLowerCase()}`), h('div.hh-pilot', face, h('span', g.pilotName))),
   );

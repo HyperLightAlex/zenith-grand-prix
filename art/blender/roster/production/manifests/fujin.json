@@ -1,0 +1,3458 @@
+{
+  "model": "fujin",
+  "production_schema": 1,
+  "source": "Accepted selective roster hybrid; final exported surfaces captured as standalone editable Blender authoring data.",
+  "accepted_source_branch": "alexander/kamaitachi-conversion",
+  "original_main_commit": null,
+  "blender_source_version": "5.2.2 LTS",
+  "dims": {
+    "hipY": 5.25,
+    "hipX": 0.82,
+    "hipDrop": 0.25,
+    "thigh": 2.2,
+    "shin": 2.15,
+    "ankleY": 0.65,
+    "spineY": 0.45,
+    "chestY": 0.85,
+    "shoulderX": 1.75,
+    "shoulderY": 1,
+    "headY": 1.55,
+    "headZ": 0.12,
+    "upperArm": 1.5,
+    "foreArm": 1.5,
+    "height": 8.7
+  },
+  "joints": {
+    "hips": {
+      "pivot": [
+        0,
+        5.25,
+        0
+      ],
+      "parent": null
+    },
+    "spine": {
+      "pivot": [
+        0,
+        5.7,
+        0
+      ],
+      "parent": "hips"
+    },
+    "chest": {
+      "pivot": [
+        0,
+        6.55,
+        0
+      ],
+      "parent": "spine"
+    },
+    "head": {
+      "pivot": [
+        0,
+        8.1,
+        0.12
+      ],
+      "parent": "chest"
+    },
+    "shL": {
+      "pivot": [
+        1.75,
+        7.55,
+        0
+      ],
+      "parent": "chest"
+    },
+    "elL": {
+      "pivot": [
+        1.75,
+        6.05,
+        0
+      ],
+      "parent": "shL"
+    },
+    "wrL": {
+      "pivot": [
+        1.75,
+        4.55,
+        0
+      ],
+      "parent": "elL"
+    },
+    "hipL": {
+      "pivot": [
+        0.82,
+        5,
+        0
+      ],
+      "parent": "hips"
+    },
+    "kneeL": {
+      "pivot": [
+        0.82,
+        2.8,
+        0
+      ],
+      "parent": "hipL"
+    },
+    "ankleL": {
+      "pivot": [
+        0.82,
+        0.6499999999999999,
+        0
+      ],
+      "parent": "kneeL"
+    },
+    "wingL": {
+      "pivot": [
+        0.55,
+        7.3,
+        -0.85
+      ],
+      "parent": "chest"
+    },
+    "shR": {
+      "pivot": [
+        -1.75,
+        7.55,
+        0
+      ],
+      "parent": "chest"
+    },
+    "elR": {
+      "pivot": [
+        -1.75,
+        6.05,
+        0
+      ],
+      "parent": "shR"
+    },
+    "wrR": {
+      "pivot": [
+        -1.75,
+        4.55,
+        0
+      ],
+      "parent": "elR"
+    },
+    "hipR": {
+      "pivot": [
+        -0.82,
+        5,
+        0
+      ],
+      "parent": "hips"
+    },
+    "kneeR": {
+      "pivot": [
+        -0.82,
+        2.8,
+        0
+      ],
+      "parent": "hipR"
+    },
+    "ankleR": {
+      "pivot": [
+        -0.82,
+        0.6499999999999999,
+        0
+      ],
+      "parent": "kneeR"
+    },
+    "wingR": {
+      "pivot": [
+        -0.55,
+        7.3,
+        -0.85
+      ],
+      "parent": "chest"
+    },
+    "skirtL": {
+      "pivot": [
+        0.3,
+        5.49,
+        0.5
+      ],
+      "parent": "hips"
+    },
+    "skirtR": {
+      "pivot": [
+        -0.3,
+        5.49,
+        0.5
+      ],
+      "parent": "hips"
+    },
+    "skirtBack": {
+      "pivot": [
+        0,
+        5.49,
+        -0.5
+      ],
+      "parent": "hips"
+    },
+    "skirtFront": {
+      "pivot": [
+        0,
+        5.25,
+        0
+      ],
+      "parent": "hips"
+    }
+  },
+  "source_blend": "art/blender/roster/production/sources/fujin.blend",
+  "approved_exports": [
+    {
+      "level": 0,
+      "source_file": "model.glb",
+      "sha256": "9669c05c9ef733622a665893ad5789318d39273abdc53198a27ffa4e577a191a",
+      "triangles": 31616
+    },
+    {
+      "level": 1,
+      "source_file": "model-lod1.glb",
+      "sha256": "d415640c03d6cd7b58778b617fa26c3a21da15ccb6d7353f659aaec3b41738db",
+      "triangles": 16380
+    },
+    {
+      "level": 2,
+      "source_file": "model-lod2.glb",
+      "sha256": "65eac5e48bf6a0ea7dded37a051f34b0c8540aaa3df9e82720373e5477b6be5f",
+      "triangles": 8994
+    }
+  ],
+  "thrusters": [
+    {
+      "id": "mainL",
+      "joint": "chest",
+      "part": "backpack",
+      "bank": "main",
+      "base": [
+        0.47999998927116394,
+        0.4399999976158142,
+        -1.2724120616912842
+      ],
+      "surface": [
+        0.47999998927116394,
+        0.4399999976158142,
+        -1.1974120140075684
+      ],
+      "physical_mouth": [
+        0.47999998927116394,
+        0.20910035938452737,
+        -1.4206710144215018
+      ],
+      "mouth": [
+        0.47999998927116394,
+        0.20910035938452737,
+        -1.4206710144215018
+      ],
+      "outlet": [
+        0.47999998927116394,
+        0.15549865765226445,
+        -1.4550882713053022
+      ],
+      "physical_axis": [
+        0.0,
+        -0.8414709848078965,
+        -0.5403023058681398
+      ],
+      "rotation": [
+        -1.0,
+        0,
+        0
+      ],
+      "radius": 0.2352,
+      "length": 0.27440000000000003,
+      "donor": "original main Sunhawk main",
+      "propulsion_fit": 2,
+      "effectWidth": 0.24,
+      "effectLength": 3.2
+    },
+    {
+      "id": "mainR",
+      "joint": "chest",
+      "part": "backpack",
+      "bank": "main",
+      "base": [
+        -0.47999998927116394,
+        0.4399999976158142,
+        -1.2724120616912842
+      ],
+      "surface": [
+        -0.47999998927116394,
+        0.4399999976158142,
+        -1.1974120140075684
+      ],
+      "physical_mouth": [
+        -0.47999998927116394,
+        0.20910035938452737,
+        -1.4206710144215018
+      ],
+      "mouth": [
+        -0.47999998927116394,
+        0.20910035938452737,
+        -1.4206710144215018
+      ],
+      "outlet": [
+        -0.47999998927116394,
+        0.15549865765226445,
+        -1.4550882713053022
+      ],
+      "physical_axis": [
+        0.0,
+        -0.8414709848078965,
+        -0.5403023058681398
+      ],
+      "rotation": [
+        -1.0,
+        0,
+        0
+      ],
+      "radius": 0.2352,
+      "length": 0.27440000000000003,
+      "donor": "original main Sunhawk main",
+      "propulsion_fit": 2,
+      "effectWidth": 0.24,
+      "effectLength": 3.2
+    },
+    {
+      "id": "calfL",
+      "joint": "kneeL",
+      "part": "shins",
+      "bank": "calf",
+      "base": [
+        0.0,
+        -1.2999999523162842,
+        -0.5231940150260925
+      ],
+      "surface": [
+        0.0,
+        -1.2999999523162842,
+        -0.4481940269470215
+      ],
+      "physical_mouth": [
+        0.0,
+        -1.5425948361848976,
+        -0.6646095007577641
+      ],
+      "mouth": [
+        0.0,
+        -1.5425948361848976,
+        -0.6646095007577641
+      ],
+      "outlet": [
+        0.0,
+        -1.5748415104182953,
+        -0.7028941013546155
+      ],
+      "physical_axis": [
+        0.0,
+        -0.644217687237691,
+        -0.7648421872844885
+      ],
+      "rotation": [
+        -0.7,
+        0,
+        0
+      ],
+      "radius": 0.17,
+      "length": 0.2644444444444445,
+      "donor": "original main Sunhawk calf",
+      "propulsion_fit": 2,
+      "effectWidth": 0.2,
+      "effectLength": 1.6
+    },
+    {
+      "id": "calfR",
+      "joint": "kneeR",
+      "part": "shins",
+      "bank": "calf",
+      "base": [
+        -0.0,
+        -1.2999999523162842,
+        -0.5231940150260925
+      ],
+      "surface": [
+        0.0,
+        -1.2999999523162842,
+        -0.4481940269470215
+      ],
+      "physical_mouth": [
+        0.0,
+        -1.5425948361848976,
+        -0.6646095007577641
+      ],
+      "mouth": [
+        0.0,
+        -1.5425948361848976,
+        -0.6646095007577641
+      ],
+      "outlet": [
+        0.0,
+        -1.5748415104182953,
+        -0.7028941013546155
+      ],
+      "physical_axis": [
+        0.0,
+        -0.644217687237691,
+        -0.7648421872844885
+      ],
+      "rotation": [
+        -0.7,
+        0,
+        0
+      ],
+      "radius": 0.17,
+      "length": 0.2644444444444445,
+      "donor": "original main Sunhawk calf",
+      "propulsion_fit": 2,
+      "effectWidth": 0.2,
+      "effectLength": 1.6
+    }
+  ],
+  "insignias": [
+    {
+      "id": "chest",
+      "joint": "chest",
+      "part": "chest",
+      "center": [
+        -2.022157423198223e-05,
+        0.8293305039405823,
+        1.0158238410949707
+      ],
+      "normal": [
+        -0.0013481638161465526,
+        -0.014900106936693192,
+        0.9998880624771118
+      ],
+      "up": [
+        -2.009001764236018e-05,
+        0.999889075756073,
+        0.014900093898177147
+      ],
+      "width": 0.9694799011818305
+    },
+    {
+      "id": "shoulderL",
+      "joint": "shL",
+      "part": "shoulders",
+      "center": [
+        0.083250001,
+        0.1065,
+        0.655
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 0.641550002
+    },
+    {
+      "id": "shoulderR",
+      "joint": "shR",
+      "part": "shoulders",
+      "center": [
+        -0.083250001,
+        0.1065,
+        0.655
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "width": 0.641550002
+    }
+  ],
+  "source_manifest_sha256": "493179fe12c15fda60a9be939bea4d0f89361a099e846433c745522f2f5ebe6a",
+  "source_authoring_blend_sha256": "8aa81ce3487e93401af3038f7a93a35ab78f6b5bb30b9b6543ccca60ed8108e3",
+  "limitations": [
+    "Selective per-piece composition on original Vector rig; source paint textures were not introduced.",
+    "Procedural marking preservation and moving-pose clearance require integrated browser review."
+  ],
+  "reviewed_metadata_corrections": [
+    {
+      "id": "shoulderL",
+      "reason": "Replacement emblem must be centered on, and cover, the complete modelled badge. 5% margin on the largest tangent extent."
+    },
+    {
+      "id": "shoulderR",
+      "reason": "Replacement emblem must be centered on, and cover, the complete modelled badge. 5% margin on the largest tangent extent."
+    }
+  ],
+  "lods": [
+    {
+      "level": 0,
+      "file": "src/client/render/mech/assets/roster/fujin.glb",
+      "sha256": "d6d2c88f82778b4af77b508a5da86fe8039331a7b490c0708f79a6ecd05f5032",
+      "triangles": 31616,
+      "by_part": {
+        "feet": 2364,
+        "chest": 1308,
+        "armL": 4658,
+        "armR": 5346,
+        "thighs": 2060,
+        "shins": 5256,
+        "waist": 1010,
+        "backpack": 3136,
+        "head": 1480,
+        "shoulders": 2368,
+        "hips": 2630
+      },
+      "groups": [
+        {
+          "name": "ankleL/feet/D",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "D",
+          "mode": 4,
+          "count": 276
+        },
+        {
+          "name": "ankleL/feet/F",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "F",
+          "mode": 4,
+          "count": 168
+        },
+        {
+          "name": "ankleL/feet/G",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "G",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "ankleL/feet/K",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "K",
+          "mode": 4,
+          "count": 124
+        },
+        {
+          "name": "ankleL/feet/LINES",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "D",
+          "mode": 1,
+          "count": 140
+        },
+        {
+          "name": "ankleL/feet/P",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "P",
+          "mode": 4,
+          "count": 330
+        },
+        {
+          "name": "ankleL/feet/T",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "T",
+          "mode": 4,
+          "count": 224
+        },
+        {
+          "name": "ankleR/feet/D",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "D",
+          "mode": 4,
+          "count": 276
+        },
+        {
+          "name": "ankleR/feet/F",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "F",
+          "mode": 4,
+          "count": 168
+        },
+        {
+          "name": "ankleR/feet/G",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "G",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "ankleR/feet/K",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "K",
+          "mode": 4,
+          "count": 124
+        },
+        {
+          "name": "ankleR/feet/LINES",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "D",
+          "mode": 1,
+          "count": 140
+        },
+        {
+          "name": "ankleR/feet/P",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "P",
+          "mode": 4,
+          "count": 330
+        },
+        {
+          "name": "ankleR/feet/T",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "T",
+          "mode": 4,
+          "count": 224
+        },
+        {
+          "name": "chest/chest/D",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "D",
+          "mode": 4,
+          "count": 152
+        },
+        {
+          "name": "chest/chest/F",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "F",
+          "mode": 4,
+          "count": 168
+        },
+        {
+          "name": "chest/chest/G/insignia-chest",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "G",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "chest/chest/K",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "K",
+          "mode": 4,
+          "count": 320
+        },
+        {
+          "name": "chest/chest/LINES",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "D",
+          "mode": 1,
+          "count": 288
+        },
+        {
+          "name": "chest/chest/P",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "P",
+          "mode": 4,
+          "count": 268
+        },
+        {
+          "name": "chest/chest/S",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "S",
+          "mode": 4,
+          "count": 210
+        },
+        {
+          "name": "chest/chest/T",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "T",
+          "mode": 4,
+          "count": 94
+        },
+        {
+          "name": "elL/armL/D",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 4,
+          "count": 264
+        },
+        {
+          "name": "elL/armL/F",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 684
+        },
+        {
+          "name": "elL/armL/LINES",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 1,
+          "count": 58
+        },
+        {
+          "name": "elL/armL/P",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 300
+        },
+        {
+          "name": "elL/armL/T",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "T",
+          "mode": 4,
+          "count": 576
+        },
+        {
+          "name": "elR/armR/D",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 4,
+          "count": 264
+        },
+        {
+          "name": "elR/armR/F",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 544
+        },
+        {
+          "name": "elR/armR/LINES",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 1,
+          "count": 46
+        },
+        {
+          "name": "elR/armR/P",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 256
+        },
+        {
+          "name": "elR/armR/T",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "T",
+          "mode": 4,
+          "count": 288
+        },
+        {
+          "name": "hipL/thighs/D",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 4,
+          "count": 108
+        },
+        {
+          "name": "hipL/thighs/F",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "F",
+          "mode": 4,
+          "count": 400
+        },
+        {
+          "name": "hipL/thighs/LINES",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 1,
+          "count": 82
+        },
+        {
+          "name": "hipL/thighs/P",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "P",
+          "mode": 4,
+          "count": 370
+        },
+        {
+          "name": "hipL/thighs/T",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "T",
+          "mode": 4,
+          "count": 152
+        },
+        {
+          "name": "hipR/thighs/D",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 4,
+          "count": 108
+        },
+        {
+          "name": "hipR/thighs/F",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "F",
+          "mode": 4,
+          "count": 400
+        },
+        {
+          "name": "hipR/thighs/LINES",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 1,
+          "count": 82
+        },
+        {
+          "name": "hipR/thighs/P",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "P",
+          "mode": 4,
+          "count": 370
+        },
+        {
+          "name": "hipR/thighs/T",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "T",
+          "mode": 4,
+          "count": 152
+        },
+        {
+          "name": "kneeL/shins/D",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "D",
+          "mode": 4,
+          "count": 264
+        },
+        {
+          "name": "kneeL/shins/F",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "F",
+          "mode": 4,
+          "count": 1084
+        },
+        {
+          "name": "kneeL/shins/G",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "G",
+          "mode": 4,
+          "count": 504
+        },
+        {
+          "name": "kneeL/shins/LINES",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "D",
+          "mode": 1,
+          "count": 104
+        },
+        {
+          "name": "kneeL/shins/P",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "P",
+          "mode": 4,
+          "count": 124
+        },
+        {
+          "name": "kneeL/shins/S",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "S",
+          "mode": 4,
+          "count": 178
+        },
+        {
+          "name": "kneeL/shins/T",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "T",
+          "mode": 4,
+          "count": 382
+        },
+        {
+          "name": "kneeR/shins/D",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "D",
+          "mode": 4,
+          "count": 264
+        },
+        {
+          "name": "kneeR/shins/F",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "F",
+          "mode": 4,
+          "count": 1084
+        },
+        {
+          "name": "kneeR/shins/G",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "G",
+          "mode": 4,
+          "count": 504
+        },
+        {
+          "name": "kneeR/shins/LINES",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "D",
+          "mode": 1,
+          "count": 104
+        },
+        {
+          "name": "kneeR/shins/P",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "P",
+          "mode": 4,
+          "count": 124
+        },
+        {
+          "name": "kneeR/shins/S",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "S",
+          "mode": 4,
+          "count": 178
+        },
+        {
+          "name": "kneeR/shins/T",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "T",
+          "mode": 4,
+          "count": 382
+        },
+        {
+          "name": "shL/armL/F",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 232
+        },
+        {
+          "name": "shL/armL/K",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "K",
+          "mode": 4,
+          "count": 80
+        },
+        {
+          "name": "shL/armL/LINES",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 1,
+          "count": 30
+        },
+        {
+          "name": "shL/armL/P",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 90
+        },
+        {
+          "name": "shR/armR/F",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 232
+        },
+        {
+          "name": "shR/armR/K",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "K",
+          "mode": 4,
+          "count": 80
+        },
+        {
+          "name": "shR/armR/LINES",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 1,
+          "count": 30
+        },
+        {
+          "name": "shR/armR/P",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 90
+        },
+        {
+          "name": "spine/waist/F",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "F",
+          "mode": 4,
+          "count": 356
+        },
+        {
+          "name": "spine/waist/LINES",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "D",
+          "mode": 1,
+          "count": 126
+        },
+        {
+          "name": "spine/waist/S",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "S",
+          "mode": 4,
+          "count": 654
+        },
+        {
+          "name": "wrL/armL/D",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 4,
+          "count": 432
+        },
+        {
+          "name": "wrL/armL/F",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 1788
+        },
+        {
+          "name": "wrL/armL/LINES",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 1,
+          "count": 40
+        },
+        {
+          "name": "wrL/armL/P",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 100
+        },
+        {
+          "name": "wrL/armL/S",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "S",
+          "mode": 4,
+          "count": 76
+        },
+        {
+          "name": "wrR/armR/D",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 4,
+          "count": 656
+        },
+        {
+          "name": "wrR/armR/F",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 1928
+        },
+        {
+          "name": "wrR/armR/G",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "G",
+          "mode": 4,
+          "count": 132
+        },
+        {
+          "name": "wrR/armR/LINES",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 1,
+          "count": 52
+        },
+        {
+          "name": "wrR/armR/P",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 208
+        },
+        {
+          "name": "wrR/armR/S",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "S",
+          "mode": 4,
+          "count": 108
+        },
+        {
+          "name": "wrR/armR/T",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "T",
+          "mode": 4,
+          "count": 560
+        },
+        {
+          "name": "chest/backpack/G",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "G",
+          "mode": 4,
+          "count": 832
+        },
+        {
+          "name": "chest/backpack/S",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "S",
+          "mode": 4,
+          "count": 352
+        },
+        {
+          "name": "head/head/F",
+          "joint": "head",
+          "part": "head",
+          "slot": "F",
+          "mode": 4,
+          "count": 140
+        },
+        {
+          "name": "head/head/P",
+          "joint": "head",
+          "part": "head",
+          "slot": "P",
+          "mode": 4,
+          "count": 484
+        },
+        {
+          "name": "head/head/LINES",
+          "joint": "head",
+          "part": "head",
+          "slot": "D",
+          "mode": 1,
+          "count": 125
+        },
+        {
+          "name": "head/head/S",
+          "joint": "head",
+          "part": "head",
+          "slot": "S",
+          "mode": 4,
+          "count": 136
+        },
+        {
+          "name": "head/head/D",
+          "joint": "head",
+          "part": "head",
+          "slot": "D",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "head/head/G",
+          "joint": "head",
+          "part": "head",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "head/head/T",
+          "joint": "head",
+          "part": "head",
+          "slot": "T",
+          "mode": 4,
+          "count": 520
+        },
+        {
+          "name": "head/head/K",
+          "joint": "head",
+          "part": "head",
+          "slot": "K",
+          "mode": 4,
+          "count": 132
+        },
+        {
+          "name": "elL/armL/G",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "G",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "chest/backpack/LINES",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "D",
+          "mode": 1,
+          "count": 122
+        },
+        {
+          "name": "chest/backpack/P",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "P",
+          "mode": 4,
+          "count": 492
+        },
+        {
+          "name": "chest/backpack/T",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "T",
+          "mode": 4,
+          "count": 284
+        },
+        {
+          "name": "shL/shoulders/P",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "P",
+          "mode": 4,
+          "count": 196
+        },
+        {
+          "name": "shL/shoulders/LINES",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 1,
+          "count": 38
+        },
+        {
+          "name": "shL/shoulders/D",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 4,
+          "count": 140
+        },
+        {
+          "name": "shL/shoulders/T",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "T",
+          "mode": 4,
+          "count": 472
+        },
+        {
+          "name": "shL/shoulders/K",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "K",
+          "mode": 4,
+          "count": 352
+        },
+        {
+          "name": "shL/shoulders/G/insignia-shoulderL",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "shR/shoulders/P",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "P",
+          "mode": 4,
+          "count": 196
+        },
+        {
+          "name": "shR/shoulders/LINES",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 1,
+          "count": 38
+        },
+        {
+          "name": "shR/shoulders/D",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 4,
+          "count": 140
+        },
+        {
+          "name": "shR/shoulders/T",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "T",
+          "mode": 4,
+          "count": 472
+        },
+        {
+          "name": "shR/shoulders/K",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "K",
+          "mode": 4,
+          "count": 352
+        },
+        {
+          "name": "shR/shoulders/G/insignia-shoulderR",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "hips/hips/K",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 204
+        },
+        {
+          "name": "hips/hips/LINES",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 48
+        },
+        {
+          "name": "hips/hips/S",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 108
+        },
+        {
+          "name": "hips/hips/T",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 184
+        },
+        {
+          "name": "skirtBack/hips/K",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "skirtBack/hips/LINES",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 58
+        },
+        {
+          "name": "skirtBack/hips/P",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 310
+        },
+        {
+          "name": "skirtBack/hips/S",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 136
+        },
+        {
+          "name": "skirtBack/hips/T",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 248
+        },
+        {
+          "name": "skirtL/hips/K",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "skirtL/hips/LINES",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 56
+        },
+        {
+          "name": "skirtL/hips/P",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 278
+        },
+        {
+          "name": "skirtL/hips/S",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 104
+        },
+        {
+          "name": "skirtL/hips/T",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 248
+        },
+        {
+          "name": "skirtR/hips/K",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "skirtR/hips/LINES",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 56
+        },
+        {
+          "name": "skirtR/hips/P",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 278
+        },
+        {
+          "name": "skirtR/hips/S",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 104
+        },
+        {
+          "name": "skirtR/hips/T",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 248
+        },
+        {
+          "name": "chest/backpack/F",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "F",
+          "mode": 4,
+          "count": 992
+        },
+        {
+          "name": "chest/backpack/K",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "K",
+          "mode": 4,
+          "count": 184
+        },
+        {
+          "name": "kneeL/shins/K",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "K",
+          "mode": 4,
+          "count": 92
+        },
+        {
+          "name": "kneeR/shins/K",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "K",
+          "mode": 4,
+          "count": 92
+        }
+      ]
+    },
+    {
+      "level": 1,
+      "file": "src/client/render/mech/assets/roster/fujin-lod1.glb",
+      "sha256": "fa7da6880ceb6d3422e2283e60aac94acfc23705400a4ea59fece0fa580cf938",
+      "triangles": 16380,
+      "by_part": {
+        "feet": 1272,
+        "chest": 710,
+        "armL": 2324,
+        "armR": 2806,
+        "thighs": 1056,
+        "shins": 3156,
+        "waist": 518,
+        "backpack": 1812,
+        "head": 624,
+        "shoulders": 752,
+        "hips": 1350
+      },
+      "groups": [
+        {
+          "name": "ankleL/feet/D",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "D",
+          "mode": 4,
+          "count": 138
+        },
+        {
+          "name": "ankleL/feet/F",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "F",
+          "mode": 4,
+          "count": 86
+        },
+        {
+          "name": "ankleL/feet/G",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "G",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "ankleL/feet/K",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "K",
+          "mode": 4,
+          "count": 62
+        },
+        {
+          "name": "ankleL/feet/LINES",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "D",
+          "mode": 1,
+          "count": 40
+        },
+        {
+          "name": "ankleL/feet/P",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "P",
+          "mode": 4,
+          "count": 170
+        },
+        {
+          "name": "ankleL/feet/T",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "T",
+          "mode": 4,
+          "count": 120
+        },
+        {
+          "name": "ankleR/feet/D",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "D",
+          "mode": 4,
+          "count": 138
+        },
+        {
+          "name": "ankleR/feet/F",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "F",
+          "mode": 4,
+          "count": 86
+        },
+        {
+          "name": "ankleR/feet/G",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "G",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "ankleR/feet/K",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "K",
+          "mode": 4,
+          "count": 62
+        },
+        {
+          "name": "ankleR/feet/LINES",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "D",
+          "mode": 1,
+          "count": 40
+        },
+        {
+          "name": "ankleR/feet/P",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "P",
+          "mode": 4,
+          "count": 170
+        },
+        {
+          "name": "ankleR/feet/T",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "T",
+          "mode": 4,
+          "count": 120
+        },
+        {
+          "name": "chest/chest/D",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "D",
+          "mode": 4,
+          "count": 76
+        },
+        {
+          "name": "chest/chest/F",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "F",
+          "mode": 4,
+          "count": 86
+        },
+        {
+          "name": "chest/chest/G/insignia-chest",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "G",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "chest/chest/K",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "K",
+          "mode": 4,
+          "count": 162
+        },
+        {
+          "name": "chest/chest/LINES",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "D",
+          "mode": 1,
+          "count": 35
+        },
+        {
+          "name": "chest/chest/P",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "P",
+          "mode": 4,
+          "count": 134
+        },
+        {
+          "name": "chest/chest/S",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "S",
+          "mode": 4,
+          "count": 108
+        },
+        {
+          "name": "chest/chest/T",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "T",
+          "mode": 4,
+          "count": 48
+        },
+        {
+          "name": "elL/armL/D",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 4,
+          "count": 134
+        },
+        {
+          "name": "elL/armL/F",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 322
+        },
+        {
+          "name": "elL/armL/LINES",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 1,
+          "count": 24
+        },
+        {
+          "name": "elL/armL/P",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 144
+        },
+        {
+          "name": "elL/armL/T",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "T",
+          "mode": 4,
+          "count": 244
+        },
+        {
+          "name": "elR/armR/D",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 4,
+          "count": 134
+        },
+        {
+          "name": "elR/armR/F",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 278
+        },
+        {
+          "name": "elR/armR/LINES",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 1,
+          "count": 16
+        },
+        {
+          "name": "elR/armR/P",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 132
+        },
+        {
+          "name": "elR/armR/T",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "T",
+          "mode": 4,
+          "count": 148
+        },
+        {
+          "name": "hipL/thighs/D",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 4,
+          "count": 56
+        },
+        {
+          "name": "hipL/thighs/F",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "F",
+          "mode": 4,
+          "count": 204
+        },
+        {
+          "name": "hipL/thighs/LINES",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 1,
+          "count": 35
+        },
+        {
+          "name": "hipL/thighs/P",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "P",
+          "mode": 4,
+          "count": 190
+        },
+        {
+          "name": "hipL/thighs/T",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "T",
+          "mode": 4,
+          "count": 78
+        },
+        {
+          "name": "hipR/thighs/D",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 4,
+          "count": 56
+        },
+        {
+          "name": "hipR/thighs/F",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "F",
+          "mode": 4,
+          "count": 204
+        },
+        {
+          "name": "hipR/thighs/LINES",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 1,
+          "count": 35
+        },
+        {
+          "name": "hipR/thighs/P",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "P",
+          "mode": 4,
+          "count": 190
+        },
+        {
+          "name": "hipR/thighs/T",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "T",
+          "mode": 4,
+          "count": 78
+        },
+        {
+          "name": "kneeL/shins/D",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "D",
+          "mode": 4,
+          "count": 134
+        },
+        {
+          "name": "kneeL/shins/F",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "F",
+          "mode": 4,
+          "count": 644
+        },
+        {
+          "name": "kneeL/shins/G",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "G",
+          "mode": 4,
+          "count": 378
+        },
+        {
+          "name": "kneeL/shins/LINES",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "D",
+          "mode": 1,
+          "count": 23
+        },
+        {
+          "name": "kneeL/shins/P",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "P",
+          "mode": 4,
+          "count": 64
+        },
+        {
+          "name": "kneeL/shins/S",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "S",
+          "mode": 4,
+          "count": 102
+        },
+        {
+          "name": "kneeL/shins/T",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "T",
+          "mode": 4,
+          "count": 194
+        },
+        {
+          "name": "kneeR/shins/D",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "D",
+          "mode": 4,
+          "count": 134
+        },
+        {
+          "name": "kneeR/shins/F",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "F",
+          "mode": 4,
+          "count": 644
+        },
+        {
+          "name": "kneeR/shins/G",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "G",
+          "mode": 4,
+          "count": 378
+        },
+        {
+          "name": "kneeR/shins/LINES",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "D",
+          "mode": 1,
+          "count": 23
+        },
+        {
+          "name": "kneeR/shins/P",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "P",
+          "mode": 4,
+          "count": 64
+        },
+        {
+          "name": "kneeR/shins/S",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "S",
+          "mode": 4,
+          "count": 102
+        },
+        {
+          "name": "kneeR/shins/T",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "T",
+          "mode": 4,
+          "count": 194
+        },
+        {
+          "name": "shL/armL/F",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 118
+        },
+        {
+          "name": "shL/armL/K",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "K",
+          "mode": 4,
+          "count": 40
+        },
+        {
+          "name": "shL/armL/LINES",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 1,
+          "count": 5
+        },
+        {
+          "name": "shL/armL/P",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 46
+        },
+        {
+          "name": "shR/armR/F",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 118
+        },
+        {
+          "name": "shR/armR/K",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "K",
+          "mode": 4,
+          "count": 40
+        },
+        {
+          "name": "shR/armR/LINES",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 1,
+          "count": 5
+        },
+        {
+          "name": "shR/armR/P",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 46
+        },
+        {
+          "name": "spine/waist/F",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "F",
+          "mode": 4,
+          "count": 182
+        },
+        {
+          "name": "spine/waist/LINES",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "D",
+          "mode": 1,
+          "count": 30
+        },
+        {
+          "name": "spine/waist/S",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "S",
+          "mode": 4,
+          "count": 336
+        },
+        {
+          "name": "wrL/armL/D",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 4,
+          "count": 224
+        },
+        {
+          "name": "wrL/armL/F",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 926
+        },
+        {
+          "name": "wrL/armL/LINES",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 1,
+          "count": 20
+        },
+        {
+          "name": "wrL/armL/P",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 52
+        },
+        {
+          "name": "wrL/armL/S",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "S",
+          "mode": 4,
+          "count": 38
+        },
+        {
+          "name": "wrR/armR/D",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 4,
+          "count": 328
+        },
+        {
+          "name": "wrR/armR/F",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 998
+        },
+        {
+          "name": "wrR/armR/G",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "G",
+          "mode": 4,
+          "count": 132
+        },
+        {
+          "name": "wrR/armR/LINES",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 1,
+          "count": 40
+        },
+        {
+          "name": "wrR/armR/P",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 108
+        },
+        {
+          "name": "wrR/armR/S",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "S",
+          "mode": 4,
+          "count": 56
+        },
+        {
+          "name": "wrR/armR/T",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "T",
+          "mode": 4,
+          "count": 288
+        },
+        {
+          "name": "chest/backpack/G",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "G",
+          "mode": 4,
+          "count": 580
+        },
+        {
+          "name": "chest/backpack/S",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "S",
+          "mode": 4,
+          "count": 160
+        },
+        {
+          "name": "head/head/F",
+          "joint": "head",
+          "part": "head",
+          "slot": "F",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "head/head/P",
+          "joint": "head",
+          "part": "head",
+          "slot": "P",
+          "mode": 4,
+          "count": 224
+        },
+        {
+          "name": "head/head/LINES",
+          "joint": "head",
+          "part": "head",
+          "slot": "D",
+          "mode": 1,
+          "count": 76
+        },
+        {
+          "name": "head/head/S",
+          "joint": "head",
+          "part": "head",
+          "slot": "S",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "head/head/D",
+          "joint": "head",
+          "part": "head",
+          "slot": "D",
+          "mode": 4,
+          "count": 12
+        },
+        {
+          "name": "head/head/G",
+          "joint": "head",
+          "part": "head",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "head/head/T",
+          "joint": "head",
+          "part": "head",
+          "slot": "T",
+          "mode": 4,
+          "count": 240
+        },
+        {
+          "name": "head/head/K",
+          "joint": "head",
+          "part": "head",
+          "slot": "K",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "elL/armL/G",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "G",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "chest/backpack/LINES",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "D",
+          "mode": 1,
+          "count": 57
+        },
+        {
+          "name": "chest/backpack/P",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "P",
+          "mode": 4,
+          "count": 172
+        },
+        {
+          "name": "chest/backpack/T",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "T",
+          "mode": 4,
+          "count": 88
+        },
+        {
+          "name": "shL/shoulders/P",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "P",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "shL/shoulders/LINES",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 1,
+          "count": 38
+        },
+        {
+          "name": "shL/shoulders/D",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "shL/shoulders/T",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "T",
+          "mode": 4,
+          "count": 152
+        },
+        {
+          "name": "shL/shoulders/K",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "K",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "shL/shoulders/G/insignia-shoulderL",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "shR/shoulders/P",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "P",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "shR/shoulders/LINES",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 1,
+          "count": 38
+        },
+        {
+          "name": "shR/shoulders/D",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "shR/shoulders/T",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "T",
+          "mode": 4,
+          "count": 152
+        },
+        {
+          "name": "shR/shoulders/K",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "K",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "shR/shoulders/G/insignia-shoulderR",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "hips/hips/K",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 102
+        },
+        {
+          "name": "hips/hips/LINES",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 10
+        },
+        {
+          "name": "hips/hips/S",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 56
+        },
+        {
+          "name": "hips/hips/T",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 92
+        },
+        {
+          "name": "skirtBack/hips/K",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 30
+        },
+        {
+          "name": "skirtBack/hips/LINES",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 36
+        },
+        {
+          "name": "skirtBack/hips/P",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 160
+        },
+        {
+          "name": "skirtBack/hips/S",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 70
+        },
+        {
+          "name": "skirtBack/hips/T",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 128
+        },
+        {
+          "name": "skirtL/hips/K",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 30
+        },
+        {
+          "name": "skirtL/hips/LINES",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 28
+        },
+        {
+          "name": "skirtL/hips/P",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 144
+        },
+        {
+          "name": "skirtL/hips/S",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 54
+        },
+        {
+          "name": "skirtL/hips/T",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 128
+        },
+        {
+          "name": "skirtR/hips/K",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 30
+        },
+        {
+          "name": "skirtR/hips/LINES",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "D",
+          "mode": 1,
+          "count": 28
+        },
+        {
+          "name": "skirtR/hips/P",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 144
+        },
+        {
+          "name": "skirtR/hips/S",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 54
+        },
+        {
+          "name": "skirtR/hips/T",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 128
+        },
+        {
+          "name": "chest/backpack/F",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "F",
+          "mode": 4,
+          "count": 688
+        },
+        {
+          "name": "chest/backpack/K",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "K",
+          "mode": 4,
+          "count": 124
+        },
+        {
+          "name": "kneeL/shins/K",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "K",
+          "mode": 4,
+          "count": 62
+        },
+        {
+          "name": "kneeR/shins/K",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "K",
+          "mode": 4,
+          "count": 62
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "file": "src/client/render/mech/assets/roster/fujin-lod2.glb",
+      "sha256": "d78958b1ff8f93f8e5cd956074cb802e2b4cd93125ea7f6cb9d4a4648da30af3",
+      "triangles": 8994,
+      "by_part": {
+        "feet": 656,
+        "chest": 380,
+        "armL": 1134,
+        "armR": 1322,
+        "thighs": 480,
+        "shins": 1692,
+        "waist": 234,
+        "backpack": 1152,
+        "head": 576,
+        "shoulders": 752,
+        "hips": 616
+      },
+      "groups": [
+        {
+          "name": "ankleL/feet/D",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "D",
+          "mode": 4,
+          "count": 66
+        },
+        {
+          "name": "ankleL/feet/F",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "F",
+          "mode": 4,
+          "count": 40
+        },
+        {
+          "name": "ankleL/feet/G",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "G",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "ankleL/feet/K",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "K",
+          "mode": 4,
+          "count": 28
+        },
+        {
+          "name": "ankleL/feet/P",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "P",
+          "mode": 4,
+          "count": 78
+        },
+        {
+          "name": "ankleL/feet/T",
+          "joint": "ankleL",
+          "part": "feet",
+          "slot": "T",
+          "mode": 4,
+          "count": 56
+        },
+        {
+          "name": "ankleR/feet/D",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "D",
+          "mode": 4,
+          "count": 66
+        },
+        {
+          "name": "ankleR/feet/F",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "F",
+          "mode": 4,
+          "count": 40
+        },
+        {
+          "name": "ankleR/feet/G",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "G",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "ankleR/feet/K",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "K",
+          "mode": 4,
+          "count": 28
+        },
+        {
+          "name": "ankleR/feet/P",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "P",
+          "mode": 4,
+          "count": 78
+        },
+        {
+          "name": "ankleR/feet/T",
+          "joint": "ankleR",
+          "part": "feet",
+          "slot": "T",
+          "mode": 4,
+          "count": 56
+        },
+        {
+          "name": "chest/chest/D",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "D",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "chest/chest/F",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "F",
+          "mode": 4,
+          "count": 40
+        },
+        {
+          "name": "chest/chest/G/insignia-chest",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "G",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "chest/chest/K",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "K",
+          "mode": 4,
+          "count": 74
+        },
+        {
+          "name": "chest/chest/P",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "P",
+          "mode": 4,
+          "count": 64
+        },
+        {
+          "name": "chest/chest/S",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "S",
+          "mode": 4,
+          "count": 48
+        },
+        {
+          "name": "chest/chest/T",
+          "joint": "chest",
+          "part": "chest",
+          "slot": "T",
+          "mode": 4,
+          "count": 22
+        },
+        {
+          "name": "elL/armL/D",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 4,
+          "count": 62
+        },
+        {
+          "name": "elL/armL/F",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 172
+        },
+        {
+          "name": "elL/armL/P",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 70
+        },
+        {
+          "name": "elL/armL/T",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "T",
+          "mode": 4,
+          "count": 164
+        },
+        {
+          "name": "elR/armR/D",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 4,
+          "count": 62
+        },
+        {
+          "name": "elR/armR/F",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 128
+        },
+        {
+          "name": "elR/armR/P",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 58
+        },
+        {
+          "name": "elR/armR/T",
+          "joint": "elR",
+          "part": "armR",
+          "slot": "T",
+          "mode": 4,
+          "count": 68
+        },
+        {
+          "name": "hipL/thighs/D",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "hipL/thighs/F",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "F",
+          "mode": 4,
+          "count": 94
+        },
+        {
+          "name": "hipL/thighs/P",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "P",
+          "mode": 4,
+          "count": 86
+        },
+        {
+          "name": "hipL/thighs/T",
+          "joint": "hipL",
+          "part": "thighs",
+          "slot": "T",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "hipR/thighs/D",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "D",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "hipR/thighs/F",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "F",
+          "mode": 4,
+          "count": 94
+        },
+        {
+          "name": "hipR/thighs/P",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "P",
+          "mode": 4,
+          "count": 86
+        },
+        {
+          "name": "hipR/thighs/T",
+          "joint": "hipR",
+          "part": "thighs",
+          "slot": "T",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "kneeL/shins/D",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "D",
+          "mode": 4,
+          "count": 62
+        },
+        {
+          "name": "kneeL/shins/F",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "F",
+          "mode": 4,
+          "count": 332
+        },
+        {
+          "name": "kneeL/shins/G",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "G",
+          "mode": 4,
+          "count": 252
+        },
+        {
+          "name": "kneeL/shins/P",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "P",
+          "mode": 4,
+          "count": 28
+        },
+        {
+          "name": "kneeL/shins/S",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "S",
+          "mode": 4,
+          "count": 50
+        },
+        {
+          "name": "kneeL/shins/T",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "T",
+          "mode": 4,
+          "count": 90
+        },
+        {
+          "name": "kneeR/shins/D",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "D",
+          "mode": 4,
+          "count": 62
+        },
+        {
+          "name": "kneeR/shins/F",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "F",
+          "mode": 4,
+          "count": 332
+        },
+        {
+          "name": "kneeR/shins/G",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "G",
+          "mode": 4,
+          "count": 252
+        },
+        {
+          "name": "kneeR/shins/P",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "P",
+          "mode": 4,
+          "count": 28
+        },
+        {
+          "name": "kneeR/shins/S",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "S",
+          "mode": 4,
+          "count": 50
+        },
+        {
+          "name": "kneeR/shins/T",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "T",
+          "mode": 4,
+          "count": 90
+        },
+        {
+          "name": "shL/armL/F",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 54
+        },
+        {
+          "name": "shL/armL/K",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "K",
+          "mode": 4,
+          "count": 18
+        },
+        {
+          "name": "shL/armL/P",
+          "joint": "shL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 20
+        },
+        {
+          "name": "shR/armR/F",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 54
+        },
+        {
+          "name": "shR/armR/K",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "K",
+          "mode": 4,
+          "count": 18
+        },
+        {
+          "name": "shR/armR/P",
+          "joint": "shR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 20
+        },
+        {
+          "name": "spine/waist/F",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "F",
+          "mode": 4,
+          "count": 84
+        },
+        {
+          "name": "spine/waist/S",
+          "joint": "spine",
+          "part": "waist",
+          "slot": "S",
+          "mode": 4,
+          "count": 150
+        },
+        {
+          "name": "wrL/armL/D",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "D",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "wrL/armL/F",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "F",
+          "mode": 4,
+          "count": 400
+        },
+        {
+          "name": "wrL/armL/P",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "P",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "wrL/armL/S",
+          "joint": "wrL",
+          "part": "armL",
+          "slot": "S",
+          "mode": 4,
+          "count": 18
+        },
+        {
+          "name": "wrR/armR/D",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "D",
+          "mode": 4,
+          "count": 150
+        },
+        {
+          "name": "wrR/armR/F",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "F",
+          "mode": 4,
+          "count": 432
+        },
+        {
+          "name": "wrR/armR/G",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "G",
+          "mode": 4,
+          "count": 132
+        },
+        {
+          "name": "wrR/armR/P",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "P",
+          "mode": 4,
+          "count": 48
+        },
+        {
+          "name": "wrR/armR/S",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "S",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "wrR/armR/T",
+          "joint": "wrR",
+          "part": "armR",
+          "slot": "T",
+          "mode": 4,
+          "count": 128
+        },
+        {
+          "name": "chest/backpack/G",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "G",
+          "mode": 4,
+          "count": 328
+        },
+        {
+          "name": "chest/backpack/S",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "S",
+          "mode": 4,
+          "count": 112
+        },
+        {
+          "name": "head/head/F",
+          "joint": "head",
+          "part": "head",
+          "slot": "F",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "head/head/P",
+          "joint": "head",
+          "part": "head",
+          "slot": "P",
+          "mode": 4,
+          "count": 224
+        },
+        {
+          "name": "head/head/S",
+          "joint": "head",
+          "part": "head",
+          "slot": "S",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "head/head/D",
+          "joint": "head",
+          "part": "head",
+          "slot": "D",
+          "mode": 4,
+          "count": 12
+        },
+        {
+          "name": "head/head/G",
+          "joint": "head",
+          "part": "head",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "head/head/T",
+          "joint": "head",
+          "part": "head",
+          "slot": "T",
+          "mode": 4,
+          "count": 192
+        },
+        {
+          "name": "head/head/K",
+          "joint": "head",
+          "part": "head",
+          "slot": "K",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "elL/armL/G",
+          "joint": "elL",
+          "part": "armL",
+          "slot": "G",
+          "mode": 4,
+          "count": 36
+        },
+        {
+          "name": "chest/backpack/P",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "P",
+          "mode": 4,
+          "count": 172
+        },
+        {
+          "name": "chest/backpack/T",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "T",
+          "mode": 4,
+          "count": 88
+        },
+        {
+          "name": "shL/shoulders/P",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "P",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "shL/shoulders/D",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "shL/shoulders/T",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "T",
+          "mode": 4,
+          "count": 152
+        },
+        {
+          "name": "shL/shoulders/K",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "K",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "shL/shoulders/G/insignia-shoulderL",
+          "joint": "shL",
+          "part": "shoulders",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "shR/shoulders/P",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "P",
+          "mode": 4,
+          "count": 60
+        },
+        {
+          "name": "shR/shoulders/D",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "D",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "shR/shoulders/T",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "T",
+          "mode": 4,
+          "count": 152
+        },
+        {
+          "name": "shR/shoulders/K",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "K",
+          "mode": 4,
+          "count": 96
+        },
+        {
+          "name": "shR/shoulders/G/insignia-shoulderR",
+          "joint": "shR",
+          "part": "shoulders",
+          "slot": "G",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "hips/hips/K",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 46
+        },
+        {
+          "name": "hips/hips/S",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "hips/hips/T",
+          "joint": "hips",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 44
+        },
+        {
+          "name": "skirtBack/hips/K",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 14
+        },
+        {
+          "name": "skirtBack/hips/P",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 74
+        },
+        {
+          "name": "skirtBack/hips/S",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 32
+        },
+        {
+          "name": "skirtBack/hips/T",
+          "joint": "skirtBack",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 58
+        },
+        {
+          "name": "skirtL/hips/K",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 14
+        },
+        {
+          "name": "skirtL/hips/P",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 66
+        },
+        {
+          "name": "skirtL/hips/S",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "skirtL/hips/T",
+          "joint": "skirtL",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 58
+        },
+        {
+          "name": "skirtR/hips/K",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "K",
+          "mode": 4,
+          "count": 14
+        },
+        {
+          "name": "skirtR/hips/P",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "P",
+          "mode": 4,
+          "count": 66
+        },
+        {
+          "name": "skirtR/hips/S",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "S",
+          "mode": 4,
+          "count": 24
+        },
+        {
+          "name": "skirtR/hips/T",
+          "joint": "skirtR",
+          "part": "hips",
+          "slot": "T",
+          "mode": 4,
+          "count": 58
+        },
+        {
+          "name": "chest/backpack/F",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "F",
+          "mode": 4,
+          "count": 388
+        },
+        {
+          "name": "chest/backpack/K",
+          "joint": "chest",
+          "part": "backpack",
+          "slot": "K",
+          "mode": 4,
+          "count": 64
+        },
+        {
+          "name": "kneeL/shins/K",
+          "joint": "kneeL",
+          "part": "shins",
+          "slot": "K",
+          "mode": 4,
+          "count": 32
+        },
+        {
+          "name": "kneeR/shins/K",
+          "joint": "kneeR",
+          "part": "shins",
+          "slot": "K",
+          "mode": 4,
+          "count": 32
+        }
+      ]
+    }
+  ],
+  "source_blend_sha256": "97e388c52d76e0eba094cd6b94aa68748faab66f2db03a32d9738d79bba7fb5f",
+  "blender_export_version": "5.2.2 LTS"
+}

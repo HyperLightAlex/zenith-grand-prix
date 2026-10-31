@@ -20,7 +20,7 @@ describe('batched authored mech ink',()=>{
   it('follows the same moving joints at every LOD with only two ink draws, and preserves the traveller mask/mark',async()=>{
     const assets=await Promise.all([0,1,2].map(load));
     const rig=new MechRig(assets[0].dims);
-    const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
+    const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back,skirtFront:rig.skirts.front};
     const ink=new MechInkBuilder(rig,joints);
     assets.forEach(a=>{const groups:THREE.Object3D[]=[];ink.addLevel(a.parts,a.lines,groups);rig.detailLevels.push(groups);});
     markCharacter(rig.root,4);markTraveller(rig.root);
@@ -69,7 +69,7 @@ describe('batched authored mech ink',()=>{
   it('sends the joints to the GPU once when they move, however many passes draw the mech, and not while it holds still',async()=>{
     const asset=await load(2);
     const rig=new MechRig(asset.dims);
-    const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
+    const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back,skirtFront:rig.skirts.front};
     const ink=new MechInkBuilder(rig,joints);
     const groups:THREE.Object3D[]=[];ink.addLevel(asset.parts,asset.lines,groups);rig.detailLevels.push(groups);
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();scene.add(rig.root);

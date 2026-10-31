@@ -17,7 +17,7 @@ import { buildImportedSunhawk } from './importedSunhawk';
 import { hasSunhawkAsset, sunhawkAsset } from './sunhawkAsset';
 import { getSunhawkModel } from './sunhawkSelection';
 import { getRosterModel } from './rosterSelection';
-import { hasRosterAsset } from './rosterAsset';
+import { hasRosterAsset, rosterAsset } from './rosterAsset';
 import { buildImportedRoster } from './importedRoster';
 import { buildVector } from './vector';
 import { buildLongbow } from './aurora/longbow';
@@ -33,7 +33,7 @@ import { buildMaul } from './vanta/maul';
 import { buildRazor } from './vanta/razor';
 import { buildStinger } from './vanta/stinger';
 
-/** Each frame type's skeleton (every roster design of the frame is built on it; the Sunhawk has its own). */
+/** The code-built frame skeletons; imported designs may supply native dimensions. */
 export const DIMS: Record<Role, FrameDims> = {
   [ROLE.FW]: { hipY: 5.5, hipX: 0.72, hipDrop: 0.25, thigh: 2.35, shin: 2.3, ankleY: 0.6, spineY: 0.4, chestY: 0.8, shoulderX: 1.5, shoulderY: 0.95, headY: 1.5, headZ: 0.15, upperArm: 1.5, foreArm: 1.45, height: 8.8 },
   [ROLE.MF]: { hipY: 5.25, hipX: 0.82, hipDrop: 0.25, thigh: 2.2, shin: 2.15, ankleY: 0.65, spineY: 0.45, chestY: 0.85, shoulderX: 1.75, shoulderY: 1.0, headY: 1.55, headZ: 0.12, upperArm: 1.5, foreArm: 1.5, height: 8.7 },
@@ -79,11 +79,11 @@ export function buildFrame(role: Role, livery: Livery, number: string): MechRig 
     buildImportedSunhawk(frameCtx(rig,livery),number,model);
     return rig;
   }
-  const rig = new MechRig(DIMS[role]);
-  const own = oldSwift && role === ROLE.FW && livery.id === 'solstice' ? buildSwift : DESIGNS[livery.id]?.[role];
-  const build = own ?? DESIGNS.solstice[role]!;
   const id=livery.models[role].toLowerCase();
   const updated=getRosterModel()==='updated' && hasRosterAsset(id);
+  const rig = new MechRig(updated?rosterAsset(id).dims:DIMS[role]);
+  const own = oldSwift && role === ROLE.FW && livery.id === 'solstice' ? buildSwift : DESIGNS[livery.id]?.[role];
+  const build = own ?? DESIGNS.solstice[role]!;
   build(frameCtx(rig, livery, !updated), number);
   if(updated) buildImportedRoster(rig,livery,id,role===ROLE.DF);
   else { rig.root.userData.rosterModel='current'; rig.root.userData.modelId=id; }

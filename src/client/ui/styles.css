@@ -872,6 +872,13 @@ html.crt-on .crt-layer {
 }
 .menu.anime .hh-pilot i::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px); }
 .menu.anime .hh-pilot span { font-size: 1.2em; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; }
+/* Custom names and class descriptions must fit beside the pilot, including
+   long player names. Reserve the portrait column and wrap the copy in its own. */
+.menu.anime .custom-heading .hh-name { grid-template-columns: auto minmax(0, 1fr) 5.4em; }
+.menu.anime .custom-heading .hh-name > b { white-space: normal; overflow: visible; overflow-wrap: anywhere; font-size: 2.5em; line-height: 1.05; }
+.menu.anime .custom-heading .hh-name > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.menu.anime .custom-heading .hh-pilot { min-width: 0; }
+.menu.anime .custom-heading .hh-pilot span { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .menu.anime[data-screen='garage'] p { font-size: 1.15em; opacity: 0.85; }
 .menu.anime[data-screen='garage'] .list { gap: 0.12em; margin-top: 0.1em; }
 .menu.anime[data-screen='garage'] .item {
@@ -1518,6 +1525,8 @@ html.compact .menu.anime .hh-name > b { font-size: 2.5em; }
 html.compact .menu.anime .hh-name > span { font-size: 1.05em; }
 html.compact .menu.anime .hh-pilot i { width: 3.9em; height: 3.9em; }
 html.compact .menu.anime .hh-pilot span { font-size: 1em; }
+html.compact .menu.anime .custom-heading .hh-name { grid-template-columns: auto minmax(0, 1fr) 3.9em; }
+html.compact .menu.anime .custom-heading .hh-name > b { font-size: 2.1em; }
 html.compact .menu.anime[data-screen='garage'] p { font-size: 1em; }
 html.compact .menu[data-screen='garage'] .item { font-size: 1.25em; padding-top: 0.28em; padding-bottom: 0.32em; }
 html.compact .menu[data-screen='garage'] .frame-info .stat { font-size: 0.95em; }

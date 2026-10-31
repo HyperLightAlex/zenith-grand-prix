@@ -1,0 +1,291 @@
+{
+  "kamaitachi": [
+    {
+      "id": "chest",
+      "reason": "Replacement emblem must be centered on, and cover, the complete modelled badge. 5% margin on the largest tangent extent.",
+      "before": {
+        "id": "chest",
+        "joint": "chest",
+        "part": "chest",
+        "center": [
+          0,
+          0.57,
+          1.184
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.84
+      },
+      "after": {
+        "id": "chest",
+        "joint": "chest",
+        "part": "chest",
+        "center": [
+          -0.011,
+          0.582499996,
+          1.184
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.897749989
+      },
+      "tangent_bounds": {
+        "min": [
+          -0.21699999272823334,
+          0.1550000011920929
+        ],
+        "max": [
+          0.19499999284744263,
+          1.0099999904632568
+        ]
+      },
+      "triangle_count": 24
+    },
+    {
+      "id": "shoulderL",
+      "reason": "Replacement emblem must be centered on, and cover, the complete modelled badge. 5% margin on the largest tangent extent.",
+      "before": {
+        "id": "shoulderL",
+        "joint": "shL",
+        "part": "shoulders",
+        "center": [
+          0.07,
+          -0.115,
+          0.612
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.55
+      },
+      "after": {
+        "id": "shoulderL",
+        "joint": "shL",
+        "part": "shoulders",
+        "center": [
+          0.07,
+          -0.115,
+          0.612
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.661500011
+      },
+      "tangent_bounds": {
+        "min": [
+          -0.10000000149011612,
+          -0.4300000071525574
+        ],
+        "max": [
+          0.23999999463558197,
+          0.20000000298023224
+        ]
+      },
+      "triangle_count": 24
+    },
+    {
+      "id": "shoulderR",
+      "reason": "Replacement emblem must be centered on, and cover, the complete modelled badge. 5% margin on the largest tangent extent.",
+      "before": {
+        "id": "shoulderR",
+        "joint": "shR",
+        "part": "shoulders",
+        "center": [
+          -0.07,
+          -0.115,
+          0.612
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.55
+      },
+      "after": {
+        "id": "shoulderR",
+        "joint": "shR",
+        "part": "shoulders",
+        "center": [
+          -0.07,
+          -0.115,
+          0.612
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.661500011
+      },
+      "tangent_bounds": {
+        "min": [
+          -0.23999999463558197,
+          -0.4300000071525574
+        ],
+        "max": [
+          0.10000000149011612,
+          0.20000000298023224
+        ]
+      },
+      "triangle_count": 24
+    }
+  ],
+  "fujin": [
+    {
+      "id": "shoulderL",
+      "reason": "Replacement emblem must be centered on, and cover, the complete modelled badge. 5% margin on the largest tangent extent.",
+      "before": {
+        "id": "shoulderL",
+        "joint": "shL",
+        "part": "shoulders",
+        "center": [
+          0.08,
+          0.1,
+          0.655
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.51
+      },
+      "after": {
+        "id": "shoulderL",
+        "joint": "shL",
+        "part": "shoulders",
+        "center": [
+          0.083250001,
+          0.1065,
+          0.655
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.641550002
+      },
+      "tangent_bounds": {
+        "min": [
+          -0.06949999928474426,
+          -0.19900000095367432
+        ],
+        "max": [
+          0.23600000143051147,
+          0.41200000047683716
+        ]
+      },
+      "triangle_count": 24
+    },
+    {
+      "id": "shoulderR",
+      "reason": "Replacement emblem must be centered on, and cover, the complete modelled badge. 5% margin on the largest tangent extent.",
+      "before": {
+        "id": "shoulderR",
+        "joint": "shR",
+        "part": "shoulders",
+        "center": [
+          -0.08,
+          0.1,
+          0.655
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.51
+      },
+      "after": {
+        "id": "shoulderR",
+        "joint": "shR",
+        "part": "shoulders",
+        "center": [
+          -0.083250001,
+          0.1065,
+          0.655
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "width": 0.641550002
+      },
+      "tangent_bounds": {
+        "min": [
+          -0.23600000143051147,
+          -0.19900000095367432
+        ],
+        "max": [
+          0.06949999928474426,
+          0.41200000047683716
+        ]
+      },
+      "triangle_count": 24
+    }
+  ]
+}

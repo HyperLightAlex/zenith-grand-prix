@@ -59,9 +59,11 @@ describe('the paint catalogue', () => {
 });
 
 describe('heads on other chests', () => {
-  it('sit as the models say: the table is what tools/head-seats.ts works out from them', () => {
+  it('match the shipped seating snapshot and independently verify every native head/chest pair', () => {
     const root = fileURLToPath(new URL('..', import.meta.url));
-    execFileSync(process.execPath, [`${root}node_modules/tsx/dist/cli.mjs`, 'tools/head-seats.ts', '--check'], { cwd: root, stdio: 'pipe' });
+    const report = execFileSync(process.execPath, [`${root}node_modules/tsx/dist/cli.mjs`, 'tools/head-seats.ts', '--check'], { cwd: root, stdio: 'pipe', encoding: 'utf8' });
+    expect(report).toContain('validated 75 native head/chest pairs against runtime seating');
+    expect(report).toContain('headSeats.ts is up to date');
   }, 120000);
 });
 

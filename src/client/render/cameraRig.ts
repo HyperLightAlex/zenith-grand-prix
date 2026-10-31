@@ -65,10 +65,17 @@ export class CameraRig {
    * In orbit, the drift held: the camera stays where it is unless turned by
    * hand (turn: the custom mech editor's right stick, or a drag across the bay).
    */
-  turntable = false;
+  private orbitHeld = false;
+  get turntable(): boolean { return this.orbitHeld; }
+  set turntable(held: boolean) {
+    // Leaving customization returns to the usual view and its automatic pan.
+    if (this.orbitHeld && !held) this.restartOrbit();
+    this.orbitHeld = held;
+  }
   /** Seconds the orbit has drifted, and how far it has been turned by hand (radians). */
   private orbitT = 0;
   private orbitTurn = 0;
+  private orbitElevation = 0;
   introLength = 4;
   private yaw = 0;
   private battleYaw = 0;
@@ -142,14 +149,17 @@ export class CameraRig {
     this.clock = 0;
     this.orbitT = 0;
     this.orbitTurn = 0;
+    this.orbitElevation = 0;
   }
 
   /**
    * Turn the orbit by hand: positive brings the near side of what it circles
    * to the right, as looking right does, or dragging it to the right.
    */
-  turn(rad: number): void {
+  turn(rad: number, elevation = 0): void {
     this.orbitTurn += rad;
+    // Keep the inspection camera above the floor and short of the overhead pole.
+    this.orbitElevation = THREE.MathUtils.clamp(this.orbitElevation + elevation, -0.15, 0.95);
   }
 
   update(dt: number, sub: CameraSubject, panX: number, panY: number, lookBack: boolean): void {
@@ -240,13 +250,22 @@ export class CameraRig {
       fov = 50 + e * 12;
     } else if (this.mode === 'orbit') {
       const ang = this.orbitT * 0.35 + 2.4 + this.orbitTurn;
-      const rise = 5 + Math.sin(this.orbitT * 0.3) * 1.5;
+      let rise = 5 + Math.sin(this.orbitT * 0.3) * 1.5;
+      let radius = 17.5;
+      if (this.orbitElevation !== 0) {
+        // Orbit the same inspection point at the same distance, rather than
+        // tilting away from the mech or zooming in as the camera rises.
+        const distance = Math.hypot(radius, rise - 4.4);
+        const elevation = Math.atan2(rise - 4.4, radius) + this.orbitElevation;
+        radius = Math.cos(elevation) * distance;
+        rise = 4.4 + Math.sin(elevation) * distance;
+      }
       if (this.orbitFrame) {
         // The frame's +X is the mech's left, the road's -d.
-        pos.set(Math.sin(ang) * 17.5, rise, -Math.cos(ang) * 17.5).applyMatrix4(this.orbitFrame);
+        pos.set(Math.sin(ang) * radius, rise, -Math.cos(ang) * radius).applyMatrix4(this.orbitFrame);
         look.set(0, 4.4, 0).applyMatrix4(this.orbitFrame);
       } else {
-        trackPoint(track, sub.s - Math.cos(ang) * 17, sub.d - Math.sin(ang) * 15, rise, pos);
+        trackPoint(track, sub.s - Math.cos(ang) * 17 * radius / 17.5, sub.d - Math.sin(ang) * 15 * radius / 17.5, rise, pos);
         trackPoint(track, sub.s, sub.d, 4.4, look);
       }
       fov = this.orbitFov;

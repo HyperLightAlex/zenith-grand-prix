@@ -97,6 +97,88 @@ describe('garage preview lifecycle', () => {
   });
 });
 
+describe('customization inspection camera', () => {
+  const center = new THREE.Vector3(0, 4.4, 0);
+  function inspection() {
+    const result = setup(0, true);
+    result.view.cam.orbitFrame = new THREE.Matrix4();
+    result.view.cam.turntable = true;
+    result.view.update(0, 0, 0, false);
+    return result;
+  }
+
+  it('keeps horizontal turning and the inspection distance while looking above or below the mech', () => {
+    const {view, renderer} = inspection();
+    try {
+      const camera = renderer.camera;
+      const initial = camera.position.clone();
+      const radius = initial.distanceTo(center);
+      const yaw = (p: THREE.Vector3) => Math.atan2(p.x, -p.z);
+      view.cam.turn(.7, .5);
+      view.update(0, 0, 0, false);
+      expect(yaw(camera.position) - yaw(initial)).toBeCloseTo(.7, 10);
+      expect(camera.position.y).toBeGreaterThan(initial.y + 5);
+      expect(camera.position.distanceTo(center)).toBeCloseTo(radius, 10);
+      expect(camera.getWorldDirection(new THREE.Vector3()).dot(center.clone().sub(camera.position).normalize())).toBeCloseTo(1, 10);
+
+      // Held input reaches a stable limit, never flipping over the mech or
+      // putting the camera through the hangar floor.
+      for (const direction of [100, -100]) {
+        view.cam.turn(0, direction);
+        view.update(0, 0, 0, false);
+        const limit = camera.position.clone();
+        view.cam.turn(0, direction);
+        view.update(0, 0, 0, false);
+        expect(camera.position.distanceTo(limit)).toBeLessThan(1e-10);
+        expect(camera.position.y).toBeGreaterThan(1);
+        expect(camera.position.y).toBeLessThan(20);
+        expect(Math.hypot(camera.position.x, camera.position.z)).toBeGreaterThan(8);
+        expect(camera.position.distanceTo(center)).toBeCloseTo(radius, 10);
+      }
+    } finally { view.dispose(); }
+  });
+
+  it('holds the view across customization screens, then resets and resumes the ordinary garage pan on exit', () => {
+    const {view, renderer} = inspection();
+    try {
+      const camera = renderer.camera, initial = camera.position.clone();
+      view.cam.turn(1.2, .6);
+      view.update(0, 0, 0, false);
+      const edited = camera.position.clone();
+      view.cam.turntable = true; // parts -> paint, or a dialog over the editor
+      view.update(3, 0, 0, false);
+      expect(camera.position.distanceTo(edited)).toBeLessThan(1e-10);
+
+      view.cam.turntable = false;
+      view.update(0, 0, 0, false);
+      expect(camera.position.distanceTo(initial)).toBeLessThan(1e-10);
+      view.update(1, 0, 0, false);
+      expect(camera.position.distanceTo(initial)).toBeGreaterThan(1);
+      const panning = camera.position.clone();
+      view.cam.turntable = true; // a new visit starts from the ordinary pan
+      view.update(1, 0, 0, false);
+      expect(camera.position.distanceTo(panning)).toBeLessThan(1e-10);
+    } finally { view.dispose(); }
+  });
+
+  it('does not carry inspection offsets into the race camera or change its right-stick response', () => {
+    const inspected = setup(0, false), ordinary = setup(0, false);
+    try {
+      inspected.view.cam.turntable = true;
+      inspected.view.cam.turn(2, .8);
+      inspected.view.cam.turntable = false;
+      for (const result of [inspected, ordinary]) {
+        result.session.race.mechs[0].speed = 80;
+        result.view.cam.mode = 'play';
+        result.view.update(1/60, .6, -.4, false);
+      }
+      expect(inspected.renderer.camera.position.distanceTo(ordinary.renderer.camera.position)).toBeLessThan(1e-10);
+      expect(inspected.renderer.camera.quaternion.angleTo(ordinary.renderer.camera.quaternion)).toBeLessThan(1e-7);
+      expect(inspected.renderer.camera.fov).toBe(ordinary.renderer.camera.fov);
+    } finally { inspected.view.dispose(); ordinary.view.dispose(); }
+  });
+});
+
 describe('steering presentation', () => {
   it('responds between anime drawings while keeping the stride and other pilots on held poses', () => {
     const previous = {on: look.on, steps: look.steps, time: drawClock.time};

@@ -1,12 +1,13 @@
 import { MechInkBuilder, type InkLines, type InsigniaId } from './ink';
 import * as THREE from 'three';
 import { Kit, type Slot } from './kit';
-import { rosterAsset, type CalfThruster } from './rosterAsset';
+import { rosterAsset, type CalfThruster, type FittingTransform, type RosterAsset } from './rosterAsset';
 import type { Livery } from '../palette';
 import type { MechRig, Pose } from './rig';
 import { getSunhawkPanels } from './sunhawkSelection';
 import { setMechDetail } from './detail';
 import { sunhawkDetailMaterial } from './sunhawkDetails';
+import { markingsMaterial } from './decals';
 import type { PartSlot } from '../../../custom/mechBuild';
 
 /** Match the source Blender silhouette gains, including the attached markings. */
@@ -54,10 +55,10 @@ export function attachRosterCalfJets(rig: MechRig, thrusters: readonly CalfThrus
 
 /** Retain the original effect/weapon/number anchors; only replace rigid armor. */
 export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, heavy: boolean): void {
-  rosterAnchors(rig,id);
+  rosterAnchors(rig,id,rosterAsset(id),livery);
   // Cooler, restrained shadow paint; each faction keeps its actual palette.
   const paint={...livery,shades:{...livery.shades,frame:0x182236}};
-  const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
+  const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back,skirtFront:rig.skirts.front};
   addArmour(rig,joints,[0,1,2].map(level=>({parts:rosterAsset(id,level).parts,lines:rosterAsset(id,level).lines})),()=>paint,rosterAsset(id).ink);
   finishRoster(rig);
   rig.fitPose=p=>fitRosterPose(p,heavy,id);
@@ -71,9 +72,10 @@ export function buildImportedRoster(rig: MechRig, livery: Livery, id: string, he
  * hands and muzzle turned to its palms. (The design's code builder, run
  * without geometry, has put them there first.)
  */
-export function rosterAnchors(rig: MechRig, id: string): void {
-  attachRosterCalfJets(rig,rosterAsset(id).calfThrusters);
-  const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back};
+export function rosterAnchors(rig: MechRig, id: string, asset: RosterAsset=rosterAsset(id), livery?: Livery): void {
+  attachRosterCalfJets(rig,asset.calfThrusters);
+  if(asset.sourceTextureSchema===1){nativeRosterFittings(rig,asset);if(livery)attachPreparedMarkings(rig,asset,livery);return;}
+  const joints={...rig.joints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back,skirtFront:rig.skirts.front};
   const gains=ROSTER_GAINS[id];
   for(const [name,joint] of Object.entries(joints)) {
     const gain=name.startsWith('el')?gains[0]:/^hip[LR]/.test(name)?gains[1]:name.startsWith('knee')?gains[2]:1;
@@ -119,6 +121,72 @@ export function rosterAnchors(rig: MechRig, id: string): void {
       if(child===rig.muzzle)child.position.z=-child.position.z+.18;
       else if(child===rig.handL || child===rig.handR)child.position.z*=-1;
     }
+  }
+}
+
+/** Restore only explicitly prepared markings after native fittings clear legacy decal planes. */
+export function attachPreparedMarkings(rig: MechRig, asset: Pick<RosterAsset, 'preparedMarkings'>, livery: Livery): void {
+  if (!asset.preparedMarkings) return;
+  const joints: Record<string, THREE.Object3D> = { ...rig.joints, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back, skirtFront: rig.skirts.front };
+  for (const mark of asset.preparedMarkings) {
+    const target = joints[mark.joint];
+    if (!target) throw new Error(`Prepared marking has no joint ${mark.joint}`);
+    const mesh = new THREE.Mesh(mark.geometry.clone(), markingsMaterial(livery, livery.darkArmour));
+    mesh.position.fromArray(mark.position);
+    mesh.quaternion.fromArray(mark.quaternion);
+    mesh.scale.fromArray(mark.scale);
+    mesh.renderOrder = mark.renderOrder;
+    mesh.userData.part = mark.part;
+    mesh.userData.ownMaterial = false;
+    mesh.userData.preparedMarking = true;
+    target.add(mesh);
+  }
+}
+
+/** Keep authored exhaust size separate from nozzle dimensions; old native exports retain their exact mapping. */
+export function thrusterEffectSize(t: Pick<CalfThruster,'radius'|'length'|'effectWidth'|'effectLength'>): {width:number;length:number} {
+  return {width:t.effectWidth??t.radius*.72,length:t.effectLength??Math.max(.65,t.length*4)};
+}
+
+/** Native exports author the physical fittings instead of inheriting old armour offsets. */
+export function nativeRosterFittings(rig: MechRig, asset: Pick<RosterAsset, 'fittings'|'mainThrusters'> & { calfThrusters?: readonly CalfThruster[] }, extraJoints: Record<string, THREE.Object3D> = {}): void {
+  const joints:Record<string,THREE.Object3D>={...rig.joints,...extraJoints,skirtL:rig.skirts.l,skirtR:rig.skirts.r,skirtBack:rig.skirts.back,skirtFront:rig.skirts.front};
+  const apply=(node:THREE.Object3D,f:FittingTransform)=>{
+    if(f.joint)joints[f.joint].add(node);
+    node.position.fromArray(f.position);
+    if(f.rotation)node.rotation.set(...f.rotation);
+    if(f.scale)node.scale.fromArray(f.scale);
+  };
+  for(const [name,f] of Object.entries(asset.fittings?.joints??{}))if(f)apply(joints[name],f);
+  const anchors=asset.fittings?.anchors??{};
+  let number:THREE.Object3D|undefined;
+  // Old procedural badges sit on the old armour. Native insignia meshes and
+  // their existing custom-team replacement system now own those locations.
+  for(const joint of Object.values(joints))for(const child of [...joint.children]){
+    if(!(child instanceof THREE.Mesh)||(child.geometry.type!=='PlaneGeometry'&&!child.userData.preparedMarking))continue;
+    const materials=Array.isArray(child.material)?child.material:[child.material];
+    if(materials.some(m=>m instanceof THREE.ShaderMaterial))continue;
+    if(child.userData.ownMaterial&&anchors.raceNumber&&!number){number=child;continue;}
+    child.removeFromParent();child.geometry.dispose();
+    if(child.userData.ownMaterial)for(const m of materials){(m as THREE.MeshBasicMaterial).map?.dispose();m.dispose();}
+  }
+  const own:Record<string,THREE.Object3D|undefined>={handL:rig.handL,handR:rig.handR,muzzle:rig.muzzle,heelL:rig.heels[0],heelR:rig.heels[1],raceNumber:number};
+  for(const [name,f] of Object.entries(anchors))if(f&&own[name])apply(own[name]!,f);
+  if(number)number.userData.part=anchors.raceNumber?.part??'backpack';
+  const unused=new Set(rig.flames.filter(f=>f.bank==='main'));
+  for(const t of asset.mainThrusters??[]){
+    const sign=t.id==='mainL'?1:-1;
+    const f=[...unused].find(f=>Math.sign(f.mesh.position.x)===sign);
+    if(!f)throw new Error(`Native roster missing ${t.id} effect`);
+    unused.delete(f);joints[t.joint].add(f.mesh);f.mesh.position.fromArray(t.outlet);f.mesh.rotation.set(...t.rotation);
+    // Explicit ownership avoids ambiguous overlapping chest/accessory bounds.
+    // The flame's drawn card and burner remain attached to this same object.
+    f.mesh.userData.part=t.part??'backpack';
+    const size=thrusterEffectSize(t);f.width=size.width;f.length=size.length;
+  }
+  for(const f of rig.flames.filter(f=>f.bank==='leg')){
+    const t=asset.calfThrusters?.find(t=>rig.joints[t.joint]===f.mesh.parent);
+    if(t){const size=thrusterEffectSize(t);f.width=size.width;f.length=size.length;}
   }
 }
 

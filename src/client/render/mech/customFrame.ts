@@ -12,15 +12,16 @@ import { ROLE, type Role } from '../../../sim/config';
 import { FRAME_DESIGNS, METALS, PAINTS, PART_SLOTS, schemeFor, type Channel, type MechBuild, type PartSlot, type Scheme } from '../../../custom/mechBuild';
 import { LIVERIES, type Livery } from '../palette';
 import { isMarking, markingsMaterial } from './decals';
-import { DIMS, designBuilder } from './frames';
+import { designBuilder } from './frames';
 import { HEAD_SEATS } from './headSeats';
+import { nativeHeadSeat, nativeBackpackSeat } from './nativeMounts';
 import { addArmour, finishRoster, fitRosterPose, rosterAnchors, type ArmourPiece } from './importedRoster';
 import { sunhawkFittings, sunhawkJoints } from './importedSunhawk';
 import type { InkLines } from './ink';
 import { insigniaEmblem } from './insignia';
 import { frameCtx } from './parts';
 import { MechRig, type FrameDims } from './rig';
-import { rosterAsset } from './rosterAsset';
+import { rosterAsset, type RosterFittings } from './rosterAsset';
 import { sunhawkAsset } from './sunhawkAsset';
 import { sunhawkDetailMaterial } from './sunhawkDetails';
 import { attachSunhawkTowers, fitSunhawkPose } from './sunhawkMotion';
@@ -34,6 +35,7 @@ const JOINT_PART: Record<string, PartSlot | null> = {
   skirtL: 'hips',
   skirtR: 'hips',
   skirtBack: 'hips',
+  skirtFront: 'hips',
   shL: null,
   shR: null,
   towerL: 'shoulders',
@@ -53,30 +55,31 @@ const JOINT_PART: Record<string, PartSlot | null> = {
 };
 
 /** A design's armour and ink at a level of detail. */
-function pieces(id: string, level: number): { parts: readonly ArmourPiece[]; lines: readonly InkLines[]; dims: FrameDims } {
+function pieces(id: string, level: number): { parts: readonly ArmourPiece[]; lines: readonly InkLines[]; dims: FrameDims; sourceTextureSchema?: number; fittings?: RosterFittings } {
   return id === 'sunhawk' ? sunhawkAsset('updated', level) : rosterAsset(id, level);
 }
 
 /** A design's skeleton. */
 function dimsOf(id: string, role: Role): FrameDims {
-  return id === 'sunhawk' ? sunhawkAsset('updated').dims : DIMS[role];
+  return id === 'sunhawk' ? sunhawkAsset('updated').dims : rosterAsset(id).dims;
 }
 
 /** Where each part's pieces sit on a joint that carries two, for a design (joint-local boxes, at full detail). */
-const boxes = new Map<string, Map<PartSlot, THREE.Box3>>();
+const boxes = new Map<string, { parts: readonly ArmourPiece[]; boxes: Map<PartSlot, THREE.Box3> }>();
 function partBoxes(id: string, joint: string): Map<PartSlot, THREE.Box3> {
   const key = `${id}/${joint}`;
-  let m = boxes.get(key);
+  const parts = pieces(id, 0).parts, cached = boxes.get(key);
+  let m = cached?.parts === parts ? cached.boxes : undefined;
   if (!m) {
     m = new Map();
-    for (const p of pieces(id, 0).parts) {
+    for (const p of parts) {
       if (p.joint !== joint || !p.part) continue;
       p.geometry.computeBoundingBox();
       const b = m.get(p.part) ?? new THREE.Box3();
       b.union(p.geometry.boundingBox!);
       m.set(p.part, b);
     }
-    boxes.set(key, m);
+    boxes.set(key, { parts, boxes: m });
   }
   return m;
 }
@@ -134,14 +137,14 @@ function donor(role: Role, id: string, team: Livery, number: string): Donor {
   let towers: Record<string, THREE.Group> = {};
   if (id === 'sunhawk') {
     rig = new MechRig(dimsOf(id, role));
-    towers = sunhawkJoints(rig, true);
-    sunhawkFittings(frameCtx(rig, team), number, true, towers as { towerL: THREE.Group; towerR: THREE.Group });
+    towers = sunhawkJoints(rig, true, sunhawkAsset('updated'));
+    sunhawkFittings(frameCtx(rig, team), number, true, towers as { towerL: THREE.Group; towerR: THREE.Group }, sunhawkAsset('updated'));
   } else {
-    rig = new MechRig(DIMS[role]);
+    rig = new MechRig(dimsOf(id, role));
     designBuilder(role, FRAME_DESIGNS[role].indexOf(id))(frameCtx(rig, team, false), number);
-    rosterAnchors(rig, id);
+    rosterAnchors(rig, id, rosterAsset(id), team);
   }
-  const joints = { ...rig.joints, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back, ...towers };
+  const joints = { ...rig.joints, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back, skirtFront: rig.skirts.front, ...towers };
   const own = new Set<THREE.Object3D>([...Object.values(joints), rig.handL, rig.handR, rig.muzzle, ...rig.heels]);
   return { rig, joints, own };
 }
@@ -197,6 +200,7 @@ export function customDims(role: Role, b: MechBuild): FrameDims {
   return {
     hipY,
     hipX: d('hips').hipX,
+    hipZ: d('hips').hipZ ?? 0,
     hipDrop,
     thigh,
     shin,
@@ -206,7 +210,11 @@ export function customDims(role: Role, b: MechBuild): FrameDims {
     shoulderX: chest.shoulderX,
     shoulderY: chest.shoulderY,
     // The neck's socket from the chest; the head up or down it, to sit on that chest as on its own.
-    headY: chest.headY + (HEAD_SEATS[of.chest]?.[of.head] ?? 0),
+    headY: chest.headY + (of.chest === of.head ? 0 :
+      pieces(of.chest, 0).sourceTextureSchema === 1 || pieces(of.head, 0).sourceTextureSchema === 1
+        ? (nativeHeadSeat(pieces(of.chest, 0), pieces(of.head, 0)) ?? 0)
+          + (pieces(of.chest, 0).fittings?.headSeatOffsets?.[of.head] ?? 0)
+        : HEAD_SEATS[of.chest]?.[of.head] ?? 0),
     headZ: chest.headZ,
     upperArm: d('armR').upperArm,
     foreArm: d('armR').foreArm,
@@ -220,8 +228,34 @@ export function buildCustomFrame(role: Role, team: Livery, b: MechBuild, number:
   const ids = [...new Set(PART_SLOTS.map((s) => of[s]))];
   const rig = new MechRig(customDims(role, b));
   const towers = of.shoulders === 'sunhawk' ? attachSunhawkTowers(rig) : null;
-  const joints: Record<string, THREE.Object3D> = { ...rig.joints, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back, ...(towers ?? {}) };
+  const joints: Record<string, THREE.Object3D> = { ...rig.joints, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back, skirtFront: rig.skirts.front, ...(towers ?? {}) };
   const paints = new Map(PART_SLOTS.map((s) => [s, paintLivery(team, schemeFor(b, s))]));
+
+  // Seat the selected module on its actual receiver, using LOD0 for every
+  // detail level. Keep approved same-design placement and all legacy pairs.
+  const chestAsset = pieces(of.chest, 0), packAsset = pieces(of.backpack, 0);
+  const packSeat = of.chest !== of.backpack && (chestAsset.sourceTextureSchema === 1 || packAsset.sourceTextureSchema === 1)
+    ? nativeBackpackSeat(chestAsset, packAsset) : undefined;
+  const backpackZ = packSeat?.deltaZ ?? 0;
+  const hipAsset=pieces(of.hips,0),waistAsset=pieces(of.waist,0);
+  const waistZ=of.hips!==of.waist && (hipAsset.sourceTextureSchema===1 || waistAsset.sourceTextureSchema===1)
+    ? (hipAsset.fittings?.mounts?.waistAxisZ??0)-(waistAsset.fittings?.mounts?.waistAxisZ??0) : 0;
+  // Seat the whole rigid waist on the hip's bearing axis. Counter-offset the
+  // chest joint so the upper-body rest position and backpack fit stay fixed.
+  rig.joints.spine.position.z=waistZ;
+  rig.joints.chest.position.z=-waistZ;
+  const headDims = dimsOf(of.head, role);
+  const headOnChest: [number, number, number] = chestAsset.sourceTextureSchema === 1 || pieces(of.head, 0).sourceTextureSchema === 1
+    ? [0, rig.dims.headY - headDims.headY, rig.dims.headZ - headDims.headZ] : [0, 0, 0];
+  // Maul's head-owned cowl stays articulated with the torso. It still needs
+  // the same mounting displacement as the head it surrounds.
+  const offsetFor = (part: PartSlot | undefined, joint: string): THREE.Vector3 | undefined => {
+    if (joint !== 'chest') return;
+    const v = part === 'backpack' ? new THREE.Vector3(0, 0, backpackZ)
+      : part === 'head' ? new THREE.Vector3(...headOnChest) : undefined;
+    return v && v.lengthSq() > 1e-16 ? v : undefined;
+  };
+  rig.root.userData.partMounts = { headY: rig.dims.headY - chestAsset.dims.headY, backpackZ, waistZ, headOnChest, backpack: packSeat };
 
   // Each part's fittings from its own design, where that design put them.
   const donors = new Map(ids.map((id) => [id, donor(role, id, team, number)]));
@@ -232,9 +266,12 @@ export function buildCustomFrame(role: Role, team: Livery, b: MechBuild, number:
       const target = joints[name];
       for (const child of [...node.children]) {
         if (d.own.has(child)) continue;
-        const part = partAt(id, name, at.copy(child.position));
+        const tagged = child.userData.part as PartSlot | undefined;
+        const part = tagged && PART_SLOTS.includes(tagged) ? tagged : partAt(id, name, at.copy(child.position));
         if (!part || of[part] !== id || !target) continue;
         target.add(child);
+        const mounting = offsetFor(part, name);
+        if (mounting) child.position.add(mounting);
         moved.add(child);
         // Markings on this part's paint: light on dark, dark on light.
         if (isMarking(child, team)) child.material = markingsMaterial(team, paints.get(part)!.darkArmour);
@@ -262,9 +299,14 @@ export function buildCustomFrame(role: Role, team: Livery, b: MechBuild, number:
   from('feet').rig.heels.forEach((h, i) => rig.heels[i]?.position.copy(h.position));
   for (const w of ['wingL', 'wingR'] as const) {
     rig.joints[w].position.copy(from('backpack').rig.joints[w].position);
+    rig.joints[w].position.z += backpackZ;
     rig.joints[w].rotation.copy(from('backpack').rig.joints[w].rotation);
   }
-  for (const k of ['l', 'r', 'back'] as const) rig.skirts[k].position.copy(from('hips').rig.skirts[k].position);
+  for (const k of ['l', 'r', 'back', 'front'] as const) rig.skirts[k].position.copy(from('hips').rig.skirts[k].position);
+  if (towers) for (const [tower, shoulder] of [['towerL','shL'],['towerR','shR']] as const) {
+    const source = from('shoulders');
+    towers[tower].position.copy(source.joints[tower].position).sub(source.rig.joints[shoulder].position).add(rig.joints[shoulder].position);
+  }
   for (const d of donors.values()) dispose(d.rig.root);
 
   // A part flown for another faction than its design's wears the team's
@@ -274,19 +316,35 @@ export function buildCustomFrame(role: Role, team: Livery, b: MechBuild, number:
   const foreign = (s: PartSlot) => FRAME_DESIGNS[role].indexOf(of[s]) !== teamIndex;
   const keep = (x: { part?: PartSlot; insignia?: string }, id: string) => !!x.part && of[x.part] === id && !(x.insignia && foreign(x.part));
 
-  // The armour, each part's from its design, in its paint.
+  // The armour and authored ink use the identical rigid mounting offset.
+  // Transient copies leave the shared donor geometry immutable.
+  const mountedGeometry: THREE.BufferGeometry[] = [];
   const levels = [0, 1, 2].map((level) => {
     const parts: ArmourPiece[] = [];
     const lines: InkLines[] = [];
     for (const id of ids) {
       const p = pieces(id, level);
-      parts.push(...p.parts.filter((x) => keep(x, id)));
-      lines.push(...p.lines.filter((x) => keep(x, id)));
+      for (const piece of p.parts.filter(x => keep(x, id))) {
+        const offset = offsetFor(piece.part, piece.joint);
+        if (!offset) { parts.push(piece); continue; }
+        const geometry = piece.geometry.clone().translate(offset.x, offset.y, offset.z);
+        mountedGeometry.push(geometry);parts.push({ ...piece, geometry });
+      }
+      for (const line of p.lines.filter(x => keep(x, id))) {
+        const offset = offsetFor(line.part, line.joint);
+        if (!offset) { lines.push(line); continue; }
+        const positions = line.positions.slice();
+        for (let i = 0; i < positions.length; i += 3) {
+          positions[i] += offset.x;positions[i + 1] += offset.y;positions[i + 2] += offset.z;
+        }
+        lines.push({ ...line, positions });
+      }
     }
     return { parts, lines };
   });
   // The Sunhawk's painted details with the team's lettering (a part carries no faction's marks of its own).
-  addArmour(rig, joints, levels, (p) => paints.get(p.part!)!, true, ids.includes('sunhawk') ? sunhawkDetailMaterial(team) : undefined);
+  addArmour(rig, joints, levels, (p) => paints.get(p.part!)!, true, levels.some(level => level.parts.some(p => p.detail)) ? sunhawkDetailMaterial(team) : undefined);
+  for (const geometry of mountedGeometry) geometry.dispose();
   const insignias: { kept: string[]; replaced: string[] } = { kept: [], replaced: [] };
   for (const id of ids) {
     if (id === 'sunhawk') continue;
@@ -299,6 +357,8 @@ export function buildCustomFrame(role: Role, team: Livery, b: MechBuild, number:
       const under = pieces(id, 0).parts.filter((x) => x.joint === a.joint && x.part === a.part && !x.insignia && !x.detail && x.slot !== 'G');
       const emblem = insigniaEmblem(a, under, team, paints.get(a.part)!);
       if (!emblem) continue;
+      const mounting = offsetFor(a.part, a.joint);
+      if (mounting) emblem.position.add(mounting);
       joints[a.joint].add(emblem);
       insignias.replaced.push(`${id}/${a.id}`);
     }

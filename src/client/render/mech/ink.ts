@@ -191,6 +191,19 @@ export class MechInkBuilder {
       m.userData.mechInkMark=this.uniforms.uMark;
       live.add(m);m.addEventListener('dispose',()=>live.delete(m));
     }
+    // A level with no authored lines still owns its line material and joint
+    // texture. Release those when the attached hull is disposed, and expose
+    // the same cleanup for review tools that build many short-lived rigs.
+    let disposed=false;
+    const release=()=>{
+      if(disposed)return;
+      disposed=true;this.line.dispose();this.jointTex.dispose();
+    };
+    this.hull.addEventListener('dispose',release);
+    rig.root.userData.disposeMechInk=()=>{
+      if(disposed)return;
+      this.hull.dispose();release();
+    };
     rig.root.userData.geometryInk=true;
   }
   /** The matrix the shaders use for joint `i` (from the joint texture). */

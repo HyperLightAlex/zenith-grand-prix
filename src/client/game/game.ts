@@ -501,12 +501,13 @@ export class Game {
   }
 
   private tellTimer = 0;
-  /** How fast the right stick is turning the mech in the editor (radians a second, eased). */
+  /** How fast the right stick is inspecting the mech in the editor (radians a second, eased). */
   private turnRate = 0;
+  private elevationRate = 0;
 
-  /** A drag across the bay in the custom mech editor: `dx` pixels to the right turns the mech that way. */
-  turnHangar(dx: number): void {
-    this.view.cam.turn((dx / Math.max(320, innerWidth)) * Math.PI * 1.6);
+  /** A drag across the custom mech bay: turn horizontally, or inspect from above/below. */
+  turnHangar(dx: number, dy = 0): void {
+    this.view.cam.turn((dx / Math.max(320, innerWidth)) * Math.PI * 1.6, (-dy / Math.max(240, innerHeight)) * Math.PI);
   }
 
   /** A room or squad hears of your mechs once the changes settle (not at every step through the paints). */
@@ -2100,15 +2101,18 @@ export class Game {
       this.heldLandscape = hold;
       holdLandscape(hold);
     }
-    // The right stick reads a menu's text.
-    if (this.menus.screen && Math.abs(this.input.camY) > 0.05) this.menus.scrollBy(this.input.camY * dt * 900);
-    // The custom mech editor: the mech stands still in the bay, and the right stick (across) turns it.
+    // Customization holds the bay still; both right-stick axes inspect the
+    // mech. Elsewhere the vertical axis keeps scrolling the menu's text.
     const under = this.menus.under(OVER_EDITOR);
     const turning = this.state === 'garage' && under !== null && CUSTOM_SCREENS.has(under);
+    if (!turning && this.menus.screen && Math.abs(this.input.camY) > 0.05) this.menus.scrollBy(this.input.camY * dt * 900);
     this.view.cam.turntable = turning;
     const want = Math.abs(this.input.camX) > 0.12 ? this.input.camX * 2.1 : 0;
-    this.turnRate = turning ? this.turnRate + (want - this.turnRate) * (1 - Math.exp(-12 * dt)) : 0;
-    if (Math.abs(this.turnRate) > 1e-3) this.view.cam.turn(this.turnRate * dt);
+    const wantElevation = Math.abs(this.input.camY) > 0.12 ? -this.input.camY * 1.25 : 0;
+    const ease = 1 - Math.exp(-12 * dt);
+    this.turnRate = turning ? this.turnRate + (want - this.turnRate) * ease : 0;
+    this.elevationRate = turning ? this.elevationRate + (wantElevation - this.elevationRate) * ease : 0;
+    if (Math.abs(this.turnRate) > 1e-3 || Math.abs(this.elevationRate) > 1e-3) this.view.cam.turn(this.turnRate * dt, this.elevationRate * dt);
     // The hangar's mech, clear of the panels for the layout in use.
     if (this.state === 'garage' && this.view.cam.mode === 'orbit') {
       [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift();

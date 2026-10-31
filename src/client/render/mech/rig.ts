@@ -15,6 +15,8 @@ export interface FrameDims {
   hipY: number;
   hipX: number;
   hipDrop: number;
+  /** Forward offset of the hip sockets within the hips module; legacy frames use zero. */
+  hipZ?: number;
   thigh: number;
   shin: number;
   ankleY: number;
@@ -188,7 +190,7 @@ export class MechRig {
    * place them and hang their armour on them; a frame without skirts leaves
    * them empty.
    */
-  readonly skirts = { l: new THREE.Group(), r: new THREE.Group(), back: new THREE.Group() };
+  readonly skirts = { l: new THREE.Group(), r: new THREE.Group(), back: new THREE.Group(), front: new THREE.Group() };
   /** How far each thigh swings forward of straight down, radians (set by apply). */
   private swing = { l: 0, r: 0 };
 
@@ -213,7 +215,7 @@ export class MechRig {
       const el = j(L ? 'elL' : 'elR', sh, 0, -d.upperArm, 0);
       const wr = j(L ? 'wrL' : 'wrR', el, 0, -d.foreArm, 0);
       wr.add(L ? this.handL : this.handR);
-      const hip = j(L ? 'hipL' : 'hipR', hips, side * d.hipX, -d.hipDrop, 0);
+      const hip = j(L ? 'hipL' : 'hipR', hips, side * d.hipX, -d.hipDrop, d.hipZ ?? 0);
       const knee = j(L ? 'kneeL' : 'kneeR', hip, 0, -d.thigh, 0);
       const ankle = j(L ? 'ankleL' : 'ankleR', knee, 0, -d.shin, 0);
       const heel = new THREE.Object3D();
@@ -222,7 +224,7 @@ export class MechRig {
       this.heels.push(heel);
       j(L ? 'wingL' : 'wingR', chest, side * 0.55, 0.75, -0.85);
     }
-    hips.add(this.skirts.l, this.skirts.r, this.skirts.back);
+    hips.add(this.skirts.l, this.skirts.r, this.skirts.back, this.skirts.front);
   }
 
   /** The joints the gun hangs from (the shoulder and elbow above the muzzle), found once. */
@@ -307,6 +309,8 @@ export class MechRig {
     // Skirts ride up with the legs instead of passing through them.
     this.skirts.l.rotation.x = -Math.max(0, this.swing.l - 0.08) * 0.95;
     this.skirts.r.rotation.x = -Math.max(0, this.swing.r - 0.08) * 0.95;
+    // A continuous front tabard lifts as one plate when either thigh advances.
+    this.skirts.front.rotation.x = -Math.max(0, this.swing.l - 0.08, this.swing.r - 0.08) * 0.95;
     this.skirts.back.rotation.x = Math.max(0, -Math.min(this.swing.l, this.swing.r) - 0.08) * 0.9;
   }
 
@@ -317,7 +321,7 @@ export class MechRig {
   private bendLeg(side: 1 | -1, target: THREE.Vector3): number {
     const d = this.dims;
     // Vector from the hip joint to the ankle target, in hips-local space.
-    v.set(side * d.hipX, -d.hipDrop, 0).applyQuaternion(qh).add(this.joints.hips.position);
+    v.copy(this.joints[side === 1 ? 'hipL' : 'hipR'].position).applyQuaternion(qh).add(this.joints.hips.position);
     v.subVectors(target, v).applyQuaternion(qInv);
     const a = d.thigh;
     const b = d.shin;

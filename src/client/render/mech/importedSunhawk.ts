@@ -4,19 +4,28 @@ import { decal } from './decals';
 import { Kit } from './kit';
 import { numberDecal, type FrameCtx } from './parts';
 import type { MechRig } from './rig';
-import { sunhawkAsset, type AssetJoint } from './sunhawkAsset';
+import { sunhawkAsset, type AssetJoint, type SunhawkAsset } from './sunhawkAsset';
 import { getSunhawkPanels, type SunhawkAssetVariant } from './sunhawkSelection';
 import { attachSunhawkTowers, fitSunhawkPose } from './sunhawkMotion';
 import { sunhawkDetailMaterial } from './sunhawkDetails';
 import { setMechDetail } from './detail';
+import { addArmour, finishRoster, nativeRosterFittings, thrusterEffectSize } from './importedRoster';
 
 /** Art-authored rigid parts on the same pose/IK system as every other mech. */
 export function buildImportedSunhawk(c: FrameCtx, number: string, variant: SunhawkAssetVariant): void {
   const { rig, livery } = c;
   const u = variant === 'updated';
   const paint = u ? { ...livery, primary: 0xeaf0f9, shades: { ...livery.shades, primary: 0x9ba8c9, trim: 0xc88024, frame: 0x1c263d } } : livery;
-  const towers = sunhawkJoints(rig, u);
-  const joints = { ...rig.joints, ...towers, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back };
+  const asset = sunhawkAsset(variant);
+  const towers = sunhawkJoints(rig, u, asset);
+  const joints = { ...rig.joints, ...towers, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back, skirtFront: rig.skirts.front };
+  if (asset.sourceTextureSchema === 1) {
+    sunhawkFittings(c, number, u, towers, asset);
+    addArmour(rig, joints, [0,1,2].map(level => sunhawkAsset(variant, level)), () => livery, asset.ink);
+    finishRoster(rig);
+    rig.root.userData.sunhawkModel = variant;
+    return;
+  }
   const ink=u && sunhawkAsset(variant).ink ? new MechInkBuilder(rig,joints) : null;
   for (let level = 0; level < (u ? 3 : 1); level++) {
     const groups: THREE.Object3D[] = [];
@@ -60,13 +69,14 @@ export function buildImportedSunhawk(c: FrameCtx, number: string, variant: Sunha
  * hip skirts' hinges, the arms' outward rake and the fins' swept roots (and,
  * updated, its own pose fitting and skates kept on the road).
  */
-export function sunhawkJoints(rig: MechRig, u: boolean): { towerL: THREE.Group; towerR: THREE.Group } {
+export function sunhawkJoints(rig: MechRig, u: boolean, asset?: SunhawkAsset): { towerL: THREE.Group; towerR: THREE.Group } {
   const J = rig.joints;
   if (u) {
     rig.fitPose = fitSunhawkPose;
     rig.keepFeetOnRoad = true;
   }
   const towers = attachSunhawkTowers(rig);
+  if (asset?.sourceTextureSchema === 1) return towers;
   rig.skirts.l.position.set(.65,.11,.36);
   rig.skirts.r.position.set(-.65,.11,.36);
   rig.skirts.back.position.set(0,.15,-.34);
@@ -80,9 +90,22 @@ export function sunhawkJoints(rig: MechRig, u: boolean): { towerL: THREE.Group; 
 }
 
 /** The Sunhawk's fittings: its markings and number, its thrusters, the hands, heels and muzzle. */
-export function sunhawkFittings(c: FrameCtx, number: string, u: boolean, towers: { towerL: THREE.Group; towerR: THREE.Group }): void {
+export function sunhawkFittings(c: FrameCtx, number: string, u: boolean, towers: { towerL: THREE.Group; towerR: THREE.Group }, asset?: SunhawkAsset): void {
   const { rig, livery } = c;
   const J = rig.joints;
+  if (asset?.sourceTextureSchema === 1) {
+    const joints = { ...J, ...towers, skirtL: rig.skirts.l, skirtR: rig.skirts.r, skirtBack: rig.skirts.back, skirtFront: rig.skirts.front };
+    for (const t of asset.mainThrusters ?? []) {
+      const size=thrusterEffectSize(t);c.flame(joints[t.joint],t.outlet,t.rotation,size.width,size.length,'main');
+    }
+    for (const t of asset.calfThrusters ?? []) {
+      const size=thrusterEffectSize(t);c.flame(joints[t.joint],t.outlet,t.rotation,size.width,size.length,'leg');
+    }
+    const num = numberDecal(number, livery);
+    J.chest.add(num);
+    nativeRosterFittings(rig, asset, towers);
+    return;
+  }
   for (const s of [1,-1]) {
     const towerX = s*(u ? 1.63 : 1.83);
     decal(s === 1 ? towers.towerL : towers.towerR,livery,s === -1 ? 'emblem' : 'warning',

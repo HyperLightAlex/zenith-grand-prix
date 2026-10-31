@@ -1,0 +1,366 @@
+{
+  "accepted_date": "2026-10-31",
+  "scope": "15 accepted default designs,3LODs each; no reconstructed alternatives or historical experimental models",
+  "source_branch": "alexander/kamaitachi-conversion",
+  "frozen_original_main": "dd1675932ad9eb40c1422ec2929755c74783df19",
+  "blender": "5.2.2 LTS",
+  "source_authoring_recipe_hashes": {
+    "compose.py": "b914a0756f59fcaa22209720cad468eb1fb27c99ae2ffd3aceaa4378315f614b",
+    "propulsion_fit.py": "c970644ba68f0b764cd140a52074dd31cc010f827986b386985d6ca2a9ac593b",
+    "emitter_sizes.py": "9a49ac57f2cbb0a8276d1521525758580276c981f1dcf426c13fc610a0414ee1",
+    "mirage_recipe.py": "ec74e807dea941f65d9054e360d5e4142eb3f10c05e28ac9acb2542a0dc54269",
+    "designs/sunhawk/recipe.py": "72b44b1cb96dd563679179bec62f403a14701ee0edb65f5c1febf3cce1204f9d",
+    "designs/daystar/build.py": "bca4ea32c41ec94530f15e0879ed6642fc7caa366704182b2a6ce3040bfbce6f",
+    "designs/rampart/build.py": "7f71ba6f141d737e2e37d276f2698ab72c4e344e5ff4ddb201afc6e34f60f5b6",
+    "designs/rampart/recipe.py": "2dd99fe3904450ef6d80f044bf219a33b4b956432d10a32503c0f4b765797279",
+    "designs/razor/recipe.py": "d06ef05a822accc737822c0b05d7ad8b88ec01e890a219cf347a2a1d81f304b8",
+    "designs/stinger/build.py": "514a1eef48c4648e4a3a61593db8a89de4f831e58b9c295e76e62d5afd8d12b8",
+    "designs/maul/build.py": "467807883783f938c674cdf96e27df7059c3c1f4d4b48c2240881aed1ff226e8",
+    "designs/maul/recipe.py": "f3b575bda22963a87169fca3943066638be449291c62d10b78375ecb2e77d4b3",
+    "designs/maul/cowl_shell.py": "9997d446f298594614908c1b36881d9880dc990f44f79e4779d60535b642f6da",
+    "designs/horus/build.py": "21a794b8f19c0e85fc8a0d6121aaf13718af3c4398fcbb222ac6373dcac8b549",
+    "designs/sobek/build.py": "2d4d2c3fa92b806f44fa17ab7c36f54a63361226b0d68bb8067a124f00fd2f50",
+    "designs/seraph/recipe.py": "a8f8e53d071066a163dc24a76bcb8d34f641470b0f42abfc9900382fe533e61f",
+    "designs/longbow/build.py": "b3d4fc158dc3606236a797928bd4556e57d8ef1323be1b072a01854e2075f60c",
+    "designs/paladin/build.py": "82cd3c79e8f3744c4c9781fff5fabdac8fb6c27d09fee7abdac32c9fababd172",
+    "designs/paladin/recipe.py": "04e4761c06a1db8dac339a546a2705563a2287b6a72c0ae8f58aa5b1d2174a82",
+    "designs/kamaitachi/recipe.py": "be708f0daba42ede0a20e561a365c8c85f3dbda34a7174863f8e6cf1d339db81",
+    "designs/fujin/build.py": "24164653a7fc4236a88689143ff5d1d04409b03effb374a7ba7e22b6e22ae7a4",
+    "designs/raijin/build.py": "3d51875c9b1012dc6b69cd106588464d6e5dc4f4edb0168df8dbe50ecdc5b104",
+    "designs/raijin/defender_common.py": "c8d09180f84c3308b149885cb94aa9e7183f4a9931192fa1cb49858ff1d86f8e",
+    "designs/raijin/recipe.py": "aff04aaab35d3fc959969e73898723b02c9acb392b03d3957326abec3459f879"
+  },
+  "accepted_models": [
+    {
+      "model": "sunhawk",
+      "source_manifest_sha256": "b0bd1b108b19e5612c3a869b604f88c45d49b2894c86a30961816febd327b5c5",
+      "source_blend_sha256": "af646a4132b0b71c495cd25bb0d8d7ba227a028039235eb82027fe890f118a6c",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "c72abab7f0d11a3b257432c2dad5bdbeb815f580d3b925e17c6f99706c2a91ae",
+          "triangles": 26024
+        },
+        {
+          "level": 1,
+          "sha256": "fb01e7dab112f7c59e5c5acbeef25a49629c0e5ef0c4f19f40a4cdb247a7728a",
+          "triangles": 13948
+        },
+        {
+          "level": 2,
+          "sha256": "9313d2286e53b46ae5f570ab6e3960e3dabbb65b468876791c0319ab241d439f",
+          "triangles": 7560
+        }
+      ]
+    },
+    {
+      "model": "daystar",
+      "source_manifest_sha256": "b46724b204f040f0895a06629a5edabedbae099b89b6b6d4878395dc2d5dce6e",
+      "source_blend_sha256": "980f512b4b207541aedd7b37ae7a0874fe63f09772da03c4cf4a89cdd303d4da",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "e27bc23dd2a3f27326b1db71715dff6972f0d654eeadbebfb94bd7f7d24749de",
+          "triangles": 23056
+        },
+        {
+          "level": 1,
+          "sha256": "ca1857087def1d7b12e59d67c69d08e9a78d0285d48e59b7f9bd5d808bd54d69",
+          "triangles": 10130
+        },
+        {
+          "level": 2,
+          "sha256": "f2998105f7d76464c664c7623d1c259d12410dacd3ccbe2d5ba3d3bf00d79bce",
+          "triangles": 8402
+        }
+      ]
+    },
+    {
+      "model": "rampart",
+      "source_manifest_sha256": "7e2f1a0bc9c1bcecdbdb3bcc351197e5cb7b8e7e711b1c83966f9284ea5ebc9e",
+      "source_blend_sha256": "c9ed4d2738f1f51cac2bd8aaf225a7f4a19a7d65bc130d9ee8f9dd932012fa32",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "261fd19a6884c8517701f93d1a743828c7d297878288e6091cdc86975e418d40",
+          "triangles": 28164
+        },
+        {
+          "level": 1,
+          "sha256": "b89bb4c5a1e4dfd6334ec1c3b93712a7aa0baa37a65edc58703243f7580887c7",
+          "triangles": 15192
+        },
+        {
+          "level": 2,
+          "sha256": "80e103ecfd1781d358bf24a409905d6eea2e33c2af8aee6843d0306a1640144c",
+          "triangles": 7832
+        }
+      ]
+    },
+    {
+      "model": "razor",
+      "source_manifest_sha256": "3a1efc7791942e587314b7e2af75fe2b48f05957daab04213605070e2fdf5525",
+      "source_blend_sha256": "fc1f59c958fa51b6ad646d38b9926a804646adb577f1641bc4515c726d1bdcea",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "9e29c727c90fa3f13d055be213ddbb9bd3c9bf571fce21b4fbc3f9ead7f457eb",
+          "triangles": 25432
+        },
+        {
+          "level": 1,
+          "sha256": "e3d18793446787670b59e3ad89bd60a631696ed31956cab880e4f61878bd7fa4",
+          "triangles": 13697
+        },
+        {
+          "level": 2,
+          "sha256": "caf55c4f820be884ab2d05121834782c7573243061be1be0a302f70b6bc0545f",
+          "triangles": 7095
+        }
+      ]
+    },
+    {
+      "model": "stinger",
+      "source_manifest_sha256": "399de28cc90ee0d602c9acb78d49f8da84ccf6ec3dfe6eec734b8d10d6a55764",
+      "source_blend_sha256": "636d361e7383e016c087ea8902f35f19c8d539b970513f5e4f075a8111fcec9b",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "1d9a8b57263055be8513295365f23c959d5f7b56e314b68aa6ed8136aea9e834",
+          "triangles": 24578
+        },
+        {
+          "level": 1,
+          "sha256": "5a6b04d88d1b37cdf0ca221b4022bed653289eafa85a1a6edf1f576f444c1202",
+          "triangles": 12901
+        },
+        {
+          "level": 2,
+          "sha256": "f5c6ea73ba1a3c6e83d4907dee41e9e07c959700d132718fdcb78d03ab3f59a9",
+          "triangles": 7023
+        }
+      ]
+    },
+    {
+      "model": "maul",
+      "source_manifest_sha256": "c776019c38ebd6965e29f121ca4992e106a3df502c09bc41b15b72edef83459c",
+      "source_blend_sha256": "6846ff3aae64b515a1e07d3888a36d3cb78bdd019c072b84aa088c274ee58fa3",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "a5931b14809b8b3e51ee56a403795c45ac1b30d7579e07889f448f9e496cfb7b",
+          "triangles": 28884
+        },
+        {
+          "level": 1,
+          "sha256": "cc526ef78039d83cbbf0f7da02ba023a39cd6bb68013d11eceae5cdf6b6243a5",
+          "triangles": 15528
+        },
+        {
+          "level": 2,
+          "sha256": "f80cee438b2f87262f147a43c25ed5685d5870b8cfcce9601a9174057a3f6643",
+          "triangles": 7956
+        }
+      ]
+    },
+    {
+      "model": "anubis",
+      "source_manifest_sha256": "6e5f63ae95319933efe86f318083416cfc8a93643af1f419522faf8516d61f93",
+      "source_blend_sha256": "312d396784943d705309ca9ba7ec399aa5fd7261a376b384e3ae226815ff99aa",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "3eb5c4b0df650cd6610d87883d0dfa0c9a0c44d02298d079f0ba0c457517416a",
+          "triangles": 28214
+        },
+        {
+          "level": 1,
+          "sha256": "794c04b67b13fd5536178d49a9c31b297a84d278263abd2025d5545ac0295140",
+          "triangles": 14966
+        },
+        {
+          "level": 2,
+          "sha256": "530f816e8f258e4506059569e906041f2091a3b85c5b46ebf59c24a4078951a4",
+          "triangles": 7924
+        }
+      ]
+    },
+    {
+      "model": "horus",
+      "source_manifest_sha256": "11eae7d73dac21db07945633da98284faeb6020bd1e2654f1d317832f8d27452",
+      "source_blend_sha256": "98fe6ad47c5859c9806dfd0b2448710f0fe56bac91c828bf82272f30601e326a",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "fe0bec9edad067a56669abfbdf711054f66b99cb0713739e68a053024dbb5017",
+          "triangles": 34136
+        },
+        {
+          "level": 1,
+          "sha256": "5f700baac6b697fa883da8a8e5325b4f06488457af74e0b6377e783976a7fd97",
+          "triangles": 17460
+        },
+        {
+          "level": 2,
+          "sha256": "a73c496143c8c259a3f6ad46eef2749faa1b90ea56c7070abb98ef70332a7790",
+          "triangles": 9894
+        }
+      ]
+    },
+    {
+      "model": "sobek",
+      "source_manifest_sha256": "0392980731f98872e4dd23ff3fb248372b3f1ac77f0ee27304933f45b0520961",
+      "source_blend_sha256": "7161e387adfc85868b861f16eb7a5d8bc24f015d8b7bcdb3ba08916aae047f61",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "2acfebdebc15c9b1f7bc33bd8b405b917237d0a3e3d796b762065a890da78739",
+          "triangles": 34452
+        },
+        {
+          "level": 1,
+          "sha256": "7e57892def1cb1ae1c0f436445f5194183151771806bfe6f91fc4c9e1c2e9bb9",
+          "triangles": 17408
+        },
+        {
+          "level": 2,
+          "sha256": "2a4c983271c1d7a2e2919c75dccb5b26bb924784f3d2ef06b89733a7663974b2",
+          "triangles": 10446
+        }
+      ]
+    },
+    {
+      "model": "seraph",
+      "source_manifest_sha256": "f2e678cee1ee4350b8cc16db4330035870ea0d0f0572c1004d0ac30430d1a4c4",
+      "source_blend_sha256": "1a011c72ea27be3a6375c40bf87906257b39b296049cfcef00c2dd0afd2db0ad",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "013ec307f81c228f381524c2d1edfd5837ee203d77683569ee4f0d6de523a0ea",
+          "triangles": 20088
+        },
+        {
+          "level": 1,
+          "sha256": "dc0dbd1d11fec314ff190376e7d35afff4075e2dbfc52150fd366f9758d4a549",
+          "triangles": 8890
+        },
+        {
+          "level": 2,
+          "sha256": "02b617b196c8322d4a4733a450b0bb01857312c4e213f7d9763600e835de89b1",
+          "triangles": 7150
+        }
+      ]
+    },
+    {
+      "model": "longbow",
+      "source_manifest_sha256": "6fe66c5c3f2415edd6534db4db64331d10be80f4bb285eb8dbad25b4a4f557c9",
+      "source_blend_sha256": "dff9a2bf456db9cbb14ef6b030ffff4ed1099f2c723dd79f5a30e0bb63b8820e",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "bc1391dd8cce44c042f66c2aab68f945bef5d2e5242b86fce9dc1c3c74a7ab4b",
+          "triangles": 39120
+        },
+        {
+          "level": 1,
+          "sha256": "20b93d545317bfaf898e0357f2d0860f022fa0d3082a10f407b6513890041e34",
+          "triangles": 20758
+        },
+        {
+          "level": 2,
+          "sha256": "a419ba5fa2a313f143c93a5741277eb14209293e6435c949f59b10c94360205b",
+          "triangles": 11270
+        }
+      ]
+    },
+    {
+      "model": "paladin",
+      "source_manifest_sha256": "a7c0a0f2b92c77ced61b4e93cdbe99380f2424037f6a0ae1152de50bae3f169e",
+      "source_blend_sha256": "a6c132606d753115d2405cd6af4697465754f49e8048b04951f248fa59d2ea83",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "3b0e5e4ef5ebd11379af44ada483c9c4bd47d8d9d2e0932e5c314ad7b23b0318",
+          "triangles": 40432
+        },
+        {
+          "level": 1,
+          "sha256": "193aa95508a12f907582ad4240aa46f1cc7306b01f3c174d4c71f898a63daa48",
+          "triangles": 20716
+        },
+        {
+          "level": 2,
+          "sha256": "13627e5fc58ea412538e3a9eee2409dedd1725f95dfb971379dd17e1ff99d6db",
+          "triangles": 11684
+        }
+      ]
+    },
+    {
+      "model": "kamaitachi",
+      "source_manifest_sha256": "3d48babe3b578d78158179c953ecffc3b3ff13b115fa7dbf89714c8ae1b22f08",
+      "source_blend_sha256": "c9492d370140fca355913d0d6306637591dea0c4db3ec46db0b1b2b21b8e5d59",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "a6c6d8fc8c912e53b23f6c50eeec6d17604cfe58f6945dae969db2b30d8f32c2",
+          "triangles": 26559
+        },
+        {
+          "level": 1,
+          "sha256": "561f380474294a558a7f23d164061d4c662797e1507c94c860698171da622e68",
+          "triangles": 13511
+        },
+        {
+          "level": 2,
+          "sha256": "53c10bf004bbf388cb710ee37c0b5b04ef9e948de72dc441560a442b5acbf0a5",
+          "triangles": 10507
+        }
+      ]
+    },
+    {
+      "model": "fujin",
+      "source_manifest_sha256": "493179fe12c15fda60a9be939bea4d0f89361a099e846433c745522f2f5ebe6a",
+      "source_blend_sha256": "8aa81ce3487e93401af3038f7a93a35ab78f6b5bb30b9b6543ccca60ed8108e3",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "9669c05c9ef733622a665893ad5789318d39273abdc53198a27ffa4e577a191a",
+          "triangles": 31616
+        },
+        {
+          "level": 1,
+          "sha256": "d415640c03d6cd7b58778b617fa26c3a21da15ccb6d7353f659aaec3b41738db",
+          "triangles": 16380
+        },
+        {
+          "level": 2,
+          "sha256": "65eac5e48bf6a0ea7dded37a051f34b0c8540aaa3df9e82720373e5477b6be5f",
+          "triangles": 8994
+        }
+      ]
+    },
+    {
+      "model": "raijin",
+      "source_manifest_sha256": "c98445711429d183e71f2f39d55502486b7fbab40aeb9d8d449475448f286d1c",
+      "source_blend_sha256": "3fed4508cd9ba444e467e5da3631bac3a5c95eb18b36fb777ba1f146e3df7a92",
+      "lods": [
+        {
+          "level": 0,
+          "sha256": "b8ffb161abcb0bda036fe0cbb0c788f5beecd106be5415ce4794ff43925393fb",
+          "triangles": 39806
+        },
+        {
+          "level": 1,
+          "sha256": "0af059d2397361d7e469b75c1c780aa478ac9008da09f27320521bfdf96dc321",
+          "triangles": 19274
+        },
+        {
+          "level": 2,
+          "sha256": "1cdd1736d8cdc62f10c25e0b3b9ef1ef5d8ec697afa55081251d04c9b9f8084e",
+          "triangles": 13438
+        }
+      ]
+    }
+  ],
+  "runtime_differences": "None in the45model files; promotion preserves original bytes. Prepared decal cache is authored separately."
+}

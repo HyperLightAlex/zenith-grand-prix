@@ -1,0 +1,389 @@
+{
+  "inputs": {
+    "daystar": {
+      "approved": "e27bc23dd2a3f27326b1db71715dff6972f0d654eeadbebfb94bd7f7d24749de",
+      "frozenMain": "ba175d0c9f025f9638043a6e7664bd9b0fd1a9a7192408f57f24ab04aaf2745c"
+    },
+    "rampart": {
+      "approved": "261fd19a6884c8517701f93d1a743828c7d297878288e6091cdc86975e418d40",
+      "frozenMain": "c74e3e01d8f91cd997f9e8b9820d9bd58189fbd1fca9a168a4a222552eb136fc"
+    },
+    "razor": {
+      "approved": "9e29c727c90fa3f13d055be213ddbb9bd3c9bf571fce21b4fbc3f9ead7f457eb",
+      "frozenMain": "2be71283834cd70f6390aff7b5b431f7ade1a801827188cda2b7f67a5e91225e"
+    },
+    "stinger": {
+      "approved": "1d9a8b57263055be8513295365f23c959d5f7b56e314b68aa6ed8136aea9e834",
+      "frozenMain": "f4883d750b1fc547ec742f12efa4bb42fde4079fc73b21dcd8e260d1b9b778f8"
+    },
+    "maul": {
+      "approved": "a5931b14809b8b3e51ee56a403795c45ac1b30d7579e07889f448f9e496cfb7b",
+      "frozenMain": "fdddbc6b81d8837b2ad2f11d77e6c774e81eb5113fe8265899096ae26f14cd54"
+    },
+    "anubis": {
+      "approved": "3eb5c4b0df650cd6610d87883d0dfa0c9a0c44d02298d079f0ba0c457517416a",
+      "frozenMain": "c2a9ceb1279e669aef856eb408ad883bc4fc1e26f051bb210f7669ea322a6403"
+    },
+    "horus": {
+      "approved": "fe0bec9edad067a56669abfbdf711054f66b99cb0713739e68a053024dbb5017",
+      "frozenMain": "00bfcc0d4c1d3acd296cbc5601df49f954c737822be3fad939340e3f245fc16e"
+    },
+    "sobek": {
+      "approved": "2acfebdebc15c9b1f7bc33bd8b405b917237d0a3e3d796b762065a890da78739",
+      "frozenMain": "755ec5b34fa0f99fb0859488365b66fc9e804d4dbc44a194008c9c9f6bca2097"
+    },
+    "seraph": {
+      "approved": "013ec307f81c228f381524c2d1edfd5837ee203d77683569ee4f0d6de523a0ea",
+      "frozenMain": "dd24b97f613e4fb350842a239becdd1c21bec35a1e7f81fb0374fb2cdf0fb473"
+    },
+    "longbow": {
+      "approved": "bc1391dd8cce44c042f66c2aab68f945bef5d2e5242b86fce9dc1c3c74a7ab4b",
+      "frozenMain": "e02167246872f1abd826713cd3b5ed38a05fcb1915f18f9a859d68f43b097d49"
+    },
+    "paladin": {
+      "approved": "3b0e5e4ef5ebd11379af44ada483c9c4bd47d8d9d2e0932e5c314ad7b23b0318",
+      "frozenMain": "a7cfcb81d089267af79841fec7478a1561901fe9ddeeadc55b619fd5240d74b9"
+    },
+    "kamaitachi": {
+      "approved": "de2897a695b437748a611b5e560175c92237cc3399f5e384e84b871b959d8bde",
+      "frozenMain": "81205bee9a19ec86e34fa3bbe4a6408625c8f7823cdc2d4569fb05cd38fd787c",
+      "capturedPreview": "a6c6d8fc8c912e53b23f6c50eeec6d17604cfe58f6945dae969db2b30d8f32c2",
+      "metadataOnlyCorrection": "Insignia anchor center/width coverage corrected for existing badge meshes; all geometry, ink, receiver surfaces and prepared decals unchanged. See anchor-corrections.json."
+    },
+    "fujin": {
+      "approved": "d6d2c88f82778b4af77b508a5da86fe8039331a7b490c0708f79a6ecd05f5032",
+      "frozenMain": "1d1d66c26590942e53930f68beae64c4c0e2c6e6fabef03f95e4a1468f0a8d4d",
+      "capturedPreview": "9669c05c9ef733622a665893ad5789318d39273abdc53198a27ffa4e577a191a",
+      "metadataOnlyCorrection": "Insignia anchor center/width coverage corrected for existing badge meshes; all geometry, ink, receiver surfaces and prepared decals unchanged. See anchor-corrections.json."
+    },
+    "raijin": {
+      "approved": "b8ffb161abcb0bda036fe0cbb0c788f5beecd106be5415ce4794ff43925393fb",
+      "frozenMain": "f219e8c405701635b6826e846175890017610a2214920b91e8f3813784aa3ba0"
+    }
+  },
+  "decisions": {
+    "sunhawk": [],
+    "daystar": [
+      {
+        "joint": "chest",
+        "part": "chest",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "hipL",
+        "part": "thighs",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "kneeL",
+        "part": "shins",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "hipR",
+        "part": "thighs",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "rampart": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "shL",
+        "part": "shoulders",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "shR",
+        "part": "shoulders",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "razor": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shL",
+        "part": "armL",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "shR",
+        "part": "armR",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "stinger": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "kneeL",
+        "part": "shins",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "maul": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "shL",
+        "part": "armL",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "shR",
+        "part": "armR",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "anubis": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shL",
+        "part": "armL",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "shR",
+        "part": "armR",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "horus": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "hipL",
+        "part": "thighs",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "sobek": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shL",
+        "part": "armL",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "kneeL",
+        "part": "shins",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "shR",
+        "part": "armR",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "seraph": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shL",
+        "part": "armL",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shR",
+        "part": "armR",
+        "restored": false,
+        "reason": "receiver surface changed"
+      }
+    ],
+    "longbow": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "hipL",
+        "part": "thighs",
+        "restored": false,
+        "reason": "receiver surface changed"
+      }
+    ],
+    "paladin": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shL",
+        "part": "shoulders",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      },
+      {
+        "joint": "kneeL",
+        "part": "shins",
+        "restored": false,
+        "reason": "receiver surface changed"
+      }
+    ],
+    "kamaitachi": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shL",
+        "part": "armL",
+        "restored": false,
+        "reason": "receiver surface changed"
+      }
+    ],
+    "fujin": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "hipL",
+        "part": "thighs",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ],
+    "raijin": [
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "chest",
+        "part": "backpack",
+        "restored": false,
+        "reason": "receiver surface changed"
+      },
+      {
+        "joint": "shL",
+        "part": "armL",
+        "restored": true,
+        "reason": "five exact retained receiver witnesses"
+      }
+    ]
+  }
+}
