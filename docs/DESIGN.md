@@ -874,8 +874,9 @@ Meridian Skyway, in a Forward, in which the game stops at each new thing to
 say what it is and what to press, then leaves a **try-it** up until it is
 done. Nothing is failed: a try-it that has had its chance goes, with a word
 if it deserves one. It is offered once, the first time Play is opened, and
-heads the Play menu until it has been finished or skipped; the pause menu
-skips it (the race goes on as an ordinary one) or starts it over.
+lives under **How to play** on the Play menu (where Controls was) for
+playing again; the pause menu skips it (the race goes on as an ordinary
+one) or starts it over.
 
 **Cards** (`src/client/game/tutorial.ts`) come from the race as it runs, not
 from a script of times: on the grid, revving; a charge strip coming up; Drive
@@ -917,6 +918,19 @@ be taught and the race cannot be lost to the lesson:
   you.
 
 The rival team's computer pilots fly at 0.3 skill, yours at 0.35.
+
+**How to play** holds the tutorial, a **primer for each frame** and the
+controls. A primer (`src/client/game/primers.ts`, `ui/screens/howto.ts`)
+stands in the hangar with the frame in your colours in the bay: what the
+frame is for, its job in a race in three lines, its weapons and abilities
+(the hangar's own panel) and how it scores, the Midfielder's and the
+Defender's support awards with their points (checked against the scoring
+by the tests). One switches to the next with left and right, and one can
+go straight to Free Play in it. The pause menu has the same guide for the
+frame being flown. The first race in a Midfielder or a Defender (offline,
+not the computer flying) puts one card on the grid, as the tutorial does:
+the frame's weapons, its job and its abilities, pointing to the full guide.
+Once per frame, per device.
 
 ## 3. How it is built
 

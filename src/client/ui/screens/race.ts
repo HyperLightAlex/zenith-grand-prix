@@ -13,6 +13,7 @@ import { DEV_TOOLS } from '../../devTools';
 import { SELECT, confirmDialog } from './common';
 import { teamLooks, type TeamLook } from '../sides';
 import { debrief } from '../../game/tutorial';
+import type { PrimerData } from './howto';
 
 const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 const fmtTime = (t: number) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
@@ -122,6 +123,9 @@ export function registerRace(m: Menus, g: Game): void {
         }, { key: 'look' });
       }
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
+      // What the frame you are flying is for (the other two a step away).
+      const flying = g.session.race.mechs[g.session.localId];
+      if (flying) m.button(list, `Frame guide: ${ROLE_NAMES[flying.role]}`, () => m.push<PrimerData>('primer', { role: flying.role, inRace: true }), { key: 'primer' });
       m.button(list, 'Video', () => m.push('video'), { key: 'video' });
       if (online) {
         const gp = !!g.online.lobby?.gp;

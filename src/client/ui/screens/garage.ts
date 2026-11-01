@@ -59,7 +59,7 @@ export interface HangarData {
 }
 
 /** The hangar computer's card and the frame's panels, for whichever faction and frame, with you as its pilot. */
-function frameCard(m: Menus, g: Game, team: number, role: Role): { head: HTMLElement; info: HTMLElement; kit: HTMLElement; blurb: HTMLElement; bay: HTMLElement } {
+export function frameCard(m: Menus, g: Game, team: number, role: Role, screen = 'Frame setup'): { head: HTMLElement; info: HTMLElement; kit: HTMLElement; blurb: HTMLElement; bay: HTMLElement } {
   const c = CLASSES[role];
   const livery = LIVERIES[team] ?? LIVERIES[0];
   // Your custom mech of the frame, if you fly it; the faction's stock one otherwise.
@@ -71,7 +71,7 @@ function frameCard(m: Menus, g: Game, team: number, role: Role): { head: HTMLEle
   const name = h('b', model);
   const head = h(
     'div.hh',
-    h('div.hh-bar', h('span', `${livery.name.replace('Team ', '')} hangar`), h('span', 'Frame setup')),
+    h('div.hh-bar', h('span', `${livery.name.replace('Team ', '')} hangar`), h('span', screen)),
     h('div.hh-name', emblem, name, h('span', `${c.frame} class, ${ROLE_NAMES[c.role].toLowerCase()}`), h('div.hh-pilot', pilot, h('span', g.pilotName))),
   );
   const fit = () => {

@@ -1937,3 +1937,16 @@ html.compact .tgoal { right: calc(1 * var(--ui-em) + var(--sr, 0px)); top: calc(
 .tgoal.done { box-shadow: inset 0.3em 0 0 var(--ally); }
 .tgoal.missed { box-shadow: inset 0.3em 0 0 var(--mute); }
 @media (prefers-reduced-motion: reduce) { .tcard, .tgoal { animation: none; } }
+
+/* ---- How to play: a frame's primer (screens/howto.ts) ---------------------
+   The hangar's layout with the frame in the bay: what the frame is for and
+   its job on the left, its weapons, abilities and scoring on the right. */
+.menu .primer-job { margin: 0; padding-left: 1.15em; display: grid; gap: 0.3em; max-width: 30em; font-size: 1.12em; font-style: normal; font-weight: 500; line-height: 1.25; }
+.menu .primer-job li::marker { color: var(--signal); }
+.menu .kit .primer-score { margin-top: 0.75em; }
+.menu .kit .primer-score h2 { color: var(--ally); }
+.menu .kit .primer-awards { display: grid; gap: 0.18em; margin-top: 0.45em; font-size: 0.9em; }
+.menu .kit .primer-award { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
+.menu .kit .primer-award b { flex: none; color: var(--ally); font-variant-numeric: tabular-nums; }
+html.compact .menu .primer-job { font-size: 0.98em; gap: 0.2em; }
+html.compact .menu .kit .primer-awards { font-size: 0.85em; }

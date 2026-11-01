@@ -136,17 +136,17 @@ export function registerCommon(m: Menus, g: Game): void {
     render(m) {
       const col = h('div.col.modes');
       const list = h('div.list');
-      // New here: the tutorial heads the list. Done, it goes down among the rest.
-      const tutorial = () => m.button(list, 'Tutorial', () => g.startTutorial(), { key: 'tutorial', note: g.tutorialDone ? 'The guided first race, again' : 'A guided first race: the controls, a duel, the speed lap' });
-      if (!g.tutorialDone) tutorial();
       m.button(list, 'Grand Prix', () => m.push('gp'), { key: 'gp', note: 'Cups and the Grand Tour for medals, or a season for the Zenith Cup' });
       m.button(list, 'Free Play', () => g.openFreePlay(), { key: 'free', note: 'Any circuit, any rival, any format' });
       m.button(list, 'Online', () => g.openOnline(), {
         key: 'online',
         note: g.online.available ? 'Private rooms with friends, by code or link' : 'Needs the game from its server: not this saved copy',
       });
-      if (g.tutorialDone) tutorial();
-      m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
+      // The tutorial, each frame's role, and the controls.
+      m.button(list, 'How to play', () => m.push('howto'), {
+        key: 'howto',
+        note: g.tutorialDone ? 'The tutorial, what each frame does, the controls' : 'Start here: the tutorial, what each frame does, the controls',
+      });
       m.button(list, 'Video', () => m.push('video'), { key: 'video', note: 'Panel lines, CRT screen, animation, screen shape' });
       col.append(h('h1', 'Play'), list);
       m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, BACK));

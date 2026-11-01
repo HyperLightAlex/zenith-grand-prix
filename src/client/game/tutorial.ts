@@ -74,6 +74,24 @@ export interface GoalView {
   note: string;
 }
 
+/**
+ * Anything that puts cards over an offline race (the tutorial, a frame's
+ * first-race tip): while `card` is up the game holds the race; `timeScale`
+ * slows it; a try-it goal, if any, shows after the card.
+ */
+export interface Coach {
+  readonly card: string | null;
+  readonly cardAge: number;
+  readonly timeScale: number;
+  readonly over: boolean;
+  held(dt: number): void;
+  dismiss(): boolean;
+  stop(): void;
+  update(race: RaceState, events: readonly SimEvent[], dt: number): void;
+  cardText(race: RaceState, device: Device): CardText | null;
+  goalView(race: RaceState, device: Device): GoalView | null;
+}
+
 /** Seconds a card stays up before it can be closed (so a press meant for the race cannot close it unread). */
 export const CARD_MIN = 0.6;
 /** Slow motion on the partner's heavies while the parry is being learnt. */
@@ -104,7 +122,7 @@ interface Goal {
   n: number;
 }
 
-export class Tutorial {
+export class Tutorial implements Coach {
   /** The card up, or null. While there is one the race is held. */
   card: BeatId | null = null;
   /** How long the card has been up, in seconds. */

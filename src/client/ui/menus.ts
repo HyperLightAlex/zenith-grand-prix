@@ -21,7 +21,7 @@ import type { Device, MenuInput } from '../input/input';
 import { h, setClass } from './dom';
 
 /** The screens on the hangar computer: styled as the hangar is (data-screen 'garage'). */
-const HANGAR_COMPUTER = new Set<string>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint']);
+const HANGAR_COMPUTER = new Set<string>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'primer']);
 
 export type ScreenId =
   | 'title'
@@ -43,6 +43,8 @@ export type ScreenId =
   | 'entry'
   | 'dialog'
   | 'controls'
+  | 'howto'
+  | 'primer'
   | 'video'
   | 'pause'
   | 'results';
