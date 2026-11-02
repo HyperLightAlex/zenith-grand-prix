@@ -2,9 +2,10 @@
 // the crowd can watch the race while the mechs are away round the lap. Each
 // is held up by lift nacelles (rings of light round them, a glow down from
 // their emitters) and drifts a little where it hangs. They show a live feed
-// of the leader, cut between broadcast shots, under the broadcast's
-// graphics (the lap, the leader's place and name); once the race is over,
-// the winner.
+// of the race, picked the way a broadcast picks its pictures (director.ts):
+// the leader, a fight in the field, and the big moments as they happen (a
+// knockout, a ring-out, a heavy blow, a new leader, the winner crossing the
+// line), under the broadcast's graphics; once the race is over, the winner.
 //
 // They hang over the stands, never over the road, well up from it and from
 // any other stretch of road near them, so they never stand between a pilot
@@ -15,7 +16,8 @@
 // The model is Blender's (art/blender/hoverscreen/build_hoverscreen.py); the
 // game paints its slots and draws what the screen shows.
 import * as THREE from 'three';
-import { PHASE, type MechState, type RaceState, type Track } from '../../../sim/index';
+import { PHASE, type RaceState, type SimEvent, type Track } from '../../../sim/index';
+import { FeedDirector, type Story } from './director';
 import { COLORS } from '../palette';
 import { readSlots, slotModel, type SlotModel } from '../slotModel';
 import { KEEP_OUT, RoadIndex, inRoadSpace } from '../titan/keepout';
@@ -123,15 +125,11 @@ void main() {
   gl_FragColor = vec4(uColor * a, a);
 }`;
 
-/** What the feed follows: a mech, where it is drawn this frame. */
-export interface FeedSubject {
-  mech: MechState;
-  /** Its place on the road, as drawn. */
+/** Where a mech is drawn this frame: its place on the road. */
+export interface FeedView {
   s: number;
   d: number;
   h: number;
-  /** Its team's colour. */
-  glow: number;
 }
 
 interface Hung {
@@ -165,7 +163,9 @@ export class HoverScreens {
   private due = false;
   private shotT = 0;
   private shot = 0;
-  private subjectId = -1;
+  private lastCut = -1;
+  /** What the feed shows (director.ts). */
+  readonly director = new FeedDirector();
   private overlayKey = '';
   private overlayT = 0;
   /** How many times a second the feed is drawn. */
@@ -176,6 +176,8 @@ export class HoverScreens {
     scenery: THREE.Object3D,
     /** The circuit's name, for the screens' card. */
     private readonly circuit: string,
+    /** Each team's colour, for its pilots' places on the screen. */
+    private readonly glows: readonly number[] = [],
   ) {
     this.group.name = 'hover screens';
     const parts = hoverScreenModel();
@@ -233,12 +235,18 @@ export class HoverScreens {
     return this.hung.length;
   }
 
+  /** Something the race reported: the director may cut to it. */
+  note(e: SimEvent, race: RaceState): void {
+    if (this.hung.length) this.director.note(e, race);
+  }
+
   /**
    * Each frame: the screens drift where they hang, their lamps blink; the
-   * feed's camera follows `subject` (null: no feed, the card instead); and
+   * director picks what the feed shows and its camera frames it (`where`:
+   * each mech as drawn; `shown` false: no feed, the card instead); and
    * whether a screen is in `view`, so the feed is worth drawing.
    */
-  update(dt: number, race: RaceState, subject: FeedSubject | null, view: THREE.Camera): void {
+  update(dt: number, race: RaceState, where: (id: number) => FeedView | null, view: THREE.Camera, shown: boolean): void {
     if (!this.hung.length) return;
     this.time += dt;
     for (const h of this.hung) {
@@ -254,10 +262,17 @@ export class HoverScreens {
     this.glowMat!.color.setHex(LIFT).multiplyScalar(pulse);
 
     const finished = race.phase === PHASE.FINISHED;
-    const live = !!subject && !finished;
+    this.director.update(dt, race);
+    const { story, subject: id, partner } = this.director.cut;
+    // (Copied: `where` may hand back the one object each time.)
+    const a = id >= 0 ? where(id) : null;
+    const subject = a ? { ...a } : null;
+    const b = partner >= 0 ? where(partner) : null;
+    const other = b ? { ...b } : null;
+    const live = shown && !!subject && !finished;
     this.screenMat!.uniforms.uLive.value = live ? 1 : 0;
     this.overlayT -= dt;
-    this.drawOverlay(race, subject, finished);
+    this.drawOverlay(race, live, finished);
 
     // Is any screen in view, near enough to see?
     projScreen.multiplyMatrices(view.projectionMatrix, view.matrixWorldInverse);
@@ -268,19 +283,41 @@ export class HoverScreens {
     this.due = live && seen && this.sinceFeed >= 1 / this.fps;
     if (!live || !subject) return;
 
-    // The feed's camera: broadcast shots of the subject, cut every few seconds (or when the subject changes).
+    // A new shot at every cut of the director's, and every few seconds on the leader.
     this.shotT += dt;
     let cut = false;
-    if (subject.mech.id !== this.subjectId || this.shotT > SHOT) {
-      if (subject.mech.id === this.subjectId) this.shot = (this.shot + 1) % 4;
-      this.subjectId = subject.mech.id;
+    if (this.director.cuts !== this.lastCut || (story === 'leader' && this.shotT > SHOT)) {
+      if (story === 'leader') this.shot = (this.shot + 1) % 4;
+      this.lastCut = this.director.cuts;
       this.shotT = 0;
       cut = true;
     }
-    const { s, d, h } = subject;
+    this.frame(story, subject, other && Math.abs(other.s - subject.s) < 90 ? other : null);
+    const k = cut ? 1 : 1 - Math.exp(-dt * 5);
+    this.feedCam.position.lerp(camAt, k);
+    this.feedCam.up.set(0, 1, 0);
+    this.feedCam.lookAt(lookAt);
+    this.feedCam.updateMatrixWorld();
+  }
+
+  /** Where the feed's camera wants to be (camAt), and what it looks at (lookAt), for this story. */
+  private frame(story: Story, a: FeedView, b: FeedView | null): void {
     const t = this.track;
+    if (b) {
+      // Two of them: from beside the pair (the wider side of the road), back far enough for both.
+      const s = (a.s + b.s) / 2;
+      const d = (a.d + b.d) / 2;
+      const h = Math.max(a.h, b.h);
+      const apart = Math.hypot(a.s - b.s, a.d - b.d);
+      const low = story === 'knockout' || story === 'ringout';
+      trackPoint(t, s + (low ? 10 : 5), d + (d > 0 ? -1 : 1) * (15 + apart * 0.8), h + (low ? 3 : 5.5) + apart * 0.12, camAt);
+      trackPoint(t, s, d, h + 4, lookAt);
+      return;
+    }
+    const { s, d, h } = a;
     const lean = d > 0 ? -1 : 1;
-    switch (this.shot) {
+    const shot = story === 'leader' ? this.shot : story === 'lead' || story === 'finish' ? 2 : story === 'knockout' || story === 'ringout' ? 1 : 0;
+    switch (shot) {
       case 0: // Chasing, up behind it.
         trackPoint(t, s - 24, d * 0.6, h + 9, camAt);
         trackPoint(t, s + 14, d, h + 3, lookAt);
@@ -297,11 +334,6 @@ export class HoverScreens {
         trackPoint(t, s - 12, d * 0.3, h + 42, camAt);
         trackPoint(t, s + 22, d, h, lookAt);
     }
-    const k = cut ? 1 : 1 - Math.exp(-dt * 5);
-    this.feedCam.position.lerp(camAt, k);
-    this.feedCam.up.set(0, 1, 0);
-    this.feedCam.lookAt(lookAt);
-    this.feedCam.updateMatrixWorld();
   }
 
   /** Draw the feed, when it is due: the scene from the feed's camera, the screens left out of it. Called before the frame is drawn. */
@@ -320,12 +352,15 @@ export class HoverScreens {
   }
 
   /** The broadcast's graphics over the feed (or the card in place of it), drawn again when what they say changes. */
-  private drawOverlay(race: RaceState, subject: FeedSubject | null, finished: boolean): void {
+  private drawOverlay(race: RaceState, live: boolean, finished: boolean): void {
     const o = this.overlay;
     if (!o) return;
-    const m = subject?.mech;
+    const { story, subject, partner } = this.director.cut;
+    const m = subject >= 0 ? race.mechs[subject] : undefined;
+    const p = partner >= 0 ? race.mechs[partner] : undefined;
     const lap = m ? Math.min(race.laps, Math.max(1, Math.floor(Math.max(0, m.s) / this.track.length) + 1)) : 0;
-    const key = `${finished}|${m?.id}|${m?.place}|${lap}|${Math.floor(this.time * 1.2) % 2}`;
+    const blink = Math.floor(this.time * 1.2) % 2;
+    const key = `${live}|${finished}|${story}|${m?.id}|${m?.place}|${p?.id}|${p?.place}|${lap}|${blink}`;
     if (key === this.overlayKey && this.overlayT > 0) return;
     this.overlayKey = key;
     this.overlayT = 0.5;
@@ -334,8 +369,9 @@ export class HoverScreens {
     const H = canvas.height;
     g.clearRect(0, 0, W, H);
     const accent = '#ff7a1a';
-    if (finished || !m) {
-      // The card: the circuit, and the winner once there is one.
+    const colour = (id: number) => `#${new THREE.Color(this.glows[race.mechs[id]?.team ?? 0] ?? 0xf4f6fb).getHexString()}`;
+    if (!live || !m) {
+      // The card: the league and the circuit, and the winner once there is one.
       g.fillStyle = '#0c111d';
       g.fillRect(0, 0, W, H);
       g.fillStyle = accent;
@@ -349,43 +385,83 @@ export class HoverScreens {
       g.font = `italic 700 46px ${FONT}`;
       g.fillStyle = winner ? '#ffd34d' : '#9fb3cc';
       g.fillText((winner ? winner.name : this.circuit).toUpperCase(), W / 2, H * 0.7);
-    } else {
-      // The bug: the league, and live.
-      g.fillStyle = 'rgba(10,14,24,0.85)';
-      g.fillRect(24, 22, 168, 44);
-      g.fillStyle = accent;
-      g.fillRect(24, 22, 8, 44);
+      o.tex.needsUpdate = true;
+      return;
+    }
+    // The bug: the league, and live; the lap, top right.
+    g.fillStyle = 'rgba(10,14,24,0.85)';
+    g.fillRect(24, 22, 168, 44);
+    g.fillRect(W - 176, 22, 152, 44);
+    g.fillStyle = accent;
+    g.fillRect(24, 22, 8, 44);
+    g.font = `italic 800 30px ${FONT}`;
+    g.textBaseline = 'middle';
+    g.textAlign = 'left';
+    g.fillStyle = '#f4f6fb';
+    g.fillText('ZGP', 44, 45);
+    if (blink === 0) {
+      g.fillStyle = '#ff3d5a';
+      g.beginPath();
+      g.arc(116, 45, 7, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#f4f6fb';
+    g.font = `italic 700 24px ${FONT}`;
+    g.fillText('LIVE', 130, 46);
+    g.textAlign = 'right';
+    g.font = `italic 700 28px ${FONT}`;
+    g.fillText(`LAP ${lap}/${race.laps}`, W - 40, 45);
+
+    // The story's banner, over the lower third.
+    const banners: Partial<Record<Story, [string, string]>> = {
+      lead: ['NEW LEADER', accent],
+      fight: ['BATTLE', '#3d8bff'],
+      pass: ['OVERTAKE', '#8be28b'],
+      knockout: ['KNOCKOUT', '#ff3d5a'],
+      ringout: [p ? 'RING-OUT' : 'OFF THE ROAD', '#ff3d5a'],
+      finish: ['CHEQUERED FLAG', '#f4f6fb'],
+    };
+    const y = H - 92;
+    const banner = banners[story];
+    if (banner) {
       g.font = `italic 800 30px ${FONT}`;
-      g.textBaseline = 'middle';
       g.textAlign = 'left';
-      g.fillStyle = '#f4f6fb';
-      g.fillText('ZGP', 44, 45);
-      if (Math.floor(this.time * 1.2) % 2 === 0) {
-        g.fillStyle = '#ff3d5a';
-        g.beginPath();
-        g.arc(116, 45, 7, 0, Math.PI * 2);
-        g.fill();
-      }
-      g.fillStyle = '#f4f6fb';
-      g.font = `italic 700 24px ${FONT}`;
-      g.fillText('LIVE', 130, 46);
-      // The lower third: the place, the name, the lap.
-      const y = H - 92;
-      g.fillStyle = 'rgba(10,14,24,0.88)';
-      g.fillRect(24, y, W - 48, 60);
-      g.fillStyle = `#${new THREE.Color(subject!.glow).getHexString()}`;
-      g.fillRect(24, y, 70, 60);
+      const w = g.measureText(banner[0]).width + 40;
+      g.fillStyle = banner[1];
+      g.fillRect(24, y - 40, w, 36);
       g.fillStyle = '#0a0e18';
-      g.font = `italic 800 40px ${FONT}`;
-      g.textAlign = 'center';
-      g.fillText(`P${m.place}`, 59, y + 31);
-      g.textAlign = 'left';
-      g.fillStyle = '#f4f6fb';
-      g.fillText(m.name.toUpperCase(), 112, y + 31);
-      g.textAlign = 'right';
+      g.fillText(banner[0], 44, y - 21);
+    }
+    // The lower third: the place and the name; for two of them, both.
+    g.fillStyle = 'rgba(10,14,24,0.88)';
+    g.fillRect(24, y, W - 48, 60);
+    g.fillStyle = colour(m.id);
+    g.fillRect(24, y, 70, 60);
+    g.fillStyle = '#0a0e18';
+    g.font = `italic 800 40px ${FONT}`;
+    g.textAlign = 'center';
+    g.fillText(`P${m.place}`, 59, y + 31);
+    g.textAlign = 'left';
+    g.fillStyle = '#f4f6fb';
+    g.font = `italic 800 ${p ? 34 : 40}px ${FONT}`;
+    const name = m.name.toUpperCase();
+    g.fillText(name, 112, y + 31);
+    if (p) {
+      // Who it was with: by, for a knockout or a ring-out; from, for a new leader; passes; vs.
+      const nameW = g.measureText(name).width;
+      const join = story === 'knockout' || story === 'ringout' ? 'BY' : story === 'pass' ? 'PASSES' : story === 'lead' ? 'FROM' : 'VS';
       g.fillStyle = '#9fb3cc';
-      g.font = `italic 700 30px ${FONT}`;
-      g.fillText(`LAP ${lap}/${race.laps}`, W - 44, y + 31);
+      g.font = `italic 700 26px ${FONT}`;
+      g.fillText(join, 112 + nameW + 18, y + 32);
+      const joinW = g.measureText(join).width;
+      g.fillStyle = colour(p.id);
+      g.font = `italic 800 34px ${FONT}`;
+      g.fillText(p.name.toUpperCase(), 112 + nameW + 36 + joinW, y + 31);
+    } else if (story === 'finish') {
+      g.textAlign = 'right';
+      g.fillStyle = '#ffd34d';
+      g.font = `italic 800 34px ${FONT}`;
+      g.fillText('WINS', W - 44, y + 31);
     }
     o.tex.needsUpdate = true;
   }

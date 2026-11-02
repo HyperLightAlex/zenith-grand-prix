@@ -1025,11 +1025,21 @@ What is round the road says what the race has done and what is coming:
   four), a 32 m screen each, held up the way the world's machines fly, on
   lift nacelles ringed with light and a glow down from their emitters,
   drifting a little where it hangs, tipped toward the stands across the
-  road. They show the crowd the race: a live feed of the leader, cut
-  between broadcast shots (chasing, beside it, ahead of it, from the air)
-  every six and a half seconds or when the lead changes, under the
-  broadcast's graphics (ZGP live, the leader's place and name, the lap);
-  once the race is over, the winner. They hang 46 m up over the rows,
+  road. They show the crowd the race, picked the way a broadcast picks
+  its pictures (`render/screens/director.ts`): the leader, cut between
+  shots (chasing, beside it, ahead of it, from the air) every six and a
+  half seconds, and between times a fight in the field (two rivals locked
+  in battle, the one nearest the front); and cutting in for the moments
+  as they happen, by how much each is worth: a knockout or a ring-out (at
+  once, whatever is on), the winner crossing the line, a new leader, a
+  heavy blow landed or a guard broken, a close pass, a lock-on. A moment
+  holds a few seconds; anything but a knockout, a ring-out or the finish
+  waits until the shot on has held two seconds, and is dropped if it is
+  still not worth more than it after two and a half. Two pilots are framed
+  together from beside them. Over it the broadcast's graphics: ZGP live,
+  the lap, the story's banner (new leader, battle, overtake, knockout,
+  ring-out, chequered flag) and its pilots' places and names; once the
+  race is over, the winner. They hang 46 m up over the rows,
   never over the road, and only where nothing of them comes within the open
   sky over any stretch of road (40 m), so they never stand between a pilot
   and the racing: on the way down the straight they sit high at the top of

@@ -209,6 +209,16 @@ export class RaceView {
   /** The screens over the stands by the start, showing the race (render/screens/hoverScreens.ts). */
   private readonly screens: HoverScreens | null;
   private readonly drawFeed = (r: THREE.WebGLRenderer, scene: THREE.Scene) => this.screens?.draw(r, scene);
+  /** Where a mech is drawn, for the screens' feed (one object, reused). */
+  private readonly feedAt = { s: 0, d: 0, h: 0 };
+  private readonly feedView = (id: number) => {
+    const v = this.mechs[id];
+    if (!v) return null;
+    this.feedAt.s = v.s;
+    this.feedAt.d = v.d;
+    this.feedAt.h = v.h;
+    return this.feedAt;
+  };
   private flashUniform = 0;
   private hurt = 0;
   private fxFov = 0;
@@ -297,7 +307,7 @@ export class RaceView {
     this.marks = new TrackMarks(session.track);
     this.crowd = new Crowd(trackVis.group, this.liveries.map((l) => l.glow));
     this.group.add(this.ring, this.fx.group, this.marks.group, this.crowd.group);
-    this.screens = previewOnly ? null : new HoverScreens(session.track, trackVis.group, session.track.def.name);
+    this.screens = previewOnly ? null : new HoverScreens(session.track, trackVis.group, session.track.def.name, this.liveries.map((l) => l.glow));
     if (this.screens?.count) {
       this.group.add(this.screens.group);
       renderer.predraw.add(this.drawFeed);
@@ -793,17 +803,10 @@ export class RaceView {
       plate.ey = -ndc.y * flip * h * 0.5;
     }
 
-    // ---- the hover screens: the leader on them (while the view is up and racing)
+    // ---- the hover screens: the race on them (while the view is up and racing)
     if (this.screens?.count) {
-      let lead: MechState | null = null;
-      for (const id of this.mechIds) {
-        const m = race.mechs[id];
-        if (!m.retired && (!lead || m.place < lead.place)) lead = m;
-      }
-      const lv = lead ? this.mechs[lead.id] : null;
-      const shown = this.group.visible && !this.solo;
       this.screens.fps = FEED_FPS[this.renderer.qualityLevel];
-      this.screens.update(dt, race, shown && lead && lv ? { mech: lead, s: lv.s, d: lv.d, h: lv.h, glow: lv.livery.glow } : null, cam);
+      this.screens.update(dt, race, this.feedView, cam, this.group.visible && !this.solo);
     }
   }
 
@@ -972,6 +975,7 @@ export class RaceView {
   handleEvent(e: SimEvent): void {
     if (this.previewOnly) return;
     const { race, track } = this.session;
+    this.screens?.note(e, race);
     const local = this.focusId;
     switch (e.type) {
       case 'hit': {
