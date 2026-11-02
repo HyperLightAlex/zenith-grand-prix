@@ -1548,6 +1548,31 @@ function buildCanyon(ctx: Ctx): void {
     }
   }
 
+  // Where the paddock stands (below): on the desert floor behind the stands
+  // on the circuit's outside, its car park behind it, the highway in from
+  // the west past a fuel stop. Kept clear of the rock.
+  const paddock = (() => {
+    const fr = makeFrame();
+    frameAt(track, -120, fr);
+    let turnSum = 0;
+    for (let i = 0; i < track.n; i += 4) turnSum += track.kappa[i];
+    // The outside: away from the way the lap turns (kappa > 0 turns right: brakeBoards.ts).
+    const outSide = turnSum > 0 ? -1 : 1;
+    const at = trackPoint(track, -120, outSide * (hwAt(track, -120) + 190), 0, new THREE.Vector3());
+    return { x: at.x, z: at.z, outSide, rx: fr.rx, rz: fr.rz, tx: fr.tx, tz: fr.tz };
+  })();
+  const roadWest = new THREE.Vector3(paddock.x, 0, paddock.z).add(new THREE.Vector3(paddock.rx * paddock.outSide, 0, paddock.rz * paddock.outSide).normalize().multiplyScalar(6500));
+  // Within `r` of the paddock, or of the highway out from it.
+  const offPaddock = (x: number, z: number, r: number) => {
+    if (Math.hypot(x - paddock.x, z - paddock.z) < 260 + r) return false;
+    const dx = roadWest.x - paddock.x;
+    const dz = roadWest.z - paddock.z;
+    const len = Math.hypot(dx, dz);
+    const t = ((x - paddock.x) * dx + (z - paddock.z) * dz) / (len * len);
+    if (t < 0 || t > 1) return true;
+    return Math.hypot(x - (paddock.x + dx * t), z - (paddock.z + dz * t)) > 60 + r;
+  };
+
   // ---- mesas, buttes and hoodoos --------------------------------------------
   {
     const rnd = mulberry(1231);
@@ -1560,7 +1585,7 @@ function buildCanyon(ctx: Ctx): void {
       const z = cz + (rnd() - 0.5) * R * 2;
       const big = rnd();
       const radius = 70 + big * big * 260;
-      if (ctx.clearance(x, z) < radius * 1.25 + 90 || inGorge(x, z)) continue;
+      if (ctx.clearance(x, z) < radius * 1.25 + 90 || inGorge(x, z) || !offPaddock(x, z, radius)) continue;
       const h = 70 + rnd() * 160 + big * 120;
       const g = new THREE.CylinderGeometry(radius * (0.72 + rnd() * 0.15), radius, h, 7 + Math.floor(rnd() * 3), 4).toNonIndexed();
       g.translate(0, h / 2, 0);
@@ -1577,7 +1602,7 @@ function buildCanyon(ctx: Ctx): void {
       const x = cx + (rnd() - 0.5) * 4200;
       const z = cz + (rnd() - 0.5) * 4200;
       const radius = 9 + rnd() * 16;
-      if (ctx.clearance(x, z) < 70 || inGorge(x, z)) continue;
+      if (ctx.clearance(x, z) < 70 || inGorge(x, z) || !offPaddock(x, z, radius)) continue;
       const h = 40 + rnd() * 90;
       const g = new THREE.CylinderGeometry(radius * 0.45, radius, h, 6, 3).toNonIndexed();
       g.translate(0, h / 2, 0);
@@ -1617,6 +1642,69 @@ function buildCanyon(ctx: Ctx): void {
     arch.frustumCulled = false;
     group.add(arch);
     if (cliffMat) swapMaterial(ctx, arch, cliffMat);
+  }
+
+  // ---- the paddock, the car park and the highway in ---------------------------
+  {
+    const rnd = mulberry(3131);
+    const g0 = theme.groundY;
+    // Its +z toward the road.
+    const yaw = Math.atan2(-paddock.rx * paddock.outSide, -paddock.rz * paddock.outSide);
+    const site = new Site(paddock.x, g0, paddock.z, yaw);
+    // The teams' garages along the front, doors toward the road; their trucks behind; hospitality.
+    site.box(0, 0, 60, 170, 9, 22, 0xd8d2c6);
+    site.box(0, 9, 60, 172, 1, 24, 0x4a505c);
+    for (let k = 0; k < 10; k++) site.box(-76 + k * 16.9, 0, 71.2, 10, 6, 0.4, 0x3a3f4a);
+    for (let k = 0; k < 8; k++) {
+      const x = -70 + k * 20;
+      site.container(x, 0, 22, [0xb4482f, 0x2f6fa8, 0xd7a52f, 0xf2f2ee][k % 4]).container(x + 3, 0, 22, 0x8a8f99);
+    }
+    site.box(-50, 0, -20, 44, 10, 20, 0xeae6dc).box(-50, 10, -20, 46, 0.8, 22, 0xff7a1a);
+    site.box(30, 0, -20, 44, 10, 20, 0xeae6dc).box(30, 10, -20, 46, 0.8, 22, 0x2f6fa8);
+    site.pad(100, -20, 12).mast(115, 40, 34);
+    // The crowd's car park behind: bays in rows, cars in some of them.
+    site.put(new THREE.PlaneGeometry(220, 120).rotateX(-Math.PI / 2).translate(0, 0.12, -120), 0x5c5a5e);
+    for (let row = 0; row < 6; row++)
+      for (let k = 0; k < 40; k++) {
+        const x = -100 + k * 5.2;
+        const z = -165 + row * 18;
+        site.box(x - 2.5, 0.13, z, 0.15, 0.02, 5, 0xe8e4da);
+        if (rnd() < 0.55) site.box(x, 0, z, 2, 1.4, 4.4, [0xd9482f, 0xf2f2ee, 0x2f6fa8, 0x3a3f4a, 0xd7a52f, 0x9aa3ae][Math.floor(rnd() * 6)]);
+      }
+    for (let x = -100; x <= 100; x += 40) site.lamp(x, -120, 9);
+    const pieces = site.pieces.filter((g) => !ctx.inRoad(g, 6));
+    for (const mesh of siteMeshes(pieces, site.lights)) group.add(mesh);
+    // The highway in from the west, straight across the desert, and a fuel stop on it.
+    const gate = new THREE.Vector3(0, 0, -185).applyMatrix4(site.m);
+    const way = roadWest.clone().sub(gate).setY(0).normalize();
+    const pts = Array.from({ length: 321 }, (_, k) => gate.clone().addScaledVector(way, (k / 320) * 6400).setY(g0));
+    const roads = [groundRoad(pts, 16, 0x4c4a50, 0.3)];
+    // Where it crosses a gorge, it crosses on a bridge: a deck under it, parapets either side.
+    const bridge = new Site(0, 0, 0, 0);
+    for (let k = 0; k + 1 < pts.length; k++) {
+      const a = pts[k];
+      const b = pts[k + 1];
+      if (!inGorge(a.x, a.z) && !inGorge(b.x, b.z)) continue;
+      const len = a.distanceTo(b);
+      const yaw = Math.atan2(b.x - a.x, b.z - a.z);
+      const mx = (a.x + b.x) / 2;
+      const mz = (a.z + b.z) / 2;
+      bridge.put(new THREE.BoxGeometry(19, 2.2, len + 0.5).rotateY(yaw).translate(mx, g0 - 1.95, mz), 0x9a8a7a);
+      for (const side of [-1, 1]) bridge.put(new THREE.BoxGeometry(0.7, 1.3, len + 0.5).translate(side * 9.2, 0.65, 0).rotateY(yaw).translate(mx, g0 + 0.3, mz), 0xc8b8a4);
+      if (k % 3 === 0) bridge.put(new THREE.CylinderGeometry(1.6, 2.2, 40, 8).translate(mx, g0 - 22, mz), 0x8a7a6a);
+    }
+    // Its centre line.
+    roads.push(groundRoad(pts, 0.5, 0xe8d27a, 0.34));
+    for (const mesh of siteMeshes([...roads.filter((r) => !ctx.inRoad(r, 10)), ...bridge.pieces], [])) group.add(mesh);
+    const stopAt = gate.clone().addScaledVector(way, 1400);
+    const stop = new Site(stopAt.x + way.z * 30, g0, stopAt.z - way.x * 30, Math.atan2(way.x, way.z) + Math.PI / 2);
+    stop.put(new THREE.PlaneGeometry(60, 40).rotateX(-Math.PI / 2).translate(0, 0.1, 0), 0x5c5a5e);
+    for (const x of [-14, 14]) for (const z of [-8, 8]) stop.box(x, 0, z, 0.6, 6, 0.6, 0xe8e4da);
+    stop.box(0, 6, 0, 36, 1.2, 22, 0xff7a1a);
+    for (const x of [-8, 0, 8]) stop.box(x, 0, 0, 1.2, 1.8, 2.4, 0xe8e4da);
+    stop.hut(0, -18, 22, 10, 4.5, 0xeae6dc, 0x8a6a4a).mast(26, -16, 16, 0xe8e4da);
+    stop.lamp(-26, 14, 8).lamp(26, 14, 8);
+    for (const mesh of siteMeshes(stop.pieces, stop.lights)) group.add(mesh);
   }
 
   // ---- far buttes on the horizon --------------------------------------------
