@@ -3805,56 +3805,94 @@ function buildCrucible(ctx: Ctx): void {
         : null;
     let signsUp = 0;
     let placed = 0;
-    for (let tries = 0; tries < 2400 && placed < 260; tries++) {
-      const a = rnd() * TAU;
-      const near = rnd() < 0.55;
-      const rr = near ? edgeR + 150 + Math.pow(rnd(), 1.4) * 1300 : edgeR + 1500 + rnd() * 5200;
-      const x = cx + Math.cos(a) * rr;
-      const z = cz + Math.sin(a) * rr;
-      const w = 28 + rnd() * 44;
-      const d = 28 + rnd() * 44;
-      const size = Math.max(w, d) * 0.75;
-      if (ctx.clearance(x, z) < 90 + size || nearGantry(x, z, size) || !free(x, z, size)) continue;
-      const closeness = 1 - Math.min(1, (rr - edgeR) / 1800);
-      const h = 50 + rnd() * 110 + closeness * closeness * (80 + rnd() * 300);
-      const rot = rnd() * 1.6;
-      const tn = tints[Math.floor(rnd() * tints.length)];
-      parts.push(tower(w, h, d, x, rim, z, rot, tn));
-      taken.push([x, z, size]);
-      placed++;
-      let crown = h;
-      if (h > 200 && rnd() < 0.6) {
-        // A setback crown, and a mast.
-        parts.push(tower(w * 0.62, h * 0.16, d * 0.62, x, rim + h, z, rot, tn));
-        crown = h * 1.16;
-        if (rnd() < 0.7) {
-          parts.push(tower(2.4, h * 0.2, 2.4, x, rim + crown, z, 0, tn));
-          crown += h * 0.2;
+    // The city grew round the pit on a plan: ring roads round it every
+    // block, avenues out from it between the blocks, a tower to a block
+    // where one stands, its faces square to the streets; tallest at the rim,
+    // thinning out across the plain. Its streets lit sodium-orange, the
+    // avenues white, seen from the road and from above as lines of light.
+    const STEP = 96;
+    const ARC = 118;
+    const streetGlow = neonCol(0xffa040, 1.1);
+    const avenueGlow = neonCol(0xd8e4ff, 1.0);
+    const streetHere = (x: number, z: number) => ctx.clearance(x, z) > 46 && !nearGantry(x, z, 6) && onPlateau(x, z, 4);
+    // A strip of light along the ground from a to b (rim height), if it is all on the plateau and off the road.
+    const strip = (x0: number, z0: number, x1: number, z1: number, glowC: THREE.Color) => {
+      if (!streetHere(x0, z0) || !streetHere(x1, z1) || !streetHere((x0 + x1) / 2, (z0 + z1) / 2)) return;
+      glowParts.push(tint(beam(new THREE.Vector3(x0, rim + 0.3, z0), new THREE.Vector3(x1, rim + 0.3, z1), 1.1, 0.25), glowC));
+    };
+    for (let ring = 0; placed < 330; ring++) {
+      const r0 = edgeR + 150 + ring * STEP;
+      if (r0 > edgeR + 5600) break;
+      const out = r0 - edgeR;
+      const sectors = Math.max(12, Math.round((TAU * r0) / ARC));
+      const turn = rnd() * TAU;
+      // How built up this far out: the rim's quarter dense, then thinning to the odd tower far out.
+      const density = out < 1500 ? 0.62 - (out / 1500) * 0.4 : 0.22 * Math.exp(-(out - 1500) / 1400);
+      const near = out < 1900;
+      // The street round this ring of blocks (at its inner edge), and the avenues across it.
+      if (near) {
+        const segs = Math.max(48, Math.round((TAU * r0) / 40));
+        for (let k = 0; k < segs; k++) {
+          const a0 = (k / segs) * TAU;
+          const a1 = ((k + 1) / segs) * TAU;
+          strip(cx + Math.cos(a0) * (r0 - 13), cz + Math.sin(a0) * (r0 - 13), cx + Math.cos(a1) * (r0 - 13), cz + Math.sin(a1) * (r0 - 13), streetGlow);
         }
       }
-      // Neon up two corners of some, and a sign on the roof of the tall ones near the pit.
-      const cr = Math.cos(rot);
-      const sr = Math.sin(rot);
-      if (rnd() < 0.5) {
-        const hue = neonCol(neonHues[Math.floor(rnd() * neonHues.length)]);
-        for (const [ox, oz] of [
-          [w / 2, d / 2],
-          [-w / 2, -d / 2],
-        ]) {
-          const px = x + ox * cr + oz * sr;
-          const pz = z - ox * sr + oz * cr;
-          glowParts.push(tint(beam(new THREE.Vector3(px, rim + h * 0.08, pz), new THREE.Vector3(px, rim + h * 0.97, pz), 1.3), hue));
+      for (let k = 0; k < sectors; k++) {
+        const a = turn + ((k + 0.5) / sectors) * TAU;
+        const edgeA = turn + (k / sectors) * TAU;
+        if (near && k % 2 === 0) strip(cx + Math.cos(edgeA) * (r0 - 13), cz + Math.sin(edgeA) * (r0 - 13), cx + Math.cos(edgeA) * (r0 + STEP - 13), cz + Math.sin(edgeA) * (r0 + STEP - 13), avenueGlow);
+        if (placed >= 330 || rnd() > density) continue;
+        const rr = r0 + STEP / 2 - 6;
+        const x = cx + Math.cos(a) * rr;
+        const z = cz + Math.sin(a) * rr;
+        // Its footprint inside the block: along the ring (the block's arc less the avenue) and across it.
+        const w = Math.min((TAU * rr) / sectors - 26, 34 + rnd() * 44);
+        const d = 30 + rnd() * 40;
+        const size = Math.max(w, d) * 0.75;
+        if (w < 24 || ctx.clearance(x, z) < 90 + size || nearGantry(x, z, size) || !free(x, z, size)) continue;
+        const closeness = 1 - Math.min(1, out / 1800);
+        const h = 50 + rnd() * 110 + closeness * closeness * (80 + rnd() * 300);
+        // Square to the streets: its length along the ring.
+        const rot = -a - Math.PI / 2;
+        const tn = tints[Math.floor(rnd() * tints.length)];
+        parts.push(tower(w, h, d, x, rim, z, rot, tn));
+        taken.push([x, z, size]);
+        placed++;
+        let crown = h;
+        if (h > 200 && rnd() < 0.6) {
+          // A setback crown, and a mast.
+          parts.push(tower(w * 0.62, h * 0.16, d * 0.62, x, rim + h, z, rot, tn));
+          crown = h * 1.16;
+          if (rnd() < 0.7) {
+            parts.push(tower(2.4, h * 0.2, 2.4, x, rim + crown, z, 0, tn));
+            crown += h * 0.2;
+          }
         }
+        // Neon up two corners of some, and a sign on the roof of the tall ones near the pit.
+        const cr = Math.cos(rot);
+        const sr = Math.sin(rot);
+        if (rnd() < 0.5) {
+          const hue = neonCol(neonHues[Math.floor(rnd() * neonHues.length)]);
+          for (const [ox, oz] of [
+            [w / 2, d / 2],
+            [-w / 2, -d / 2],
+          ]) {
+            const px = x + ox * cr + oz * sr;
+            const pz = z - ox * sr + oz * cr;
+            glowParts.push(tint(beam(new THREE.Vector3(px, rim + h * 0.08, pz), new THREE.Vector3(px, rim + h * 0.97, pz), 1.3), hue));
+          }
+        }
+        if (out < 1500 && h > 200 && signsUp < 14) {
+          const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.1, (w * 1.1) / 3.2), signMats[signsUp % signMats.length]);
+          sign.position.set(x, rim + h + (w * 1.1) / 6.4 + 2, z);
+          sign.lookAt(cx, sign.position.y, cz);
+          group.add(sign);
+          if (paintedSignMats) swapMaterial(ctx, sign, paintedSignMats[signsUp % paintedSignMats.length]);
+          signsUp++;
+        }
+        if (crown > 160) beacons.push(new THREE.Vector3(x, rim + crown + 2, z));
       }
-      if (near && h > 200 && signsUp < 14) {
-        const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.1, (w * 1.1) / 3.2), signMats[signsUp % signMats.length]);
-        sign.position.set(x, rim + h + (w * 1.1) / 6.4 + 2, z);
-        sign.lookAt(cx, sign.position.y, cz);
-        group.add(sign);
-        if (paintedSignMats) swapMaterial(ctx, sign, paintedSignMats[signsUp % paintedSignMats.length]);
-        signsUp++;
-      }
-      if (crown > 160) beacons.push(new THREE.Vector3(x, rim + crown + 2, z));
     }
     const facade = nightWindows(false);
     const lit = nightWindows(true);
