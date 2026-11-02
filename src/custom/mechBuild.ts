@@ -135,6 +135,80 @@ export interface MechBuild {
   own: Partial<Record<PartSlot, Partial<Scheme>>>;
   /** What the player calls it ('' for none). */
   name: string;
+  /** Its livery's pattern, race number, finish and wear (left out: none of them, the seat's number). */
+  style?: LiveryStyle;
+}
+
+// ---- the livery: a pattern, the race number, the finish and the wear ----------
+
+/** Patterns laid over the main paint, in a paint of their own. */
+export const PATTERNS = ['none', 'stripes', 'chevrons', 'splinter', 'checks', 'hex', 'slashes', 'digital'] as const;
+export type PatternId = (typeof PATTERNS)[number];
+export const PATTERN_NAMES: Record<PatternId, string> = {
+  none: 'None',
+  stripes: 'Twin stripes',
+  chevrons: 'Chevrons',
+  splinter: 'Splinter camo',
+  checks: 'Racing checks',
+  hex: 'Hex weave',
+  slashes: 'Tiger slashes',
+  digital: 'Digital camo',
+};
+
+/** How the paint is finished: satin is the paint as it has always been. */
+export const FINISHES = ['satin', 'gloss', 'matte', 'flake', 'pearl'] as const;
+export type FinishId = (typeof FINISHES)[number];
+export const FINISH_NAMES: Record<FinishId, string> = {
+  satin: 'Satin',
+  gloss: 'Gloss',
+  matte: 'Matte',
+  flake: 'Metal flake',
+  pearl: 'Pearl',
+};
+
+/** How the race shows on it: scuffed and scorched as its armour goes, never, or worn from the start. */
+export const WEARS = ['race', 'clean', 'veteran'] as const;
+export type WearId = (typeof WEARS)[number];
+export const WEAR_NAMES: Record<WearId, string> = {
+  race: 'Shows the race',
+  clean: 'Always clean',
+  veteran: 'Battle-worn',
+};
+
+/** Whether the armour's panel lines are cut into it (when the player watching has them on: Video). */
+export const LINES = ['on', 'off'] as const;
+export type LinesId = (typeof LINES)[number];
+export const LINES_NAMES: Record<LinesId, string> = { on: 'On', off: 'Off' };
+
+/** The largest race number. */
+export const NUMBER_MAX = 99;
+
+export interface LiveryStyle {
+  /** An index into PATTERNS (0: none), in `patternPaint` (an index into PAINTS). */
+  pattern: number;
+  patternPaint: number;
+  /** The race number on its decals, 0 to NUMBER_MAX, or -1 for the seat's own (its frame's: 1 to 3). */
+  number: number;
+  /** Indices into FINISHES, WEARS and LINES. */
+  finish: number;
+  wear: number;
+  lines: number;
+}
+
+/** No pattern, the seat's number, satin, showing the race. */
+export const PLAIN_STYLE: Readonly<LiveryStyle> = { pattern: 0, patternPaint: 0, number: -1, finish: 0, wear: 0, lines: 0 };
+
+/** A build's livery style (the plain one when it has none). */
+export function styleOf(b: MechBuild | null | undefined): LiveryStyle {
+  return { ...PLAIN_STYLE, ...(b?.style ?? {}) };
+}
+
+const isPlain = (s: LiveryStyle) => (Object.keys(PLAIN_STYLE) as Array<keyof LiveryStyle>).every((k) => s[k] === PLAIN_STYLE[k]);
+
+/** The race number a mech wears: its build's, or its frame's (1 to 3). */
+export function raceNumber(role: Role, b: MechBuild | null | undefined): string {
+  const n = b?.style?.number ?? -1;
+  return n >= 0 && n <= NUMBER_MAX ? String(n) : String(role + 1);
 }
 
 export const NAME_MAX = 16;
@@ -176,8 +250,11 @@ export function nameProblem(name: string): string | null {
 // A build travels and is kept as a short line of text:
 //   c1/<eleven digits, each part's design>/<main accent trim: two base-36 digits each><frame: one>/<own>/<name>
 // <own> is a run of entries: a part's letter (a to k, in PART_SLOTS order), a
-// channel's (m a t f), and its paint (two digits; a metal one). Anything that
-// does not read back exactly is refused (decodeBuild gives null).
+// channel's (m a t f), and its paint (two digits; a metal one). A build with
+// a livery style is written c2, with the style before the name:
+//   c2/<parts>/<paint>/<own>/<pattern: one base-36 digit><its paint: two><finish: one><wear: one><panel lines: one><number: two decimal digits, or -->/<name>
+// (one with the plain style is still written c1, as it always was). Anything
+// that does not read back exactly is refused (decodeBuild gives null).
 
 const CH_LETTER: Record<Channel, string> = { main: 'm', accent: 'a', trim: 't', frame: 'f' };
 const LETTER_CH: Record<string, Channel> = { m: 'main', a: 'accent', t: 'trim', f: 'frame' };
@@ -197,6 +274,11 @@ export function encodeBuild(b: MechBuild): string {
       own += String.fromCharCode(97 + i) + CH_LETTER[ch] + (ch === 'frame' ? v.toString(36) : two(v));
     }
   });
+  if (b.style && !isPlain(b.style)) {
+    const s = b.style;
+    const num = s.number < 0 ? '--' : String(s.number).padStart(2, '0');
+    return `c2/${parts}/${paint}/${own}/${s.pattern.toString(36)}${two(s.patternPaint)}${s.finish.toString(36)}${s.wear.toString(36)}${s.lines.toString(36)}${num}/${b.name}`;
+  }
   return `c1/${parts}/${paint}/${own}/${b.name}`;
 }
 
@@ -206,8 +288,24 @@ const validPaint = (ch: Channel, v: number) => Number.isInteger(v) && v >= 0 && 
 export function decodeBuild(text: unknown): MechBuild | null {
   if (typeof text !== 'string' || text.length > 200) return null;
   const seg = text.split('/');
-  if (seg.length !== 5 || seg[0] !== 'c1') return null;
-  const [, partsText, paintText, ownText, name] = seg;
+  const styled = seg[0] === 'c2';
+  if (seg.length !== (styled ? 6 : 5) || (seg[0] !== 'c1' && !styled)) return null;
+  const [, partsText, paintText, ownText] = seg;
+  const name = seg[seg.length - 1];
+  let style: LiveryStyle | undefined;
+  if (styled) {
+    const t = seg[4];
+    if (!/^[0-9a-z]{6}([0-9]{2}|--)$/.test(t)) return null;
+    style = {
+      pattern: parseInt(t[0], 36),
+      patternPaint: parseInt(t.slice(1, 3), 36),
+      finish: parseInt(t[3], 36),
+      wear: parseInt(t[4], 36),
+      lines: parseInt(t[5], 36),
+      number: t.slice(6) === '--' ? -1 : Number(t.slice(6)),
+    };
+    if (style.pattern >= PATTERNS.length || style.patternPaint >= PAINTS.length || style.finish >= FINISHES.length || style.wear >= WEARS.length || style.lines >= LINES.length) return null;
+  }
   if (!/^[0-4]{11}$/.test(partsText)) return null;
   if (!/^[0-9a-z]{7}$/.test(paintText)) return null;
   const parts = Object.fromEntries(PART_SLOTS.map((s, i) => [s, Number(partsText[i])])) as Record<PartSlot, number>;
@@ -235,7 +333,7 @@ export function decodeBuild(text: unknown): MechBuild | null {
     i += 2 + width;
   }
   if (name !== cleanCallsign(name) || nameProblem(name)) return null;
-  const b: MechBuild = { parts, paint, own, name };
+  const b: MechBuild = style ? { parts, paint, own, name, style } : { parts, paint, own, name };
   // Only the one way of writing it: the same build always reads the same.
   return encodeBuild(b) === text ? b : null;
 }

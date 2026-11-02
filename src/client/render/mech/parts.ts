@@ -221,9 +221,14 @@ export function numberDecal(text: string, livery: Livery): THREE.Mesh {
   const g = c.getContext('2d')!;
   g.clearRect(0, 0, 128, 128);
   g.fillStyle = `#${new THREE.Color(livery.trim).getHexString()}`;
-  g.font = 'italic 800 104px "Barlow Condensed", "Arial Narrow", sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
+  // One figure or two (a custom mech's number, up to 99), as large as fits.
+  let px = 104;
+  do {
+    g.font = `italic 800 ${px}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+    px -= 4;
+  } while (g.measureText(text).width > 118 && px > 40);
   g.fillText(text, 62, 70);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;

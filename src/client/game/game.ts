@@ -114,6 +114,7 @@ import { PhotoPanel } from '../ui/photoPanel';
 import { Podium, type PodiumBill, type PodiumPilot } from '../render/podium/podium';
 import { PodiumPanel, type PodiumCard } from '../ui/podiumPanel';
 import { podiumOrder, poseFor } from './podium';
+import { newlyEarned, type Progress, type Unlock } from './unlocks';
 import { isVictoryId, type VictoryId } from '../render/mech/victoryPoses';
 import { teamLooks } from '../ui/sides';
 import { mechName } from '../../custom/mechBuild';
@@ -150,7 +151,7 @@ function garageShift(): [number, number] {
   return [GARAGE_SHIFT, 0];
 }
 /** Screens shown over the hangar, with your mech in its bay. */
-const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'setup', 'gp', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room', 'primer']);
+const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'custom-livery', 'setup', 'gp', 'gp-rewards', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room', 'primer']);
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -186,7 +187,7 @@ const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'award', 'controls',
 /** Screens that open over others: the music is the one for the screen under them. */
 const OVER_SCREENS = new Set<ScreenId>(['controls', 'video', 'dialog', 'pause']);
 /** The custom mech editor's screens: the mech in the bay is turned by hand on them, not drifting round (naming it too). */
-const CUSTOM_SCREENS = new Set<ScreenId>(['custom', 'custom-parts', 'custom-paint']);
+const CUSTOM_SCREENS = new Set<ScreenId>(['custom', 'custom-parts', 'custom-paint', 'custom-livery']);
 const OVER_EDITOR = new Set<ScreenId>([...OVER_SCREENS, 'entry']);
 /**
  * Semitones to move the race stingers by on each circuit so they land in the
@@ -1582,6 +1583,19 @@ export class Game {
     return { byCup: gpStore.medals(), season: gpStore.cupsWon() };
   }
 
+  /** Whether the mechs' panel lines are drawn on this device (Video). */
+  get panelLinesShown(): boolean {
+    return video.panels;
+  }
+
+  /** What the Grand Prix has earned so far (game/unlocks.ts). */
+  get progress(): Progress {
+    return { byCup: gpStore.medals(), season: gpStore.cupsWon() };
+  }
+
+  /** What the award just seen opened for your mech (shown on it). */
+  justEarned: Unlock[] = [];
+
   /**
    * From the hub: carry on with the event, or pick a faction and start one
    * (`cup`: which cup; one cup is under way at a time, and the hub asks
@@ -1678,8 +1692,10 @@ export class Game {
     if (isOver(ev)) {
       const place = finalPlace(ev);
       const medal = singleRaces(ev) ? medalFor(place) : null;
+      const before = this.progress;
       if (singleRaces(ev)) gpStore.awardMedal(ev.cup, ev.difficulty, medal);
       else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
+      this.justEarned = newlyEarned(before, this.progress);
       this.menus.replace('award', { kind, place, medal });
       // (The music first: the jingle is only for the synthesised music.)
       this.music('results', place === 1 ? 'win' : 'loss');
@@ -1691,6 +1707,7 @@ export class Game {
 
   /** The award seen: the event is put away, its medals and cups kept. */
   finishGp(kind: GpKind): void {
+    this.justEarned = [];
     gpStore.clearEvent(kind);
     this.gpEvents[kind] = null;
     if (!this.menus.popTo('gp')) this.menus.reset('gp', undefined, ['title', 'modes']);

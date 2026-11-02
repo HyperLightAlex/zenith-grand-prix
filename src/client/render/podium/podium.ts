@@ -12,11 +12,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { hwAt, type MechState, type Track } from '../../../sim/index';
-import { decodeBuild } from '../../../custom/mechBuild';
 import { celify, markCharacter } from '../look';
 import { MechAnimator } from '../mech/animate';
-import { buildCustomFrame } from '../mech/customFrame';
-import { buildFrame } from '../mech/frames';
+import { rigForSeat, undressRig, wearRig } from '../mech/style';
 import type { MechRig } from '../mech/rig';
 import type { VictoryId } from '../mech/victoryPoses';
 import { SUN_DIR, type Livery } from '../palette';
@@ -332,10 +330,12 @@ export class Podium {
     this.led.color.setHex(bill.glow);
     this.paintScreens(pilots, bill);
     pilots.slice(0, 3).forEach((p, place) => {
-      const custom = p.mech.look ? decodeBuild(p.mech.look) : null;
-      const rig = custom ? buildCustomFrame(p.mech.role, p.livery, custom, String(p.mech.role + 1)) : buildFrame(p.mech.role, p.livery, String(p.mech.role + 1));
+      const rig = rigForSeat(p.mech, p.livery);
+      // As worn as the race left it.
+      wearRig(rig, p.mech.retired ? 1 : 1 - p.mech.hp / Math.max(1, p.mech.maxHp));
       rig.root.matrixAutoUpdate = false;
       markCharacter(rig.root, p.mech.id);
+      celify(rig.root);
       // Standing still: nothing of the race left on it.
       const state: MechState = { ...p.mech, speed: 0, vs: 0, vd: 0, boosting: false, carving: false, guarding: false, retired: false, overdriveT: 0, carveT: 0, target: -1, act: 0, h: 0, air: false };
       const anim = new MechAnimator(rig);
@@ -367,6 +367,7 @@ export class Podium {
     for (const s of this.stands) {
       this.root.remove(s.rig.root);
       s.rig.root.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+      undressRig(s.rig);
     }
     this.stands.length = 0;
   }

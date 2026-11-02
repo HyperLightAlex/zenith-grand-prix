@@ -10,6 +10,9 @@ faction's frames have the same stats), so none of it needs balancing.
 | The pilot profile | begun: your callsign and portrait, worn by your seat everywhere, and the Pilot screen (below: "The pilot profile") |
 | Swappable parts | built: the hangar's editor, your custom mech raced in every mode, offline and online (below: "The game's side") |
 | Paint catalogue (each part paintable) | built: 33 paints and 9 metals, the whole mech and any part; one open question (below) |
+| Livery: patterns, race number, finish, wear | built: eight patterns, any race number to 99, panel lines on or off, five finishes, three wears (below: "Livery") |
+| Victory poses | built: six, chosen in the hangar, struck on the podium (DESIGN.md, "The podium") |
+| Earned in the Grand Prix | built: thirteen patterns, finishes, a wear and poses opened by medals (below) |
 | Pilot portraits | the gallery is the fifteen faction pilots; more, and recolouring, to come |
 | Gameplay customization (tuning, loadouts) | not planned for now |
 
@@ -297,6 +300,57 @@ decal.
 
 Open: whether the computer pilots on the player's team wear the player's
 paint.
+
+## Livery
+
+A custom mech's **livery** (the editor's Livery screen, off the hangar):
+
+- **A pattern** over its main paint, in a paint of its own from the
+  catalogue: twin stripes, chevrons, splinter camo, racing checks, a hex
+  weave, tiger slashes, digital camo, or none. Drawn by the armour shader
+  (`render/mech/kit.ts`) on each part, on each face's own plane (as the
+  anime look's panel lines are), only where the part wears the main paint
+  (the armour carries which paint each surface is, `aSlot`); in the anime
+  look shaded with the pattern paint's own shadow colour.
+- **The race number** on its decals: any from 0 to 99, or the frame's own
+  (1 to 3, as the stock mechs wear).
+- **Panel lines**, on or off: the anime look's lines cut into the armour,
+  drawn over the paint and the pattern alike, so a mech can wear either,
+  both or neither (where the player watching has them on in Video: off
+  there, they are off on every mech).
+- **A finish** on its paint: satin (the paint as it always was), gloss (a
+  broad hard highlight, lacquered edges), matte (the highlight flattened),
+  metal flake (a sparkle that twinkles as the view moves) or pearl (colours
+  running round the silhouette).
+- **Wear**: *shows the race* (scuffed through to the metal and scorched as
+  its armour goes, and kept so for the race: armour coming back does not
+  clean it; the stock mechs do this too), *always clean*, or *battle-worn*
+  (worn from the start, more as it goes).
+
+Each mech has an armour material of its own for its style
+(`render/mech/style.ts`: one program for all of them, only the values
+differ); the race view keeps its wear up with its armour. A build with a
+livery style is written `c2`, with the style before its name (see
+`encodeBuild`); one without is still written `c1`, as it always was, so
+the servers and rooms read both.
+
+## Earned in the Grand Prix
+
+Some of the livery and the poses are earned (`client/game/unlocks.ts`), by
+a medal this good or better in a cup or the Grand Tour at any difficulty, or
+a Zenith Cup; the rest are open from the start (two patterns, satin and
+matte, the race and clean wears, three poses). Nothing is kept of its own:
+what is open follows from the medals won. The award screen says what it has
+just opened; the Grand Prix menu's Rewards lists them all, and the editor
+and the hangar list what is left to earn beside their choices.
+
+| Opened by | Pattern | Finish | Pose | Wear |
+|---|---|---|---|---|
+| Horizon Cup | bronze: chevrons | silver: gloss | gold: pointing to the sky | |
+| Frontier Cup | bronze: racing checks, silver: splinter camo | gold: metal flake | | |
+| Ascent Cup | bronze: hex weave, silver: tiger slashes | gold: pearl | | |
+| Grand Tour | bronze: digital camo | | gold: a bow | |
+| Zenith Cup | | | hands on hips | battle-worn |
 
 ## Pilot portraits
 

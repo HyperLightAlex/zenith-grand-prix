@@ -28,11 +28,9 @@ import { CameraRig } from './cameraRig';
 import { Fx, Trail, makeBubble, makeLockRing, makeRamProw, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
 import { DEPTH, MUZZLE_EDGE, RAM_TIP, WALL_EDGE, wide } from './sprites';
 import { MechAnimator } from './mech/animate';
+import { rigForSeat, undressRig, wearRig } from './mech/style';
 import type { VictoryId } from './mech/victoryPoses';
-import { buildFrame } from './mech/frames';
-import { buildCustomFrame } from './mech/customFrame';
-import { decodeBuild } from '../../custom/mechBuild';
-import { drawClock, drawingStep, look, markCharacter } from './look';
+import { celify, drawClock, drawingStep, look, markCharacter } from './look';
 import type { MechRig } from './mech/rig';
 import { CARVE_COLORS, COLORS, SUN_DIR, type Livery } from './palette';
 import { teamLooks } from '../ui/sides';
@@ -169,8 +167,7 @@ const DUST: Record<string, number> = { meridian: 0x9aa2b0, canyon: 0xc98a5a, hel
 
 /** A seat's mech: its custom mech if it flies one, its faction's stock mech otherwise. */
 function frameFor(m: MechState, livery: Livery): MechRig {
-  const custom = m.look ? decodeBuild(m.look) : null;
-  return custom ? buildCustomFrame(m.role, livery, custom, String(m.role + 1)) : buildFrame(m.role, livery, String(m.role + 1));
+  return rigForSeat(m, livery);
 }
 
 export class RaceView {
@@ -320,11 +317,13 @@ export class RaceView {
       fitProw(v.prow, CLASSES[m.role].radius, rig.dims.height);
       markCharacter(rig.root,m.id);
       markTraveller(rig.root);
+      celify(rig.root);
       v.rig = rig;
       v.anim.replaceRig(rig);
       rig.root.updateMatrixWorld(true);
       this.group.add(rig.root);
       this.group.remove(old.root);
+      undressRig(old);
       old.root.traverse((o) => {
         const mesh = o as THREE.Mesh;
         mesh.geometry?.dispose();
@@ -351,6 +350,7 @@ export class RaceView {
     // the mech kit are shared between views and stay, as does the shadow texture.
     for (const id of this.mechIds) {
       const v = this.mechs[id];
+      undressRig(v.rig);
       for (const mesh of [v.shield, v.bubble, v.snare, v.shadow, v.trails[0].mesh, v.trails[1].mesh]) (mesh.material as THREE.Material).dispose();
       v.prow.geometry.dispose();
       (v.prow.material as THREE.Material).dispose();
@@ -393,6 +393,8 @@ export class RaceView {
       trackMatrix(track, v.s, v.d, v.h, v.facing, m4);
       v.rig.root.matrix.copy(m4);
       v.rig.root.matrixWorldNeedsUpdate = true;
+      // Scuffed and scorched as its armour goes.
+      wearRig(v.rig, m.retired ? 1 : 1 - m.hp / Math.max(1, m.maxHp));
       // The pose: every frame, or in the anime look only on each new drawing
       // (twelve a second, eight for a held pose: a boost, a carve, a burst),
       // while the mech itself moves smoothly.

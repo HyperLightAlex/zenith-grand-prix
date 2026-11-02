@@ -7,8 +7,19 @@ import { CLASSES, ROLE_NAMES, type Role } from '../../../sim/index';
 import {
   CHANNEL_NAMES,
   CHANNELS,
+  FINISHES,
+  FINISH_NAMES,
+  LINES,
+  LINES_NAMES,
   METALS,
+  NUMBER_MAX,
   PAINTS,
+  PATTERNS,
+  PATTERN_NAMES,
+  WEARS,
+  WEAR_NAMES,
+  styleOf,
+  type LiveryStyle,
   PART_NAMES,
   PART_SLOTS,
   PLURAL_PARTS,
@@ -22,6 +33,7 @@ import {
 } from '../../../custom/mechBuild';
 import { CALLSIGN_MAX } from '../../../net/protocol';
 import type { Game } from '../../game/game';
+import { UNLOCKS, earned, howTo, openOf, unlockName } from '../../game/unlocks';
 import { partChannels } from '../../render/mech/customFrame';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h, setClass, setText } from '../dom';
@@ -55,6 +67,20 @@ function swatch(p: Paint, follow = false): HTMLElement {
   el.style.setProperty('--s', hex(p.shade));
   el.title = follow ? `As the mech: ${p.name}` : p.name;
   return el;
+}
+
+/** What the Grand Prix still has to earn of these kinds, and how (for the side panel). */
+export function toEarn(g: Game, kinds: ReadonlyArray<'pattern' | 'finish' | 'wear' | 'pose'>): HTMLElement[] {
+  const left = UNLOCKS.filter((u) => kinds.includes(u.kind) && !earned(u, g.progress));
+  if (!left.length) return [];
+  return [h('h2', 'Earned in the Grand Prix'), h('div.rewards', ...left.map((u) => h('div.reward', h('b', unlockName(u)), h('span', howTo(u)))))];
+}
+
+/** A livery in a line: its pattern, number, finish and wear. */
+function liverySummary(role: Role, s: LiveryStyle): string {
+  const pattern = s.pattern ? `${PATTERN_NAMES[PATTERNS[s.pattern]]} in ${PAINTS[s.patternPaint].name}` : 'No pattern';
+  const number = s.number < 0 ? `the frame's number (${role + 1})` : `number ${s.number}`;
+  return `${pattern}, ${number}, a ${FINISH_NAMES[FINISHES[s.finish]].toLowerCase()} finish, panel lines ${LINES_NAMES[LINES[s.lines]].toLowerCase()}; wear: ${WEAR_NAMES[WEARS[s.wear]].toLowerCase()}.`;
 }
 
 /** The right stick (or a drag across the bay) inspects the mech from any side and elevation. */
@@ -114,6 +140,7 @@ export function registerCustom(m: Menus, g: Game): void {
       const list = h('div.list');
       m.button(list, 'Parts', () => m.push<CustomData>('custom-parts', { ...d }), { key: 'parts', note: 'Each part from any of the five designs of the frame' });
       m.button(list, 'Paint', () => m.push<PaintData>('custom-paint', { ...d, target: 'mech' }), { key: 'paint', note: 'The whole mech, or a part at a time' });
+      m.button(list, 'Livery', () => m.push<CustomData>('custom-livery', { ...d }), { key: 'livery', note: 'A pattern, the race number, the finish and the wear' });
       m.button(list, `Name: ${b.name || '(none)'}`, () => {
         m.push<EntryData>('entry', {
           title: 'Name your mech',
@@ -161,7 +188,7 @@ export function registerCustom(m: Menus, g: Game): void {
       const paint = h('div.paint-row');
       for (const ch of CHANNELS) paint.append(h('div', swatch(listOf(ch)[b.paint[ch]]), h('small', `${CHANNEL_NAMES[ch]}: ${listOf(ch)[b.paint[ch]].name}`)));
       const own = PART_SLOTS.filter((s) => b.own[s]).map((s) => PART_NAMES[s].toLowerCase());
-      side.append(parts, h('h2', 'Paint'), paint, own.length ? h('div.note', `Painted on their own: ${own.join(', ')}.`) : '');
+      side.append(parts, h('h2', 'Paint'), paint, own.length ? h('div.note', `Painted on their own: ${own.join(', ')}.`) : '', h('h2', 'Livery'), h('div.note', liverySummary(d.role, styleOf(b))));
       m.root.append(bayShade(g), m.panes(col, h('div.hangar-side', side)), m.footer(TURN, { pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, SELECT, BACK));
     },
   });
@@ -204,6 +231,55 @@ export function registerCustom(m: Menus, g: Game): void {
     },
     selected(_m, key, d) {
       describe(d, key);
+    },
+  });
+
+  // ---- livery ------------------------------------------------------------------
+  // A pattern over the main paint (in a paint of its own), the race number,
+  // the finish and the wear; each change shows on the mech in the bay.
+  m.register<CustomData>('custom-livery', {
+    render(m, d) {
+      const col = h('div.col');
+      const list = h('div.list');
+      const style = (): LiveryStyle => styleOf(mech(d));
+      const set = (c: Partial<LiveryStyle>) => {
+        save(d, { ...mech(d), style: { ...style(), ...c } });
+        m.refresh();
+      };
+      const step = (v: number, dir: number, n: number) => (((v + dir) % n) + n) % n;
+      // On through what is open (the rest the Grand Prix earns: listed at the side).
+      const next = <T extends string>(all: readonly T[], open: readonly T[], v: number, dir: number): number => {
+        const at = open.indexOf(all[v]);
+        return all.indexOf(open[at < 0 ? 0 : step(at, dir, open.length)]);
+      };
+      const p = g.progress;
+      const s = style();
+      m.choice(list, 'Pattern', PATTERN_NAMES[PATTERNS[s.pattern]], (dir) => set({ pattern: next(PATTERNS, openOf('pattern', PATTERNS, p), s.pattern, dir) }), { key: 'pattern' });
+      m.choice(list, 'Pattern paint', PAINTS[s.patternPaint].name, (dir) => set({ patternPaint: step(s.patternPaint, dir, PAINTS.length) }), {
+        key: 'patternPaint',
+        locked: s.pattern === 0 ? 'Choose a pattern first' : null,
+      });
+      // The frame's own number first, then 0 to 99.
+      m.choice(list, 'Race number', s.number < 0 ? `The frame's (${d.role + 1})` : String(s.number), (dir) => set({ number: step(s.number + 1, dir, NUMBER_MAX + 2) - 1 }), { key: 'number' });
+      m.choice(list, 'Finish', FINISH_NAMES[FINISHES[s.finish]], (dir) => set({ finish: next(FINISHES, openOf('finish', FINISHES, p), s.finish, dir) }), { key: 'finish' });
+      m.choice(list, 'Wear', WEAR_NAMES[WEARS[s.wear]], (dir) => set({ wear: next(WEARS, openOf('wear', WEARS, p), s.wear, dir) }), { key: 'wear' });
+      // The panel lines are drawn over the paint and the pattern alike: either, both or neither.
+      m.choice(list, 'Panel lines', LINES_NAMES[LINES[s.lines]], (dir) => set({ lines: step(s.lines, dir, LINES.length) }), {
+        key: 'lines',
+        locked: g.panelLinesShown ? null : 'Panel lines are off in Video: turn them on there to see them',
+      });
+      m.button(list, 'Done', () => m.pop(), { key: 'done', go: true });
+      const b = mech(d);
+      col.append(h('div.context', customName(d.role, b)), card(g, d, b, 'Livery'), h('h1', 'Livery'), list);
+      const side = h(
+        'div.kit.custom-sheet',
+        h('h2', 'Livery'),
+        h('div.note', liverySummary(d.role, s)),
+        s.pattern ? h('div.paint-row', h('div', swatch(PAINTS[s.patternPaint]), h('small', `Pattern: ${PAINTS[s.patternPaint].name}`))) : '',
+        h('div.note', 'The pattern goes over the main paint, a part at a time, and the panel lines over it (if they are on in Video). Wear shows in a race: scuffed to the metal and scorched as the armour goes.'),
+        ...toEarn(g, ['pattern', 'finish', 'wear']),
+      );
+      m.root.append(bayShade(g), m.panes(col, h('div.hangar-side', side)), m.footer(TURN, { pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, BACK));
     },
   });
 

@@ -20,6 +20,8 @@ export type Slot = 'P' | 'S' | 'F' | 'T' | 'D' | 'C' | 'K';
 
 /** Surface type per slot: 0 paint, 1 metal, 2 rubber and dark metal, 3 glass. */
 const SURFACE: Record<Slot, number> = { P: 0, S: 0, T: 0, F: 1, K: 1, D: 2, C: 3 };
+/** Each slot, for the shader (aSlot): the main paint is 0, the one a livery's pattern goes on. */
+const SLOT_ID: Record<Slot, number> = { P: 0, S: 1, T: 2, F: 3, K: 4, D: 5, C: 6 };
 
 /**
  * Which painted panel lines each slot wears in the anime look (art/mech-sheets,
@@ -179,16 +181,171 @@ export function setArmorEnvironment(sky: number, ground: number, rim: number): v
 let armorMaterial: THREE.MeshToonMaterial | null = null;
 
 /**
+ * A mech's livery style, as its armour shader reads it (render/mech/style.ts
+ * sets it from its build and the race): a pattern over its main paint, in a
+ * paint of its own; how the paint is finished; how worn it is.
+ */
+export interface ArmorStyle {
+  /** An index into PATTERNS (custom/mechBuild.ts); 0 none. */
+  uPattern: { value: number };
+  uPatColor: { value: THREE.Color };
+  /** The pattern paint's shadow colour, for the anime look. */
+  uPatShade: { value: THREE.Color };
+  /** An index into FINISHES; 0 satin (the paint as it always was). */
+  uFinish: { value: number };
+  /** 0 clean to 1 scuffed to the metal and scorched. */
+  uWear: { value: number };
+  /** 1: the panel lines (where the player watching has them on, Video); 0: none on this mech. */
+  uPanels: { value: number };
+}
+
+export function armorStyle(): ArmorStyle {
+  return { uPattern: { value: 0 }, uPatColor: { value: new THREE.Color() }, uPatShade: { value: new THREE.Color() }, uFinish: { value: 0 }, uWear: { value: 0 }, uPanels: { value: 1 } };
+}
+
+/** Every mech without a style of its own: no pattern, satin, clean. */
+const PLAIN_ARMOR = armorStyle();
+
+/**
+ * The livery style in the armour shader: the face's own plane (as the panel
+ * lines take it), the patterns on it, and the noise the wear is made of.
+ */
+const STYLE_HEAD = /* glsl */ `
+uniform float uPattern;
+uniform vec3 uPatColor;
+uniform vec3 uPatShade;
+uniform float uFinish;
+uniform float uWear;
+varying float vSlot;
+// How much of this pixel is pattern, scuffed to the metal, and scorched.
+float gPat = 0.0;
+float gScuff = 0.0;
+float gSoot = 0.0;
+float sHash3(vec3 p) {
+  p = fract(p * 0.3183099 + 0.1);
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float sHash2(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float sNoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(sHash3(i), sHash3(i + vec3(1.0, 0.0, 0.0)), f.x), mix(sHash3(i + vec3(0.0, 1.0, 0.0)), sHash3(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+    mix(mix(sHash3(i + vec3(0.0, 0.0, 1.0)), sHash3(i + vec3(1.0, 0.0, 1.0)), f.x), mix(sHash3(i + vec3(0.0, 1.0, 1.0)), sHash3(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+    f.z);
+}
+// A band edge, softened by a pixel.
+float sEdge(float edge, float x) {
+  float w = max(fwidth(x), 1e-4) * 0.75;
+  return smoothstep(edge - w, edge + w, x);
+}
+// The pattern over the main paint (each part has its own, on each face's plane).
+float patternMask() {
+  float id = floor(uPattern + 0.5);
+  if (id < 0.5 || vSlot > 0.5 || vMat > 0.5) return 0.0;
+  vec3 n = abs(normalize(cross(dFdx(vObjPos), dFdy(vObjPos))));
+  vec2 uv;
+  float side = 0.0;
+  if (n.x >= n.y && n.x >= n.z) { uv = vObjPos.zy; side = 1.0; }
+  else if (n.y >= n.z) uv = vObjPos.xz;
+  else uv = vObjPos.xy;
+  if (id < 1.5) {
+    // Twin stripes down the middle of each part, on its front, back and top.
+    float x = abs(vObjPos.x);
+    return (1.0 - side) * sEdge(0.09, x) * (1.0 - sEdge(0.24, x));
+  }
+  if (id < 2.5) {
+    // Chevrons, pointing up.
+    float v = (uv.y + abs(uv.x) * 0.85) / 0.8;
+    return 1.0 - sEdge(0.17, abs(fract(v) - 0.5));
+  }
+  if (id < 3.5) {
+    // Splinter camo: shards of two grids at angles to each other.
+    vec2 a = mat2(0.94, 0.34, -0.34, 0.94) * uv * 1.6;
+    vec2 b = mat2(0.6, -0.8, 0.8, 0.6) * uv * 2.2 + 3.1;
+    float ha = sHash2(floor(a));
+    float hb = sHash2(floor(b) + 17.0);
+    return clamp(step(0.55, ha) * step(0.3, hb) + step(0.82, hb), 0.0, 1.0);
+  }
+  if (id < 4.5) {
+    // Racing checks.
+    vec2 c = floor(uv / 0.38);
+    return mod(c.x + c.y, 2.0);
+  }
+  if (id < 5.5) {
+    // A hex weave: the cells' edges.
+    vec2 q = uv / 0.3;
+    const vec2 r = vec2(1.0, 1.7320508);
+    vec4 hc = floor(vec4(q, q - vec2(0.5, 1.0)) / r.xyxy) + 0.5;
+    vec4 h = vec4(q - hc.xy * r, q - (hc.zw + 0.5) * r);
+    vec2 cell = dot(h.xy, h.xy) < dot(h.zw, h.zw) ? h.xy : h.zw;
+    cell = abs(cell);
+    float d = max(dot(cell, r * 0.5), cell.x);
+    return sEdge(0.41, d);
+  }
+  if (id < 6.5) {
+    // Tiger slashes: wavering diagonals, broken up.
+    float v = (uv.x * 0.8 + uv.y * 0.6 + 0.22 * sin(uv.y * 4.0 + uv.x * 2.0)) / 0.75;
+    float broken = step(0.38, sNoise(vec3(uv * 1.4, 7.0)));
+    return (1.0 - sEdge(0.11, abs(fract(v) - 0.5))) * broken;
+  }
+  // Digital camo: square pixels, in clumps.
+  vec2 c1 = floor(uv / 0.16);
+  vec2 c2 = floor(uv / 0.48);
+  return step(0.62, sHash2(c1 + c2 * 7.3) * 0.45 + sHash2(c2) * 0.6);
+}
+// Metal flake's sparkle (it twinkles as the view moves) and pearl's colours
+// running round the silhouette, on paint.
+vec3 styleSheen(vec3 wN, vec3 eyeDir, float fres, float isPaint, float fin) {
+  if (isPaint < 0.01 || fin < 2.5) return vec3(0.0);
+  if (fin < 3.5) {
+    float glint = step(0.968, sHash3(floor(vObjPos * 24.0) + floor(dot(eyeDir, vec3(7.0, 11.0, 13.0)) * 3.0)));
+    return mix(uEnvHigh, vec3(1.0), 0.5) * glint * 0.85 * isPaint;
+  }
+  vec3 pearl = 0.5 + 0.5 * cos(6.2831 * (fres * 1.3 + vec3(0.0, 0.33, 0.67)));
+  return pearl * 0.3 * smoothstep(0.1, 0.7, fres) * isPaint;
+}
+// The paint's own shadow colour (the anime look), under the pattern and the wear.
+vec3 celArmorShade() {
+  vec3 sh = mix(vShade, uPatShade, gPat);
+  sh = mix(sh, vec3(0.16, 0.17, 0.22), gScuff);
+  return sh * (1.0 - gSoot * 0.55);
+}
+`;
+
+/** The style on the paint's colour: the pattern, then the race's scuffs and scorches. */
+const STYLE_BODY = /* glsl */ `
+gPat = patternMask();
+diffuseColor.rgb = mix(diffuseColor.rgb, uPatColor, gPat);
+if (uWear > 0.001) {
+  // Scuffed through to the metal (dark metal on light paint, bright on dark)...
+  float worn = 0.84 - uWear * 0.4;
+  float n1 = sNoise(vObjPos * 3.1) * 0.65 + sNoise(vObjPos * 9.7) * 0.35;
+  gScuff = vMat < 0.5 ? smoothstep(worn, worn + 0.03, n1) : 0.0;
+  float light = step(0.35, dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)));
+  diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.5, 0.52, 0.58), vec3(0.17, 0.18, 0.22), light), gScuff * 0.9);
+  // ...and scorched.
+  float sootAt = 0.92 - uWear * 0.45;
+  gSoot = smoothstep(sootAt, sootAt + 0.18, sNoise(vObjPos * 1.7 + 11.0)) * (1.0 - step(2.5, vMat));
+  diffuseColor.rgb *= 1.0 - gSoot * 0.6;
+}
+`;
+
+/**
  * The armour shader: three's toon lighting (hard bands, real shadows) plus
  * what makes painted and bare metal parts read as different materials: a
  * hard-edged anime highlight sized by surface type, a rim of sky light round
  * the silhouette, and a sky-and-ground reflection on metal and glass.
  */
-export function armorMat(): THREE.MeshToonMaterial {
-  if (armorMaterial) return armorMaterial;
+export function armorMat(style: ArmorStyle = PLAIN_ARMOR): THREE.MeshToonMaterial {
+  if (style === PLAIN_ARMOR && armorMaterial) return armorMaterial;
   const mat = new THREE.MeshToonMaterial({ gradientMap: toonGradient(), vertexColors: true });
   mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, ENV);
+    Object.assign(shader.uniforms, ENV, style);
     const [pa, pb] = panelMaps();
     shader.uniforms.uPanelA = { value: pa };
     shader.uniforms.uPanelB = { value: pb };
@@ -200,9 +357,11 @@ export function armorMat(): THREE.MeshToonMaterial {
         attribute float aMat;
         attribute vec3 aShade;
         attribute float aPanel;
+        attribute float aSlot;
         varying float vMat;
         varying vec3 vShade;
         varying float vPanel;
+        varying float vSlot;
         varying vec3 vObjPos;
         varying vec3 vWorldN;
         varying vec3 vWorldP;`,
@@ -213,11 +372,13 @@ export function armorMat(): THREE.MeshToonMaterial {
         vMat = aMat;
         vShade = aShade;
         vPanel = aPanel;
+        vSlot = aSlot;
         vObjPos = transformed;
         vWorldN = normalize(mat3(modelMatrix) * objectNormal);
         vWorldP = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
       );
     shader.fragmentShader = shader.fragmentShader
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + STYLE_BODY)
       .replace(
         '#include <lights_toon_pars_fragment>',
         /* glsl */ `
@@ -229,6 +390,7 @@ export function armorMat(): THREE.MeshToonMaterial {
         uniform sampler2D uPanelA;
         uniform sampler2D uPanelB;
         uniform float uPanelSize[6];
+        uniform float uPanels;
         // The anime look's panel lines (art/mech-sheets, P1), 0..1 ink: the
         // drawing for this part's paint, projected flat along whichever axis
         // the face looks down (taken from the face itself, so a face never
@@ -236,7 +398,7 @@ export function armorMat(): THREE.MeshToonMaterial {
         // too fine to draw. Wear (lighter, on paint only) in the second.
         vec2 panelInk() {
           float idx = floor(vPanel + 0.5);
-          if (idx < -0.5) return vec2(0.0);
+          if (idx < -0.5 || uPanels < 0.5) return vec2(0.0);
           vec3 dx = dFdx(vObjPos);
           vec3 dy = dFdy(vObjPos);
           vec3 n = abs(normalize(cross(dx, dy)));
@@ -261,6 +423,7 @@ export function armorMat(): THREE.MeshToonMaterial {
         uniform vec3 uEnvHigh;
         uniform vec3 uEnvLow;
         uniform vec3 uRim;
+        ${STYLE_HEAD}
         struct ToonMaterial {
           vec3 diffuseColor;
           float spec;
@@ -293,6 +456,16 @@ export function armorMat(): THREE.MeshToonMaterial {
         float isGlass = step( 2.5, vMat );
         material.spec = mix( mix( mix( 0.32, 0.6, isMetal ), 0.1, isDark ), 1.2, isGlass );
         material.shine = mix( mix( mix( 46.0, 22.0, isMetal ), 12.0, isDark ), 120.0, isGlass );
+        // The finish, on paint (and less where it is scuffed to the metal):
+        // gloss a sharper, brighter highlight; matte next to none; metal flake
+        // and pearl a metal's broader sheen.
+        float isPaint = ( 1.0 - step( 0.5, vMat ) ) * ( 1.0 - gScuff );
+        float fin = floor( uFinish + 0.5 );
+        float isGloss = 1.0 - step( 0.5, abs( fin - 1.0 ) );
+        float isMatte = 1.0 - step( 0.5, abs( fin - 2.0 ) );
+        float isFlake = step( 2.5, fin );
+        material.spec *= 1.0 + isPaint * ( isGloss * 2.2 - isMatte * 0.85 + isFlake * 0.6 );
+        material.shine *= 1.0 + isPaint * ( isGloss * 2.5 - isFlake * 0.4 );
         `,
       )
       .replace(
@@ -307,15 +480,17 @@ export function armorMat(): THREE.MeshToonMaterial {
         vec3 R = reflect( eyeDir, wN );
         vec3 env = mix( uEnvLow, uEnvHigh, smoothstep( -0.25, 0.35, R.y ) );
         float envK = mix( mix( mix( 0.07, 0.3, isMetal ), 0.04, isDark ), 0.55, isGlass );
+        envK *= 1.0 + isPaint * ( isGloss * 2.4 - isMatte * 0.8 + isFlake * 0.9 );
         vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular
-          + totalEmissiveRadiance + rim + env * envK * mix( 0.6, 1.0, fres );
+          + totalEmissiveRadiance + rim * ( 1.0 - isPaint * isMatte * 0.6 ) + env * envK * mix( 0.6, 1.0, fres );
+        outgoingLight += styleSheen( wN, eyeDir, fres, isPaint, fin );
         `,
       );
   };
-  mat.customProgramCacheKey = () => 'zgp-armor-v3';
+  mat.customProgramCacheKey = () => 'zgp-armor-v4';
   // The anime look paints the armour's metal and glass (see look.ts).
   mat.userData.celArmor = true;
-  armorMaterial = mat;
+  if (style === PLAIN_ARMOR) armorMaterial = mat;
   return mat;
 }
 
@@ -410,6 +585,7 @@ export class Kit {
       geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
       geo.setAttribute('aShade', new THREE.BufferAttribute(shade, 3));
       geo.setAttribute('aMat', new THREE.BufferAttribute(mat, 1));
+      geo.setAttribute('aSlot', new THREE.BufferAttribute(new Float32Array(n).fill(SLOT_ID[slot]), 1));
       this.armor.push(geo);
       this.armorSlots.push(slot);
       this.armorPanels.push(panel);

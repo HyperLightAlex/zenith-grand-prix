@@ -23,6 +23,7 @@ import {
   type GpKind,
 } from '../../../gp/grandPrix';
 import type { Game } from '../../game/game';
+import { UNLOCKS, earned, howTo, unlockName } from '../../game/unlocks';
 import { LIVERIES, factionName } from '../../render/palette';
 import { paintedTrack } from '../../render/painted';
 import { h } from '../dom';
@@ -203,6 +204,8 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       });
       m.button(list, 'Season', () => g.openGp('season'), { key: 'season', note: season && !isOver(season) ? progress(season) : 'Ten matchdays for the Zenith Cup' });
       m.choice(list, 'Difficulty', GP_DIFFICULTY[diff], (dir) => g.setGpDifficulty((diff + dir + 3) % 3), { key: 'difficulty' });
+      const won = UNLOCKS.filter((u) => earned(u, g.progress)).length;
+      m.button(list, 'Rewards', () => m.push('gp-rewards'), { key: 'rewards', note: `${won} of ${UNLOCKS.length} earned: patterns, finishes and victory poses for your mech` });
       col.append(h('div.context', 'Grand Prix'), h('h1', 'Grand Prix'), list);
       preview = h('div.panel.gp-preview');
       m.root.append(h('div.shade'), m.panes(col, preview), m.footer(SELECT, CHANGE, BACK));
@@ -334,12 +337,31 @@ export function registerGrandPrix(m: Menus, g: Game): void {
     back() {},
   });
 
+  // Everything the Grand Prix earns for your mech, and what opens each.
+  m.register('gp-rewards', {
+    render(m) {
+      const col = h('div.col');
+      const list = h('div.list');
+      m.button(list, 'Back', () => m.pop(), { key: 'back', go: true });
+      col.append(h('div.context', 'Grand Prix'), h('h1', 'Rewards'), h('p', 'Medals open these for your mech: patterns and finishes in its livery (the custom mech editor, off the hangar) and victory poses for the podium (the hangar).'), list);
+      const rows = h('div.rewards');
+      for (const u of UNLOCKS) {
+        const got = earned(u, g.progress);
+        rows.append(h('div.reward' + (got ? '.got' : ''), h('b', unlockName(u)), h('span', got ? 'Earned' : howTo(u))));
+      }
+      m.root.append(h('div.shade'), m.panes(col, h('div.panel.gp-rewards', h('h2', 'For your mech'), rows)), m.footer(SELECT, BACK));
+    },
+  });
+
   m.register<GpData & { place: number; medal: string | null }>('award', {
     render(m, d) {
       const ev = g.gpEvent(d.kind);
       if (!ev) return void m.pop();
       const col = h('div.col.gp-award');
       col.append(h('div.context', eventName(ev)), ...awardLines(ev, d.place, d.medal));
+      if (g.justEarned.length) {
+        col.append(h('div.unlocked', h('h2', 'Earned for your mech'), ...g.justEarned.map((u) => h('div', unlockName(u)))));
+      }
       const list = h('div.list');
       m.button(list, 'Back to Grand Prix', () => g.finishGp(d.kind), { key: 'done', go: true });
       col.append(list);

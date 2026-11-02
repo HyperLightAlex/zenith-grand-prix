@@ -12,6 +12,7 @@ import { MATCH_OPTIONS, MODE_NAMES, RIVALS, SPRINT_OPTIONS, SPRINT_TAGLINE, TRAC
 import { BACK, CHANGE, SELECT } from './common';
 import { customName, openCustom } from './custom';
 import { VICTORY_IDS, VICTORY_NAMES } from '../../render/mech/victoryPoses';
+import { openOf } from '../../game/unlocks';
 
 const KIT_TEXT: Record<number, [string, string]> = {
   0: ['Three quick blade strikes. Light, fast, hard to interrupt you out of.', 'An armoured lunge that closes a 30 m gap. Costs Drive.'],
@@ -171,9 +172,11 @@ export function registerGarage(m: Menus, g: Game): void {
         hint: mine ? undefined : `Start from this ${LIVERIES[team].models[role]}: swap its parts for other teams' and paint it`,
       });
       m.button(list, `Pilot: ${g.pilotName}`, () => m.push('pilot'), { key: 'pilot' });
+      // (Through the poses open: the rest the Grand Prix earns.)
       m.choice(list, 'Victory pose', VICTORY_NAMES[g.victoryPose], (dir) => {
-        const i = VICTORY_IDS.indexOf(g.victoryPose);
-        g.setVictoryPose(VICTORY_IDS[(i + dir + VICTORY_IDS.length) % VICTORY_IDS.length]);
+        const open = openOf('pose', VICTORY_IDS, g.progress);
+        const i = open.indexOf(g.victoryPose);
+        g.setVictoryPose(open[i < 0 ? 0 : (i + dir + open.length) % open.length]);
         m.refresh();
       }, { key: 'pose' });
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });

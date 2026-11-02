@@ -186,7 +186,7 @@ if (uCel > 0.5) {
     vec3 celShade = celLit * uShadeTint;
     #ifdef CEL_ARMOR
       // Each paint's own shadow colour, leant a little toward the circuit's light.
-      celShade = celLit * clamp(vShade / max(celBase, vec3(0.001)), 0.0, 1.5) * uShadeLean;
+      celShade = celLit * clamp(celArmorShade() / max(celBase, vec3(0.001)), 0.0, 1.5) * uShadeLean;
     #endif
     // Bounce: a lighter band along the far rim of the shadow.
     float rim = 1.0 - clamp(dot(celN, celV), 0.0, 1.0);
@@ -218,9 +218,20 @@ if (uCel > 0.5) {
       celCol = mix(celCol, mix(celLit * 0.35, celLit * 1.1 + celAmb * 0.12, above), cGlass * 0.7);
       // Panel lines, in a deeper mix of the paint's own shadow colour; wear lighter.
       vec2 celPanel = panelInk();
-      vec3 celLine = clamp(vShade / max(celBase, vec3(0.001)), 0.0, 1.5) * 0.5;
+      vec3 celLine = clamp(celArmorShade() / max(celBase, vec3(0.001)), 0.0, 1.5) * 0.5;
       celCol *= mix(vec3(1.0), celLine, celPanel.x * 0.9);
       celCol *= 1.0 - celPanel.y * 0.3;
+      // The paint's finish, painted: gloss a big hard glint, matte the
+      // highlight tone flattened, metal flake its sparkle, pearl its colours.
+      float cPaint = (1.0 - step(0.5, vMat)) * (1.0 - gScuff);
+      float cFin = floor(uFinish + 0.5);
+      float cGloss = 1.0 - step(0.5, abs(cFin - 1.0));
+      float cMatte = 1.0 - step(0.5, abs(cFin - 2.0));
+      // (Gloss: a broad hard highlight, and the edges turned toward the sky lit like lacquer.)
+      celCol += celSun * RECIPROCAL_PI * celStep(nh, 0.86) * 0.5 * cPaint * cGloss * litK;
+      celCol = mix(celCol, celLit * 1.3 + celAmb * 0.08, celStep(rim, 0.6) * celStep(celN.y, -0.2) * 0.55 * cPaint * cGloss);
+      celCol = mix(celCol, mix(celShade, celLit, litK), cPaint * cMatte * 0.75);
+      celCol += styleSheen(normalize(vWorldN), normalize(vWorldP - cameraPosition), rim, cPaint, cFin) * 1.4;
     #endif
   #else
     vec3 celCol = mix(celLit * uBgShadeTint, celLit, litK);

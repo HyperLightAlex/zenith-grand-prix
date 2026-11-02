@@ -5,6 +5,17 @@ import * as THREE from 'three';
 import {
   CHANNELS,
   FACTION_SCHEMES,
+  FINISHES,
+  FINISH_NAMES,
+  PATTERNS,
+  PATTERN_NAMES,
+  PLAIN_STYLE,
+  WEARS,
+  WEAR_NAMES,
+  LINES,
+  LINES_NAMES,
+  raceNumber,
+  styleOf,
   FRAME_DESIGNS,
   METALS,
   PAINTS,
@@ -108,6 +119,37 @@ describe('a custom mech as text', () => {
     // The parts' entries written out of order: not the one way of writing it.
     expect(good).toContain('/am0jka00kf8/');
     expect(decodeBuild(good.replace('am0jka00kf8', 'ka00kf8am0j'))).toBeNull();
+  });
+
+  it('carries its livery: a pattern in a paint of its own, the race number, the finish and the wear', () => {
+    const styled: MechBuild = { ...mixed(), style: { pattern: 3, patternPaint: 21, number: 7, finish: 4, wear: 2, lines: 1 } };
+    const text = encodeBuild(styled);
+    expect(text.startsWith('c2/')).toBe(true);
+    expect(text).toContain('/30l42107/');
+    expect(decodeBuild(text)).toEqual(styled);
+    expect(styleOf(decodeBuild(text))).toEqual(styled.style);
+    expect(raceNumber(ROLE.MF, styled)).toBe('7');
+    // The seat's own number, and no style at all: the frame's.
+    const seat: MechBuild = { ...mixed(), style: { ...PLAIN_STYLE, pattern: 1, patternPaint: 3 } };
+    expect(decodeBuild(encodeBuild(seat))).toEqual(seat);
+    expect(encodeBuild(seat)).toContain('/103000--/');
+    expect(raceNumber(ROLE.MF, seat)).toBe('2');
+    expect(raceNumber(ROLE.DF, mixed())).toBe('3');
+    // The plain style is written as a build always was.
+    const plain: MechBuild = { ...mixed(), style: { ...PLAIN_STYLE } };
+    expect(encodeBuild(plain)).toBe(encodeBuild(mixed()));
+    expect(styleOf(mixed())).toEqual(PLAIN_STYLE);
+    // Every pattern, finish and wear has a name.
+    expect(PATTERNS.every((p) => PATTERN_NAMES[p])).toBe(true);
+    expect(FINISHES.every((f) => FINISH_NAMES[f])).toBe(true);
+    expect(WEARS.every((w) => WEAR_NAMES[w])).toBe(true);
+    expect(LINES.every((l) => LINES_NAMES[l])).toBe(true);
+    // And nothing outside them reads.
+    for (const bad of ['z0l42107', '3zz42107', '30l92107', '30l49107', '30l42907', '30l421-7', '30l4211000', '30l4210']) {
+      expect(decodeBuild(text.replace('/30l42107/', `/${bad}/`)), bad).toBeNull();
+    }
+    // A plain style written c2 is not the one way of writing it.
+    expect(decodeBuild(encodeBuild(mixed()).replace('c1/', 'c2/').replace('/Storm Kite', '/000000--/Storm Kite'))).toBeNull();
   });
 });
 

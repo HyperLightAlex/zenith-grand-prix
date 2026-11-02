@@ -2096,3 +2096,19 @@ html.compact .podium .podium-card { min-width: 0; font-size: 0.9em; }
 html.compact .podium .podium-cards { left: calc(1 * var(--ui-em) + var(--sl, 0px)); }
 html.compact .podium .podium-btns { right: calc(1 * var(--ui-em) + var(--sr, 0px)); flex-direction: column; align-items: flex-end; }
 @media (prefers-reduced-motion: reduce) { .podium .podium-card { transition: none; } }
+
+/* ---- Rewards (game/unlocks.ts): what the Grand Prix earns for your mech ------
+   A list of each, earned or what opens it: in the Grand Prix menu, at the side
+   of the livery editor, and under an award for what it has just opened. */
+.menu .rewards { display: grid; gap: 0.3em; margin-top: 0.4em; }
+.menu .reward { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; font-size: 0.95em; }
+.menu .reward b { font-weight: 700; }
+.menu .panel.gp-rewards .reward b { color: var(--paper); }
+.menu .reward span { font-weight: 500; font-style: normal; opacity: 0.7; text-align: right; }
+.menu .reward.got span { color: var(--charge); opacity: 1; }
+.menu .panel.gp-rewards { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 34em; display: flex; flex-direction: column; gap: 0.3em; }
+.menu .panel.gp-rewards h2 { margin: 0 0 0.2em; font-size: 1.4em; }
+.menu .panel.gp-rewards .reward { font-size: 1.05em; }
+.menu .gp-award .unlocked { margin-top: 1em; padding: 0.6em 0.9em; background: rgba(53, 240, 255, 0.12); box-shadow: inset 0.25em 0 0 var(--charge); }
+.menu .gp-award .unlocked h2 { margin: 0 0 0.3em; font-size: 1.1em; color: var(--charge); }
+.menu .gp-award .unlocked div { font-size: 1.1em; font-weight: 700; }

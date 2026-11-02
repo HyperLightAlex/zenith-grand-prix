@@ -37,6 +37,10 @@ This is version 0.5: nine circuits and three ways to play.
 - **The podium**: after a race, the first three home take their places on
   a stage at the side of the start straight, each in their victory pose
   (yours is chosen in the hangar), with confetti for the winner.
+- **Your mech's livery**: on a custom mech, a pattern over its main paint
+  (stripes, chevrons, camo, checks and more), its race number, a finish
+  (gloss, matte, metal flake, pearl) and how the race wears it; some of the
+  patterns, finishes and poses are earned with medals in the Grand Prix.
 - **Online**: private rooms for up to six people, joined by code or invite
   link, with computer pilots in the empty seats. Friends can form a squad of
   up to three that stays together from room to room.

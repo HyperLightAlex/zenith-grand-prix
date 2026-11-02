@@ -1011,7 +1011,9 @@ it as you choose): a fist in the air, both arms up, arms crossed, hands on
 hips, pointing to the sky or a bow. Each is a held pose with a little
 movement (the fist pumped, a bounce, a nod, a look round the crowd, a bow
 every five seconds).
-Computer pilots each have their own, by name.
+Computer pilots each have their own, by name. Three poses are open from
+the start; the others are earned with Grand Prix medals, as some of the
+livery is (CUSTOMIZATION.md, "Earned in the Grand Prix").
 
 ## 3. How it is built
 
