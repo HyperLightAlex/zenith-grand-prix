@@ -9,6 +9,8 @@ import { Game } from './game/game';
 import { useOldSwift } from './render/mech/frames';
 import { preloadSunhawks, sunhawkFiles } from './render/mech/sunhawkAsset';
 import { preloadRoster, ROSTER_IDS } from './render/mech/rosterAsset';
+import { loadGrandstand } from './render/grandstand/grandstand';
+import { loadHoverScreen } from './render/screens/hoverScreens';
 import { BootScreen } from './ui/boot';
 import { setRosterModel } from './render/mech/rosterSelection';
 import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech/sunhawkSelection';
@@ -71,6 +73,10 @@ async function boot(): Promise<void> {
         rosterLevels.set(id, n);
         if (n === 3) bootScreen.frame(id);
       }),
+      // The grandstands' and the hover screens' models, for the circuits built
+      // after (without them, plainer stands and no screens).
+      loadGrandstand(),
+      loadHoverScreen(),
     ]);
   } catch (error) {
     console.error('Mech model loading failed', error);

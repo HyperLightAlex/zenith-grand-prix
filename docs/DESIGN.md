@@ -1010,6 +1010,32 @@ What is round the road says what the race has done and what is coming:
   mechs coming up to them, wherever the road is plain. The kerbs and the
   chevrons on the corners' shoulders were there already (the road's
   shader).
+- **The grandstands** (`render/grandstand/`, built in Blender by
+  `art/blender/grandstand/build_grandstand.py`): up to four a side along
+  the start straight, each a whole building, terraced rows of the crowd in
+  five blocks between aisles, behind a parapet, walled at its ends and
+  back, under a cantilevered roof on five columns with floodlights along
+  its front. Their fronts stand 10 m back from the road's edge; none over a
+  pit or reaching into another stretch of road's space. Without the model
+  (the tests' tracks, built without loading it) the old raked crowd under
+  a roof stands in.
+- **Hover screens** (`render/screens/hoverScreens.ts`, built in Blender
+  by `art/blender/hoverscreen/build_hoverscreen.py`): over the stands by
+  the start (those within 140 m before the line or 10 m after it, up to
+  four), a 32 m screen each, held up the way the world's machines fly, on
+  lift nacelles ringed with light and a glow down from their emitters,
+  drifting a little where it hangs, tipped toward the stands across the
+  road. They show the crowd the race: a live feed of the leader, cut
+  between broadcast shots (chasing, beside it, ahead of it, from the air)
+  every six and a half seconds or when the lead changes, under the
+  broadcast's graphics (ZGP live, the leader's place and name, the lap);
+  once the race is over, the winner. They hang 46 m up over the rows,
+  never over the road, and only where nothing of them comes within the open
+  sky over any stretch of road (40 m), so they never stand between a pilot
+  and the racing: on the way down the straight they sit high at the top of
+  the picture. The feed is the scene drawn again from its own camera into
+  a 384 by 216 picture, 6, 10 or 15 times a second by the video quality,
+  and only while a screen is in view; out on the lap it costs nothing.
 - **The crowd** (`render/crowd.ts`): cameras flashing all over the
   grandstands and flags in the two teams' colours waved along the front
   rows, going up (more flashes, flags waved harder) at the start, a lap

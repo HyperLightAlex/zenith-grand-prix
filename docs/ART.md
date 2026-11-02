@@ -301,8 +301,10 @@ the look):
 - **Barriers**: armour on the faces toward the road (one repeat the face's
   whole height), dark ribbed steel over the top and down the back; the slab
   under the road and the pylons in concrete; the gantries in riveted navy
-  steel; the grandstands' crowd, cut on whole rows of seats, and their bases
-  in concrete.
+  steel; the grandstands' crowd, cut on whole rows of seats (each row's
+  people up the riser behind it, its step over the tread, lined up on the
+  stand's own rows), their walls in concrete, their steel in the gantries'
+  navy plate and their roofs in the barriers' pale armour.
 - **Boards**: the sponsors' boards, the circuit's own and the race's, and the
   banner over the line, each in a frame of its own shape (the paintings came
   out a little deeper than the plain boards), drawn as painted.

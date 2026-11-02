@@ -2,10 +2,12 @@
 // flags in the two teams' colours waved along the front rows. They go up
 // when something happens: the start, a knockout or a ring-out in front of
 // them, the lead changing, a lap begun, the flag. The stands are the
-// circuit's own (trackMesh.ts: the planes named 'grandstand'); this only
-// lays the flashes and flags over them.
+// circuit's own (trackMesh.ts: the model's stands, each marked by an object
+// named 'grandstand' where it stands, or the plain rakes, planes so named);
+// this only lays the flashes and flags over them.
 
 import * as THREE from 'three';
+import { SEATING } from './grandstand/grandstand';
 
 /** Most stands a circuit has (two sides, four along). */
 const MAX_STANDS = 8;
@@ -90,10 +92,31 @@ export class Crowd {
   /** Over the grandstands in `scenery`, the flags in `colors` (the teams'). */
   constructor(scenery: THREE.Object3D | undefined, colors: readonly number[]) {
     this.group.name = 'crowd';
-    const stands: THREE.Mesh[] = [];
+    // Each stand: where it is, a place on its crowd (along it, up its rows,
+    // 0 to 1; out toward the road), and which way is up in its frame.
+    const stands: Array<{ o: THREE.Object3D; at: (along: number, up: number, out: number, v: THREE.Vector3) => THREE.Vector3; upright: THREE.Quaternion }> = [];
+    const [fy, fz] = SEATING.front;
+    const [by, bz] = SEATING.back;
     scenery?.traverse((o) => {
+      if (o.name !== 'grandstand') return;
+      if (o.userData.seating) {
+        stands.push({
+          o,
+          // Among a row's people: half a metre up, out from the riser behind its tread.
+          at: (along, up, out, v) => v.set((along - 0.5) * 2 * SEATING.half, fy + (by - fy) * up + 0.5, fz + (bz - fz) * up - SEATING.depth + out),
+          upright: new THREE.Quaternion(),
+        });
+        return;
+      }
       const mesh = o as THREE.Mesh;
-      if (mesh.isMesh && o.name === 'grandstand' && (mesh.geometry as THREE.PlaneGeometry).type === 'PlaneGeometry') stands.push(mesh);
+      if (!mesh.isMesh || (mesh.geometry as THREE.PlaneGeometry).type !== 'PlaneGeometry') return;
+      const { width, height } = (mesh.geometry as THREE.PlaneGeometry).parameters;
+      stands.push({
+        o,
+        at: (along, up, out, v) => v.set((along - 0.5) * width, (up - 0.5) * height, out),
+        // (The rake leans back: upright is leant forward again.)
+        upright: new THREE.Quaternion().setFromEuler(new THREE.Euler(0.65, 0, 0)),
+      });
     });
     const use = stands.slice(0, MAX_STANDS);
     if (!use.length) return;
@@ -108,12 +131,11 @@ export class Crowd {
     const flagMatrices: THREE.Matrix4[] = [];
     const flagColors: THREE.Color[] = [];
     const palette = [...colors, ...colors, 0xf3f5fa];
-    use.forEach((stand, k) => {
+    use.forEach(({ o: stand, at, upright }, k) => {
       stand.updateWorldMatrix(true, false);
-      const { width, height } = (stand.geometry as THREE.PlaneGeometry).parameters;
-      this.centres.push(new THREE.Vector3().setFromMatrixPosition(stand.matrixWorld));
+      this.centres.push(at(0.5, 0.5, 0, new THREE.Vector3()).applyMatrix4(stand.matrixWorld));
       for (let i = 0; i < FLASHES; i++) {
-        v.set((Math.random() - 0.5) * width * 0.96, (Math.random() - 0.5) * height * 0.9, 0.35).applyMatrix4(stand.matrixWorld);
+        at(0.02 + Math.random() * 0.96, 0.05 + Math.random() * 0.9, 0.35, v).applyMatrix4(stand.matrixWorld);
         pos.push(v.x, v.y, v.z);
         phase.push(Math.random());
         rate.push(0.03 + Math.random() * 0.05);
@@ -122,11 +144,11 @@ export class Crowd {
       // Flags along the front rows, leaning out over the rail.
       const q = new THREE.Quaternion();
       const sScale = new THREE.Vector3(1, 1, 1);
-      const standQ = new THREE.Quaternion().setFromRotationMatrix(stand.matrixWorld);
+      const standQ = new THREE.Quaternion().setFromRotationMatrix(stand.matrixWorld).multiply(upright);
       for (let i = 0; i < FLAGS; i++) {
-        v.set((Math.random() - 0.5) * width * 0.94, -height * 0.5 + 1.5 + Math.random() * height * 0.35, 0.8).applyMatrix4(stand.matrixWorld);
+        at(0.03 + Math.random() * 0.94, 0.06 + Math.random() * 0.35, 0.8, v).applyMatrix4(stand.matrixWorld);
         // Upright in the stand's own frame, its pole along the stand.
-        q.copy(standQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0.65, 0, (Math.random() - 0.5) * 0.5)));
+        q.copy(standQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, (Math.random() - 0.5) * 0.5)));
         flagMatrices.push(new THREE.Matrix4().compose(v.clone(), q.clone(), sScale.clone().multiplyScalar(0.8 + Math.random() * 0.5)));
         flagColors.push(new THREE.Color(palette[i % palette.length]));
         flagPhase.push(Math.random() * Math.PI * 2);

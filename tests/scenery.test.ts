@@ -17,6 +17,8 @@ import { KEEP_OUT, RoadIndex } from '../src/client/render/titan/keepout';
 import { themeFor } from '../src/client/render/themes';
 import { buildWorld } from '../src/client/render/world';
 import { buildTrackVisual } from '../src/client/render/trackMesh';
+import { useGrandstandModel } from '../src/client/render/grandstand/grandstand';
+import { withGrandstandModel } from './grandstandModel';
 
 const TITAN_MODEL = new URL('../src/client/render/titan/assets/titan.glb', import.meta.url);
 /** How far under the deck counts: the ground may lie against the slab under the road, not within this of its top. */
@@ -168,8 +170,14 @@ const ids = (process.env.SCENERY ?? TRACKS.map((t) => t.id).join(',')).split(','
 const NOT_YET: Record<string, string> = { crucible: 'its benches, rim and rock at the road edge' };
 
 describe('the scenery and the road', () => {
-  beforeAll(() => vi.stubGlobal('document', fakeDocument()));
-  afterAll(() => vi.unstubAllGlobals());
+  beforeAll(async () => {
+    vi.stubGlobal('document', fakeDocument());
+    await withGrandstandModel();
+  });
+  afterAll(() => {
+    vi.unstubAllGlobals();
+    useGrandstandModel(null);
+  });
   const report: string[] = [];
   afterAll(() => {
     if (process.env.SCENERY_REPORT) writeFileSync(process.env.SCENERY_REPORT, report.join('\n') + '\n');

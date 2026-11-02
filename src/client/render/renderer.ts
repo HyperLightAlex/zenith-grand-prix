@@ -218,8 +218,14 @@ export class Renderer {
   /** The game is paused: a cut in progress waits for it. */
   paused = false;
   private quality: Quality = 'high';
+  /** The video quality set (what the hover screens' feed is drawn at follows it). */
+  get qualityLevel(): Quality {
+    return this.quality;
+  }
   /** Draw at most this many frames a second (0: every frame): the anime look's 30 fps option. */
   frameCap = 0;
+  /** Drawn first, each frame drawn: pictures the frame shows (the hover screens' feed). */
+  readonly predraw = new Set<(renderer: THREE.WebGLRenderer, scene: THREE.Scene) => void>();
   private capAcc = 0;
   private capDt = 0;
   /** The travellers drawn white on black at a quarter of the size, for the stretch. */
@@ -590,6 +596,7 @@ export class Renderer {
     const travel = this.speedPass.uniforms.uTravel.value > 0.001;
     if (travel && !this.inking) this.drawTravellers();
     this.speedPass.uniforms.tTravel.value = this.inking ? this.inkPass.mask.texture : this.travelMask.texture;
+    for (const draw of this.predraw) draw(this.renderer, this.scene);
     this.composer.render(dt);
     this.reviewProbe?.record(this.renderer, this.quality, this.scale, this.frameCap);
   }

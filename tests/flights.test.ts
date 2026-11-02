@@ -17,6 +17,8 @@ import { fastestFlight } from '../src/sim/flight';
 import { themeFor } from '../src/client/render/themes';
 import { buildWorld } from '../src/client/render/world';
 import { buildTrackVisual } from '../src/client/render/trackMesh';
+import { useGrandstandModel } from '../src/client/render/grandstand/grandstand';
+import { withGrandstandModel } from './grandstandModel';
 import { trackPoint } from '../src/client/render/trackSpace';
 
 /** How far from the middle of a flying mech's body scenery must keep: half a mech's height (8.8) and a margin. */
@@ -131,8 +133,14 @@ function inTheWay(root: THREE.Object3D, path: THREE.Vector3[]): Map<string, numb
 }
 
 describe('the fastest flights clear the scenery', () => {
-  beforeAll(() => vi.stubGlobal('document', fakeDocument()));
-  afterAll(() => vi.unstubAllGlobals());
+  beforeAll(async () => {
+    vi.stubGlobal('document', fakeDocument());
+    await withGrandstandModel();
+  });
+  afterAll(() => {
+    vi.unstubAllGlobals();
+    useGrandstandModel(null);
+  });
   for (const def of TRACKS) {
     if (!('pieces' in def)) continue;
     it(`${def.id}: every jump, in Overdrive off a pad, flies clear`, () => {

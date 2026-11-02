@@ -15,6 +15,7 @@ import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT, RoadIndex, inRoadSpace } from './titan/keepout';
+import { CROWD_STEP, GRANDSTAND_DEPTH, GRANDSTAND_LENGTH, SEATING, grandstandModel, type GrandstandSlot } from './grandstand/grandstand';
 
 const MAX_STRIPS = 12;
 const MAX_GATES = 8;
@@ -403,6 +404,83 @@ function gapRuns(track: Track): Array<{ s0: number; s1: number; side: number }> 
     else merged.push({ ...g });
   }
   return merged;
+}
+
+/** The grandstands' fronts, this far out from the road's edge. */
+const STAND_OUT = 10;
+/** The painted crowd's picture: five rows to its height, the first's people starting (at their feet) this far up it. */
+const CROWD_ROWS = 5;
+const CROWD_ROW_START = 0.084;
+/** And along a stand, a picture's width to every this many units. */
+const CROWD_TILE = 12;
+/** How much of its own colour the crowd shows in the shade. */
+const CROWD_GLOW = 0.35;
+
+const worldUp = new THREE.Vector3(0, 1, 0);
+const standAt = new THREE.Vector3();
+const standX = new THREE.Vector3();
+const standZ = new THREE.Vector3();
+/** Turn a placement `m` upright (its facing kept, level), where its up is near enough the world's. */
+function standUpright(m: THREE.Matrix4): THREE.Matrix4 {
+  if (standX.setFromMatrixColumn(m, 1).y < 0.85) return m;
+  standAt.setFromMatrixPosition(m);
+  standZ.setFromMatrixColumn(m, 2).setY(0).normalize();
+  standX.crossVectors(worldUp, standZ).normalize();
+  return m.makeBasis(standX, worldUp, standZ).setPosition(standAt);
+}
+
+/**
+ * The plain look's crowd: dots of colour in sixteen rows. On the model's
+ * stand, each row is its people (a dot each, on the dark) under its step, as
+ * the stand's UVs lay them (grandstand.ts); on the plain rake, rows of dots.
+ */
+function crowdTexture(stepped: boolean): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = stepped ? 128 : 64;
+  const g = c.getContext('2d')!;
+  const hues = ['#f4f6fb', '#ff7a1a', '#3d8bff', '#ff3d5a', '#ffd34d', '#8be28b', '#222833'];
+  let seed = 7;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  if (stepped) {
+    // A row to every eight pixels, the higher rows over the lower: the
+    // step (the top of the row's eight, the end of its UVs), the shadow
+    // under the next row's edge, then its people down to the rail.
+    const step = Math.round(8 * CROWD_STEP);
+    for (let y = 0; y < 128; y += 8) {
+      g.fillStyle = '#8e949d';
+      g.fillRect(0, y, 256, step - 1);
+      g.fillStyle = '#262c37';
+      g.fillRect(0, y + step - 1, 256, 1);
+      g.fillStyle = '#39414f';
+      g.fillRect(0, y + step, 256, 8 - step);
+      for (let x = 0; x < 256; x += 3) {
+        g.fillStyle = hues[Math.floor(rnd() * hues.length)];
+        g.fillRect(x + ((y / 8) % 2), y + step + (rnd() < 0.3 ? 1 : 0), 2, 3);
+      }
+      g.fillStyle = '#262c37';
+      g.fillRect(0, y + 7, 256, 1);
+    }
+  } else {
+    g.fillStyle = '#39414f';
+    g.fillRect(0, 0, 256, 64);
+    for (let y = 0; y < 64; y += 4) {
+      for (let x = 0; x < 256; x += 3) {
+        g.fillStyle = hues[Math.floor(rnd() * hues.length)];
+        g.fillRect(x + (y % 8 ? 1 : 0), y + 1, 2, 2);
+      }
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter;
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 1);
+  return t;
 }
 
 function boardTexture(lines: string[], bg: string, fg: string, accent: string): THREE.CanvasTexture {
@@ -1141,38 +1219,30 @@ export function buildTrackVisual(
       k++;
     }
 
-    // Grandstands either side of the start, with a speckled crowd.
-    const crowd = document.createElement('canvas');
-    crowd.width = 256;
-    crowd.height = 64;
-    const cg = crowd.getContext('2d')!;
-    cg.fillStyle = '#39414f';
-    cg.fillRect(0, 0, 256, 64);
-    const hues = ['#f4f6fb', '#ff7a1a', '#3d8bff', '#ff3d5a', '#ffd34d', '#8be28b', '#222833'];
-    let seed = 7;
-    const rnd = () => {
-      seed = (seed * 16807) % 2147483647;
-      return seed / 2147483647;
-    };
-    for (let y = 0; y < 64; y += 4) {
-      for (let x = 0; x < 256; x += 3) {
-        cg.fillStyle = hues[Math.floor(rnd() * hues.length)];
-        cg.fillRect(x + (y % 8 ? 1 : 0), y + 1, 2, 2);
-      }
-    }
-    const crowdTex = new THREE.CanvasTexture(crowd);
-    crowdTex.colorSpace = THREE.SRGBColorSpace;
-    crowdTex.magFilter = THREE.NearestFilter;
-    crowdTex.wrapS = THREE.RepeatWrapping;
-    crowdTex.repeat.set(3, 1);
-    const standMat = new THREE.MeshLambertMaterial({ map: crowdTex });
+    // Grandstands either side of the start: the Blender model's stand
+    // (grandstand/grandstand.ts), painted here, its crowd on its rows. Until
+    // the model is in (the tests' tracks), a raked crowd under a roof on a block.
+    const model = grandstandModel();
+    const crowdTex = crowdTexture(model !== null);
+    // (On the model's rows, lit a little of itself, its colours carrying in
+    // the stand's shade the way the open rake's do in the sun.)
+    const standMat = new THREE.MeshLambertMaterial({ map: crowdTex, emissive: model ? 0xffffff : 0x000000, emissiveMap: model ? crowdTex : null, emissiveIntensity: CROWD_GLOW });
     const roofMat = new THREE.MeshLambertMaterial({ color: 0xe9edf2 });
-    // Painted: the crowd, five rows of it to every 18 units up the stand (big
-    // enough for its colours to carry at a distance), and concrete stands.
+    // Painted: the crowd, five rows of it to its picture. On the model's
+    // stand, a row of it to each of the stand's (its people up the riser
+    // behind, its step over the tread, as the stand's UVs lay them); on the
+    // plain rake, five rows to every 18 units up it (big enough for its
+    // colours to carry at a distance). And concrete stands.
     const crowdPainted = paintedTexture(kit.surfaces.crowd, { repeat: true });
-    crowdPainted.repeat.set(120 / (18 * kit.crowdAspect), 26 / 18);
+    if (model) {
+      crowdPainted.repeat.set(GRANDSTAND_LENGTH / CROWD_TILE, SEATING.rows / CROWD_ROWS);
+      crowdPainted.offset.set(0, CROWD_ROW_START);
+    } else crowdPainted.repeat.set(120 / (18 * kit.crowdAspect), 26 / 18);
     ownTextures(standMat, crowdPainted, crowdTex);
-    swaps.push((on) => (standMat.map = on ? crowdPainted : crowdTex));
+    swaps.push((on) => {
+      standMat.map = on ? crowdPainted : crowdTex;
+      if (model) standMat.emissiveMap = standMat.map;
+    });
     const baseMat = paintedSurfaceMaterial(tex('concrete'), tex('concrete'), 8, 8, THREE.FrontSide, { dip: 0 });
     // None hanging out over a pit.
     const overPit = (s: number, d: number) =>
@@ -1182,11 +1252,45 @@ export function buildTrackVisual(
         return pit.groundAt(f.px + f.rx * d, f.pz + f.rz * d) < pit.rim - 1;
       });
     // None reaching into another stretch of road's space either (where the
-    // circuit comes back past the start: Abyss Line's tubes).
+    // circuit comes back past the start: Abyss Line's tubes). (Down to the
+    // slab under a deck, too.)
     let roads: RoadIndex | null = null;
+    const intrudes = (geos: THREE.BufferGeometry[]) => {
+      roads ??= new RoadIndex(track);
+      return geos.some((g) => inRoadSpace(roads!, g.index ? g.toNonIndexed() : g, 2, KEEP_OUT.up, 8));
+    };
+    // The model's stands, all of each slot as one mesh.
+    const pieces = new Map<GrandstandSlot, THREE.BufferGeometry[]>();
     for (const side of [-1, 1]) {
       for (let seg = 0; seg < 4; seg++) {
         const s = -260 + seg * 130;
+        if (model) {
+          // Its front this far out from the road's edge (its widest along the stand).
+          const w = Math.max(...[-60, -30, 0, 30, 60].map((ds) => hwAt(track, s + ds)));
+          const out = w + STAND_OUT;
+          if (overPit(s, side * (out + GRANDSTAND_DEPTH / 2))) continue;
+          trackMatrix(track, s, side * out, 0, side > 0 ? -Math.PI / 2 : Math.PI / 2, m);
+          // A building stands upright, not leant with the road's banking
+          // (unless the road is nowhere near upright here).
+          standUpright(m);
+          const placed = [...model].map(([slot, g]) => [slot, g.clone().applyMatrix4(m)] as const);
+          if (intrudes(placed.map(([, g]) => g))) {
+            for (const [, g] of placed) g.dispose();
+            continue;
+          }
+          for (const [slot, g] of placed) {
+            if (!pieces.has(slot)) pieces.set(slot, []);
+            pieces.get(slot)!.push(g);
+          }
+          // Where it is, for the crowd's flashes and flags (crowd.ts).
+          const at = new THREE.Object3D();
+          at.name = 'grandstand';
+          at.userData.seating = { s, side };
+          at.matrixAutoUpdate = false;
+          at.matrix.copy(m);
+          group.add(at);
+          continue;
+        }
         if (overPit(s, side * (hw + 20))) continue;
         const stand = new THREE.Mesh(new THREE.PlaneGeometry(120, 26), standMat);
         // Tilted back like raked seating.
@@ -1201,18 +1305,37 @@ export function buildTrackVisual(
         roof.applyMatrix4(new THREE.Matrix4().makeRotationX(0.12));
         roof.applyMatrix4(new THREE.Matrix4().makeTranslation(0, 17, -8));
         roof.applyMatrix4(m);
-        roads ??= new RoadIndex(track);
-        // (Down to the slab under a deck, too.)
         const placed = (o: THREE.Mesh) => {
           o.updateMatrix();
           return o.geometry.clone().applyMatrix4(o.matrix).toNonIndexed();
         };
-        if ([stand, base, roof].some((o) => inRoadSpace(roads!, placed(o), 2, KEEP_OUT.up, 8))) continue;
+        if (intrudes([stand, base, roof].map(placed))) continue;
         for (const o of [stand, base, roof]) {
           o.name = 'grandstand';
           group.add(o);
         }
         swapMaterial(base, baseMat);
+      }
+    }
+    if (pieces.size) {
+      // Painted, each in the kit's own: the walls concrete, the steel the
+      // gantries' dark plate, the roof's slab the barriers' pale armour.
+      const looks: Record<GrandstandSlot, [THREE.Material, THREE.Material | null]> = {
+        crowd: [standMat, null],
+        concrete: [new THREE.MeshLambertMaterial({ color: 0x8e949d }), baseMat],
+        roof: [roofMat, paintedSurfaceMaterial(tex('armour'), tex('armour'), 10, 10, THREE.FrontSide, { dip: 0 })],
+        steel: [new THREE.MeshLambertMaterial({ color: 0x39414f }), paintedSurfaceMaterial(tex('gantry'), tex('gantry'), 6, 6, THREE.FrontSide, { dip: 0 })],
+        accent: [new THREE.MeshLambertMaterial({ color: COLORS.accent }), null],
+        glass: [new THREE.MeshLambertMaterial({ color: 0x24405a, emissive: 0x0c1824 }), null],
+        lamp: [new THREE.MeshBasicMaterial({ color: 0xfff2d8, toneMapped: false }), null],
+      };
+      for (const [slot, geos] of pieces) {
+        const [plainMat, paintedMat] = looks[slot];
+        const mesh = new THREE.Mesh(mergeGeometries(geos), plainMat);
+        for (const g of geos) g.dispose();
+        mesh.name = 'grandstand';
+        group.add(mesh);
+        if (paintedMat) swapMaterial(mesh, paintedMat);
       }
     }
   }

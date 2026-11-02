@@ -30,6 +30,7 @@ import { DEPTH, MUZZLE_EDGE, RAM_TIP, WALL_EDGE, wide } from './sprites';
 import { MechAnimator } from './mech/animate';
 import { TrackMarks } from './marks';
 import { Crowd } from './crowd';
+import { FEED_FPS, HoverScreens } from './screens/hoverScreens';
 import { rigForSeat, undressRig, wearRig } from './mech/style';
 import type { VictoryId } from './mech/victoryPoses';
 import { celify, drawClock, drawingStep, look, markCharacter } from './look';
@@ -205,6 +206,9 @@ export class RaceView {
   private readonly marks: TrackMarks;
   /** The crowd in the stands (render/crowd.ts). */
   private readonly crowd: Crowd;
+  /** The screens over the stands by the start, showing the race (render/screens/hoverScreens.ts). */
+  private readonly screens: HoverScreens | null;
+  private readonly drawFeed = (r: THREE.WebGLRenderer, scene: THREE.Scene) => this.screens?.draw(r, scene);
   private flashUniform = 0;
   private hurt = 0;
   private fxFov = 0;
@@ -293,6 +297,11 @@ export class RaceView {
     this.marks = new TrackMarks(session.track);
     this.crowd = new Crowd(trackVis.group, this.liveries.map((l) => l.glow));
     this.group.add(this.ring, this.fx.group, this.marks.group, this.crowd.group);
+    this.screens = previewOnly ? null : new HoverScreens(session.track, trackVis.group, session.track.def.name);
+    if (this.screens?.count) {
+      this.group.add(this.screens.group);
+      renderer.predraw.add(this.drawFeed);
+    }
     renderer.scene.add(this.group);
     this.resize();
   }
@@ -367,6 +376,8 @@ export class RaceView {
     this.fx.dispose();
     this.marks.dispose();
     this.crowd.dispose();
+    if (this.screens?.count) this.renderer.predraw.delete(this.drawFeed);
+    this.screens?.dispose();
   }
 
   /** World position of a mech's chest, for the HUD. */
@@ -780,6 +791,19 @@ export class RaceView {
       const flip = ndc.z > 1 ? -1 : 1;
       plate.ex = ndc.x * flip * w * 0.5;
       plate.ey = -ndc.y * flip * h * 0.5;
+    }
+
+    // ---- the hover screens: the leader on them (while the view is up and racing)
+    if (this.screens?.count) {
+      let lead: MechState | null = null;
+      for (const id of this.mechIds) {
+        const m = race.mechs[id];
+        if (!m.retired && (!lead || m.place < lead.place)) lead = m;
+      }
+      const lv = lead ? this.mechs[lead.id] : null;
+      const shown = this.group.visible && !this.solo;
+      this.screens.fps = FEED_FPS[this.renderer.qualityLevel];
+      this.screens.update(dt, race, shown && lead && lv ? { mech: lead, s: lv.s, d: lv.d, h: lv.h, glow: lv.livery.glow } : null, cam);
     }
   }
 
