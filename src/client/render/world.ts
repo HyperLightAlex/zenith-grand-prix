@@ -2,11 +2,14 @@
 // cumulus and landmarks. Meridian Skyway: golden hour over open sea, a city
 // built out on planned islands joined by bridges (meridianCity.ts), the start
 // on an island of its own. Corkscrew Canyon: dusk over red desert, mesas, the
-// rock cut the Narrows runs through and the gorge under the Sky Bridge.
+// rock cut the Narrows runs through and the gorge under the Sky Bridge, a
+// paddock behind the stands and the highway in past a fuel stop.
 // Helios Drop: high noon above a sea of cloud, floating islands, the Sun
 // Gate over the Drop and the Helios spire. Neon Crucible: night over an
 // open-pit mine, its benches the Coil, molten metal on its floor, a city
-// round its rim and a gantry across it. All procedural in the plain look;
+// round its rim on ring roads and avenues, and a gantry across it.
+// Frostline's polar station and Titan's Rest's salvage camp say who is out
+// there, and how the crowd gets in (outposts.ts). All procedural in the plain look;
 // in the anime look a circuit with a painted background (painted.ts) has its
 // sky, far hills, clouds and surfaces painted instead.
 import * as THREE from 'three';

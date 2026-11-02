@@ -34,6 +34,9 @@ Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`).
 | M3 Clouds | bg-m3-clouds.png | six clouds; the second is a little wider than its cell, so the clouds are cut by their outlines, not by the grid |
 | M4 Surfaces | bg-m4-surfaces.png | the squares do not quite repeat at their edges; each is cut to the length that wraps (whole window bays on the facades) and its seams blended |
 | M5 City ground | bg-m5-city.png | made with M4 attached, for the city's planned islands (render/meridianCity.ts). Of two tries, the one whose park keeps its bushes and path inside the square (a park is one square to a block, so it never repeats); the other's ran off its edges. Each square is laid its own way: the street, the bridge's deck and the promenade wrap along their length only (their sides are kerbs and parapets), the plaza both ways, the seawall along its length, cut below its railing (painted against sky) at its coping |
+| C5 Paddock and highway | (requested) | for the paddock, the car park, the highway in and the fuel stop (render/outposts.ts) |
+| F4 Polar station | (requested) | for the station's modules, radomes, hangar and tanks, its runway and its track |
+| R5 Salvage camp | (requested) | for the camp's containers, workshop, cabins and tarps, its dirt track and its apron |
 | C1 Sky | bg-c1-sky.png | horizon at 697 px; the glow sits right on the horizon, as asked (the sun just touching it), so the game draws the sun's disc there, not at the light's height |
 | C1B Sky | bg-c1b-sky.png | horizon at 697 px, level with C1's; C1's right edge runs into it cleanly, but C1's left edge carries more of the sunset's orange than C1B's right edge, so that join is blended over a wider band |
 | C2 Horizon | bg-c2-horizon.png | three strips (mesas, buttes and spires, hoodoos), bottoms dead level, ends matching exactly |
@@ -214,6 +217,27 @@ SHEET C1B: SKY, THE HALF FACING AWAY (make it after C1, with C1 attached)
 - Same size, style and palette as C1, the horizon at exactly the same height, the same flat haze below it and the same plain deep indigo along the top edge.
 - The other half of the sky, behind the viewer, facing away from the setting sun. Its left edge must continue seamlessly from C1's right edge, and its right edge seamlessly into C1's left edge, so the two side by side make the whole sky round.
 - No sun glow here: a deep violet-blue dusk sky, darkening to indigo higher up with more small stars, and a soft band of dusky pink just above the horizon. The bands of high cloud carry on across it, sparser, their undersides catching only a faint coral light, mostly violet-grey.
+```
+
+Sheet C5, made with C4 attached, for the paddock and the highway in (requested):
+
+```
+SHEET C5: CORKSCREW CANYON, THE PADDOCK AND THE HIGHWAY IN (attach sheet C4)
+
+The setting: a racing paddock on the desert floor behind the grandstands at dusk, the circuit raised on its pylons beside it: the teams' garages in a long row, hospitality units, the crowd's car park, and the highway in across the desert from the west past a fuel stop. These squares are the surfaces the game lays on its own buildings and ground.
+
+Same size (1536x1024), same style, palette and light as the attached sheet: background art from a 1980s Japanese TV mecha anime, poster colour (gouache) on illustration board, a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture; no ink outlines; not a photo, 3D render or modern digital painting; no bloom, blur, grain or noise.
+
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge continues into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon) and evenly lit, with no cast shadows across it and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats.
+- Nothing but surfaces: no people, vehicles, text, numbers, logos, signs or lane markings.
+
+1, top left: the front of one team's garage seen straight on, about 17 m wide and 9 m high: a pale concrete facade with a wide dark-grey roller door (shut) taking most of it, a blank fascia band along the top, a strip of light over the door.
+2, top middle: a hospitality unit's long side seen straight on, about 12 m across: smooth off-white panels with a band of tinted glass windows along it and a warm stripe along the roofline.
+3, top right: corrugated metal for the fuel stop's shop and the trucks' trailers, about 6 m across: vertical ribs, sun-faded pale grey with rust streaks.
+4, bottom left: the highway seen from straight above, about 16 m across, running top to bottom: dark weathered asphalt with red sand blown over its edges, faint tyre wear down its length, a few tar-patched cracks; no lines (the game paints the centre line).
+5, bottom middle: the car park seen from above, about 30 m across: grey asphalt with white bay lines in two rows facing each other, oil stains in the bays, a kerb along one edge; no cars.
+6, bottom right: the fuel stop's apron seen from above, about 20 m across: pale concrete slabs with dark joints, oil and fuel stains and tyre marks.
 ```
 
 ## Helios Drop
@@ -433,6 +457,27 @@ SHEET F1B: SKY, THE HALF FACING AWAY (make it after F1, with F1 attached)
 - No moon halo here: a deeper sky with more stars, the pink afterglow along the horizon a little stronger (the sun has just set on this side), and the aurora's curtains carrying on across it from F1's edges, joining them, in the same colours.
 ```
 
+Sheet F4, made with F3 attached, for the polar station (requested):
+
+```
+SHEET F4: FROSTLINE, THE POLAR STATION (attach sheet F3)
+
+The setting: a polar research station on the ice shelf at blue hour, beside the circuit: a row of modules on legs above the drift, radomes, fuel tanks, a hangar, an ice runway the teams fly in on and a packed-snow track to the paddock. These squares are the surfaces the game lays on its own buildings and ground.
+
+Same size (1536x1024), same style, palette and light as the attached sheet: background art from a 1980s Japanese TV mecha anime, poster colour (gouache) on illustration board, a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture; no ink outlines; not a photo, 3D render or modern digital painting; no bloom, blur, grain or noise.
+
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge continues into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon) and evenly lit, with no cast shadows across it and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats.
+- Nothing but surfaces: no people, vehicles, text, numbers, logos, signs or lane markings.
+
+1, top left: a station module's wall seen straight on, about 8 m across: insulated sandwich panels painted plain white (the game tints each module red, white or blue), their joints, a row of small square windows lit warm from inside, rime frost along the bottom edge.
+2, top middle: a radome's skin, about 6 m across: white geodesic triangular panels with fine seams and a little frost.
+3, top right: the hangar's wall, about 10 m across: ribbed pale grey steel cladding with a strip of rime along the bottom and a few rivets.
+4, bottom left: a fuel tank's skin, about 6 m across: white painted steel with horizontal weld seams, rime collected along the seams.
+5, bottom middle: the ice runway seen from straight above, about 36 m across, running top to bottom: groomed snow with faint drag marks along it, harder blue-white ice showing through in streaks; no markings (the game sets out its flags).
+6, bottom right: a packed-snow track seen from above, about 10 m across, running top to bottom: compacted snow with tracked-vehicle cleat marks down it and loose snow along its edges.
+```
+
 ## Titan's Rest
 
 Morning in a white desert where a colossus fell in a war long over: a giant
@@ -509,6 +554,27 @@ SHEET R1B: SKY, THE HALF FACING AWAY (make it after R1, with R1 attached)
 - Same size, style and palette as R1, the horizon at exactly the same height, the same flat dusty haze below it and the same plain clear aqua-blue along the top edge.
 - The other half of the sky, behind the viewer, facing away from the sun. Its left edge must continue seamlessly from R1's right edge, and its right edge seamlessly into R1's left edge, so the two side by side make the whole sky round.
 - No sun glow here: a deeper, clearer aqua sky, the haze along the horizon cooler and paler (more cream than gold), and a few small fair-weather clouds low down, lit on the sides facing back toward the sun (toward the sheet's edges), shadowed blue-lilac on the sides facing the viewer.
+```
+
+Sheet R5, made with R4 attached, for the salvage camp (requested):
+
+```
+SHEET R5: TITAN'S REST, THE SALVAGE CAMP (attach sheet R4)
+
+The setting: a salvage camp on the desert floor where the fallen titan is cut up, in clear morning light: a fenced yard of tower cranes, stacks of shipping containers, prefab cabins, a corrugated-steel workshop, fuel tanks and a landing pad, a dirt track to the circuit's paddock and the road in across the desert. These squares are the surfaces the game lays on its own buildings and ground.
+
+Same size (1536x1024), same style, palette and light as the attached sheet: background art from a 1980s Japanese TV mecha anime, poster colour (gouache) on illustration board, a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture; no ink outlines; not a photo, 3D render or modern digital painting; no bloom, blur, grain or noise.
+
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge continues into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon) and evenly lit, with no cast shadows across it and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats.
+- Nothing but surfaces: no people, vehicles, text, numbers, logos, signs or lane markings.
+
+1, top left: the long side of a shipping container seen straight on, about 6 m wide: vertical corrugations in faded paint of a neutral warm grey (the game tints each container its own colour), rust at the seams and along the bottom, a few dents.
+2, top middle: corrugated sheet steel walling for the workshop, about 8 m across: vertical ribs, galvanised grey weathered dull, a few patched sheets, sand drifted against the bottom edge.
+3, top right: a prefab cabin's wall seen straight on, about 6 m across: cream insulated panels with their joints, one small window in a dark frame, sun-bleached.
+4, bottom left: tarpaulin, about 4 m across: faded khaki and orange tarps stretched and tied over salvage, folds and lashings.
+5, bottom middle: a dirt track seen from straight above, about 12 m across, running top to bottom: compacted pale sand with two darker tyre ruts down it and loose sand drifting over its edges.
+6, bottom right: a concrete apron seen from above, about 20 m across: pale cracked slabs with oil stains and sand in the joints.
 ```
 
 ## Zenith Ring
