@@ -111,15 +111,24 @@ import { LEAD_IN, ReplaySession, makeReplay, type Replay } from './replay';
 import { ReplayBar } from '../ui/replayBar';
 import { PhotoMode, photoName, type PhotoAction } from './photo';
 import { PhotoPanel } from '../ui/photoPanel';
+import { Podium, type PodiumBill, type PodiumPilot } from '../render/podium/podium';
+import { PodiumPanel, type PodiumCard } from '../ui/podiumPanel';
+import { podiumOrder, poseFor } from './podium';
+import { isVictoryId, type VictoryId } from '../render/mech/victoryPoses';
+import { teamLooks } from '../ui/sides';
+import { mechName } from '../../custom/mechBuild';
 import type { CameraMode } from '../render/cameraRig';
 import { registerHowTo, type PrimerData } from '../ui/screens/howto';
 import { TutorialPanel } from '../ui/tutorialPanel';
 
-type State = 'title' | 'garage' | 'race' | 'paused' | 'results' | 'replay';
+type State = 'title' | 'garage' | 'race' | 'paused' | 'results' | 'replay' | 'podium';
 export type GameMode = 'free' | 'gp' | 'online' | 'tutorial';
 
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
 /** A replay's playback speeds, slowest first. */
+/** Photo mode at the podium: in front of it, all of it in the picture, and room to stand back. */
+const PODIUM_PHOTO = { start: { yaw: 0, pitch: 0.1, dist: 28, fov: 50, roll: 0 }, dist: [6, 70] as const };
+
 const REPLAY_SPEEDS = [0.25, 0.5, 1, 2, 4];
 /** A replay's cameras, in the order the camera control steps through them. */
 const REPLAY_CAMERAS: Array<{ mode: 'play' | 'tv' | 'orbit'; name: string }> = [
@@ -330,6 +339,14 @@ export class Game {
   private photoPrevCam: CameraMode = 'play';
   /** Save the next picture drawn. */
   private captureNext = false;
+  /** The podium after a race (state 'podium'), and its screen. */
+  private readonly podium = new Podium();
+  private readonly podiumPanel: PodiumPanel;
+  /** Up straight after the race (it goes on to the results by itself), rather than opened from them. */
+  private podiumFirst = false;
+  private podiumT = 0;
+  /** The victory pose you strike on the podium, chosen in the hangar. */
+  victoryPose: VictoryId = ((v) => (isVictoryId(v) ? v : 'fist'))(readJson<unknown>('zgp.victory', 'fist'));
   /** The frames whose first-race tip has been shown, on this device. */
   private framesTipped: Record<string, boolean> = readJson('zgp.frameTips', {});
   /** The player's revs on the grid, by band (0 below the green, 2 in it, 3 past it), for the tick into the green. */
@@ -372,6 +389,11 @@ export class Game {
       menu: () => this.replayControl('pause'),
     });
     this.photoPanel = new PhotoPanel(uiRoot, (a) => this.photoAction(a));
+    this.podiumPanel = new PodiumPanel(uiRoot, { go: () => this.leavePodium(), photo: () => this.openPhoto() });
+    this.renderer.scene.add(this.podium.root);
+    this.podium.preload();
+    // Each takes their place with a sting; the winner's sets the confetti off.
+    this.podium.onStrike = (place) => this.audio.play(place === 0 ? 'carve_burst' : 'award', { volume: place === 0 ? 0.8 : 0.55 });
     this.eyecatch = new Eyecatch(uiRoot);
     this.nowPlaying = new NowPlaying(uiRoot, () => this.nextTrack());
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
@@ -668,6 +690,8 @@ export class Game {
   /** Put a session on screen: its view, effects, the scenery back. */
   private attach(session: LocalSession | NetSession | ReplaySession, previewOnly: boolean): void {
     this.view?.dispose();
+    this.podium.hide();
+    this.podiumPanel.close();
     this.attracting = false;
     this.session = session;
     this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.raceFactions, previewOnly);
@@ -1474,17 +1498,18 @@ export class Game {
 
   /** Photo mode: over the race held by the pause menu (offline), or over a replay. */
   get canPhoto(): boolean {
-    return (this.state === 'paused' && !(this.session instanceof NetSession)) || this.state === 'replay';
+    return (this.state === 'paused' && !(this.session instanceof NetSession)) || this.state === 'replay' || this.state === 'podium';
   }
 
   openPhoto(): void {
     if (!this.canPhoto || this.photo.active) return;
-    const from = this.state === 'replay' ? 'replay' : 'paused';
+    const from = this.state === 'replay' ? 'replay' : this.state === 'podium' ? 'podium' : 'paused';
     if (this.replay) this.replay.paused = true;
     this.menus.show(null);
     this.photoPrevCam = this.view.cam.mode;
     this.view.cam.mode = 'photo';
-    this.photo.open(from, this.view.cam.photo, this.renderer.renderer.domElement);
+    this.photo.open(from, this.view.cam.photo, this.renderer.renderer.domElement, from === 'podium' ? PODIUM_PHOTO : undefined);
+    this.podiumPanel.root.hidden = true;
     this.hud.hide();
     this.tutorialPanel.show(false);
     this.replayBar.show(false);
@@ -1498,9 +1523,13 @@ export class Game {
     this.view.cam.mode = this.photoPrevCam;
     this.view.cam.reset();
     this.photoPanel.show(false, this.input.device, false);
+    this.input.swallowHeld();
+    if (from === 'podium') {
+      this.podiumPanel.root.hidden = false;
+      return;
+    }
     this.hud.root.hidden = false;
     this.menus.reset(from === 'replay' ? 'replay-menu' : 'pause');
-    this.input.swallowHeld();
   }
 
   private photoAction(a: PhotoAction): void {
@@ -2784,7 +2813,14 @@ export class Game {
       case 'replay':
         simDt = this.replayFrame(dt, menu);
         break;
+      case 'podium':
+        // The race behind is held; the podium's shots run.
+        this.podiumFrame(dt, menu as MenuInput[]);
+        break;
     }
+    if (this.podium.shown && this.state !== 'podium' && this.state !== 'results') this.putPodiumAway();
+    this.podium.update(this.photo.active ? 0 : dt);
+    this.podiumPanel.update(dt);
     if (this.state !== 'replay' || this.photo.active) this.replayBar.show(false);
     this.photoPanel.show(this.photo.active, this.input.device, this.photo.hintsHidden);
     this.photoPanel.update(dt);
@@ -2896,12 +2932,114 @@ export class Game {
     this.resultsAt = -1;
     this.eyecatch.hide();
     if (this.session instanceof NetSession) this.session.autopilot = false;
-    this.state = 'results';
     this.hud.hide();
     this.resultsRace = online ? (this.session as NetSession).confirmed : race;
     this.resultsLocal = local;
-    this.menus.reset('results');
     this.resultsMusic();
+    // Offline, the podium first; the results after it.
+    if (!online && this.showPodium(true)) return;
+    this.state = 'results';
+    this.menus.reset('results');
+  }
+
+  // ---- the podium ------------------------------------------------------------------
+
+  /** Whether there is a podium to show: a race run offline, its results in, the set loaded. */
+  get canPodium(): boolean {
+    return !!this.resultsRace && this.session instanceof LocalSession && this.mode !== 'online' && this.podium.ready && this.session.race === this.resultsRace;
+  }
+
+  /**
+   * The podium: the first three home on it in their victory poses, at the
+   * side of the start straight. `first`: straight after the race (it goes
+   * on to the results by itself).
+   */
+  showPodium(first = false): boolean {
+    const race = this.resultsRace;
+    if (!race || !this.canPodium) return false;
+    const order = podiumOrder(race);
+    if (!order.length) return false;
+    const looks = teamLooks(race, this.raceFactions);
+    const local = this.resultsLocal;
+    const pilots: PodiumPilot[] = order.map((id) => {
+      const m = race.mechs[id];
+      const look = looks[m.team] ?? looks[0];
+      return { mech: m, livery: look.livery, name: m.name, team: look.name, emblem: look.emblem, pose: poseFor(race, id, local, this.victoryPose) };
+    });
+    const round = this.match?.rounds[this.match.rounds.length - 1];
+    const side = round ? round.winner : race.mechs[order[0]].team;
+    const won = looks[side] ?? looks[0];
+    const sprint = !!race.sprint;
+    const named = sprint ? (race.mechs.find((m) => m.team === side)?.name ?? won.name) : won.name;
+    const bill: PodiumBill = {
+      circuit: this.session.track.def.name,
+      headline: `${named} ${sprint ? 'wins' : 'win'}`,
+      sub: round && !sprint && round.points.length === 2 ? `${round.points[side]}–${round.points[1 - side]}` : '',
+      glow: won.livery.glow,
+      css: won.css,
+      emblem: won.emblem,
+    };
+    if (!this.podium.show(this.session.track, pilots, bill)) return false;
+    // The race out of sight; the camera on the podium.
+    this.view.group.visible = false;
+    this.view.calm = true;
+    const cam = this.view.cam;
+    cam.anchor = this.podium.frame;
+    cam.podiumReach = this.podium.reach;
+    cam.podiumT = 0;
+    cam.mode = 'podium';
+    this.state = 'podium';
+    this.podiumFirst = first;
+    this.podiumT = 0;
+    this.menus.show(null);
+    this.hud.hide();
+    const cards: PodiumCard[] = pilots.map((p, place) => ({
+      name: p.name,
+      detail: `${mechName(p.mech, p.livery.models[p.mech.role])}, ${p.team}`,
+      css: (looks[p.mech.team] ?? looks[0]).css,
+      emblem: p.emblem,
+      you: p.mech.id === local && p.mech.human,
+      at: Podium.STRIKE_AT[place] + 0.25,
+    }));
+    this.podiumPanel.open(bill.circuit, cards, first ? 'Results' : 'Back to the results', this.input.device);
+    this.input.swallowHeld();
+    return true;
+  }
+
+  /** On to the results (the podium stays up behind them). */
+  leavePodium(): void {
+    if (this.state !== 'podium' || this.photo.active) return;
+    this.state = 'results';
+    this.podiumPanel.close();
+    this.menus.reset('results');
+    this.input.swallowHeld();
+  }
+
+  private podiumFrame(dt: number, menu: readonly MenuInput[]): void {
+    this.podiumT += dt;
+    for (const k of menu) {
+      if (k === 'x') return this.openPhoto();
+      // (Not straight away: a press still held from the race does not skip it.)
+      if ((k === 'confirm' || k === 'back' || k === 'pause') && this.podiumT > 0.6) return this.leavePodium();
+    }
+    if (this.podiumFirst && this.podiumT > 16) this.leavePodium();
+  }
+
+  /** The podium put away (the view's mechs and camera back): leaving the results for anything else. */
+  private putPodiumAway(): void {
+    this.podium.hide();
+    this.podiumPanel.close();
+    this.view.group.visible = true;
+    this.view.calm = false;
+    this.view.cam.anchor = null;
+    if (this.view.cam.mode === 'podium') this.view.cam.mode = 'orbit';
+  }
+
+  /** Choose your victory pose (the mech in the hangar strikes it). */
+  setVictoryPose(pose: VictoryId): void {
+    this.victoryPose = pose;
+    writeJson('zgp.victory', pose);
+    this.view.strike(this.view.focusId, pose, 6);
   }
 
   /**

@@ -32,8 +32,11 @@ This is version 0.5: nine circuits and three ways to play.
 - **Replays and photo mode**: watch the last race back from its results,
   at any speed, following any pilot, from the chase or trackside cameras,
   jumping to its moments (knockouts, ring-outs, changes of lead, the
-  finish); and pose the camera in a paused race or a replay to save a
-  picture.
+  finish); and pose the camera in a paused race, a replay or on the podium
+  to save a picture.
+- **The podium**: after a race, the first three home take their places on
+  a stage at the side of the start straight, each in their victory pose
+  (yours is chosen in the hangar), with confetti for the winner.
 - **Online**: private rooms for up to six people, joined by code or invite
   link, with computer pilots in the empty seats. Friends can form a squad of
   up to three that stays together from room to room.

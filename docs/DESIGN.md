@@ -981,6 +981,38 @@ wider lens and a tilt, with the HUD gone. The picture is saved as a PNG at
 2560 pixels on its long side whatever the screen, named for the circuit and
 the time; the hints can be hidden too.
 
+### The podium
+
+After a race offline, before the results, the first three home stand on
+the **podium** (`render/podium/podium.ts`): those who finished, in the order
+they did, never a pilot out of the race (`game/podium.ts`). It stands at
+the side of the straight behind the start line, its back to the barrier
+and the grandstand, facing across the road (on whichever side has the sun
+on its front, and so on the three), and the race is out of sight while it
+is up; the cameras keep to the road, short of the lamps along its edge. The set is built in Blender from code
+(`art/blender/podium/build_podium.py`): three tiers sized for the mechs
+(the winner's 4.6 m high), a backdrop of screens behind them, a lighting
+truss on two towers. The game paints it: the tiers' numerals in gold,
+silver and bronze; the middle screen shows the circuit, the winners and
+the score in the winners' colours, the side ones the second and third;
+the light strips take the winners' colour; six spotlights' beams sweep the
+tiers.
+
+They take their places in turn, the third, the second, then the winner,
+each striking a **victory pose**, and the winner's sets off the confetti
+from the stage's corners. The cameras cut from wide as they arrive, to in on
+the winner, to the whole podium, drifting. A card for each comes up at the
+foot of the screen as they pose. On to the results with confirm (or by
+itself after 16 seconds); photo mode is a press away, posed round the
+podium. The results' **The podium** brings it back.
+
+Your **victory pose** is chosen in the hangar (the mech in the bay strikes
+it as you choose): a fist in the air, both arms up, arms crossed, hands on
+hips, pointing to the sky or a bow. Each is a held pose with a little
+movement (the fist pumped, a bounce, a nod, a look round the crowd, a bow
+every five seconds).
+Computer pilots each have their own, by name.
+
 ## 3. How it is built
 
 ```

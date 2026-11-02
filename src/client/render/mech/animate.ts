@@ -6,6 +6,7 @@ import { COLORS } from '../palette';
 import { setFlameTime } from './frames';
 import { CLIPS, POSES } from './poses';
 import { blendPose, copyPose, makePose, mirrorPose, type MechRig, type Pose } from './rig';
+import { victoryPose, type VictoryId } from './victoryPoses';
 
 const ease = (t: number) => t * t * (3 - 2 * t);
 const easeOut = (t: number) => 1 - (1 - t) * (1 - t) * (1 - t);
@@ -49,6 +50,22 @@ export class MechAnimator {
   private prevSpeed = 0;
   /** The garage: stand at rest in the bay instead of the grid's crouch. */
   display = false;
+  /**
+   * Standing (display), a victory pose struck: on the podium, or in the
+   * hangar while one is chosen. `victoryT`: seconds since it was struck.
+   */
+  victory: VictoryId | null = null;
+  victoryT = 0;
+  /** How long it is held before relaxing (seconds; Infinity: until another). */
+  private victoryHold = Infinity;
+  private victoryPose = makePose();
+
+  /** Strike a victory pose (standing, `display`), held `hold` seconds; null: none. */
+  strike(pose: VictoryId | null, hold = Infinity): void {
+    this.victory = pose;
+    this.victoryT = 0;
+    this.victoryHold = hold;
+  }
   /**
    * On the grid, through the countdown (the view sets it): the ready stance,
    * crouching into the launch as the revs build. When it goes, the push off
@@ -319,6 +336,13 @@ export class MechAnimator {
       P.shR[2] -= breath * 0.015;
       P.head[1] += Math.sin(this.time * 0.31) * 0.16;
       P.head[0] += Math.sin(this.time * 0.23 + 1) * 0.04;
+      if (this.victory) {
+        this.victoryT += dt;
+        const t = this.victoryT;
+        const w = ease(Math.min(1, t / 0.35)) * (1 - ease(Math.min(1, Math.max(0, (t - this.victoryHold) / 0.6))));
+        if (w > 0) blendPose(P, victoryPose(this.victory, t, this.victoryPose), w);
+        else if (t > this.victoryHold) this.victory = null;
+      }
     }
 
     this.updateSteering(bodyDt, m);

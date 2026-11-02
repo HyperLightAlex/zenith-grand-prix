@@ -11,6 +11,7 @@ import { STAT_LABELS, frameStats } from '../frameStats';
 import { MATCH_OPTIONS, MODE_NAMES, RIVALS, SPRINT_OPTIONS, SPRINT_TAGLINE, TRACK_BLURBS, type Menus } from '../menus';
 import { BACK, CHANGE, SELECT } from './common';
 import { customName, openCustom } from './custom';
+import { VICTORY_IDS, VICTORY_NAMES } from '../../render/mech/victoryPoses';
 
 const KIT_TEXT: Record<number, [string, string]> = {
   0: ['Three quick blade strikes. Light, fast, hard to interrupt you out of.', 'An armoured lunge that closes a 30 m gap. Costs Drive.'],
@@ -170,6 +171,11 @@ export function registerGarage(m: Menus, g: Game): void {
         hint: mine ? undefined : `Start from this ${LIVERIES[team].models[role]}: swap its parts for other teams' and paint it`,
       });
       m.button(list, `Pilot: ${g.pilotName}`, () => m.push('pilot'), { key: 'pilot' });
+      m.choice(list, 'Victory pose', VICTORY_NAMES[g.victoryPose], (dir) => {
+        const i = VICTORY_IDS.indexOf(g.victoryPose);
+        g.setVictoryPose(VICTORY_IDS[(i + dir + VICTORY_IDS.length) % VICTORY_IDS.length]);
+        m.refresh();
+      }, { key: 'pose' });
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
       // (Controls: from the title's menu and the pause menu, not here.)
       const strip = h('div.context', now(d.context));

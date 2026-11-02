@@ -15,9 +15,10 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 /**
  * intro: the sweep round the grid. play: the chase. orbit: circling (the
  * garage, the results). tv: a broadcast's trackside cameras, cutting from
- * one to the next (replays). photo: posed by hand (photo mode).
+ * one to the next (replays). photo: posed by hand (photo mode). podium: the
+ * podium's shots (round `anchor`).
  */
-export type CameraMode = 'intro' | 'play' | 'orbit' | 'tv' | 'photo';
+export type CameraMode = 'intro' | 'play' | 'orbit' | 'tv' | 'photo' | 'podium';
 
 /** Photo mode's camera, round the mech it frames: turned, raised, how far, the lens, and tilted. */
 export interface PhotoCam {
@@ -128,6 +129,16 @@ export class CameraRig {
   private first = true;
   /** Photo mode's camera (mode 'photo'). */
   photo: PhotoCam = { yaw: 0.6, pitch: 0.15, dist: 13, fov: 45, roll: 0 };
+  /**
+   * A set the camera works round instead of the mech (the podium, facing its
+   * +z, the middle of it `anchorLook` up): the podium's shots, and photo
+   * mode's centre while it is up.
+   */
+  anchor: THREE.Matrix4 | null = null;
+  anchorLook = 9;
+  /** How far out in front of the anchor the podium's cameras may go; seconds into its shots. */
+  podiumReach = 40;
+  podiumT = 0;
   /**
    * Whether a camera at `from` can see `to` with nothing of the circuit in
    * between (set by the race view): the trackside cameras are placed, and
@@ -392,13 +403,48 @@ export class CameraRig {
       fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(11 / Math.max(1, pos.distanceTo(look)))), 9, 62);
       this.fov = fov;
     } else if (this.mode === 'photo') {
-      // Posed by hand round the mech, in its own frame (yaw 0: behind it).
+      // Posed by hand round the mech, in its own frame (yaw 0: behind it),
+      // or round the podium (yaw 0: in front of it).
       const p = this.photo;
-      trackMatrix(track, sub.s, sub.d, sub.h ?? 0, m.facing, this.photoFrame);
+      if (this.anchor) this.photoFrame.copy(this.anchor);
+      else trackMatrix(track, sub.s, sub.d, sub.h ?? 0, m.facing, this.photoFrame);
       const r = p.dist;
-      pos.set(Math.sin(p.yaw) * r * Math.cos(p.pitch), 3.8 + r * Math.sin(p.pitch), -Math.cos(p.yaw) * r * Math.cos(p.pitch)).applyMatrix4(this.photoFrame);
-      look.set(0, 3.8, 0).applyMatrix4(this.photoFrame);
+      const y = this.anchor ? this.anchorLook : 3.8;
+      const back = this.anchor ? 1 : -1;
+      pos.set(Math.sin(p.yaw) * r * Math.cos(p.pitch), y + r * Math.sin(p.pitch), back * Math.cos(p.yaw) * r * Math.cos(p.pitch)).applyMatrix4(this.photoFrame);
+      look.set(0, y, 0).applyMatrix4(this.photoFrame);
       fov = p.fov;
+      this.fov = fov;
+    } else if (this.mode === 'podium' && this.anchor) {
+      // In from wide as the three take their places; in on the winner as the
+      // confetti goes up; then the whole podium, the camera drifting.
+      this.podiumT += dt;
+      const t = this.podiumT;
+      const reach = Math.max(24, this.podiumReach);
+      const k = (a: number, b: number) => {
+        const x = THREE.MathUtils.clamp((t - a) / (b - a), 0, 1);
+        return x * x * (3 - 2 * x);
+      };
+      // A lens that takes in `w` by `h` metres at `dist`, whatever the screen's shape.
+      const fit = (w: number, h: number, dist: number) => THREE.MathUtils.radToDeg(2 * Math.max(Math.atan(h / 2 / dist), Math.atan(w / 2 / dist / Math.max(0.3, this.camera.aspect))));
+      if (t < 3.2) {
+        const e = k(0, 3.2);
+        pos.set(-18 + 10 * e, 5.5 + 3 * e, reach * (1 - 0.06 * e));
+        look.set(-3 + 3 * e, 9, 0);
+        fov = fit(60, 24, reach);
+      } else if (t < 7.6) {
+        const e = k(3.2, 7.6);
+        pos.set(-7 + 12 * e, 11 + e, Math.min(reach, 30) * (0.72 - 0.06 * e));
+        look.set(0, 11, 0);
+        fov = fit(22, 14, Math.min(reach, 30) * 0.7);
+      } else {
+        pos.set(Math.sin((t - 7.6) * 0.13) * 6, 9, reach);
+        look.set(0, 10, 0);
+        fov = fit(56, 24, reach);
+      }
+      pos.applyMatrix4(this.anchor);
+      look.applyMatrix4(this.anchor);
+      // Each shot a cut, not a zoom.
       this.fov = fov;
     }
 
@@ -416,13 +462,14 @@ export class CameraRig {
     // ---- apply, with roll from the banking and any shake. Upside down in a
     // loop or a corkscrew, the camera turns over with the road.
     const flat = THREE.MathUtils.clamp(upYAt(track, sub.s), 0, 1);
-    trackUp(track, sub.s, this.up).lerp(WORLD_UP, 0.45 * flat).normalize();
+    if (this.anchor && (this.mode === 'podium' || this.mode === 'photo')) this.up.setFromMatrixColumn(this.anchor, 1).normalize();
+    else trackUp(track, sub.s, this.up).lerp(WORLD_UP, 0.45 * flat).normalize();
     const cam = this.camera;
     cam.position.copy(pos);
     cam.up.copy(this.up);
     cam.lookAt(look);
     if (this.mode === 'photo' && this.photo.roll !== 0) cam.rotateZ(this.photo.roll);
-    if (this.trauma > 0.001 && dt > 0 && this.mode !== 'photo') {
+    if (this.trauma > 0.001 && dt > 0 && this.mode !== 'photo' && this.mode !== 'podium') {
       const t2 = this.trauma * this.trauma;
       cam.position.x += (Math.random() - 0.5) * 1.3 * t2;
       cam.position.y += (Math.random() - 0.5) * 1.3 * t2;

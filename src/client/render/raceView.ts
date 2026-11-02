@@ -28,6 +28,7 @@ import { CameraRig } from './cameraRig';
 import { Fx, Trail, makeBubble, makeLockRing, makeRamProw, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
 import { DEPTH, MUZZLE_EDGE, RAM_TIP, WALL_EDGE, wide } from './sprites';
 import { MechAnimator } from './mech/animate';
+import type { VictoryId } from './mech/victoryPoses';
 import { buildFrame } from './mech/frames';
 import { buildCustomFrame } from './mech/customFrame';
 import { decodeBuild } from '../../custom/mechBuild';
@@ -181,6 +182,8 @@ export class RaceView {
   readonly group = new THREE.Group();
   /** The garage: only the mech being followed is shown, lit from overhead in its hangar. */
   solo = false;
+  /** Off the race (the podium is up): none of the speed effects. */
+  calm = false;
   readonly cam: CameraRig;
   readonly fx = new Fx();
   readonly plates: Plate[] = [];
@@ -287,6 +290,11 @@ export class RaceView {
     this.group.add(this.ring, this.fx.group);
     renderer.scene.add(this.group);
     this.resize();
+  }
+
+  /** A mech standing in the hangar strikes a victory pose, held `hold` seconds. */
+  strike(id: number, pose: VictoryId | null, hold = Infinity): void {
+    this.mechs[id]?.anim.strike(pose, hold);
   }
 
   resize(): void {
@@ -713,10 +721,10 @@ export class RaceView {
     const F = this.feel;
     const speedFrac = Math.min(1.5, focus.speed / FULL_SPEED);
     // A fight is carried along at racing speed, so it keeps (by default all of) the speed effects.
-    const fxScale = focus.retired ? 0.2 : focus.mode === MODE.BATTLE ? F.lockSpeedFx : 1;
-    const surging = focus.overdriveT > 0 && !focus.retired && focus.mode === MODE.SPEED;
+    const fxScale = this.calm ? 0 : focus.retired ? 0.2 : focus.mode === MODE.BATTLE ? F.lockSpeedFx : 1;
+    const surging = !this.calm && focus.overdriveT > 0 && !focus.retired && focus.mode === MODE.SPEED;
     u.uSpeed.value = toward(u.uSpeed.value, speedFrac * speedFrac * 1.15 * fxScale, 4, dt);
-    u.uBoost.value = toward(u.uBoost.value, surging ? 1.5 : focus.boosting ? 1 : focus.ramT > 0 ? 0.5 : 0, 6, dt);
+    u.uBoost.value = toward(u.uBoost.value, this.calm ? 0 : surging ? 1.5 : focus.boosting ? 1 : focus.ramT > 0 ? 0.5 : 0, 6, dt);
     u.uBlurK.value = F.speedBlur;
     u.uLineK.value = F.speedLines;
     // The stretch: how far the camera goes in the blur's shutter, so near

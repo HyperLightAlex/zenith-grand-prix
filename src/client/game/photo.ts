@@ -6,7 +6,7 @@ import { BTN, type MechInput } from '../../sim/index';
 import type { PhotoCam } from '../render/cameraRig';
 import type { Device, MenuInput } from '../input/input';
 
-/** How far the camera may go, and the lens's range. */
+/** How far the camera may go (unless opened with a range of its own), and the lens's range. */
 const DIST = [3.5, 45] as const;
 const FOV = [12, 95] as const;
 const PITCH = [-0.25, 1.35] as const;
@@ -16,23 +16,30 @@ export type PhotoAction = 'take' | 'look' | 'hints' | 'back';
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export class PhotoMode {
-  /** What it was opened from: the pause menu over a race, or a replay. */
-  from: 'paused' | 'replay' | null = null;
+  /** What it was opened from: the pause menu over a race, a replay, or the podium. */
+  from: 'paused' | 'replay' | 'podium' | null = null;
   hintsHidden = false;
   private drag: { id: number; x: number; y: number } | null = null;
   private pinch = new Map<number, { x: number; y: number }>();
   private pinchDist = 0;
   private detach: (() => void) | null = null;
+  private dist: readonly [number, number] = DIST;
 
   get active(): boolean {
     return this.from !== null;
   }
 
-  /** Open over `el` (the picture, which takes the drags, pinches and wheel), posing `cam`. */
-  open(from: 'paused' | 'replay', cam: PhotoCam, el: HTMLElement): void {
+  /**
+   * Open over `el` (the picture, which takes the drags, pinches and wheel),
+   * posing `cam`: from where `opts.start` says (or just off the mech's
+   * shoulder), as near and as far as `opts.dist` allows.
+   */
+  open(from: 'paused' | 'replay' | 'podium', cam: PhotoCam, el: HTMLElement, opts: { start?: PhotoCam; dist?: readonly [number, number] } = {}): void {
     this.from = from;
     this.hintsHidden = false;
-    Object.assign(cam, { yaw: 0.65, pitch: 0.12, dist: 12, fov: 42, roll: 0 });
+    this.dist = opts.dist ?? DIST;
+    const DIST_ = this.dist;
+    Object.assign(cam, opts.start ?? { yaw: 0.65, pitch: 0.12, dist: 12, fov: 42, roll: 0 });
     const down = (e: PointerEvent) => {
       if (e.pointerType === 'touch') this.pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.pinch.size >= 2) {
@@ -44,7 +51,7 @@ export class PhotoMode {
       if (this.pinch.has(e.pointerId)) this.pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.pinch.size >= 2) {
         const d = this.spread();
-        if (this.pinchDist > 0 && d > 0) cam.dist = clamp(cam.dist * (this.pinchDist / d), DIST[0], DIST[1]);
+        if (this.pinchDist > 0 && d > 0) cam.dist = clamp(cam.dist * (this.pinchDist / d), DIST_[0], DIST_[1]);
         this.pinchDist = d;
         return;
       }
@@ -62,7 +69,7 @@ export class PhotoMode {
     };
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
-      cam.dist = clamp(cam.dist * Math.exp(e.deltaY * 0.0012), DIST[0], DIST[1]);
+      cam.dist = clamp(cam.dist * Math.exp(e.deltaY * 0.0012), DIST_[0], DIST_[1]);
     };
     el.addEventListener('pointerdown', down);
     window.addEventListener('pointermove', move);
@@ -104,7 +111,7 @@ export class PhotoMode {
     if (device === 'pad') zoom += input.brake - input.throttle;
     if (input.buttons & BTN.TNEXT) zoom -= 1;
     if (input.buttons & BTN.TPREV) zoom += 1;
-    cam.dist = clamp(cam.dist * Math.exp(zoom * 1.1 * dt), DIST[0], DIST[1]);
+    cam.dist = clamp(cam.dist * Math.exp(zoom * 1.1 * dt), this.dist[0], this.dist[1]);
     // The D-pad's sides (the keys 4 and 2) tilt the picture.
     if (input.cmd === 4) cam.roll = clamp(cam.roll - 0.6 * dt, -0.6, 0.6);
     if (input.cmd === 2) cam.roll = clamp(cam.roll + 0.6 * dt, -0.6, 0.6);
