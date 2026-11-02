@@ -37,6 +37,10 @@ This is version 0.5: nine circuits and three ways to play.
 - **The podium**: after a race, the first three home take their places on
   a stage at the side of the start straight, each in their victory pose
   (yours is chosen in the hangar), with confetti for the winner.
+- **The trackside**: each race opens with a flight over the circuit under
+  its title card; the race leaves its marks (carve lines, burns, scorches,
+  soot, a knockout's pieces), brake boards count down to the tight corners,
+  and the crowd's flashes and flags go up at the big moments.
 - **Your mech's livery**: on a custom mech, a pattern over its main paint
   (stripes, chevrons, camo, checks and more), its race number, a finish
   (gloss, matte, metal flake, pearl) and how the race wears it; some of the

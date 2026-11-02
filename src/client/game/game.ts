@@ -67,6 +67,7 @@ import { Hangar } from '../render/hangar';
 import { RaceView } from '../render/raceView';
 import { Renderer } from '../render/renderer';
 import { Sightlines } from '../render/sightlines';
+import { buildBrakeBoards } from '../render/brakeBoards';
 import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
 import { buildWorld, type World } from '../render/world';
 import { disposeTree, themeFor } from '../render/themes';
@@ -779,6 +780,8 @@ export class Game {
     const track = buildTrack(def);
     const theme = themeFor(def.theme);
     this.trackVis = buildTrackVisual(track, theme);
+    // Brake boards before the tight corners (render/brakeBoards.ts).
+    this.trackVis.group.add(buildBrakeBoards(track));
     this.world = buildWorld(track, theme);
     this.sightlines = new Sightlines(track, [this.trackVis.group, this.world.group], [this.trackVis.road, this.world.sky]);
     this.hangar.setSky(this.world.sky, theme.sunLight);

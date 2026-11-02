@@ -28,6 +28,8 @@ import { CameraRig } from './cameraRig';
 import { Fx, Trail, makeBubble, makeLockRing, makeRamProw, makeShadow, makeShield, makeSnareRing, shadowTexture } from './fx';
 import { DEPTH, MUZZLE_EDGE, RAM_TIP, WALL_EDGE, wide } from './sprites';
 import { MechAnimator } from './mech/animate';
+import { TrackMarks } from './marks';
+import { Crowd } from './crowd';
 import { rigForSeat, undressRig, wearRig } from './mech/style';
 import type { VictoryId } from './mech/victoryPoses';
 import { celify, drawClock, drawingStep, look, markCharacter } from './look';
@@ -199,6 +201,10 @@ export class RaceView {
   }
   private ring = makeLockRing();
   private time = 0;
+  /** What the race leaves on the circuit (render/marks.ts). */
+  private readonly marks: TrackMarks;
+  /** The crowd in the stands (render/crowd.ts). */
+  private readonly crowd: Crowd;
   private flashUniform = 0;
   private hurt = 0;
   private fxFov = 0;
@@ -284,7 +290,9 @@ export class RaceView {
       };
       this.plates[m.id] = { id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false, ex: 0, ey: 0 };
     }
-    this.group.add(this.ring, this.fx.group);
+    this.marks = new TrackMarks(session.track);
+    this.crowd = new Crowd(trackVis.group, this.liveries.map((l) => l.glow));
+    this.group.add(this.ring, this.fx.group, this.marks.group, this.crowd.group);
     renderer.scene.add(this.group);
     this.resize();
   }
@@ -357,6 +365,8 @@ export class RaceView {
     }
     (this.ring.material as THREE.Material).dispose();
     this.fx.dispose();
+    this.marks.dispose();
+    this.crowd.dispose();
   }
 
   /** World position of a mech's chest, for the HUD. */
@@ -372,6 +382,8 @@ export class RaceView {
     const { race, track } = this.session;
     const alpha = this.session.alpha;
     this.time += dt;
+    this.marks.update(dt);
+    this.crowd.update(dt);
     const focus = race.mechs[this.focusId];
     // Remember the lock for a few seconds after it goes.
     if (focus.target >= 0) {
@@ -459,8 +471,11 @@ export class RaceView {
       const tint = surge ? GOLD : ramming ? AMBER : bursting ? CARVE[v.burstTier] : carveTier > 0 ? CARVE[carveTier] : primed ? HOT : v.glow;
       v.trailColor.lerp(tint, 1 - Math.exp(-10 * dt));
       routeDir(track, v.s, v.d, 0, 1, v2);
+      // The marks the skates leave: a carve's lines, a boost's burns.
+      const trail = m.retired || v.h > 0.3 ? null : m.boosting || surge ? 'burn' : m.carving ? 'carve' : null;
       for (let i = 0; i < 2; i++) {
         v.rig.heels[i].getWorldPosition(v1);
+        this.marks.skate(m.id * 2 + i, v1, v.s, v.d, trail);
         v.trails[i].setColor(v.trailColor);
         v.trails[i].update(v1, v2, glow * 0.8 * this.feel.trails, surge ? 0.5 : m.boosting || bursting ? 0.34 : 0.2);
       }
@@ -1031,6 +1046,11 @@ export class RaceView {
         const v = this.mechs[e.mech];
         const hard = Math.min(1.5, 0.6 + e.intensity / 40);
         this.trackVis.pulseWall(e.s, e.face, hard * this.feel.wallPulse, true);
+        onMech(v, 4, 0, v1);
+        this.crowd.cheer(v1, 1);
+        // Soot where it struck the barrier, and pieces at its foot.
+        this.marks.soot(e.mech, e.s, e.face, e.side, 4.5 + hard * 2);
+        this.marks.scatter(e.s, e.face - e.side * 2.5, [v.livery.primary, v.livery.frame], 6);
         if (!this.wallStrike(v, e.face, e.side, 3.2 + v.h, 16, 0xff6ab0)) {
           trackPoint(track, v.s, e.face - e.side * 0.3, 3.2 + v.h, v1);
           this.fx.flash(v1, 16, 0xff6ab0, 0.32, null, false, DEPTH.ON_MECH);
@@ -1051,6 +1071,13 @@ export class RaceView {
       }
       case 'ko': {
         const v = this.mechs[e.mech];
+        onMech(v, 4, 0, v1);
+        this.crowd.cheer(v1, 1.1);
+        // Where it fell: a scorch, and its pieces round it.
+        if (v.h < 2) {
+          this.marks.scorch(v.s, v.d, 7);
+          this.marks.scatter(v.s, v.d, [v.livery.primary, v.livery.frame, v.livery.secondary, v.livery.frame]);
+        }
         onMech(v, 4.5, 0, v1);
         if (this.fx.explosion(v1, v.vel, 28)) {
           // The anime look: the painted explosion (flash, fireball, smoke
@@ -1076,6 +1103,7 @@ export class RaceView {
         const v = this.mechs[e.mech];
         const side = e.side;
         this.trackVis.pulseWall(e.s, e.face, Math.min(0.9, Math.max(0.25, e.intensity / 30)) * this.feel.wallPulse, false);
+        if (e.intensity > 6) this.marks.soot(e.mech, e.s, e.face, side, 2 + Math.min(3, e.intensity * 0.1));
         this.wallStrike(v, e.face, side, 2.4 + v.h, 6 + Math.min(6, e.intensity * 0.15), 0xffc66e);
         trackPoint(track, v.s, v.d + side * 3, 1.6, v1);
         routeDir(track, v.s, v.d, -1, -side * 0.5, v3);
@@ -1151,6 +1179,8 @@ export class RaceView {
       }
       case 'boost': {
         const v = this.mechs[e.mech];
+        // A scorch where the thrusters lit.
+        if (v.h < 0.5) this.marks.scorch(v.s - 2, v.d, 2.6, 0x2a1a12);
         trackPoint(track, v.s - 2, v.d, 3.5, v1);
         // (Drawn, the ring is smaller: the painted flames carry the boost.)
         // At the thrusters: hidden by the mech's own body seen from in front, and by anything else in the way.
@@ -1196,6 +1226,9 @@ export class RaceView {
         // off the line as well. A bog coughs smoke from the thrusters instead.
         const v = this.mechs[e.mech];
         const k = e.grade === START.PERFECT ? 1 : e.grade === START.GOOD ? 0.65 : 0.3;
+        this.crowd.cheer(null, 0.9);
+        // Burnt into the grid by a good start.
+        if (k > 0.5) this.marks.scorch(v.s - 1.5, v.d, 2.4 + k * 1.6, 0x241812);
         trackPoint(track, v.s, v.d, 0.6, v1);
         if (e.grade === START.PERFECT) {
           this.fx.burst(v1, v.vel, 26, 34, v.livery.glow, 0.5, 0.5);
@@ -1231,6 +1264,12 @@ export class RaceView {
       }
       case 'lapPhase':
         this.flash(0.4);
+        this.crowd.cheer(null, 0.6);
+        break;
+      case 'finish':
+        // The flag: every stand for the winner, the near ones for the rest.
+        onMech(this.mechs[e.mech], 4, 0, v1);
+        this.crowd.cheer(e.place === 1 ? null : v1, e.place === 1 ? 1.1 : 0.6);
         break;
       case 'airborne': {
         // Off a ramp or a crest: the skates let go in a spit of sparks.
@@ -1244,6 +1283,7 @@ export class RaceView {
         // Touchdown: dust and sparks thrown out sideways, harder for a longer drop.
         const v = this.mechs[e.mech];
         const k = Math.min(1, e.intensity / 40);
+        if (e.intensity > 14) this.marks.scorch(v.s, v.d, 1.6 + k * 2.4, 0x2a2420);
         trackPoint(track, v.s, v.d, 0.3, v1);
         for (const side of [-1, 1]) {
           routeDir(track, v.s, v.d, 0.2, side, v3);

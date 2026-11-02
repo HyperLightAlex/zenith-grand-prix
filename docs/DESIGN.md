@@ -992,6 +992,30 @@ who races whom. Any press skips it; a restart goes straight to the grid, as
 does the tutorial, and online (where the race does not wait for anyone) it
 is left out. Then the countdown's sweep round the grid, as before.
 
+### Trackside
+
+What is round the road says what the race has done and what is coming:
+
+- **Marks the race leaves** (`render/marks.ts`), kept for the race: a
+  carve's lines from the skates and a boost's burns along the road, a
+  scorch where a boost lit, a good start was launched, a hard landing or a
+  knockout fell, soot on the barrier where a mech hit it (a scrape no more
+  than every half second), and the pieces a knockout or a ring-out
+  scatters, in the mech's colours. Each kind is one instanced mesh, its
+  newest marks overwriting its oldest.
+- **Brake boards** (`render/brakeBoards.ts`) before every tight corner
+  (tighter than 250 m radius) that comes after 220 m of straight: three on
+  its outside, 300, 200 and 100 m out (three bars, two, one, and the
+  distance), behind the barrier with their faces above it, turned to the
+  mechs coming up to them, wherever the road is plain. The kerbs and the
+  chevrons on the corners' shoulders were there already (the road's
+  shader).
+- **The crowd** (`render/crowd.ts`): cameras flashing all over the
+  grandstands and flags in the two teams' colours waved along the front
+  rows, going up (more flashes, flags waved harder) at the start, a lap
+  begun, the flag, and a knockout or ring-out in front of them, then dying
+  away over a few seconds.
+
 ### The podium
 
 After a race offline, before the results, the first three home stand on
