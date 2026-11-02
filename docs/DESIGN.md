@@ -569,6 +569,12 @@ Disruptor, a pulse round the mech, made more sense with nobody picked out.
   take is marked: pale corner brackets, and the lock key beside its name.
 - A strike that takes the lock for you (pressing attack near an enemy) still
   goes to the nearest rival in reach, since that is who the blow can land on.
+- **Looking round**: free steering, the right stick looks the way it is
+  pushed, all the way round the mech: pulled back, behind it (the chasers
+  coming), and the view swings back ahead when it is let go, the short way
+  round. (It used to turn the camera only about 65 degrees either side,
+  with no way to see behind but holding R3.) Locked on, the camera is the
+  fight's and the stick switches target; it only tilts the view.
 - **Switching target**: flick the right stick left or right while locked on
   and the lock moves to the next enemy that way, as you see it (measured from
   the way the mech faces, so "left" is left on screen), within 125 units.
@@ -956,9 +962,15 @@ taken when it was raced, and the bar says so.
 
 A replay is watched with the bar at the foot of the picture: play and
 pause, back and on 5 seconds, five speeds (¼ to 4), whose race to follow
-(any of the six), the camera (the chase, the **trackside** cameras, or the
-orbit) and the next moment, each with its button for the device in hand, and
-the timeline with the moments marked on it, to click. A knockout slows the
+(any of the six), the camera (the chase, the **trackside** cameras, the
+orbit, or the **free** camera) and the next moment, each with its button for
+the device in hand, and the timeline with the moments marked on it, to
+click. The free camera (`game/freeCam.ts`) is turned round the pilot
+followed by hand while the replay plays, in the road's frame so it holds
+its angle through a fight: the right stick turns it and the triggers zoom;
+on a desktop, drag the picture and turn the wheel; on a touch screen, drag
+and pinch. Taking hold of it from any other camera switches to it, from
+where the camera was. A knockout slows the
 picture as in the race. The HUD is that of whoever is followed, without
 the hints and plays. Its menu holds the moments as a list, photo mode,
 the controls and the way back to the results.
@@ -1019,13 +1031,15 @@ What is round the road says what the race has done and what is coming:
   pit or reaching into another stretch of road's space. They stand upright
   whatever the road's banking, and where the road is raised higher than
   their walls go down (over the sea, a drop), on columns down to the
-  ground, as the road stands on its pylons. Without the model
+  ground, as the road stands on its pylons. Under the sea (Abyss Line)
+  they stand only in the air under the town's dome, never out in the
+  water beside the road's tube. Without the model
   (the tests' tracks, built without loading it) the old raked crowd under
   a roof stands in.
 - **Hover screens** (`render/screens/hoverScreens.ts`, built in Blender
   by `art/blender/hoverscreen/build_hoverscreen.py`): over the stands by
-  the start (those within 140 m before the line or 10 m after it, up to
-  four), a 32 m screen each, held up the way the world's machines fly, on
+  the start (on each side the two nearest the line, within 200 m of it),
+  a 32 m screen each, held up the way the world's machines fly, on
   lift nacelles ringed with light and a glow down from their emitters,
   drifting a little where it hangs, tipped toward the stands across the
   road. They show the crowd the race, picked the way a broadcast picks

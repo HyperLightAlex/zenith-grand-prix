@@ -1259,9 +1259,19 @@ export function buildTrackVisual(
       roads ??= new RoadIndex(track);
       return geos.some((g) => inRoadSpace(roads!, g.index ? g.toNonIndexed() : g, 2, KEEP_OUT.up, 8));
     };
+    const foot = new THREE.Vector3();
+    // Whether a stand placed at `m` is wholly under Abyss Line's dome (its
+    // corners, up to its roof's columns, well inside the glass).
+    const inDome = (at: THREE.Matrix4) => {
+      if (!abyss) return true;
+      const { centre, radius } = abyss.dome;
+      for (const x of [-GRANDSTAND_LENGTH / 2, GRANDSTAND_LENGTH / 2])
+        for (const z of [0, -GRANDSTAND_DEPTH])
+          for (const y of [0, 34]) if (foot.set(x, y, z).applyMatrix4(at).distanceTo(centre) > radius - 10) return false;
+      return true;
+    };
     // The model's stands, all of each slot as one mesh.
     const pieces = new Map<GrandstandSlot, THREE.BufferGeometry[]>();
-    const foot = new THREE.Vector3();
     for (const side of [-1, 1]) {
       for (let seg = 0; seg < 4; seg++) {
         const s = -260 + seg * 130;
@@ -1274,6 +1284,8 @@ export function buildTrackVisual(
           // A building stands upright, not leant with the road's banking
           // (unless the road is nowhere near upright here).
           standUpright(m);
+          // Under the sea (Abyss Line), only in the air of the town's dome: a crowd sits in no open water.
+          if (abyss && !inDome(m)) continue;
           const placed = [...model].map(([slot, g]) => [slot, g.clone().applyMatrix4(m)] as const);
           if (intrudes(placed.map(([, g]) => g))) {
             for (const [, g] of placed) g.dispose();

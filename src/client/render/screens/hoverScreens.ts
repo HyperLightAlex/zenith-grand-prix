@@ -44,8 +44,9 @@ export const useHoverScreenModel = model.use;
 export const HOVER = { up: 46, back: 11, along: 12, tilt: 0.2 };
 /** All of a screen, round its middle (its picture's): x, y and z either way, with the lift's glow below it and its drift. */
 const EXTENT = { x: 23, below: 21, above: 16, z: 4.5 };
-/** Stands this far along the road from the line, or nearer: those by the start. */
-const NEAR_LINE = [-140, 10] as const;
+/** The stands by the start: on each side, the two nearest the line's stretch (its middle this far along), none further than this from it. */
+const LINE_MIDDLE = -60;
+const NEAR_LINE = 200;
 /** The feed: its size, how often it is drawn, and how far off a screen may be for it to be worth drawing. */
 const FEED_W = 384;
 const FEED_H = 216;
@@ -64,11 +65,14 @@ const LIFT = 0x5ff6ff;
  * within the open sky over any stretch of road.
  */
 export function hoverScreenSpots(track: Track, scenery: THREE.Object3D): THREE.Matrix4[] {
-  const stands: THREE.Object3D[] = [];
+  const bySide = new Map<number, Array<{ o: THREE.Object3D; off: number }>>();
   scenery.traverse((o) => {
     const at = o.userData.seating as { s: number; side: number } | undefined;
-    if (o.name === 'grandstand' && at && at.s >= NEAR_LINE[0] && at.s <= NEAR_LINE[1]) stands.push(o);
+    if (o.name !== 'grandstand' || !at || Math.abs(at.s - LINE_MIDDLE) > NEAR_LINE) return;
+    if (!bySide.has(at.side)) bySide.set(at.side, []);
+    bySide.get(at.side)!.push({ o, off: Math.abs(at.s - LINE_MIDDLE) });
   });
+  const stands = [...bySide.values()].flatMap((list) => list.sort((a, b) => a.off - b.off).slice(0, 2).map((e) => e.o));
   if (!stands.length) return [];
   scenery.updateMatrixWorld(true);
   const roads = new RoadIndex(track);

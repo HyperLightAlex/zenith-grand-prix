@@ -122,7 +122,7 @@ which follows the frame rate).
 | Dash (while locked on; forward or no stick goes at the target, hold to boost at it) | A | Space | Dash |
 | Guard swing: arc round your target (while guarding) | Stick left or right + A | A or D + Space | Hold Guard, steer, Dash |
 | Switch target (while locked on; teammates while escorting) | Right stick left / right, hold to keep stepping | Z C | Switch |
-| Look around / look back | Right stick / R3 | V | |
+| Look around (free steering: all the way round, the stick pulled back looks behind) / look back | Right stick / R3 | V | |
 | Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 | Team, then the play |
 | Pause | Start | Esc | Pause (top right) |
 | Tuning panel | Back | T | |

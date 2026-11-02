@@ -27,16 +27,18 @@ export interface ReplayBarActions {
   speed(dir: number): void;
   pilot(dir: number): void;
   camera(): void;
+  /** The free camera, turned by hand. */
+  look(): void;
   moment(): void;
   menu(): void;
 }
 
-type Control = 'play' | 'seek' | 'speed' | 'pilot' | 'camera' | 'moment' | 'menu';
+type Control = 'play' | 'seek' | 'speed' | 'pilot' | 'camera' | 'look' | 'moment' | 'menu';
 
 const KEYS: Record<Device, Record<Control, string>> = {
-  pad: { play: 'A', seek: '◀ ▶', speed: '▲ ▼', pilot: 'LB RB', camera: 'X', moment: 'Y', menu: 'Start' },
-  keys: { play: 'Space', seek: 'A D', speed: 'W S', pilot: 'Q E', camera: 'X', moment: 'Y', menu: 'Esc' },
-  touch: { play: '', seek: '', speed: '', pilot: '', camera: '', moment: '', menu: '' },
+  pad: { play: 'A', seek: '◀ ▶', speed: '▲ ▼', pilot: 'LB RB', camera: 'X', look: 'RS', moment: 'Y', menu: 'Start' },
+  keys: { play: 'Space', seek: 'A D', speed: 'W S', pilot: 'Q E', camera: 'X', look: 'Drag', moment: 'Y', menu: 'Esc' },
+  touch: { play: '', seek: '', speed: '', pilot: '', camera: '', look: 'Drag', moment: '', menu: '' },
 };
 
 const TICKS_PER_SECOND = 60;
@@ -83,6 +85,7 @@ export class ReplayBar {
     add('speed', '×1', (d) => act.speed(d), true);
     add('pilot', '', (d) => act.pilot(d), true);
     add('camera', '', () => act.camera());
+    add('look', 'Look round', () => act.look());
     add('moment', 'Next moment', () => act.moment());
     add('menu', 'Menu', () => act.menu());
     this.line.addEventListener('pointerdown', (e) => {

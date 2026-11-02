@@ -111,6 +111,7 @@ import { FrameTip } from './primers';
 import { LEAD_IN, ReplaySession, makeReplay, type Replay } from './replay';
 import { ReplayBar } from '../ui/replayBar';
 import { PhotoMode, photoName, type PhotoAction } from './photo';
+import { FreeCamControl } from './freeCam';
 import { PhotoPanel } from '../ui/photoPanel';
 import { Podium, type PodiumBill, type PodiumPilot } from '../render/podium/podium';
 import { PodiumPanel, type PodiumCard } from '../ui/podiumPanel';
@@ -135,11 +136,14 @@ const PODIUM_PHOTO = { start: { yaw: 0, pitch: 0.1, dist: 28, fov: 50, roll: 0 }
 
 const REPLAY_SPEEDS = [0.25, 0.5, 1, 2, 4];
 /** A replay's cameras, in the order the camera control steps through them. */
-const REPLAY_CAMERAS: Array<{ mode: 'play' | 'tv' | 'orbit'; name: string }> = [
+const REPLAY_CAMERAS: Array<{ mode: 'play' | 'tv' | 'orbit' | 'free'; name: string }> = [
   { mode: 'play', name: 'Chase' },
   { mode: 'tv', name: 'Trackside' },
   { mode: 'orbit', name: 'Orbit' },
+  // Turned by hand (game/freeCam.ts): taking hold of the camera from any other switches to it.
+  { mode: 'free', name: 'Free' },
 ];
+const FREE_CAMERA = REPLAY_CAMERAS.findIndex((c) => c.mode === 'free');
 /** The garage's mech sits this far right of centre (of the screen's width), clear of the menu. */
 const GARAGE_SHIFT = 0.07;
 
@@ -339,6 +343,8 @@ export class Game {
   private replayStarted = false;
   /** Photo mode, over a held race or a replay. */
   private readonly photo = new PhotoMode();
+  /** A replay's free camera, by hand. */
+  private readonly freeCam = new FreeCamControl();
   private readonly photoPanel: PhotoPanel;
   private photoPrevCam: CameraMode = 'play';
   /** Save the next picture drawn. */
@@ -394,6 +400,7 @@ export class Game {
       speed: (d) => this.replayControl(d > 0 ? 'up' : 'down'),
       pilot: (d) => this.replayControl(d > 0 ? 'rb' : 'lb'),
       camera: () => this.replayControl('x'),
+      look: () => this.replayFreeCamera(),
       moment: () => this.replayControl('y'),
       menu: () => this.replayControl('pause'),
     });
@@ -1477,6 +1484,10 @@ export class Game {
         break;
       case 'x':
         this.replayCam = (this.replayCam + 1) % REPLAY_CAMERAS.length;
+        if (this.replayCam === FREE_CAMERA) {
+          this.replayFreeCamera();
+          break;
+        }
         if (rs.race.phase !== PHASE.COUNTDOWN || this.view.cam.mode !== 'intro') this.view.cam.mode = REPLAY_CAMERAS[this.replayCam].mode;
         this.view.cam.reset();
         break;
@@ -1488,6 +1499,16 @@ export class Game {
         break;
       }
     }
+  }
+
+  /** The replay's camera to the free one, taking over from where the camera is now. */
+  private replayFreeCamera(): void {
+    const rs = this.replay;
+    if (!rs || this.state !== 'replay') return;
+    const m = rs.race.mechs[this.replayFocus];
+    if (m && this.view.cam.mode !== 'free') this.view.cam.freeFromView({ s: m.s, d: m.d, h: m.h });
+    this.replayCam = FREE_CAMERA;
+    this.view.cam.mode = 'free';
   }
 
   /** Each frame while watching: preparing, then the controls, playback and its bar. */
@@ -1515,6 +1536,12 @@ export class Game {
     }
     for (const k of menu) this.replayControl(k);
     if (this.state !== 'replay' || this.menus.screen) return 0;
+    // The free camera: taking hold of it from any other camera switches to it (not during the countdown's sweep).
+    this.freeCam.attach(this.renderer.renderer.domElement);
+    const { camX, camY, state: held, device } = this.input;
+    if (this.view.cam.mode !== 'free' && this.view.cam.mode !== 'intro' && this.freeCam.wanted(camX, camY, held, device)) this.replayFreeCamera();
+    if (this.view.cam.mode === 'free') this.freeCam.frame(dt, this.view.cam.free, camX, camY, held, device);
+    else this.freeCam.frame(0, { yaw: 0, pitch: 0, dist: 1, fov: 1, roll: 0 }, 0, 0, held, device);
     // Slow motion round a knockout, as in the race.
     if (this.slowmo > 0) {
       this.slowmo -= dt;
@@ -2898,7 +2925,10 @@ export class Game {
     if (this.podium.shown && this.state !== 'podium' && this.state !== 'results') this.putPodiumAway();
     this.podium.update(this.photo.active ? 0 : dt);
     this.podiumPanel.update(dt);
-    if (this.state !== 'replay' || this.photo.active) this.replayBar.show(false);
+    if (this.state !== 'replay' || this.photo.active) {
+      this.replayBar.show(false);
+      this.freeCam.release();
+    }
     this.photoPanel.show(this.photo.active, this.input.device, this.photo.hintsHidden);
     this.photoPanel.update(dt);
 

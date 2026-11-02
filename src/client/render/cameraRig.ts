@@ -19,7 +19,7 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
  * podium's shots (round `anchor`). flyover: the flight over the circuit
  * before a race, over its title card.
  */
-export type CameraMode = 'intro' | 'play' | 'orbit' | 'tv' | 'photo' | 'podium' | 'flyover';
+export type CameraMode = 'intro' | 'play' | 'orbit' | 'tv' | 'photo' | 'podium' | 'flyover' | 'free';
 
 /** Photo mode's camera, round the mech it frames: turned, raised, how far, the lens, and tilted. */
 export interface PhotoCam {
@@ -65,6 +65,13 @@ const TV_SPOTS: ReadonlyArray<readonly [number, number]> = [
 /** Where along its way up to a trackside camera the mech is checked to be in sight (0: where it is now; 1: just past). */
 const TV_PROBES = [0, 0.35, 0.7, 1];
 
+/** A replay's free camera: the height on the mech it turns round, and how near, far, low and high it goes. */
+const FREE_LOOK = 4;
+export const FREE_DIST = [5, 90] as const;
+export const FREE_PITCH = [-0.12, 1.4] as const;
+/** Free steering: how far the right stick must be pushed to look round, and how fast the view swings to it. */
+const LOOK_DEAD = 0.35;
+const LOOK_RATE = 9;
 /** The flyover's first shot, seconds. */
 const FLYOVER_SHOT = 2.8;
 
@@ -133,6 +140,12 @@ export class CameraRig {
   private first = true;
   /** Photo mode's camera (mode 'photo'). */
   photo: PhotoCam = { yaw: 0.6, pitch: 0.15, dist: 13, fov: 45, roll: 0 };
+  /**
+   * A replay's free camera (mode 'free'): turned round the mech by hand, as
+   * photo mode's is, while the race plays on; in the road's frame (yaw 0:
+   * behind the mech, along the road), so it holds its angle through a fight.
+   */
+  free: PhotoCam = { yaw: 0, pitch: 0.28, dist: 18, fov: 55, roll: 0 };
   /**
    * A set the camera works round instead of the mech (the podium, facing its
    * +z, the middle of it `anchorLook` up): the podium's shots, and photo
@@ -205,6 +218,20 @@ export class CameraRig {
     if (a <= 0) return;
     this.lurchAmt = Math.max(a, this.lurchT < LURCH_IN ? this.lurchAmt : 0);
     this.lurchT = 0;
+  }
+
+  /**
+   * The free camera turned to where the camera is now, round `sub` (so
+   * taking it over from another camera does not jump).
+   */
+  freeFromView(sub: { s: number; d: number; h?: number }): void {
+    trackMatrix(this.track, sub.s, sub.d, sub.h ?? 0, 0, this.photoFrame);
+    const local = this.a.copy(this.camera.position).applyMatrix4(this.photoFrame.clone().invert());
+    local.y -= FREE_LOOK;
+    const r = THREE.MathUtils.clamp(local.length(), FREE_DIST[0], FREE_DIST[1]);
+    this.free.dist = r;
+    this.free.pitch = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(local.y / Math.max(1e-3, local.length()), -1, 1)), FREE_PITCH[0], FREE_PITCH[1]);
+    this.free.yaw = Math.atan2(local.x, -local.z);
   }
 
   reset(): void {
@@ -296,8 +323,16 @@ export class CameraRig {
     this.boostW = toward(this.boostW, m.boosting || (m.carveT > 0 && m.mode === MODE.SPEED) ? 1 : 0, 5, dt);
     this.surgeW = toward(this.surgeW, m.overdriveT > 0 ? 1 : 0, 5, dt);
     this.lookBackW = toward(this.lookBackW, lookBack ? 1 : 0, 14, dt);
-    this.pan = toward(this.pan, inBattle ? 0 : panX * 1.15, 9, dt);
-    this.tilt = toward(this.tilt, panY * 0.5, 9, dt);
+    // Free steering, the right stick looks the way it is pushed, all the way
+    // round the mech (pulled back: behind it), and swings back ahead when it
+    // is let go. Locked on, the camera is the fight's; the stick only tilts it.
+    const pushed = Math.hypot(panX, panY);
+    const wantPan = !inBattle && pushed > LOOK_DEAD ? Math.atan2(panX, -panY) : 0;
+    let swing = wantPan - this.pan;
+    swing -= Math.round(swing / (Math.PI * 2)) * Math.PI * 2;
+    this.pan += swing * (1 - Math.exp(-LOOK_RATE * dt));
+    this.pan -= Math.round(this.pan / (Math.PI * 2)) * Math.PI * 2;
+    this.tilt = toward(this.tilt, inBattle ? panY * 0.5 : 0, 9, dt);
     if (this.first) {
       this.dSmooth = sub.d;
       this.yaw = 0;
@@ -423,6 +458,13 @@ export class CameraRig {
       look.set(0, y, 0).applyMatrix4(this.photoFrame);
       fov = p.fov;
       this.fov = fov;
+    } else if (this.mode === 'free') {
+      const p = this.free;
+      trackMatrix(track, sub.s, sub.d, this.hSmooth, 0, this.photoFrame);
+      const r = p.dist;
+      pos.set(Math.sin(p.yaw) * r * Math.cos(p.pitch), FREE_LOOK + r * Math.sin(p.pitch), -Math.cos(p.yaw) * r * Math.cos(p.pitch)).applyMatrix4(this.photoFrame);
+      look.set(0, FREE_LOOK, 0).applyMatrix4(this.photoFrame);
+      fov = p.fov;
     } else if (this.mode === 'flyover') {
       // High over the start straight looking down it, drifting; then a cut
       // to low and fast up the road behind the grid, the field ahead.
