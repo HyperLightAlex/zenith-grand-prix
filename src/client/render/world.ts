@@ -1,6 +1,7 @@
 // The setting of each circuit: sky, what lies below the road, far hills,
-// cumulus and landmarks. Meridian Skyway: golden hour over open sea with a
-// city inside the loop. Corkscrew Canyon: dusk over red desert, mesas, the
+// cumulus and landmarks. Meridian Skyway: golden hour over open sea, a city
+// built out on planned islands joined by bridges (meridianCity.ts), the start
+// on an island of its own. Corkscrew Canyon: dusk over red desert, mesas, the
 // rock cut the Narrows runs through and the gorge under the Sky Bridge.
 // Helios Drop: high noon above a sea of cloud, floating islands, the Sun
 // Gate over the Drop and the Helios spire. Neon Crucible: night over an
@@ -30,6 +31,7 @@ import type { TitanMat } from './titan/pose';
 import { buildZenith } from './zenith';
 import { buildAbyss } from './abyss';
 import { buildMonsoon } from './monsoon';
+import { BLOCK, DECK_FOOT, DECK_TOP, STREET, bridgeEnds, bridgeLinks, fromIsland, islandBlocks, islandOutline, meridianIslands, streetHalf } from './meridianCity';
 
 const skyVertex = /* glsl */ `
 varying vec3 vDir;
@@ -1080,47 +1082,102 @@ function buildMeridian(ctx: Ctx): void {
     ctx.swaps.push((on) => (seaMat.uniforms.uPainted.value = on ? 1 : 0));
   }
 
-  // ---- city ---------------------------------------------------------------
+  // ---- city: planned islands out on the sea (meridianCity.ts) ---------------
   {
     const rnd = mulberry(2049);
-    // Three kinds of tower, for the painted facades: glass offices, hotels, dark glass.
+    // Three kinds of building, for the painted facades: glass offices, hotels, dark glass.
     const parts: THREE.BufferGeometry[][] = [[], [], []];
     const decks: THREE.BufferGeometry[] = [];
+    const streets: THREE.BufferGeometry[] = [];
+    const parks: THREE.BufferGeometry[] = [];
+    const trees: THREE.BufferGeometry[] = [];
     const tints = [new THREE.Color(0xffffff), new THREE.Color(0xe6ecf5), new THREE.Color(0xffe9d2), new THREE.Color(0xd5e4f7)];
-    // A handful of districts: islands of towers inside and around the loop.
-    const districts: Array<[number, number, number, number]> = [
-      [cx - 60, cz - 80, 520, 90],
-      [cx + 240, cz + 520, 300, 46],
-      [cx - 420, cz - 780, 260, 40],
-      [minX - 620, cz - 200, 380, 50],
-      [maxX + 700, cz + 300, 420, 54],
-      [cx + 100, minZ - 760, 420, 50],
-      [cx - 300, maxZ + 700, 360, 44],
-    ];
-    for (const [dx, dz, radius, count] of districts) {
-      // Low platform the towers stand on.
-      const deck = new THREE.CylinderGeometry(radius * 1.04, radius * 0.98, 14, 10).toNonIndexed();
-      planarUvs(deck, 60);
-      deck.translate(dx, 1, dz);
-      decks.push(deck);
-      for (let i = 0; i < count; i++) {
-        const a = rnd() * Math.PI * 2;
-        const r = Math.sqrt(rnd()) * radius * 0.92;
-        const x = dx + Math.cos(a) * r;
-        const z = dz + Math.sin(a) * r;
-        if (ctx.clearance(x, z) < 120) continue;
-        const core = 1 - r / radius;
-        const w = 26 + rnd() * 50;
-        const d = 26 + rnd() * 50;
-        const h = 50 + rnd() * 120 + core * core * (160 + rnd() * 330);
-        // The tallest are offices, the low ones hotels, a few dark glass.
-        const kind = h > 260 ? (rnd() < 0.6 ? 0 : 2) : rnd() < 0.55 ? 1 : rnd() < 0.6 ? 0 : 2;
-        parts[kind].push(tower(w, h, d, x, 8, z, rnd() * 0.6, tints[Math.floor(rnd() * tints.length)]));
-        if (h > 240 && rnd() < 0.7) {
-          // Setback crown and a mast.
-          parts[kind].push(tower(w * 0.6, h * 0.18, d * 0.6, x, 8 + h, z, 0, tints[0]));
-          parts[kind].push(tower(2.5, h * 0.22, 2.5, x, 8 + h * 1.18, z, 0, tints[1]));
+    const startAt = trackPoint(track, -120, 0, 0, new THREE.Vector3());
+    const isles = meridianIslands(ctx, { x: startAt.x, z: startAt.z, rot: Math.atan2(track.tz[0], track.tx[0]) + Math.PI / 2 });
+    const flat = (g: THREE.BufferGeometry, c: number) => paint(g.index ? g.toNonIndexed() : g, () => new THREE.Color(c));
+    for (const isle of isles) {
+      // The deck behind its seawall, a promenade round its edge.
+      const outline = islandOutline(isle);
+      const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
+      const deck = new THREE.ExtrudeGeometry(shape, { depth: DECK_TOP - DECK_FOOT, bevelEnabled: false, curveSegments: 1 });
+      deck.rotateX(-Math.PI / 2);
+      deck.translate(0, DECK_FOOT, 0);
+      const d = deck.toNonIndexed();
+      deck.dispose();
+      paint(d, (_x, y) => new THREE.Color(y > DECK_TOP - 0.5 ? 0xc6cdd7 : 0x8f98a6));
+      planarUvs(d, 60);
+      decks.push(d);
+      // The streets: along and across the grid, inside the promenade.
+      const step = BLOCK + STREET;
+      for (const along of ['u', 'v'] as const) {
+        const span = along === 'u' ? isle.b : isle.a;
+        for (let k = -Math.ceil(span / step); k <= Math.ceil(span / step); k++) {
+          const across = (k + 0.5) * step;
+          const half = streetHalf(isle, across, along);
+          if (half < BLOCK) continue;
+          const g = new THREE.PlaneGeometry(along === 'u' ? half * 2 : STREET, along === 'u' ? STREET : half * 2).rotateX(-Math.PI / 2);
+          const [x, z] = along === 'u' ? fromIsland(isle, 0, across) : fromIsland(isle, across, 0);
+          g.rotateY(-isle.rot).translate(x, DECK_TOP + 0.06, z);
+          streets.push(flat(g, 0x5c6573));
         }
+      }
+      // The blocks: a park here and there; otherwise a podium and a tower on it, tallest at the island's heart.
+      for (const [u, v] of islandBlocks(isle)) {
+        const [x, z] = fromIsland(isle, u, v);
+        if (ctx.clearance(x, z) < 120) continue;
+        if (isle.plaza && Math.hypot(u, v) < isle.plaza) continue;
+        const core = Math.max(0, 1 - Math.hypot(u / isle.a, v / isle.b));
+        if (rnd() < 0.1 + (1 - core) * 0.08) {
+          const lawn = new THREE.PlaneGeometry(BLOCK, BLOCK).rotateX(-Math.PI / 2).rotateY(-isle.rot).translate(x, DECK_TOP + 0.1, z);
+          parks.push(flat(lawn, 0x79a35f));
+          for (let t = 0; t < 7; t++) {
+            const [tx, tz] = fromIsland(isle, u + (rnd() - 0.5) * BLOCK * 0.8, v + (rnd() - 0.5) * BLOCK * 0.8);
+            const h = 8 + rnd() * 6;
+            trees.push(flat(new THREE.ConeGeometry(3.4 + rnd() * 1.6, h, 6).translate(tx, DECK_TOP + h / 2 + 1.5, tz), 0x3f7442));
+          }
+          continue;
+        }
+        const tint = tints[Math.floor(rnd() * tints.length)];
+        // The podium: shops and lobbies along the street, most of the block.
+        const podium = 8 + rnd() * 10;
+        const pw = BLOCK - 6 - rnd() * 8;
+        parts[1].push(tower(pw, podium, pw, x, DECK_TOP, z, -isle.rot, tint));
+        // The tower: set back on it, its height by how near the heart it stands and how tall the island's skyline is.
+        const h = (30 + rnd() * 70 + core * core * (170 + rnd() * 330)) * isle.height;
+        if (h < 26) continue;
+        const w = 22 + rnd() * 20;
+        const dd = 22 + rnd() * 20;
+        const kind = h > 240 ? (rnd() < 0.6 ? 0 : 2) : rnd() < 0.5 ? 1 : rnd() < 0.6 ? 0 : 2;
+        const top = DECK_TOP + podium;
+        parts[kind].push(tower(w, h, dd, x, top, z, -isle.rot, tint));
+        if (h > 220 && rnd() < 0.7) {
+          // A setback crown and a mast.
+          parts[kind].push(tower(w * 0.6, h * 0.16, dd * 0.6, x, top + h, z, -isle.rot, tints[0]));
+          parts[kind].push(tower(2.5, h * 0.2, 2.5, x, top + h * 1.16, z, 0, tints[1]));
+        }
+      }
+    }
+    // The bridges between the islands: a deck on piers, a rail each side.
+    const bridges: THREE.BufferGeometry[] = [];
+    const piers: THREE.BufferGeometry[] = [];
+    for (const [i, j] of bridgeLinks(isles)) {
+      const [[x0, z0], [x1, z1]] = bridgeEnds(isles[i], isles[j]);
+      const len = Math.hypot(x1 - x0, z1 - z0);
+      const yaw = Math.atan2(x1 - x0, z1 - z0);
+      const mx = (x0 + x1) / 2;
+      const mz = (z0 + z1) / 2;
+      const deckG = new THREE.BoxGeometry(18, 2.4, len).rotateY(yaw).translate(mx, DECK_TOP - 1.2, mz).toNonIndexed();
+      if (ctx.inRoad(deckG, 6)) continue;
+      bridges.push(paint(deckG, () => new THREE.Color(0xb7bfcb)));
+      for (const side of [-1, 1]) {
+        const rail = new THREE.BoxGeometry(0.6, 1.4, len).translate(side * 8.7, 0.7, 0).rotateY(yaw).translate(mx, DECK_TOP, mz).toNonIndexed();
+        bridges.push(paint(rail, () => new THREE.Color(0x8e98a6)));
+      }
+      const n = Math.max(1, Math.floor(len / 56));
+      for (let k = 1; k < n; k++) {
+        const f = k / n;
+        const pier = new THREE.CylinderGeometry(2.6, 3.2, DECK_TOP - 2.4 - DECK_FOOT, 8).translate(x0 + (x1 - x0) * f, (DECK_TOP - 2.4 + DECK_FOOT) / 2, z0 + (z1 - z0) * f).toNonIndexed();
+        piers.push(paint(pier, () => new THREE.Color(0x8f98a6)));
       }
     }
     const windows = windowTexture();
@@ -1144,18 +1201,28 @@ function buildMeridian(ctx: Ctx): void {
         ctx.swaps.push((on) => (cityMat.map = on ? facade : windows));
       }
     });
+    // The decks, the bridges and their piers: concrete (painted, in the painted look).
     const blank = whiteTexture();
-    const deckMat = new THREE.MeshLambertMaterial({ color: 0xb9c2cf, map: blank });
-    const deckMesh = new THREE.Mesh(mergeGeometries(decks)!, deckMat);
-    deckMesh.frustumCulled = false;
-    group.add(deckMesh);
+    const deckMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: blank });
+    for (const list of [decks, [...bridges, ...piers]]) {
+      if (!list.length) continue;
+      const mesh = new THREE.Mesh(mergeGeometries(list)!, deckMat);
+      mesh.frustumCulled = false;
+      group.add(mesh);
+    }
     if (surf?.concrete) {
       const concrete = paintedTexture(surf.concrete, { repeat: true });
       ownTextures(deckMat, concrete, blank);
-      ctx.swaps.push((on) => {
-        deckMat.map = on ? concrete : blank;
-        deckMat.color.set(on ? 0xffffff : 0xb9c2cf);
-      });
+      ctx.swaps.push((on) => (deckMat.map = on ? concrete : blank));
+    }
+    // The streets, the parks and their trees: flat colour.
+    const groundMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    for (const list of [streets, [...parks, ...trees]]) {
+      if (!list.length) continue;
+      for (const g of list) g.deleteAttribute('uv');
+      const mesh = new THREE.Mesh(mergeGeometries(list)!, groundMat);
+      mesh.frustumCulled = false;
+      group.add(mesh);
     }
   }
 
@@ -1211,25 +1278,39 @@ function buildMeridian(ctx: Ctx): void {
     const inner = new THREE.Mesh(new THREE.TorusGeometry(84.6, 0.9, 6, 60), new THREE.MeshBasicMaterial({ color: new THREE.Color(COLORS.charge).multiplyScalar(1.6), toneMapped: false }));
     inner.applyMatrix4(m);
     group.add(inner);
-    // Twin towers either side of the start with a sky-bridge.
-    for (const side of [-1, 1]) {
-      const towerMat = new THREE.MeshLambertMaterial({ map: windowTexture(), color: 0xf2f5fa });
-      const t = new THREE.Mesh(new THREE.BoxGeometry(46, 420, 46), towerMat);
-      const windowsMap = towerMat.map!;
-      windowsMap.repeat.set(2, 16);
-      if (panels) {
-        const towerPanels = paintedTexture(panels, { repeat: true });
-        towerPanels.repeat.set(2, 18);
-        ownTextures(towerMat, towerPanels, windowsMap);
-        ctx.swaps.push((on) => {
-          towerMat.map = on ? towerPanels : windowsMap;
-          towerMat.color.set(on ? 0xffffff : 0xf2f5fa);
-        });
-      }
-      trackMatrix(track, 120, side * 150, 150, 0, m);
-      t.applyMatrix4(m);
-      group.add(t);
+    // Twin towers either side of the start, on the start island, joined high over the road by a sky bridge.
+    const towerMat = new THREE.MeshLambertMaterial({ map: windowTexture(), color: 0xf2f5fa });
+    const windowsMap = towerMat.map!;
+    windowsMap.repeat.set(2, 16);
+    if (panels) {
+      const towerPanels = paintedTexture(panels, { repeat: true });
+      towerPanels.repeat.set(2, 18);
+      ownTextures(towerMat, towerPanels, windowsMap);
+      ctx.swaps.push((on) => {
+        towerMat.map = on ? towerPanels : windowsMap;
+        towerMat.color.set(on ? 0xffffff : 0xf2f5fa);
+      });
     }
+    const TOP = 400;
+    const feet: THREE.Vector3[] = [];
+    for (const side of [-1, 1]) {
+      const at = trackPoint(track, 120, side * 150, 0, new THREE.Vector3());
+      feet.push(at);
+      const t = new THREE.Mesh(new THREE.BoxGeometry(46, TOP - DECK_TOP, 46), towerMat);
+      t.rotation.y = Math.atan2(track.tx[0], track.tz[0]);
+      t.position.set(at.x, (TOP + DECK_TOP) / 2, at.z);
+      group.add(t);
+      // Its lobby: a podium on the plaza.
+      const podium = new THREE.Mesh(new THREE.BoxGeometry(70, 22, 70), towerMat);
+      podium.rotation.y = t.rotation.y;
+      podium.position.set(at.x, DECK_TOP + 11, at.z);
+      group.add(podium);
+    }
+    const span = feet[0].distanceTo(new THREE.Vector3(feet[1].x, feet[0].y, feet[1].z)) - 46;
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(14, 10, span), towerMat);
+    bridge.rotation.y = Math.atan2(feet[1].x - feet[0].x, feet[1].z - feet[0].z);
+    bridge.position.set((feet[0].x + feet[1].x) / 2, 250, (feet[0].z + feet[1].z) / 2);
+    group.add(bridge);
   }
 }
 

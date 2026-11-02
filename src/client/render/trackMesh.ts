@@ -15,7 +15,7 @@ import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT, RoadIndex, inRoadSpace } from './titan/keepout';
-import { CROWD_STEP, GRANDSTAND_DEPTH, GRANDSTAND_LENGTH, SEATING, grandstandModel, type GrandstandSlot } from './grandstand/grandstand';
+import { CROWD_STEP, GRANDSTAND_DEPTH, GRANDSTAND_FOOT, GRANDSTAND_LENGTH, SEATING, grandstandModel, type GrandstandSlot } from './grandstand/grandstand';
 
 const MAX_STRIPS = 12;
 const MAX_GATES = 8;
@@ -1261,6 +1261,7 @@ export function buildTrackVisual(
     };
     // The model's stands, all of each slot as one mesh.
     const pieces = new Map<GrandstandSlot, THREE.BufferGeometry[]>();
+    const foot = new THREE.Vector3();
     for (const side of [-1, 1]) {
       for (let seg = 0; seg < 4; seg++) {
         const s = -260 + seg * 130;
@@ -1281,6 +1282,23 @@ export function buildTrackVisual(
           for (const [slot, g] of placed) {
             if (!pieces.has(slot)) pieces.set(slot, []);
             pieces.get(slot)!.push(g);
+          }
+          // Where the ground lies further down than its walls reach (a
+          // raised road, over the sea or a drop), it stands on columns down
+          // to the ground, as the road does on its pylons. (In orbit, the
+          // station holds it up.)
+          if (theme.ground !== 'orbit') {
+            for (const lz of [-2, -12, -22]) {
+              for (let lx = -56; lx <= 56; lx += 16) {
+                foot.set(lx, GRANDSTAND_FOOT, lz).applyMatrix4(m);
+                const g = groundAt(foot.x, foot.z);
+                if (!(foot.y - g > 1)) continue;
+                const leg = new THREE.BoxGeometry(2.4, foot.y - g + 0.5, 2.4).translate(foot.x, (foot.y + 0.5 + g) / 2, foot.z);
+                leg.deleteAttribute('uv');
+                if (intrudes([leg.clone().toNonIndexed()])) continue;
+                pieces.get('concrete')!.push(leg);
+              }
+            }
           }
           // Where it is, for the crowd's flashes and flags (crowd.ts).
           const at = new THREE.Object3D();

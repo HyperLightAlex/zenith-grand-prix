@@ -18,6 +18,8 @@ export type GrandstandSlot = (typeof GRANDSTAND_SLOTS)[number];
 /** The stand's length (along x), and how far back from its front it reaches. */
 export const GRANDSTAND_LENGTH = 120;
 export const GRANDSTAND_DEPTH = 24;
+/** How far below the road its walls go (the Blender script's BOTTOM). */
+export const GRANDSTAND_FOOT = -14;
 
 /**
  * Where the crowd is, in the stand's frame: along x from -half to half,

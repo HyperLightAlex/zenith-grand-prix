@@ -1016,7 +1016,10 @@ What is round the road says what the race has done and what is coming:
   five blocks between aisles, behind a parapet, walled at its ends and
   back, under a cantilevered roof on five columns with floodlights along
   its front. Their fronts stand 10 m back from the road's edge; none over a
-  pit or reaching into another stretch of road's space. Without the model
+  pit or reaching into another stretch of road's space. They stand upright
+  whatever the road's banking, and where the road is raised higher than
+  their walls go down (over the sea, a drop), on columns down to the
+  ground, as the road stands on its pylons. Without the model
   (the tests' tracks, built without loading it) the old raked crowd under
   a roof stands in.
 - **Hover screens** (`render/screens/hoverScreens.ts`, built in Blender
