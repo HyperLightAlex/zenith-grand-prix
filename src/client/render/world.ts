@@ -2456,6 +2456,63 @@ function buildFrostline(ctx: Ctx): void {
     add(parts, iceMat);
   }
 
+  // ---- the polar station: who built a circuit out here, and how they come ------------
+  // In the infield by the start, on the shelf: modules on legs above the
+  // drift, a radome or two, fuel, a hangar and a mast, an ice runway the
+  // teams and the crowd fly in on, and a track from the station to the
+  // paddock behind the stands.
+  {
+    const fr = makeFrame();
+    frameAt(track, -60, fr);
+    // Into the infield: the side the circuit turns toward, the way the lap goes.
+    let turnSum = 0;
+    for (let i = 0; i < track.n; i += 4) turnSum += track.kappa[i];
+    // (kappa > 0 turns right: brakeBoards.ts.)
+    const inSide = turnSum > 0 ? 1 : -1;
+    let spot: THREE.Vector3 | null = null;
+    for (const out of [260, 320, 380, 220]) {
+      for (const along of [-60, 40, -160, 140]) {
+        const p = trackPoint(track, along, inSide * out, 0, new THREE.Vector3());
+        const ok = [[0, 0], [110, 0], [-110, 0], [0, 110], [0, -110], [80, 80], [-80, -80], [80, -80], [-80, 80]].every(([dx, dz]) => Math.abs(frost.groundAt(p.x + dx, p.z + dz) - shelfY) < 1.5) && ctx.clearance(p.x, p.z) > 180;
+        if (ok) {
+          spot = p;
+          break;
+        }
+      }
+      if (spot) break;
+    }
+    if (spot) {
+      const yaw = Math.atan2(-fr.rx * inSide, -fr.rz * inSide);
+      const site = new Site(spot.x, shelfY, spot.z, yaw);
+      // The station: its modules in a row on their legs, linked, in the colours polar stations wear.
+      const modules: Array<[number, number, number, number, number]> = [
+        [-60, -10, 34, 12, 0xd9482f],
+        [-22, -10, 34, 12, 0xf2f2ee],
+        [16, -10, 34, 12, 0xd9482f],
+        [54, -10, 34, 12, 0x2f6fa8],
+      ];
+      for (const [x, z, w, d, c] of modules) site.module(x, z, w, d, c, 0, 3.4);
+      for (const x of [-41, -3, 35]) site.box(x, 4.4, -10, 4, 2.6, 3, 0x9aa3ae);
+      site.dome(-70, 40, 9).dome(-45, 52, 6);
+      site.hut(40, 48, 36, 26, 11, 0xb7c0cc, 0x5a6472);
+      for (const [x, z] of [[85, 30], [85, 50], [85, 70]]) site.tank(x, z, 5.5, 8, 0xe8ecf0, 0xd9482f);
+      site.mast(-95, -40, 42).pad(-20, 60, 12);
+      for (let z = -60; z <= 80; z += 35) site.lamp(-110, z, 7);
+      // The runway: a groomed strip of the shelf, flagged along its edges.
+      const RW = 640;
+      site.put(new THREE.PlaneGeometry(36, RW).rotateX(-Math.PI / 2).translate(0, 0.2, -110 - RW / 2), 0xdde6f5);
+      for (let z = -110; z >= -110 - RW; z -= 40) for (const x of [-19, 19]) site.box(x, 0, z, 0.5, 1.6, 0.5, 0xff5a2a);
+      const pieces = site.pieces.filter((g) => !ctx.inRoad(g, 6));
+      for (const mesh of siteMeshes(pieces, site.lights)) group.add(mesh);
+      // The track from the station to behind the stands on its side.
+      const gate = new THREE.Vector3(0, 0, 70).applyMatrix4(site.m);
+      const paddock = trackPoint(track, -60, inSide * (hwAt(track, -60) + 50), 0, new THREE.Vector3());
+      const pts = Array.from({ length: 13 }, (_, k) => gate.clone().lerp(paddock, k / 12).setY(shelfY));
+      const road = groundRoad(pts, 10, 0xc8d4ea, 0.3);
+      if (!ctx.inRoad(road, 8)) for (const mesh of siteMeshes([road], [])) group.add(mesh);
+    }
+  }
+
   // ---- icebergs out at sea, and mountains beyond -------------------------------
   {
     const rnd = mulberry(2026);

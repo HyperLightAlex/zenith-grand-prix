@@ -219,26 +219,36 @@ function findFrost(track: Track): Frost | null {
   }
   cx /= ring.length;
   cz /= ring.length;
-  // Out from the hull by a margin that wanders, every 40 units along it.
+  // Out from the hull by a margin that wanders, every 25 units along it: a
+  // coast the sea has worked at, headlands and bays in long swells of it
+  // (never nearer the road than the hull's margin), and smaller jags where
+  // the ice has calved.
   const shelf: Array<[number, number]> = [];
   let seed = 3;
   const rnd = () => {
     seed = (seed * 16807) % 2147483647;
     return seed / 2147483647;
   };
+  let perimeter = 0;
+  for (let k = 0; k < ring.length; k++) perimeter += Math.hypot(ring[(k + 1) % ring.length][0] - ring[k][0], ring[(k + 1) % ring.length][1] - ring[k][1]);
+  const ph = [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28];
+  let run = 0;
   for (let k = 0; k < ring.length; k++) {
     const [ax, az] = ring[k];
     const [bx, bz] = ring[(k + 1) % ring.length];
     const len = Math.hypot(bx - ax, bz - az);
-    const steps = Math.max(1, Math.round(len / 40));
+    const steps = Math.max(1, Math.round(len / 25));
     for (let q = 0; q < steps; q++) {
       const f = q / steps;
       const x = ax + (bx - ax) * f;
       const z = az + (bz - az) * f;
       const l = Math.hypot(x - cx, z - cz) || 1;
-      const out = 85 + rnd() * 40;
+      const t = ((run + len * f) / perimeter) * Math.PI * 2;
+      const swell = (1 + Math.sin(3 * t + ph[0])) * 70 + (1 + Math.sin(7 * t + ph[1])) * 38 + (1 + Math.sin(13 * t + ph[2])) * 14;
+      const out = 75 + swell + rnd() * 26;
       shelf.push([x + ((x - cx) / l) * out, z + ((z - cz) / l) * out]);
     }
+    run += len;
   }
   const shelfY = shelfRoad - 3;
   const shelfDips = new Dips(track, shelfY);
