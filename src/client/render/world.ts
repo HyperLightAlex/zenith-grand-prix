@@ -31,7 +31,10 @@ import type { TitanMat } from './titan/pose';
 import { buildZenith } from './zenith';
 import { buildAbyss } from './abyss';
 import { buildMonsoon } from './monsoon';
-import { BLOCK, DECK_FOOT, DECK_TOP, STREET, bridgeEnds, bridgeLinks, fromIsland, islandBlocks, islandOutline, meridianIslands, streetHalf } from './meridianCity';
+import { BLOCK, DECK_FOOT, DECK_TOP, PROMENADE, STREET, bridgeEnds, bridgeLinks, fromIsland, islandBlocks, islandOutline, meridianIslands, streetHalf } from './meridianCity';
+/** Meridian's ground (M5): a plaza's square covers this many units, a seawall's face (along it) this many. */
+const PLAZA_TILE = 30;
+const WALL_TILE = 20;
 
 const skyVertex = /* glsl */ `
 varying vec3 vDir;
@@ -686,6 +689,41 @@ function strata(base: THREE.Color, seed: number): (x: number, y: number, z: numb
   };
 }
 
+const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+
+/** A four-cornered face and its texture coordinates, corner by corner. */
+interface Quad {
+  p: THREE.Vector3[];
+  uv: Array<[number, number]>;
+}
+
+/** Quads as one geometry, each turned to face the way `faces` wants (its normal, its middle). */
+function quads(list: Quad[], faces: (normal: THREE.Vector3, middle: THREE.Vector3) => boolean): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const uvs: number[] = [];
+  const n = new THREE.Vector3();
+  const e1 = new THREE.Vector3();
+  const e2 = new THREE.Vector3();
+  const mid = new THREE.Vector3();
+  for (const q of list) {
+    n.crossVectors(e1.subVectors(q.p[1], q.p[0]), e2.subVectors(q.p[2], q.p[0])).normalize();
+    mid.copy(q.p[0]).add(q.p[1]).add(q.p[2]).add(q.p[3]).multiplyScalar(0.25);
+    const flip = !faces(n, mid);
+    if (flip) n.negate();
+    for (const k of flip ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3]) {
+      pos.push(q.p[k].x, q.p[k].y, q.p[k].z);
+      nor.push(n.x, n.y, n.z);
+      uvs.push(q.uv[k][0], q.uv[k][1]);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  return g;
+}
+
 /** Use `painted` on `mesh` with the painted background, its own material otherwise. */
 function swapMaterial(ctx: Ctx, mesh: THREE.Mesh, painted: THREE.Material): void {
   const plain = mesh.material as THREE.Material;
@@ -1087,7 +1125,10 @@ function buildMeridian(ctx: Ctx): void {
     const rnd = mulberry(2049);
     // Three kinds of building, for the painted facades: glass offices, hotels, dark glass.
     const parts: THREE.BufferGeometry[][] = [[], [], []];
-    const decks: THREE.BufferGeometry[] = [];
+    // The islands' ground: the plaza inside the promenade, the promenade round it, the seawall's face.
+    const caps: THREE.BufferGeometry[] = [];
+    const proms: THREE.BufferGeometry[] = [];
+    const walls: THREE.BufferGeometry[] = [];
     const streets: THREE.BufferGeometry[] = [];
     const parks: THREE.BufferGeometry[] = [];
     const trees: THREE.BufferGeometry[] = [];
@@ -1096,18 +1137,42 @@ function buildMeridian(ctx: Ctx): void {
     const isles = meridianIslands(ctx, { x: startAt.x, z: startAt.z, rot: Math.atan2(track.tz[0], track.tx[0]) + Math.PI / 2 });
     const flat = (g: THREE.BufferGeometry, c: number) => paint(g.index ? g.toNonIndexed() : g, () => new THREE.Color(c));
     for (const isle of isles) {
-      // The deck behind its seawall, a promenade round its edge.
-      const outline = islandOutline(isle);
-      const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
-      const deck = new THREE.ExtrudeGeometry(shape, { depth: DECK_TOP - DECK_FOOT, bevelEnabled: false, curveSegments: 1 });
-      deck.rotateX(-Math.PI / 2);
-      deck.translate(0, DECK_FOOT, 0);
-      const d = deck.toNonIndexed();
-      deck.dispose();
-      paint(d, (_x, y) => new THREE.Color(y > DECK_TOP - 0.5 ? 0xc6cdd7 : 0x8f98a6));
-      planarUvs(d, 60);
-      decks.push(d);
-      // The streets: along and across the grid, inside the promenade.
+      // The deck behind its seawall, a promenade round its edge (in the
+      // painted look, M5's ground: its plaza, the promenade's paving, the
+      // seawall's face its full height, each laid along the island's edge).
+      const outer = islandOutline(isle, 96);
+      const inner = islandOutline({ ...isle, a: isle.a - PROMENADE, b: isle.b - PROMENADE }, 96);
+      const cap = new THREE.ShapeGeometry(new THREE.Shape(inner.map(([x, z]) => new THREE.Vector2(x, -z))));
+      cap.rotateX(-Math.PI / 2).translate(0, DECK_TOP, 0);
+      const cp = cap.attributes.position;
+      for (let k = 0; k < cp.count; k++) cap.attributes.uv.setXY(k, cp.getX(k) / PLAZA_TILE, cp.getZ(k) / PLAZA_TILE);
+      caps.push(cap);
+      const middle = new THREE.Vector3(isle.x, DECK_TOP, isle.z);
+      const wallQuads: Quad[] = [];
+      const promQuads: Quad[] = [];
+      let run = 0;
+      for (let k = 0; k < outer.length; k++) {
+        const [x0, z0] = outer[k];
+        const [x1, z1] = outer[(k + 1) % outer.length];
+        const [i0, j0] = inner[k];
+        const [i1, j1] = inner[(k + 1) % inner.length];
+        const len = Math.hypot(x1 - x0, z1 - z0);
+        const u0 = run / WALL_TILE;
+        const u1 = (run + len) / WALL_TILE;
+        wallQuads.push({
+          p: [v3(x0, DECK_FOOT, z0), v3(x1, DECK_FOOT, z1), v3(x1, DECK_TOP, z1), v3(x0, DECK_TOP, z0)],
+          uv: [[u0, 0], [u1, 0], [u1, 1], [u0, 1]],
+        });
+        promQuads.push({
+          p: [v3(i0, DECK_TOP, j0), v3(i1, DECK_TOP, j1), v3(x1, DECK_TOP, z1), v3(x0, DECK_TOP, z0)],
+          uv: [[0, run / WALL_TILE], [0, (run + len) / WALL_TILE], [1, (run + len) / WALL_TILE], [1, run / WALL_TILE]],
+        });
+        run += len;
+      }
+      walls.push(quads(wallQuads, (n, at) => n.x * (at.x - middle.x) + n.z * (at.z - middle.z) > 0));
+      proms.push(quads(promQuads, (n) => n.y > 0));
+      // The streets: along and across the grid, inside the promenade (the
+      // painted street runs along its length, its pavements either side).
       const step = BLOCK + STREET;
       for (const along of ['u', 'v'] as const) {
         const span = along === 'u' ? isle.b : isle.a;
@@ -1115,10 +1180,14 @@ function buildMeridian(ctx: Ctx): void {
           const across = (k + 0.5) * step;
           const half = streetHalf(isle, across, along);
           if (half < BLOCK) continue;
-          const g = new THREE.PlaneGeometry(along === 'u' ? half * 2 : STREET, along === 'u' ? STREET : half * 2).rotateX(-Math.PI / 2);
+          const g = new THREE.PlaneGeometry(STREET, half * 2).rotateX(-Math.PI / 2);
+          const uv = g.attributes.uv;
+          for (let q = 0; q < uv.count; q++) uv.setY(q, (uv.getY(q) * half * 2) / STREET);
+          if (along === 'u') g.rotateY(Math.PI / 2);
           const [x, z] = along === 'u' ? fromIsland(isle, 0, across) : fromIsland(isle, across, 0);
-          g.rotateY(-isle.rot).translate(x, DECK_TOP + 0.06, z);
-          streets.push(flat(g, 0x5c6573));
+          // (The cross streets a little over the others, where they meet.)
+          g.rotateY(-isle.rot).translate(x, DECK_TOP + (along === 'u' ? 0.06 : 0.14), z);
+          streets.push(g);
         }
       }
       // The blocks: a park here and there; otherwise a podium and a tower on it, tallest at the island's heart.
@@ -1129,7 +1198,7 @@ function buildMeridian(ctx: Ctx): void {
         const core = Math.max(0, 1 - Math.hypot(u / isle.a, v / isle.b));
         if (rnd() < 0.1 + (1 - core) * 0.08) {
           const lawn = new THREE.PlaneGeometry(BLOCK, BLOCK).rotateX(-Math.PI / 2).rotateY(-isle.rot).translate(x, DECK_TOP + 0.1, z);
-          parks.push(flat(lawn, 0x79a35f));
+          parks.push(lawn);
           for (let t = 0; t < 7; t++) {
             const [tx, tz] = fromIsland(isle, u + (rnd() - 0.5) * BLOCK * 0.8, v + (rnd() - 0.5) * BLOCK * 0.8);
             const h = 8 + rnd() * 6;
@@ -1157,18 +1226,23 @@ function buildMeridian(ctx: Ctx): void {
         }
       }
     }
-    // The bridges between the islands: a deck on piers, a rail each side.
+    // The bridges between the islands: a deck on piers, a rail each side, its road on top.
     const bridges: THREE.BufferGeometry[] = [];
     const piers: THREE.BufferGeometry[] = [];
+    const roadways: THREE.BufferGeometry[] = [];
     for (const [i, j] of bridgeLinks(isles)) {
       const [[x0, z0], [x1, z1]] = bridgeEnds(isles[i], isles[j]);
       const len = Math.hypot(x1 - x0, z1 - z0);
       const yaw = Math.atan2(x1 - x0, z1 - z0);
       const mx = (x0 + x1) / 2;
       const mz = (z0 + z1) / 2;
-      const deckG = new THREE.BoxGeometry(18, 2.4, len).rotateY(yaw).translate(mx, DECK_TOP - 1.2, mz).toNonIndexed();
+      const deckG = new THREE.BoxGeometry(18, 2.3, len).rotateY(yaw).translate(mx, DECK_TOP - 1.25, mz).toNonIndexed();
       if (ctx.inRoad(deckG, 6)) continue;
       bridges.push(paint(deckG, () => new THREE.Color(0xb7bfcb)));
+      const road = new THREE.PlaneGeometry(18, len).rotateX(-Math.PI / 2);
+      const ruv = road.attributes.uv;
+      for (let q = 0; q < ruv.count; q++) ruv.setY(q, (ruv.getY(q) * len) / 18);
+      roadways.push(road.rotateY(yaw).translate(mx, DECK_TOP, mz));
       for (const side of [-1, 1]) {
         const rail = new THREE.BoxGeometry(0.6, 1.4, len).translate(side * 8.7, 0.7, 0).rotateY(yaw).translate(mx, DECK_TOP, mz).toNonIndexed();
         bridges.push(paint(rail, () => new THREE.Color(0x8e98a6)));
@@ -1201,12 +1275,11 @@ function buildMeridian(ctx: Ctx): void {
         ctx.swaps.push((on) => (cityMat.map = on ? facade : windows));
       }
     });
-    // The decks, the bridges and their piers: concrete (painted, in the painted look).
+    // The bridges and their piers: concrete (painted, in the painted look).
     const blank = whiteTexture();
     const deckMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: blank });
-    for (const list of [decks, [...bridges, ...piers]]) {
-      if (!list.length) continue;
-      const mesh = new THREE.Mesh(mergeGeometries(list)!, deckMat);
+    if (bridges.length) {
+      const mesh = new THREE.Mesh(mergeGeometries([...bridges, ...piers])!, deckMat);
       mesh.frustumCulled = false;
       group.add(mesh);
     }
@@ -1215,12 +1288,33 @@ function buildMeridian(ctx: Ctx): void {
       ownTextures(deckMat, concrete, blank);
       ctx.swaps.push((on) => (deckMat.map = on ? concrete : blank));
     }
-    // The streets, the parks and their trees: flat colour.
-    const groundMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    for (const list of [streets, [...parks, ...trees]]) {
-      if (!list.length) continue;
-      for (const g of list) g.deleteAttribute('uv');
-      const mesh = new THREE.Mesh(mergeGeometries(list)!, groundMat);
+    // The ground, each in its own colour, and painted with M5's in the painted look.
+    const ground = (list: THREE.BufferGeometry[], plain: number, name: string, repeat = true) => {
+      if (!list.length) return;
+      const mat = new THREE.MeshLambertMaterial({ color: plain, map: blank });
+      const url = surf?.[name];
+      if (url) {
+        const t = paintedTexture(url, { repeat });
+        ownTextures(mat, t, blank);
+        ctx.swaps.push((on) => {
+          mat.map = on ? t : blank;
+          mat.color.set(on ? 0xffffff : plain);
+        });
+      }
+      const mesh = new THREE.Mesh(mergeGeometries(list)!, mat);
+      mesh.frustumCulled = false;
+      group.add(mesh);
+    };
+    ground(caps, 0xc6cdd7, 'plaza');
+    ground(proms, 0xd4d1c9, 'promenade');
+    ground(walls, 0x8f98a6, 'seawall');
+    ground(streets, 0x5c6573, 'street');
+    ground(roadways, 0x6d7584, 'bridge');
+    ground(parks, 0x79a35f, 'park', false);
+    // The parks' trees: flat colour.
+    if (trees.length) {
+      for (const g of trees) g.deleteAttribute('uv');
+      const mesh = new THREE.Mesh(mergeGeometries(trees)!, new THREE.MeshLambertMaterial({ vertexColors: true }));
       mesh.frustumCulled = false;
       group.add(mesh);
     }

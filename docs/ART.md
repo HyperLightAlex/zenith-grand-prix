@@ -216,8 +216,11 @@ to one brief per circuit and checked one at a time.
   its bolt.
 - **Surfaces**, as repeating painted textures:
   - Meridian: the sea, three kinds of tower facade (glass offices, hotels,
-    dark glass), the platforms the towers stand on, and white panels on the
-    landmarks.
+    dark glass), concrete for the bridges and their piers, and white panels
+    on the landmarks; and the city's ground (M5): the islands' plazas, the
+    promenades along their edges, the seawalls' faces (each wall its full
+    height, laid along the island's edge), the streets and the bridges'
+    roads running along their length, and a painted park to each park block.
   - Canyon: the desert floor (the sand at two sizes and angles blended by a
     slow noise, so its scrub never lines up into a grid, with pans of cracked
     clay and broad light and shade), the gorges' rock, strata cliffs and

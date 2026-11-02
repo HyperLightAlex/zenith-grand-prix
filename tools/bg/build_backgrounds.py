@@ -48,6 +48,13 @@ CIRCUITS = {
         clouds='bg-m3-clouds.png',
         surfaces='bg-m4-surfaces.png',
         tiles=['sea', 'office', 'hotel', 'dark', 'concrete', 'panels'],
+        # The city's ground (M5), each square laid its own way: a street, the
+        # bridges' decks and the promenade run on along their length only (their
+        # edges are kerbs and parapets); the plaza repeats both ways; the seawall
+        # along its length only, cut below its railing (the game builds its own
+        # edge); a park is one square to a block, as painted.
+        ground='bg-m5-city.png',
+        ground_tiles=[('street', 'v'), ('plaza', 'both'), ('seawall', 'h', 62), ('park', 'none'), ('bridge', 'v'), ('promenade', 'v')],
     ),
     'canyon': dict(
         sky=['bg-c1-sky.png', 'bg-c1b-sky.png'],
@@ -503,6 +510,28 @@ def porthole_lights(t, seed=7):
     return np.stack([ndimage.gaussian_filter(out[..., c], 1.2, mode='wrap') for c in range(3)], -1)
 
 
+def laid(t, wrap, top=0):
+    """A square that repeats only the way it is laid ('v': along its length,
+    top to bottom; 'h': across; 'both'; 'none'), cut a few pixels inside the
+    sheet's grid (and `top` rows off its top) and its seams blended where it repeats."""
+    t = t[3 + top:-3, 3:-3]
+    if wrap in ('h', 'both'):
+        t = fade(t[:, :best_len(t, 1)], 1)
+    if wrap in ('v', 'both'):
+        t = fade(t[:best_len(t, 0)], 0)
+    im = Image.fromarray((np.clip(t, 0, 1) * 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS)
+    return np.asarray(im).astype(np.float32) / 255
+
+
+def build_ground(spec):
+    sheet = load(spec['ground'])
+    out = {}
+    for i, (name, wrap, *top) in enumerate(spec['ground_tiles']):
+        r, c = divmod(i, 3)
+        out[name] = laid(sheet[r * 512:(r + 1) * 512, c * 512:(c + 1) * 512], wrap, top[0] if top else 0)
+    return out
+
+
 def build_surfaces(spec, sheet_key='surfaces', tiles_key='tiles'):
     sheet = load(spec[sheet_key])
     out = {}
@@ -558,6 +587,8 @@ def main():
         else:
             cards = []
         surfaces = build_surfaces(spec)
+        if 'ground' in spec:
+            surfaces.update(build_ground(spec))
         for k, t in surfaces.items():
             files[k] = save(t, os.path.join(d, f'{k}.webp'), 84)
         earth = build_surfaces(spec, 'earth', 'earth_tiles') if 'earth' in spec else {}

@@ -33,6 +33,7 @@ Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`).
 | M2 Horizon | bg-m2-horizon.png | three strips, bottoms dead level, ends match to within a few pixels |
 | M3 Clouds | bg-m3-clouds.png | six clouds; the second is a little wider than its cell, so the clouds are cut by their outlines, not by the grid |
 | M4 Surfaces | bg-m4-surfaces.png | the squares do not quite repeat at their edges; each is cut to the length that wraps (whole window bays on the facades) and its seams blended |
+| M5 City ground | bg-m5-city.png | made with M4 attached, for the city's planned islands (render/meridianCity.ts). Of two tries, the one whose park keeps its bushes and path inside the square (a park is one square to a block, so it never repeats); the other's ran off its edges. Each square is laid its own way: the street, the bridge's deck and the promenade wrap along their length only (their sides are kerbs and parapets), the plaza both ways, the seawall along its length, cut below its railing (painted against sky) at its coping |
 | C1 Sky | bg-c1-sky.png | horizon at 697 px; the glow sits right on the horizon, as asked (the sun just touching it), so the game draws the sun's disc there, not at the light's height |
 | C1B Sky | bg-c1b-sky.png | horizon at 697 px, level with C1's; C1's right edge runs into it cleanly, but C1's left edge carries more of the sunset's orange than C1B's right edge, so that join is blended over a wider band |
 | C2 Horizon | bg-c2-horizon.png | three strips (mesas, buttes and spires, hoodoos), bottoms dead level, ends matching exactly |
@@ -123,6 +124,27 @@ SHEET M4: SURFACES (six tiling squares, full bleed)
 - 4, bottom left: a dark tower's facade, deep blue-violet glass with sparse lit windows and slim gold vertical fins.
 - 5, bottom middle: the concrete of the platforms the towers stand on, pale warm slabs with joints and weathering streaks.
 - 6, bottom right: white painted metal panels with fine seams and rivets, for the landmark towers and the great white ring over the track.
+```
+
+Sheet M5, made with M4 attached, for the city's ground once the city was laid out on planned islands (this sheet may be green: nothing in it is cut out):
+
+```
+SHEET M5: MERIDIAN'S CITY GROUND (attach sheet M4)
+
+The setting: the planned islands of a sea city at golden hour, reclaimed ground behind seawalls, laid out in blocks on a grid of streets with parks among the towers, bridges on piers between the islands. These squares are the ground the game lays under its own buildings.
+
+Same size (1536x1024), same style, palette and light as the attached sheet: background art from a 1980s Japanese TV mecha anime, poster colour (gouache) on illustration board, a few flat tones per form with visible but controlled brush strokes and a little dry-brush texture; no ink outlines; not a photo, 3D render or modern digital painting; no bloom, blur, grain or noise.
+
+- Six square textures in a 3x2 grid, each exactly 512x512, filling the sheet edge to edge with no borders, gaps or labels.
+- Each square repeats on its own: its left edge continues into its right edge and its top edge into its bottom edge, with no visible seam. Paint each straight-on (flat, no perspective, no horizon) and evenly lit, with no cast shadows across it and no vignette: the game adds the light. Keep the detail even, with no single feature that would stand out when it repeats.
+- Nothing but surfaces: no people, vehicles, boats, text, numbers, arrows, lane markings, logos or signs.
+
+1, top left: a city street seen from straight above, about 14 m across, running top to bottom: smooth blue-grey asphalt with faint darker tyre wear down its length, a pale kerb and a narrow pale-concrete pavement along both the left and right edges, a drain grate or two at the kerbs.
+2, top middle: a pedestrian plaza seen from above, about 30 m across: large pale warm-grey stone slabs in a regular grid with thin dark joints, a few slabs a shade lighter or darker, light weathering.
+3, top right: the face of a seawall seen straight on, about 20 m wide and 18 m high: courses of dressed pale grey concrete blocks, a darker band of wet staining along the bottom third where the sea washes it, small round drainage outlets in a row, a plain dark steel railing along the top edge.
+4, bottom left: a city park seen from above, about 60 m across: soft sunlit lawn in a few muted greens, a winding pale gravel path crossing it, a few round flowerbeds in warm reds and yellows, scattered small round tree crowns seen from above with their shadow sides lavender-blue.
+5, bottom middle: a road bridge's deck seen from above, about 18 m across, running top to bottom: blue-grey asphalt between two pale concrete parapets along the left and right edges, expansion joints crossing it at regular intervals.
+6, bottom right: the paving of a waterfront promenade seen from above, about 20 m across: warm cream concrete pavers laid in a herringbone pattern, a strip of darker granite along one edge.
 ```
 
 Sheet M1B, made with M1 attached:

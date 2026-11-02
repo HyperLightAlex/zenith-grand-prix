@@ -11,6 +11,12 @@ import hotel from './meridian/hotel.webp';
 import dark from './meridian/dark.webp';
 import concrete from './meridian/concrete.webp';
 import panels from './meridian/panels.webp';
+import street from './meridian/street.webp';
+import plaza from './meridian/plaza.webp';
+import seawall from './meridian/seawall.webp';
+import park from './meridian/park.webp';
+import bridge from './meridian/bridge.webp';
+import promenade from './meridian/promenade.webp';
 
 const set: PaintedSet = {
   sky,
@@ -18,6 +24,6 @@ const set: PaintedSet = {
   horizonV: 0.03125,
   horizon: [{ url: horizon0, aspect: 9.1152 }, { url: horizon1, aspect: 10.9781 }, { url: horizon2, aspect: 9.7662 }],
   clouds: { url: clouds, cards: [{"u0": 0.022135416666666668, "v0": 0.6201171875, "u1": 0.3111979166666667, "v1": 0.880859375, "aspect": 1.6629}, {"u0": 0.3372395833333333, "v0": 0.65625, "u1": 0.6627604166666666, "v1": 0.84375, "aspect": 2.6042}, {"u0": 0.6940104166666666, "v0": 0.541015625, "u1": 0.9720052083333334, "v1": 0.9599609375, "aspect": 0.9953}, {"u0": 0.014973958333333334, "v0": 0.1318359375, "u1": 0.318359375, "v1": 0.3681640625, "aspect": 1.9256}, {"u0": 0.33984375, "v0": 0.1865234375, "u1": 0.6595052083333334, "v1": 0.314453125, "aspect": 3.7481}, {"u0": 0.6868489583333334, "v0": 0.109375, "u1": 0.9798177083333334, "v1": 0.3916015625, "aspect": 1.5571}] },
-  surfaces: { "sea": sea, "office": office, "hotel": hotel, "dark": dark, "concrete": concrete, "panels": panels },
+  surfaces: { "sea": sea, "office": office, "hotel": hotel, "dark": dark, "concrete": concrete, "panels": panels, "street": street, "plaza": plaza, "seawall": seawall, "park": park, "bridge": bridge, "promenade": promenade },
 };
 export default set;
