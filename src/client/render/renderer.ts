@@ -500,6 +500,9 @@ export class Renderer {
    * chooses a lower one: lines drawn on a smaller picture and stretched up
    * come out thinner and softer.
    */
+  /** Draw at this pixel ratio whatever the settings say (a photo: see Game.savePhoto); null for the settings'. */
+  overrideRatio: number | null = null;
+
   setResolution(scale: number | 'auto'): void {
     this.autoScale = scale === 'auto';
     this.scale = scale === 'auto' ? 1 : Math.min(1, Math.max(0.5, scale));
@@ -517,7 +520,7 @@ export class Renderer {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
     const maxRatio = this.quality === 'high' ? 2 : this.quality === 'medium' ? 1.5 : 1;
-    const ratio = Math.min(window.devicePixelRatio || 1, maxRatio) * this.scale;
+    const ratio = this.overrideRatio ?? Math.min(window.devicePixelRatio || 1, maxRatio) * this.scale;
     if (w === this.viewport.width && h === this.viewport.height && ratio === this.viewport.ratio) return;
     this.viewport = { width: w, height: h, ratio };
     this.renderer.setPixelRatio(ratio);

@@ -10,7 +10,7 @@ import { emblemUrl, faceUrl } from '../factionArt';
 import { LOGO } from '../keyArt';
 import { art, type Menus } from '../menus';
 import { DEV_TOOLS } from '../../devTools';
-import { SELECT, confirmDialog } from './common';
+import { BACK, SELECT, confirmDialog } from './common';
 import { teamLooks, type TeamLook } from '../sides';
 import { debrief } from '../../game/tutorial';
 import type { PrimerData } from './howto';
@@ -122,6 +122,7 @@ export function registerRace(m: Menus, g: Game): void {
           lookLabel.textContent = `Look: ${g.toggleLook() ? '80s anime' : 'plain'}`;
         }, { key: 'look' });
       }
+      if (g.canPhoto) m.button(list, 'Photo mode', () => g.openPhoto(), { key: 'photo', note: 'Pose the camera and save a picture' });
       m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
       // What the frame you are flying is for (the other two a step away).
       const flying = g.session.race.mechs[g.session.localId];
@@ -148,6 +149,43 @@ export function registerRace(m: Menus, g: Game): void {
       return false;
     },
     back: () => g.resume(),
+  });
+
+  // Over a replay: its menu, and the race's moments to jump to.
+  m.register('replay-menu', {
+    render(m) {
+      const rs = g.replay;
+      const col = h('div.col');
+      const list = h('div.list');
+      m.button(list, 'Resume', () => g.resumeReplay(), { key: 'resume' });
+      if (rs && rs.highlights.length) m.button(list, "The race's moments", () => m.push('highlights'), { key: 'moments', note: `${rs.highlights.length} to jump to: knockouts, the lead changing, the finish` });
+      m.button(list, 'Photo mode', () => g.openPhoto(), { key: 'photo', note: 'Pose the camera and save a picture' });
+      m.button(list, 'Controls', () => m.push('controls'), { key: 'controls' });
+      m.button(list, 'Back to the results', () => g.leaveReplay(), { key: 'leave' });
+      const card = h('div.ec-pause', h('div.ec-kick', 'Replay'), art(LOGO.url, 'img', 'Zenith Grand Prix'));
+      col.append(card, h('h1', 'Replay'), rs ? h('p', rs.replay.label) : '', list);
+      m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, { pad: 'B', keys: 'Esc', label: 'Resume', press: 'back' }));
+    },
+    press(_m, key) {
+      if (key === 'pause') {
+        g.resumeReplay();
+        return true;
+      }
+      return false;
+    },
+    back: () => g.resumeReplay(),
+  });
+
+  m.register('highlights', {
+    render(m) {
+      const rs = g.replay;
+      const col = h('div.col');
+      const list = h('div.list');
+      const clock = (t: number) => `${Math.floor(t / 3600)}:${String(Math.floor((t / 60) % 60)).padStart(2, '0')}`;
+      rs?.highlights.forEach((hl, i) => m.button(list, hl.label, () => (g.jumpToMoment(i), g.resumeReplay()), { key: `m${i}`, note: clock(hl.tick) }));
+      col.append(h('h1', "The race's moments"), list);
+      m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, BACK));
+    },
   });
 
   m.register('results', {
@@ -310,14 +348,17 @@ function resultButtons(m: Menus, g: Game, box: HTMLElement, over: boolean, singl
     m.button(list, gp ? 'Leave the Grand Prix' : 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
   } else if (g.mode === 'gp') {
     m.button(list, over ? 'Continue' : 'Next round', () => g.next(), { key: 'next', go: true });
+    if (g.canReplay) m.button(list, 'Watch the replay', () => g.watchReplay(), { key: 'replay' });
     m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
   } else if (g.mode === 'tutorial') {
     m.button(list, 'Free Play', () => g.afterTutorial('free'), { key: 'free', go: true, note: 'Any circuit, any rival, any format' });
     m.button(list, 'Grand Prix', () => g.afterTutorial('gp'), { key: 'gp', note: 'Cups and the Grand Tour for medals' });
     m.button(list, 'Race the tutorial again', () => g.next(), { key: 'next' });
+    if (g.canReplay) m.button(list, 'Watch the replay', () => g.watchReplay(), { key: 'replay' });
     m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
   } else {
     m.button(list, over ? (single ? 'Race again' : sprint ? 'New Sprint' : 'New match') : sprint ? 'Next race' : 'Next round', () => g.next(), { key: 'next', go: true });
+    if (g.canReplay) m.button(list, 'Watch the replay', () => g.watchReplay(), { key: 'replay' });
     m.button(list, 'Change setup', () => g.toSetup(), { key: 'setup' });
     m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
   }

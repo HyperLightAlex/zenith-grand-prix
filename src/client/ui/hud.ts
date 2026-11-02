@@ -446,6 +446,11 @@ export class Hud {
     this.root.hidden = true;
   }
 
+  /** Watching a replay: no controls to hint at, no plays to call. */
+  setReplay(on: boolean): void {
+    setClass(this.root, 'replay', on);
+  }
+
   /** One line under the score: which round of what, and how the match stands. */
   setMatch(text: string): void {
     setText(this.matchLine, text);

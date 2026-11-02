@@ -14,6 +14,7 @@ import {
   type Track,
   type AnyTrackDef,
 } from '../../sim/index';
+import { Recorder, quantize } from './replay';
 
 export interface Session {
   readonly track: Track;
@@ -57,9 +58,14 @@ export class LocalSession implements Session {
   private latched = 0;
   private latchedCmd = 0;
   private first = emptyInput();
+  private later = emptyInput();
+  /** What was raced, for a replay: the setup, and the local seat's inputs tick by tick. */
+  readonly recorder = new Recorder();
+  readonly cfg: RaceConfig;
 
-  constructor(trackDef: AnyTrackDef, cfg: RaceConfig, readonly localId: number) {
+  constructor(readonly trackDef: AnyTrackDef, cfg: RaceConfig, readonly localId: number) {
     this.track = buildTrack(trackDef);
+    this.cfg = cfg;
     this.race = createRace(this.track, cfg);
     const n = this.race.mechs.length;
     this.prevS = new Float64Array(n);
@@ -99,19 +105,22 @@ export class LocalSession implements Session {
     while (this.acc >= DT && steps < 8) {
       this.snapshot();
       if (this.localId >= 0) {
+        // As online, the stick and triggers to the wire's steps (what a replay keeps).
         if (steps === 0) {
           // The first tick of the frame also carries whatever was pressed since the last tick.
           Object.assign(this.first, live);
           this.first.buttons = live.buttons | this.latched;
           this.first.cmd = live.cmd || this.latchedCmd;
-          this.inputs[this.localId] = this.first;
+          this.inputs[this.localId] = quantize(this.first, this.first);
           this.latched = 0;
           this.latchedCmd = 0;
         } else {
-          this.inputs[this.localId] = live;
+          this.inputs[this.localId] = quantize(live, this.later);
         }
       }
+      this.recordStep();
       stepRace(this.race, this.track, this.inputs);
+      this.recorder.after(this.race);
       for (const e of this.race.events) this.events.push(e);
       this.acc -= DT;
       steps++;
@@ -123,7 +132,15 @@ export class LocalSession implements Session {
   /** Run the simulation forward without drawing (used by attract mode and tests). */
   fastForward(seconds: number): void {
     const ticks = Math.round(seconds / DT);
-    for (let i = 0; i < ticks; i++) stepRace(this.race, this.track, this.inputs);
+    for (let i = 0; i < ticks; i++) {
+      this.recordStep();
+      stepRace(this.race, this.track, this.inputs);
+      this.recorder.after(this.race);
+    }
     this.snapshot();
+  }
+
+  private recordStep(): void {
+    this.recorder.record(this.localId >= 0 ? this.inputs[this.localId] : null);
   }
 }

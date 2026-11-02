@@ -1950,3 +1950,89 @@ html.compact .tgoal { right: calc(1 * var(--ui-em) + var(--sr, 0px)); top: calc(
 .menu .kit .primer-award b { flex: none; color: var(--ally); font-variant-numeric: tabular-nums; }
 html.compact .menu .primer-job { font-size: 0.98em; gap: 0.2em; }
 html.compact .menu .kit .primer-awards { font-size: 0.85em; }
+
+/* ---- Replays (game/replay.ts, ui/replayBar.ts) ------------------------------
+   The HUD of whoever is followed, without the hints and plays (nothing to
+   press in a replay), and the playback bar at the foot of the picture: the
+   timeline with the race's moments on it, and its controls. */
+.hud.replay .hints, .hud.replay .tactics { display: none; }
+/* The followed mech's state (locked on, slipstream...) above the bar. */
+.hud.replay .chips { bottom: calc(8.4 * var(--ui-em, 1em) + var(--sb, 0px)); }
+html.compact .hud.replay .chips { bottom: calc(7.2 * var(--ui-em) + var(--sb, 0px)); }
+html.touch .hud.replay .chips { bottom: auto; }
+/* The revs are shown at the start, but not the prompt to rev up. */
+.hud.replay .revbar:not([data-grade]) .label, .hud.replay .revbar[data-grade=''] .label { visibility: hidden; }
+.replaybar { z-index: 6; }
+.replaybar > * { pointer-events: auto; }
+.replaybar {
+  position: fixed;
+  /* Beside the gauges (bottom right), clear of the plays' corner (hidden in a replay). */
+  inset: auto calc(28 * var(--ui-em, 1em) + var(--sr, 0px)) calc(1 * var(--ui-em, 1em) + var(--sb, 0px)) calc(2 * var(--ui-em, 1em) + var(--sl, 0px));
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+  padding: 0.6em 0.9em 0.7em;
+  background: rgba(10, 15, 28, 0.86);
+  box-shadow: inset 0 0.22em 0 var(--charge);
+  clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
+  font-size: 1em;
+}
+.replaybar[hidden] { display: none; }
+.replaybar .top { display: flex; justify-content: space-between; gap: 1em; font-size: 1.05em; }
+.replaybar .time { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.replaybar .status { font-weight: 500; font-style: normal; opacity: 0.75; text-align: right; }
+.replaybar .timeline { position: relative; height: 0.65em; background: rgba(243, 245, 250, 0.16); cursor: pointer; }
+.replaybar .timeline .fill { position: absolute; inset: 0; background: var(--charge); transform-origin: 0 50%; transform: scaleX(0); }
+.replaybar .marks { position: absolute; inset: 0; }
+.replaybar .mark { position: absolute; top: 50%; width: 0.55em; height: 0.55em; margin-left: -0.275em; transform: translateY(-50%) rotate(45deg); background: var(--paper); box-shadow: 0 0 0 0.12em rgba(10, 15, 28, 0.9); }
+.replaybar .mark.ko, .replaybar .mark.ringout { background: var(--danger); }
+.replaybar .mark.parry { background: var(--hazard); }
+.replaybar .mark.lead { background: var(--ally); }
+.replaybar .mark.finish { background: var(--cell); }
+.replaybar .mark.start, .replaybar .mark.lap { background: var(--mute); }
+.replaybar .playback { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.35em 0.9em; font-weight: 500; }
+.replaybar .ctl { display: inline-flex; align-items: center; gap: 0.25em; cursor: pointer; white-space: nowrap; }
+.replaybar .ctl .label { font-weight: 700; }
+.replaybar .ctl[data-ctl='pilot'] .label { min-width: 4.5em; text-align: center; }
+.replaybar .ctl .arrow { padding: 0 0.3em; font-size: 1.25em; font-style: normal; opacity: 0.7; }
+.replaybar .ctl .arrow:hover { opacity: 1; }
+.replaybar.preparing .playback { opacity: 0.35; pointer-events: none; }
+html.compact .replaybar { left: calc(1 * var(--ui-em) + var(--sl, 0px)); right: calc(1 * var(--ui-em) + var(--sr, 0px)); font-size: 0.92em; }
+html.compact .hud.replay .dash { display: none; }
+html.touch .replaybar .ctl { padding: 0.35em 0.5em; background: rgba(243, 245, 250, 0.1); }
+
+/* ---- Photo mode (game/photo.ts, ui/photoPanel.ts) ----------------------------
+   Nothing over the picture but a bar of how to pose it and its buttons,
+   which can be hidden too; a flash as a picture is taken. */
+.photo { z-index: 7; }
+.photo .photo-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(1 * var(--ui-em, 1em) + var(--sb, 0px));
+  transform: translateX(-50%);
+  width: min(70em, 94%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em 1.6em;
+  flex-wrap: wrap;
+  padding: 0.55em 0.9em;
+  background: rgba(10, 15, 28, 0.8);
+  clip-path: polygon(0.5em 0, 100% 0, calc(100% - 0.5em) 100%, 0 100%);
+}
+.photo .photo-hints { display: flex; flex-wrap: wrap; gap: 0.3em 1.1em; font-weight: 500; font-style: normal; }
+.photo .photo-hints .key { margin-right: 0.3em; }
+.photo .photo-btns { display: flex; gap: 0.5em; margin-left: auto; }
+.photo .photo-btn { pointer-events: auto; cursor: pointer; padding: 0.35em 0.9em; background: rgba(243, 245, 250, 0.12); font-weight: 700; }
+.photo .photo-btn:hover { background: rgba(243, 245, 250, 0.24); }
+.photo .photo-btn.go { background: var(--charge); color: var(--ink); }
+.photo.bare .photo-hints { display: none; }
+.photo.bare .photo-bar { width: auto; left: auto; right: calc(1 * var(--ui-em, 1em) + var(--sr, 0px)); transform: none; background: none; }
+.photo.bare .photo-btn { background: rgba(10, 15, 28, 0.45); opacity: 0.75; }
+.photo .photo-toast { position: absolute; left: 50%; top: 1.4em; transform: translateX(-50%); padding: 0.4em 1.2em; background: rgba(10, 15, 28, 0.86); font-weight: 600; font-style: normal; }
+.photo .photo-toast[hidden] { display: none; }
+.photo .photo-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.photo .photo-flash.go { animation: photo-flash 0.35s ease-out; }
+@keyframes photo-flash { from { opacity: 0.85; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .photo .photo-flash.go { animation: none; } }

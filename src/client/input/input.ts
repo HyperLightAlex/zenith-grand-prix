@@ -349,13 +349,18 @@ export class Input {
   private rumbleBusyUntil = 0;
 
   /** Rumble the pad if it can. Strength 0..1. */
+  /** No rumble at all for now (a replay is being watched). */
+  rumbleMuted = false;
+
   rumble(strength: number, ms: number): void {
+    if (this.rumbleMuted) return;
     this.rumbleBusyUntil = performance.now() + ms;
     this.pulse(Math.min(1, strength), Math.min(1, strength * 0.6), ms);
   }
 
   /** Low continuous rumble (road, strips, scraping). Gives way to a hit that is still playing. */
   rumbleRoad(strong: number, weak: number, ms: number): void {
+    if (this.rumbleMuted) return;
     if (performance.now() < this.rumbleBusyUntil) return;
     this.pulse(strong, weak, ms);
   }

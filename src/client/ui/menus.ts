@@ -47,7 +47,10 @@ export type ScreenId =
   | 'primer'
   | 'video'
   | 'pause'
-  | 'results';
+  | 'results'
+  | 'replay-menu'
+  | 'highlights'
+  | 'photo';
 
 /** The old single-screen names, still used by tools that drive the game: 'garage' is the hangar. */
 export type Screen = ScreenId | 'garage' | null;

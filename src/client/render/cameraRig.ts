@@ -2,9 +2,9 @@
 // stays behind the mech through bends, and swings to frame both fighters
 // when the pilot locks on.
 import * as THREE from 'three';
-import { MODE, deltaS, hwAt, medianAt, upYAt, type MechState, type Track } from '../../sim/index';
+import { MODE, deltaS, hwAt, kappaAt, medianAt, upYAt, type MechState, type Track } from '../../sim/index';
 import type { Feel } from '../game/tuning';
-import { trackPoint, trackUp } from './trackSpace';
+import { trackMatrix, trackPoint, trackUp } from './trackSpace';
 
 /** Speed the camera treats as "flat out": a forward's top speed on the speed lap. */
 const FULL_SPEED = 160;
@@ -12,7 +12,25 @@ const FULL_SPEED = 160;
 const toward = (v: number, target: number, rate: number, dt: number) => v + (target - v) * (1 - Math.exp(-rate * dt));
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
-export type CameraMode = 'intro' | 'play' | 'orbit';
+/**
+ * intro: the sweep round the grid. play: the chase. orbit: circling (the
+ * garage, the results). tv: a broadcast's trackside cameras, cutting from
+ * one to the next (replays). photo: posed by hand (photo mode).
+ */
+export type CameraMode = 'intro' | 'play' | 'orbit' | 'tv' | 'photo';
+
+/** Photo mode's camera, round the mech it frames: turned, raised, how far, the lens, and tilted. */
+export interface PhotoCam {
+  /** Radians round the mech, 0 behind it. */
+  yaw: number;
+  /** Radians up (negative: down). */
+  pitch: number;
+  dist: number;
+  /** The lens, degrees (vertical). */
+  fov: number;
+  /** Radians of roll. */
+  roll: number;
+}
 
 export interface CameraSubject {
   /** Interpolated track position of the mech being followed. */
@@ -31,6 +49,19 @@ export interface CameraSubject {
  * edge of the road is never seen from behind a pillar.
  */
 const CAM_EDGE = 1.5;
+
+/**
+ * The trackside cameras' spots, in order of preference: how far out past the
+ * road's edge and how high. Beside the barrier at head height; up over the
+ * boards (which stand 5.5 out, to 14 high); on a crane over the barrier.
+ */
+const TV_SPOTS: ReadonlyArray<readonly [number, number]> = [
+  [9, 7.5],
+  [10, 17],
+  [2.5, 13],
+];
+/** Where along its way up to a trackside camera the mech is checked to be in sight (0: where it is now; 1: just past). */
+const TV_PROBES = [0, 0.35, 0.7, 1];
 
 /** Punch-in timing, seconds: in, held, and back out. */
 const PUNCH_IN = 0.05;
@@ -95,6 +126,26 @@ export class CameraRig {
   private lurchT = 1;
   private lurchAmt = 0;
   private first = true;
+  /** Photo mode's camera (mode 'photo'). */
+  photo: PhotoCam = { yaw: 0.6, pitch: 0.15, dist: 13, fov: 45, roll: 0 };
+  /**
+   * Whether a camera at `from` can see `to` with nothing of the circuit in
+   * between (set by the race view): the trackside cameras are placed, and
+   * cut away, by it.
+   */
+  sightline: ((from: THREE.Vector3, to: THREE.Vector3) => boolean) | null = null;
+  /** The trackside camera in use (mode 'tv'): where along the road, how far out and how high, and which side. */
+  private tvS = 0;
+  private tvD = 0;
+  private tvUp = 7.5;
+  private tvSide = 1;
+  private tvFresh = true;
+  /** Checking the shot's line to the mech, and how long it has been blocked. */
+  private tvCheckT = 0;
+  private tvBlockedT = 0;
+  private tvPos = new THREE.Vector3();
+  private tvProbe = new THREE.Vector3();
+  private photoFrame = new THREE.Matrix4();
   private chasePos = new THREE.Vector3();
   private chaseLook = new THREE.Vector3();
   private battlePos = new THREE.Vector3();
@@ -140,6 +191,7 @@ export class CameraRig {
   reset(): void {
     this.lurchAmt = 0;
     this.first = true;
+    this.tvFresh = true;
     this.trauma = 0;
     this.restartOrbit();
   }
@@ -160,6 +212,50 @@ export class CameraRig {
     this.orbitTurn += rad;
     // Keep the inspection camera above the floor and short of the overhead pole.
     this.orbitElevation = THREE.MathUtils.clamp(this.orbitElevation + elevation, -0.15, 0.95);
+  }
+
+  /**
+   * Place the next trackside camera: a way up the road from the mech, on the
+   * outside of any bend, beside the barrier at head height. Where the boards,
+   * walls, rock or stands would be in the way of the mech coming up the road
+   * to it, it goes higher, nearer or farther, or to the other side; failing
+   * all of those, wherever the most of the mech's way is seen.
+   */
+  private placeTv(sub: CameraSubject): void {
+    const track = this.track;
+    const ahead = 150 + Math.max(0, sub.mech.speed - 60) * 0.6;
+    const k = kappaAt(track, sub.s + ahead);
+    const outside = Math.abs(k) > 1 / 900 ? (k > 0 ? -1 : 1) : this.tvSide;
+    const see = this.sightline;
+    let best = -1;
+    for (const along of [ahead, ahead * 0.7, ahead * 1.3]) {
+      const s = sub.s + along;
+      const hw = hwAt(track, s);
+      for (const side of [outside, -outside]) {
+        for (const [out, up] of TV_SPOTS) {
+          const d = side * (hw + out);
+          // How much of the mech's way up to the camera, and past it, is in
+          // sight, down to its feet (so nothing near the lens hides the road).
+          let seen = TV_PROBES.length;
+          if (see) {
+            trackPoint(track, s, d, up, this.tvPos);
+            seen = 0;
+            for (const t of TV_PROBES) {
+              trackPoint(track, sub.s + (along + 25) * t, sub.d * (1 - t), 1.2, this.tvProbe);
+              if (see(this.tvPos, this.tvProbe)) seen++;
+            }
+          }
+          if (seen > best) {
+            best = seen;
+            this.tvS = s;
+            this.tvD = d;
+            this.tvUp = up;
+            this.tvSide = side;
+          }
+          if (seen === TV_PROBES.length) return;
+        }
+      }
+    }
   }
 
   update(dt: number, sub: CameraSubject, panX: number, panY: number, lookBack: boolean): void {
@@ -269,6 +365,41 @@ export class CameraRig {
         trackPoint(track, sub.s, sub.d, 4.4, look);
       }
       fov = this.orbitFov;
+    } else if (this.mode === 'tv') {
+      // A camera by the road a little way ahead, on the outside of any bend,
+      // panning as the mech comes and goes by; once it is well past, a cut to
+      // the next one.
+      const rel = deltaS(track, this.tvS, sub.s);
+      if (this.tvFresh || rel < -38 || rel > 260) {
+        this.placeTv(sub);
+        this.tvFresh = false;
+        this.fov = 40;
+      }
+      trackPoint(track, this.tvS, this.tvD, this.tvUp, pos);
+      trackPoint(track, sub.s, sub.d, 3.6 + this.hSmooth, look);
+      // Something come between (the mech took another line, or went over a
+      // crest): if it stays blocked, a cut to another camera.
+      this.tvCheckT -= dt;
+      if (this.sightline && this.tvCheckT <= 0) {
+        this.tvCheckT = 0.2;
+        this.tvBlockedT = this.sightline(pos, look) ? 0 : this.tvBlockedT + 0.2;
+        if (this.tvBlockedT >= 0.6) {
+          this.tvBlockedT = 0;
+          this.tvFresh = true;
+        }
+      }
+      // Zoomed to hold the mech at about the same size, near or far.
+      fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(11 / Math.max(1, pos.distanceTo(look)))), 9, 62);
+      this.fov = fov;
+    } else if (this.mode === 'photo') {
+      // Posed by hand round the mech, in its own frame (yaw 0: behind it).
+      const p = this.photo;
+      trackMatrix(track, sub.s, sub.d, sub.h ?? 0, m.facing, this.photoFrame);
+      const r = p.dist;
+      pos.set(Math.sin(p.yaw) * r * Math.cos(p.pitch), 3.8 + r * Math.sin(p.pitch), -Math.cos(p.yaw) * r * Math.cos(p.pitch)).applyMatrix4(this.photoFrame);
+      look.set(0, 3.8, 0).applyMatrix4(this.photoFrame);
+      fov = p.fov;
+      this.fov = fov;
     }
 
     // ---- punch-in: dart toward what the camera is looking at
@@ -290,7 +421,8 @@ export class CameraRig {
     cam.position.copy(pos);
     cam.up.copy(this.up);
     cam.lookAt(look);
-    if (this.trauma > 0.001 && dt > 0) {
+    if (this.mode === 'photo' && this.photo.roll !== 0) cam.rotateZ(this.photo.roll);
+    if (this.trauma > 0.001 && dt > 0 && this.mode !== 'photo') {
       const t2 = this.trauma * this.trauma;
       cam.position.x += (Math.random() - 0.5) * 1.3 * t2;
       cam.position.y += (Math.random() - 0.5) * 1.3 * t2;

@@ -29,6 +29,11 @@ This is version 0.5: nine circuits and three ways to play.
   (offered the first time you open Play; `?tutorial=1` goes straight to
   it); a primer on each frame, Forward, Midfielder and Defender; and the
   controls.
+- **Replays and photo mode**: watch the last race back from its results,
+  at any speed, following any pilot, from the chase or trackside cameras,
+  jumping to its moments (knockouts, ring-outs, changes of lead, the
+  finish); and pose the camera in a paused race or a replay to save a
+  picture.
 - **Online**: private rooms for up to six people, joined by code or invite
   link, with computer pilots in the empty seats. Friends can form a squad of
   up to three that stays together from room to room.

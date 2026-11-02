@@ -932,6 +932,55 @@ not the computer flying) puts one card on the grid, as the tutorial does:
 the frame's weapons, its job and its abilities, pointing to the full guide.
 Once per frame, per device.
 
+### Replays and photo mode
+
+Every race played offline can be **watched back** from its results
+(**Watch the replay**): the last race only, for now, kept until the next one
+starts. A replay is not a recording of the picture but of the race: its
+setup (`RaceConfig`: seed, seats, rules, the lesson if it was the tutorial)
+and the person's inputs, tick by tick (`src/client/game/replay.ts`). The
+computer pilots are deterministic, so playing those inputs into a new race
+from the same setup is the same race. Inputs are run-length encoded in the
+wire format (`packInput`), and the race's own inputs are quantised the same
+way as they are flown, so what is replayed is exactly what was raced; a
+whole race is a few kilobytes to a few tens. Recording ends three seconds
+after the flag.
+
+Watching one first runs the whole race through in the background, a slice
+a frame (`ReplaySession.prepare`), keeping a snapshot every 10 seconds
+for **seeking**, and the race's **moments** for jumping to: the start, each
+new lap, knockouts, ring-outs, your parries, changes of leader, the finish.
+If the game has changed since the race (its rules, its pilots), the race no
+longer plays out as it went: the end is checked against a fingerprint
+taken when it was raced, and the bar says so.
+
+A replay is watched with the bar at the foot of the picture: play and
+pause, back and on 5 seconds, five speeds (¼ to 4), whose race to follow
+(any of the six), the camera (the chase, the **trackside** cameras, or the
+orbit) and the next moment, each with its button for the device in hand, and
+the timeline with the moments marked on it, to click. A knockout slows the
+picture as in the race. The HUD is that of whoever is followed, without
+the hints and plays. Its menu holds the moments as a list, photo mode,
+the controls and the way back to the results.
+
+The **trackside cameras** are a broadcast's: a camera by the road some way
+ahead of the mech followed, on the outside of any bend, panning and zooming
+to hold it the same size as it comes and goes past, then a cut to the next
+once it is well past. Each is placed where it can see the mech's way up to
+it (`render/sightlines.ts`: the solid scenery near the road, copied into a
+grid over the ground plan, a line tested only against what lies in the
+squares it crosses): beside the barrier at head height, else up over the
+boards, else on a crane over the barrier, nearer or farther, or across the
+road. A camera that loses the mech for more than half a second cuts away.
+
+**Photo mode**, from the pause menu in a race offline and from a replay's
+menu, holds the picture still and lets the camera be posed round the mech
+followed: turned round it and raised (left stick, the keys or a drag),
+nearer or farther (the triggers, Z and C, the wheel or a pinch), a longer or
+wider lens and a tilt, with the HUD gone. The picture is saved as a PNG at
+2560 pixels on its long side whatever the screen, named for the circuit and
+the time; the hints can be hidden too.
+
 ## 3. How it is built
 
 ```

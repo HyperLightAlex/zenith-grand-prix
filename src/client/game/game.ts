@@ -60,12 +60,13 @@ import {
 } from '../../gp/grandPrix';
 import { normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
 import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
-import { Input, type Device } from '../input/input';
+import { Input, type Device, type MenuInput } from '../input/input';
 import { TouchControls } from '../input/touch';
 import { holdLandscape, isFullscreen, setFullscreen } from '../fullscreen';
 import { Hangar } from '../render/hangar';
 import { RaceView } from '../render/raceView';
 import { Renderer } from '../render/renderer';
+import { Sightlines } from '../render/sightlines';
 import { buildTrackVisual, type TrackVisual } from '../render/trackMesh';
 import { buildWorld, type World } from '../render/world';
 import { disposeTree, themeFor } from '../render/themes';
@@ -106,13 +107,26 @@ import { LocalSession } from './session';
 import { TUNE_GROUPS, Tuning } from './tuning';
 import { CARD_MIN, Tutorial, type Coach } from './tutorial';
 import { FrameTip } from './primers';
+import { LEAD_IN, ReplaySession, makeReplay, type Replay } from './replay';
+import { ReplayBar } from '../ui/replayBar';
+import { PhotoMode, photoName, type PhotoAction } from './photo';
+import { PhotoPanel } from '../ui/photoPanel';
+import type { CameraMode } from '../render/cameraRig';
 import { registerHowTo, type PrimerData } from '../ui/screens/howto';
 import { TutorialPanel } from '../ui/tutorialPanel';
 
-type State = 'title' | 'garage' | 'race' | 'paused' | 'results';
+type State = 'title' | 'garage' | 'race' | 'paused' | 'results' | 'replay';
 export type GameMode = 'free' | 'gp' | 'online' | 'tutorial';
 
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
+/** A replay's playback speeds, slowest first. */
+const REPLAY_SPEEDS = [0.25, 0.5, 1, 2, 4];
+/** A replay's cameras, in the order the camera control steps through them. */
+const REPLAY_CAMERAS: Array<{ mode: 'play' | 'tv' | 'orbit'; name: string }> = [
+  { mode: 'play', name: 'Chase' },
+  { mode: 'tv', name: 'Trackside' },
+  { mode: 'orbit', name: 'Orbit' },
+];
 /** The garage's mech sits this far right of centre (of the screen's width), clear of the menu. */
 const GARAGE_SHIFT = 0.07;
 
@@ -240,12 +254,14 @@ export class Game {
   audio: AudioEngine;
   private trackVis!: TrackVisual;
   private world!: World;
+  /** What on the circuit stands in the way of what (the replay's trackside cameras). */
+  private sightlines!: Sightlines;
   /** The garage's set, built once; stood round your mech while a hangar screen is up. */
   private readonly hangar = new Hangar();
   private readonly hangarFrame = new THREE.Matrix4();
   /** Id of the circuit whose scenery is built. */
   private trackId = '';
-  session!: LocalSession | NetSession;
+  session!: LocalSession | NetSession | ReplaySession;
   private view!: RaceView;
   private state: State = 'title';
   /** The mode being played (null on the title and between modes). */
@@ -300,6 +316,20 @@ export class Game {
   private cardHeld = false;
   /** The tutorial, done (or skipped) and offered, on this device. */
   private tutorialSave: { done: boolean; offered: boolean } = readJson('zgp.tutorial', { done: false, offered: false });
+  /** The replay being watched (state 'replay'), and how. */
+  replay: ReplaySession | null = null;
+  /** The race it is of, back on screen behind the results when it is over. */
+  private replayOf: LocalSession | null = null;
+  private readonly replayBar: ReplayBar;
+  private replayFocus = 0;
+  private replayCam = 0;
+  private replayStarted = false;
+  /** Photo mode, over a held race or a replay. */
+  private readonly photo = new PhotoMode();
+  private readonly photoPanel: PhotoPanel;
+  private photoPrevCam: CameraMode = 'play';
+  /** Save the next picture drawn. */
+  private captureNext = false;
   /** The frames whose first-race tip has been shown, on this device. */
   private framesTipped: Record<string, boolean> = readJson('zgp.frameTips', {});
   /** The player's revs on the grid, by band (0 below the green, 2 in it, 3 past it), for the tick into the green. */
@@ -331,6 +361,17 @@ export class Game {
     this.hud = new Hud(uiRoot);
     this.tutorialPanel = new TutorialPanel(uiRoot);
     this.tutorialPanel.onContinue = () => this.tutorialContinue();
+    this.replayBar = new ReplayBar(uiRoot, {
+      playPause: () => this.replayControl('confirm'),
+      seekBy: (s) => this.replaySeek(s),
+      seekTo: (f) => this.replay && this.replayJump(f * this.replay.length),
+      speed: (d) => this.replayControl(d > 0 ? 'up' : 'down'),
+      pilot: (d) => this.replayControl(d > 0 ? 'rb' : 'lb'),
+      camera: () => this.replayControl('x'),
+      moment: () => this.replayControl('y'),
+      menu: () => this.replayControl('pause'),
+    });
+    this.photoPanel = new PhotoPanel(uiRoot, (a) => this.photoAction(a));
     this.eyecatch = new Eyecatch(uiRoot);
     this.nowPlaying = new NowPlaying(uiRoot, () => this.nextTrack());
     this.hud.onRadio = () => this.audio.play('comms', { volume: 0.7 });
@@ -625,11 +666,13 @@ export class Game {
   }
 
   /** Put a session on screen: its view, effects, the scenery back. */
-  private attach(session: LocalSession | NetSession, previewOnly: boolean): void {
+  private attach(session: LocalSession | NetSession | ReplaySession, previewOnly: boolean): void {
     this.view?.dispose();
     this.attracting = false;
     this.session = session;
     this.view = new RaceView(this.renderer, this.session, this.trackVis, this.tuning.feel, this.raceFactions, previewOnly);
+    const sight = this.sightlines;
+    this.view.cam.sightline = (a, b) => sight.clear(a, b);
     // Out of the hangar, if the garage had it up: the circuit is back.
     this.hangar.hide();
     this.garageShown = null;
@@ -704,6 +747,7 @@ export class Game {
     const theme = themeFor(def.theme);
     this.trackVis = buildTrackVisual(track, theme);
     this.world = buildWorld(track, theme);
+    this.sightlines = new Sightlines(track, [this.trackVis.group, this.world.group], [this.trackVis.road, this.world.sky]);
     this.hangar.setSky(this.world.sky, theme.sunLight);
     this.renderer.setTheme(theme);
     setCelTheme(theme);
@@ -750,6 +794,7 @@ export class Game {
       document.documentElement.classList.toggle('touch', d === 'touch');
       this.hud.setDevice(d);
       this.menus.setDevice(d);
+      this.replayBar.setDevice(d);
     };
     if (d !== 'touch' || now) apply();
     else window.addEventListener('pointerup', () => setTimeout(apply, 0), { once: true, capture: true });
@@ -1219,6 +1264,273 @@ export class Game {
     if (this.state !== 'race' || !this.coach?.card) return;
     // The button that closed it must not also fire a boost or a dash.
     if (this.coach.dismiss()) this.input.swallowHeld();
+  }
+
+  // ---- replays --------------------------------------------------------------------
+
+  /** A race just run offline can be watched again (from its results). */
+  get canReplay(): boolean {
+    return this.session instanceof LocalSession && this.mode !== 'online' && !!this.session.recorder.ticks;
+  }
+
+  /** The race just run, as a replay. */
+  private lastReplay(): Replay | null {
+    const s = this.session;
+    if (!(s instanceof LocalSession)) return null;
+    const label = [s.track.def.name, this.matchLabel()].filter(Boolean).join(' · ');
+    return makeReplay(s.recorder, s.trackDef.id, s.cfg, s.localId, this.raceFactions, label, s.race);
+  }
+
+  /** From the results: watch the race again, from the start. */
+  watchReplay(): void {
+    const replay = this.lastReplay();
+    if (!replay) return;
+    const rs = new ReplaySession(replay);
+    rs.paused = true;
+    if (this.session instanceof LocalSession) this.replayOf = this.session;
+    this.attach(rs, false);
+    this.replay = rs;
+    this.replayFocus = Math.max(0, replay.local);
+    this.replayCam = 0;
+    this.replayStarted = false;
+    this.view.focusId = this.replayFocus;
+    this.view.cam.mode = 'intro';
+    this.state = 'replay';
+    this.menus.show(null);
+    this.beginReplayHud();
+    this.music('race', rs.track.def.theme ?? 'meridian');
+  }
+
+  private beginReplayHud(): void {
+    const rs = this.replay;
+    if (!rs) return;
+    this.hud.begin(rs.race, rs.track, this.replayFocus, this.raceFactions);
+    this.hud.setMatch(`Replay · ${rs.replay.label}`);
+    this.hud.setDevice(this.input.device);
+    this.hud.setReplay(true);
+  }
+
+  /** Back to the results. */
+  leaveReplay(): void {
+    if (this.state !== 'replay') return;
+    this.replay = null;
+    // The race itself back behind the results (and its replay to watch again).
+    const race = this.replayOf;
+    this.replayOf = null;
+    if (race) {
+      this.attach(race, false);
+      this.view.focusId = Math.max(0, race.localId);
+      this.view.cam.mode = 'orbit';
+      this.view.cam.restartOrbit();
+    }
+    this.state = 'results';
+    this.hud.setReplay(false);
+    this.hud.hide();
+    this.replayBar.show(false);
+    this.menus.reset('results');
+    this.resultsMusic();
+  }
+
+  /** Send the replay to a tick (and play on, if it was playing). */
+  private replayJump(tick: number): void {
+    const rs = this.replay;
+    if (!rs || rs.progress < 1) return;
+    const playing = !rs.paused;
+    rs.seek(tick);
+    rs.paused = !playing && rs.race.tick < rs.length ? true : rs.race.tick >= rs.length;
+    this.view.cam.reset();
+    if (rs.race.phase !== PHASE.COUNTDOWN && this.view.cam.mode === 'intro') this.view.cam.mode = REPLAY_CAMERAS[this.replayCam].mode;
+  }
+
+  private replaySeek(seconds: number): void {
+    if (this.replay) this.replayJump(this.replay.race.tick + seconds * TICK_RATE);
+  }
+
+  /** Jump to one of the race's moments, a little before it, following whoever's moment it is. */
+  jumpToMoment(index: number): void {
+    const rs = this.replay;
+    const m = rs?.highlights[index];
+    if (!rs || !m) return;
+    this.replayJump(m.tick - LEAD_IN * TICK_RATE);
+    rs.paused = false;
+    this.followInReplay(m.mech);
+  }
+
+  private followInReplay(id: number): void {
+    if (!this.replay || id === this.replayFocus) return;
+    this.replayFocus = id;
+    this.view.focusId = id;
+    this.view.cam.reset();
+    this.beginReplayHud();
+  }
+
+  /** A control pressed while watching (see ReplayBar for the keys). */
+  private replayControl(key: string): void {
+    const rs = this.replay;
+    if (!rs || this.state !== 'replay') return;
+    if (key === 'pause' || key === 'back') {
+      rs.paused = true;
+      this.menus.reset('replay-menu');
+      return;
+    }
+    if (rs.progress < 1) return;
+    const n = rs.race.mechs.length;
+    switch (key) {
+      case 'confirm':
+        if (rs.race.tick >= rs.length) this.replayJump(0);
+        rs.paused = !rs.paused;
+        break;
+      case 'left':
+        this.replaySeek(-5);
+        break;
+      case 'right':
+        this.replaySeek(5);
+        break;
+      case 'up':
+      case 'down': {
+        const i = REPLAY_SPEEDS.indexOf(rs.speed);
+        rs.speed = REPLAY_SPEEDS[Math.max(0, Math.min(REPLAY_SPEEDS.length - 1, (i < 0 ? 2 : i) + (key === 'up' ? 1 : -1)))];
+        break;
+      }
+      case 'lb':
+      case 'rb':
+        this.followInReplay((this.replayFocus + (key === 'rb' ? 1 : n - 1)) % n);
+        break;
+      case 'x':
+        this.replayCam = (this.replayCam + 1) % REPLAY_CAMERAS.length;
+        if (rs.race.phase !== PHASE.COUNTDOWN || this.view.cam.mode !== 'intro') this.view.cam.mode = REPLAY_CAMERAS[this.replayCam].mode;
+        this.view.cam.reset();
+        break;
+      case 'y': {
+        // The next moment after now (a little way on, so the one just jumped to is not chosen again).
+        const now = rs.race.tick + (LEAD_IN + 1) * TICK_RATE;
+        const next = rs.highlights.findIndex((h) => h.tick > now);
+        this.jumpToMoment(next >= 0 ? next : 0);
+        break;
+      }
+    }
+  }
+
+  /** Each frame while watching: preparing, then the controls, playback and its bar. */
+  private replayFrame(dt: number, menu: string[]): number {
+    const rs = this.replay!;
+    if (!rs.prepare(10)) {
+      this.replayBar.show(true);
+      this.replayBar.update({ tick: 0, ticks: rs.length, paused: true, speed: rs.speed, pilot: '', camera: '', preparing: rs.progress, highlights: [], drifted: false });
+      // Ready: play from the start (the trackside cameras' sightlines made
+      // ready first, while the bar is still up, rather than on the first cut).
+      if (rs.progress >= 1) {
+        this.sightlines.prepare();
+        rs.paused = false;
+      }
+      return 0;
+    }
+    if (rs.progress >= 1 && rs.paused && rs.race.tick === 0 && !this.replayStarted) {
+      this.replayStarted = true;
+      rs.paused = false;
+    }
+    if (this.menus.screen) {
+      this.menus.handle(menu as MenuInput[]);
+      this.replayBar.show(false);
+      return 0;
+    }
+    for (const k of menu) this.replayControl(k);
+    if (this.state !== 'replay' || this.menus.screen) return 0;
+    // Slow motion round a knockout, as in the race.
+    if (this.slowmo > 0) {
+      this.slowmo -= dt;
+      rs.timeScale = this.slowmo > 0.25 ? 0.3 : 0.3 + (1 - this.slowmo / 0.25) * 0.7;
+    } else rs.timeScale = 1;
+    rs.update(dt, null);
+    for (const e of rs.events) this.onEvent(e);
+    // The countdown's sweep, then the chosen camera.
+    if (this.view.cam.mode === 'intro' && rs.race.phase !== PHASE.COUNTDOWN) this.view.cam.mode = REPLAY_CAMERAS[this.replayCam].mode;
+    this.view.focusId = this.replayFocus;
+    this.replayBar.show(true);
+    this.replayBar.update({
+      tick: rs.race.tick,
+      ticks: rs.length,
+      paused: rs.paused,
+      speed: rs.speed,
+      pilot: rs.race.mechs[this.replayFocus]?.name ?? '',
+      camera: REPLAY_CAMERAS[this.replayCam].name,
+      preparing: null,
+      highlights: rs.highlights,
+      drifted: !rs.faithful,
+    });
+    return rs.paused ? 0 : dt * rs.speed * rs.timeScale;
+  }
+
+  /** Back to watching from the replay's menu. */
+  resumeReplay(): void {
+    const rs = this.replay;
+    if (!rs || this.state !== 'replay') return;
+    this.menus.show(null);
+    rs.paused = rs.race.tick >= rs.length;
+    this.input.swallowHeld();
+  }
+
+  // ---- photo mode ------------------------------------------------------------------
+
+  /** Photo mode: over the race held by the pause menu (offline), or over a replay. */
+  get canPhoto(): boolean {
+    return (this.state === 'paused' && !(this.session instanceof NetSession)) || this.state === 'replay';
+  }
+
+  openPhoto(): void {
+    if (!this.canPhoto || this.photo.active) return;
+    const from = this.state === 'replay' ? 'replay' : 'paused';
+    if (this.replay) this.replay.paused = true;
+    this.menus.show(null);
+    this.photoPrevCam = this.view.cam.mode;
+    this.view.cam.mode = 'photo';
+    this.photo.open(from, this.view.cam.photo, this.renderer.renderer.domElement);
+    this.hud.hide();
+    this.tutorialPanel.show(false);
+    this.replayBar.show(false);
+    this.input.swallowHeld();
+  }
+
+  private closePhoto(): void {
+    const from = this.photo.from;
+    if (!from) return;
+    this.photo.close();
+    this.view.cam.mode = this.photoPrevCam;
+    this.view.cam.reset();
+    this.photoPanel.show(false, this.input.device, false);
+    this.hud.root.hidden = false;
+    this.menus.reset(from === 'replay' ? 'replay-menu' : 'pause');
+    this.input.swallowHeld();
+  }
+
+  private photoAction(a: PhotoAction): void {
+    if (!this.photo.active) return;
+    if (a === 'take') this.captureNext = true;
+    else if (a === 'look') this.toggleLook();
+    else if (a === 'hints') this.photo.hintsHidden = !this.photo.hintsHidden;
+    else if (a === 'back') this.closePhoto();
+  }
+
+  /** Save the picture just drawn (call straight after drawing it, before the browser shows it). */
+  private savePhoto(): void {
+    const canvas = this.renderer.renderer.domElement;
+    const name = photoName(this.session.track.def.name);
+    try {
+      canvas.toBlob((blob) => {
+        if (!blob) return this.photoPanel.failed('The picture could not be saved here');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.append(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+        this.photoPanel.taken(name);
+      }, 'image/png');
+    } catch {
+      this.photoPanel.failed('The picture could not be saved here');
+    }
   }
 
   // ---- Grand Prix ----------------------------------------------------------------
@@ -1889,7 +2201,7 @@ export class Game {
   private onEvent(e: SimEvent): void {
     const race = this.session.race;
     const local = this.session.localId;
-    const inRace = this.state === 'race';
+    const inRace = this.state === 'race' || this.state === 'replay';
     this.view.handleEvent(e);
     if (inRace) this.hud.onEvent(e, race);
     const quiet = inRace ? 1 : 0.25;
@@ -2312,7 +2624,8 @@ export class Game {
     readLook(this.tuning.feel);
     if (this.lookParam !== null) look.on = this.lookParam >= 0.5;
     const held = this.state === 'race' && this.cardHeld;
-    const paused = (this.state === 'paused' && !online) || held;
+    const stopped = (this.state === 'replay' && (!this.replay || this.replay.paused || !!this.menus.screen)) || this.photo.active;
+    const paused = (this.state === 'paused' && !online) || held || stopped;
     tickDrawings(this.renderer.stillShowing || paused ? 0 : dt * (this.state === 'race' ? this.session.timeScale : 1));
     this.eyecatch.update(paused ? 0 : dt);
     this.renderer.paused = paused;
@@ -2326,9 +2639,11 @@ export class Game {
     DRAWN_FLAMES.uFrame.value = drawClock.drawing % 3;
     this.world.sky.uniforms.uBands.value = look.on ? 9 : 0;
     this.hud.anime = look.on;
-    this.renderer.moments = this.state === 'race';
+    this.renderer.moments = this.state === 'race' || this.state === 'replay';
     const mine = this.session.race.mechs[this.session.localId];
     this.input.battle = this.state === 'race' && !!mine && mine.mode === MODE.BATTLE && !mine.retired;
+    // Watching a replay, the pad does not shake with the blows.
+    this.input.rumbleMuted = this.state === 'replay';
     // How far behind the mech the lock's target is (1 dead astern): on the
     // keys and the touch screen, pushing toward it eases off the pace.
     let behind = 0;
@@ -2382,7 +2697,11 @@ export class Game {
     const local = this.session.localId;
     let simDt = dt;
 
-    switch (this.state) {
+    if (this.photo.active) {
+      // Photo mode: everything held; the camera posed by hand.
+      for (const a of this.photo.frame(dt, this.view.cam.photo, this.input.state, this.input.camX, this.input.camY, this.input.device, menu)) this.photoAction(a);
+      simDt = 0;
+    } else switch (this.state) {
       case 'title': {
         this.menus.handle(menu);
         // The title card itself holds the race behind it (no sound, no
@@ -2462,7 +2781,13 @@ export class Game {
         this.session.update(dt, null);
         for (const e of this.session.events) this.view.handleEvent(e);
         break;
+      case 'replay':
+        simDt = this.replayFrame(dt, menu);
+        break;
     }
+    if (this.state !== 'replay' || this.photo.active) this.replayBar.show(false);
+    this.photoPanel.show(this.photo.active, this.input.device, this.photo.hintsHidden);
+    this.photoPanel.update(dt);
 
     const tutOn = this.state === 'race' && !!this.coach && !this.coach.over;
     this.cardHeld = tutOn && !!this.coach!.card;
@@ -2486,8 +2811,9 @@ export class Game {
     const flyingNow = this.state === 'race' && this.view.focusId === local;
     // A painted still holds everything, the camera and the sparks included.
     const viewDt = this.renderer.stillShowing ? 0 : simDt * (this.state === 'race' ? this.session.timeScale : 1);
+    const watching = this.state === 'replay';
     this.view.update(viewDt, flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
-    if ((this.state === 'race' || (this.state === 'paused' && online)) && drawDt > 0) this.hud.update(this.cardHeld ? 0 : drawDt, cur, this.view.plates, this.view.focusId);
+    if ((this.state === 'race' || watching || (this.state === 'paused' && online)) && drawDt > 0 && !this.photo.active) this.hud.update(this.cardHeld || (watching && simDt === 0) ? 0 : drawDt, cur, this.view.plates, this.view.focusId);
     // The scenery's own motion (water, lights) holds for a painted still too.
     if (!this.renderer.stillShowing) this.worldTime += dt;
     this.trackVis.update(this.worldTime);
@@ -2507,7 +2833,7 @@ export class Game {
     // Continuous sound follows whoever the camera is on.
     const f = cur.mechs[this.view.focusId];
     const sc = this.scene;
-    sc.racing = (this.state === 'race' || this.state === 'results' || (this.state === 'paused' && online)) && cur.phase !== PHASE.COUNTDOWN && !f.retired && !this.cardHeld;
+    sc.racing = (this.state === 'race' || this.state === 'results' || (watching && simDt > 0) || (this.state === 'paused' && online)) && cur.phase !== PHASE.COUNTDOWN && !f.retired && !this.cardHeld;
     sc.speed = f.speed;
     // (Home, the computer drives it on: the engine is its throttle, not the pad's.)
     sc.throttle = this.state === 'race' && f.id === local && !f.finished ? Math.max(this.input.state.throttle, f.mode === MODE.BATTLE ? 0.6 : 0) : 0.8;
@@ -2533,7 +2859,22 @@ export class Game {
 
     if (drawDt > 0 && !this.titleCovered()) {
       this.renderer.reviewProbe?.setContext(`${this.state} · tick ${cur.tick} · lap ${f.lap}`, this.view.reviewDetailLevels());
+      // A photo is drawn larger than the screen shows (its long side 2560 px, as far as 3x), then saved.
+      const shoot = this.captureNext;
+      if (shoot) {
+        const c = this.renderer.renderer.domElement;
+        this.renderer.overrideRatio = Math.min(3, Math.max(window.devicePixelRatio || 1, 2560 / Math.max(1, c.clientWidth, c.clientHeight)));
+        this.renderer.resize();
+        this.view.resize();
+      }
       this.renderer.render(drawDt, this.time);
+      if (shoot) {
+        this.captureNext = false;
+        this.savePhoto();
+        this.renderer.overrideRatio = null;
+        this.renderer.resize();
+        this.view.resize();
+      }
     }
   }
 
