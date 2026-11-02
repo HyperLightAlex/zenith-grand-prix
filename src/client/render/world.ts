@@ -31,6 +31,7 @@ import type { TitanMat } from './titan/pose';
 import { buildZenith } from './zenith';
 import { buildAbyss } from './abyss';
 import { buildMonsoon } from './monsoon';
+import { Site, groundRoad, siteMeshes } from './outposts';
 import { BLOCK, DECK_FOOT, DECK_TOP, PROMENADE, STREET, bridgeEnds, bridgeLinks, fromIsland, islandBlocks, islandOutline, meridianIslands, streetHalf } from './meridianCity';
 /** Meridian's ground (M5): a plaza's square covers this many units, a seawall's face (along it) this many. */
 const PLAZA_TILE = 30;
@@ -722,6 +723,16 @@ function quads(list: Quad[], faces: (normal: THREE.Vector3, middle: THREE.Vector
   g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   return g;
+}
+
+/** Whether the fallen titan lies under any of a circle `r` round (x, z), in plan. */
+function onTitanPlan(body: { topAt(x: number, z: number): number } | null, x: number, z: number, r: number): boolean {
+  if (!body) return false;
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    if (body.topAt(x + Math.cos(a) * r, z + Math.sin(a) * r) > -Infinity) return true;
+  }
+  return body.topAt(x, z) > -Infinity;
 }
 
 /** Use `painted` on `mesh` with the painted background, its own material otherwise. */
@@ -2718,44 +2729,90 @@ function buildTitansRest(ctx: Ctx): void {
     console.warn('titan model not loaded', err);
   });
 
+  // Where the salvage camp stands (below): behind the stands, on the start's side away from the titan.
+  const campAt = (() => {
+    const at0 = trackPoint(track, -120, 0, 0, new THREE.Vector3());
+    frameAt(track, -120, f);
+    const away = body && (body.minX + body.maxX) / 2 - at0.x > 0 ? -1 : 1;
+    return { x: at0.x + f.rx * away * 330, z: at0.z + f.rz * away * 330, away, rx: f.rx, rz: f.rz };
+  })();
+  const nearCamp = (x: number, z: number, r: number) => Math.hypot(x - campAt.x, z - campAt.z) < 200 + r;
+
   // ---- dunes drifted against it, and wreckage half buried ----------------------------
   {
     const rnd = mulberry(611);
     const dunes: THREE.BufferGeometry[] = [];
     const clear = (x: number, z: number, r: number) => ctx.clearance(x, z) > r + 40;
-    for (let tries = 0; tries < 600 && dunes.length < 40; tries++) {
-      // Round the titan, drifted against it.
-      const x0 = body ? body.minX - 300 : cx - 1500, x1 = body ? body.maxX + 300 : cx + 1500;
-      const z0 = body ? body.minZ - 250 : cz - 1500, z1 = body ? body.maxZ + 250 : cz + 1500;
+    // The wind blows one way here (from the west): every dune a crescent
+    // with its long gentle back to the wind, its steep slip face and its
+    // horns downwind, drifted up round the titan.
+    const WIND = 0.35;
+    // Shaded by hand toward the sun, in the desert floor's own two colours
+    // (it is drawn unlit): its sand in the light, its lavender shade away from it.
+    const sand = new THREE.Color(theme.groundLight2);
+    const shade = new THREE.Color(theme.groundDeep);
+    const tone = new THREE.Color();
+    const nrm = new THREE.Vector3();
+    const onTitan = (x: number, z: number, r: number) => !!body && [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]].some(([a, b]) => body.topAt(x + a, z + b) > -Infinity);
+    for (let tries = 0; tries < 700 && dunes.length < 34; tries++) {
+      const x0 = body ? body.minX - 500 : cx - 1500, x1 = body ? body.maxX + 500 : cx + 1500;
+      const z0 = body ? body.minZ - 400 : cz - 1500, z1 = body ? body.maxZ + 400 : cz + 1500;
       const x = x0 + rnd() * (x1 - x0);
       const z = z0 + rnd() * (z1 - z0);
-      const r = 60 + rnd() * 120;
-      if (!clear(x, z, r)) continue;
-      const g = new THREE.SphereGeometry(r, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).toNonIndexed();
-      g.deleteAttribute('uv');
-      g.scale(1.6 + rnd() * 0.8, 0.22 + rnd() * 0.18, 1);
-      g.rotateY(rnd() * 3);
-      g.translate(x, -2, z);
-      // Stretched, a dune reaches further than its clearance allowed for: none over the road.
-      if (ctx.inRoad(g)) continue;
-      dunes.push(paint(g, () => new THREE.Color(0xf1e6cc)));
+      const W = 160 + rnd() * 260;
+      const L = W * (0.55 + rnd() * 0.25);
+      const H = 8 + rnd() * 16;
+      if (!clear(x, z, W * 0.6) || onTitan(x, z, W * 0.5) || nearCamp(x, z, W * 0.6)) continue;
+      const g = new THREE.PlaneGeometry(W, L, 20, 14).rotateX(-Math.PI / 2);
+      const pos = g.attributes.position;
+      for (let k = 0; k < pos.count; k++) {
+        const u = pos.getX(k) / (W / 2);
+        const t = pos.getZ(k) / (L / 2);
+        // The crest bows downwind toward the horns.
+        const tc = 0.15 + 0.55 * u * u;
+        const across = Math.max(0, 1 - u * u) ** 1.2;
+        const along = t < tc ? ((t + 1) / (tc + 1)) ** 1.6 : Math.max(0, 1 - (t - tc) / 0.3) ** 0.7;
+        pos.setY(k, H * across * along - 1.2);
+      }
+      g.computeVertexNormals();
+      const d = g.toNonIndexed();
+      g.dispose();
+      d.deleteAttribute('uv');
+      d.rotateY(WIND + (rnd() - 0.5) * 0.25);
+      // Each face lit by how it faces the sun: the slip faces in shade.
+      const nor = d.attributes.normal;
+      const col = new Float32Array(nor.count * 3);
+      for (let k = 0; k < nor.count; k += 3) {
+        nrm.set(nor.getX(k) + nor.getX(k + 1) + nor.getX(k + 2), nor.getY(k) + nor.getY(k + 1) + nor.getY(k + 2), nor.getZ(k) + nor.getZ(k + 1) + nor.getZ(k + 2)).normalize();
+        const flatLit = SUN_DIR.y;
+        const lit = Math.max(0, nrm.dot(SUN_DIR));
+        tone.copy(sand).lerp(shade, THREE.MathUtils.clamp((flatLit - lit) * 1.6, 0, 0.85));
+        if (lit > flatLit) tone.lerp(new THREE.Color(0xffffff), Math.min(0.25, (lit - flatLit) * 0.8));
+        for (let q = 0; q < 3; q++) col.set([tone.r, tone.g, tone.b], (k + q) * 3);
+      }
+      d.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      d.translate(x, theme.groundY, z);
+      if (ctx.inRoad(d)) continue;
+      dunes.push(d);
     }
     if (dunes.length) {
-      const m = new THREE.Mesh(mergeGeometries(dunes)!, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: 0x6a5e48, emissiveIntensity: 0.35 }));
+      const m = new THREE.Mesh(mergeGeometries(dunes)!, new THREE.MeshBasicMaterial({ vertexColors: true }));
       m.frustumCulled = false;
       group.add(m);
       if (sandTex) swapMaterial(ctx, m, paintedRock(sandTex, sandTex, 60, 60));
     }
-    // Wreckage: armour plates, a gun barrel, a fallen pylon, half buried round about.
+    // Wreckage: armour plates, a gun barrel, a fallen pylon, half buried in
+    // a field round the titan where they came off it as it fell (none far
+    // out on the open desert).
     let wrecks = 0;
-    for (let tries = 0; tries < 400 && wrecks < 34; tries++) {
-      const a = rnd() * Math.PI * 2;
-      const r = 400 + rnd() * 1800;
-      const x = cx + Math.cos(a) * r;
-      const z = cz + Math.sin(a) * r;
-      const sz = 40 + rnd() * 70;
+    const bx0 = body ? body.minX - 380 : cx - 900, bx1 = body ? body.maxX + 380 : cx + 900;
+    const bz0 = body ? body.minZ - 380 : cz - 900, bz1 = body ? body.maxZ + 380 : cz + 900;
+    for (let tries = 0; tries < 500 && wrecks < 30; tries++) {
+      const x = bx0 + rnd() * (bx1 - bx0);
+      const z = bz0 + rnd() * (bz1 - bz0);
+      const sz = 30 + rnd() * 60;
       if (!clear(x, z, sz * 1.8)) continue;
-      if (body && [[0, 0], [sz, 0], [-sz, 0], [0, sz], [0, -sz]].some(([a, b]) => body.topAt(x + a * 1.6, z + b * 1.6) > -Infinity)) continue;
+      if (onTitan(x, z, sz * 1.6) || nearCamp(x, z, sz * 1.8)) continue;
       const g = rnd() < 0.6 ? block(-sz, sz, -sz * 0.18, sz * 0.18, -sz * 0.7, sz * 0.7) : limb(new THREE.Vector3(-sz * 1.6, 0, 0), new THREE.Vector3(sz * 1.6, 0, 0), sz * 0.3, sz * 0.24, 8);
       g.rotateX((rnd() - 0.5) * 0.7);
       g.rotateZ((rnd() - 0.5) * 0.7);
@@ -2765,6 +2822,53 @@ function buildTitansRest(ctx: Ctx): void {
       if (ctx.inRoad(g.index ? g.toNonIndexed() : g)) continue;
       put(kind, g);
       wrecks++;
+    }
+  }
+
+  // ---- the salvage camp: who lives out here, and how the crowd gets in ------------
+  // Behind the stands on the start's open side, a fenced yard where the
+  // titan is cut up: cranes, containers, cabins, a workshop, fuel, a pad,
+  // a mast; a track from its gate to the paddock behind the stands, and the
+  // road in from across the desert.
+  {
+    const rnd = mulberry(5150);
+    const { x: cxs, z: czs, away } = campAt;
+    const g0 = theme.groundY;
+    if (ctx.clearance(cxs, czs) > 200 && !onTitanPlan(body, cxs, czs, 200)) {
+      // The yard faces the road: its +z toward it.
+      const yaw = Math.atan2(-campAt.rx * away, -campAt.rz * away);
+      const site = new Site(cxs, g0, czs, yaw);
+      const hues = [0xb4482f, 0x2f6fa8, 0xd7a52f, 0x3e7a52, 0x8a8f99, 0xc96a2a];
+      site.fence(0, 0, 250, 210, 24);
+      site.crane(-60, -40, 48, 42, 0.9).crane(55, -62, 40, 34, -2.2);
+      for (const [x, z, n, high, turn] of [
+        [-100, -85, 8, 3, 0],
+        [-62, -85, 8, 2, 0],
+        [-24, -92, 6, 3, 0],
+        [14, -92, 6, 2, 0],
+        [82, -20, 7, 3, Math.PI / 2],
+        [82, 10, 5, 2, Math.PI / 2],
+        [-112, -20, 6, 2, Math.PI / 2],
+      ] as const)
+        site.containers(x, z, n, high, hues, rnd, turn);
+      for (const [x, z] of [[-100, 45], [-82, 45], [-64, 45], [-100, 70], [-82, 70]]) site.hut(x, z, 12, 8, 3.6, 0xd9d2c2, 0x8a6a4a);
+      site.hut(25, 55, 40, 30, 13, 0xb8b2a6, 0x6e5a48).hut(-10, 82, 30, 18, 10, 0xc4bdb0, 0x6e5a48);
+      for (const [k, z] of [[0, 55], [1, 75], [2, 95]]) site.tank(98, z - 20 + k, 7, 10, 0xe4e0d6);
+      site.pad(-50, 5, 13).mast(100, -88, 38);
+      // Salvage waiting to be cut: armour plates off the titan, leant on each other.
+      for (let k = 0; k < 14; k++) site.box(-10 + (rnd() - 0.5) * 60, 0, -36 + (rnd() - 0.5) * 34, 14 + rnd() * 14, 1.6 + rnd() * 2, 8 + rnd() * 10, k % 3 ? 0xe6e0d2 : 0xb84a3a, rnd() * 3);
+      for (let z = -80; z <= 90; z += 34) site.lamp(0, z);
+      for (const mesh of siteMeshes(site.pieces, site.lights)) group.add(mesh);
+      // The track from its gate to behind the stands, and the road in from across the desert.
+      const gate = new THREE.Vector3(0, 0, 105).applyMatrix4(site.m);
+      const paddock = trackPoint(track, -120, away * (hwAt(track, -120) + 50), 0, new THREE.Vector3()).setY(g0);
+      const roads: THREE.BufferGeometry[] = [];
+      const pts = (a: THREE.Vector3, b: THREE.Vector3, n = 12) => Array.from({ length: n + 1 }, (_, k) => a.clone().lerp(b, k / n).setY(g0));
+      roads.push(groundRoad(pts(gate, paddock), 12, 0xb8a888));
+      const back = new THREE.Vector3(0, 0, -105).applyMatrix4(site.m);
+      const far = back.clone().add(back.clone().sub(gate).setY(0).normalize().multiplyScalar(6000)).setY(g0);
+      roads.push(groundRoad(pts(back, far, 60), 14, 0xb8a888));
+      for (const mesh of siteMeshes(roads.filter((r) => !ctx.inRoad(r, 8)), [])) group.add(mesh);
     }
   }
 
