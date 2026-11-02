@@ -16,9 +16,10 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
  * intro: the sweep round the grid. play: the chase. orbit: circling (the
  * garage, the results). tv: a broadcast's trackside cameras, cutting from
  * one to the next (replays). photo: posed by hand (photo mode). podium: the
- * podium's shots (round `anchor`).
+ * podium's shots (round `anchor`). flyover: the flight over the circuit
+ * before a race, over its title card.
  */
-export type CameraMode = 'intro' | 'play' | 'orbit' | 'tv' | 'photo' | 'podium';
+export type CameraMode = 'intro' | 'play' | 'orbit' | 'tv' | 'photo' | 'podium' | 'flyover';
 
 /** Photo mode's camera, round the mech it frames: turned, raised, how far, the lens, and tilted. */
 export interface PhotoCam {
@@ -63,6 +64,9 @@ const TV_SPOTS: ReadonlyArray<readonly [number, number]> = [
 ];
 /** Where along its way up to a trackside camera the mech is checked to be in sight (0: where it is now; 1: just past). */
 const TV_PROBES = [0, 0.35, 0.7, 1];
+
+/** The flyover's first shot, seconds. */
+const FLYOVER_SHOT = 2.8;
 
 /** Punch-in timing, seconds: in, held, and back out. */
 const PUNCH_IN = 0.05;
@@ -139,6 +143,10 @@ export class CameraRig {
   /** How far out in front of the anchor the podium's cameras may go; seconds into its shots. */
   podiumReach = 40;
   podiumT = 0;
+  /** Seconds into the flyover's shots. */
+  flyT = 0;
+  /** How long the flyover is, seconds (FLYOVER_SHOT is its first shot's). */
+  static readonly FLYOVER = 5.4;
   /**
    * Whether a camera at `from` can see `to` with nothing of the circuit in
    * between (set by the race view): the trackside cameras are placed, and
@@ -414,6 +422,23 @@ export class CameraRig {
       pos.set(Math.sin(p.yaw) * r * Math.cos(p.pitch), y + r * Math.sin(p.pitch), back * Math.cos(p.yaw) * r * Math.cos(p.pitch)).applyMatrix4(this.photoFrame);
       look.set(0, y, 0).applyMatrix4(this.photoFrame);
       fov = p.fov;
+      this.fov = fov;
+    } else if (this.mode === 'flyover') {
+      // High over the start straight looking down it, drifting; then a cut
+      // to low and fast up the road behind the grid, the field ahead.
+      this.flyT += dt;
+      const t = this.flyT;
+      const hw0 = hwAt(track, 0);
+      if (t < FLYOVER_SHOT) {
+        trackPoint(track, -260 + 34 * t, hw0 * 1.6, 88 - 7 * t, pos);
+        trackPoint(track, 160 + 26 * t, 0, 0, look);
+        fov = 52;
+      } else {
+        const u = t - FLYOVER_SHOT;
+        trackPoint(track, -230 + 46 * u, -hw0 * 0.55, 10 - u, pos);
+        trackPoint(track, -30, 0, 3, look);
+        fov = 46;
+      }
       this.fov = fov;
     } else if (this.mode === 'podium' && this.anchor) {
       // In from wide as the three take their places; in on the winner as the

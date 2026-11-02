@@ -113,6 +113,8 @@ import { PhotoMode, photoName, type PhotoAction } from './photo';
 import { PhotoPanel } from '../ui/photoPanel';
 import { Podium, type PodiumBill, type PodiumPilot } from '../render/podium/podium';
 import { PodiumPanel, type PodiumCard } from '../ui/podiumPanel';
+import { TitleCard } from '../ui/titleCard';
+import { CameraRig } from '../render/cameraRig';
 import { podiumOrder, poseFor } from './podium';
 import { newlyEarned, type Progress, type Unlock } from './unlocks';
 import { isVictoryId, type VictoryId } from '../render/mech/victoryPoses';
@@ -346,6 +348,11 @@ export class Game {
   /** Up straight after the race (it goes on to the results by itself), rather than opened from them. */
   private podiumFirst = false;
   private podiumT = 0;
+  /** The flight over the circuit before a race, with its title card (offline: the race waits for it). */
+  private flyover: { t: number } | null = null;
+  /** The next race goes straight to the grid (a restart). */
+  private noFlyover = false;
+  private readonly titleCard: TitleCard;
   /** The victory pose you strike on the podium, chosen in the hangar. */
   victoryPose: VictoryId = ((v) => (isVictoryId(v) ? v : 'fist'))(readJson<unknown>('zgp.victory', 'fist'));
   /** The frames whose first-race tip has been shown, on this device. */
@@ -391,6 +398,7 @@ export class Game {
     });
     this.photoPanel = new PhotoPanel(uiRoot, (a) => this.photoAction(a));
     this.podiumPanel = new PodiumPanel(uiRoot, { go: () => this.leavePodium(), photo: () => this.openPhoto() });
+    this.titleCard = new TitleCard(uiRoot);
     this.renderer.scene.add(this.podium.root);
     this.podium.preload();
     // Each takes their place with a sting; the winner's sets the confetti off.
@@ -1114,7 +1122,11 @@ export class Game {
     if (this.mode === 'online') return;
     // Once a round has been banked, "restart" can only mean moving on.
     if (this.roundScored) this.next();
-    else this.startRound();
+    else {
+      // (Straight to the grid: the circuit has been seen.)
+      this.noFlyover = true;
+      this.startRound();
+    }
   }
 
   /** What the HUD shows under the score: the format, the round, and how the match stands. */
@@ -1187,6 +1199,45 @@ export class Game {
     this.view.cam.reset();
     this.view.cam.mode = this.session.race.phase === PHASE.COUNTDOWN ? 'intro' : 'play';
     this.music('race', this.session.track.def.theme ?? 'meridian');
+    this.flyover = null;
+    this.titleCard.hide();
+    // Offline, from the grid: first the flight over the circuit, its name on
+    // a title card. (Not the tutorial, which gets on with it; nor online,
+    // where the race does not wait.)
+    const race = this.session.race;
+    if (this.session instanceof LocalSession && this.mode !== 'tutorial' && race.phase === PHASE.COUNTDOWN && race.tick === 0 && !this.opts.skip && !this.noFlyover) this.startFlyover();
+    this.noFlyover = false;
+  }
+
+  private startFlyover(): void {
+    const race = this.session.race;
+    const track = this.session.track;
+    this.flyover = { t: 0 };
+    this.view.cam.mode = 'flyover';
+    this.view.cam.flyT = 0;
+    this.hud.root.hidden = true;
+    const looks = teamLooks(race, this.raceFactions);
+    const sides = race.sprint ? [] : looks.slice(0, 2).map((l) => ({ name: l.name, emblem: l.emblem, css: l.css }));
+    const km = (track.length / 1000).toFixed(1);
+    const device = this.input.device;
+    this.titleCard.show({
+      event: this.matchLabel() || (race.sprint ? 'Sprint' : 'Free Play'),
+      circuit: track.def.name,
+      facts: `${race.laps} laps · ${km} km`,
+      sides,
+      skip: device === 'touch' ? '' : `${device === 'pad' ? 'A' : 'Enter'} to skip`,
+    });
+  }
+
+  /** Down to the grid: the countdown's sweep, the HUD back. */
+  private endFlyover(): void {
+    if (!this.flyover) return;
+    this.flyover = null;
+    this.titleCard.hide();
+    this.hud.root.hidden = false;
+    this.view.cam.mode = 'intro';
+    this.view.cam.restartOrbit();
+    this.input.swallowHeld();
   }
 
   private pause(): void {
@@ -2772,6 +2823,12 @@ export class Game {
         simDt = dt;
         break;
       case 'race': {
+        if (this.flyover) {
+          // The flight over the circuit: the race waits on the grid.
+          this.flyover.t += dt;
+          if (menu.includes('confirm') || menu.includes('pause') || this.flyover.t >= CameraRig.FLYOVER) this.endFlyover();
+          break;
+        }
         if (menu.includes('pause')) {
           this.pause();
           break;

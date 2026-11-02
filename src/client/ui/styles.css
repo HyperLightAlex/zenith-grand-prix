@@ -2112,3 +2112,39 @@ html.compact .podium .podium-btns { right: calc(1 * var(--ui-em) + var(--sr, 0px
 .menu .gp-award .unlocked { margin-top: 1em; padding: 0.6em 0.9em; background: rgba(53, 240, 255, 0.12); box-shadow: inset 0.25em 0 0 var(--charge); }
 .menu .gp-award .unlocked h2 { margin: 0 0 0.3em; font-size: 1.1em; color: var(--charge); }
 .menu .gp-award .unlocked div { font-size: 1.1em; font-weight: 700; }
+
+/* ---- The title card (ui/titleCard.ts) ---------------------------------------
+   Over the flight above the circuit before a race: a band low on the left,
+   the event over the circuit's name, its laps and length, and who races whom;
+   in from the left, and away again at the cut to the grid. */
+.titlecard { z-index: 5; }
+.titlecard .tc-band {
+  position: absolute;
+  left: 0;
+  bottom: calc(14% + var(--sb, 0px));
+  padding: 0.9em 3.2em 1em calc(2.4 * var(--ui-em, 1em) + var(--sl, 0px));
+  background: linear-gradient(90deg, rgba(10, 15, 28, 0.92) 70%, rgba(10, 15, 28, 0));
+  box-shadow: inset 0 0.25em 0 var(--charge);
+  display: grid;
+  gap: 0.25em;
+  min-width: 30em;
+}
+.titlecard .tc-event { font-size: 1.05em; font-weight: 700; color: var(--charge); }
+.titlecard .tc-name { font-size: 3.6em; font-weight: 800; line-height: 0.95; letter-spacing: 0.01em; text-shadow: 0 0.06em 0 rgba(10, 15, 28, 0.7); }
+.titlecard .tc-facts { font-size: 1.25em; font-weight: 600; opacity: 0.85; }
+.titlecard .tc-sides { display: flex; align-items: center; gap: 0.7em; margin-top: 0.35em; font-size: 1.2em; }
+.titlecard .tc-sides:empty { display: none; }
+.titlecard .tc-side { display: inline-flex; align-items: center; gap: 0.4em; padding: 0.2em 0.8em 0.2em 0.35em; box-shadow: inset 0.22em 0 0 var(--side, var(--paper)); background: rgba(243, 245, 250, 0.08); }
+.titlecard .tc-side img { width: 1.8em; height: 1.8em; object-fit: contain; }
+.titlecard .tc-vs { font-weight: 800; opacity: 0.6; }
+.titlecard .tc-skip { position: absolute; right: calc(2 * var(--ui-em, 1em) + var(--sr, 0px)); bottom: calc(1.4 * var(--ui-em, 1em) + var(--sb, 0px)); font-weight: 600; opacity: 0.6; }
+.titlecard.in .tc-band { animation: tc-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.titlecard.in .tc-band > * { animation: tc-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.titlecard.in .tc-name { animation-delay: 0.08s; }
+.titlecard.in .tc-facts { animation-delay: 0.16s; }
+.titlecard.in .tc-sides { animation-delay: 0.24s; }
+.titlecard.out .tc-band { animation: tc-out 0.3s ease-in both; }
+@keyframes tc-in { from { opacity: 0; transform: translateX(-2.5em); } to { opacity: 1; transform: none; } }
+@keyframes tc-out { to { opacity: 0; transform: translateX(-2em); } }
+html.compact .titlecard .tc-band { min-width: 0; right: 0; font-size: 0.8em; }
+@media (prefers-reduced-motion: reduce) { .titlecard.in .tc-band, .titlecard.in .tc-band > *, .titlecard.out .tc-band { animation: none; } }

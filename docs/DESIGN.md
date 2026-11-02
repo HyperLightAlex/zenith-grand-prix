@@ -981,6 +981,17 @@ wider lens and a tilt, with the HUD gone. The picture is saved as a PNG at
 2560 pixels on its long side whatever the screen, named for the circuit and
 the time; the hints can be hidden too.
 
+### Before the race
+
+Offline, a race opens with a **flight over the circuit**, the race held on
+the grid: high over the start straight looking down it, then a cut to low
+and fast up the road behind the grid, the field ahead (5.4 seconds, the
+camera's `flyover`), under the circuit's **title card**: what is being raced
+(the event and round), the circuit's name large, its laps and length, and
+who races whom. Any press skips it; a restart goes straight to the grid, as
+does the tutorial, and online (where the race does not wait for anyone) it
+is left out. Then the countdown's sweep round the grid, as before.
+
 ### The podium
 
 After a race offline, before the results, the first three home stand on
