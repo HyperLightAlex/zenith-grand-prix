@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.sim.json",
     "test": "vitest run",
     "sim": "tsx tools/headless-race.ts",
-    "bots": "tsx tools/bots.ts"
+    "bots": "tsx tools/bots.ts",
+    "blender:check": "sh tools/blender.sh check"
   },
   "dependencies": {
     "@colyseus/core": "^0.18.18",

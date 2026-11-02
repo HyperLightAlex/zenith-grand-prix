@@ -37,6 +37,11 @@ Read-only verification of the checked-in production GLBs (write only temporary
 outputs and the chosen report):
   ... --python art/blender/roster/production/export.py -- --all --output-root /tmp/zenith-roster-check --check --report /tmp/zenith-roster-check.json
 
+Without the Blender app (a cloud workspace, CI): the same Blender 5.2.2 as a
+Python module reproduces all 45 files byte for byte.
+  sh tools/blender.sh check                  (the read-only verification above)
+  sh tools/blender.sh run art/blender/roster/production/export.py -- --design maul
+
 Use Blender's --python-exit-code 1 before --python in automation so a Python
 exception propagates to the process status. Always check the exported report;
 Blender's default process exit status alone does not certify a Python script.

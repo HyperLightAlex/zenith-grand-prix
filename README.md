@@ -346,6 +346,8 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
 | `npm run sim -- 100 1 tow3=0.12 koPoints=4` | The same with any rule overridden |
 | `npm run sim -- 100 1 track=canyon` | The same on another circuit (`meridian`, `canyon`, `helios`, `crucible`) |
+| `npm run blender:check` | Re-export every production mech with Blender 5.2.2 (the bpy module: no Blender app or screen needed) and compare each file byte for byte with the game's |
+| `sh tools/blender.sh run script.py -- args` | Run any Blender script in the background the same way (it installs the module the first time) |
 | `npx tsx tools/circuit-plot.ts canyon` | Plan, height and features of a circuit, as numbers and an SVG |
 
 The browser-driving helpers in `tools/` (`shot.mjs`, `screens.mjs`,
