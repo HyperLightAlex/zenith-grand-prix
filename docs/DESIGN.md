@@ -375,7 +375,7 @@ painted water, surfaces and drifting sea life; Zenith Ring: in orbit, a ring sta
 built round the road, the Earth below filling the sky under its limb, its
 night side lit with cities, and no ground at all, so no support pylons:
 `src/client/render/zenith.ts`, a stand-in until it has a model; Meridian:
-golden hour over the sea and a city; Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
+golden hour over the sea and a city on its islands (twin towers either side of the start, the sky bridge between them carried on a truss); Canyon: dusk over red desert, mesas, a rock cut and a gorge under the
 Sky Bridge; Helios: noon above a sea of cloud, floating islands, the Sun Gate
 over the Drop; the Crucible: night over an open-pit mine, the Coil cut into
 its wall as benches with a line of neon along each, shading from magenta at
@@ -1029,9 +1029,13 @@ What is round the road says what the race has done and what is coming:
   back, under a cantilevered roof on five columns with floodlights along
   its front. Their fronts stand 10 m back from the road's edge; none over a
   pit or reaching into another stretch of road's space. They stand upright
-  whatever the road's banking, and where the road is raised higher than
-  their walls go down (over the sea, a drop), on columns down to the
-  ground, as the road stands on its pylons. Under the sea (Abyss Line)
+  whatever the road's banking. Under each, at its walls' foot, a ground
+  floor: a slab on a grid of beams (along under its front wall, its middle
+  and its back wall, across every 16 m). On the ground that is its
+  foundation; where the road is raised higher than the walls go down (over
+  the sea, a drop) it stands on columns down to the ground, as the road
+  stands on its pylons: one under each crossing of the beams, on its
+  footing, tied to its neighbours both ways every 10 m down. Under the sea (Abyss Line)
   they stand only in the air under the town's dome, never out in the
   water beside the road's tube. Without the model
   (the tests' tracks, built without loading it) the old raked crowd under
@@ -1063,6 +1067,26 @@ What is round the road says what the race has done and what is coming:
   the picture. The feed is the scene drawn again from its own camera into
   a 384 by 216 picture, 6, 10 or 15 times a second by the video quality,
   and only while a screen is in view; out on the lap it costs nothing.
+- **The outposts** (`render/outposts/outposts.ts`, built in Blender by
+  `art/blender/outposts/build_outposts.py`): what explains a circuit out in
+  the wild, who built it and how everyone gets there. Corkscrew Canyon's
+  paddock behind the stands (the teams' garages, their trucks, hospitality,
+  a helipad, a mast, the crowd's car park in double rows round lit islands)
+  and the highway in, crossing the gorges on bridges (abutments, girders,
+  piers with their caps) past a fuel stop (a canopy over its pump islands,
+  the shop behind); Titan's Rest's salvage camp (a fenced yard with a gate
+  each end and the haul road between, tower cranes over the salvage,
+  containers stacked each on the one under it, the crews' cabins, two
+  workshops with their trucks, a tank farm, a pad, a mast); Frostline's
+  polar station (its modules on braced legs, linked, radomes, a hangar by
+  the runway's head, a tank farm, a pad, a mast, flags along the runway).
+  Every building is the kit's (a 40 ft container, a site cabin, a
+  portal-frame workshop, a tower crane, and so on: each on its
+  foundations, framed, closed, with a way in), placed in its site's frame
+  and drawn instanced, one mesh to each kind's slot, its paint per building.
+  What runs along the ground (fences on footed posts with braced corners
+  and sliding gates, car park markings, runways, roads) is built in place.
+  No building stands in another, or in the road's space.
 - **The crowd** (`render/crowd.ts`): cameras flashing all over the
   grandstands and flags in the two teams' colours waved along the front
   rows, going up (more flashes, flags waved harder) at the start, a lap

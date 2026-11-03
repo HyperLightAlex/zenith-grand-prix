@@ -23,7 +23,12 @@ WHAT IT IS
   front, sloping back, on five columns up the back wall, each holding out a
   tapered beam over the roof with ties down to it; floodlights under the
   roof's front edge, its fascia orange. The walls go down to 14 m below the
-  road, for circuits whose ground is lower.
+  road, for circuits whose ground is lower, and close on its ground floor
+  there: a slab under the whole stand on a grid of beams (along under the
+  front wall, the middle and the back wall, across every 16 m), their
+  underside 16.2 m below the road. Where the ground falls further than
+  that, the game stands it on a column under each crossing of the beams
+  (trackMesh.ts; grandstand.ts has the grid).
 
 AXES AND NAMES
   Metres. Blender's axes, Z up, the stand's front (the parapet's face) on

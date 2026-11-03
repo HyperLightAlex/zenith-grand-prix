@@ -34,7 +34,7 @@ import type { TitanMat } from './titan/pose';
 import { buildZenith } from './zenith';
 import { buildAbyss } from './abyss';
 import { buildMonsoon } from './monsoon';
-import { Site, groundRoad, siteMeshes } from './outposts';
+import { Site, groundRoad, siteMeshes } from './outposts/outposts';
 import { BLOCK, DECK_FOOT, DECK_TOP, PROMENADE, STREET, bridgeEnds, bridgeLinks, fromIsland, islandBlocks, islandOutline, meridianIslands, streetHalf } from './meridianCity';
 /** Meridian's ground (M5): a plaza's square covers this many units, a seawall's face (along it) this many. */
 const PLAZA_TILE = 30;
@@ -1261,11 +1261,22 @@ function buildMeridian(ctx: Ctx): void {
         const rail = new THREE.BoxGeometry(0.6, 1.4, len).translate(side * 8.7, 0.7, 0).rotateY(yaw).translate(mx, DECK_TOP, mz).toNonIndexed();
         bridges.push(paint(rail, () => new THREE.Color(0x8e98a6)));
       }
+      // Its piers: each a pair of columns from a pile cap at the waterline up to a crosshead under the deck.
       const n = Math.max(1, Math.floor(len / 56));
+      const CAP = DECK_TOP - 2.4;
       for (let k = 1; k < n; k++) {
         const f = k / n;
-        const pier = new THREE.CylinderGeometry(2.6, 3.2, DECK_TOP - 2.4 - DECK_FOOT, 8).translate(x0 + (x1 - x0) * f, (DECK_TOP - 2.4 + DECK_FOOT) / 2, z0 + (z1 - z0) * f).toNonIndexed();
-        piers.push(paint(pier, () => new THREE.Color(0x8f98a6)));
+        const px = x0 + (x1 - x0) * f;
+        const pz = z0 + (z1 - z0) * f;
+        const head = new THREE.BoxGeometry(17, 1.6, 3.6).rotateY(yaw).translate(px, CAP - 0.8, pz).toNonIndexed();
+        const cap = new THREE.BoxGeometry(16, 2.2, 6).rotateY(yaw).translate(px, 0.4, pz).toNonIndexed();
+        piers.push(paint(head, () => new THREE.Color(0x8f98a6)), paint(cap, () => new THREE.Color(0x7f8896)));
+        for (const side of [-1, 1]) {
+          const ox = Math.cos(yaw) * side * 5;
+          const oz = -Math.sin(yaw) * side * 5;
+          const col = new THREE.CylinderGeometry(1.5, 1.7, CAP - 1.6 - DECK_FOOT, 10).translate(px + ox, (CAP - 1.6 + DECK_FOOT) / 2, pz + oz).toNonIndexed();
+          piers.push(paint(col, () => new THREE.Color(0x8f98a6)));
+        }
       }
     }
     const windows = windowTexture();
@@ -1294,6 +1305,7 @@ function buildMeridian(ctx: Ctx): void {
     const deckMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: blank });
     if (bridges.length) {
       const mesh = new THREE.Mesh(mergeGeometries([...bridges, ...piers])!, deckMat);
+      mesh.name = 'bridges';
       mesh.frustumCulled = false;
       group.add(mesh);
     }
@@ -1415,10 +1427,65 @@ function buildMeridian(ctx: Ctx): void {
       group.add(podium);
     }
     const span = feet[0].distanceTo(new THREE.Vector3(feet[1].x, feet[0].y, feet[1].z)) - 46;
+    const SKY = 250;
     const bridge = new THREE.Mesh(new THREE.BoxGeometry(14, 10, span), towerMat);
     bridge.rotation.y = Math.atan2(feet[1].x - feet[0].x, feet[1].z - feet[0].z);
-    bridge.position.set((feet[0].x + feet[1].x) / 2, 250, (feet[0].z + feet[1].z) / 2);
+    bridge.position.set((feet[0].x + feet[1].x) / 2, SKY, (feet[0].z + feet[1].z) / 2);
     group.add(bridge);
+    // What carries it over a span that long: a steel truss either side of
+    // its corridor (top and bottom chords, posts, diagonals, cross beams
+    // under its floor and over its roof), seated on brackets on the towers'
+    // faces; and from each tower a pair of raking legs up to its bottom
+    // chords a quarter of the way out, as on the Petronas towers' bridge.
+    const members: THREE.BufferGeometry[] = [];
+    const along = new THREE.Vector3(Math.sin(bridge.rotation.y), 0, Math.cos(bridge.rotation.y));
+    const across = new THREE.Vector3(along.z, 0, -along.x);
+    const mid = bridge.position;
+    const at = (a: number, x: number, y: number) => mid.clone().addScaledVector(along, a).addScaledVector(across, x).setY(y);
+    const member = (p: THREE.Vector3, q: THREE.Vector3, s: number) => {
+      const d = q.clone().sub(p);
+      const g = new THREE.BoxGeometry(s, s, d.length()).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d.normalize()));
+      members.push(g.translate((p.x + q.x) / 2, (p.y + q.y) / 2, (p.z + q.z) / 2));
+    };
+    const TOP_CHORD = SKY + 6;
+    const BOTTOM_CHORD = SKY - 9;
+    const half = span / 2 + 1;
+    const bays = Math.max(4, Math.round(span / 18));
+    for (const x of [-8, 8]) {
+      member(at(-half, x, TOP_CHORD), at(half, x, TOP_CHORD), 1.4);
+      member(at(-half, x, BOTTOM_CHORD), at(half, x, BOTTOM_CHORD), 1.8);
+      for (let k = 0; k <= bays; k++) {
+        const a = -half + (2 * half * k) / bays;
+        member(at(a, x, BOTTOM_CHORD), at(a, x, TOP_CHORD), 0.9);
+        if (k < bays) {
+          const b = -half + (2 * half * (k + 1)) / bays;
+          // A Warren truss's diagonals, each panel's the other way to the last.
+          if (k % 2) member(at(a, x, TOP_CHORD), at(b, x, BOTTOM_CHORD), 0.8);
+          else member(at(a, x, BOTTOM_CHORD), at(b, x, TOP_CHORD), 0.8);
+        }
+      }
+    }
+    for (let k = 0; k <= bays; k++) {
+      const a = -half + (2 * half * k) / bays;
+      member(at(a, -8, BOTTOM_CHORD), at(a, 8, BOTTOM_CHORD), 1.0);
+      member(at(a, -8, TOP_CHORD), at(a, 8, TOP_CHORD), 0.8);
+      // The corridor's floor hung from the cross beams below it.
+      member(at(a, 0, BOTTOM_CHORD), at(a, 0, SKY - 5), 0.6);
+    }
+    for (const end of [-1, 1]) {
+      // Its seat on the tower's face, and the raking legs (each pair braced across) up from the face below.
+      member(at(end * (half + 1), -10, BOTTOM_CHORD - 1.5), at(end * (half + 1), 10, BOTTOM_CHORD - 1.5), 3);
+      const foot = BOTTOM_CHORD - 70;
+      for (const x of [-8, 8]) member(at(end * (half + 1.5), x * 0.6, foot), at(end * half * 0.5, x, BOTTOM_CHORD), 2.2);
+      member(at(end * half * 0.75, -6.5, (foot + BOTTOM_CHORD) / 2), at(end * half * 0.75, 6.5, (foot + BOTTOM_CHORD) / 2), 1.2);
+      member(at(end * (half + 1.5), -10, foot), at(end * (half + 1.5), 10, foot), 3);
+    }
+    const steel = new THREE.MeshLambertMaterial({ color: 0x8a93a2 });
+    const truss = new THREE.Mesh(mergeGeometries(members.map((g) => g.toNonIndexed()))!, steel);
+    for (const g of members) g.dispose();
+    truss.name = 'sky bridge';
+    truss.frustumCulled = false;
+    group.add(truss);
   }
 }
 
@@ -1654,60 +1721,81 @@ function buildCanyon(ctx: Ctx): void {
     // Its +z toward the road.
     const yaw = Math.atan2(-paddock.rx * paddock.outSide, -paddock.rz * paddock.outSide);
     const site = new Site(paddock.x, g0, paddock.z, yaw);
-    // The teams' garages along the front, doors toward the road; their trucks behind; hospitality.
-    site.box(0, 0, 60, 170, 9, 22, 0xd8d2c6);
-    site.box(0, 9, 60, 172, 1, 24, 0x4a505c);
-    for (let k = 0; k < 10; k++) site.box(-76 + k * 16.9, 0, 71.2, 10, 6, 0.4, 0x3a3f4a);
-    for (let k = 0; k < 8; k++) {
-      const x = -70 + k * 20;
-      site.container(x, 0, 22, [0xb4482f, 0x2f6fa8, 0xd7a52f, 0xf2f2ee][k % 4]).container(x + 3, 0, 22, 0x8a8f99);
-    }
-    site.box(-50, 0, -20, 44, 10, 20, 0xeae6dc).box(-50, 10, -20, 46, 0.8, 22, 0xff7a1a);
-    site.box(30, 0, -20, 44, 10, 20, 0xeae6dc).box(30, 10, -20, 46, 0.8, 22, 0x2f6fa8);
-    site.pad(100, -20, 12).mast(115, 40, 34);
-    // The crowd's car park behind: bays in rows, cars in some of them.
-    site.put(new THREE.PlaneGeometry(220, 120).rotateX(-Math.PI / 2).translate(0, 0.12, -120), 0x5c5a5e);
-    for (let row = 0; row < 6; row++)
-      for (let k = 0; k < 40; k++) {
-        const x = -100 + k * 5.2;
-        const z = -165 + row * 18;
-        site.box(x - 2.5, 0.13, z, 0.15, 0.02, 5, 0xe8e4da);
-        if (rnd() < 0.55) site.box(x, 0, z, 2, 1.4, 4.4, [0xd9482f, 0xf2f2ee, 0x2f6fa8, 0x3a3f4a, 0xd7a52f, 0x9aa3ae][Math.floor(rnd() * 6)]);
+    // The teams' garages along the front, doors toward the road; their trucks behind; hospitality behind them.
+    const teams = [0xb4482f, 0x2f6fa8, 0xd7a52f, 0xf2f2ee, 0x3e7a52, 0x8a8f99, 0xc96a2a, 0x6a4a8a];
+    site.place('garages', 0, 60, 0, 0xe8e4da);
+    for (let k = 0; k < 8; k++) site.place('truck', -70 + k * 20, 22, 0, teams[k]);
+    site.place('hospitality', -50, -20, 0, 0xff7a1a).place('hospitality', 30, -20, 0, 0x2f6fa8);
+    site.place('helipad', 100, -20).place('mast', 115, 40, 0, 0xe8e4da);
+    // The crowd's car park behind: double rows of bays back to back either side of a kerbed island, the lamps on the islands, aisles between.
+    site.put(new THREE.PlaneGeometry(116, 120).rotateX(-Math.PI / 2).translate(0, 0.12, -120), 0x5c5a5e);
+    const cars = [0xd9482f, 0xf2f2ee, 0x2f6fa8, 0x3a3f4a, 0xd7a52f, 0x9aa3ae];
+    for (let row = 0; row < 5; row++) {
+      const iz = -156 + row * 18;
+      site.box(0, 0.12, iz, 106, 0.15, 1, site.palette.concrete);
+      for (let k = 0; k <= 40; k++) {
+        const x = -52 + k * 2.6;
+        for (const side of [-1, 1]) site.put(new THREE.PlaneGeometry(0.12, 5).rotateX(-Math.PI / 2).translate(x, 0.14, iz + side * 3), 0xe8e4da);
+        if (k === 40) continue;
+        for (const side of [-1, 1]) if (rnd() < 0.55) site.place('car', x + 1.3, iz + side * 3.1, side < 0 ? 0 : Math.PI, cars[Math.floor(rnd() * cars.length)]);
       }
-    for (let x = -100; x <= 100; x += 40) site.lamp(x, -120, 9);
-    const pieces = site.pieces.filter((g) => !ctx.inRoad(g, 6));
-    for (const mesh of siteMeshes(pieces, site.lights)) group.add(mesh);
+      for (const x of [-39, -13, 13, 39]) site.place('lamp', x, iz, Math.PI / 2);
+    }
+    for (const mesh of site.meshes((g) => !ctx.inRoad(g, 6))) group.add(mesh);
     // The highway in from the west, straight across the desert, and a fuel stop on it.
     const gate = new THREE.Vector3(0, 0, -185).applyMatrix4(site.m);
     const way = roadWest.clone().sub(gate).setY(0).normalize();
     const pts = Array.from({ length: 321 }, (_, k) => gate.clone().addScaledVector(way, (k / 320) * 6400).setY(g0));
     const roads = [groundRoad(pts, 16, 0x4c4a50, 0.3)];
-    // Where it crosses a gorge, it crosses on a bridge: a deck under it, parapets either side.
+    // Where it crosses a gorge, it crosses on a bridge: abutments on the rims, wing walls back from them; the deck on piers with
+    // their caps; parapets either side.
     const bridge = new Site(0, 0, 0, 0);
+    const over = (k: number) => k >= 0 && k + 1 < pts.length && (inGorge(pts[k].x, pts[k].z) || inGorge(pts[k + 1].x, pts[k + 1].z));
+    const deck = 0x9a8a7a;
     for (let k = 0; k + 1 < pts.length; k++) {
+      if (!over(k)) continue;
       const a = pts[k];
       const b = pts[k + 1];
-      if (!inGorge(a.x, a.z) && !inGorge(b.x, b.z)) continue;
       const len = a.distanceTo(b);
       const yaw = Math.atan2(b.x - a.x, b.z - a.z);
       const mx = (a.x + b.x) / 2;
       const mz = (a.z + b.z) / 2;
-      bridge.put(new THREE.BoxGeometry(19, 2.2, len + 0.5).rotateY(yaw).translate(mx, g0 - 1.95, mz), 0x9a8a7a);
-      for (const side of [-1, 1]) bridge.put(new THREE.BoxGeometry(0.7, 1.3, len + 0.5).translate(side * 9.2, 0.65, 0).rotateY(yaw).translate(mx, g0 + 0.3, mz), 0xc8b8a4);
-      if (k % 3 === 0) bridge.put(new THREE.CylinderGeometry(1.6, 2.2, 40, 8).translate(mx, g0 - 22, mz), 0x8a7a6a);
+      bridge.put(new THREE.BoxGeometry(19, 2.2, len + 0.5).rotateY(yaw).translate(mx, g0 - 1.95, mz), deck);
+      for (const side of [-1, 1]) {
+        bridge.put(new THREE.BoxGeometry(0.7, 1.3, len + 0.5).translate(side * 9.2, 0.65, 0).rotateY(yaw).translate(mx, g0 + 0.3, mz), 0xc8b8a4);
+        // The edge girders under the deck.
+        bridge.put(new THREE.BoxGeometry(1.2, 2.4, len + 0.5).translate(side * 7, -1.2, 0).rotateY(yaw).translate(mx, g0 - 3.05, mz), deck);
+      }
+      if (k % 3 === 0) {
+        bridge.put(new THREE.BoxGeometry(17, 1.8, 2.6).rotateY(yaw).translate(mx, g0 - 6.6, mz), 0x8a7a6a);
+        for (const side of [-1, 1]) {
+          const off = new THREE.Vector3(side * 5, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+          bridge.put(new THREE.CylinderGeometry(1.4, 1.8, 40, 8).translate(mx + off.x, g0 - 27.5, mz + off.z), 0x8a7a6a);
+        }
+      }
+      // An abutment where it leaves the rim: the seat the deck rests on, wing walls angled back along the road.
+      for (const [end, at, dir] of [
+        [!over(k - 1), a, -1],
+        [!over(k + 1), b, 1],
+      ] as const) {
+        if (!end) continue;
+        bridge.put(new THREE.BoxGeometry(22, 3.2, 3).rotateY(yaw).translate(at.x, g0 - 1.4, at.z), 0xb0a090);
+        for (const side of [-1, 1]) {
+          const wing = new THREE.BoxGeometry(0.8, 2.2, 9).translate(side * 10.6, 0, dir * 5.5).rotateY(yaw).translate(at.x, g0 + 0.2, at.z);
+          bridge.put(wing, 0xb0a090);
+        }
+      }
     }
     // Its centre line.
     roads.push(groundRoad(pts, 0.5, 0xe8d27a, 0.34));
     for (const mesh of siteMeshes([...roads.filter((r) => !ctx.inRoad(r, 10)), ...bridge.pieces], [])) group.add(mesh);
+    // The fuel stop, back off the road, its +z toward it: the forecourt and canopy, the shop behind, a slip of tarmac to the road.
     const stopAt = gate.clone().addScaledVector(way, 1400);
-    const stop = new Site(stopAt.x + way.z * 30, g0, stopAt.z - way.x * 30, Math.atan2(way.x, way.z) + Math.PI / 2);
-    stop.put(new THREE.PlaneGeometry(60, 40).rotateX(-Math.PI / 2).translate(0, 0.1, 0), 0x5c5a5e);
-    for (const x of [-14, 14]) for (const z of [-8, 8]) stop.box(x, 0, z, 0.6, 6, 0.6, 0xe8e4da);
-    stop.box(0, 6, 0, 36, 1.2, 22, 0xff7a1a);
-    for (const x of [-8, 0, 8]) stop.box(x, 0, 0, 1.2, 1.8, 2.4, 0xe8e4da);
-    stop.hut(0, -18, 22, 10, 4.5, 0xeae6dc, 0x8a6a4a).mast(26, -16, 16, 0xe8e4da);
-    stop.lamp(-26, 14, 8).lamp(26, 14, 8);
-    for (const mesh of siteMeshes(stop.pieces, stop.lights)) group.add(mesh);
+    const stop = new Site(stopAt.x + way.z * 30, g0, stopAt.z - way.x * 30, Math.atan2(way.x, way.z) - Math.PI / 2);
+    stop.put(new THREE.PlaneGeometry(60, 8).rotateX(-Math.PI / 2).translate(0, 0.2, 18), 0x5c5a5e);
+    stop.place('canopy', 0, 0, 0, 0xe8e4da).place('shop', 0, -26, 0, 0xe8e4da).place('mast', 40, -30, 0, 0xe8e4da);
+    for (const x of [-27, 27]) stop.place('lamp', x, 12, Math.PI);
+    for (const mesh of stop.meshes()) group.add(mesh);
   }
 
   // ---- far buttes on the horizon --------------------------------------------
@@ -2574,27 +2662,28 @@ function buildFrostline(ctx: Ctx): void {
     }
     if (spot) {
       const yaw = Math.atan2(-fr.rx * inSide, -fr.rz * inSide);
-      const site = new Site(spot.x, shelfY, spot.z, yaw);
-      // The station: its modules in a row on their legs, linked, in the colours polar stations wear.
-      const modules: Array<[number, number, number, number, number]> = [
-        [-60, -10, 34, 12, 0xd9482f],
-        [-22, -10, 34, 12, 0xf2f2ee],
-        [16, -10, 34, 12, 0xd9482f],
-        [54, -10, 34, 12, 0x2f6fa8],
-      ];
-      for (const [x, z, w, d, c] of modules) site.module(x, z, w, d, c, 0, 3.4);
-      for (const x of [-41, -3, 35]) site.box(x, 4.4, -10, 4, 2.6, 3, 0x9aa3ae);
-      site.dome(-70, 40, 9).dome(-45, 52, 6);
-      site.hut(40, 48, 36, 26, 11, 0xb7c0cc, 0x5a6472);
-      for (const [x, z] of [[85, 30], [85, 50], [85, 70]]) site.tank(x, z, 5.5, 8, 0xe8ecf0, 0xd9482f);
-      site.mast(-95, -40, 42).pad(-20, 60, 12);
-      for (let z = -60; z <= 80; z += 35) site.lamp(-110, z, 7);
+      const site = new Site(spot.x, shelfY, spot.z, yaw, { cladding: 0xc4ccd6, panel: 0xe4e8ee, roof: 0x5a6472 });
+      // The station: its modules in a row on their legs, linked, in the colours polar stations wear; their doors toward the track.
+      for (const [x, c] of [
+        [-60, 0xd9482f],
+        [-22, 0xf2f2ee],
+        [16, 0xd9482f],
+        [54, 0x2f6fa8],
+      ] as const)
+        site.place('module', x, -10, 0, c);
+      for (const x of [-41, -3, 35]) site.place('link', x, -10, 0, 0xe8ecf0);
+      for (const x of [-70, -35, 0, 35, 70]) site.place('lamp', x, 4, Math.PI);
+      site.place('radome', -70, 40, 0, 0xeef2f6).place('radome', -48, 50, 0.4, 0xeef2f6);
+      // Fuel in its bund, and the pad.
+      site.place('tankfarm', 90, 50, -Math.PI / 2, 0xe8ecf0).place('helipad', -20, 60);
+      site.place('mast', -100, -45, 0, 0xe8ecf0);
+      // The hangar by the runway's head, its door toward the apron; cargo in from the last flight beside it.
+      site.place('hangar', 55, -75, -Math.PI / 2).containers(-40, -70, 4, 1, [0xd9482f, 0x2f6fa8, 0x8a8f99], mulberry(41));
       // The runway: a groomed strip of the shelf, flagged along its edges.
       const RW = 640;
       site.put(new THREE.PlaneGeometry(36, RW).rotateX(-Math.PI / 2).translate(0, 0.2, -110 - RW / 2), 0xdde6f5);
-      for (let z = -110; z >= -110 - RW; z -= 40) for (const x of [-19, 19]) site.box(x, 0, z, 0.5, 1.6, 0.5, 0xff5a2a);
-      const pieces = site.pieces.filter((g) => !ctx.inRoad(g, 6));
-      for (const mesh of siteMeshes(pieces, site.lights)) group.add(mesh);
+      for (let z = -110; z >= -110 - RW; z -= 40) for (const x of [-19, 19]) site.place('flag', x, z, Math.PI / 2);
+      for (const mesh of site.meshes((g) => !ctx.inRoad(g, 6))) group.add(mesh);
       // The track from the station to behind the stands on its side.
       const gate = new THREE.Vector3(0, 0, 70).applyMatrix4(site.m);
       const paddock = trackPoint(track, -60, inSide * (hwAt(track, -60) + 50), 0, new THREE.Vector3());
@@ -2919,7 +3008,8 @@ function buildTitansRest(ctx: Ctx): void {
         // The crest bows downwind toward the horns.
         const tc = 0.15 + 0.55 * u * u;
         const across = Math.max(0, 1 - u * u) ** 1.2;
-        const along = t < tc ? ((t + 1) / (tc + 1)) ** 1.6 : Math.max(0, 1 - (t - tc) / 0.3) ** 0.7;
+        // (Its upwind edge's t a hair under -1 in floating point: a negative base to a power is NaN.)
+        const along = t < tc ? (Math.max(0, t + 1) / (tc + 1)) ** 1.6 : Math.max(0, 1 - (t - tc) / 0.3) ** 0.7;
         pos.setY(k, H * across * along - 1.2);
       }
       g.computeVertexNormals();
@@ -2987,8 +3077,9 @@ function buildTitansRest(ctx: Ctx): void {
       const yaw = Math.atan2(-campAt.rx * away, -campAt.rz * away);
       const site = new Site(cxs, g0, czs, yaw);
       const hues = [0xb4482f, 0x2f6fa8, 0xd7a52f, 0x3e7a52, 0x8a8f99, 0xc96a2a];
-      site.fence(0, 0, 250, 210, 24);
-      site.crane(-60, -40, 48, 42, 0.9).crane(55, -62, 40, 34, -2.2);
+      // Fenced, a gate to the road in front and one to the desert road behind; the haul road between them down the middle.
+      site.fence(0, 0, 250, 210, 24, 16);
+      site.place('crane', -60, -40, 0.9, 0xf2b632).place('crane', 55, -62, -2.2, 0xf2b632);
       for (const [x, z, n, high, turn] of [
         [-100, -85, 8, 3, 0],
         [-62, -85, 8, 2, 0],
@@ -2999,14 +3090,16 @@ function buildTitansRest(ctx: Ctx): void {
         [-112, -20, 6, 2, Math.PI / 2],
       ] as const)
         site.containers(x, z, n, high, hues, rnd, turn);
-      for (const [x, z] of [[-100, 45], [-82, 45], [-64, 45], [-100, 70], [-82, 70]]) site.hut(x, z, 12, 8, 3.6, 0xd9d2c2, 0x8a6a4a);
-      site.hut(25, 55, 40, 30, 13, 0xb8b2a6, 0x6e5a48).hut(-10, 82, 30, 18, 10, 0xc4bdb0, 0x6e5a48);
-      for (const [k, z] of [[0, 55], [1, 75], [2, 95]]) site.tank(98, z - 20 + k, 7, 10, 0xe4e0d6);
-      site.pad(-50, 5, 13).mast(100, -88, 38);
-      // Salvage waiting to be cut: armour plates off the titan, leant on each other.
-      for (let k = 0; k < 14; k++) site.box(-10 + (rnd() - 0.5) * 60, 0, -36 + (rnd() - 0.5) * 34, 14 + rnd() * 14, 1.6 + rnd() * 2, 8 + rnd() * 10, k % 3 ? 0xe6e0d2 : 0xb84a3a, rnd() * 3);
-      for (let z = -80; z <= 90; z += 34) site.lamp(0, z);
-      for (const mesh of siteMeshes(site.pieces, site.lights)) group.add(mesh);
+      // The cabins the crews live in, by the gate; the workshops the salvage is cut up in, their trucks in front; fuel; the pad; the mast.
+      for (const [x, z] of [[-100, 45], [-82, 45], [-64, 45], [-100, 70], [-82, 70], [-64, 70]]) site.place('cabin', x, z, 0, [0xd9d2c2, 0xc9c2b2, 0xe2dccc][Math.floor(rnd() * 3)]);
+      site.place('workshop', 25, 55).place('workshop', 50, 55);
+      site.place('truck', 30, 84, Math.PI / 2, 0xb4482f).place('truck', 58, 86, Math.PI / 2, 0xd7a52f);
+      site.place('tankfarm', 98, 55, -Math.PI / 2, 0xe4e0d6).place('helipad', -50, 5).place('mast', 100, -80, 0, 0xe8e4da);
+      // Salvage waiting to be cut: armour plates off the titan, laid out in the yard under the cranes.
+      for (let k = 0; k < 14; k++) site.box(-30 + (rnd() - 0.5) * 20, 0, -45 + (rnd() - 0.5) * 20, 8 + rnd() * 8, 1.2 + rnd() * 1.6, 5 + rnd() * 5, k % 3 ? 0xe6e0d2 : 0xb84a3a, rnd() * 3);
+      // Lamps down the haul road, either side by turns, leaning out over it.
+      for (let z = -80, k = 0; z <= 90; z += 34, k++) site.place('lamp', k % 2 ? 8 : -8, z, k % 2 ? -Math.PI / 2 : Math.PI / 2);
+      for (const mesh of site.meshes()) group.add(mesh);
       // The track from its gate to behind the stands, and the road in from across the desert.
       const gate = new THREE.Vector3(0, 0, 105).applyMatrix4(site.m);
       const paddock = trackPoint(track, -120, away * (hwAt(track, -120) + 50), 0, new THREE.Vector3()).setY(g0);

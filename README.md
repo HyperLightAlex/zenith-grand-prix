@@ -42,7 +42,9 @@ This is version 0.5: nine circuits and three ways to play.
   soot, a knockout's pieces), brake boards count down to the tight corners,
   and the crowd's flashes and flags go up at the big moments in roofed,
   terraced grandstands along the start straight, under hover screens
-  showing them the race live.
+  showing them the race live. Out in the wild, the settlements that explain
+  a circuit stand round it: a paddock, car park and fuel stop in the
+  desert, a salvage camp by the fallen titan, a polar station on the ice.
 - **Your mech's livery**: on a custom mech, a pattern over its main paint
   (stripes, chevrons, camo, checks and more), its race number, a finish
   (gloss, matte, metal flake, pearl) and how the race wears it; some of the

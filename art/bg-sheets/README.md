@@ -34,7 +34,7 @@ Every circuit's sheets are in the game (`tools/bg/build_backgrounds.py`).
 | M3 Clouds | bg-m3-clouds.png | six clouds; the second is a little wider than its cell, so the clouds are cut by their outlines, not by the grid |
 | M4 Surfaces | bg-m4-surfaces.png | the squares do not quite repeat at their edges; each is cut to the length that wraps (whole window bays on the facades) and its seams blended |
 | M5 City ground | bg-m5-city.png | made with M4 attached, for the city's planned islands (render/meridianCity.ts). Of two tries, the one whose park keeps its bushes and path inside the square (a park is one square to a block, so it never repeats); the other's ran off its edges. Each square is laid its own way: the street, the bridge's deck and the promenade wrap along their length only (their sides are kerbs and parapets), the plaza both ways, the seawall along its length, cut below its railing (painted against sky) at its coping |
-| C5 Paddock and highway | (requested) | for the paddock, the car park, the highway in and the fuel stop (render/outposts.ts) |
+| C5 Paddock and highway | (requested) | for the paddock, the car park, the highway in and the fuel stop (render/outposts/outposts.ts) |
 | F4 Polar station | (requested) | for the station's modules, radomes, hangar and tanks, its runway and its track |
 | R5 Salvage camp | (requested) | for the camp's containers, workshop, cabins and tarps, its dirt track and its apron |
 | C1 Sky | bg-c1-sky.png | horizon at 697 px; the glow sits right on the horizon, as asked (the sun just touching it), so the game draws the sun's disc there, not at the light's height |

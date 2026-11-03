@@ -15,7 +15,7 @@ import { COLORS, SUN_DIR, toonMaterial } from './palette';
 import { buildGates, type GateVisual } from './gates';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT, RoadIndex, inRoadSpace } from './titan/keepout';
-import { CROWD_STEP, GRANDSTAND_DEPTH, GRANDSTAND_FOOT, GRANDSTAND_LENGTH, SEATING, grandstandModel, type GrandstandSlot } from './grandstand/grandstand';
+import { CROWD_STEP, GRANDSTAND_COLUMNS, GRANDSTAND_DEPTH, GRANDSTAND_LENGTH, GRANDSTAND_UNDERSIDE, SEATING, grandstandModel, type GrandstandSlot } from './grandstand/grandstand';
 
 const MAX_STRIPS = 12;
 const MAX_GATES = 8;
@@ -1296,19 +1296,51 @@ export function buildTrackVisual(
             pieces.get(slot)!.push(g);
           }
           // Where the ground lies further down than its walls reach (a
-          // raised road, over the sea or a drop), it stands on columns down
-          // to the ground, as the road does on its pylons. (In orbit, the
-          // station holds it up.)
+          // raised road, over the sea or a drop), its ground floor stands on
+          // columns down to the ground, as the road does on its pylons: one
+          // under each crossing of its beams, on a footing, tied to its
+          // neighbours both ways every 10 m down so the frame is braced. (In
+          // orbit, the station holds it up.)
           if (theme.ground !== 'orbit') {
-            for (const lz of [-2, -12, -22]) {
-              for (let lx = -56; lx <= 56; lx += 16) {
-                foot.set(lx, GRANDSTAND_FOOT, lz).applyMatrix4(m);
+            const concrete = pieces.get('concrete')!;
+            const keep = (geo: THREE.BufferGeometry) => {
+              geo.deleteAttribute('uv');
+              if (intrudes([geo.clone().toNonIndexed()])) return false;
+              concrete.push(geo);
+              return true;
+            };
+            type Column = { x: number; y: number; z: number; g: number };
+            const cols: Array<Array<Column | null>> = GRANDSTAND_COLUMNS.zs.map((lz) =>
+              GRANDSTAND_COLUMNS.xs.map((lx) => {
+                foot.set(lx, GRANDSTAND_UNDERSIDE, lz).applyMatrix4(m);
                 const g = groundAt(foot.x, foot.z);
-                if (!(foot.y - g > 1)) continue;
-                const leg = new THREE.BoxGeometry(2.4, foot.y - g + 0.5, 2.4).translate(foot.x, (foot.y + 0.5 + g) / 2, foot.z);
-                leg.deleteAttribute('uv');
-                if (intrudes([leg.clone().toNonIndexed()])) continue;
-                pieces.get('concrete')!.push(leg);
+                return foot.y - g > 1 ? { x: foot.x, y: foot.y, z: foot.z, g } : null;
+              }),
+            );
+            for (const row of cols) {
+              for (let k = 0; k < row.length; k++) {
+                const c = row[k];
+                if (!c) continue;
+                if (!keep(new THREE.BoxGeometry(2.4, c.y - c.g + 0.6, 2.4).translate(c.x, (c.y + 0.6 + c.g) / 2, c.z))) {
+                  row[k] = null;
+                  continue;
+                }
+                keep(new THREE.BoxGeometry(4.8, 1.4, 4.8).translate(c.x, c.g - 0.4, c.z));
+              }
+            }
+            const tie = (a: Column, b: Column) => {
+              const len = Math.hypot(b.x - a.x, b.z - a.z) - 2.4;
+              const yaw = Math.atan2(b.x - a.x, b.z - a.z);
+              for (let y = Math.min(a.y, b.y) - 9; y > Math.max(a.g, b.g) + 3; y -= 10) keep(new THREE.BoxGeometry(1, 1.4, len).rotateY(yaw).translate((a.x + b.x) / 2, y, (a.z + b.z) / 2));
+            };
+            for (let r = 0; r < cols.length; r++) {
+              for (let k = 0; k < cols[r].length; k++) {
+                const c = cols[r][k];
+                if (!c) continue;
+                const along = cols[r][k + 1];
+                const back = cols[r + 1]?.[k];
+                if (along) tie(c, along);
+                if (back) tie(c, back);
               }
             }
           }

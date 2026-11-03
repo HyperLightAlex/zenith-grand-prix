@@ -18,7 +18,8 @@ import { themeFor } from '../src/client/render/themes';
 import { buildWorld } from '../src/client/render/world';
 import { buildTrackVisual } from '../src/client/render/trackMesh';
 import { useGrandstandModel } from '../src/client/render/grandstand/grandstand';
-import { withGrandstandModel } from './grandstandModel';
+import { withGrandstandModel, withOutpostModel } from './grandstandModel';
+import { useOutpostModel } from '../src/client/render/outposts/outposts';
 
 const TITAN_MODEL = new URL('../src/client/render/titan/assets/titan.glb', import.meta.url);
 /** How far under the deck counts: the ground may lie against the slab under the road, not within this of its top. */
@@ -173,10 +174,12 @@ describe('the scenery and the road', () => {
   beforeAll(async () => {
     vi.stubGlobal('document', fakeDocument());
     await withGrandstandModel();
+    await withOutpostModel();
   });
   afterAll(() => {
     vi.unstubAllGlobals();
     useGrandstandModel(null);
+    useOutpostModel(null);
   });
   const report: string[] = [];
   afterAll(() => {

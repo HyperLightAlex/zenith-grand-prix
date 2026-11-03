@@ -20,6 +20,15 @@ export const GRANDSTAND_LENGTH = 120;
 export const GRANDSTAND_DEPTH = 24;
 /** How far below the road its walls go (the Blender script's BOTTOM). */
 export const GRANDSTAND_FOOT = -14;
+/**
+ * Its ground floor's beams (under its slab at the walls' foot): their
+ * underside (UNDERSIDE), and the lines they run along, in the stand's frame,
+ * across every 16 m (COLUMN_XS) and along under its front wall, its middle
+ * and its back wall (COLUMN_YS, here as z). Where the ground falls away, a
+ * column stands under each crossing.
+ */
+export const GRANDSTAND_UNDERSIDE = -16.2;
+export const GRANDSTAND_COLUMNS = { xs: [-56, -40, -24, -8, 8, 24, 40, 56], zs: [-0.6, -11.2, -21.8] } as const;
 
 /**
  * Where the crowd is, in the stand's frame: along x from -half to half,

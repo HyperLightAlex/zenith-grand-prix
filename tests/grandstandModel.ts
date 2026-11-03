@@ -1,6 +1,7 @@
-// The grandstands' model for the tests that build circuits' scenery: read
-// from its file (the game loads it at boot), so the stands they check are the
-// ones the game shows. Not a test file itself.
+// The grandstands' (and the hover screens', the outposts') models for the
+// tests that build circuits' scenery: read from their files (the game loads
+// them at boot), so what they check is what the game shows. Not a test file
+// itself.
 
 import { readFileSync } from 'node:fs';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -26,4 +27,14 @@ export async function readHoverScreenFile() {
   const bytes = readFileSync(HOVER_SCREEN_FILE);
   const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
   return readHoverScreen(gltf.scene);
+}
+
+export const OUTPOSTS_FILE = new URL('../src/client/render/outposts/assets/outposts.glb', import.meta.url);
+
+/** Build with the outposts' buildings from here on (until `useOutpostModel(null)`). */
+export async function withOutpostModel(): Promise<void> {
+  const { readOutposts, useOutpostModel } = await import('../src/client/render/outposts/outposts');
+  const bytes = readFileSync(OUTPOSTS_FILE);
+  const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+  useOutpostModel(readOutposts(gltf.scene));
 }

@@ -50,6 +50,13 @@ BACK_Y = FIRST_Y + ROWS * ROW_DEPTH  # 21.2
 LAST_Z = FIRST_Z + (ROWS - 1) * ROW_RISE
 BACK_TOP = LAST_Z + 3.4
 BOTTOM = -14.0
+# The ground floor's slab under BOTTOM, its beams' underside, and the lines
+# of its beams (and the columns the game stands it on where the ground falls
+# away): along x every 16 m, and under the front wall, the middle, the back wall.
+SLAB = 0.8
+UNDERSIDE = BOTTOM - 2.2
+COLUMN_XS = tuple(float(x) for x in range(-56, 57, 16))
+COLUMN_YS = (0.6, 11.2, 21.8)
 AISLES = (-36.0, -12.0, 12.0, 36.0)
 AISLE_HALF = 0.8
 ROOF_FRONT_Y = 4.0
@@ -207,6 +214,16 @@ def build():
     # Pilasters up the back wall, between the windows.
     for x in range(-56, 57, 8):
         concrete.box(x - 0.5, x + 0.5, BACK_Y + 1.2, BACK_Y + 1.6, BOTTOM, BACK_TOP)
+    # Its ground floor, at the walls' foot: a slab under the whole stand on a
+    # grid of beams, under the front wall, the middle and the back wall, and
+    # across them every 16 m. On the ground it is its foundation; where the
+    # ground falls away (a raised road, over the sea), the game stands it on
+    # columns under the beams' crossings (UNDERSIDE, COLUMN_XS, COLUMN_YS).
+    concrete.box(-HALF - 1.0, HALF + 1.0, 0.0, BACK_Y + 1.6, BOTTOM - SLAB, BOTTOM)
+    for y in COLUMN_YS:
+        concrete.box(-HALF - 1.0, HALF + 1.0, y - 0.6, y + 0.6, UNDERSIDE, BOTTOM - SLAB)
+    for x in COLUMN_XS:
+        concrete.box(x - 0.6, x + 0.6, 0.0, BACK_Y + 1.6, UNDERSIDE, BOTTOM - SLAB)
     concrete.build(col)
 
     # The hospitality boxes' windows along the back, above the last row.
