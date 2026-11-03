@@ -331,10 +331,24 @@ export function registerRace(m: Menus, g: Game): void {
   });
 }
 
-/** What to do next, under the results: on to the next race or match, or back. */
+/** What to do next, under the results: on to the next race, or (the match decided) its ceremony; or back. */
 function resultButtons(m: Menus, g: Game, box: HTMLElement, over: boolean, single: boolean, sprint = false): void {
   const list = h('div.list');
   const next = sprint ? 'race' : 'round';
+  if (g.ceremonyDue) {
+    // The match decided: on to its ceremony (the podium, the award, the readout).
+    m.button(list, 'The ceremony', () => g.showMatchCeremony(), { key: 'next', go: true, note: 'The podium, the mentions and the final readout' });
+    if (g.mode === 'online') {
+      const t = Math.max(0, g.online.lobby?.timer ?? 0);
+      m.button(list, 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave', note: `Back to the room in ${t}` });
+    } else {
+      if (g.canReplay) m.button(list, 'Watch the replay', () => g.watchReplay(), { key: 'replay' });
+      m.button(list, 'Change setup', () => g.toSetup(), { key: 'setup' });
+      m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
+    }
+    box.append(list);
+    return;
+  }
   if (g.mode === 'online') {
     const v = g.online.lobby;
     const done = v?.continued.includes(g.online.pid);
@@ -349,19 +363,16 @@ function resultButtons(m: Menus, g: Game, box: HTMLElement, over: boolean, singl
   } else if (g.mode === 'gp') {
     m.button(list, over ? 'Continue' : 'Next round', () => g.next(), { key: 'next', go: true });
     if (g.canReplay) m.button(list, 'Watch the replay', () => g.watchReplay(), { key: 'replay' });
-    if (g.canPodium) m.button(list, 'The podium', () => g.showPodium(), { key: 'podium', note: 'And photo mode' });
     m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
   } else if (g.mode === 'tutorial') {
     m.button(list, 'Free Play', () => g.afterTutorial('free'), { key: 'free', go: true, note: 'Any circuit, any rival, any format' });
     m.button(list, 'Grand Prix', () => g.afterTutorial('gp'), { key: 'gp', note: 'Cups and the Grand Tour for medals' });
     m.button(list, 'Race the tutorial again', () => g.next(), { key: 'next' });
     if (g.canReplay) m.button(list, 'Watch the replay', () => g.watchReplay(), { key: 'replay' });
-    if (g.canPodium) m.button(list, 'The podium', () => g.showPodium(), { key: 'podium', note: 'And photo mode' });
     m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
   } else {
     m.button(list, over ? (single ? 'Race again' : sprint ? 'New Sprint' : 'New match') : sprint ? 'Next race' : 'Next round', () => g.next(), { key: 'next', go: true });
     if (g.canReplay) m.button(list, 'Watch the replay', () => g.watchReplay(), { key: 'replay' });
-    if (g.canPodium) m.button(list, 'The podium', () => g.showPodium(), { key: 'podium', note: 'And photo mode' });
     m.button(list, 'Change setup', () => g.toSetup(), { key: 'setup' });
     m.button(list, 'Quit to title', () => g.showTitle(), { key: 'quit' });
   }

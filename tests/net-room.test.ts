@@ -3,7 +3,7 @@ import { CALLER, PHASE, ROLE, TACTIC, emptyInput, raceChecksum, type MechInput }
 import { TestNet, type TestClient } from './netHarness';
 import { steerToward, makeRandom, mash } from './helpers';
 import { cleanWire } from '../src/net/roomCore';
-import { READY_COUNTDOWN } from '../src/net/protocol';
+import { CEREMONY_SECONDS, READY_COUNTDOWN } from '../src/net/protocol';
 
 /** A person who keeps to the racing line, with some random button presses. */
 function pilot(seed: number): (c: TestClient) => MechInput {
@@ -73,8 +73,16 @@ describe('an online room', () => {
     // Both people drove: the server applied their inputs, not the computer's.
     expect(net.core.race!.mechs[0].human).toBe(true);
     expect(net.core.race!.mechs[0].finished || net.core.race!.mechs[0].retired).toBe(true);
-    // After the final results, everyone is back in the lobby on their team, in their frame.
+    // The ceremony's ledger came with the match: every pilot's points, where they came from.
+    expect(b.roundEnds[0].match.pilots).toHaveLength(6);
+    expect(b.roundEnds[0].match.pilots.every((l) => l.points === l.placing + l.koPts + l.support)).toBe(true);
+    // The results, then the ceremony: the room waits for everyone (or a minute).
     net.run(11000);
+    expect(net.core.phase).toBe('final');
+    expect(CEREMONY_SECONDS).toBeGreaterThan(30);
+    // Everyone back to the room: in the lobby on their team, in their frame.
+    for (const c of [a, b]) c.send('continue', { at: 'final' });
+    net.run(500);
     expect(net.core.phase).toBe('lobby');
     expect(a.lobby?.phase).toBe('lobby');
     const back = a.lobby?.players.find((p) => p.pid === 'a');

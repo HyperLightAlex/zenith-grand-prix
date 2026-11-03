@@ -1,10 +1,14 @@
-// The podium: after a race, the first three home stand on it in their
-// victory poses, on a stage built at the side of the start straight, its
-// back to the barrier and the grandstand behind it, facing across the road.
-// The set is Blender's (art/blender/podium/build_podium.py: the tiers, the
-// backdrop's screens, a lighting truss on two towers); the game paints it,
-// draws the numerals and what the screens show, hangs the spotlights' beams
-// and fires the confetti.
+// The podium: at a match's or an event's end, its first three stand on it
+// in their victory poses, on a stage built at the side of the start
+// straight, its back to the barrier and the grandstand behind it, facing
+// across the road. Two sets, Blender's (art/blender/podium/build_podium.py:
+// the tiers, the backdrop's screens, a lighting truss on two towers): the
+// pilots' podium, a mech to a step (a Sprint's first three, a team's three),
+// and the teams' podium, a team to a step, three abreast (a Grand Prix's
+// first three factions), its leader in front. The game paints them, draws
+// the numerals and what the screens show, hangs the spotlights' beams, fires
+// the confetti, and at an event's end sets its trophy (art/blender/trophy)
+// on the winners' step.
 //
 // Everything is in the podium's own frame (`frame`): the stage on y = 0, the
 // front of the winner's tier at the middle of its front edge, facing +z;
@@ -20,14 +24,37 @@ import type { VictoryId } from '../mech/victoryPoses';
 import { SUN_DIR, type Livery } from '../palette';
 import { trackDir, trackMatrix } from '../trackSpace';
 
-const urls = import.meta.glob('./assets/podium.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const urls = import.meta.glob(['./assets/podium.glb', './assets/podium-teams.glb', './assets/trophy.glb'], { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
-/** Where each place stands: on top of its tier (x, the tier's top, z). */
+/** The pilots' podium (a mech to a step) or the teams' (a team to a step). */
+export type PodiumLayout = 'pilots' | 'teams';
+
+/** Where each place stands on the pilots' podium: on top of its tier (x, the tier's top, z). */
 export const PODIUM_SPOTS: ReadonlyArray<readonly [number, number, number]> = [
   [0, 5.4, 0.2],
   [-13.25, 4.2, 0.4],
   [13.25, 3.2, 0.4],
 ];
+/**
+ * Where a team stands on the teams' podium, each place's three: its leader
+ * in front at the middle of its tier, the other two a step behind either
+ * side (the tiers 24 m wide, a Defender 8 m across).
+ */
+export const TEAM_SPOTS: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>> = [0, -25.25, 25.25].map((cx, place) => {
+  const y = [5.4, 4.2, 3.2][place];
+  return [
+    [cx, y, 1.6],
+    [cx - 7.6, y, -2.2],
+    [cx + 7.6, y, -2.2],
+  ] as const;
+});
+/** Where the trophy stands: on the winners' tier, in front of their leader (pilots', teams'). */
+const TROPHY_AT: Record<PodiumLayout, readonly [number, number, number]> = { pilots: [0, 5.4, 4.3], teams: [0, 5.4, 5.0] };
+/** Each set's pyro cannons (x) and the stage's half width; its spotlights (x). */
+const SET: Record<PodiumLayout, { cannons: number; stage: number; lamps: readonly number[]; scale: number }> = {
+  pilots: { cannons: 22.5, stage: 24, lamps: [-18, -11, -4, 4, 11, 18], scale: 1 },
+  teams: { cannons: 39.5, stage: 41, lamps: [-32, -22, -8, 8, 22, 32], scale: 1.7 },
+};
 /** The middle of the set, for cameras to look at. */
 export const PODIUM_CENTRE = new THREE.Vector3(0, 9, 0);
 /** How far along the road behind the start line it stands. */
@@ -48,6 +75,15 @@ export interface PodiumPilot {
   pose: VictoryId;
 }
 
+/** A place on the podium: who stands on it (its leader first), and what its screen says. */
+export interface PodiumStep {
+  pilots: PodiumPilot[];
+  /** On its screen: the pilot's name, or the team's. */
+  label: string;
+  css: string;
+  emblem: string;
+}
+
 export interface PodiumBill {
   circuit: string;
   /** The big line on the screen (the winning team, or the winner). */
@@ -58,21 +94,33 @@ export interface PodiumBill {
   glow: number;
   css: string;
   emblem: string;
+  /** Which podium. */
+  layout: PodiumLayout;
+  /** An event's trophy on the winners' step. */
+  trophy: boolean;
 }
 
-let loading: Promise<THREE.Group | null> | undefined;
-/** Load the set (once). Null when it is not in the build. */
-export function loadPodium(): Promise<THREE.Group | null> {
-  return (loading ??= (async () => {
-    const url = urls['./assets/podium.glb'];
-    if (!url) return null;
-    try {
-      return (await new GLTFLoader().loadAsync(url)).scene;
-    } catch {
-      return null;
-    }
-  })());
+const loading = new Map<string, Promise<THREE.Group | null>>();
+/** Load a model of the set (once). Null when it is not in the build. */
+function loadModel(file: string): Promise<THREE.Group | null> {
+  let p = loading.get(file);
+  if (!p) {
+    p = (async () => {
+      const url = urls[`./assets/${file}`];
+      if (!url) return null;
+      try {
+        return (await new GLTFLoader().loadAsync(url)).scene;
+      } catch {
+        return null;
+      }
+    })();
+    loading.set(file, p);
+  }
+  return p;
 }
+
+/** Load the pilots' podium (once). Null when it is not in the build. */
+export const loadPodium = (): Promise<THREE.Group | null> => loadModel('podium.glb');
 
 function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
@@ -144,6 +192,9 @@ interface Stand {
   /** The pilot's mech, standing still. */
   state: MechState;
   place: number;
+  /** Its spot on its step (0 its leader, 1 and 2 behind either side), and how it is turned. */
+  at: readonly [number, number, number];
+  turn: number;
   pose: VictoryId;
   /** Seconds since it struck its pose, or less than zero before. */
   t: number;
@@ -165,21 +216,38 @@ const v1 = new THREE.Vector3();
 const q1 = new THREE.Quaternion();
 const ONE = new THREE.Vector3(1, 1, 1);
 
+/** A set as dressed: its model, the planes drawn on, the beams. */
+interface Dressed {
+  root: THREE.Group;
+  numerals: Array<{ mesh: THREE.Mesh; place: number }>;
+  screens: Map<string, THREE.Mesh>;
+  beams: THREE.Mesh[];
+}
+
 export class Podium {
   /** When each place strikes its pose, first to third (seconds after it goes up). */
   static readonly STRIKE_AT: readonly number[] = POSE_AT;
+  /** A team's second and third strike theirs this long after its leader. */
+  static readonly TEAM_STAGGER = 0.22;
   readonly root = new THREE.Group();
   /** The podium's frame in the world. */
   readonly frame = new THREE.Matrix4();
   /** How far out in front of it a camera may stand (across the road and a little past it). */
   reach = 40;
-  private set: THREE.Group | null = null;
+  /** Which set is up, and how much wider than the pilots' it is (for the cameras). */
+  layout: PodiumLayout = 'pilots';
+  get scale(): number {
+    return SET[this.layout].scale;
+  }
+  private sets: Partial<Record<PodiumLayout, Dressed>> = {};
+  private trophy: THREE.Group | null = null;
+  private trophyGlow = new THREE.MeshBasicMaterial({ color: 0x45e8ff, toneMapped: false });
+  /** Seconds since the trophy came up, or less than zero before (none: no trophy). */
+  private trophyT = -1;
+  private showTrophy = false;
   private stands: Stand[] = [];
   private time = 0;
-  private numerals: Array<{ mesh: THREE.Mesh; place: number }> = [];
-  private screens = new Map<string, THREE.Mesh>();
   private led = new THREE.MeshBasicMaterial({ color: 0x45e8ff, toneMapped: false });
-  private beams: THREE.Mesh[] = [];
   private beamMat: THREE.MeshBasicMaterial;
   private confetti: THREE.InstancedMesh;
   private bits: Bit[] = [];
@@ -218,23 +286,46 @@ export class Podium {
     this.root.add(this.confetti);
   }
 
-  /** Whether the set is in (it loads in the background). */
-  get ready(): boolean {
-    return this.set !== null;
+  /** Whether a set is in (they load in the background): the pilots' (or `layout`'s). */
+  ready(layout: PodiumLayout = 'pilots'): boolean {
+    return !!this.sets[layout];
   }
 
-  /** Start loading the set (and take it once it is in). */
+  /** Start loading the sets and the trophy (and take each once it is in). */
   preload(): void {
-    if (this.set) return;
-    void loadPodium().then((scene) => {
-      if (!scene || this.set) return;
-      this.set = this.dress(scene);
-      this.root.add(this.set);
-    });
+    for (const layout of ['pilots', 'teams'] as const) {
+      if (this.sets[layout]) continue;
+      void loadModel(layout === 'pilots' ? 'podium.glb' : 'podium-teams.glb').then((scene) => {
+        if (!scene || this.sets[layout]) return;
+        const set = this.dress(scene, layout);
+        set.root.visible = false;
+        this.sets[layout] = set;
+        this.root.add(set.root);
+      });
+    }
+    if (!this.trophy)
+      void loadModel('trophy.glb').then((scene) => {
+        if (!scene || this.trophy) return;
+        scene.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          const slot = (mesh.material as THREE.Material).name;
+          (mesh.material as THREE.Material).dispose();
+          mesh.material = slot === 'glow' ? this.trophyGlow : new THREE.MeshLambertMaterial({ color: slot === 'base' ? 0x262c3a : 0xf2b630 });
+        });
+        celify(scene);
+        scene.visible = false;
+        scene.matrixAutoUpdate = false;
+        this.trophy = scene;
+        this.root.add(scene);
+      });
   }
 
-  /** Paint the set's slots, and find the planes the game draws on. */
-  private dress(scene: THREE.Group): THREE.Group {
+  /** Paint a set's slots, and find the planes the game draws on. */
+  private dress(scene: THREE.Group, layout: PodiumLayout): Dressed {
+    const numerals: Dressed['numerals'] = [];
+    const screens: Dressed['screens'] = new Map();
+    const beams: THREE.Mesh[] = [];
     const lambert = (color: number) => new THREE.MeshLambertMaterial({ color });
     const mats: Record<string, THREE.Material> = {
       stage: lambert(0x262c3a),
@@ -255,11 +346,11 @@ export class Podium {
       const slot = (mesh.material as THREE.Material).name;
       const n = /^numeral_(\d)$/.exec(name);
       if (n) {
-        this.numerals.push({ mesh, place: Number(n[1]) - 1 });
+        numerals.push({ mesh, place: Number(n[1]) - 1 });
         return;
       }
       if (/^screen_/.test(name)) {
-        this.screens.set(name, mesh);
+        screens.set(name, mesh);
         return;
       }
       const mat = mats[slot] ?? mats.stage;
@@ -268,7 +359,7 @@ export class Podium {
     });
     celify(scene);
     // The numerals: drawn once, each to its panel's shape.
-    for (const { mesh, place } of this.numerals) {
+    for (const { mesh, place } of numerals) {
       const box = new THREE.Box3().setFromBufferAttribute(mesh.geometry.attributes.position as THREE.BufferAttribute);
       const size = box.getSize(v1);
       const w = 512;
@@ -277,14 +368,18 @@ export class Podium {
       drawNumeral(g, w, h, place);
       mesh.material = new THREE.MeshBasicMaterial({ map: modelTexture(c) });
     }
-    for (const [name, mesh] of this.screens) {
-      // (The middle screen 26 m by 13.7, the side ones square.)
-      const [c] = name === 'screen_center' ? canvas(1024, 540) : canvas(600, 600);
+    for (const [name, mesh] of screens) {
+      // (Each canvas the shape of its screen: the pilots' middle one 26 m by 13.7, the side ones square.)
+      const box = new THREE.Box3().setFromBufferAttribute(mesh.geometry.attributes.position as THREE.BufferAttribute);
+      const size = box.getSize(v1);
+      const across = Math.hypot(size.x, size.z);
+      const w = name === 'screen_center' ? 1024 : 600;
+      const [c] = canvas(w, Math.round((w * size.y) / Math.max(0.01, across)));
       mesh.material = new THREE.MeshBasicMaterial({ map: modelTexture(c), toneMapped: false });
       mesh.userData.canvas = c;
     }
     // The spotlights' beams, down from the truss to the tiers.
-    for (const x of [-18, -11, -4, 4, 11, 18]) {
+    for (const x of SET[layout].lamps) {
       const from = new THREE.Vector3(x, 22.1, -3.4);
       const to = new THREE.Vector3(x * 0.7, 2.5, 6);
       const len = from.distanceTo(to);
@@ -297,18 +392,22 @@ export class Podium {
       beam.userData.base = beam.quaternion.clone();
       beam.userData.x = x;
       beam.renderOrder = 3;
-      this.beams.push(beam);
+      beams.push(beam);
       scene.add(beam);
     }
-    return scene;
+    return { root: scene, numerals, screens, beams };
   }
 
   /**
-   * Put the podium up on a circuit with its three (or fewer) pilots, first
-   * to third. False if the set is not in yet.
+   * Put the podium up on a circuit with its three (or fewer) places, first
+   * to third (on the pilots' podium a pilot each, on the teams' a team).
+   * False if the set is not in yet.
    */
-  show(track: Track, pilots: readonly PodiumPilot[], bill: PodiumBill): boolean {
-    if (!this.set) return false;
+  show(track: Track, steps: readonly PodiumStep[], bill: PodiumBill): boolean {
+    const set = this.sets[bill.layout];
+    if (!set) return false;
+    this.layout = bill.layout;
+    for (const l of ['pilots', 'teams'] as const) if (this.sets[l]) this.sets[l]!.root.visible = l === bill.layout;
     this.clearStands();
     // At the side of the straight behind the line, its back to the barrier,
     // facing across the road: on whichever side has the sun on its front
@@ -328,21 +427,30 @@ export class Podium {
     this.root.matrixWorldNeedsUpdate = true;
     this.bill = bill;
     this.led.color.setHex(bill.glow);
-    this.paintScreens(pilots, bill);
-    pilots.slice(0, 3).forEach((p, place) => {
-      const rig = rigForSeat(p.mech, p.livery);
-      // As worn as the race left it.
-      wearRig(rig, p.mech.retired ? 1 : 1 - p.mech.hp / Math.max(1, p.mech.maxHp));
-      rig.root.matrixAutoUpdate = false;
-      markCharacter(rig.root, p.mech.id);
-      celify(rig.root);
-      // Standing still: nothing of the race left on it.
-      const state: MechState = { ...p.mech, speed: 0, vs: 0, vd: 0, boosting: false, carving: false, guarding: false, retired: false, overdriveT: 0, carveT: 0, target: -1, act: 0, h: 0, air: false };
-      const anim = new MechAnimator(rig);
-      anim.display = true;
-      this.root.add(rig.root);
-      this.stands.push({ rig, anim, state, place, pose: p.pose, t: -POSE_AT[place], struck: false });
+    this.trophyGlow.color.setHex(bill.glow);
+    this.paintScreens(set, steps, bill);
+    steps.slice(0, 3).forEach((step, place) => {
+      const spots = bill.layout === 'teams' ? TEAM_SPOTS[place] : [PODIUM_SPOTS[place]];
+      step.pilots.slice(0, spots.length).forEach((p, k) => {
+        const rig = rigForSeat(p.mech, p.livery);
+        // As worn as its last race left it.
+        wearRig(rig, p.mech.retired ? 1 : 1 - p.mech.hp / Math.max(1, p.mech.maxHp));
+        rig.root.matrixAutoUpdate = false;
+        markCharacter(rig.root, p.mech.id);
+        celify(rig.root);
+        // Standing still: nothing of the race left on it.
+        const state: MechState = { ...p.mech, speed: 0, vs: 0, vd: 0, boosting: false, carving: false, guarding: false, retired: false, overdriveT: 0, carveT: 0, target: -1, act: 0, h: 0, air: false };
+        const anim = new MechAnimator(rig);
+        anim.display = true;
+        this.root.add(rig.root);
+        // The second's and the third's turn a little in, toward the winners.
+        const turn = place === 0 ? 0 : place === 1 ? 0.22 : -0.22;
+        this.stands.push({ rig, anim, state, place, at: spots[k], turn, pose: p.pose, t: -(POSE_AT[place] + k * Podium.TEAM_STAGGER), struck: false });
+      });
     });
+    this.showTrophy = bill.trophy;
+    this.trophyT = -1;
+    if (this.trophy) this.trophy.visible = false;
     this.time = 0;
     this.fired = false;
     this.bits.length = 0;
@@ -354,6 +462,7 @@ export class Podium {
 
   hide(): void {
     this.root.visible = false;
+    if (this.trophy) this.trophy.visible = false;
     this.clearStands();
     this.bits.length = 0;
     this.confetti.count = 0;
@@ -373,16 +482,16 @@ export class Podium {
   }
 
   /** The screens: the winners and the circuit in the middle, the second and third either side. */
-  private paintScreens(pilots: readonly PodiumPilot[], bill: PodiumBill): void {
+  private paintScreens(set: Dressed, steps: readonly PodiumStep[], bill: PodiumBill): void {
     const draw = async () => {
       try {
         await document.fonts?.load(`italic 800 40px ${FONT}`);
       } catch {
         // (Drawn in whatever font there is.)
       }
-      const emblems = await Promise.all([bill.emblem, ...pilots.map((p) => p.emblem)].map((u) => (u ? loadImage(u) : Promise.resolve(null))));
+      const emblems = await Promise.all([bill.emblem, ...steps.map((p) => p.emblem)].map((u) => (u ? loadImage(u) : Promise.resolve(null))));
       if (this.bill !== bill) return;
-      const centre = this.screens.get('screen_center');
+      const centre = set.screens.get('screen_center');
       if (centre) {
         const c = centre.userData.canvas as HTMLCanvasElement;
         const g = c.getContext('2d')!;
@@ -425,15 +534,15 @@ export class Podium {
         g.fillText(bill.sub, w / 2, 178);
         const em = emblems[0];
         if (em) {
-          const s = 150;
+          const s = Math.min(150, h * 0.36);
           g.drawImage(em, 40, 30, s, s);
           g.drawImage(em, w - 40 - s, 30, s, s);
         }
         (centre.material as THREE.MeshBasicMaterial).map!.needsUpdate = true;
       }
       for (const [name, place] of [['screen_left', 1], ['screen_right', 2]] as const) {
-        const mesh = this.screens.get(name);
-        const p = pilots[place];
+        const mesh = set.screens.get(name);
+        const p = steps[place];
         if (!mesh) continue;
         const c = mesh.userData.canvas as HTMLCanvasElement;
         const g = c.getContext('2d')!;
@@ -441,19 +550,21 @@ export class Podium {
         g.fillStyle = '#080c16';
         g.fillRect(0, 0, w, h);
         if (p) {
-          g.fillStyle = p.livery.css;
+          // (Laid out for a square screen, scaled to this one's height.)
+          const k = h / 600;
+          g.fillStyle = p.css;
           g.globalAlpha = 0.3;
           g.fillRect(0, 0, w, h);
           g.globalAlpha = 1;
           const em = emblems[place + 1];
-          if (em) g.drawImage(em, w / 2 - 130, 60, 260, 260);
+          if (em) g.drawImage(em, w / 2 - 130 * k, 60 * k, 260 * k, 260 * k);
           g.textAlign = 'center';
           g.fillStyle = PLACE_COLOURS[place];
-          g.font = `italic 800 110px ${FONT}`;
-          g.fillText(place === 1 ? '2ND' : '3RD', w / 2, 440);
+          g.font = `italic 800 ${Math.round(110 * k)}px ${FONT}`;
+          g.fillText(place === 1 ? '2ND' : '3RD', w / 2, 440 * k);
           g.fillStyle = '#ffffff';
-          fitText(g, p.name.toUpperCase(), 84, '800', w * 0.85);
-          g.fillText(p.name.toUpperCase(), w / 2, 540);
+          fitText(g, p.label.toUpperCase(), 84 * k, '800', w * 0.85);
+          g.fillText(p.label.toUpperCase(), w / 2, 540 * k);
         }
         (mesh.material as THREE.MeshBasicMaterial).map!.needsUpdate = true;
       }
@@ -466,10 +577,9 @@ export class Podium {
     this.time += dt;
     for (const s of this.stands) {
       s.t += dt;
-      const [x, y, z] = PODIUM_SPOTS[s.place];
+      const [x, y, z] = s.at;
       m4.makeTranslation(x, y, z);
-      // The second and third turn a little in, toward the winner.
-      if (s.place > 0) m4.multiply(new THREE.Matrix4().makeRotationY(s.place === 1 ? 0.22 : -0.22));
+      if (s.turn) m4.multiply(new THREE.Matrix4().makeRotationY(s.turn));
       s.rig.root.matrix.copy(m4);
       if (s.t >= 0 && !s.struck) {
         s.struck = true;
@@ -479,12 +589,14 @@ export class Podium {
       s.anim.update(dt, s.state, 1, dt);
       s.rig.root.updateMatrixWorld(true);
     }
-    // The winner's pose fires the confetti.
+    // The winner's pose fires the confetti; the trophy comes up with it.
     if (!this.fired && this.stands[0] && this.stands[0].t >= 0) {
       this.fired = true;
       this.burst();
+      if (this.showTrophy) this.trophyT = 0;
     }
-    for (const beam of this.beams) {
+    this.stepTrophy(dt);
+    for (const beam of this.sets[this.layout]?.beams ?? []) {
       // The beams sweep a little.
       const x = beam.userData.x as number;
       q1.setFromAxisAngle(v1.set(0, 0, 1), Math.sin(this.time * 0.7 + x) * 0.06);
@@ -492,6 +604,30 @@ export class Podium {
     }
     this.beamMat.opacity = 0.065 + Math.sin(this.time * 2.3) * 0.008;
     this.stepConfetti(dt);
+  }
+
+  /**
+   * The trophy: up out of the winners' tier in front of their leader as the
+   * confetti goes (scaled up from nothing, turning), then turning slowly on
+   * its plinth, its ring lit in the winners' colour.
+   */
+  private stepTrophy(dt: number): void {
+    const t = this.trophy;
+    if (!t) return;
+    if (this.trophyT < 0) {
+      t.visible = false;
+      return;
+    }
+    this.trophyT += dt;
+    const e = Math.min(1, this.trophyT / 0.9);
+    const grow = e * e * (3 - 2 * e);
+    const [x, y, z] = TROPHY_AT[this.layout];
+    // (Rising the last little way as it grows.)
+    q1.setFromAxisAngle(v1.set(0, 1, 0), this.trophyT * 0.6 + (1 - grow) * 2.5);
+    m4.compose(new THREE.Vector3(x, y - 0.6 * (1 - grow), z), q1, new THREE.Vector3(grow, grow, grow));
+    t.matrix.copy(m4);
+    t.visible = grow > 0.01;
+    t.updateMatrixWorld(true);
   }
 
   /** Confetti from the four cannons, in the winners' colours, gold and white. */
@@ -502,9 +638,10 @@ export class Podium {
       // Half blown up and in from the cannons at the stage's corners, half
       // let go from the truss over the tiers.
       const cannon = i % 2 === 0;
-      const [cx, cz] = [[-22.5, 7], [22.5, 7], [-22.5, -9.5], [22.5, -9.5]][(i >> 1) % 4];
+      const X = SET[this.layout].cannons;
+      const [cx, cz] = [[-X, 7], [X, 7], [-X, -9.5], [X, -9.5]][(i >> 1) % 4];
       this.bits.push({
-        p: cannon ? new THREE.Vector3(cx, 1.9, cz) : new THREE.Vector3((Math.random() - 0.5) * 50, 21 + Math.random() * 2, -3.8 + (Math.random() - 0.5) * 3),
+        p: cannon ? new THREE.Vector3(cx, 1.9, cz) : new THREE.Vector3((Math.random() - 0.5) * 50 * SET[this.layout].scale, 21 + Math.random() * 2, -3.8 + (Math.random() - 0.5) * 3),
         v: cannon
           ? new THREE.Vector3(-Math.sign(cx) * (8 + Math.random() * 22), 18 + Math.random() * 12, -Math.sign(cz) * Math.random() * 8)
           : new THREE.Vector3((Math.random() - 0.5) * 2, -Math.random() * 1.5, 2 + Math.random() * 4),
@@ -534,7 +671,7 @@ export class Podium {
       b.p.addScaledVector(b.v, dt);
       b.p.x += Math.sin(b.life * 2.2 + b.phase) * 1.4 * dt;
       b.p.z += Math.cos(b.life * 1.7 + b.phase) * 0.8 * dt;
-      const floor = Math.abs(b.p.x) < 24 && b.p.z > -11.5 && b.p.z < 8.5 ? 0.85 : 0.05;
+      const floor = Math.abs(b.p.x) < SET[this.layout].stage && b.p.z > -11.5 && b.p.z < 8.5 ? 0.85 : 0.05;
       if (b.p.y < floor) {
         b.p.y = floor;
         b.v.set(0, 0, 0);

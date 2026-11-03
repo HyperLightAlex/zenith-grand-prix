@@ -153,6 +153,7 @@ export function renderGpRoom(m: Menus, g: Game, v: LobbyView): void {
     col.className = 'col gp-award';
     col.append(h('div.context', `${eventName(ev)} · online`), ...awardLines(ev, place, cup ? medalFor(place) : null));
     m.button(list, 'Back to Online', () => g.leaveRoom(), { key: 'done', go: true, note: 'Online results are not kept' });
+    m.button(list, 'The ceremony', () => g.showEventCeremony(ev), { key: 'ceremony', note: 'The podium and the pilots' });
     side = h('div.panel.standings', h('h2', 'Final standings'), gpTable(ev, ev.rounds.length - 1));
   } else {
     // The match is under way (you are here between rounds, or arrived mid-match).

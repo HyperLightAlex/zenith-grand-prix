@@ -28,8 +28,13 @@ export const RECONNECT_SECONDS = 60;
 export const READY_COUNTDOWN = 5;
 /** Between rounds: the next starts when everyone continues, or after this long (seconds). */
 export const RESULTS_SECONDS = 15;
-/** After the match: the final results stay up this long before the room's lobby (seconds). */
+/** After a Grand Prix room's match: its final results stay up this long before the round's standings (seconds). */
 export const FINAL_SECONDS = 10;
+/**
+ * After any other room's match: its results, then its ceremony (the podium,
+ * the readout), until everyone goes back to the room or this long (seconds).
+ */
+export const CEREMONY_SECONDS = 60;
 /** A Grand Prix room: once every result of a round is in, the table stays up until everyone continues, or this long (seconds). */
 export const STANDINGS_SECONDS = 30;
 /**

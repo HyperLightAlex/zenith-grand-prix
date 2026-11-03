@@ -4,7 +4,10 @@ and a lighting truss over it on two towers (art/blender/podium/README.txt).
 Run with the bpy module (tools/blender.sh):
 
     sh tools/blender.sh run art/blender/podium/build_podium.py -- \
+        [--layout pilots|teams] \
         [--glb src/client/render/podium/assets/podium.glb] [--blend out.blend] [--preview out.png]
+
+(--layout teams builds the teams' podium, podium-teams.glb.)
 
 Built from code so it can be built again exactly: every piece is a box, a
 plane or a tube. Metres, Blender's axes (Z up); the front faces -Y, so in the
@@ -43,25 +46,53 @@ SLOTS = {
 
 # Sized for the mechs: 8.7 to 8.8 m tall, up to 8 m across (a Defender).
 STAGE_TOP = 0.8
-# The tiers: x from, x to, height above the stage, the front's y, the trim's slot.
-TIERS = {
-    1: (-6.5, 6.5, 4.6, -6.0, "gold"),
-    2: (-19.5, -7.0, 3.4, -5.5, "silver"),
-    3: (7.0, 19.5, 2.4, -5.5, "bronze"),
-}
 TIER_BACK = 5.0
-# The backdrop's centre panel: half its width, its front's y, its top.
-BACK_HALF = 14.0
+# Two layouts. The pilots' podium: a mech to a tier (a Sprint's first three,
+# a team's three). The teams' podium (a Grand Prix's first three factions):
+# a team to a tier, three abreast, its leader in front, the other two a step
+# behind either side; the set as much wider as it needs, the same height.
+#   tiers: x from, x to, height above the stage, the front's y, the trim's slot
+#   stage: its half width; steps: the front steps' half width
+#   back: the backdrop's centre panel's half width; side: a side panel's
+#   width and how far it is swung forward (degrees)
+#   tower: the truss's towers' x; lamps: the spotlights' x; cannons: the pyro
+#   cannons' x
+LAYOUTS = {
+    "pilots": dict(
+        tiers={1: (-6.5, 6.5, 4.6, -6.0, "gold"), 2: (-19.5, -7.0, 3.4, -5.5, "silver"), 3: (7.0, 19.5, 2.4, -5.5, "bronze")},
+        stage=24.0,
+        steps=6.0,
+        back=14.0,
+        side=(13.0, 24),
+        tower=29.0,
+        lamps=(-18, -11, -4, 4, 11, 18),
+        cannons=22.5,
+    ),
+    "teams": dict(
+        tiers={1: (-12.0, 12.0, 4.6, -6.5, "gold"), 2: (-37.5, -13.0, 3.4, -6.0, "silver"), 3: (13.0, 37.5, 2.4, -6.0, "bronze")},
+        stage=41.0,
+        steps=10.0,
+        back=18.0,
+        side=(15.0, 16),
+        tower=46.0,
+        lamps=(-32, -22, -8, 8, 22, 32),
+        cannons=39.5,
+    ),
+}
+L = LAYOUTS["pilots"]
+TIERS = L["tiers"]
+# The backdrop's centre panel: half its width (the layout's), its front's y, its top.
+BACK_HALF = L["back"]
 BACK_Y = 10.0
 BACK_TOP = 21.0
 # The truss: its top, and the towers' x.
 TRUSS_TOP = 23.5
-TOWER_X = 29.0
+TOWER_X = L["tower"]
 
 
 def args():
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
-    out = {"glb": None, "blend": None, "preview": None}
+    out = {"glb": None, "blend": None, "preview": None, "layout": "pilots"}
     i = 0
     while i < len(argv):
         key = argv[i].lstrip("-")
@@ -199,12 +230,13 @@ def build():
 
     # ---- the stage, its front steps and its light strip
     stage = Part("stage", "stage")
-    stage.box(-24, 24, -8.5, 11.5, 0, STAGE_TOP, bevel=0.12)
+    half = L["stage"]
+    stage.box(-half, half, -8.5, 11.5, 0, STAGE_TOP, bevel=0.12)
     for y0, z1 in ((-10.9, 0.27), (-10.1, 0.54)):
-        stage.box(-6, 6, y0, -8.4, 0, z1, bevel=0.04)
+        stage.box(-L["steps"], L["steps"], y0, -8.4, 0, z1, bevel=0.04)
     stage.build(col)
     led = Part("led", "led")
-    led.box(-23.8, 23.8, -8.56, -8.48, 0.36, 0.5)
+    led.box(-half + 0.2, half - 0.2, -8.56, -8.48, 0.36, 0.5)
 
     # ---- the tiers: a block each, a pale top over it with its trim in gold,
     # silver or bronze, the numeral's panel set into its front, and a light
@@ -239,8 +271,8 @@ def build():
     front_plane(col, "screen_center", "screen", -BACK_HALF + 1, BACK_HALF - 1, BACK_Y - 0.05, 6.4, BACK_TOP - 0.9)
     led.box(-BACK_HALF, BACK_HALF, BACK_Y - 0.08, BACK_Y, BACK_TOP - 0.45, BACK_TOP - 0.25)
     led.box(-BACK_HALF, BACK_HALF, BACK_Y - 0.08, BACK_Y, 5.85, 6.05)
-    side = 13.0
-    turn = math.radians(24)
+    side = L["side"][0]
+    turn = math.radians(L["side"][1])
     for sgn, name in ((-1, "screen_left"), (1, "screen_right")):
         # Hinged at the centre panel's edge, swung forward.
         hx, hy = sgn * BACK_HALF, BACK_Y
@@ -272,7 +304,7 @@ def build():
     # The towers' feet: a plate each, on the stage or the ground beside it.
     for x in (-TOWER_X, TOWER_X):
         metal.box(x - 1.3, x + 1.3, tyc - 1.3, tyc + 1.3, 0, 0.3, bevel=0.05)
-    for x in (-18, -11, -4, 4, 11, 18):
+    for x in L["lamps"]:
         # A can hung under the truss, aimed down at the tiers.
         hang = Vector((x, tyc - 0.3, top_z - 0.65))
         aim = (Vector((x * 0.7, -4.0, STAGE_TOP + 6)) - hang).normalized()
@@ -281,7 +313,7 @@ def build():
         metal.tube(body0, body0 + aim * 1.1, 0.42, 12)
         lamps.tube(body0 + aim * 1.1, body0 + aim * 1.16, 0.36, 12)
     # The pyro cannons at the stage's corners.
-    for x in (-22.5, 22.5):
+    for x in (-L["cannons"], L["cannons"]):
         for y in (-7.0, 9.5):
             metal.tube((x, y, STAGE_TOP), (x, y, STAGE_TOP + 1.0), 0.5, 12)
             led.tube((x, y, STAGE_TOP + 1.0), (x, y, STAGE_TOP + 1.08), 0.42, 12)
@@ -307,7 +339,8 @@ def preview(path):
     cam.data.lens = 28
     scene.collection.objects.link(cam)
     target = Vector((0, 2, 8))
-    cam.location = Vector((-22, -52, 12))
+    k = L["stage"] / 24.0
+    cam.location = Vector((-22 * k, -52 * k, 12 * k))
     cam.rotation_euler = (target - cam.location).to_track_quat("-Z", "Y").to_euler()
     scene.camera = cam
     scene.render.filepath = path
@@ -315,7 +348,10 @@ def preview(path):
 
 
 def main():
+    global L, TIERS, BACK_HALF, TOWER_X
     a = args()
+    L = LAYOUTS[a["layout"]]
+    TIERS, BACK_HALF, TOWER_X = L["tiers"], L["back"], L["tower"]
     build()
     tris = sum(len(p.vertices) - 2 for o in bpy.data.objects if o.type == "MESH" for p in o.data.polygons)
     print(f"podium: {len([o for o in bpy.data.objects if o.type == 'MESH'])} meshes, {tris} triangles")

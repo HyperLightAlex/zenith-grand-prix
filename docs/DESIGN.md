@@ -432,8 +432,8 @@ While a song plays the stingers can take keys of its own (Helios's E minor,
 Canyon's G minor rising to A minor, the Crucible's D minor ending in D
 major, Frostline's C# minor ending in C# major, Titan's Rest's and Zenith
 Ring's C minor turning to C major).
-The results have a song for each outcome of the round (and the Grand Prix
-award, first place or not): トロフィーセレモニー when the player's team
+The results have a song for each outcome of the round (and the ceremony
+at a Grand Prix's end, first place or not): トロフィーセレモニー when the player's team
 won, Minor Theme when it lost, each looping until the screen is left. The
 hangar screens play a setlist, like a radio: songs one after another in a
 shuffled order, what plays shown in the corner, M (or R3, or a tap) for
@@ -1099,30 +1099,86 @@ What is round the road says what the race has done and what is coming:
   begun, the flag, and a knockout or ring-out in front of them, then dying
   away over a few seconds.
 
-### The podium
+### The ceremony and the podium
 
-After a race offline, before the results, the first three home stand on
-the **podium** (`render/podium/podium.ts`): those who finished, in the order
-they did, never a pilot out of the race (`game/podium.ts`). It stands at
-the side of the straight behind the start line, its back to the barrier
-and the grandstand, facing across the road (on whichever side has the sun
-on its front, and so on the three), and the race is out of sight while it
-is up; the cameras keep to the road, short of the lamps along its edge. The set is built in Blender from code
-(`art/blender/podium/build_podium.py`): three tiers sized for the mechs
-(the winner's 4.6 m high), a backdrop of screens behind them, a lighting
-truss on two towers. The game paints it: the tiers' numerals in gold,
-silver and bronze; the middle screen shows the circuit, the winners and
-the score in the winners' colours, the side ones the second and third;
-the light strips take the winners' colour; six spotlights' beams sweep the
-tiers.
+The podium is for the end of the whole thing, not every race: a Free Play
+match once its winner is decided (a single race, after it; a series or a
+Sprint of several races, after the race that decides it), and a Grand Prix
+once its event is over (a cup after its third round, the Grand Tour after
+its last race, a season after its last matchday). The match's last results
+come first, with **The ceremony** to go on (online it comes up by itself a
+few seconds later); a Grand Prix goes straight to it from the last
+standings. Before then, races end on their results alone.
 
-They take their places in turn, the third, the second, then the winner,
-each striking a **victory pose**, and the winner's sets off the confetti
-from the stage's corners. The cameras cut from wide as they arrive, to in on
-the winner, to the whole podium, drifting. A card for each comes up at the
-foot of the screen as they pose. On to the results with confirm (or by
-itself after 16 seconds); photo mode is a press away, posed round the
-podium. The results' **The podium** brings it back.
+Who stands on it (`game/ceremony.ts`):
+
+- **A Sprint**: its first three by the match's standings, a mech to a
+  tier (behind the winner, only those with points: a pilot knocked out of
+  a single race does not stand there).
+- **A team match**: the winners only, their three, their best first (the
+  match's MVP among them on the top tier), a mech to a tier.
+- **A Grand Prix**: the event's first three factions by its final table, a
+  whole team to a tier on the wider **teams' podium**, each team's best in
+  front and the other two either side behind. A faction you never raced
+  stands its own three pilots. A cup's and the Grand Tour's medals are on
+  their cards, and the **trophy** (`art/blender/trophy/`) rises onto the
+  winners' tier as they strike their poses.
+
+The award comes up over it as the winners pose: an event's is yours (your
+medal, the Zenith Cup, or the place you finished), a match's is its MVP.
+This is the award ceremony: there is no award screen in the hangar.
+
+The set (`render/podium/podium.ts`) stands at the side of the straight
+behind the start line, its back to the barrier and the grandstand, facing
+across the road (on whichever side has the sun on its front, and so on the
+three), and the race is out of sight while it is up; the cameras keep to
+the road, short of the lamps along its edge. Both sets are built in
+Blender from code (`art/blender/podium/build_podium.py`): three tiers sized
+for the mechs (the winner's 4.6 m high; the teams' podium's three times as
+wide), a backdrop of screens behind them, a lighting truss on two towers.
+The game paints them: the tiers' numerals in gold, silver and bronze; the
+middle screen shows the circuit (or the event), the winners and the score
+in the winners' colours, the side ones the second and third; the light
+strips take the winners' colour; six spotlights' beams sweep the tiers.
+
+They take their places in turn, the third, the second, then the winners
+(a team a little after one another), each striking a **victory pose**, and
+the winners' set off the confetti from the stage's corners. The cameras cut
+from wide as they arrive, to in on the winners, to the whole podium,
+drifting (further off for the teams' podium). A card for each comes up at
+the foot of the screen as they pose. On to the readout with confirm (or by
+itself after 18 seconds); photo mode is a press away, posed round the
+podium.
+
+**The readout** (`ui/screens/ceremony.ts`) comes up over the podium:
+
+- **The result**: the match's winners and score, or your place in the
+  event and your medal or cup (and what it earned for your mech).
+- **Mentions**, whoever earned them, wherever they placed: the **MVP**
+  (the most points), the **top racer** (the most placing points, when that
+  is not the MVP), **most knockouts**, **best support**, the **heavy
+  hitter** (the most damage dealt) and the **ironclad** (never knocked out
+  in a race they ran, the least damage taken). Each only when someone did
+  it: no knockouts, no mention for them.
+- **Your contribution**: your points and where they came from (placing,
+  knockouts, support), your share of your team's, your support by kind
+  (blocks, assists, links...), your races, wins, knockouts and damage.
+- **Every pilot**: their points as a bar in three (placing, knockouts,
+  support), their races, wins, knockouts and damage; an event's beside its
+  final table, every pilot of the races you ran.
+
+Then on: race again or a new match (Free Play), back to the Grand Prix, or
+back to the room; **The podium again** brings the podium (and photo mode)
+back. The tally behind it is the **ledger** (`sim/ledger.ts`): each
+pilot's points by where they came from and what they did, added up race by
+race over the match (it goes out with the match online) and, in a Grand
+Prix, over the event's races you ran, each pilot under their faction's
+seat (it saves with the event).
+
+Online, a room's match ends on its results, then the ceremony for everyone;
+the room waits for everyone to go back to it (or a minute). A Grand Prix
+room's ends with the ceremony for everyone at the award, which brings it
+back too.
 
 Your **victory pose** is chosen in the hangar (the mech in the bay strikes
 it as you choose): a fist in the air, both arms up, arms crossed, hands on

@@ -127,9 +127,10 @@ two players.
   If the shot caller drops, their teammate calls. If everyone on a team
   drops, the computer captain takes over.
 - **Between rounds.** The next round starts when everyone presses Continue,
-  or after 15 seconds. After the match the final results stay up for 10
-  seconds, then everyone is back in the lobby on their teams. A rematch is
-  just readying up again.
+  or after 15 seconds. After the match, its final results, then its
+  ceremony for everyone (the podium, the readout); once everyone has gone
+  back to the room (or after a minute) everyone is back in the lobby on
+  their teams. A rematch is just readying up again.
 - **Late arrivals** wait on the room screen and take a computer pilot's
   place, in a frame nobody on their team has, at the next round.
 - **Squads.** The leader picks the faction and takes everyone into rooms:
@@ -156,7 +157,9 @@ two players.
   round's standings, with the other factions' results as they come in; the
   next briefing follows when everyone presses Continue, or 30 seconds after
   the last result. A season's matchday off is its standings alone. At the
-  end, the award; Back to Online leaves. It is played in one sitting:
+  end, the ceremony for everyone: the first three factions on the podium,
+  then the readout with your place and the final table (the award screen
+  brings it back); Back to Online leaves. It is played in one sitting:
   nothing is saved and no medals or cups are recorded. Only the squad can
   join (and anyone who was in it, after a reload), nobody can sit on the
   rivals' team, the event sets the factions, circuit, format and skill, and

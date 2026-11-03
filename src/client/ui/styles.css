@@ -1447,7 +1447,8 @@ html.lay-single .menu :is(.dialog, .entry) {
 /* Screen by screen, side by side. */
 html.lay-cols .menu[data-screen='garage'] .panes { grid-template-columns: minmax(0, 30em) minmax(0, 24em); align-items: end; }
 html.lay-cols .menu:is([data-screen='room'], [data-screen='results'], [data-screen='controls']) .panes { grid-template-columns: minmax(0, 1fr); }
-html.lay-cols .menu:is([data-screen='briefing'], [data-screen='standings'], [data-screen='award'], [data-screen='online']) .panes { grid-template-columns: minmax(0, 30em) minmax(0, 34em); }
+html.lay-cols .menu:is([data-screen='briefing'], [data-screen='standings'], [data-screen='online']) .panes { grid-template-columns: minmax(0, 30em) minmax(0, 34em); }
+html.lay-cols .menu[data-screen='ceremony'] .panes { grid-template-columns: minmax(0, 32em) minmax(0, 40em); }
 /* The hangar sits low, its panels on the floor either side of the mech. */
 html.lay-single .menu[data-screen='garage'] .panes::after { display: none; }
 
@@ -2109,9 +2110,9 @@ html.compact .podium .podium-btns { right: calc(1 * var(--ui-em) + var(--sr, 0px
 .menu .panel.gp-rewards { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 34em; display: flex; flex-direction: column; gap: 0.3em; }
 .menu .panel.gp-rewards h2 { margin: 0 0 0.2em; font-size: 1.4em; }
 .menu .panel.gp-rewards .reward { font-size: 1.05em; }
-.menu .gp-award .unlocked { margin-top: 1em; padding: 0.6em 0.9em; background: rgba(53, 240, 255, 0.12); box-shadow: inset 0.25em 0 0 var(--charge); }
-.menu .gp-award .unlocked h2 { margin: 0 0 0.3em; font-size: 1.1em; color: var(--charge); }
-.menu .gp-award .unlocked div { font-size: 1.1em; font-weight: 700; }
+.menu :is(.gp-award, .ceremony) .unlocked { margin-top: 1em; padding: 0.6em 0.9em; background: rgba(53, 240, 255, 0.12); box-shadow: inset 0.25em 0 0 var(--charge); }
+.menu :is(.gp-award, .ceremony) .unlocked h2 { margin: 0 0 0.3em; font-size: 1.1em; color: var(--charge); }
+.menu :is(.gp-award, .ceremony) .unlocked div { font-size: 1.1em; font-weight: 700; }
 
 /* ---- The title card (ui/titleCard.ts) ---------------------------------------
    Over the flight above the circuit before a race: a band low on the left,
@@ -2148,3 +2149,84 @@ html.compact .podium .podium-btns { right: calc(1 * var(--ui-em) + var(--sr, 0px
 @keyframes tc-out { to { opacity: 0; transform: translateX(-2em); } }
 html.compact .titlecard .tc-band { min-width: 0; right: 0; font-size: 0.8em; }
 @media (prefers-reduced-motion: reduce) { .titlecard.in .tc-band, .titlecard.in .tc-band > *, .titlecard.out .tc-band { animation: none; } }
+
+/* The ceremony's podium (game/ceremony.ts): an event's medal on each card that has one, and the
+   award as the winners strike their poses (your medal or the cup, or a match's MVP), high in the middle. */
+.podium .podium-card { grid-template-columns: 2.2em 2.2em auto auto; }
+.podium .podium-card .medal { width: 2.2em; height: 2.2em; margin: 0 0 0 0.4em; box-shadow: inset 0 0 0 0.12em rgba(0, 0, 0, 0.25); }
+.podium .podium-award {
+  position: absolute;
+  left: 50%;
+  top: calc(4.6 * var(--ui-em, 1em) + var(--st, 0px));
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.6em 1.6em 0.6em 1.1em;
+  background: rgba(10, 15, 28, 0.84);
+  box-shadow: inset 0 -0.18em 0 var(--charge);
+  opacity: 0;
+  transform: translate(-50%, -0.8em) scale(0.92);
+  transition: opacity 0.35s, transform 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.podium .podium-award:empty { display: none; }
+.podium .podium-award.in { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.podium .podium-award .medal { width: 4.2em; height: 4.2em; margin: 0; }
+.podium .podium-award span { display: grid; gap: 0.15em; }
+.podium .podium-award b { font-size: 1.7em; font-weight: 800; font-style: italic; }
+.podium .podium-award small { font-size: 1em; opacity: 0.8; }
+html.compact .podium .podium-award { top: calc(3.2 * var(--ui-em) + var(--st, 0px)); font-size: 0.85em; }
+@media (prefers-reduced-motion: reduce) { .podium .podium-award { transition: opacity 0.2s; } }
+
+/* ---- The ceremony's readout (screens/ceremony.ts) -----------------------------
+   Over the podium at a match's or an event's end: the result, the mentions
+   (each in its pilot's colour, the MVP across the top in gold), your own
+   contribution, and at the side every pilot's points, each bar in three:
+   placing (the signal orange), knockouts (red), support (the link green). */
+.menu .col.ceremony { top: 2em; bottom: 4.4em; width: 36em; justify-content: safe center; gap: 0.75em; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.menu .col.ceremony h1 { font-size: 3.6em; }
+.menu .col.ceremony h1 .pts { margin-left: 0.25em; color: var(--signal); font-variant-numeric: tabular-nums; }
+.menu .col.ceremony h2 { margin: 0.2em 0 0; font-size: 1.15em; font-weight: 800; color: var(--signal); }
+.menu .col.ceremony .medal { width: 4.6em; height: 4.6em; margin-bottom: 0; }
+.mentions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3em; }
+.mention { display: grid; gap: 0.05em; padding: 0.35em 0.8em 0.4em 0.9em; background: var(--ink-soft); box-shadow: inset 0.3em 0 0 var(--tc, var(--paper)); }
+.mention .kind { font-size: 0.85em; font-weight: 700; letter-spacing: 0.04em; color: var(--hazard); }
+.mention b { font-size: 1.25em; font-weight: 800; line-height: 1.05; }
+.mention small { font-size: 0.9em; font-weight: 500; opacity: 0.75; }
+.mention.mvp { grid-column: 1 / -1; padding: 0.5em 1em 0.55em 1.1em; background: linear-gradient(90deg, rgba(242, 193, 51, 0.24), rgba(15, 21, 36, 0.78) 70%); box-shadow: inset 0.35em 0 0 #f2c133; }
+.mention.mvp .kind { color: #f2c133; font-size: 1em; }
+.mention.mvp b { font-size: 1.8em; font-style: italic; }
+.mention.me { background: var(--paper); color: var(--ink); }
+.mention.me .kind { color: var(--signal); }
+.mention.mvp.me { background: linear-gradient(90deg, #ffe48a, var(--paper) 70%); }
+.yours { display: grid; gap: 0.35em; padding: 0.55em 0.9em 0.65em; background: rgba(53, 240, 255, 0.1); box-shadow: inset 0.25em 0 0 var(--charge); }
+.menu .yours h2 { margin: 0; color: var(--charge); }
+.menu .yours p { font-size: 1.15em; max-width: none; }
+.menu .yours p.facts { font-size: 1em; opacity: 0.8; }
+.menu .yours .chips { position: static; transform: none; display: flex; flex-wrap: wrap; gap: 0.3em; font-size: 0.95em; white-space: normal; }
+.menu .yours .chip { padding: 0.05em 0.6em; background: rgba(255, 255, 255, 0.1); }
+.menu .yours .chip b { color: var(--charge); font-variant-numeric: tabular-nums; }
+.menu .panel.ceremony-pilots { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 40em; max-height: calc(100% - 7em); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.menu .panel.ceremony-pilots .gptable { margin-bottom: 0.9em; }
+table.pilots { width: 100%; border-collapse: separate; border-spacing: 0 0.16em; font-size: 1.05em; }
+table.pilots th { text-align: left; font-weight: 500; opacity: 0.7; padding: 0 0.5em 0.1em; font-size: 0.8em; }
+table.pilots th.num, table.pilots td.num { text-align: right; }
+table.pilots td { padding: 0.2em 0.5em 0.24em; background: rgba(255, 255, 255, 0.06); font-variant-numeric: tabular-nums; vertical-align: middle; }
+table.pilots td.pos { width: 1.8em; font-weight: 800; box-shadow: inset 0.3em 0 0 var(--tc, var(--paper)); padding-left: 0.7em; }
+table.pilots td.who b { display: block; font-weight: 700; line-height: 1.05; }
+table.pilots td.who small { display: block; font-size: 0.78em; opacity: 0.7; white-space: nowrap; }
+table.pilots td.pts { font-weight: 800; font-size: 1.15em; }
+table.pilots td.bar { width: 9em; }
+table.pilots tr.me td { background: var(--paper); color: var(--ink); }
+.ptsbar { display: flex; height: 0.6em; background: rgba(255, 255, 255, 0.08); transform: skewX(-18deg); }
+table.pilots tr.me .ptsbar { background: rgba(15, 21, 36, 0.14); }
+.ptsbar i, .ceremony-pilots p.key i { display: block; height: 100%; }
+:is(.ptsbar, .ceremony-pilots p.key) i.placing { background: var(--signal); }
+:is(.ptsbar, .ceremony-pilots p.key) i.ko { background: var(--danger); }
+:is(.ptsbar, .ceremony-pilots p.key) i.support { background: var(--ally); }
+.menu .ceremony-pilots p.key { display: flex; align-items: center; gap: 0.35em; margin: -0.2em 0 0.3em; font-size: 0.9em; opacity: 0.8; max-width: none; }
+.ceremony-pilots p.key i { display: inline-block; width: 1.2em; height: 0.55em; margin-left: 0.7em; transform: skewX(-18deg); }
+.menu .panel.ceremony-pilots.many table.pilots { font-size: 0.94em; border-spacing: 0 0.12em; }
+.menu .panel.ceremony-pilots.many table.pilots td { padding-top: 0.12em; padding-bottom: 0.15em; }
+.menu .panel.ceremony-pilots.many .gptable { font-size: 1.05em; }
+html.compact .mention.mvp b { font-size: 1.4em; }
+html.compact .menu .col.ceremony h1 { font-size: 2.4em; }

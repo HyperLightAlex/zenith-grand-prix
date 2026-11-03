@@ -1,7 +1,8 @@
 // Grand Prix: the hub (Cup, Grand Tour, Season and the difficulty, with what
 // the highlighted one holds shown beside it), the cup select (the three cups
 // side by side, each with its circuits and the medals it has given), the
-// round briefing, the standings after a round, and the award at the end.
+// round briefing, and the standings after a round (the end: the ceremony,
+// screens/ceremony.ts).
 
 import { TRACKS } from '../../../sim/index';
 import {
@@ -351,23 +352,5 @@ export function registerGrandPrix(m: Menus, g: Game): void {
       }
       m.root.append(h('div.shade'), m.panes(col, h('div.panel.gp-rewards', h('h2', 'For your mech'), rows)), m.footer(SELECT, BACK));
     },
-  });
-
-  m.register<GpData & { place: number; medal: string | null }>('award', {
-    render(m, d) {
-      const ev = g.gpEvent(d.kind);
-      if (!ev) return void m.pop();
-      const col = h('div.col.gp-award');
-      col.append(h('div.context', eventName(ev)), ...awardLines(ev, d.place, d.medal));
-      if (g.justEarned.length) {
-        col.append(h('div.unlocked', h('h2', 'Earned for your mech'), ...g.justEarned.map((u) => h('div', unlockName(u)))));
-      }
-      const list = h('div.list');
-      m.button(list, 'Back to Grand Prix', () => g.finishGp(d.kind), { key: 'done', go: true });
-      col.append(list);
-      const side = h('div.panel.standings', h('h2', 'Final standings'), gpTable(ev, ev.rounds.length - 1));
-      m.root.append(h('div.shade.full'), m.panes(col, side), m.footer(SELECT));
-    },
-    back: () => {},
   });
 }

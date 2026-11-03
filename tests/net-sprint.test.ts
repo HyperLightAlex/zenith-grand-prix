@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { PHASE, ROLE, emptyInput, raceChecksum, type MechInput } from '../src/sim/index';
 import { PILOT_NAMES } from '../src/net/factions';
-import { READY_COUNTDOWN, SPRINT_FORMATS, portraitColour } from '../src/net/protocol';
+import { CEREMONY_SECONDS, READY_COUNTDOWN, SPRINT_FORMATS, portraitColour } from '../src/net/protocol';
 import { decodeBuild, encodeBuild, stockBuild } from '../src/custom/mechBuild';
 import { TestNet, type TestClient } from './netHarness';
 import { makeRandom, mash, steerToward } from './helpers';
@@ -129,7 +129,10 @@ describe('a room set to a Sprint', () => {
     // The grid: by lot, then the standings reversed.
     expect(new Set(grids).size).toBeGreaterThan(1);
     expect(net.core.race!.mechs.every((m) => m.support === 0)).toBe(true);
+    // Nobody goes back to the room: it waits out the ceremony, then its lobby.
     net.run(11000);
+    expect(net.core.phase).toBe('final');
+    net.run(CEREMONY_SECONDS * 1000);
     expect(net.core.phase).toBe('lobby');
     expect(a.lobby?.sprint).toBeNull();
     expect(a.lobby?.settings.mode).toBe('sprint');

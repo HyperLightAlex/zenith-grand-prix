@@ -1,7 +1,7 @@
 // Two browsers through the squad's Grand Prix online: Alpha makes a squad,
 // Charlie joins it, Alpha starts the cup from the online hub and Charlie
 // follows; they ready up, race (one-lap races if the server was started with
-// TEST_LAPS=1), and go briefing, race, standings, briefing... to the award.
+// TEST_LAPS=1), and go briefing, race, standings, briefing... to the ceremony and the award.
 // Needs the game served and its server running.
 //
 //   URL=http://localhost:8090/ node tools/online-gp-check.mjs [shots dir]
@@ -147,7 +147,12 @@ for (let r = 0; r < rounds; r++) {
   }
 }
 if (rounds >= EXPECT.rounds) {
-  await shot(a, '7-award');
+  // The ceremony for everyone: the first three factions on the podium, then the readout over it.
+  check(await until(a, () => window.game.state === 'podium' || window.game.menus.screen === 'ceremony', null, 20000), 'the ceremony comes up at the award');
+  await shot(a, '7-ceremony');
+  await a.evaluate(() => window.game.leavePodium());
+  check(await until(a, () => window.game.menus.screen === 'ceremony'), 'on to its readout');
+  await shot(a, '8-readout');
   await a.locator('.menu .item', { hasText: /^Back to Online/ }).click();
   check(await until(a, () => window.game.menus.screen === 'online' && !window.game.online.room), 'Back to Online leaves the room for the hub');
 }

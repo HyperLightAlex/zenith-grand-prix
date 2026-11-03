@@ -82,6 +82,7 @@ import {
 } from './lobby';
 import {
   CHECKSUM_TICKS,
+  CEREMONY_SECONDS,
   FINAL_SECONDS,
   GP_BACKGROUND_MS,
   GP_BACKGROUND_TICKS,
@@ -789,7 +790,7 @@ export class RoomCore {
     this.io.broadcast('roundEnd', { round: result, match: this.match });
     const over = this.match.winner >= 0;
     this.phase = over ? 'final' : 'results';
-    this.timerEnd = this.now() + (over ? FINAL_SECONDS : RESULTS_SECONDS) * 1000;
+    this.timerEnd = this.now() + (over ? (this.gp ? FINAL_SECONDS : CEREMONY_SECONDS) : RESULTS_SECONDS) * 1000;
     this.continued.clear();
     this.dirty = true;
   }
@@ -856,7 +857,7 @@ export class RoomCore {
   private gpMatchDone(): void {
     const gp = this.gp!;
     const m = this.match;
-    if (m) recordYours(gp.event, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 });
+    if (m) recordYours(gp.event, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 }, m.pilots);
     this.io.log?.('gp', gp.event.kind, 'round', gp.event.current + 1, 'done');
     // Out of the race for everyone, as at the end of any match.
     this.backToLobby('over');

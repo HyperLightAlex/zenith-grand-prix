@@ -34,9 +34,14 @@ This is version 0.5: nine circuits and three ways to play.
   jumping to its moments (knockouts, ring-outs, changes of lead, the
   finish); and pose the camera in a paused race, a replay or on the podium
   to save a picture.
-- **The podium**: after a race, the first three home take their places on
-  a stage at the side of the start straight, each in their victory pose
-  (yours is chosen in the hangar), with confetti for the winner.
+- **The ceremony**: at the end of a match or a Grand Prix (not every
+  race), the first three take their places on a podium at the side of the
+  start straight, each in their victory pose (yours is chosen in the
+  hangar): a Sprint's first three pilots, a team match's winners, a Grand
+  Prix's first three factions a whole team to a tier, with their medals
+  and the trophy. Then the readout: the mentions (the MVP, the most
+  knockouts, the best support...), whoever earned them, and every pilot's
+  points broken down by placing, knockouts and support.
 - **The trackside**: each race opens with a flight over the circuit under
   its title card; the race leaves its marks (carve lines, burns, scorches,
   soot, a knockout's pieces), brake boards count down to the tight corners,

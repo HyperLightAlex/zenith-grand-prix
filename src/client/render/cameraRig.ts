@@ -156,6 +156,8 @@ export class CameraRig {
   /** How far out in front of the anchor the podium's cameras may go; seconds into its shots. */
   podiumReach = 40;
   podiumT = 0;
+  /** How much wider than the pilots' podium the set is (the teams': a team to a step). */
+  podiumScale = 1;
   /** Seconds into the flyover's shots. */
   flyT = 0;
   /** How long the flyover is, seconds (FLYOVER_SHOT is its first shot's). */
@@ -494,20 +496,22 @@ export class CameraRig {
       };
       // A lens that takes in `w` by `h` metres at `dist`, whatever the screen's shape.
       const fit = (w: number, h: number, dist: number) => THREE.MathUtils.radToDeg(2 * Math.max(Math.atan(h / 2 / dist), Math.atan(w / 2 / dist / Math.max(0.3, this.camera.aspect))));
+      // (The teams' podium is wider: a team to a step, the winners' three across 24 m.)
+      const S = this.podiumScale;
       if (t < 3.2) {
         const e = k(0, 3.2);
-        pos.set(-18 + 10 * e, 5.5 + 3 * e, reach * (1 - 0.06 * e));
-        look.set(-3 + 3 * e, 9, 0);
-        fov = fit(60, 24, reach);
+        pos.set((-18 + 10 * e) * S, 5.5 + 3 * e, reach * (1 - 0.06 * e));
+        look.set((-3 + 3 * e) * S, 9, 0);
+        fov = fit(60 * S, 24, reach);
       } else if (t < 7.6) {
         const e = k(3.2, 7.6);
-        pos.set(-7 + 12 * e, 11 + e, Math.min(reach, 30) * (0.72 - 0.06 * e));
+        pos.set((-7 + 12 * e) * S, 11 + e, Math.min(reach, 30 * S) * (0.72 - 0.06 * e));
         look.set(0, 11, 0);
-        fov = fit(22, 14, Math.min(reach, 30) * 0.7);
+        fov = fit(S > 1 ? 34 : 22, S > 1 ? 16 : 14, Math.min(reach, 30 * S) * 0.7);
       } else {
-        pos.set(Math.sin((t - 7.6) * 0.13) * 6, 9, reach);
+        pos.set(Math.sin((t - 7.6) * 0.13) * 6 * S, 9, reach);
         look.set(0, 10, 0);
-        fov = fit(56, 24, reach);
+        fov = fit(56 * S, 24, reach);
       }
       pos.applyMatrix4(this.anchor);
       look.applyMatrix4(this.anchor);

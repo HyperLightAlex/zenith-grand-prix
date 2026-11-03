@@ -222,8 +222,12 @@ if (!/[?&](dev|tune)\b/.test(base)) {
 check(sa.net && sa.net.gaps === 0 && sa.net.confirmed > 100, `the race runs (confirmed tick ${sa.net?.confirmed}, ${sa.net?.ahead} inputs predicted ahead)`);
 await a.waitForFunction(() => window.game.debugState().state === 'results', null, { timeout: 400000 });
 check(true, 'the results come up at the flag');
+// The match decided: its ceremony comes up for everyone by itself (the podium, then the readout).
+const ceremony = await a.waitForFunction(() => window.game.state === 'podium' || window.game.menus.screen === 'ceremony', null, { timeout: 20000 }).then(() => true, () => false);
+check(ceremony, 'the ceremony comes up after the final results');
+for (const p of [a, b]) await p.evaluate(() => window.game.online.sendRoom('continue', { at: 'final' }));
 await a.waitForFunction(() => window.game.menus.screen === 'room', null, { timeout: 60000 });
-check(true, 'after the final results, back in the room');
+check(true, 'everyone back to the room after the ceremony');
 console.log(problems.length ? `PROBLEMS (${problems.length}):\n` + problems.join('\n') : 'no errors or failed checks');
 await browser.close();
 process.exit(problems.length ? 1 : 0);

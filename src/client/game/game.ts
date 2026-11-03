@@ -31,7 +31,9 @@ import {
   TRACKS,
   weaponsFree,
   type MatchConfig,
+  seatKey,
   type MatchState,
+  type MechState,
   type RaceState,
   type Role,
   type SeatConfig,
@@ -84,6 +86,7 @@ import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
 import { NowPlaying } from '../ui/nowPlaying';
 import { emblemUrl } from '../ui/factionArt';
+import { MEDAL_NAMES, ORD } from '../ui/screens/grandPrix';
 import { Hud, abilityShown } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, SPRINT_OPTIONS, type GarageChoice, type ScreenId } from '../ui/menus';
 import { confirmDialog, messageDialog, registerCommon, type DialogData, type EntryData } from '../ui/screens/common';
@@ -94,6 +97,7 @@ import { registerGrandPrix } from '../ui/screens/grandPrix';
 import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { gpBlocked, registerOnlineGp } from '../ui/screens/onlineGp';
 import { registerRace } from '../ui/screens/race';
+import { registerCeremony } from '../ui/screens/ceremony';
 import { registerVideo } from '../ui/screens/video';
 import { applyFrame, frame, FRAME_RATES, onFrame, RESOLUTIONS, saveVideo, video, type VideoSettings } from '../video';
 import { TuningPanel } from '../ui/tuningPanel';
@@ -113,14 +117,15 @@ import { ReplayBar } from '../ui/replayBar';
 import { PhotoMode, photoName, type PhotoAction } from './photo';
 import { FreeCamControl } from './freeCam';
 import { PhotoPanel } from '../ui/photoPanel';
-import { Podium, type PodiumBill, type PodiumPilot } from '../render/podium/podium';
-import { PodiumPanel, type PodiumCard } from '../ui/podiumPanel';
+import { Podium, type PodiumBill, type PodiumPilot, type PodiumStep } from '../render/podium/podium';
+import { PodiumPanel, type PodiumAward, type PodiumCard } from '../ui/podiumPanel';
 import { TitleCard } from '../ui/titleCard';
 import { CameraRig } from '../render/cameraRig';
-import { podiumOrder, poseFor } from './podium';
+import { poseFor } from './podium';
+import { eventAward, eventCeremony, matchCeremony, type Ceremony } from './ceremony';
 import { newlyEarned, type Progress, type Unlock } from './unlocks';
 import { isVictoryId, type VictoryId } from '../render/mech/victoryPoses';
-import { teamLooks } from '../ui/sides';
+import { factionLook, teamLooks, type TeamLook } from '../ui/sides';
 import { mechName } from '../../custom/mechBuild';
 import type { CameraMode } from '../render/cameraRig';
 import { registerHowTo, type PrimerData } from '../ui/screens/howto';
@@ -130,10 +135,18 @@ type State = 'title' | 'garage' | 'race' | 'paused' | 'results' | 'replay' | 'po
 export type GameMode = 'free' | 'gp' | 'online' | 'tutorial';
 
 const RIVAL_SKILL = [0.28, 0.55, 0.82];
-/** A replay's playback speeds, slowest first. */
-/** Photo mode at the podium: in front of it, all of it in the picture, and room to stand back. */
-const PODIUM_PHOTO = { start: { yaw: 0, pitch: 0.1, dist: 28, fov: 50, roll: 0 }, dist: [6, 70] as const };
+/** Online, how long the results of a match's deciding race stay up before its ceremony comes up by itself (seconds). */
+const CEREMONY_AFTER = 6;
 
+/** An event's identity, to know its ceremony has come up (a room's copy is new with every update). */
+function eventKey(ev: GpEvent): string {
+  return `${ev.kind}:${ev.cup}:${ev.faction}:${ev.rounds.map((r) => r.you?.seed ?? r.others[0]?.seed ?? 0).join(',')}`;
+}
+
+/** Photo mode at the podium: in front of it, all of it in the picture, and room to stand back. */
+const podiumPhoto = (scale: number) => ({ start: { yaw: 0, pitch: 0.1, dist: 28 * scale, fov: 50, roll: 0 }, dist: [6, 70 * scale] as const });
+
+/** A replay's playback speeds, slowest first. */
 const REPLAY_SPEEDS = [0.25, 0.5, 1, 2, 4];
 /** A replay's cameras, in the order the camera control steps through them. */
 const REPLAY_CAMERAS: Array<{ mode: 'play' | 'tv' | 'orbit' | 'free'; name: string }> = [
@@ -158,7 +171,7 @@ function garageShift(): [number, number] {
   return [GARAGE_SHIFT, 0];
 }
 /** Screens shown over the hangar, with your mech in its bay. */
-const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'custom-livery', 'setup', 'gp', 'gp-rewards', 'briefing', 'standings', 'award', 'online', 'online-gp', 'room', 'primer']);
+const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'custom-livery', 'setup', 'gp', 'gp-rewards', 'briefing', 'standings', 'online', 'online-gp', 'room', 'primer']);
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -190,7 +203,7 @@ export interface GameOptions {
 
 const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
 /** Screens the results' music carries on under: the results, the award, and what opens over them. */
-const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'award', 'controls', 'video', 'dialog', 'pause']);
+const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'ceremony', 'controls', 'video', 'dialog', 'pause']);
 /** Screens that open over others: the music is the one for the screen under them. */
 const OVER_SCREENS = new Set<ScreenId>(['controls', 'video', 'dialog', 'pause']);
 /** The custom mech editor's screens: the mech in the bay is turned by hand on them, not drifting round (naming it too). */
@@ -352,8 +365,7 @@ export class Game {
   /** The podium after a race (state 'podium'), and its screen. */
   private readonly podium = new Podium();
   private readonly podiumPanel: PodiumPanel;
-  /** Up straight after the race (it goes on to the results by itself), rather than opened from them. */
-  private podiumFirst = false;
+  /** How long the podium has been up (it goes on to the ceremony's readout by itself). */
   private podiumT = 0;
   /** The flight over the circuit before a race, with its title card (offline: the race waits for it). */
   private flyover: { t: number } | null = null;
@@ -428,6 +440,7 @@ export class Game {
     registerOnline(this.menus, this);
     registerOnlineGp(this.menus, this);
     registerRace(this.menus, this);
+    registerCeremony(this.menus, this);
     registerVideo(this.menus, this);
     registerHowTo(this.menus, this);
     this.renderer.crt = video.crt;
@@ -893,7 +906,7 @@ export class Game {
 
   /** The scene behind the menus follows the screen on top: the attract race, or your mech in the hangar. */
   private screenChanged(id: ScreenId | null): void {
-    // Off the results (or the Grand Prix award) to anywhere but a dialog over them: the menu music again.
+    // Off the results (or the ceremony) to anywhere but a dialog over them: the menu music again.
     if (this.musicNow === 'results' && id !== null && !RESULTS_MUSIC_SCREENS.has(id)) this.music('menu');
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
       if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'video' || id === 'dialog' || id === 'primer') return;
@@ -923,7 +936,7 @@ export class Game {
       const me = v?.players.find((p) => p.pid === this.online.pid);
       if (v && me && me.side >= 0) return { team: v.sides[me.side].faction, role: me.role };
     }
-    if (id === 'briefing' || id === 'standings' || id === 'award' || this.menus.has('briefing')) {
+    if (id === 'briefing' || id === 'standings' || this.menus.has('briefing')) {
       const ev = this.gpEvents[this.gpKind];
       if (ev) return { team: ev.faction, role: this.loadout.role };
     }
@@ -1590,7 +1603,7 @@ export class Game {
     this.menus.show(null);
     this.photoPrevCam = this.view.cam.mode;
     this.view.cam.mode = 'photo';
-    this.photo.open(from, this.view.cam.photo, this.renderer.renderer.domElement, from === 'podium' ? PODIUM_PHOTO : undefined);
+    this.photo.open(from, this.view.cam.photo, this.renderer.renderer.domElement, from === 'podium' ? podiumPhoto(this.podium.scale) : undefined);
     this.podiumPanel.root.hidden = true;
     this.hud.hide();
     this.tutorialPanel.show(false);
@@ -1688,10 +1701,8 @@ export class Game {
     const ev = this.gpEvents[kind];
     if (ev && (kind !== 'cup' || ev.cup === cup)) {
       this.gpRunner.run(ev);
-      if (isOver(ev)) {
-        const place = finalPlace(ev);
-        this.menus.push('award', { kind, place, medal: singleRaces(ev) ? medalFor(place) : null });
-      } else if (ev.rounds[ev.current].you?.result) this.menus.push('standings', { kind });
+      if (isOver(ev)) this.showEventCeremony(ev);
+      else if (ev.rounds[ev.current].you?.result) this.menus.push('standings', { kind });
       else this.menus.push('briefing', { kind });
       return;
     }
@@ -1754,7 +1765,7 @@ export class Game {
     const ev = this.gpEvents[this.gpKind];
     const m = this.match;
     if (!ev || !m) return;
-    recordYours(ev, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 });
+    recordYours(ev, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 }, m.pilots);
     gpStore.saveEvent(ev);
     this.match = null;
     this.state = 'garage';
@@ -1763,7 +1774,7 @@ export class Game {
     this.menus.reset('standings', { kind: this.gpKind }, ['title', 'modes', 'gp']);
   }
 
-  /** On from the standings (or a matchday off): the next briefing, or the award. */
+  /** On from the standings (or a matchday off): the next briefing, or the ceremony. */
   gpAdvance(kind: GpKind): void {
     const ev = this.gpEvents[kind];
     if (!ev || !advance(ev)) return;
@@ -1777,7 +1788,8 @@ export class Game {
       if (singleRaces(ev)) gpStore.awardMedal(ev.cup, ev.difficulty, medal);
       else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
       this.justEarned = newlyEarned(before, this.progress);
-      this.menus.replace('award', { kind, place, medal });
+      // The ceremony: the first three factions on the podium, the award, then the readout.
+      this.showEventCeremony(ev);
       // (The music first: the jingle is only for the synthesised music.)
       this.music('results', place === 1 ? 'win' : 'loss');
       this.resultJingle(place === 1);
@@ -1786,7 +1798,18 @@ export class Game {
     }
   }
 
-  /** The award seen: the event is put away, its medals and cups kept. */
+  /** On from an event's ceremony: offline, the event put away; online, out of the room. */
+  ceremonyOver(): void {
+    if (this.mode === 'online') return this.leaveRoom();
+    this.finishGp(this.gpKind);
+  }
+
+  /** The circuit last raced (or on show), by name. */
+  get circuitName(): string {
+    return this.session?.track.def.name ?? '';
+  }
+
+  /** The ceremony seen: the event is put away, its medals and cups kept. */
   finishGp(kind: GpKind): void {
     this.justEarned = [];
     gpStore.clearEvent(kind);
@@ -2073,7 +2096,7 @@ export class Game {
     this.mode = null;
     this.hud.hide();
     this.eyecatch.hide();
-    if (this.state === 'race' || this.state === 'paused' || this.state === 'results') this.state = 'garage';
+    if (this.state === 'race' || this.state === 'paused' || this.state === 'results' || this.state === 'podium') this.state = 'garage';
     this.menus.reset('online', undefined, ['title', 'modes']);
     this.music('menu');
     void this.ensureSquad();
@@ -2119,7 +2142,8 @@ export class Game {
 
   /** The match is over (or was ended): out of the race and back to the room's screen. */
   private roomAgain(toast: string | null): void {
-    const wasRacing = this.state === 'race' || this.state === 'paused' || this.state === 'results';
+    // (Or at the match's ceremony: its podium put away too.)
+    const wasRacing = this.state === 'race' || this.state === 'paused' || this.state === 'results' || this.state === 'podium';
     this.mode = null;
     if (wasRacing) {
       this.state = 'garage';
@@ -2204,11 +2228,17 @@ export class Game {
         this.tellPilot();
       }
       const s = this.menus.screen;
+      // A room's Grand Prix over: its ceremony, for everyone, once.
+      if (v.phase === 'award' && v.gp && this.mode === 'online' && this.ceremonyAuto !== eventKey(v.gp) && this.state !== 'race' && this.state !== 'paused') {
+        this.ceremonyAuto = eventKey(v.gp);
+        this.showEventCeremony(v.gp);
+        return;
+      }
       if (s === 'room') {
         this.menus.refresh();
         const l = this.previewLoadout('room');
         this.preview(l);
-      } else if (s === 'results' && this.mode === 'online') this.menus.refresh();
+      } else if ((s === 'results' || s === 'ceremony') && this.mode === 'online') this.menus.refresh();
       else if (s === 'hangar' && this.menus.has('room')) this.menus.refresh();
       this.syncRequests();
     });
@@ -2913,6 +2943,8 @@ export class Game {
         this.menus.handle(menu);
         this.session.update(dt, null);
         for (const e of this.session.events) this.view.handleEvent(e);
+        // Online, a match decided: its ceremony for everyone, a few seconds after the results.
+        if (online && this.menus.screen === 'results' && this.ceremonyDue && this.ceremonyAuto !== this.match && this.time - this.resultsUpAt > CEREMONY_AFTER) this.showMatchCeremony();
         break;
       case 'replay':
         simDt = this.replayFrame(dt, menu);
@@ -3043,83 +3075,203 @@ export class Game {
     this.resultsRace = online ? (this.session as NetSession).confirmed : race;
     this.resultsLocal = local;
     this.resultsMusic();
-    // Offline, the podium first; the results after it.
-    if (!online && this.showPodium(true)) return;
+    this.resultsUpAt = this.time;
     this.state = 'results';
     this.menus.reset('results');
   }
 
-  // ---- the podium ------------------------------------------------------------------
+  // ---- the ceremony ------------------------------------------------------------------
+  //
+  // At a match's end (Free Play, a room) or an event's (a Grand Prix, a
+  // room's), and only then: its podium (ceremony.ts says who stands on it),
+  // the award on it, then its readout (the 'ceremony' screen) over it.
 
-  /** Whether there is a podium to show: a race run offline, its results in, the set loaded. */
+  /** The ceremony up now (or last), and the event it is for (none: a match's). */
+  ceremony: Ceremony | null = null;
+  ceremonyEvent: GpEvent | null = null;
+  /** When the results came up (online: the ceremony follows them by itself). */
+  private resultsUpAt = -1;
+  /** Online: the match (or the event, by its key) whose ceremony has come up by itself already. */
+  private ceremonyAuto: object | string | null = null;
+
+  /** Whether a match has just been decided whose ceremony is due (Free Play, a room; not a Grand Prix's match, nor the tutorial). */
+  get ceremonyDue(): boolean {
+    if (this.mode === 'tutorial' || this.mode === 'gp' || !this.resultsRace) return false;
+    if (this.mode === 'online' && this.online.lobby?.gp) return false;
+    return !!this.match && this.match.winner >= 0;
+  }
+
+  /** A match decided: its ceremony (the podium first, if the set is in; else straight to the readout). */
+  showMatchCeremony(): void {
+    const race = this.resultsRace;
+    const c = matchCeremony(this.match, !!race?.sprint);
+    if (!c || !race) return;
+    this.ceremony = c;
+    this.ceremonyEvent = null;
+    this.ceremonyAuto = this.match;
+    if (!this.podiumUp(c, race)) this.toReadout();
+  }
+
+  /** An event over: its ceremony, at the side of the straight of the circuit last raced. */
+  showEventCeremony(ev: GpEvent): void {
+    const c = eventCeremony(ev);
+    if (!c) return;
+    this.ceremony = c;
+    this.ceremonyEvent = ev;
+    this.ceremonyAuto = eventKey(ev);
+    const race = this.session?.race;
+    if (!race || !this.podiumUp(c, race)) this.toReadout();
+  }
+
+  /** The podium again, from the readout (and photo mode there). */
+  podiumAgain(): void {
+    if (!this.ceremony) return;
+    this.podiumUp(this.ceremony, this.ceremonyEvent ? this.session.race : (this.resultsRace ?? this.session.race), true);
+  }
+
+  /** Whether the podium can come up (its set is in, and there is a circuit to put it on). */
   get canPodium(): boolean {
-    return !!this.resultsRace && this.session instanceof LocalSession && this.mode !== 'online' && this.podium.ready && this.session.race === this.resultsRace;
+    return !!this.ceremony && this.podium.ready(this.ceremony.layout) && !!this.session?.track;
+  }
+
+  /** How a match's side looks (a team, or a Sprint's pilot), or an event's faction. */
+  private sideLook(race: RaceState, side: number): TeamLook {
+    if (this.ceremonyEvent) return factionLook(side);
+    const looks = teamLooks(race, this.factions);
+    return looks[side] ?? looks[0];
   }
 
   /**
-   * The podium: the first three home on it in their victory poses, at the
-   * side of the start straight. `first`: straight after the race (it goes
-   * on to the results by itself).
+   * Put the ceremony's podium up: its steps (first to third), the screens'
+   * bill, the cards. `again`: from the readout (back to it after).
    */
-  showPodium(first = false): boolean {
-    const race = this.resultsRace;
-    if (!race || !this.canPodium) return false;
-    const order = podiumOrder(race);
-    if (!order.length) return false;
-    const looks = teamLooks(race, this.raceFactions);
-    const local = this.resultsLocal;
-    const pilots: PodiumPilot[] = order.map((id) => {
-      const m = race.mechs[id];
-      const look = looks[m.team] ?? looks[0];
-      return { mech: m, livery: look.livery, name: m.name, team: look.name, emblem: look.emblem, pose: poseFor(race, id, local, this.victoryPose) };
+  private podiumUp(c: Ceremony, race: RaceState, again = false): boolean {
+    if (!this.podium.ready(c.layout) || !this.session?.track || !c.steps.length) return false;
+    const ev = this.ceremonyEvent;
+    const me = this.ceremonyMe();
+    // Each pilot as their mech stood at the end of their last race (an event's: fresh, in their faction's colours).
+    const template = race.mechs[0];
+    let made = 0;
+    const steps: PodiumStep[] = c.steps.map((step) => {
+      const look = this.sideLook(race, step.side);
+      const pilots: PodiumPilot[] = step.pilots.map((l) => {
+        const raced = ev ? null : race.mechs.find((m) => m.id === l.id);
+        const mech: MechState = raced ?? { ...template, id: made++ % 6, team: Math.max(0, l.team), role: l.role as Role, name: l.name, human: l.human, look: l.look, portrait: l.portrait, colour: l.colour, hp: template.maxHp, retired: false, finished: true };
+        // Yours as you chose it in the hangar; everyone else's their own.
+        return { mech, livery: look.livery, name: l.name, team: look.name, emblem: look.emblem, pose: poseFor(l, me, this.victoryPose) };
+      });
+      return { pilots, label: c.layout === 'teams' ? look.name : (step.pilots[0]?.name ?? look.name), css: look.css, emblem: look.emblem };
     });
-    const round = this.match?.rounds[this.match.rounds.length - 1];
-    const side = round ? round.winner : race.mechs[order[0]].team;
-    const won = looks[side] ?? looks[0];
-    const sprint = !!race.sprint;
-    const named = sprint ? (race.mechs.find((m) => m.team === side)?.name ?? won.name) : won.name;
+    const first = c.steps[0];
+    const won = this.sideLook(race, first.side);
     const bill: PodiumBill = {
-      circuit: this.session.track.def.name,
-      headline: `${named} ${sprint ? 'wins' : 'win'}`,
-      sub: round && !sprint && round.points.length === 2 ? `${round.points[side]}–${round.points[1 - side]}` : '',
+      circuit: ev ? eventName(ev) : this.session.track.def.name,
+      headline: this.ceremonyHeadline(c, race),
+      sub: this.ceremonySub(c),
       glow: won.livery.glow,
       css: won.css,
       emblem: won.emblem,
+      layout: c.layout,
+      trophy: c.trophy,
     };
-    if (!this.podium.show(this.session.track, pilots, bill)) return false;
-    // The race out of sight; the camera on the podium.
+    if (!this.podium.show(this.session.track, steps, bill)) return false;
+    // Out of the hangar, if the Grand Prix had it up: the circuit, the race out of sight, the camera on the podium.
+    this.hangar.hide();
+    this.garageShown = null;
+    this.trackVis.group.visible = true;
+    this.world.group.visible = true;
+    this.renderer.outdoors = true;
+    this.view.solo = false;
     this.view.group.visible = false;
     this.view.calm = true;
     const cam = this.view.cam;
     cam.anchor = this.podium.frame;
     cam.podiumReach = this.podium.reach;
+    cam.podiumScale = this.podium.scale;
     cam.podiumT = 0;
     cam.mode = 'podium';
     this.state = 'podium';
-    this.podiumFirst = first;
     this.podiumT = 0;
     this.menus.show(null);
     this.hud.hide();
-    const cards: PodiumCard[] = pilots.map((p, place) => ({
-      name: p.name,
-      detail: `${mechName(p.mech, p.livery.models[p.mech.role])}, ${p.team}`,
-      css: (looks[p.mech.team] ?? looks[0]).css,
-      emblem: p.emblem,
-      you: p.mech.id === local && p.mech.human,
-      at: Podium.STRIKE_AT[place] + 0.25,
-    }));
-    this.podiumPanel.open(bill.circuit, cards, first ? 'Results' : 'Back to the results', this.input.device);
+    const cards: PodiumCard[] = steps.map((step, place) => {
+      const lines = c.steps[place].pilots;
+      const medal = c.steps[place].medal;
+      return {
+        name: step.label,
+        detail: c.layout === 'teams' ? lines.map((l) => l.name).join(', ') : `${mechName(step.pilots[0].mech, step.pilots[0].livery.models[step.pilots[0].mech.role])}, ${step.pilots[0].team}`,
+        css: step.css,
+        emblem: step.emblem,
+        you: lines.some((l) => l.id === me && l.human),
+        at: Podium.STRIKE_AT[place] + 0.25,
+        medal: medal ?? '',
+      };
+    });
+    this.podiumPanel.open(bill.circuit, cards, again ? 'Back to the readout' : 'On to the readout', this.input.device, 0, this.ceremonyAward(c));
     this.input.swallowHeld();
     return true;
   }
 
-  /** On to the results (the podium stays up behind them). */
+  /** Your line in the ceremony (its id): your seat in the match, or your faction's seat for your role in the event; -1 for none (watching). */
+  ceremonyMe(): number {
+    const ev = this.ceremonyEvent;
+    if (!ev) return this.resultsLocal;
+    const room = this.online.lobby;
+    const role = this.mode === 'online' ? (room?.players.find((p) => p.pid === this.online.pid)?.role ?? this.loadout.role) : this.loadout.role;
+    return seatKey(ev.faction, role);
+  }
+
+  /** What the screens say: who won. */
+  private ceremonyHeadline(c: Ceremony, race: RaceState): string {
+    const ev = this.ceremonyEvent;
+    const top = c.steps[0];
+    if (ev) return `${factionName(LIVERIES[top.side] ?? LIVERIES[0])} win`;
+    if (c.kind === 'sprint') return `${top.pilots[0]?.name ?? ''} wins`;
+    return `${this.sideLook(race, top.side).name} win`;
+  }
+
+  /** Under it: the score. */
+  private ceremonySub(c: Ceremony): string {
+    const ev = this.ceremonyEvent;
+    const m = this.match;
+    // (The event's name is over it already: what the winners take.)
+    if (ev) return ev.kind === 'season' ? 'The Zenith Cup' : `${MEDAL_NAMES.gold} medal`;
+    if (!m) return '';
+    if (c.kind === 'sprint') {
+      const side = c.steps[0].side;
+      return `${m.totals[side] ?? 0} points`;
+    }
+    if (m.cfg.mode === 'series') return m.cfg.bestOf > 1 ? `${m.wins[m.winner]}–${m.wins[1 - m.winner]}` : `${m.totals[m.winner]}–${m.totals[1 - m.winner]}`;
+    return `${m.totals[m.winner]}–${m.totals[1 - m.winner]}`;
+  }
+
+  /** The award as it comes up on the podium: yours (an event's medal or cup), or the MVP's mention (a match's). */
+  private ceremonyAward(c: Ceremony): PodiumAward | null {
+    const ev = this.ceremonyEvent;
+    if (ev) {
+      const { place, medal } = eventAward(ev);
+      const at = Podium.STRIKE_AT[0] + 1.6;
+      const yours = factionName(LIVERIES[ev.faction] ?? LIVERIES[0]);
+      if (ev.kind === 'season') return place === 1 ? { badge: 'cup', title: 'The Zenith Cup', line: `${yours} top the table`, at } : { badge: '', title: `${ORD[place - 1]} in the season`, line: `${yours}: only the top of the table takes the cup`, at };
+      return medal ? { badge: medal, title: `${MEDAL_NAMES[medal]} medal`, line: `${yours} finish ${ORD[place - 1]}`, at } : { badge: '', title: `${ORD[place - 1]} place`, line: `${yours}: a medal needs the top three`, at };
+    }
+    const mvp = c.mentions.find((m) => m.kind === 'mvp');
+    const who = mvp ? c.lines.find((l) => l.id === mvp.id) : null;
+    return who && mvp ? { badge: '', title: `MVP: ${who.name}`, line: `${mvp.value} point${mvp.value === 1 ? '' : 's'}`, at: Podium.STRIKE_AT[0] + 1.6 } : null;
+  }
+
+  /** On from the podium to the readout (the podium stays up behind it). */
   leavePodium(): void {
     if (this.state !== 'podium' || this.photo.active) return;
-    this.state = 'results';
     this.podiumPanel.close();
-    this.menus.reset('results');
+    this.toReadout();
     this.input.swallowHeld();
+  }
+
+  /** The ceremony's readout: over the podium if it is up (else over whatever is). */
+  private toReadout(): void {
+    if (this.podium.shown) this.state = 'results';
+    this.menus.reset('ceremony');
   }
 
   private podiumFrame(dt: number, menu: readonly MenuInput[]): void {
@@ -3129,7 +3281,7 @@ export class Game {
       // (Not straight away: a press still held from the race does not skip it.)
       if ((k === 'confirm' || k === 'back' || k === 'pause') && this.podiumT > 0.6) return this.leavePodium();
     }
-    if (this.podiumFirst && this.podiumT > 16) this.leavePodium();
+    if (this.podiumT > 18) this.leavePodium();
   }
 
   /** The podium put away (the view's mechs and camera back): leaving the results for anything else. */

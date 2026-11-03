@@ -38,7 +38,7 @@ export type ScreenId =
   | 'gp-rewards'
   | 'briefing'
   | 'standings'
-  | 'award'
+  | 'ceremony'
   | 'online'
   | 'online-gp'
   | 'room'

@@ -16,6 +16,7 @@
 //            six pilots could trade wins a long time) the most race wins
 //            (level: the more points, then the better finish in the last race).
 
+import { addRace, type PilotLine } from './ledger';
 import { koBonus, pointsFor } from './sim';
 import type { RaceState } from './types';
 
@@ -65,6 +66,8 @@ export interface MatchState {
   totals: number[];
   /** -1 while the match is still being played. */
   winner: number;
+  /** Each pilot's scoring and contribution over the match's rounds (ledger.ts), by seat. */
+  pilots: PilotLine[];
 }
 
 /**
@@ -76,15 +79,15 @@ export function createMatch(cfg?: Partial<MatchConfig> | null, sides = 2): Match
   if (cfg?.mode === 'races' || cfg?.mode === 'wins') {
     if (cfg.mode === 'races') {
       const races = cfg.races === 1 || cfg.races === 5 ? cfg.races : 3;
-      return { cfg: { mode: 'races', bestOf: 1, target: 0, races }, rounds: [], wins: new Array(n).fill(0), totals: new Array(n).fill(0), winner: -1 };
+      return { cfg: { mode: 'races', bestOf: 1, target: 0, races }, rounds: [], wins: new Array(n).fill(0), totals: new Array(n).fill(0), winner: -1, pilots: [] };
     }
     const wins = cfg.wins === 3 ? 3 : 2;
-    return { cfg: { mode: 'wins', bestOf: 1, target: 0, wins, races: wins * 2 + 1 }, rounds: [], wins: new Array(n).fill(0), totals: new Array(n).fill(0), winner: -1 };
+    return { cfg: { mode: 'wins', bestOf: 1, target: 0, wins, races: wins * 2 + 1 }, rounds: [], wins: new Array(n).fill(0), totals: new Array(n).fill(0), winner: -1, pilots: [] };
   }
   const mode = cfg?.mode === 'points' ? 'points' : 'series';
   const bestOf = cfg?.bestOf === 1 || cfg?.bestOf === 5 ? cfg.bestOf : 3;
   const target = typeof cfg?.target === 'number' && Number.isFinite(cfg.target) ? Math.max(1, Math.round(cfg.target)) : DEFAULT_MATCH.target;
-  return { cfg: { mode, bestOf, target }, rounds: [], wins: new Array(n).fill(0), totals: new Array(n).fill(0), winner: -1 };
+  return { cfg: { mode, bestOf, target }, rounds: [], wins: new Array(n).fill(0), totals: new Array(n).fill(0), winner: -1, pilots: [] };
 }
 
 /** Round wins needed to take a team series. */
@@ -199,6 +202,9 @@ export function recordRound(match: MatchState, race: RaceState): RoundResult {
   while (match.wins.length < n) match.wins.push(0);
   while (match.totals.length < n) match.totals.push(0);
   match.rounds.push(r);
+  // (A match from before the ledger: started now.)
+  match.pilots ??= [];
+  addRace(match.pilots, race);
   match.wins[r.winner]++;
   for (let i = 0; i < r.points.length; i++) match.totals[i] += r.points[i];
   const cfg = match.cfg;

@@ -27,7 +27,7 @@
 // This module is plain logic over plain data (no DOM), so it saves as JSON
 // and the background races can run in a worker or in a test.
 
-import { ROLE, createMatch, createRace, recordRound, stepRace, sharedTrack, trackById, PHASE, TRACKS, type SeatConfig, type MatchConfig } from '../sim/index';
+import { ROLE, addLines, createMatch, createRace, recordRound, seatKey, stepRace, sharedTrack, trackById, PHASE, TRACKS, type PilotLine, type SeatConfig, type MatchConfig } from '../sim/index';
 
 export type GpKind = 'cup' | 'tour' | 'season';
 
@@ -104,6 +104,13 @@ export interface GpEvent {
   rounds: GpRound[];
   /** The round being played (equal to rounds.length once it is over). */
   current: number;
+  /**
+   * The pilots of your races (yours and your rivals'), each its scoring and
+   * contribution over the event (sim/ledger.ts), by its faction's seat
+   * (seatKey). For the ceremony at the end. (An event saved before the
+   * ledger has none.)
+   */
+  pilots?: PilotLine[];
 }
 
 export interface GpRow {
@@ -349,10 +356,21 @@ export function roundComplete(ev: GpEvent, index: number): boolean {
   return !!r && (!r.you || !!r.you.result) && r.others.every((f) => !!f.result);
 }
 
-/** Record your own result for the current round. */
-export function recordYours(ev: GpEvent, result: GpFixtureResult): void {
+/**
+ * Record your own result for the current round, and its pilots' lines (the
+ * match's ledger: its team 0 your faction, its team 1 the rival's) into the
+ * event's.
+ */
+export function recordYours(ev: GpEvent, result: GpFixtureResult, pilots: readonly PilotLine[] = []): void {
   const r = ev.rounds[ev.current];
-  if (r?.you) r.you.result = result;
+  if (!r?.you) return;
+  // (Its pilots only the first time: a result set again replaces the result.)
+  const first = !r.you.result;
+  r.you.result = result;
+  if (!first) return;
+  const factions = [r.you.a, r.you.b];
+  ev.pilots ??= [];
+  addLines(ev.pilots, pilots, (l) => seatKey(factions[l.team] ?? 0, l.role), (l) => factions[l.team] ?? -1);
 }
 
 /**

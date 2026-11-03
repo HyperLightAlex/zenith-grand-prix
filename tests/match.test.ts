@@ -85,7 +85,7 @@ describe('createMatch', () => {
     expect(Object.isFrozen(DEFAULT_MATCH)).toBe(true);
     for (const cfg of [undefined, null, {}] as const) {
       const m = createMatch(cfg);
-      expect(m).toEqual({ cfg: { mode: 'series', bestOf: 3, target: 50 }, rounds: [], wins: [0, 0], totals: [0, 0], winner: -1 });
+      expect(m).toEqual({ cfg: { mode: 'series', bestOf: 3, target: 50 }, rounds: [], wins: [0, 0], totals: [0, 0], winner: -1, pilots: [] });
       expect(m.cfg).not.toBe(DEFAULT_MATCH);
     }
   });

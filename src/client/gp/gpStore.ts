@@ -26,7 +26,10 @@ function write(k: string, v: unknown): void {
 
 export function loadEvent(kind: GpKind): GpEvent | null {
   const ev = read<GpEvent | null>(KEYS[kind], null);
-  return ev && ev.v === 1 && ev.kind === kind && Array.isArray(ev.rounds) ? ev : null;
+  if (!ev || ev.v !== 1 || ev.kind !== kind || !Array.isArray(ev.rounds)) return null;
+  // (Saved before the pilots' ledger, or spoilt: the ceremony's readout starts it again.)
+  if (ev.pilots !== undefined && !Array.isArray(ev.pilots)) delete ev.pilots;
+  return ev;
 }
 
 export function saveEvent(ev: GpEvent): void {
