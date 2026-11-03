@@ -34,7 +34,7 @@ import type { TitanMat } from './titan/pose';
 import { buildZenith } from './zenith';
 import { buildAbyss } from './abyss';
 import { buildMonsoon } from './monsoon';
-import { Site, groundRoad, siteMeshes } from './outposts/outposts';
+import { Site, groundRoad, paintedGround, siteMeshes, type Look, type Skin } from './outposts/outposts';
 import { BLOCK, DECK_FOOT, DECK_TOP, PROMENADE, STREET, bridgeEnds, bridgeLinks, fromIsland, islandBlocks, islandOutline, meridianIslands, streetHalf } from './meridianCity';
 /** Meridian's ground (M5): a plaza's square covers this many units, a seawall's face (along it) this many. */
 const PLAZA_TILE = 30;
@@ -1491,6 +1491,33 @@ function buildMeridian(ctx: Ctx): void {
 
 // ---- Corkscrew Canyon -------------------------------------------------------
 
+/**
+ * The car park's painted square (C5's, as tools/bg/build_backgrounds.py cuts
+ * it), measured off it: `size` metres across (seven bays of 2.6 m), the
+ * first bay line `line` of the way across; down it (fractions of it from
+ * its top) its kerb, the row of bays nosing up to the kerb, and the row
+ * nosing down to the next square's.
+ */
+const CAR_PARK = { size: 18.2, bays: 7, line: 12.5 / 512, kerb: [14 / 512, 31 / 512], rowA: [31 / 512, 178 / 512], rowB: [348 / 512, 501 / 512] } as const;
+
+/**
+ * How the paddock and the fuel stop wear C5 with the painted background
+ * (outposts/outposts.ts: Lay), measured off its squares: concrete as the
+ * apron's slabs; the garages' roller doors as the painted bay's door (its
+ * door 29 to 507 px across and 104 to 483 down, from one column to the
+ * next), the hospitality units' panels with their window band at the
+ * model's (173 to 288 px down: the upper storey's band, 6.3 to 7.9 m up),
+ * held at its plain panels below; the shop's walls and the trailers in
+ * corrugated metal.
+ */
+const PADDOCK_SKIN = {
+  concrete: { tile: 'apron', size: [20, 20] },
+  'garages.dark': { tile: 'garage', size: [17, 8.1], at: [-85.16, -0.16] },
+  'hospitality.panel': { tile: 'hospitality', size: [12, 7.13], at: [0, 3.18], clampV: true },
+  'shop.cladding': { tile: 'corrugated', size: [6, 6] },
+  'truck.paint': { tile: 'corrugated', size: [6, 6], flat: 0.5 },
+} as const;
+
 function buildCanyon(ctx: Ctx): void {
   const { track, group, cx, cz, theme } = ctx;
   const rock = new THREE.Color(0xb4573a);
@@ -1727,21 +1754,43 @@ function buildCanyon(ctx: Ctx): void {
     for (let k = 0; k < 8; k++) site.place('truck', -70 + k * 20, 22, 0, teams[k]);
     site.place('hospitality', -50, -20, 0, 0xff7a1a).place('hospitality', 30, -20, 0, 0x2f6fa8);
     site.place('helipad', 100, -20).place('mast', 115, 40, 0, 0xe8e4da);
-    // The crowd's car park behind: double rows of bays back to back either side of a kerbed island, the lamps on the islands, aisles between.
-    site.put(new THREE.PlaneGeometry(116, 120).rotateX(-Math.PI / 2).translate(0, 0.12, -120), 0x5c5a5e);
+    // The crowd's car park behind, laid out as its painted square is (C5's,
+    // measured off it: CAR_PARK), so the cars stand in its bays in either
+    // look: square after square down it, each a kerb with a row of bays
+    // nosing up to it, the aisle, a row nosing down to the next square's
+    // kerb; the lamps on the kerbs.
+    const { size: T, bays, line: firstLine, kerb, rowA, rowB } = CAR_PARK;
+    const NX = 6;
+    const NZ = 6;
+    const X0 = (-T * NX) / 2;
+    const Z0 = -175;
+    const lot = new THREE.PlaneGeometry(T * NX, T * NZ).rotateX(-Math.PI / 2).translate(0, 0.12, Z0 + (T * NZ) / 2);
+    const lp = lot.attributes.position;
+    const luv = lot.attributes.uv;
+    // (u across in squares; down the picture as z grows: its top at Z0.)
+    for (let q = 0; q < lp.count; q++) luv.setXY(q, (lp.getX(q) - X0) / T, 1 - (lp.getZ(q) - Z0) / T);
+    site.ground(lot, 0x5c5a5e, 'carpark');
     const cars = [0xd9482f, 0xf2f2ee, 0x2f6fa8, 0x3a3f4a, 0xd7a52f, 0x9aa3ae];
-    for (let row = 0; row < 5; row++) {
-      const iz = -156 + row * 18;
-      site.box(0, 0.12, iz, 106, 0.15, 1, site.palette.concrete);
-      for (let k = 0; k <= 40; k++) {
-        const x = -52 + k * 2.6;
-        for (const side of [-1, 1]) site.put(new THREE.PlaneGeometry(0.12, 5).rotateX(-Math.PI / 2).translate(x, 0.14, iz + side * 3), 0xe8e4da);
-        if (k === 40) continue;
-        for (const side of [-1, 1]) if (rnd() < 0.55) site.place('car', x + 1.3, iz + side * 3.1, side < 0 ? 0 : Math.PI, cars[Math.floor(rnd() * cars.length)]);
+    const across = (f: number) => X0 + f * T;
+    for (let j = 0; j < NZ; j++) {
+      const down = (f: number) => Z0 + (j + f) * T;
+      site.box(0, 0.12, down((kerb[0] + kerb[1]) / 2), T * NX, 0.15, (kerb[1] - kerb[0]) * T, site.palette.concrete);
+      for (let k = 0; k <= NX * bays; k++) {
+        const x = across(firstLine + k / bays);
+        if (x > T * NX / 2) break;
+        for (const [a, b] of [rowA, rowB]) site.put(new THREE.PlaneGeometry(0.14, (b - a) * T).rotateX(-Math.PI / 2).translate(x, 0.14, down((a + b) / 2)), 0xe8e4da);
+        if (x + T / bays > T * NX / 2) continue;
+        // Nosed in: toward the kerb above (-z) in the first row, the next one (+z) in the second.
+        for (const [[a, b], yaw] of [
+          [rowA, Math.PI],
+          [rowB, 0],
+        ] as const)
+          if (rnd() < 0.55) site.place('car', x + T / bays / 2, down((a + b) / 2), yaw, cars[Math.floor(rnd() * cars.length)]);
       }
-      for (const x of [-39, -13, 13, 39]) site.place('lamp', x, iz, Math.PI / 2);
+      for (const i of [1, 3, 5]) site.place('lamp', across(i), down((kerb[0] + kerb[1]) / 2), Math.PI / 2);
     }
-    for (const mesh of site.meshes((g) => !ctx.inRoad(g, 6))) group.add(mesh);
+    const look: Look = { swaps: ctx.swaps, surfaces: ctx.painted?.surfaces, skin: PADDOCK_SKIN, maps: new Map() };
+    for (const mesh of site.meshes((g) => !ctx.inRoad(g, 6), look)) group.add(mesh);
     // The highway in from the west, straight across the desert, and a fuel stop on it.
     const gate = new THREE.Vector3(0, 0, -185).applyMatrix4(site.m);
     const way = roadWest.clone().sub(gate).setY(0).normalize();
@@ -1787,15 +1836,19 @@ function buildCanyon(ctx: Ctx): void {
       }
     }
     // Its centre line.
-    roads.push(groundRoad(pts, 0.5, 0xe8d27a, 0.34));
-    for (const mesh of siteMeshes([...roads.filter((r) => !ctx.inRoad(r, 10)), ...bridge.pieces], [])) group.add(mesh);
+    const line = groundRoad(pts, 0.5, 0xe8d27a, 0.34);
+    if (!ctx.inRoad(roads[0], 10)) group.add(paintedGround(roads[0], look, 'highway'));
+    for (const mesh of siteMeshes([...[line].filter((r) => !ctx.inRoad(r, 10)), ...bridge.pieces], [])) group.add(mesh);
     // The fuel stop, back off the road, its +z toward it: the forecourt and canopy, the shop behind, a slip of tarmac to the road.
     const stopAt = gate.clone().addScaledVector(way, 1400);
     const stop = new Site(stopAt.x + way.z * 30, g0, stopAt.z - way.x * 30, Math.atan2(way.x, way.z) - Math.PI / 2);
-    stop.put(new THREE.PlaneGeometry(60, 8).rotateX(-Math.PI / 2).translate(0, 0.2, 18), 0x5c5a5e);
+    const slip = new THREE.PlaneGeometry(60, 8).rotateX(-Math.PI / 2).translate(0, 0.2, 18);
+    // (Its apron's slabs, 20 m to a square.)
+    for (let q = 0; q < slip.attributes.position.count; q++) slip.attributes.uv.setXY(q, slip.attributes.position.getX(q) / 20, -slip.attributes.position.getZ(q) / 20);
+    stop.ground(slip, 0x5c5a5e, 'apron');
     stop.place('canopy', 0, 0, 0, 0xe8e4da).place('shop', 0, -26, 0, 0xe8e4da).place('mast', 40, -30, 0, 0xe8e4da);
     for (const x of [-27, 27]) stop.place('lamp', x, 12, Math.PI);
-    for (const mesh of stop.meshes()) group.add(mesh);
+    for (const mesh of stop.meshes(undefined, look)) group.add(mesh);
   }
 
   // ---- far buttes on the horizon --------------------------------------------
@@ -2195,6 +2248,20 @@ function turnCentre(track: Track, range: [number, number]): [number, number] {
   }
   return k ? [sx / k, sz / k] : [0, 0];
 }
+
+/**
+ * How the polar station wears F4 with the painted background (outposts/
+ * outposts.ts: Lay): a module's wall over its body, rime at
+ * its foot, its row of small windows lit (in place of the model's, plain
+ * look only) and its plain panel over its roof; the radomes' triangles, the
+ * hangar's cladding round its arch, the tanks' welded skins.
+ */
+const STATION_SKIN = {
+  'module.paint': { tile: 'module', size: [8, 4.5], at: [0, 3.4], clampV: true, flat: 0.85, lit: 'moduleLit' },
+  'radome.paint': { tile: 'radome', size: [6, 6] },
+  'hangar.cladding': { tile: 'hangar', size: [10, 20] },
+  'tankfarm.paint': { tile: 'tank', size: [6, 6] },
+} as const;
 
 function buildFrostline(ctx: Ctx): void {
   const { track, group, cx, cz, theme } = ctx;
@@ -2681,15 +2748,20 @@ function buildFrostline(ctx: Ctx): void {
       site.place('hangar', 55, -75, -Math.PI / 2).containers(-40, -70, 4, 1, [0xd9482f, 0x2f6fa8, 0x8a8f99], mulberry(41));
       // The runway: a groomed strip of the shelf, flagged along its edges.
       const RW = 640;
-      site.put(new THREE.PlaneGeometry(36, RW).rotateX(-Math.PI / 2).translate(0, 0.2, -110 - RW / 2), 0xdde6f5);
+      const strip = new THREE.PlaneGeometry(36, RW).rotateX(-Math.PI / 2).translate(0, 0.2, -110 - RW / 2);
+      const sp = strip.attributes.position;
+      // (Its painted square across it, repeating along it.)
+      for (let q = 0; q < sp.count; q++) strip.attributes.uv.setXY(q, (sp.getX(q) + 18) / 36, -sp.getZ(q) / 36);
+      site.ground(strip, 0xdde6f5, 'runway');
       for (let z = -110; z >= -110 - RW; z -= 40) for (const x of [-19, 19]) site.place('flag', x, z, Math.PI / 2);
-      for (const mesh of site.meshes((g) => !ctx.inRoad(g, 6))) group.add(mesh);
+      const look: Look = { swaps: ctx.swaps, surfaces: ctx.painted?.surfaces, skin: STATION_SKIN, plainOnly: ['module.lamp'], maps: new Map() };
+      for (const mesh of site.meshes((g) => !ctx.inRoad(g, 6), look)) group.add(mesh);
       // The track from the station to behind the stands on its side.
       const gate = new THREE.Vector3(0, 0, 70).applyMatrix4(site.m);
       const paddock = trackPoint(track, -60, inSide * (hwAt(track, -60) + 50), 0, new THREE.Vector3());
       const pts = Array.from({ length: 13 }, (_, k) => gate.clone().lerp(paddock, k / 12).setY(shelfY));
       const road = groundRoad(pts, 10, 0xc8d4ea, 0.3);
-      if (!ctx.inRoad(road, 8)) for (const mesh of siteMeshes([road], [])) group.add(mesh);
+      if (!ctx.inRoad(road, 8)) group.add(paintedGround(road, look, 'track'));
     }
   }
 
@@ -2804,6 +2876,24 @@ function titanSign(): THREE.CanvasTexture {
  * and the Hull, its other arm's elbow over the Long Flank, its sword round
  * the corkscrew. Every part is placed from the road's own pieces.
  */
+/**
+ * How the salvage camp wears R5 with the painted background (outposts/
+ * outposts.ts: Lay): concrete as the apron's slabs; a container's side from
+ * its foot to its top rail (ribs across its roof), the workshop's walling
+ * with the sand at its foot (held at its top up into the gables), a cabin's
+ * wall over its height, the tarpaulins over the salvage.
+ */
+const CAMP_SKIN = {
+  concrete: { tile: 'apron', size: [20, 20] },
+  'container.paint': { tile: 'container', size: [6, 2.59], flat: 0.5 },
+  'workshop.cladding': { tile: 'shed', size: [8, 7.75], at: [0, 0.25], clampV: true },
+  'cabin.paint': { tile: 'cabin', size: [6, 2.7], at: [0, 0.5], clampV: true },
+  'tarp.paint': { tile: 'tarp', size: [4, 4] },
+} as const;
+
+/** Each circuit's outposts' skin, by circuit (for the tests). */
+export const OUTPOST_SKINS: Record<string, Skin> = { canyon: PADDOCK_SKIN, titan: CAMP_SKIN, frostline: STATION_SKIN };
+
 function buildTitansRest(ctx: Ctx): void {
   const { track, group, cx, cz, theme } = ctx;
   const surf = ctx.painted?.surfaces;
@@ -3076,6 +3166,7 @@ function buildTitansRest(ctx: Ctx): void {
       // The yard faces the road: its +z toward it.
       const yaw = Math.atan2(-campAt.rx * away, -campAt.rz * away);
       const site = new Site(cxs, g0, czs, yaw);
+      const look: Look = { swaps: ctx.swaps, surfaces: ctx.painted?.surfaces, skin: CAMP_SKIN, maps: new Map() };
       const hues = [0xb4482f, 0x2f6fa8, 0xd7a52f, 0x3e7a52, 0x8a8f99, 0xc96a2a];
       // Fenced, a gate to the road in front and one to the desert road behind; the haul road between them down the middle.
       site.fence(0, 0, 250, 210, 24, 16);
@@ -3095,11 +3186,14 @@ function buildTitansRest(ctx: Ctx): void {
       site.place('workshop', 25, 55).place('workshop', 50, 55);
       site.place('truck', 30, 84, Math.PI / 2, 0xb4482f).place('truck', 58, 86, Math.PI / 2, 0xd7a52f);
       site.place('tankfarm', 98, 55, -Math.PI / 2, 0xe4e0d6).place('helipad', -50, 5).place('mast', 100, -80, 0, 0xe8e4da);
-      // Salvage waiting to be cut: armour plates off the titan, laid out in the yard under the cranes.
+      // Salvage waiting to be cut: armour plates off the titan, laid out in the yard under the cranes; more of it stacked under tarpaulins.
       for (let k = 0; k < 14; k++) site.box(-30 + (rnd() - 0.5) * 20, 0, -45 + (rnd() - 0.5) * 20, 8 + rnd() * 8, 1.2 + rnd() * 1.6, 5 + rnd() * 5, k % 3 ? 0xe6e0d2 : 0xb84a3a, rnd() * 3);
-      // Lamps down the haul road, either side by turns, leaning out over it.
+      site.place('tarp', -82, -25, 0.1, 0xe8dcc0).place('tarp', -82, -9, -0.05, 0xe8dcc0).place('tarp', 32, -30, Math.PI / 2, 0xe8dcc0);
+      // The haul road down the middle from gate to gate; lamps down it, either side by turns, leaning out over it.
+      const haul = Array.from({ length: 9 }, (_, k) => new THREE.Vector3(0, 0, -105 + (k / 8) * 210).applyMatrix4(site.m).setY(g0));
+      group.add(paintedGround(groundRoad(haul, 10, 0xb8a888, 0.22), look, 'track'));
       for (let z = -80, k = 0; z <= 90; z += 34, k++) site.place('lamp', k % 2 ? 8 : -8, z, k % 2 ? -Math.PI / 2 : Math.PI / 2);
-      for (const mesh of site.meshes()) group.add(mesh);
+      for (const mesh of site.meshes(undefined, look)) group.add(mesh);
       // The track from its gate to behind the stands, and the road in from across the desert.
       const gate = new THREE.Vector3(0, 0, 105).applyMatrix4(site.m);
       const paddock = trackPoint(track, -120, away * (hwAt(track, -120) + 50), 0, new THREE.Vector3()).setY(g0);
@@ -3109,7 +3203,7 @@ function buildTitansRest(ctx: Ctx): void {
       const back = new THREE.Vector3(0, 0, -105).applyMatrix4(site.m);
       const far = back.clone().add(back.clone().sub(gate).setY(0).normalize().multiplyScalar(6000)).setY(g0);
       roads.push(groundRoad(pts(back, far, 60), 14, 0xb8a888));
-      for (const mesh of siteMeshes(roads.filter((r) => !ctx.inRoad(r, 8)), [])) group.add(mesh);
+      for (const r of roads) if (!ctx.inRoad(r, 8)) group.add(paintedGround(r, look, 'track'));
     }
   }
 

@@ -14,7 +14,8 @@ import { OUTPOST_KINDS, OUTPOST_SLOTS, Site, readOutposts, useOutpostModel, type
 import { buildTrack } from '../src/sim/track';
 import { TRACKS } from '../src/sim/tracks/index';
 import { themeFor } from '../src/client/render/themes';
-import { buildWorld } from '../src/client/render/world';
+import { OUTPOST_SKINS, buildWorld } from '../src/client/render/world';
+import { paintedSet } from '../src/client/render/painted';
 import { OUTPOSTS_FILE } from './grandstandModel';
 
 function fakeDocument() {
@@ -54,6 +55,34 @@ describe("the outposts' kit", () => {
       expect(shape.box.min.y, kind).toBeGreaterThan(-1.5);
       expect(shape.box.max.y, kind).toBeGreaterThan(1);
     }
+  });
+
+  it("turns their ribbed walls and the hangar's skin outward (seen from outside, not culled away)", () => {
+    // Of each wall face (not a roof or a floor), whether it faces away from the
+    // building's middle (from the hangar's arch's axis, along z, 0.25 up).
+    const outward = (kind: OutpostKind, slot: string, axis = false) => {
+      const g = kit.get(kind)!.slots.get(slot as never)!.toNonIndexed();
+      const p = g.attributes.position;
+      const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+      let walls = 0, out = 0;
+      for (let i = 0; i < p.count; i += 3) {
+        a.fromBufferAttribute(p, i);
+        b.fromBufferAttribute(p, i + 1);
+        c.fromBufferAttribute(p, i + 2);
+        const n = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
+        const m = a.clone().add(b).add(c).divideScalar(3);
+        if (!axis && Math.abs(n.y) > 0.5) continue;
+        walls++;
+        const from = axis ? new THREE.Vector3(m.x, m.y - 0.25, 0) : new THREE.Vector3(m.x, 0, m.z);
+        if (n.dot(from) > 0) out++;
+      }
+      return out / walls;
+    };
+    // (Of a container's, the frame's posts' and rails' inner faces face in: a sheet the wrong way round would leave half its ribs facing in.)
+    expect(outward('container', 'paint')).toBeGreaterThan(0.8);
+    expect(outward('workshop', 'cladding')).toBeGreaterThan(0.9);
+    expect(outward('shop', 'cladding')).toBeGreaterThan(0.9);
+    expect(outward('hangar', 'cladding', true)).toBe(1);
   });
 
   it('turns their doors to their fronts (+z)', () => {
@@ -164,7 +193,7 @@ describe('the outposts in their worlds', () => {
 
   const expected: Record<string, OutpostKind[]> = {
     canyon: ['garages', 'truck', 'hospitality', 'helipad', 'car', 'lamp', 'canopy', 'shop'],
-    titan: ['crane', 'container', 'cabin', 'workshop', 'tankfarm', 'helipad', 'mast', 'lamp'],
+    titan: ['crane', 'container', 'cabin', 'workshop', 'tankfarm', 'helipad', 'mast', 'lamp', 'tarp'],
     frostline: ['module', 'link', 'radome', 'hangar', 'tankfarm', 'helipad', 'mast', 'flag'],
   };
   for (const [id, kinds] of Object.entries(expected)) {
@@ -194,5 +223,24 @@ describe('the outposts in their worlds', () => {
       });
       expect(bad).toEqual([]);
     }, 120000);
+  }
+});
+
+describe("the outposts' painting (the painted background's skins)", () => {
+  for (const [id, skin] of Object.entries(OUTPOST_SKINS)) {
+    it(`${id}: lays the circuit's own squares, each on a slot its buildings have, with UVs to lay it by`, () => {
+      const def = TRACKS.find((t) => t.id === id)!;
+      const surfaces = paintedSet(themeFor(def.theme).id)?.surfaces ?? {};
+      for (const [key, lay] of Object.entries(skin)) {
+        expect(surfaces[lay!.tile], `${key}: ${lay!.tile}`).toBeTruthy();
+        if (lay!.lit) expect(surfaces[lay!.lit], `${key}: ${lay!.lit}`).toBeTruthy();
+        const [kind, slot] = key.includes('.') ? key.split('.') : [null, key];
+        expect(OUTPOST_SLOTS).toContain(slot);
+        if (!kind) continue;
+        const g = kit.get(kind as OutpostKind)?.slots.get(slot as never);
+        expect(g, key).toBeTruthy();
+        expect(g!.attributes.uv, key).toBeTruthy();
+      }
+    });
   }
 });

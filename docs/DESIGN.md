@@ -1075,8 +1075,8 @@ What is round the road says what the race has done and what is coming:
   and the highway in, crossing the gorges on bridges (abutments, girders,
   piers with their caps) past a fuel stop (a canopy over its pump islands,
   the shop behind); Titan's Rest's salvage camp (a fenced yard with a gate
-  each end and the haul road between, tower cranes over the salvage,
-  containers stacked each on the one under it, the crews' cabins, two
+  each end and the haul road between, tower cranes over the salvage and
+  more of it under tarpaulins, containers stacked each on the one under it, the crews' cabins, two
   workshops with their trucks, a tank farm, a pad, a mast); Frostline's
   polar station (its modules on braced legs, linked, radomes, a hangar by
   the runway's head, a tank farm, a pad, a mast, flags along the runway).
@@ -1086,7 +1086,13 @@ What is round the road says what the race has done and what is coming:
   and drawn instanced, one mesh to each kind's slot, its paint per building.
   What runs along the ground (fences on footed posts with braced corners
   and sliding gates, car park markings, runways, roads) is built in place.
-  No building stands in another, or in the road's space.
+  No building stands in another, or in the road's space. With the painted
+  background each circuit lays its outposts sheet (C5, F4, R5) on them by a
+  skin: which painted square goes on which kind's slot, how many metres one
+  repeat covers and where it starts (a garage's door on the model's door, a
+  container's side from its foot to its top rail), the buildings lit by the
+  scene and the ground drawn as the painted ground round it is, unlit; the
+  car park is laid out by its painted square, so the cars stand in its bays.
 - **The crowd** (`render/crowd.ts`): cameras flashing all over the
   grandstands and flags in the two teams' colours waved along the front
   rows, going up (more flashes, flags waved harder) at the start, a lap

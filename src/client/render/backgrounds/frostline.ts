@@ -10,6 +10,13 @@ import packice from './frostline/packice.webp';
 import blueice from './frostline/blueice.webp';
 import rock from './frostline/rock.webp';
 import icefall from './frostline/icefall.webp';
+import module from './frostline/module.webp';
+import radome from './frostline/radome.webp';
+import hangar from './frostline/hangar.webp';
+import tank from './frostline/tank.webp';
+import runway from './frostline/runway.webp';
+import track from './frostline/track.webp';
+import moduleLit from './frostline/moduleLit.webp';
 
 const set: PaintedSet = {
   sky,
@@ -17,6 +24,6 @@ const set: PaintedSet = {
   horizonV: 0.03125,
   horizon: [{ url: horizon0, aspect: 8.7953 }, { url: horizon1, aspect: 5.8295 }, { url: horizon2, aspect: 5.7186 }],
   clouds: { url: '', cards: [] },
-  surfaces: { "snow": snow, "icecliff": icecliff, "packice": packice, "blueice": blueice, "rock": rock, "icefall": icefall },
+  surfaces: { "snow": snow, "icecliff": icecliff, "packice": packice, "blueice": blueice, "rock": rock, "icefall": icefall, "module": module, "radome": radome, "hangar": hangar, "tank": tank, "runway": runway, "track": track, "moduleLit": moduleLit },
 };
 export default set;

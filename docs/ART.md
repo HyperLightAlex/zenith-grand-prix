@@ -225,6 +225,10 @@ to one brief per circuit and checked one at a time.
     slow noise, so its scrub never lines up into a grid, with pans of cracked
     clay and broad light and shade), the gorges' rock, strata cliffs and
     caprock on the cut, the mesas and the arch, the hoodoos' softer stone.
+    Its paddock and highway (sheet C5) on the outposts' buildings and
+    ground: the garages' roller doors, the hospitality units' panels, the
+    shop's and the trailers' corrugated metal, concrete aprons, the highway
+    in, and the car park, whose bays the cars stand in.
   - Helios: the cloud sea (drifting, at two sizes), layered rock under the
     islands and meadow on top, whitewashed buildings, and engraved gold on
     the Sun Gate and the spire's collar.
@@ -243,10 +247,16 @@ to one brief per circuit and checked one at a time.
     seracs, the bridge's pillars, the caves' ribs and the fallen blocks, the
     nunatak's rock, and the frozen waterfall round the Icefall's column. Its
     sign over the Ice Barrel's mouth is on track sheet T5. It has no clouds
-    sheet: the circuit has no cumulus.
+    sheet: the circuit has no cumulus. The polar station (sheet F4): the
+    modules' walls with their small windows lit (glowing, in place of the
+    model's), the radomes' panels, the hangar's cladding, the tanks' skins,
+    the runway and the track to the paddock.
   - Titan's Rest: the sand, and on the fallen titan its ivory armour, its
     faded red markings, its bronze frame (inside the chest), its sword's
-    gunmetal blade and the engraved bronze of its halo and guard. The titan
+    gunmetal blade and the engraved bronze of its halo and guard. The
+    salvage camp (sheet R5): the containers' sides (each in its own
+    colour), the workshops' walling, the cabins' walls, the tarpaulins over
+    the salvage, concrete aprons, and its dirt tracks. The titan
     itself is a model built in Blender to its model sheets (G1 to G4 in
     `art/model-sheets`) and fitted to the road (`art/blender/titan`);
     until it is in, the game draws a placeholder from simple shapes in the

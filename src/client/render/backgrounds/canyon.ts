@@ -11,6 +11,12 @@ import sand from './canyon/sand.webp';
 import gorge from './canyon/gorge.webp';
 import hoodoo from './canyon/hoodoo.webp';
 import lakebed from './canyon/lakebed.webp';
+import garage from './canyon/garage.webp';
+import hospitality from './canyon/hospitality.webp';
+import corrugated from './canyon/corrugated.webp';
+import highway from './canyon/highway.webp';
+import carpark from './canyon/carpark.webp';
+import apron from './canyon/apron.webp';
 
 const set: PaintedSet = {
   sky,
@@ -18,6 +24,6 @@ const set: PaintedSet = {
   horizonV: 0.03125,
   horizon: [{ url: horizon0, aspect: 9.284 }, { url: horizon1, aspect: 7.2308 }, { url: horizon2, aspect: 7.52 }],
   clouds: { url: clouds, cards: [{"u0": 0.005859375, "v0": 0.6904296875, "u1": 0.3274739583333333, "v1": 0.810546875, "aspect": 4.0163}, {"u0": 0.3430989583333333, "v0": 0.65625, "u1": 0.65625, "v1": 0.84375, "aspect": 2.5052}, {"u0": 0.6985677083333334, "v0": 0.693359375, "u1": 0.9680989583333334, "v1": 0.8076171875, "aspect": 3.5385}, {"u0": 0.013671875, "v0": 0.15625, "u1": 0.3190104166666667, "v1": 0.3447265625, "aspect": 2.4301}, {"u0": 0.3372395833333333, "v0": 0.1533203125, "u1": 0.6627604166666666, "v1": 0.34765625, "aspect": 2.5126}, {"u0": 0.685546875, "v0": 0.2001953125, "u1": 0.98046875, "v1": 0.2998046875, "aspect": 4.4412}] },
-  surfaces: { "strata": strata, "caprock": caprock, "sand": sand, "gorge": gorge, "hoodoo": hoodoo, "lakebed": lakebed },
+  surfaces: { "strata": strata, "caprock": caprock, "sand": sand, "gorge": gorge, "hoodoo": hoodoo, "lakebed": lakebed, "garage": garage, "hospitality": hospitality, "corrugated": corrugated, "highway": highway, "carpark": carpark, "apron": apron },
 };
 export default set;

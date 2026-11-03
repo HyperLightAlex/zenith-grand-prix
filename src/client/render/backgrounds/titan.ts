@@ -11,6 +11,12 @@ import armourRed from './titan/armourRed.webp';
 import frame from './titan/frame.webp';
 import blade from './titan/blade.webp';
 import bronze from './titan/bronze.webp';
+import container from './titan/container.webp';
+import shed from './titan/shed.webp';
+import cabin from './titan/cabin.webp';
+import tarp from './titan/tarp.webp';
+import track from './titan/track.webp';
+import apron from './titan/apron.webp';
 
 const set: PaintedSet = {
   sky,
@@ -18,6 +24,6 @@ const set: PaintedSet = {
   horizonV: 0.03125,
   horizon: [{ url: horizon0, aspect: 8.6437 }, { url: horizon1, aspect: 5.9447 }, { url: horizon2, aspect: 5.9447 }],
   clouds: { url: clouds, cards: [{"u0": 0.03125, "v0": 0.5732421875, "u1": 0.3020833333333333, "v1": 0.927734375, "aspect": 1.146}, {"u0": 0.3645833333333333, "v0": 0.6923828125, "u1": 0.6354166666666666, "v1": 0.8076171875, "aspect": 3.5254}, {"u0": 0.7044270833333334, "v0": 0.646484375, "u1": 0.9622395833333334, "v1": 0.8544921875, "aspect": 1.8592}, {"u0": 0.03125, "v0": 0.123046875, "u1": 0.3020833333333333, "v1": 0.376953125, "aspect": 1.6}, {"u0": 0.3645833333333333, "v0": 0.201171875, "u1": 0.6354166666666666, "v1": 0.298828125, "aspect": 4.16}, {"u0": 0.6979166666666666, "v0": 0.150390625, "u1": 0.96875, "v1": 0.349609375, "aspect": 2.0392}] },
-  surfaces: { "sand": sand, "armour": armour, "armourRed": armourRed, "frame": frame, "blade": blade, "bronze": bronze },
+  surfaces: { "sand": sand, "armour": armour, "armourRed": armourRed, "frame": frame, "blade": blade, "bronze": bronze, "container": container, "shed": shed, "cabin": cabin, "tarp": tarp, "track": track, "apron": apron },
 };
 export default set;

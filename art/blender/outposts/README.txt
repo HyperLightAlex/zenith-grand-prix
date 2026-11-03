@@ -44,7 +44,9 @@ THE KINDS (front toward -Y)
   helipad      A raised pad with its ring and H, lights, a windsock.
   lamp         A street lamp on its footing, the head lit underneath.
   module       A polar station module on braced legs with skid feet, a
-               frame under it; lit windows; its door up a stair to a landing.
+               frame under it; lit windows (lamp: drawn only in the plain
+               look, the painted wall's own windows glowing in the painted
+               one); its door up a stair to a landing.
   link         The corridor between two modules, on legs.
   radome       A radome on its equipment building, a rail round its roof.
   hangar       An arched hangar: ribs over its cladding, end walls, the big
@@ -55,12 +57,15 @@ THE KINDS (front toward -Y)
   hospitality  A two-storey unit: columns, a glazed ground floor, a band of
                windows above with a stripe in the team's colour, a roof
                terrace with its rail and awnings, a stair at its end.
-  truck        A team's truck: tractor and box trailer, on its wheels.
+  truck        A team's truck: tractor (its cab white, panel) and box
+               trailer (in the team's colour, paint), on its wheels.
   canopy       A fuel stop's canopy on columns, its fascia, lights under it;
                four pump islands along the way through, two pumps on each.
   shop         The fuel stop's shop: ribbed walls, a glazed front with
                mullions and a door, a flat roof behind a parapet.
   car          A car, for car parks.
+  tarp         Salvage stacked under a tarpaulin, lashed across with ropes
+               pegged into the ground, a plate's corner out at one end.
   flag         A runway marker flag in its weighted foot.
 
 AXES AND NAMES
@@ -73,5 +78,15 @@ AXES AND NAMES
   roof, glass, dark (doors, tyres, cables), marking (white paint on the
   ground), accent (safety orange), lamp (lit).
 
-  The slots a texture may go on one day (paint, concrete, cladding, panel,
-  roof) have UVs, box-projected, a unit to a metre.
+  The slots a painted texture goes on (paint, concrete, cladding, panel,
+  roof, dark) have UVs, a unit to a metre, box-projected: on a wall u along
+  it and v up it from the ground; on a roof or a floor u along y and v
+  along x (so a ribbed sheet's ribs, up a wall, run across a container's
+  roof). The hangar's cladding is unrolled round its arch instead: u along
+  the hangar, v up the arch from the nearer foot. The game lays each
+  circuit's outposts sheet (C5, F4, R5: art/bg-sheets/README.md) on them
+  by these metres (render/outposts/outposts.ts: Skin, Lay).
+
+  Open sheets (the ribbed walls, the hangar's skin, the helipad's ring, the
+  tarp) are made facing out and kept so; the rest's normals are worked out
+  from their closed shapes.

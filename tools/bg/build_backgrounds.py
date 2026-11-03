@@ -20,6 +20,12 @@ What it does to the sheets:
   seams blended, so it repeats. A surface can also give a map of its lights
   alone (Neon Crucible's facades: the lit windows, for their glow; Abyss
   Line's: its portholes, painted dark, lit by the build).
+- Ground and buildings laid their own way (Meridian's city, the outposts:
+  Corkscrew Canyon's paddock, Frostline's polar station, Titan's Rest's
+  salvage camp): each square repeats only the way it is laid (a street or a
+  road along its length, a wall's bay along the wall, a slab both ways), cut
+  and blended only that way; the station's module also gives its warm lit
+  windows alone, for their glow.
 - Signs (Neon Crucible's neon signs): each cut out of the green by its
   outline, as the track kit's boards are.
 - The Earth (Zenith Ring, in orbit): its surface's squares seen from orbit,
@@ -67,6 +73,15 @@ CIRCUITS = {
         drop_cool=True,
         surfaces='bg-c4-surfaces.png',
         tiles=['strata', 'caprock', 'sand', 'gorge', 'hoodoo', 'lakebed'],
+        # The paddock and the highway in (C5, render/outposts/), each square
+        # laid its own way: a garage's bay, a hospitality unit's side and the
+        # highway run on along their length only (above and below a bay are
+        # its fascia and the ground; either side of the highway the sand); the
+        # car park both ways, its kerb, two rows of bays and their aisle whole,
+        # and across cut from one bay line to the one seven bays on (the
+        # painting's own ends do not meet), plus the fade's overlap.
+        outposts='bg-c5-paddock.png',
+        outpost_tiles=[('garage', 'h'), ('hospitality', 'h'), ('corrugated', 'both'), ('highway', 'v'), ('carpark', 'whole', {'cols': (5, 509)}), ('apron', 'both')],
     ),
     'helios': dict(
         # The sun is overhead and the light even all round: one half, used twice.
@@ -106,6 +121,12 @@ CIRCUITS = {
         # No clouds: the circuit has no cumulus.
         surfaces='bg-f3-surfaces.png',
         tiles=['snow', 'icecliff', 'packice', 'blueice', 'rock', 'icefall'],
+        # The polar station (F4): a module's and the hangar's walls run on
+        # along their length only (rime along their feet); the runway and the
+        # track along theirs. The module's lit windows alone, for their glow.
+        outposts='bg-f4-station.png',
+        outpost_tiles=[('module', 'h'), ('radome', 'both'), ('hangar', 'h'), ('tank', 'both'), ('runway', 'v'), ('track', 'v')],
+        warm_lit={'module': 'moduleLit'},
     ),
     'titan': dict(
         sky=['bg-r1-sky.png', 'bg-r1b-sky.png'],
@@ -113,6 +134,11 @@ CIRCUITS = {
         clouds='bg-r3-clouds.png',
         surfaces='bg-r4-surfaces.png',
         tiles=['sand', 'armour', 'armourRed', 'frame', 'blade', 'bronze'],
+        # The salvage camp (R5): a container's side, the workshop's walling
+        # (sand drifted at its foot) and a cabin's wall run on along their
+        # length only; the dirt track along its.
+        outposts='bg-r5-camp.png',
+        outpost_tiles=[('container', 'h'), ('shed', 'h'), ('cabin', 'h'), ('tarp', 'both'), ('track', 'v'), ('apron', 'both')],
     ),
     'abyss': dict(
         # The water: the sun a bright patch on the surface overhead, at the
@@ -510,25 +536,46 @@ def porthole_lights(t, seed=7):
     return np.stack([ndimage.gaussian_filter(out[..., c], 1.2, mode='wrap') for c in range(3)], -1)
 
 
-def laid(t, wrap, top=0):
+def laid(t, wrap, top=0, cols=None):
     """A square that repeats only the way it is laid ('v': along its length,
     top to bottom; 'h': across; 'both'; 'none'), cut a few pixels inside the
-    sheet's grid (and `top` rows off its top) and its seams blended where it repeats."""
+    sheet's grid (and `top` rows off its top) and its seams blended where it
+    repeats. ('whole': both ways, but laid out as one piece down its length,
+    as a car park's two rows of bays either side of their aisle, so kept
+    whole that way rather than cut where it looks most like its top.)"""
     t = t[3 + top:-3, 3:-3]
-    if wrap in ('h', 'both'):
-        t = fade(t[:, :best_len(t, 1)], 1)
+    if cols:
+        # Cut across at given columns (a whole number of a car park's bays, from one line to the next).
+        t = t[:, cols[0] - 3:cols[1] - 3]
+    if wrap in ('h', 'both', 'whole'):
+        t = fade(t if cols else t[:, :best_len(t, 1)], 1)
     if wrap in ('v', 'both'):
         t = fade(t[:best_len(t, 0)], 0)
+    if wrap == 'whole':
+        t = fade(t, 0)
     im = Image.fromarray((np.clip(t, 0, 1) * 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS)
     return np.asarray(im).astype(np.float32) / 255
 
 
-def build_ground(spec):
-    sheet = load(spec['ground'])
+def warm_lights(t):
+    """A surface's warm lights alone (windows lit from inside, far warmer than
+    the cold white round them), black elsewhere."""
+    m = np.clip((t[..., 0] - t[..., 2] - 0.12) / 0.15, 0, 1)[..., None]
+    return t * m
+
+
+def build_ground(spec, sheet_key='ground', tiles_key='ground_tiles'):
+    """A sheet of squares each laid its own way (`laid`): the city's ground, the outposts'."""
+    sheet = load(spec[sheet_key])
     out = {}
-    for i, (name, wrap, *top) in enumerate(spec['ground_tiles']):
+    for i, (name, wrap, *more) in enumerate(spec[tiles_key]):
         r, c = divmod(i, 3)
-        out[name] = laid(sheet[r * 512:(r + 1) * 512, c * 512:(c + 1) * 512], wrap, top[0] if top else 0)
+        # (More: the rows to cut off its top, or a dict of `laid`'s options.)
+        opts = more[0] if more and isinstance(more[0], dict) else {'top': more[0]} if more else {}
+        out[name] = laid(sheet[r * 512:(r + 1) * 512, c * 512:(c + 1) * 512], wrap, **opts)
+    for name, lit in spec.get('warm_lit', {}).items():
+        if name in out:
+            out[lit] = warm_lights(out[name])
     return out
 
 
@@ -589,6 +636,11 @@ def main():
         surfaces = build_surfaces(spec)
         if 'ground' in spec:
             surfaces.update(build_ground(spec))
+        if 'outposts' in spec:
+            outposts = build_ground(spec, 'outposts', 'outpost_tiles')
+            clash = set(outposts) & set(surfaces)
+            assert not clash, f'{name}: outposts tiles named as surfaces: {clash}'
+            surfaces.update(outposts)
         for k, t in surfaces.items():
             files[k] = save(t, os.path.join(d, f'{k}.webp'), 84)
         earth = build_surfaces(spec, 'earth', 'earth_tiles') if 'earth' in spec else {}

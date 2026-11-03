@@ -42,7 +42,7 @@ SLOTS = {
 
 
 # The slots a texture may go on one day (the outposts' art sheets): these keep UVs.
-TEXTURED = {"paint", "concrete", "cladding", "panel", "roof"}
+TEXTURED = {"paint", "concrete", "cladding", "panel", "roof", "dark"}
 
 
 def args():
@@ -73,6 +73,15 @@ class Part:
     def __init__(self, slot):
         self.slot = slot
         self.bm = bmesh.new()
+        # Its own UVs (a function of the bmesh) in place of box-projected ones.
+        self.uvs = None
+        # Whether its faces' normals are worked out from its shape (closed
+        # pieces); an open sheet keeps the way its faces were made.
+        self.recalc = True
+        # Open faces (a ribbed wall's sheets, a hangar's skin, paint on the
+        # ground) and the way each must face, made sure of after the rest's
+        # normals are worked out: a vector, or a function of the face.
+        self.facing = []
 
     def _new(self, verts):
         return verts
@@ -127,8 +136,10 @@ class Part:
             self.bm.faces.new((lo[i], lo[j], hi[j], hi[i]))
         return self
 
-    def quad(self, pts):
-        self.bm.faces.new([self.bm.verts.new(p) for p in pts])
+    def quad(self, pts, out=None):
+        f = self.bm.faces.new([self.bm.verts.new(p) for p in pts])
+        if out is not None:
+            self.facing.append((f, out))
         return self
 
     def merge(self, other):
@@ -155,6 +166,9 @@ class Kind:
 
 
 def box_uvs(bm):
+    """Box-projected UVs, a unit to a metre: a wall's u along it and v up it;
+    a roof's or a floor's u along y and v along x (so a ribbed sheet's ribs,
+    up a wall, run across a container's roof)."""
     uv = bm.loops.layers.uv.verify()
     for f in bm.faces:
         n = f.normal
@@ -162,7 +176,7 @@ def box_uvs(bm):
         for loop in f.loops:
             co = loop.vert.co
             if ax == 2:
-                loop[uv].uv = (co.x, co.y)
+                loop[uv].uv = (co.y, co.x)
             elif ax == 0:
                 loop[uv].uv = (co.y, co.z)
             else:
@@ -174,8 +188,15 @@ def emit(kind, col):
     col.objects.link(root)
     for slot, part in kind.parts.items():
         bm = part.bm
-        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-        if slot in TEXTURED:
+        if part.recalc:
+            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        for f, out in part.facing:
+            f.normal_update()
+            if f.normal.dot(Vector(out(f) if callable(out) else out)) < 0:
+                f.normal_flip()
+        if part.uvs:
+            part.uvs(bm)
+        elif slot in TEXTURED:
             box_uvs(bm)
         mesh = bpy.data.meshes.new(f"{kind.name}.{slot}")
         bm.to_mesh(mesh)
@@ -276,9 +297,11 @@ def corrugated(part, axis, a0, a1, fixed, z0, z1, pitch=0.5, depth=0.06, outward
         for (p, q, d0, d1) in ((u0, um, 0.0, depth), (um, u1, depth, 0.0)):
             if axis == "x":
                 pts = [(p, fixed + outward * d0, z0), (q, fixed + outward * d1, z0), (q, fixed + outward * d1, z1), (p, fixed + outward * d0, z1)]
+                out = (0, outward, 0)
             else:
                 pts = [(fixed + outward * d0, p, z0), (fixed + outward * d1, q, z0), (fixed + outward * d1, q, z1), (fixed + outward * d0, p, z1)]
-            part.quad(pts)
+                out = (outward, 0, 0)
+            part.quad(pts, out)
 
 
 def container():
@@ -540,12 +563,10 @@ def helipad():
     k["concrete"].cyl(0, 0, 0, 0.5, R, 40)
     k["concrete"].cyl(0, 0, 0.5, 0.62, R, 40, r_top=R - 0.3)
     m = k["marking"]
-    ring = Part("marking")
     for i in range(40):
         a0, a1 = i * math.tau / 40, (i + 1) * math.tau / 40
         r0, r1 = R * 0.7, R * 0.78
-        ring.quad([(math.cos(a0) * r0, math.sin(a0) * r0, 0.64), (math.cos(a1) * r0, math.sin(a1) * r0, 0.64), (math.cos(a1) * r1, math.sin(a1) * r1, 0.64), (math.cos(a0) * r1, math.sin(a0) * r1, 0.64)])
-    m.merge(ring)
+        m.quad([(math.cos(a0) * r0, math.sin(a0) * r0, 0.64), (math.cos(a1) * r0, math.sin(a1) * r0, 0.64), (math.cos(a1) * r1, math.sin(a1) * r1, 0.64), (math.cos(a0) * r1, math.sin(a0) * r1, 0.64)], (0, 0, 1))
     for sx in (-1, 1):
         m.box(sx * R * 0.22, 0, 0.64, R * 0.09, R * 0.6, 0.02)
     m.box(0, 0, 0.64, R * 0.44, R * 0.09, 0.02)
@@ -595,7 +616,6 @@ def module():
         for i in range(10):
             x = -L / 2 + 2.5 + i * 3.2
             k["lamp"].box(x, sy * (D / 2 + 0.03), lift + 2.5, 1.6, 0.06, 1.0)
-            st.box(x, sy * (D / 2 + 0.05), lift + 1.95, 1.8, 0.1, 0.08)
     k["dark"].box(-8.0, -D / 2 - 0.05, lift + 1.1, 1.0, 0.08, 2.1)
     st.box(-8.0, -D / 2 - 1.0, lift - 0.05, 1.8, 2.0, 0.1)
     rail(st, [(-8.9, -D / 2 - 2.0, lift), (-7.1, -D / 2 - 2.0, lift)])
@@ -648,7 +668,23 @@ def hangar():
     c = k["cladding"]
     for i in range(n):
         (x0, z0), (x1, z1) = arch[i], arch[i + 1]
-        c.quad([(x0, -L / 2, z0), (x1, -L / 2, z1), (x1, L / 2, z1), (x0, L / 2, z0)])
+        # (Facing out from the arch's axis.)
+        c.quad([(x0, -L / 2, z0), (x1, -L / 2, z1), (x1, L / 2, z1), (x0, L / 2, z0)], lambda f: (f.calc_center_median().x, 0, f.calc_center_median().z - 0.25))
+    # Its cladding's UVs unrolled round the arch: u along the hangar, v up the
+    # arch from the nearer foot (so a sheet's foot is at the ground both sides).
+    run = [0.0]
+    for (x0, z0), (x1, z1) in zip(arch, arch[1:]):
+        run.append(run[-1] + math.hypot(x1 - x0, z1 - z0))
+
+    def arch_uvs(bm):
+        uv = bm.loops.layers.uv.verify()
+        for f in bm.faces:
+            for loop in f.loops:
+                co = loop.vert.co
+                i = min(range(n + 1), key=lambda j: (arch[j][0] - co.x) ** 2 + (arch[j][1] - co.z) ** 2)
+                loop[uv].uv = (co.y, min(run[i], run[-1] - run[i]))
+
+    c.uvs = arch_uvs
     st = k["steel"]
     for y in [-L / 2 + 0.2 + i * (L - 0.4) / 8 for i in range(9)]:
         for i in range(n):
@@ -740,7 +776,8 @@ def truck():
     dk = k["dark"]
     p = k["paint"]
     st.box(0, -6.5, 0.9, 1.0, 6.0, 0.3)
-    p.box(0, -8.3, 2.3, 2.5, 2.2, 2.6)
+    # The cab white; the trailer's box the team's colour (paint).
+    k["panel"].box(0, -8.3, 2.3, 2.5, 2.2, 2.6)
     k["glass"].box(0, -9.42, 2.9, 2.2, 0.06, 1.0)
     st.box(0, -9.45, 1.2, 2.5, 0.12, 0.6)
     for sx in (-1, 1):
@@ -841,6 +878,39 @@ def car():
     return k
 
 
+def tarp():
+    """Salvage under a tarpaulin: plates stacked on the ground, the tarp drawn
+    over them (flat on top where it lies on them, falling to the ground round
+    them), lashed across with ropes pegged into the ground; a plate's corner
+    showing at one end."""
+    k = Kind("tarp")
+    W, L, H = 6.0, 10.0, 2.0
+    nx, ny = 12, 20
+    def height(x, y):
+        # Flat over the stack, falling away round it, a lump or two where the plates under it lie uneven.
+        edge = max(abs(2 * x / W), abs(2 * y / L))
+        flat = min(1.0, max(0.0, (1.0 - edge ** 3) * 1.7))
+        lump = 0.12 * math.sin(1.7 * x + 0.6) * math.cos(0.9 * y) + 0.1 * math.sin(0.7 * y + 1.3)
+        return max(0.0, H * flat + (lump if flat > 0.6 else 0.0))
+    t = k["paint"]
+    # (An open sheet, made facing up.)
+    t.recalc = False
+    grid = [[t.bm.verts.new((-W / 2 + W * i / nx, -L / 2 + L * j / ny, height(-W / 2 + W * i / nx, -L / 2 + L * j / ny))) for j in range(ny + 1)] for i in range(nx + 1)]
+    for i in range(nx):
+        for j in range(ny):
+            t.bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+    # The lashings: across it at three places, over it to a peg each side.
+    for y in (-3.2, 0.0, 3.2):
+        pts = [(-W / 2 - 0.4, y, 0.0)] + [(-W / 2 + W * i / nx, y, height(-W / 2 + W * i / nx, y) + 0.04) for i in range(nx + 1)] + [(W / 2 + 0.4, y, 0.0)]
+        for a, b in zip(pts, pts[1:]):
+            k["dark"].tube(a, b, 0.03, 4)
+        for sx in (-1, 1):
+            k["steel"].box(sx * (W / 2 + 0.4), y, 0.15, 0.08, 0.08, 0.5)
+    # A plate's corner out from under it at one end.
+    k["steel"].box(1.2, L / 2 + 0.2, 0.5, 2.4, 1.0, 0.25, 0.2)
+    return k
+
+
 def flag():
     """A runway marker: a pole in a weighted foot, a flag."""
     k = Kind("flag")
@@ -850,7 +920,7 @@ def flag():
     return k
 
 
-KINDS = [container, cabin, workshop, crane, tankfarm, mast, helipad, lamp, module, link, radome, hangar, garages, hospitality, truck, canopy, shop, car, flag]
+KINDS = [container, cabin, workshop, crane, tankfarm, mast, helipad, lamp, module, link, radome, hangar, garages, hospitality, truck, canopy, shop, car, tarp, flag]
 
 
 def build():
