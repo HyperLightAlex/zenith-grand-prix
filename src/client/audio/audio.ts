@@ -63,6 +63,11 @@ export interface AudioScene {
    */
   carve?: number;
   carveTier?: number;
+  /**
+   * A carve biting: how hard (0 to 1) while it sheds speed to hold its line,
+   * 0 when it is not. Optional: left out, nothing is biting.
+   */
+  bite?: number;
   /** Armour below a quarter. */
   critical: boolean;
   /**

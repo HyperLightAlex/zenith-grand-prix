@@ -70,6 +70,8 @@ interface MechVisual {
   vel: THREE.Vector3;
   smokeT: number;
   sparkT: number;
+  /** Seconds to the next puff off the skates while a carve bites (sheds speed). */
+  scrubT: number;
   /** A Breakaway's drawn crackle, seconds left. */
   crackleT: number;
   /** The tick of the last drawn muzzle blast (a scatter cannon reports every pellet). */
@@ -135,6 +137,8 @@ const AMBER = new THREE.Color(0xffa030);
 const HOT = new THREE.Color(0xff7a2a);
 const HOT_HEX = 0xff8a3a;
 const CARVE = CARVE_COLORS.map((c) => new THREE.Color(c));
+/** A biting carve's sparks: white hot, whatever its tier. */
+const SCRUB_SPARK = 0xfff2d2;
 
 /** A colour for each weapon: its swing, and the sparks it throws off what it hits. */
 const WEAPON_COLOR: Record<string, number> = {
@@ -295,6 +299,7 @@ export class RaceView {
         vel: new THREE.Vector3(),
         smokeT: 0,
         sparkT: 0,
+        scrubT: 0,
         crackleT: 0,
         shotTick: -1,
         burstTier: 0,
@@ -493,7 +498,7 @@ export class RaceView {
       v.trailColor.lerp(tint, 1 - Math.exp(-10 * dt));
       routeDir(track, v.s, v.d, 0, 1, v2);
       // The marks the skates leave: a carve's lines, a boost's burns.
-      const trail = m.retired || v.h > 0.3 ? null : m.boosting || surge ? 'burn' : m.carving ? 'carve' : null;
+      const trail = m.retired || v.h > 0.3 ? null : m.boosting || surge ? 'burn' : m.carveBite > 0 ? 'scrub' : m.carving ? 'carve' : null;
       for (let i = 0; i < 2; i++) {
         v.rig.heels[i].getWorldPosition(v1);
         this.marks.skate(m.id * 2 + i, v1, v.s, v.d, trail);
@@ -604,6 +609,27 @@ export class RaceView {
             v.rig.heels[heel].getWorldPosition(v1);
             routeDir(track, v.s, v.d, -0.55, heel === 0 ? -0.75 : 0.75, v2);
             this.fx.spray(v1, v3, v2, heel === out ? n : Math.ceil(n / 2), 18 + tier * 5, CARVE_COLORS[tier], 0.28 + tier * 0.07, 0.3 + tier * 0.04);
+          }
+          // Biting (shedding speed to hold the line): both skates turned
+          // across throw a white-hot sheet of sparks forward and out, as
+          // hard as it bites, and smoke off the outside one.
+          if (m.carveBite > 0) {
+            const hot = (3 + 5 * m.carveBite) * this.feel.sparks;
+            for (const heel of [out, 1 - out]) {
+              v.rig.heels[heel].getWorldPosition(v1);
+              routeDir(track, v.s, v.d, 0.35, heel === 0 ? -0.9 : 0.9, v2);
+              this.fx.spray(v1, v3, v2, Math.ceil(heel === out ? hot : hot * 0.6), 30, SCRUB_SPARK, 0.34, 0.26);
+            }
+            v.scrubT -= dt;
+            if (v.scrubT <= 0) {
+              v.rig.heels[out].getWorldPosition(v1);
+              // (Carried on with the mech, most of the way: left behind, it
+              // piled up in front of the camera following it.)
+              v4.copy(v.vel).multiplyScalar(0.6);
+              const drawn = this.fx.drawnSprite('smoke', v1, 1.4 + 1.1 * m.carveBite, { row: 0, tint: this.dust, vel: v4, flip: Math.random() < 0.5, depth: true });
+              if (!drawn) this.fx.puff(v1, v4, 1, this.dust, 1.1, 0.5);
+              v.scrubT = drawn ? 0.16 : 0.08;
+            }
           }
         }
         if (m.onStrip && !m.retired) {

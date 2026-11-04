@@ -123,6 +123,8 @@ import {
   armourToLose,
   classOf,
   backToFight,
+  carveBite,
+  carveBiteSpeed,
   carveSteer,
   clearEffects,
   dropCarve,
@@ -263,6 +265,7 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
       carveDir: 0,
       carveCharge: 0,
       carveTier: 0,
+      carveBite: 0,
       carveT: 0,
       carveBoost: 0,
       arcDir: 0,
@@ -420,6 +423,21 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   const sharp = m.carving ? Math.abs(steerIn) : 0;
   m.steer = approach(m.steer, staggered ? 0 : steerIn, STEER_RATE * DT);
 
+  // The grip the turn has: the frame's, a turn banked toward its inside
+  // grips harder, and carving digs the skates in, more again in Overdrive.
+  // (In the air there is little grip at all: see omegaMax below.)
+  const carving = m.carving && !m.air;
+  const grip = c.grip * gripAt(track, m.s) * (carving ? race.rules.carveGrip * (m.overdriveT > 0 ? OVERDRIVE_CARVE_GRIP : 1) : 1);
+  // (Round a barrel or a twist, the skates' hold grips harder: Track.hold.)
+  const hold = holdAt(track, m.s);
+  // The bite: the stick pushed into a carve digs the skates in harder still.
+  // A grip-limited turn opens out with the square of the speed, so a carve
+  // at boost pace runs as wide as a plain turn without it. Biting, the carve
+  // holds its line instead: too fast for the line the bite asks for (all
+  // the way in, rules.carveBiteRadius), it sheds speed until it is not.
+  const bite = carving && !staggered ? carveBite(m.carveDir, input.mx) : 0;
+  const biteSpeed = carveBiteSpeed(grip * hold, race.rules.carveBiteRadius, bite);
+
   let cap = speedCap(race, m, c);
   const wasBoosting = m.boosting;
   const overdrive = m.overdriveT > 0;
@@ -432,7 +450,10 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // one picked straight back up is the same boost, not a new ignition.
   const fuel = wasBoosting ? BOOST_COST * DT : BOOST_MIN_START;
   const wantsIt = (input.buttons & BTN.A) !== 0 || (wasBoosting && m.boostT > 0);
-  if (!staggered && !m.finished && !overdrive && m.snareT <= 0 && wantsIt && m.drive >= fuel && input.throttle > 0.2) {
+  // A bite holding the mech under its own pace has no use for a boost: it
+  // waits (no Drive spent) and lights again as the carve lets the pace run.
+  const bitten = biteSpeed < cap;
+  if (!staggered && !m.finished && !overdrive && !bitten && m.snareT <= 0 && wantsIt && m.drive >= fuel && input.throttle > 0.2) {
     m.boosting = true;
     cap *= race.rules.boostMult;
     m.drive = Math.max(0, m.drive - BOOST_COST * DT);
@@ -463,13 +484,18 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   const throttle = staggered ? Math.min(clamp(input.throttle, 0, 1), STAGGER_THROTTLE) : clamp(input.throttle, 0, 1);
   // The trigger brakes unless it is carving.
   const brake = staggered || m.carving ? 0 : clamp(input.brake, 0, 1);
-  const want = cap * throttle;
+  // (Biting, no faster than the bite holds its line at.)
+  const want = Math.min(cap * throttle, biteSpeed);
+  // Shedding speed to hold the bite's line: the scrub's sparks and screech follow it.
+  m.carveBite = m.speed > biteSpeed + 0.5 ? bite : 0;
   if (m.speed < want) {
     // Acceleration tails off toward the cap.
     const room = clamp(1.2 - m.speed / cap, 0.18, 1);
     m.speed = Math.min(want, m.speed + c.accel * (overdrive ? OVERDRIVE_ACCEL : m.boosting || padded || burst ? BOOST_ACCEL : 1) * room * DT);
   } else if (m.speed > want) {
-    const drag = COAST_DRAG + (m.speed > cap ? OVERCAP_DRAG : 0);
+    // A bite sheds speed hard (the skates turned across, all the way in
+    // harder than the brake), as hard as it is pushed in; otherwise the speed drifts down.
+    const drag = m.speed > biteSpeed ? race.rules.carveBiteDrag * bite : COAST_DRAG + (m.speed > cap ? OVERCAP_DRAG : 0);
     m.speed = Math.max(want, m.speed - drag * DT);
   }
   if (brake > 0) m.speed -= brake * c.brake * DT;
@@ -481,13 +507,13 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // free steering tops out a little above the cap.
   if (m.speed > cap * SPEED_CEILING) m.speed = cap * SPEED_CEILING;
 
-  // Steering fights the bend of the road: hold a line or run wide. A turn
-  // banked toward its inside grips harder; in the air there is little grip at all.
-  // Carving digs the skates in: far more grip, and a tighter turn.
-  const carving = m.carving && !m.air;
-  const grip = c.grip * gripAt(track, m.s) * (carving ? race.rules.carveGrip * (m.overdriveT > 0 ? OVERDRIVE_CARVE_GRIP : 1) : 1);
-  // (Round a barrel or a twist, the skates' hold grips harder: Track.hold.)
-  const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), (grip * holdAt(track, m.s)) / Math.max(m.speed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
+  // Steering fights the bend of the road: hold a line or run wide, as hard
+  // as the grip above allows (carving: far more grip, and a tighter turn).
+  // Biting, the edges dig in: while it sheds speed the carve turns as tight
+  // as it will once down to the bite's pace, not as wide as the speed it is
+  // shedding would leave it (or a hairpin taken hot is over before it is).
+  const gripSpeed = m.carveBite > 0 ? Math.min(m.speed, biteSpeed) : m.speed;
+  const omegaMax = Math.min(c.turnMax * (carving ? CARVE_TURN : 1), (grip * hold) / Math.max(gripSpeed, 24)) * Math.min(1, m.speed / 12) * (m.air ? AIR_CONTROL : 1);
   // The bend steered against: the road's, and in a steered fork the route's own over it.
   const kappa = kappaAt(track, m.s);
   const sdot = (m.speed * Math.cos(m.heading + routeAngleAt(track, m.s, m.d))) / stretchAt(track, m.s, m.d, kappa);

@@ -2,6 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   BTN,
+  CARVE_TURN,
+  CLASSES,
   CARVE_BEND_MAX,
   CARVE_BEND_MIN,
   CARVE_BURST,
@@ -14,12 +16,22 @@ import {
   DT,
   MODE,
   OVERDRIVE_CARVE_GRIP,
+  ROLE,
+  buildTrack,
+  carveBiteSpeed,
   carveSteer,
   carveStick,
+  clamp,
+  createRace,
+  emptyInput,
+  kappaAt,
+  speedCap,
+  stepRace,
   ticks,
 } from '../src/sim/index';
 import { setStagger } from '../src/sim/combat';
-import { Arena, FW0, FW1, TRACK, wallLimit } from './helpers';
+import { MONSOON_RUINS } from '../src/sim/tracks/monsoon';
+import { Arena, FW0, FW1, TRACK, makeSeats, runCountdown, wallLimit } from './helpers';
 
 /** Where the tightest corner on the circuit (the Harbour Hairpin) starts, and which way it turns. */
 function hairpin(): { s: number; dir: number } {
@@ -117,7 +129,8 @@ describe('holding a carve', () => {
     // Carving at full lock on the straight, flat out (Overdrive's pace or
     // not): the grip it turns with, the turn rate times the speed.
     const carveGrip = (od: boolean) => {
-      const a = new Arena(2);
+      // (No bite: the grip alone. The bite has tests of its own, below.)
+      const a = new Arena(2, 1, { carveBiteRadius: 1000 });
       const m = a.put(FW0, 0, -12, 200);
       m.overdriveT = od ? 600 : 0;
       carve(a, FW0, 1);
@@ -211,7 +224,8 @@ describe('the charge', () => {
     const { s, dir } = hairpin();
     const first = (mx: number) => dir * Math.max(CARVE_MIN_STEER, Math.abs(mx));
     const run = (at: number, mx: number, speed = 110) => {
-      const a = new Arena(2);
+      // (No bite: the charge alone, at the pace it is put at.)
+      const a = new Arena(2, 1, { carveBiteRadius: 1000 });
       const m = a.put(FW0, at, 0, speed);
       if (speed < 100) a.inputs[FW0].throttle = 0;
       // The stick has to be over to start it; after that it can go anywhere.
@@ -292,5 +306,158 @@ describe('the burst', () => {
     a.step(80, () => (top = Math.max(top, m.speed)));
     expect(a.events('carveBurst').map((e) => e.tier)).toEqual([3]);
     expect(top).toBeLessThan(a.pace + 0.5);
+  });
+});
+
+describe('the bite', () => {
+  // The stick pushed into a carve past the middle digs the skates in: too fast
+  // for the line it asks for, the carve sheds speed until it is not, rather
+  // than running wide. In the middle or eased out of the turn it does not.
+  const fullPush = (a: Arena) => carveBiteSpeed(CLASSES[ROLE.FW].grip * a.race.rules.carveGrip, a.race.rules.carveBiteRadius, 1);
+
+  it('pushed all the way in, sheds speed about as hard as carveBiteDrag', () => {
+    const a = new Arena(3);
+    const m = a.put(FW0, 100, -14, 160);
+    carve(a, FW0, 1);
+    a.step(10);
+    expect(m.carving).toBe(true);
+    // The bite and the carve's own drag, for ten ticks.
+    const drop = 160 - m.speed;
+    expect(drop).toBeGreaterThan((a.race.rules.carveBiteDrag + a.race.rules.carveDrag) * 10 * DT * 0.9);
+    expect(drop).toBeLessThan((a.race.rules.carveBiteDrag + a.race.rules.carveDrag) * 10 * DT * 1.1);
+    expect(m.carveBite).toBe(1);
+  });
+
+  it('down to the pace that holds its line, and no lower', () => {
+    const a = new Arena(3);
+    const v = fullPush(a);
+    // (Bitten all the way, a Forward holds carveBiteRadius at about 91.)
+    expect(v).toBeGreaterThan(85);
+    expect(v).toBeLessThan(97);
+    const m = a.put(FW0, 100, -14, v + 6);
+    carve(a, FW0, 1);
+    let low = Infinity;
+    a.step(20, () => (low = Math.min(low, m.speed)));
+    expect(m.speed).toBeLessThan(v + 0.01);
+    expect(low).toBeGreaterThan(v - 2);
+  });
+
+  it('in the middle, or eased out of the turn, there is no bite: only the carve\'s own drag', () => {
+    for (const mx of [0, -0.8]) {
+      const a = new Arena(3);
+      const m = a.put(FW0, 100, -14, 160);
+      carve(a, FW0, 0.6);
+      a.step(1);
+      carve(a, FW0, mx);
+      a.step(10);
+      expect(m.carving).toBe(true);
+      expect(160 - m.speed).toBeLessThan(a.race.rules.carveDrag * 11 * DT + 0.5);
+      expect(m.carveBite).toBe(0);
+    }
+  });
+
+  it('pushed in part of the way, it bites only at a higher pace', () => {
+    const a = new Arena(3);
+    const m = a.put(FW0, 100, -14, 160);
+    carve(a, FW0, 0.75);
+    a.step(1);
+    // A three-quarter push holds its line up to a third more than a full one.
+    expect(fullPush(a) / 0.75).toBeLessThan(160);
+    expect(m.carveBite).toBeCloseTo(0.75, 6);
+    const b = new Arena(3);
+    const n = b.put(FW0, 100, -14, 160);
+    carve(b, FW0, 0.4);
+    b.step(1);
+    expect(fullPush(b) / 0.4).toBeGreaterThan(160);
+    expect(n.carveBite).toBe(0);
+  });
+
+  it('no bite and no limit without the grip: it follows the carve\'s, so Overdrive bites at a higher pace', () => {
+    const a = new Arena(3);
+    expect(carveBiteSpeed(100 * a.race.rules.carveGrip * OVERDRIVE_CARVE_GRIP, 50, 1)).toBeGreaterThan(fullPush(a));
+    expect(carveBiteSpeed(165, 50, 0)).toBe(Infinity);
+  });
+
+  it('a boost waits while the bite holds the mech under its pace: no Drive spent, lit again as it lets go', () => {
+    const a = new Arena(3, 1, { drivePassive: 0 });
+    const m = a.put(FW0, 100, -14, 150);
+    m.drive = 100;
+    a.hold(FW0, BTN.A);
+    carve(a, FW0, 1);
+    a.step(10);
+    expect(m.carving).toBe(true);
+    expect(m.boosting).toBe(false);
+    expect(m.drive).toBe(100);
+    // Eased back to the middle: the bite lets go and the boost lights.
+    carve(a, FW0, 0);
+    a.step(2);
+    expect(m.boosting).toBe(true);
+    expect(m.drive).toBeLessThan(100);
+  });
+
+  it("round Monsoon's Stairway hairpins on the boost, laps 2 and 3, bitten in, without touching the barrier", () => {
+    const track = buildTrack(MONSOON_RUINS);
+    // The hairpins: the runs of road tighter than 70 round.
+    const pins: Array<{ s0: number; s1: number; dir: number }> = [];
+    for (let k = 0; k < track.n; k++) {
+      const tight = Math.abs(track.kappa[k]) > 1 / 70;
+      const last = pins[pins.length - 1];
+      if (tight && last && k * track.ds - last.s1 <= track.ds * 1.5) last.s1 = k * track.ds;
+      else if (tight) pins.push({ s0: k * track.ds, s1: k * track.ds, dir: Math.sign(track.kappa[k]) });
+    }
+    const stair = pins.filter((p) => p.s1 - p.s0 > 120).slice(0, 2);
+    expect(stair).toHaveLength(2);
+    for (const [pin, lap] of stair.flatMap((p) => [[p, 2], [p, 3]] as const)) {
+      const race = createRace(track, { seed: 3, seats: makeSeats('all'), rules: { momentumSecs: 0, drivePass: 0 } });
+      const inputs = race.mechs.map(() => emptyInput());
+      runCountdown(race, inputs);
+      race.lapPhase = lap;
+      // Everyone else well out of the way.
+      for (const o of race.mechs) if (o.id !== FW0) o.s = track.length + 9000 + o.id * 50;
+      const m = race.mechs[FW0];
+      const boosted = speedCap(race, race.mechs[FW0], CLASSES[ROLE.FW]) * race.rules.boostMult;
+      // Down the ramp to it on the boost, on the outside of the road.
+      m.s = track.length + pin.s0 - 80;
+      m.d = -pin.dir * 12;
+      m.speed = m.vs = boosted;
+      m.vd = m.heading = m.facing = 0;
+      m.drive = 100;
+      const inp = inputs[FW0];
+      inp.throttle = 1;
+      inp.buttons = BTN.A;
+      let walls = 0;
+      let top = 0;
+      let low = Infinity;
+      for (let t = 0; t < 8 * 60; t++) {
+        const at = m.s - track.length;
+        const inPin = at > pin.s0 - 12 && at < pin.s1 - 15;
+        // A pilot's line: the bend fed forward, the heading put toward the line.
+        const c = CLASSES[m.role];
+        const look = 14 + m.speed * 0.35;
+        const dWant = inPin ? -pin.dir * 4 : -pin.dir * 12;
+        const rate = kappaAt(track, m.s + m.speed * 0.12) * m.speed * Math.cos(m.heading) + (Math.atan2(dWant - m.d, look) - m.heading) * 3.2;
+        const grip = c.grip * (m.carving ? race.rules.carveGrip : 1);
+        const omega = Math.min(c.turnMax * (m.carving ? CARVE_TURN : 1), grip / Math.max(m.speed, 24));
+        if (inPin) {
+          // Carving it: in hard enough to start, then as the line wants (all
+          // the way in, biting, when it wants more than the grip gives).
+          inp.brake = 1;
+          inp.mx = m.carving ? carveStick(m.carveDir, clamp(rate / omega, -1, 1)) : pin.dir;
+        } else {
+          inp.brake = 0;
+          inp.mx = clamp(rate / omega, -1, 1);
+        }
+        stepRace(race, track, inputs);
+        for (const e of race.events) if (e.type === 'wall' && e.mech === FW0) walls++;
+        if (at < pin.s0 - 20) top = Math.max(top, m.speed);
+        if (inPin) low = Math.min(low, m.speed);
+        if (at > pin.s1 + 60) break;
+      }
+      expect(top).toBeGreaterThan(boosted - 2);
+      expect(m.s - track.length).toBeGreaterThan(pin.s1 + 60);
+      expect(walls).toBe(0);
+      // It made it at the pace its line holds, not at a crawl.
+      expect(low).toBeGreaterThan(80);
+    }
   });
 });

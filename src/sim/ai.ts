@@ -27,7 +27,7 @@ import {
   TACTIC,
   type Tactic,
 } from './config';
-import { carveStick, classOf, distance, hpFraction, inPlay, lockable, sameRoute, setTarget, speedCap } from './core';
+import { carveBiteSpeed, carveStick, classOf, distance, hpFraction, inPlay, lockable, sameRoute, setTarget, speedCap } from './core';
 import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
 import { deltaS, forkAt, gripAt, holdAt, hwAt, routeBendAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
@@ -475,7 +475,15 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     // Lean into it hard enough to start the carve; after that, the stick
     // that makes the carve turn the way the line wants.
     if (!m.carving) out.mx = bendDir * Math.max(Math.abs(out.mx), CARVE_MIN_STEER + 0.05);
-    else out.mx = carveStick(m.carveDir, out.mx);
+    else {
+      out.mx = carveStick(m.carveDir, out.mx);
+      // Pushed in, the carve bites: no harder than takes the speed down to
+      // what the bend ahead can be carved at (all the way in would take it
+      // down to the hairpin pace, bend or no bend).
+      const lean = out.mx * m.carveDir;
+      const fullBite = carveBiteSpeed(c.grip * carveGrip * gripAt(track, m.s) * holdAt(track, m.s), rules.carveBiteRadius, 1);
+      if (lean > 0) out.mx = m.carveDir * Math.min(lean, fullBite / Math.max(vCarve, 1));
+    }
     if (m.speed > vCarve + 3) throttle = 0;
     else if (m.speed > vCarve - 3) throttle = Math.min(throttle, 0.7);
     wantBoost = false;

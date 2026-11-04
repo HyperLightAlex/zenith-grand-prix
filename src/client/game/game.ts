@@ -3021,6 +3021,7 @@ export class Game {
     sc.scraping = f.wall > 0 && f.speed > 20;
     sc.carve = f.carving && !f.air ? Math.max(0.15, Math.abs(f.steer)) : 0;
     sc.carveTier = f.carving ? f.carveTier : 0;
+    sc.bite = f.carving && !f.air ? f.carveBite : 0;
     sc.critical = f.hp > 0 && f.hp < 0.25 * f.maxHp && !f.retired && this.state === 'race';
     // On the grid the engine runs on the revs; a tick as the player's come into the green.
     const grid = cur.phase === PHASE.COUNTDOWN && this.state === 'race' && !f.retired;

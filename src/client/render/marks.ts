@@ -98,10 +98,11 @@ class Layer {
   }
 }
 
-/** What a skate leaves: a carve's line, or a boost's burn. */
-export type Trail = 'carve' | 'burn';
+/** What a skate leaves: a carve's line, a biting carve's scrub (wider, darker), or a boost's burn. */
+export type Trail = 'carve' | 'scrub' | 'burn';
 
-const TRAIL_COLOR: Record<Trail, number> = { carve: 0x1a1d2c, burn: 0x2b1a10 };
+const TRAIL_COLOR: Record<Trail, number> = { carve: 0x1a1d2c, scrub: 0x0c0d14, burn: 0x2b1a10 };
+const TRAIL_WIDTH: Record<Trail, number> = { carve: 0.42, scrub: 0.8, burn: 0.75 };
 /** Laid every this far along (a segment a mark). */
 const SEGMENT = 2.4;
 
@@ -158,7 +159,7 @@ export class TrackMarks {
       m4.makeBasis(vx, vy, vz);
       at.addVectors(p, last.p).multiplyScalar(0.5).addScaledVector(vy, 0.04);
       q.setFromRotationMatrix(m4);
-      m4.compose(at, q, sc.set(trail === 'burn' ? 0.75 : 0.42, 1, len + 0.3));
+      m4.compose(at, q, sc.set(TRAIL_WIDTH[trail], 1, len + 0.3));
       this.road.put(m4, col.setHex(TRAIL_COLOR[trail]));
     }
     last.p.copy(p);

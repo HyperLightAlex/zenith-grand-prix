@@ -181,6 +181,16 @@ shapes it (centred it turns at about half lock, pushed into the turn it
 tightens, pushed out it opens wide), and it lasts until you let go of the
 trigger. With the stick near the middle the trigger is still a brake.
 
+Push the stick all the way into the turn and the carve **bites**: it holds
+a tight line (about a hairpin's) and, if you come in too fast for it, sheds
+speed hard instead of running you into the barrier. White-hot sparks, a
+screech and Bite on the carve meter say it is biting. Push in only as far as
+the corner needs: the further in, the more speed it is willing to give up.
+You can stay on the boost through it; the boost waits while the bite holds
+you back and picks up as you ease out. On the keys, A or D held into a carve
+digs in over a moment (all the way in after about half a second); tap it to
+steer the carve without biting.
+
 While you carve, the sparks off your skates climb three colours: cyan, gold,
 then magenta. The tighter you hold it, the tighter the bend and the faster
 you go, the quicker they climb; on a straight they barely move. Let go for a

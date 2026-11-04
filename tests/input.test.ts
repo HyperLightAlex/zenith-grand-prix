@@ -57,6 +57,34 @@ describe('controller steering', () => {
   });
 });
 
+describe('carving on the keys', () => {
+  it('a direction key held into a carve digs in over a moment, as a stick would be pushed; steering alone is all the way over', () => {
+    let now = 1000;
+    vi.stubGlobal('performance', { now: () => now });
+    const input = new Input();
+    key('keydown', 'KeyA');
+    input.poll();
+    expect(input.state.mx).toBe(-1);
+    // The carve key as well: just past the middle of the carve's range...
+    key('keydown', 'KeyS');
+    input.poll();
+    expect(input.state.brake).toBe(1);
+    expect(input.state.mx).toBeCloseTo(-0.6);
+    // ...all the way in after 0.6 s...
+    now += 300;
+    input.poll();
+    expect(input.state.mx).toBeCloseTo(-0.8);
+    now += 400;
+    input.poll();
+    expect(input.state.mx).toBe(-1);
+    // ...and from the start again for the other key.
+    key('keyup', 'KeyA');
+    key('keydown', 'KeyD');
+    input.poll();
+    expect(input.state.mx).toBeCloseTo(0.6);
+  });
+});
+
 describe('touch controls', () => {
   function fakeTouch(read: ReturnType<TouchControls['read']>): TouchControls {
     return { read: () => read, onTouch: () => {}, onMenu: () => {} } as unknown as TouchControls;

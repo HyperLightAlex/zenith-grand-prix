@@ -722,7 +722,10 @@ export class Hud {
       if (me.carving) this.carveShown = me.carveTier;
       this.carve.style.setProperty('--tier', hex(CARVE_COLORS[tier]));
       setClass(this.carve, 'burst', bursting && !me.carving);
-      setText(this.carveLabel, bursting && !me.carving ? `Burst +${Math.round(CARVE_BURST[Math.max(0, tier - 1)] * race.rules.carveBurst * 100)}%` : 'Carve');
+      // Biting: shedding speed to hold the line.
+      const biting = me.carving && me.carveBite > 0;
+      setClass(this.carve, 'bite', biting);
+      setText(this.carveLabel, bursting && !me.carving ? `Burst +${Math.round(CARVE_BURST[Math.max(0, tier - 1)] * race.rules.carveBurst * 100)}%` : biting ? 'Bite' : 'Carve');
     }
 
     // Speed and limiter.

@@ -111,10 +111,16 @@ describe('who stands on the podium', () => {
   });
 
   it('a Sprint: its first three by the standings, a pilot each', () => {
-    const m = createMatch({ mode: 'races', races: 1 }, 6);
-    const race = newSprint(8);
-    runToEnd(race);
-    recordRound(m, race);
+    // A Sprint whose first three all scored (in plenty the field is knocked
+    // out behind the winner: see below).
+    let m = createMatch({ mode: 'races', races: 1 }, 6);
+    for (let seed = 8; seed < 40; seed++) {
+      m = createMatch({ mode: 'races', races: 1 }, 6);
+      const race = newSprint(seed);
+      runToEnd(race);
+      recordRound(m, race);
+      if (standings(m).slice(0, 3).every((side) => m.pilots.some((l) => l.team === side && l.points > 0))) break;
+    }
     const c = matchCeremony(m, true)!;
     expect(c.kind).toBe('sprint');
     expect(c.steps.map((s) => s.side)).toEqual(standings(m).slice(0, 3));

@@ -466,6 +466,28 @@ road. Less stick than 0.35 and the trigger is a brake.
   (`OVERDRIVE_CARVE_GRIP`): at that pace the grip, not the frame, limits the
   turn, and without it the carve opened out by as much as the pace rose. The
   mech leans further into it too.
+- **The bite.** A turn that only has grip opens out with the square of the
+  speed, so a carve on the boost (1.25 times the pace, 1.56 times the
+  radius) ran about as wide as plain steering without one, and nothing
+  could take Monsoon's Stairway hairpins (55 round, 40 wide) at a boosted
+  pace, or at all from lap 2. Pushed into the turn past the middle, the
+  carve bites: all the way in it holds a line `carveBiteRadius` (50) round,
+  and too fast for that it sheds speed at `carveBiteDrag` (150 u/s every
+  second, harder than the brake: the skates turned across), down to the
+  pace that holds it (about 91 for a Forward on the flat, more on a banked
+  turn or in Overdrive). Pushed in part of the way it holds a wider line
+  and sheds speed only above a higher pace, in proportion (`carveBiteSpeed`:
+  the full-push pace over how far in), and more gently. While it sheds, it
+  turns as tight as it will at that pace, not as wide as the speed it is
+  shedding would leave it. Centred or eased out, nothing changes. A boost
+  waits while the bite holds the mech under its pace (no Drive spent) and
+  lights again as it lets go. Biting, the skates throw white-hot sparks and
+  smoke, leave a wider, darker mark, screech, and the carve meter reads
+  Bite. Computer pilots bite only as hard as takes them down to the pace
+  the bend ahead can be carved at. On the keys, which are all or nothing, a
+  direction key held into a carve digs in over a moment, from 0.6 of the
+  way over to all the way in after 0.6 s (`KEY_DIG_FROM`, input.ts), so
+  a tap steers the carve without biting.
 - **Charge.** Per second: how tight the carve is held (0.15 to 1) x the
   bend (250 / its radius, between 0.15 and 1.6; a straight or a carve
   against the bend counts 0.15) x the speed (full from 100 u/s). Tiers at
@@ -478,7 +500,7 @@ road. Less stick than 0.35 and the trigger is a brake.
   Aegis or in a Ram), locking on, a fall or the finish end the carve with
   nothing. In the air it holds, but does not charge.
 
-Grip, speed loss, charge rate and burst size are all on the tuning panel.
+Grip, speed loss, charge rate, burst size and the bite are all on the tuning panel.
 
 ### Drive
 

@@ -1,5 +1,6 @@
 // The continuous sounds of a mech at speed: turbine, wind, afterburner, charge
-// strip, slipstream, barrier scrape and the low-armour alarm. Every node is
+// strip, slipstream, barrier scrape, the carve (and its bite's screech) and
+// the low-armour alarm. Every node is
 // made once. Each frame only moves AudioParams; the one exception is that a
 // layer is unplugged from the mix a moment after it falls silent and plugged
 // back in when it is next needed, because an unplugged layer costs no CPU.
@@ -21,6 +22,7 @@ const LEVEL = {
   scrape: 1.6,
   carveHiss: 0.5,
   carveHum: 0.05,
+  bite: 2.0,
   alarm: 0.08,
 };
 
@@ -136,6 +138,9 @@ export class EngineLayers {
   private readonly carveHum: Glide;
   private readonly carveHumF: Glide[];
   private readonly carveShimmer: Glide;
+  private readonly biteGain: Glide;
+  private readonly biteCut: Glide[];
+  private readonly bitePatch: Patch;
   private readonly alarmGain: AudioParam;
   private readonly alarmPatch: Patch;
 
@@ -280,6 +285,23 @@ export class EngineLayers {
     h2.connect(this.gain(0.35, this.pan(0.25, humLp)));
     this.carveHumF = [new Glide(h1.frequency, 0.05, CARVE_HUM_HZ[0]), new Glide(h2.frequency, 0.05, CARVE_HUM_HZ[0] * 2.003)];
 
+    // --- a carve biting (shedding speed to hold its line): the skates turned
+    // across, screeching. Two narrow bands of the white noise, chattering at
+    // a stick-slip rate, a little higher the faster it is going.
+    const chatter = this.gain(0.55, null);
+    this.osc('square', 41).connect(this.gain(0.45, chatter.gain));
+    const biteG = this.gain(0, null);
+    this.biteGain = new Glide(biteG.gain, 0.03, 0);
+    this.bitePatch = new Patch(biteG, out);
+    chatter.connect(biteG);
+    this.biteCut = [];
+    for (const [f, q, g] of [[1650, 7, 1], [2950, 9, 0.7]]) {
+      const bp = this.filter('bandpass', f, q);
+      this.biteCut.push(new Glide(bp.frequency, 0.1, f));
+      hiss.connect(bp);
+      bp.connect(this.gain(g, chatter));
+    }
+
     // --- low-armour alarm: a soft beep, scheduled ahead like the music.
     const alarmG = this.gain(0, null);
     this.alarmGain = alarmG.gain;
@@ -287,7 +309,7 @@ export class EngineLayers {
     this.osc('sine', 659.3).connect(alarmG);
     this.osc('sine', 1318.5).connect(this.gain(0.25, alarmG));
 
-    this.taps = { engine: engG, whine: whineG, wind: windG, road: roadG, draft: draftG, boostNoise: boostNG, strip: stripG, scrape: scrapeG, carveHiss: edgeG, carveHum: humG, alarm: alarmG };
+    this.taps = { engine: engG, whine: whineG, wind: windG, road: roadG, draft: draftG, boostNoise: boostNG, strip: stripG, scrape: scrapeG, carveHiss: edgeG, carveHum: humG, bite: biteG, alarm: alarmG };
   }
 
   /** The player's mix of the layers. Values are 0..1; anything else is ignored. */
@@ -425,6 +447,14 @@ export class EngineLayers {
     this.carveHumF[1].to(CARVE_HUM_HZ[tier] * 2.003, now);
     this.carveShimmer.to(CARVE_SHIMMER_HZ[tier], now);
     this.carveHum.to(carving ? LEVEL.carveHum * mix.strip * (0.5 + 0.5 * (tier / 3)) : 0, now, carving ? 0.06 : 0.12);
+
+    // The bite's screech: as hard as it bites, louder at speed.
+    const bite = carving ? clamp(Number.isFinite(s.bite) ? (s.bite as number) : 0, 0, 1) : 0;
+    const biting = bite > 0;
+    this.bitePatch.set(biting, now, TAIL);
+    this.biteCut[0].to(1650 * (0.85 + 0.3 * x1), now);
+    this.biteCut[1].to(2950 * (0.85 + 0.3 * x1), now);
+    this.biteGain.to(biting ? LEVEL.bite * mix.scrape * (0.45 + 0.55 * bite) * (0.5 + 0.5 * x1) : 0, now, biting ? 0.03 : 0.12);
 
     // Alarm: a few soft beeps when armour first goes critical, queued ahead of
     // the clock like the music, and then quiet. (It used to beep twice a

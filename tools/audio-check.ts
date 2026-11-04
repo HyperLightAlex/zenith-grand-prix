@@ -103,6 +103,7 @@ const LAYER_CASES: LayerCase[] = [
   { name: '+scraping', scene: { ...BASE, scraping: true }, vs: 'limiter (110)' },
   { name: '+carving, building', scene: { ...BASE, carve: 0.55, carveTier: 0 }, vs: 'limiter (110)' },
   { name: '+carving tight, tier 3', scene: { ...BASE, carve: 1, carveTier: 3 }, vs: 'limiter (110)' },
+  { name: '+biting', scene: { ...BASE, carve: 1, carveTier: 3, bite: 1 }, vs: '+carving tight, tier 3' },
   { name: '+critical', scene: { ...BASE, speed: 0, throttle: 0, critical: true }, vs: 'idle (speed 0)' },
   { name: 'everything', scene: { ...BASE, speed: 250, boosting: true, surge: true, onStrip: true, drafting: true, scraping: true, critical: true } },
   { name: 'off again', scene: OFF, silent: true },

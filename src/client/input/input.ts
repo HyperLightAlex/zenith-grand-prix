@@ -33,6 +33,16 @@ const KEY_BUTTONS: Record<string, number> = {
   KeyZ: BTN.TPREV,
 };
 
+/**
+ * Carving on the keys (S with A or D), a key held into the carve digs in
+ * over a moment, as a stick would be pushed: from this much of the way over
+ * (just past the middle of a carve's range, nowhere near a bite at the
+ * first laps' pace) to all the way in after KEY_DIG_SECS. A key is all or
+ * nothing, and all the way in at once would bite every carve hard.
+ */
+const KEY_DIG_FROM = 0.6;
+const KEY_DIG_SECS = 0.6;
+
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, LS: 10, RS: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 
 function dead(v: number, zone: number): number {
@@ -63,6 +73,9 @@ export class Input {
   private prevStickY = 0;
   private prevFlick = 0;
   private flickHold = 0;
+  /** A carve's direction key held (its sign, 0 for none), and since when (ms). */
+  private digDir = 0;
+  private digAt = 0;
   /** When the held flick next repeats (performance.now, ms). */
   private flickNext = 0;
   /** Buttons that were down when a menu closed: ignored until they are let go. */
@@ -180,6 +193,15 @@ export class Input {
     let my = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
     let throttle = my > 0 ? 1 : 0;
     let brake = my < 0 ? 1 : 0;
+    // Carving on the keys: the direction key digs in over a moment (KEY_DIG_FROM).
+    if (!this.battle && brake > 0 && mx !== 0) {
+      const now = performance.now();
+      if (this.digDir !== mx) {
+        this.digDir = mx;
+        this.digAt = now;
+      }
+      mx *= Math.min(1, KEY_DIG_FROM + ((1 - KEY_DIG_FROM) * (now - this.digAt)) / (KEY_DIG_SECS * 1000));
+    } else this.digDir = 0;
     let buttons = 0;
     for (const code in KEY_BUTTONS) if (k.has(code)) buttons |= KEY_BUTTONS[code];
     let cmd = k.has('Digit1') ? 1 : k.has('Digit2') ? 2 : k.has('Digit3') ? 3 : k.has('Digit4') ? 4 : 0;

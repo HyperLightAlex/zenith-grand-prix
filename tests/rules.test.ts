@@ -69,6 +69,8 @@ describe('the default rules', () => {
       carveDrag: 10,
       carveCharge: 1,
       carveBurst: 1,
+      carveBiteRadius: 50,
+      carveBiteDrag: 150,
       battleMove: 1.6,
       momentumSecs: 0.75,
       momentumDamage: 1.35,

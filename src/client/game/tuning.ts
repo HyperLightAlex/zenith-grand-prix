@@ -175,6 +175,8 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('carveDrag', 'Speed lost carving', 0, 30, 1, 'int', 'Per second, with the stick hard over. Less with less stick.'),
       rule('carveCharge', 'Charge rate', 0.3, 3, 0.05, 'x', 'How fast a carve climbs the three spark colours.'),
       rule('carveBurst', 'Burst on release', 0, 2, 0.05, 'x', 'Scales the burst: +15%, +25% or +35% for 0.5, 0.8 or 1.1 seconds. 0 turns it off.'),
+      rule('carveBiteRadius', 'Bite: tightest line', 30, 120, 1, 'int', 'With the stick pushed all the way into a carve, the radius of the line it holds, shedding speed until it can. Bigger holds more speed but turns wider.'),
+      rule('carveBiteDrag', 'Bite: speed shed', 0, 300, 5, 'int', 'Per second, pushed all the way in, while too fast for the line. Less pushed in less. 0 lets it run wide as before.'),
     ],
   },
   {

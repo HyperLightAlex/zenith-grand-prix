@@ -253,6 +253,10 @@ html.crt-on .crt-layer {
 .carve .seg { position: relative; flex: 1; height: 0.75em; background: rgba(15, 21, 36, 0.72); transform: skewX(-18deg); overflow: hidden; }
 .carve .seg > i { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); }
 .carve.burst .segs { filter: drop-shadow(0 0 0.5em var(--tier)); animation: carve-burst 0.35s ease-out; }
+/* Biting (shedding speed to hold the line): the label white hot, shaking with the skates. */
+.carve.bite .label { color: #fff2d2; animation: carve-bite 0.09s steps(2) infinite; }
+@keyframes carve-bite { from { transform: translateX(-0.06em); } to { transform: translateX(0.06em); } }
+@media (prefers-reduced-motion: reduce) { .carve.bite .label { animation: none; } }
 
 /* ---- HUD: bottom right, the dash (dash.ts) ----------------------------------
    The speed in a dial, Drive wrapped round it and out along the bottom,

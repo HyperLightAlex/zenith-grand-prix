@@ -178,6 +178,12 @@ export interface MechState {
   carveCharge: number;
   /** Tier the charge has reached, 0 to 3. */
   carveTier: number;
+  /**
+   * How hard the carve is biting while it sheds speed to hold its line (the
+   * stick pushed into the turn past the middle, 0 to 1); 0 while it is not
+   * shedding any. What the scrub's sparks and screech follow.
+   */
+  carveBite: number;
   /** Ticks left of a carve's burst, and the extra top speed it gives. */
   carveT: number;
   carveBoost: number;

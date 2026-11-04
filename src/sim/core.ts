@@ -110,6 +110,24 @@ export function carveSteer(dir: number, mx: number): number {
   return dir * (lean >= 0 ? CARVE_STEER_MID + lean * (1 - CARVE_STEER_MID) : CARVE_STEER_MID + lean * (CARVE_STEER_MID - CARVE_STEER_WIDE));
 }
 
+/**
+ * How hard a carve bites, 0 to 1: how far the stick is pushed into the turn
+ * past the middle (none with it in the middle or eased out of the turn).
+ */
+export function carveBite(dir: number, mx: number): number {
+  return clamp(mx * dir, 0, 1);
+}
+
+/**
+ * The fastest a carve biting this hard (`bite`, 0 to 1) holds its line, for
+ * the grip it has (the frame's, the road's and the carve's): bitten all the
+ * way in, the pace that turns at `radius` (rules.carveBiteRadius); bitten
+ * less, faster in proportion. No bite, no limit.
+ */
+export function carveBiteSpeed(grip: number, radius: number, bite: number): number {
+  return bite > 0 ? Math.sqrt(grip * radius) / bite : Infinity;
+}
+
 /** The stick that makes a carve turning `dir` turn at `want` (the inverse of carveSteer, held to the stick's travel). */
 export function carveStick(dir: number, want: number): number {
   const w = want * dir;
@@ -122,6 +140,7 @@ export function dropCarve(m: MechState): void {
   m.carving = false;
   m.carveCharge = 0;
   m.carveTier = 0;
+  m.carveBite = 0;
 }
 
 /** Keep speed/heading and vs/vd in agreement after the speed-mode values change. */
