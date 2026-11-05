@@ -165,7 +165,7 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('ringoutDamage', 'Ring-out damage', 0, 60, 1, 'int', 'Damage for being thrown into the barrier, before the part that grows with the impact.'),
       rule('arcAngle', 'Guard swing: how far round', 0, 270, 5, 'int', 'Degrees round the target. Less from further out, so it never goes round faster than 150 u/s. 0 turns the swing off.'),
       rule('arcSecs', 'Guard swing: time', 0.2, 0.8, 0.01, 'sec'),
-      rule('armourScale', 'Armour', 0.5, 1.5, 0.05, 'x', 'Scales every frame. 1.00 is 1600 for the Swift and Vector, 2000 for the Bulwark.'),
+      rule('armourScale', 'Armour', 0.5, 1.5, 0.05, 'x', 'Scales every frame. 1.00 is 1600 for the Swift and Vector, 1800 for the Bulwark.'),
     ],
   },
   {
@@ -233,6 +233,8 @@ export const TUNE_GROUPS: TuneGroup[] = [
       rule('awardCooldown', 'Same action, same rival: again after', 0, 20, 0.5, 'sec'),
       rule('pressureDamage', 'Vector Pressure: damage per point', 50, 500, 10, 'int'),
       rule('backupDamage', 'Vector Back-up: damage per point', 40, 400, 10, 'int'),
+      rule('openerDamage', 'Vector Opener: teammates\' damage per point', 20, 300, 10, 'int', 'A rival the Vector snared, hit by its teammates while the Snare holds: this much of their damage earns the Vector a point.'),
+      rule('supportLoss', 'Support points lost on a knockout', 0, 1, 0.25, 'pct', 'The share of its support points a pilot loses when it is knocked out: 0% keeps them all, 50% half (rounded against it), 100% all of them.'),
       rule('assistSecs', 'Assist window', 1, 15, 0.5, 'sec'),
     ],
   },

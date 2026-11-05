@@ -253,7 +253,9 @@ function think(race: RaceState, track: Track, m: MechState): void {
       sc += e.role === ROLE.FW ? -20 : e.role === ROLE.DF ? -34 : -26;
       if (onMe) sc += 32;
     } else if (m.role === ROLE.MF) {
-      // Leave the forwards to their duel unless told otherwise.
+      // Leave the forwards to their duel unless told otherwise (joining it
+      // only turns the rival forward's blades on the midfielder: measured,
+      // forwards were knocked out a quarter less and midfielders more).
       if (e.role === ROLE.FW) sc -= 26;
       else if (onAlly) sc += 14;
       if (e.role === ROLE.MF) sc += 6;
@@ -262,6 +264,9 @@ function think(race: RaceState, track: Track, m: MechState): void {
       else if (onFw) sc += 30;
       else sc += 8;
     }
+    // A rival forward a teammate has snared: it cannot get away for a few
+    // seconds, so whoever is close follows the Snare up.
+    if (e.role === ROLE.FW && e.snareT > 0 && e.snaredBy >= 0 && race.mechs[e.snaredBy].team === m.team && dist < 70) sc += m.role === ROLE.FW ? 10 : 24;
     // Team tactics. Even on the attack a forward only joins in on what is
     // right beside it; the support pilots do the hunting.
     if (tactic === TACTIC.BLITZ) sc += m.role === ROLE.FW ? 14 : 22;
@@ -835,15 +840,19 @@ function wantLockedAbility(race: RaceState, track: Track, m: MechState): boolean
     }
     case ABILITY.SNARE: {
       // The bolt at the lock's target: drag back a rival who would otherwise
-      // get away. On the speed lap the forward, or anyone in the top two; on
-      // the battle lap a marked target, or the rival forward, with a Cell to spare.
+      // get away. On the speed lap the forward, or anyone in the top two. On
+      // the battle lap the rival forward (or a marked target): to open it up
+      // for a teammate close enough to follow it in, or with a Cell to spare.
       const t = race.mechs[m.target];
       if (!t || t.team === m.team || !inPlay(t) || t.snareT > 0 || t.shieldT > 0 || t.iframes > 0) return false;
       const a = ATTACKS[ATK.MF_SNARE];
       if (distance(track, t, m) > a.shot!.range - 12) return false;
       const ts = race.teams[m.team];
       if (lap3) return t.role === ROLE.FW || t.place <= 2;
-      return m.cells >= 2 && ((ts.tactic === TACTIC.MARK && ts.mark === t.id) || t.role === ROLE.FW);
+      if (!((ts.tactic === TACTIC.MARK && ts.mark === t.id) || t.role === ROLE.FW)) return false;
+      if (m.cells >= 2) return true;
+      for (const o of race.mechs) if (o !== m && o.team === m.team && inPlay(o) && distance(track, o, t) < 40) return true;
+      return false;
     }
     case ABILITY.AEGIS:
       return wantAegis(race, track, m);

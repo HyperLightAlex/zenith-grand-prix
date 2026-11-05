@@ -94,6 +94,7 @@ export function clearEffects(m: MechState): void {
   m.ramHits = 0;
   m.shieldT = 0;
   m.snareT = 0;
+  m.snaredBy = -1;
   m.cloakT = 0;
   m.cdAbility = 0;
   m.tow = 0;

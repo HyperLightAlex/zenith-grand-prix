@@ -63,13 +63,35 @@ describe('award()', () => {
     expect(award(b.race, b.mech(DF0), AWARD.SAVE, FW1)).toBe(0);
   });
 
-  it('a wreck earns nothing more, and keeps what it had', () => {
-    const a = new Arena(2);
+  it('a wreck earns nothing more, and keeps what it had (with supportLoss 0)', () => {
+    const a = new Arena(2, 1, { supportLoss: 0 });
     const df = a.mech(DF0);
     award(a.race, df, AWARD.SAVE, FW1);
     retire(a.race, df, null);
     expect(award(a.race, df, AWARD.PEEL, MF1)).toBe(0);
     expect(df.support).toBe(2);
+    expect(df.supportLost).toBe(0);
+  });
+
+  it('a knockout takes rules.supportLoss of a pilot\'s support points, rounded against it, and says so', () => {
+    for (const [loss, had, kept] of [[0.5, 5, 2], [0.5, 4, 2], [0.5, 1, 0], [1, 6, 0], [0.25, 6, 4]] as const) {
+      const a = new Arena(2, 1, { supportLoss: loss });
+      const mf = a.mech(MF0);
+      for (let i = 0; i < had; i++) award(a.race, mf, AWARD.PEEL, -1, 1, false);
+      const before = teamPoints(a.race, 0);
+      a.race.events.length = 0;
+      retire(a.race, mf, a.mech(FW1));
+      expect(mf.support, `${loss} of ${had}`).toBe(kept);
+      expect(mf.supportLost).toBe(had - kept);
+      // The team's score loses them too (the placing it had goes with the knockout as before).
+      expect(teamPoints(a.race, 0)).toBeLessThanOrEqual(before - (had - kept));
+      expect(a.race.events).toContainEqual({ type: 'supportLost', mech: MF0, points: had - kept });
+    }
+    // Nothing banked, nothing to lose, and no word of it.
+    const b = new Arena(2);
+    b.race.events.length = 0;
+    retire(b.race, b.mech(MF0), null);
+    expect(b.race.events.some((e) => e.type === 'supportLost')).toBe(false);
   });
 });
 
@@ -218,6 +240,46 @@ describe('the Vector', () => {
     // The rival defender is not the forward.
     hook(a, () => onHit(a.race, TRACK, mf, a.mech(DF1), facts({ attack: ATK.MF_BURST, damage: need * 3 })));
     expect(awards(a, MF0)).toHaveLength(2);
+  });
+
+  it('Opener: 1 for every rules.openerDamage its teammates deal to a rival it snared, while the Snare holds', () => {
+    const a = new Arena(2);
+    const mf = a.mech(MF0);
+    const fw = a.mech(FW1);
+    const need = a.race.rules.openerDamage;
+    fw.snareT = 120;
+    fw.snaredBy = MF0;
+    const by = (id: number, damage: number) => hook(a, () => onHit(a.race, TRACK, a.mech(id), fw, facts({ damage })));
+    by(DF0, need * 0.7);
+    expect(awards(a, MF0)).toHaveLength(0);
+    by(FW0, need * 0.7);
+    expect(awards(a, MF0).map((e) => [e.kind, e.points, e.victim])).toEqual([[AWARD.OPENER, 1, FW1]]);
+    // Its own hits are Pressure, not Opener.
+    by(MF0, need * 3);
+    expect(awards(a, MF0).filter((e) => e.kind === AWARD.OPENER)).toHaveLength(1);
+    // Once the Snare is off, the team's hits no longer pay it.
+    fw.snareT = 0;
+    by(DF0, need * 3);
+    expect(awards(a, MF0).filter((e) => e.kind === AWARD.OPENER)).toHaveLength(1);
+    // A rival's own Snare on someone pays nobody here; nor does a Snare from a teammate of the rival.
+    const df1 = a.mech(DF1);
+    df1.snareT = 120;
+    df1.snaredBy = MF1;
+    by(DF0, need * 3);
+    expect(awards(a).filter((e) => e.kind === AWARD.OPENER)).toHaveLength(1);
+    void mf;
+  });
+
+  it('a Snare that lands marks who threw it, until it wears off', () => {
+    const a = new Arena(2);
+    const mf = a.put(MF0, 0, 0);
+    const fw = a.put(FW1, 30, 0);
+    hook(a, () => applyHit(a.race, TRACK, mf, fw, ATTACKS[ATK.MF_SNARE], ATK.MF_SNARE));
+    expect(fw.snareT).toBeGreaterThan(0);
+    expect(fw.snaredBy).toBe(MF0);
+    a.step(fw.snareT + 1);
+    expect(fw.snareT).toBe(0);
+    expect(fw.snaredBy).toBe(-1);
   });
 });
 

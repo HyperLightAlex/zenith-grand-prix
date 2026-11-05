@@ -83,9 +83,10 @@ never a win.
 | Frame | Action | Points |
 |---|---|---|
 | Vector | Snare lands on a rival (the rival forward: 2) | 1 |
+| Vector | **Opener**: every 60 damage its teammates deal to a rival it snared, while the Snare holds | 1 |
 | Vector | **Interrupt**: a Disruptor or Stun Kick that breaks a wind-up | 2 |
-| Vector | **Pressure**: every 150 damage dealt to the rival forward | 1 |
-| Vector | **Back-up**: every 80 damage dealt to a rival who is fighting a teammate | 1 |
+| Vector | **Pressure**: every 90 damage dealt to the rival forward (150 before the balance pass) | 1 |
+| Vector | **Back-up**: every 120 damage dealt to a rival who is fighting a teammate (80 before) | 1 |
 | Bulwark | **Peel**: a hit on a rival who is attacking your forward | 1 |
 | Bulwark | **Save**: the same hit, breaking their attack | 2 |
 | Bulwark | **Bodyguard**: a block or parry near your forward | 1 |
@@ -97,6 +98,12 @@ never a win.
 Each award shows the moment it lands, the results break the score down by
 pilot and action, and a support pilot gets short prompts ("Your forward is
 under attack"). Computer pilots earn them by playing their roles.
+
+Since the balance pass, **a knockout costs support points**: the pilot
+knocked out loses half of its own (`rules.supportLoss`, 0.5, rounded against
+it; the Scoring tab has 0%, 25% ... 100%). It says so as it goes down, and the
+results show what went. See "Balance pass: the midfielder's job" in section
+4 for why, and what it did.
 
 **Circuits rebuilt for carving.** Each circuit gains corners tight enough
 that carving is the quick way round, with a straight after each to spend
@@ -780,7 +787,7 @@ Breaker Slam 20 (18).
 | | Swift | Vector | Bulwark |
 |---|---|---|---|
 | Role | Forward | Midfielder | Defender |
-| Armour | 1600 | 1600 | 2000 |
+| Armour | 1600 | 1600 | 1800 (2000 before the balance pass) |
 | Top speed (lap 3) | 160 u/s | 152.5 | 145 |
 | Grip | 100 | 90 | 80 |
 | Guard | 80 | 100 | 130 |
@@ -1398,6 +1405,64 @@ ahead at the start of the speed lap stays ahead of the rival forward 50% to
 leader at the start of lap 3 wins 45% (Crucible) to 72% (Canyon).
 Knockouts are unchanged (Meridian 1.10 a race against 1.13 before).
 
+### Balance pass: the midfielder's job, support points at risk
+
+Measured first, 900 races (100 on each circuit, every seat a computer pilot
+at 0.6 skill; computer pilots follow fixed doctrine, so this is what the
+rules do with them, not how people will play). What each frame did, per mech
+per race, before the pass:
+
+| | Forward | Midfielder | Defender |
+|---|---|---|---|
+| Damage dealt / taken | 650 / 899 | 988 / 1097 | 1523 / 1168 |
+| Knocked out, per 100 races | 44 | 43 | 13 |
+| Knockouts scored, per 100 races | 26 | 28 | 48 |
+
+The defender was the best fighter (most damage, most knockouts, hardest to
+knock out; 40% of its damage the Scatter Cannon). The midfielder was knocked
+out as often as the forward, and half its support points were Back-up (any
+fight beside a teammate): the scoring paid nearly twice as much per point of
+damage for that (1 per 80) as for damage on the rival forward (1 per 150),
+and the computer pilots fired the Snare 0.7 times a race, as their rule
+asked for two Cells. Losing support points on a knockout, tried on those
+races by re-scoring them, mostly turned rounds toward the team that did not
+win the race (the comeback it was meant for): where the race winner's team
+had also knocked out a rival support it was already 21 points up and lost
+none of those rounds either way.
+
+The pass:
+
+- **The midfielder is the hunter**: its job is the rival forward, opened up
+  for the team. Pressure 1 per 90 damage (was 150), Back-up 1 per 120 (was
+  80), and a new award, **Opener**: every 60 damage its teammates deal to a
+  rival it snared, while the Snare holds. Its own damage is unchanged.
+- **The Snare is a team signal.** A snared rival carries a badge over its
+  name with the time left; the snarer's teammates are told to hit it. Computer
+  midfielders Snare the rival forward with one Cell when a teammate is close
+  enough to follow it in, and anyone close follows up a snared forward.
+- **A knockout costs support points**: half (`rules.supportLoss` 0.5).
+- **The Bulwark's armour is 1800** (was 2000).
+
+Tried and left out: computer midfielders joining the forwards' duel. The
+rival forward turned its blades on the midfielder, forwards were knocked out
+a quarter less and midfielders more, the opposite of the job.
+
+After, the same 900 races:
+
+| | Before | After |
+|---|---|---|
+| Forwards knocked out, per 100 races (lap 2) | 45 (36) | 41 (33), within the noise of 900 races |
+| Midfielders | 43 | 46 |
+| Defenders | 13 | 21 |
+| Defender's damage per race | 1523 | 1458 |
+| Midfielder's support points from the hunt (Snare, Pressure, Opener) / Back-up | 1.1 / 3.4 | 2.4 / 2.1 |
+| Snares fired per midfielder per race | 0.7 | 1.1 |
+| Race winner's team loses the round | 12% | 17% (20% if a knockout cost them all) |
+
+By circuit the race winner's team now loses 7% (Canyon) to 32% (Crucible) of
+rounds. Canyon's battle lap is the shortest (64 s against 66 to 75), so its
+supports are worn down least; its fights per second are no fewer.
+
 ## 5. What I could not judge
 
 I can run races and read screenshots; I cannot feel the game. These need a
@@ -1430,8 +1495,8 @@ person with a gamepad, and all of them are on the tuning panel:
    turbine whine no longer climbs past its lap 1 level, and the brightest
    hits are quieter. If another sound grates, the Sound tab plays each one by
    name and turns each layer down.
-8. **Combat tempo and armour.** Armour is back down to 1600 (2000 for the
-   Bulwark); "Armour" on the Combat tab scales every frame if a fight now
+8. **Combat tempo and armour.** Armour is back down to 1600 (1800 for the
+   Bulwark since the balance pass); "Armour" on the Combat tab scales every frame if a fight now
    ends too soon or still drags.
 9. **Momentum, ring-outs and tells.** How long momentum lasts (0.75 s), what
    a momentum strike is worth (x1.35 damage, x1.5 knockback), how hard heavy
@@ -1532,11 +1597,13 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
 
 ## 7. Known gaps
 
-- Knockouts fall on forwards and midfielders about equally (45 to 55 of
-  each per 100 races, fewer midfielders at Canyon); defenders go down 5 to
-  13 times per 100 races. The race winner's team loses the round 2%
-  (Canyon) to 20% (Meridian, Crucible) of the time. A balance pass is being
-  talked through; nothing is changed yet.
+- Balance (see "Balance pass" in section 4) is measured with computer
+  pilots, who follow fixed doctrine: they leave the rival forward to the
+  forwards' duel unless a play says otherwise, so they hunt it far less
+  than a team of people will. The defender still deals about half again the
+  midfielder's damage, 40% of it the Scatter Cannon; trimming its pellets
+  from 6 to 5 was tried (7% less defender damage, forward knockouts
+  unchanged) and is not in.
 - Computer pilots carve by the line they want rather than holding a carve
   tight, so they seldom reach the third tier except in long hairpins. They
   never play for a Lead-out (it almost never happens in their races) and use

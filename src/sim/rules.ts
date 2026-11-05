@@ -144,6 +144,10 @@ export interface Rules {
   pressureDamage: number;
   /** Damage to rivals who are fighting a teammate that earns a Vector one Back-up point. */
   backupDamage: number;
+  /** Damage teammates deal to a rival a Vector has snared, while it is snared, that earns the Vector one Opener point. */
+  openerDamage: number;
+  /** The share of its support points a pilot loses when it is knocked out (0 keeps them all, 1 loses them all; rounded against the pilot). */
+  supportLoss: number;
   /** Seconds before a knockout that damage still counts as an assist. */
   assistSecs: number;
 }
@@ -215,8 +219,10 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   koPoints: 3,
   supportCap: 8,
   awardCooldown: 6,
-  pressureDamage: 150,
-  backupDamage: 80,
+  pressureDamage: 90,
+  backupDamage: 120,
+  openerDamage: 60,
+  supportLoss: 0.5,
   assistSecs: 5,
 });
 
@@ -297,6 +303,8 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   awardCooldown: [0, 60],
   pressureDamage: [1, 100000],
   backupDamage: [1, 100000],
+  openerDamage: [1, 100000],
+  supportLoss: [0, 1],
   assistSecs: [0, 60],
 });
 

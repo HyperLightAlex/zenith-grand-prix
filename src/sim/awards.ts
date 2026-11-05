@@ -115,6 +115,20 @@ export function onHit(race: RaceState, track: Track, att: MechState, victim: Mec
     }
   }
 
+  // Opener: a rival a Vector snared, hit by its teammates while the Snare
+  // holds, pays the Vector by the damage (the Snare set it up).
+  if (victim.snareT > 0 && victim.snaredBy >= 0 && victim.snaredBy !== att.id && f.damage > 0) {
+    const sn = race.mechs[victim.snaredBy];
+    if (sn && sn.role === ROLE.MF && sn.team === att.team && sn.team !== victim.team) {
+      sn.opener += f.damage;
+      const need = race.rules.openerDamage;
+      while (sn.opener >= need) {
+        sn.opener -= need;
+        award(race, sn, AWARD.OPENER, victim.id, AWARD_POINTS[AWARD.OPENER], false);
+      }
+    }
+  }
+
   // A defender that takes a blow on the guard (or turns it) beside its forward.
   if (f.blocked && victim.role === ROLE.DF) bodyguard(race, track, victim, att);
 }

@@ -327,7 +327,8 @@ export function registerRace(m: Menus, g: Game): void {
         table.append(tr);
       }
       box.append(table);
-      const supporters = race.mechs.filter((x) => x.support > 0).sort((a, b) => (a.team === me.team ? 0 : 1) - (b.team === me.team ? 0 : 1) || b.support - a.support);
+      // (A pilot knocked out with all its support points lost still shows, with what went.)
+      const supporters = race.mechs.filter((x) => x.support > 0 || (x.supportLost ?? 0) > 0).sort((a, b) => (a.team === me.team ? 0 : 1) - (b.team === me.team ? 0 : 1) || b.support - a.support);
       if (supporters.length > 0) {
         const sup = h('div.supportlist');
         for (const x of supporters) {
@@ -335,6 +336,7 @@ export function registerRace(m: Menus, g: Game): void {
           AWARD_NAMES.forEach((name, kind) => {
             if (x.awardPts[kind] > 0) chips.append(h('span.chip', `${name} `, h('b', String(x.awardPts[kind]))));
           });
+          if ((x.supportLost ?? 0) > 0) chips.append(h('span.chip.lost', 'Lost when knocked out ', h('b', `−${x.supportLost}`)));
           const capped = x.support >= race.rules.supportCap ? h('span.cap', 'max') : '';
           sup.append(h('div.row' + (x.team ? '.t1' : '') + (x.id === me.id ? '.me' : ''), h('span.who', x.name, h('small', ROLE_NAMES[x.role])), chips, h('span.total', `+${x.support}`), capped));
         }

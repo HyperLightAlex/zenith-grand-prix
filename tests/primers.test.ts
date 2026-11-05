@@ -26,6 +26,8 @@ describe('the frame primers', () => {
     const all = JSON.stringify(PRIMERS);
     expect(all).toContain(`every ${DEFAULT_RULES.backupDamage} damage`);
     expect(all).toContain(`every ${DEFAULT_RULES.pressureDamage} damage`);
+    expect(all).toContain(`every ${DEFAULT_RULES.openerDamage} damage`);
+    expect(all).toContain(`for ${DEFAULT_RULES.snareSecs} s`);
     expect(all).toContain(`${AEGIS_SAVED} damage or more`);
     expect(all).toContain(`the ${DEFAULT_RULES.assistSecs} s before`);
     // The Forward earns no support points.

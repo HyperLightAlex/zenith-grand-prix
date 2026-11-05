@@ -272,6 +272,10 @@ export class Hud {
     edgeIco: HTMLElement;
     edgeLabel: HTMLElement;
     edgeKey: string;
+    /** A rival held by a Snare: a badge over its name with the time left, for the team to follow up. */
+    snare: HTMLElement;
+    snareText: HTMLElement;
+    snareKey: number;
   }> = [];
   private lastTarget = -1;
   // banners
@@ -409,7 +413,10 @@ export class Hud {
       const warnText = h('span', '');
       const warn = h('div.warn', warnIco, warnText);
       warn.hidden = true;
-      const plate = h('div.plate' + (m.team ? '.t1' : ''), warn, cue, h('span.tag', icon(ROLE_ICON[m.role]), m.name, h('span.rolekey', ` ${ROLE_KEYS[m.role]}`)), h('div.bar', php));
+      const snareText = h('span', '');
+      const snare = h('div.snarebadge', icon('snared'), snareText);
+      snare.hidden = true;
+      const plate = h('div.plate' + (m.team ? '.t1' : ''), warn, snare, cue, h('span.tag', icon(ROLE_ICON[m.role]), m.name, h('span.rolekey', ` ${ROLE_KEYS[m.role]}`)), h('div.bar', php));
       teamStyle(plate, m.team);
       plate.hidden = true;
       // Under the panels, so a name never covers the running order.
@@ -422,7 +429,7 @@ export class Hud {
       const edge = h('div.edgewarn', edgeArrow, h('span', edgeIco, edgeLabel));
       edge.hidden = true;
       this.root.append(edge);
-      this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnIco, warnText, warnKey: '', edge, edgeArrow, edgeIco, edgeLabel, edgeKey: '' });
+      this.plates.push({ el: plate, hp: php, cue, cueText: '', warn, warnIco, warnText, warnKey: '', edge, edgeArrow, edgeIco, edgeLabel, edgeKey: '', snare, snareText, snareKey: -1 });
     }
     this.comms.replaceChildren();
     this.pops.forEach((p) => p.el.remove());
@@ -867,6 +874,14 @@ export class Hud {
           pl.warn.className = `warn ${tell.kind}${tell.now ? ' now' : ''}`;
         }
       }
+      // A rival held by a Snare: the time it has left, so the team can follow it up.
+      const snareKey = m.snareT > 0 && m.team !== focus.team && !m.retired ? Math.ceil(m.snareT / 6) : -1;
+      if (snareKey !== pl.snareKey) {
+        pl.snareKey = snareKey;
+        pl.snare.hidden = snareKey < 0;
+        setClass(pl.el, 'snared', snareKey >= 0);
+        if (snareKey >= 0) setText(pl.snareText, `Snared ${(m.snareT / TICK_RATE).toFixed(1)}`);
+      }
       // Off screen, the warning moves to an arrow on the edge pointing at them.
       const offscreen = tell !== null && !p.visible;
       const edgeKey = offscreen && tell ? `${tell.kind}${tell.now ? '!' : ''}` : '';
@@ -1191,9 +1206,19 @@ export class Hud {
       case 'snared': {
         const victim = race.mechs[e.mech];
         const by = race.mechs[e.by];
+        const secs = race.rules.snareSecs.toFixed(1).replace(/\.0$/, '');
+        const forward = victim.role === ROLE.FW ? 'Their forward' : victim.name;
         if (e.mech === this.localId) this.showNotice('Snared: speed cut, no boost', true, 2.2);
-        else if (e.by === this.localId) this.showNotice(`${victim.name} is snared`, false, 1.6);
-        else if (by.team === me.team) this.say(by, pick(LINES.snared, this.seq++).replace('{t}', victim.name));
+        else if (e.by === this.localId) this.showNotice(by.role === ROLE.MF ? `${victim.name} snared: your team's hits on it score you Openers` : `${victim.name} is snared`, false, 2);
+        else if (by.team === me.team) {
+          this.say(by, pick(LINES.snared, this.seq++).replace('{t}', victim.name));
+          // The call to follow it up: no boost and no dash for the Snare's length.
+          if (!me.retired && !me.finished) this.showNotice(`${forward} is snared: ${secs} s with no boost or dash. Hit it!`, false, 2);
+        }
+        break;
+      }
+      case 'supportLost': {
+        if (e.mech === this.localId) window.setTimeout(() => this.showNotice(`Knocked out: ${e.points} support ${e.points === 1 ? 'point' : 'points'} lost`, true, 2.4), 1200);
         break;
       }
       case 'lapPhase':

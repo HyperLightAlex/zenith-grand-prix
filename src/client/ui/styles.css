@@ -398,6 +398,10 @@ html.crt-on .crt-layer {
 /* A heavy blow coming at you, and what answers it. */
 .plate .warn { margin: 0 auto 0.25em; width: max-content; padding: 0.06em 0.6em; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink); clip-path: polygon(0.35em 0, 100% 0, calc(100% - 0.35em) 100%, 0 100%); }
 .plate .warn[hidden] { display: none; }
+/* A rival held by a Snare: a badge over its name with the time left, the team's cue to follow it up. */
+.plate .snarebadge { margin: 0 auto 0.25em; width: max-content; padding: 0.06em 0.6em; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 0.04em; background: var(--snare); color: var(--ink); font-variant-numeric: tabular-nums; clip-path: polygon(0.35em 0, 100% 0, calc(100% - 0.35em) 100%, 0 100%); }
+.plate .snarebadge[hidden] { display: none; }
+.plate.snared .tag { outline: 0.14em solid var(--snare); }
 .plate .warn.parry { background: var(--hazard); }
 .plate .warn.dodge { background: var(--danger); color: #fff; }
 .plate .warn.block { background: var(--signal); }
@@ -578,7 +582,7 @@ html.crt-on .crt-layer {
 /* The plays' icons make the pills wider: the diamond opens out so they clear the hub. */
 .hud.anime .tactics { width: 18.5em; }
 .hud.anime .plate .tag .ico { width: 1em; height: 1em; margin-right: 0.25em; vertical-align: -0.15em; }
-.hud.anime .plate .warn .ico, .hud.anime .edgewarn .ico { width: 1em; height: 1em; margin-right: 0.25em; vertical-align: -0.15em; }
+.hud.anime .plate .warn .ico, .hud.anime .plate .snarebadge .ico, .hud.anime .edgewarn .ico { width: 1em; height: 1em; margin-right: 0.25em; vertical-align: -0.15em; }
 .hud.anime .tower .row .who small .ico { width: 1.05em; height: 1.05em; margin: 0 0 0 0.1em; vertical-align: -0.2em; }
 .hud.anime .target .sub .ico { width: 1.05em; height: 1.05em; margin-right: 0.3em; }
 
@@ -796,6 +800,7 @@ html.crt-on .crt-layer {
 .results .supportlist .chips { display: flex; flex-wrap: wrap; gap: 0.35em; flex: 1; position: static; transform: none; font-size: 0.92em; }
 .results .supportlist .chip { padding: 0.04em 0.55em; background: rgba(255, 255, 255, 0.1); clip-path: polygon(0.3em 0, 100% 0, calc(100% - 0.3em) 100%, 0 100%); }
 .results .supportlist .row.me .chip { background: rgba(15, 21, 36, 0.12); }
+.results .supportlist .chip.lost { background: rgba(232, 69, 69, 0.28); }
 .results .supportlist .total { font-weight: 800; font-variant-numeric: tabular-nums; }
 .results .supportlist .cap { font-size: 0.8em; font-weight: 700; text-transform: uppercase; color: var(--hazard); }
 .results .supportlist .row.me .cap { color: var(--signal); }

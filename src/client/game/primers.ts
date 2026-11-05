@@ -4,7 +4,7 @@
 // game's own (docs/DESIGN.md: Abilities, Fighting, support points).
 
 import { CARD_MIN, type CardText, type Coach, type GoalView } from './tutorial';
-import { PHASE, ROLE, type RaceState, type Role, type SimEvent } from '../../sim/index';
+import { DEFAULT_RULES, PHASE, ROLE, type RaceState, type Role, type SimEvent } from '../../sim/index';
 import type { Device } from '../input/input';
 
 export interface FramePrimer {
@@ -19,6 +19,11 @@ export interface FramePrimer {
   /** Its support awards, [what, points]. */
   awards: Array<[string, string]>;
 }
+
+const R = DEFAULT_RULES;
+/** What a knockout costs a support pilot, said plainly (rules.supportLoss). */
+const LOSS =
+  R.supportLoss >= 1 ? ' Knocked out, you lose them all.' : R.supportLoss > 0 ? ` Knocked out, you lose ${R.supportLoss === 0.5 ? 'half' : `${Math.round(R.supportLoss * 100)}%`} of them.` : '';
 
 /** The awards both support frames can earn. */
 const SHARED: Array<[string, string]> = [
@@ -40,20 +45,21 @@ export const PRIMERS: Record<Role, FramePrimer> = {
     awards: [],
   },
   [ROLE.MF]: {
-    line: 'The gun: backs up whoever is fighting',
+    line: 'The hunter: opens up the rival Forward for the team',
     synopsis:
-      "A balanced frame with the only gun that reaches. A Midfielder holds the middle of the pack: shooting at racing speed with no lock needed, joining a teammate's fight, and keeping the rival Forward under fire.",
+      "The frame with the only gun that reaches, and the Snare. A Midfielder's job is the rival Forward: keep it under fire, pin it with the Snare so it cannot boost or dash away, and let the team finish it. It backs up teammates in a fight on the way.",
     job: [
-      'Back up a teammate in a fight: put your carbine on whoever is on them.',
-      'Keep the rival Forward under fire. Lost armour costs it top speed on the speed lap.',
-      'Break up heavy blows: a Stun Kick or a Disruptor that lands during a wind-up stops it.',
+      'Hunt the rival Forward: keep your carbine on it from range, where its blades cannot reach you.',
+      `Snare it when a teammate is close: for ${R.snareSecs} s it cannot boost or dash, and every hit your team lands on it scores you.`,
+      'Break up heavy blows: a Stun Kick or a Disruptor that lands during a wind-up stops it. Back up a teammate who is in a fight.',
     ],
-    scoreNote: "Your place scores like anyone's, and helping scores support points for the team, up to 8 a race:",
+    scoreNote: `Your place scores like anyone's, and hunting scores support points for the team, up to ${R.supportCap} a race.${LOSS}`,
     awards: [
-      ['Interrupt: a Stun Kick or Disruptor breaks a wind-up', '2'],
-      ['Back-up: every 80 damage to a rival who is fighting a teammate', '1'],
-      ['Pressure: every 150 damage to the rival Forward', '1'],
+      [`Opener: every ${R.openerDamage} damage your team deals to a rival you snared, while it is snared`, '1'],
       ['Snare: a Snare lands (on their Forward, 2)', '1'],
+      [`Pressure: every ${R.pressureDamage} damage to the rival Forward`, '1'],
+      ['Interrupt: a Stun Kick or Disruptor breaks a wind-up', '2'],
+      [`Back-up: every ${R.backupDamage} damage to a rival who is fighting a teammate`, '1'],
       ...SHARED,
     ],
   },
@@ -66,7 +72,7 @@ export const PRIMERS: Record<Role, FramePrimer> = {
       'Use that guard: your blocks and parries near your Forward count for the team.',
       'Shield the team: the Aegis takes most of the damage off you and every teammate near you.',
     ],
-    scoreNote: "Your place scores like anyone's, and protecting scores support points for the team, up to 8 a race:",
+    scoreNote: `Your place scores like anyone's, and protecting scores support points for the team, up to ${R.supportCap} a race.${LOSS}`,
     awards: [
       ['Peel: a hit on a rival who is attacking your Forward', '1'],
       ['Save: the same hit, breaking their attack', '2'],
@@ -89,7 +95,7 @@ function tipText(role: Role, device: Device): CardText {
         touch
           ? '[Attack] fires your carbine, at racing speed and without a lock. Locked on, [Special] is the Stun Kick.'
           : '[x] fires your carbine, at racing speed and without a lock: hold it to keep firing. Locked on, [y] is the Stun Kick.',
-        'Your job is the fights: back up a teammate who is in one, and keep the rival Forward under fire. Both score support points.',
+        'Your job is the rival Forward: keep it under fire, and Snare it when a teammate is close. Their hits on it while it is snared score for you.',
         touch
           ? `[Disruptor] knocks back everyone near you; locked on, [Snare] slows your target. ${guide}`
           : `[ability] fires the Disruptor, or locked on, the Snare. [ally] escorts a teammate. ${guide}`,

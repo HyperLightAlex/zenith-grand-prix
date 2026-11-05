@@ -326,14 +326,16 @@ placing points, and the team that knocked it out gets 3. So a team whose
 forward wins but whose other two mechs are knocked out loses the round, 15 to
 21, to a team that finished second, third and fourth.
 
-**Support points** count for the team too, up to 8 per pilot per race:
+**Support points** count for the team too, up to 8 per pilot per race. A
+pilot that is knocked out loses half of its own (rounded against it):
 
 | Who | For | Points |
 |---|---|---|
+| Vector | Opener: every 60 damage your team deals to a rival you snared, while the Snare holds | 1 |
 | Vector | Snare a rival (the rival forward: 2) | 1 |
+| Vector | Pressure: every 90 damage on the rival forward | 1 |
 | Vector | Interrupt: break a wind-up with the Disruptor or the Stun Kick | 2 |
-| Vector | Pressure: every 150 damage on the rival forward | 1 |
-| Vector | Back-up: every 80 damage on rivals fighting a teammate | 1 |
+| Vector | Back-up: every 120 damage on rivals fighting a teammate | 1 |
 | Bulwark | Peel: hit a rival attacking your forward (break its attack: Save, 2) | 1 |
 | Bulwark | Bodyguard: block or parry beside your forward | 1 |
 | Bulwark | Aegis: your shield keeps 100 damage off the team | 2 |
@@ -343,7 +345,9 @@ forward wins but whose other two mechs are knocked out loses the round, 15 to
 
 The same action on the same rival scores once every 6 seconds. Each one pops
 up as it lands, a support pilot gets a prompt when its forward needs it, and
-the results show where every support point came from.
+the results show where every support point came from (and any lost). A
+snared rival carries a badge over its name with the time left, and the
+snarer's teammates are told to follow it up.
 
 Pick the format in Free Play's match setup, or the host picks it for a room:
 

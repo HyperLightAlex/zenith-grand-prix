@@ -274,6 +274,12 @@ export interface MechState {
   pressure: number;
   /** Damage dealt to rivals fighting a teammate, not yet turned into Back-up points. */
   backup: number;
+  /** Damage teammates dealt to a rival this mech snared, while snared, not yet turned into Opener points. */
+  opener: number;
+  /** Who snared this mech (while snareT runs), or -1. */
+  snaredBy: number;
+  /** Support points this mech lost when it was knocked out (rules.supportLoss). */
+  supportLost: number;
   /** Damage an Aegis this mech cast has kept off teammates, and whether it has scored yet. */
   aegisSaved: number;
   aegisPaid: boolean;
@@ -371,6 +377,8 @@ export type SimEvent =
   | { type: 'pass'; mech: number; other: number }
   /** A support action scored: `points` for the team (after the cap), against `victim` (or -1). */
   | { type: 'award'; mech: number; kind: number; points: number; victim: number }
+  /** A knocked-out pilot's support points: this many went with it (rules.supportLoss). */
+  | { type: 'supportLost'; mech: number; points: number }
   | { type: 'ability'; mech: number; ability: Ability }
   | { type: 'snared'; mech: number; by: number }
   | { type: 'tactic'; team: number; tactic: Tactic; by: number; mark: number }

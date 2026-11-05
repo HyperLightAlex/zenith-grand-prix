@@ -286,6 +286,7 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
       m.overdriveT = ticks(rules.overdriveSecs);
       // The surge burns a Snare off, so a forward with a Cell always has an answer to one.
       m.snareT = 0;
+      m.snaredBy = -1;
       break;
     }
     case ABILITY.BREAKAWAY: {
@@ -296,6 +297,7 @@ export function tryAbility(race: RaceState, track: Track, m: MechState): boolean
       m.guarding = false;
       m.comboQueued = false;
       m.snareT = 0;
+      m.snaredBy = -1;
       m.iframes = Math.max(m.iframes, BREAKAWAY_IFRAMES);
       m.cloakT = ticks(rules.breakawaySecs);
       for (const o of race.mechs) {
@@ -377,6 +379,14 @@ export function retire(race: RaceState, m: MechState, by: MechState | null, trac
   if (by) by.kos++;
   race.events.push({ type: 'ko', mech: m.id, by: by ? by.id : -1 });
   onKnockout(race, m, by);
+  // A support pilot's points ride on it: a share goes with the knockout
+  // (rules.supportLoss, rounded against the pilot).
+  const lost = Math.min(m.support, Math.ceil(m.support * race.rules.supportLoss - 1e-9));
+  if (lost > 0) {
+    m.support -= lost;
+    m.supportLost = lost;
+    race.events.push({ type: 'supportLost', mech: m.id, points: lost });
+  }
 }
 
 /**
@@ -533,6 +543,7 @@ export function applyHit(
   if (victim.hp <= 0.001) retire(race, victim, att, track);
   else if (attackIdx === ATK.MF_SNARE && !blocked && !unstoppable) {
     victim.snareT = ticks(rules.snareSecs);
+    victim.snaredBy = att.id;
     victim.boosting = false;
     race.events.push({ type: 'snared', mech: victim.id, by: att.id });
     onSnare(race, att, victim);
@@ -633,7 +644,7 @@ export function stepAction(race: RaceState, track: Track, m: MechState, input: M
   if (m.overdriveT > 0) m.overdriveT--;
   if (m.ramT > 0) m.ramT--;
   if (m.shieldT > 0) m.shieldT--;
-  if (m.snareT > 0) m.snareT--;
+  if (m.snareT > 0 && --m.snareT === 0) m.snaredBy = -1;
   if (m.cloakT > 0) m.cloakT--;
 
   // The ability comes first: a forward can break away in the middle of a hit.

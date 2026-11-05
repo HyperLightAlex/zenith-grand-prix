@@ -104,8 +104,10 @@ describe('the default rules', () => {
       koPoints: 3,
       supportCap: 8,
       awardCooldown: 6,
-      pressureDamage: 150,
-      backupDamage: 80,
+      pressureDamage: 90,
+      backupDamage: 120,
+      openerDamage: 60,
+      supportLoss: 0.5,
       assistSecs: 5,
     });
   });

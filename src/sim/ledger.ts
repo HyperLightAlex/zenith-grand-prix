@@ -72,7 +72,7 @@ export function addRace(lines: PilotLine[], race: RaceState, key: (id: number) =
     l.placing += placing;
     l.koPts += ko;
     l.support += m.support;
-    for (let k = 0; k < AWARD_COUNT; k++) l.awards[k] += m.awardPts[k] ?? 0;
+    for (let k = 0; k < AWARD_COUNT; k++) l.awards[k] = (l.awards[k] ?? 0) + (m.awardPts[k] ?? 0);
     l.kos += m.kos;
     if (m.retired) l.out++;
     l.dmgDealt += Math.round(m.dmgDealt);
@@ -102,7 +102,7 @@ export function addLines(into: PilotLine[], from: readonly PilotLine[], key: (l:
     l.placing += f.placing;
     l.koPts += f.koPts;
     l.support += f.support;
-    for (let k = 0; k < AWARD_COUNT; k++) l.awards[k] += f.awards[k] ?? 0;
+    for (let k = 0; k < AWARD_COUNT; k++) l.awards[k] = (l.awards[k] ?? 0) + (f.awards[k] ?? 0);
     l.kos += f.kos;
     l.out += f.out;
     l.dmgDealt += f.dmgDealt;

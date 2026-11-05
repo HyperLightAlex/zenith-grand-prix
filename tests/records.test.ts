@@ -7,15 +7,17 @@ import { COUNTDOWN_TICKS, DT, ROLE, stepRace } from '../src/sim/index';
 import { GHOST_RATE, LapTracer, RecordBook, ghostAt, packGhost, recordKey, unpackGhost, type Ghost } from '../src/client/game/records';
 import { FW0, TRACK, newRace } from './helpers';
 
-/** A race run to its end by the computer pilots, its forward's laps traced. */
+/** A race run to its end by the computer pilots, its forward's laps traced (the first race from `seed` on in which the forward reaches the flag). */
 function tracedRace(seed = 3) {
-  const race = newRace(seed);
-  const tracer = new LapTracer(FW0, TRACK);
-  for (let t = 0; t < 8 * 60 * 60 && race.phase !== 2; t++) {
-    stepRace(race, TRACK, []);
-    tracer.after(race);
+  for (let k = seed; ; k++) {
+    const race = newRace(k);
+    const tracer = new LapTracer(FW0, TRACK);
+    for (let t = 0; t < 8 * 60 * 60 && race.phase !== 2; t++) {
+      stepRace(race, TRACK, []);
+      tracer.after(race);
+    }
+    if (race.mechs[FW0].finished || k > seed + 20) return { race, tracer };
   }
-  return { race, tracer };
 }
 
 class MemoryStorage {

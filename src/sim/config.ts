@@ -18,12 +18,16 @@ export const SPRINT_POINTS = [10, 8, 6, 4, 2, 1];
  * capped per race (rules.supportCap); most can score only once every few
  * seconds against the same rival (rules.awardCooldown).
  */
-export const AWARD = { ASSIST: 0, SNARE: 1, INTERRUPT: 2, PRESSURE: 3, BACKUP: 4, PEEL: 5, SAVE: 6, BODYGUARD: 7, AEGIS: 8, RINGOUT: 9, LEADOUT: 10 } as const;
+export const AWARD = { ASSIST: 0, SNARE: 1, INTERRUPT: 2, PRESSURE: 3, BACKUP: 4, PEEL: 5, SAVE: 6, BODYGUARD: 7, AEGIS: 8, RINGOUT: 9, LEADOUT: 10, OPENER: 11 } as const;
 export type Award = (typeof AWARD)[keyof typeof AWARD];
-export const AWARD_COUNT = 11;
-export const AWARD_NAMES = ['Assist', 'Snare', 'Interrupt', 'Pressure', 'Back-up', 'Peel', 'Save', 'Bodyguard', 'Aegis', 'Ring-out', 'Lead-out'] as const;
-/** Points for each award. A Snare or a ring-out on the rival forward is worth one more. */
-export const AWARD_POINTS = [2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 2] as const;
+export const AWARD_COUNT = 12;
+export const AWARD_NAMES = ['Assist', 'Snare', 'Interrupt', 'Pressure', 'Back-up', 'Peel', 'Save', 'Bodyguard', 'Aegis', 'Ring-out', 'Lead-out', 'Opener'] as const;
+/**
+ * Points for each award. A Snare or a ring-out on the rival forward is worth
+ * one more. Back-up, Pressure and Opener pay by the damage instead (one point
+ * per rules.backupDamage, pressureDamage, openerDamage).
+ */
+export const AWARD_POINTS = [2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 2, 1] as const;
 /** Bodyguard: a block or a parry within this distance of your own forward. */
 export const BODYGUARD_RANGE = 30;
 /** Aegis: damage the shield must keep off teammates (caster included) for the award. */
@@ -608,7 +612,7 @@ export const CLASSES: ClassDef[] = [
   },
   {
     role: ROLE.MF, frame: 'Vector',
-    blurb: 'Balanced all-rounder. Controls space with carbine fire.',
+    blurb: 'The hunter. Pins the rival forward with the Snare and keeps it under carbine fire.',
     maxHp: 1600, radius: 3.4, mass: 1.0,
     topSpeed: 152.5, accel: 40, brake: 90, grip: 90, turnMax: 2.0,
     battleAccel: 68, strafe: 26, approach: 30,
@@ -620,7 +624,7 @@ export const CLASSES: ClassDef[] = [
   {
     role: ROLE.DF, frame: 'Bulwark',
     blurb: 'Heavy bruiser. Breaks guards and shrugs off light hits.',
-    maxHp: 2000, radius: 4.0, mass: 1.45,
+    maxHp: 1800, radius: 4.0, mass: 1.45,
     topSpeed: 145, accel: 35, brake: 90, grip: 80, turnMax: 1.8,
     battleAccel: 56, strafe: 22, approach: 26,
     guardMax: 130, guardRegen: 20, dash: 58, dashCost: 18, dashIframes: 8,
