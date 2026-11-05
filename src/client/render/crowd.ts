@@ -14,18 +14,23 @@ const MAX_STANDS = 8;
 const FLASHES = 320;
 const FLAGS = 34;
 
+// Each stand keeps its own clocks (Crowd.update), run faster while it cheers.
+// The shaders read the clocks rather than multiply the time by a rate that
+// changes: time x rate jumps whenever the rate does, and as a cheer died away
+// the flags thrashed faster the longer the race had run (70 flaps a second
+// three minutes in).
 const FLASH_VERT = /* glsl */ `
 attribute float aPhase;
 attribute float aRate;
 attribute float aStand;
-uniform float uTime;
+uniform float uFlashClock[${MAX_STANDS}];
 uniform float uExcite[${MAX_STANDS}];
 uniform float uSize;
 varying float vFlash;
 void main() {
-  float ex = uExcite[int(aStand + 0.5)];
-  float rate = aRate * (1.0 + ex * 7.0);
-  float f = fract(uTime * rate + aPhase);
+  int k = int(aStand + 0.5);
+  float ex = uExcite[k];
+  float f = fract(uFlashClock[k] * aRate + aPhase);
   float w = 0.05 + ex * 0.03;
   vFlash = f < w ? 1.0 - f / w : 0.0;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -48,18 +53,20 @@ void main() {
 const FLAG_VERT = /* glsl */ `
 attribute float aPhase;
 attribute float aStand;
-uniform float uTime;
+uniform float uRipple[${MAX_STANDS}];
+uniform float uBob[${MAX_STANDS}];
 uniform float uExcite[${MAX_STANDS}];
 varying vec3 vColor;
 varying float vShade;
 void main() {
-  float ex = uExcite[int(aStand + 0.5)];
+  int k = int(aStand + 0.5);
+  float ex = uExcite[k];
   vec3 p = position;
   // Pinned at its pole (x = 0), rippling out to its free end, waved harder in a cheer.
   float along = clamp(p.x / 2.2, 0.0, 1.0);
-  float wave = sin(p.x * 2.6 - uTime * (5.0 + ex * 7.0) + aPhase);
+  float wave = sin(p.x * 2.6 - uRipple[k] + aPhase);
   p.z += wave * 0.32 * along;
-  p.y += sin(uTime * (1.4 + ex * 4.0) + aPhase) * (0.25 + ex * 0.6);
+  p.y += sin(uBob[k] + aPhase) * (0.25 + ex * 0.6);
   vShade = 0.78 + 0.22 * wave;
   #ifdef USE_INSTANCING_COLOR
     vColor = instanceColor;
@@ -80,8 +87,14 @@ void main() {
 export class Crowd {
   readonly group = new THREE.Group();
   private excite = new Array<number>(MAX_STANDS).fill(0);
+  /** Each stand's clocks: the flags' ripple and bob (radians) and the camera flashes (seconds, sped up in a cheer). */
+  private ripple = new Array<number>(MAX_STANDS).fill(0);
+  private bob = new Array<number>(MAX_STANDS).fill(0);
+  private flashClock = new Array<number>(MAX_STANDS).fill(0);
   private uniforms = {
-    uTime: { value: 0 },
+    uRipple: { value: this.ripple },
+    uBob: { value: this.bob },
+    uFlashClock: { value: this.flashClock },
     uExcite: { value: this.excite },
     uSize: { value: 3 },
   };
@@ -196,9 +209,16 @@ export class Crowd {
   }
 
   update(dt: number): void {
-    this.uniforms.uTime.value += dt;
-    // A cheer dies away over a few seconds.
-    for (let k = 0; k < this.excite.length; k++) this.excite[k] = Math.max(0, this.excite[k] - dt * 0.35);
+    const TAU = Math.PI * 2;
+    for (let k = 0; k < this.excite.length; k++) {
+      const ex = this.excite[k];
+      // Waved about once a second at rest, twice in a cheer; the arms bob slower.
+      this.ripple[k] = (this.ripple[k] + dt * (5 + ex * 7)) % TAU;
+      this.bob[k] = (this.bob[k] + dt * (1.4 + ex * 4)) % TAU;
+      this.flashClock[k] += dt * (1 + ex * 7);
+      // A cheer dies away over a few seconds.
+      this.excite[k] = Math.max(0, ex - dt * 0.35);
+    }
   }
 
   dispose(): void {

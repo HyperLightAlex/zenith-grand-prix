@@ -1059,8 +1059,8 @@ is kept on this device (`src/client/settings.ts`, `ui/screens/settings.ts`).
   tenths. They are the tuning panel's feel values, so the panel and this
   tab agree.
 - **Camera**: distance (four steps, the locked-on camera with it), field of
-  view (56° to 80°), speed effects and screen shake (off, low, full), the
-  look turned round on either axis, and the pad's rumble.
+  view (56° to 80°), speed effects and screen shake (off, low, full), and the
+  look turned round on either axis.
 - **Controls**: every race action on the gamepad and the keyboard. Choose
   one, press its new button or key, and whatever had it takes the old one,
   so nothing is left unbound. X puts one back as it came, Y all of them.
@@ -1071,8 +1071,8 @@ is kept on this device (`src/client/settings.ts`, `ui/screens/settings.ts`).
 - **Accessibility**: reduce flashes (the white flash on hits and boosts a
   quarter as bright, no impact frames, Monsoon's lightning dimmed), reduce
   motion (shake off, speed effects down, the menus and HUD still), the
-  HUD's size (85% to 130%), the hints on or off, and guard and carve held
-  or toggled.
+  HUD's size (85% to 130%), the hints on or off, the pad's rumble (off, low,
+  full), and guard and carve held or toggled.
 
 ### Records
 

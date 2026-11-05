@@ -114,10 +114,10 @@ device, Settings, Video, Resolution trades sharpness for speed (85%, 70%,
 
 **Settings** (from the title's modes, or the pause menu) has five tabs:
 Video, Sound (the volumes), Camera (distance, field of view, shake, speed
-effects, the look inverted, rumble), Controls (remap any race action on the
-pad or the keyboard: pick it and press the new button) and Accessibility
-(fewer flashes, less motion, the HUD's size, the hints, guard and carve held
-or toggled). **Records** keeps your career and your fastest speed lap and
+effects, the look inverted), Controls (remap any race action on the pad or
+the keyboard: pick it and press the new button) and Accessibility (fewer
+flashes, less motion, the HUD's size, the hints, rumble, guard and carve
+held or toggled). **Records** keeps your career and your fastest speed lap and
 race on each circuit in each frame, on this device; no account is needed.
 
 ## Controls

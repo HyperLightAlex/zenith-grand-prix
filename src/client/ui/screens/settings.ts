@@ -1,9 +1,10 @@
 // Settings: one screen, five tabs (LB and RB, or Q and E, or a click on the
 // tab): Video (the picture, as the old Video screen had it), Sound (the
 // volumes), Camera (distance, field of view, shake, speed effects, the look
-// turned round, rumble), Controls (every race action on the gamepad and the
-// keys, remapped by pressing the new button) and Accessibility (flashes,
-// motion, the HUD's size and hints, guard and carve held or toggled).
+// turned round), Controls (every race action on the gamepad and the keys,
+// remapped by pressing the new button) and Accessibility (flashes, motion,
+// the HUD's size and hints, the pad's rumble, guard and carve held or
+// toggled).
 // Everything applies at once and is kept on this device.
 
 import type { Game } from '../../game/game';
@@ -124,8 +125,6 @@ export function registerSettings(m: Menus, g: Game): void {
     }, { key: 'shake' });
     m.choice(list, 'Look left and right', settings.invertX ? 'Inverted' : 'Normal', () => changeSettings({ invertX: !settings.invertX }), { key: 'invertX' });
     m.choice(list, 'Look up and down', settings.invertY ? 'Inverted' : 'Normal', () => changeSettings({ invertY: !settings.invertY }), { key: 'invertY' });
-    const ru = nearest([0, 0.5, 1], feel('rumble'));
-    m.choice(list, 'Gamepad rumble', LEVELS3[ru], (dir) => set({ rumble: [0, 0.5, 1][Math.max(0, Math.min(2, ru + dir))] }), { key: 'rumble' });
   }
 
   function accessTab(list: HTMLElement): void {
@@ -139,6 +138,8 @@ export function registerSettings(m: Menus, g: Game): void {
     const hs = HUD_SCALES.indexOf(settings.hudScale as (typeof HUD_SCALES)[number]);
     m.choice(list, 'HUD size', pctLabel(settings.hudScale), (dir) => changeSettings({ hudScale: HUD_SCALES[Math.max(0, Math.min(HUD_SCALES.length - 1, (hs < 0 ? 1 : hs) + dir))] }), { key: 'hudScale' });
     m.choice(list, 'Button hints in races', onOff(settings.hints), () => changeSettings({ hints: !settings.hints }), { key: 'hints' });
+    const ru = nearest([0, 0.5, 1], feel('rumble'));
+    m.choice(list, 'Gamepad rumble', LEVELS3[ru], (dir) => set({ rumble: [0, 0.5, 1][Math.max(0, Math.min(2, ru + dir))] }), { key: 'rumble' });
     m.choice(list, 'Guard', settings.toggleGuard ? 'Toggle' : 'Hold', () => changeSettings({ toggleGuard: !settings.toggleGuard }), { key: 'toggleGuard' });
     m.choice(list, 'Carve', settings.toggleCarve ? 'Toggle' : 'Hold', () => changeSettings({ toggleCarve: !settings.toggleCarve }), { key: 'toggleCarve' });
   }

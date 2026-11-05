@@ -2193,7 +2193,11 @@ html.compact .podium .podium-award { top: calc(3.2 * var(--ui-em) + var(--st, 0p
    (each in its pilot's colour, the MVP across the top in gold), your own
    contribution, and at the side every pilot's points, each bar in three:
    placing (the signal orange), knockouts (red), support (the link green). */
-.menu .col.ceremony { top: 2em; bottom: 4.4em; width: 36em; justify-content: safe center; gap: 0.75em; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+/* The two panes share the frame's width (5.5em in from the left, 3em in from
+   the right, 2em between): on a frame narrower than 16:10 (a window between
+   4:3 and 3:2, say) both narrow instead of the pilots running over the
+   mentions. */
+.menu .col.ceremony { top: 2em; bottom: 4.4em; width: min(36em, calc((100% - 10.5em) * 0.47)); justify-content: safe center; gap: 0.75em; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .menu .col.ceremony h1 { font-size: 3.6em; }
 .menu .col.ceremony h1 .pts { margin-left: 0.25em; color: var(--signal); font-variant-numeric: tabular-nums; }
 .menu .col.ceremony h2 { margin: 0.2em 0 0; font-size: 1.15em; font-weight: 800; color: var(--signal); }
@@ -2216,7 +2220,7 @@ html.compact .podium .podium-award { top: calc(3.2 * var(--ui-em) + var(--st, 0p
 .menu .yours .chips { position: static; transform: none; display: flex; flex-wrap: wrap; gap: 0.3em; font-size: 0.95em; white-space: normal; }
 .menu .yours .chip { padding: 0.05em 0.6em; background: rgba(255, 255, 255, 0.1); }
 .menu .yours .chip b { color: var(--charge); font-variant-numeric: tabular-nums; }
-.menu .panel.ceremony-pilots { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 40em; max-height: calc(100% - 7em); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.menu .panel.ceremony-pilots { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: min(40em, calc((100% - 10.5em) * 0.53)); max-height: calc(100% - 7em); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .menu .panel.ceremony-pilots .gptable { margin-bottom: 0.9em; }
 table.pilots { width: 100%; border-collapse: separate; border-spacing: 0 0.16em; font-size: 1.05em; }
 table.pilots th { text-align: left; font-weight: 500; opacity: 0.7; padding: 0 0.5em 0.1em; font-size: 0.8em; }
