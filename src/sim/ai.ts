@@ -14,6 +14,7 @@ import {
   CARVE_MIN_STEER,
   CARVE_STEER_WIDE,
   CARVE_TURN,
+  DRAFT_WIDTH,
   OVERDRIVE_CARVE_GRIP,
   LOCK_RANGE,
   MODE,
@@ -27,7 +28,7 @@ import {
   TACTIC,
   type Tactic,
 } from './config';
-import { carveBiteSpeed, carveStick, classOf, distance, hpFraction, inPlay, lockable, sameRoute, setTarget, speedCap } from './core';
+import { carveBiteSpeed, carveStick, classOf, distance, hpFraction, inPlay, lockable, ownTopSpeed, sameRoute, setTarget, speedCap, towBonus } from './core';
 import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
 import { deltaS, forkAt, gripAt, holdAt, hwAt, routeBendAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
@@ -37,6 +38,39 @@ import type { Lesson, MechInput, MechState, RaceState } from './types';
 const INTENT = { RACE: 0, ENGAGE: 1, ESCORT: 2 } as const;
 /** In a Sprint, how far down the road a pilot will go after the leader (metres): out of reach of a lock, it runs them down. */
 const HUNT_RANGE = 450;
+
+/**
+ * A team's forward held up for this long (ticks): its support pilots come to
+ * clear the way. Boxed in (a rival support pilot just ahead in its way, no
+ * slower: the enemy forward alongside is a race, not a box), they come
+ * from as far off as HELP_RANGE, on any lap, dropping back to it if they
+ * are ahead. Under Shield they come sooner, and keep their forward company
+ * from further off (SHIELD_RANGE). A forward set upon (a rival locked on to
+ * it) is left to the usual doctrine, Shield or not: a defender peels its
+ * attackers off it, Shield sends the support pilots after them from as far
+ * as a fight is picked. (Sending them from HELP_RANGE took a third of the
+ * forwards' knockouts away: hunting the enemy forward is the game.)
+ */
+const HELP_AFTER = 120;
+const HELP_AFTER_SHIELD = 45;
+/** A holder out of the way for this long (ticks) is not holding any more. */
+const HELP_LETUP = 45;
+const HELP_RANGE = 420;
+/** Under Shield the support pilots keep their forward company from this far off (they drop back to it). */
+const SHIELD_RANGE = 400;
+
+/**
+ * The speed lap's duels. A pilot in a rival's tow sits in it, LAP3_GAP
+ * behind, and strikes (pulls out, boosts) on the run to the line, about
+ * LAP3_STRIKE from it, and sooner on a slower rival. A pilot with a rival
+ * on its tail keeps LAP3_RESERVE Drive back to answer a pass, breaks the
+ * tow now and then (one move across, held), and covers a pass under way.
+ * Rookies (below LAP3_SKILL) just race.
+ */
+const LAP3_GAP = 16;
+const LAP3_STRIKE = 420;
+const LAP3_RESERVE = 30;
+const LAP3_SKILL = 0.4;
 
 /** Set a button only on a tick where it was up before, so the sim sees a press. */
 function press(out: MechInput, m: MechState, bit: number): void {
@@ -73,6 +107,31 @@ function ownForward(race: RaceState, m: MechState): MechState | null {
     if (o.team === m.team && o.role === ROLE.FW && inPlay(o)) return o;
   }
   return null;
+}
+
+/**
+ * The rival holding up a forward right now: in its way (just ahead, across
+ * its line, no slower: boxed in) or locked on to it and on top of it (set
+ * upon: id + HELD_ON); -1 for nobody.
+ */
+const HELD_ON = 1000;
+function holderOf(race: RaceState, track: Track, fw: MechState): number {
+  if (!inPlay(fw) || fw.finished) return -1;
+  let best = -1;
+  let bestD = Infinity;
+  for (const e of race.mechs) {
+    if (e.team === fw.team || !inPlay(e) || !sameRoute(track, e, fw)) continue;
+    const ahead = deltaS(track, e.s, fw.s);
+    const dd = Math.abs(e.d - fw.d);
+    const near = Math.hypot(ahead, dd);
+    const onIt = e.mode === MODE.BATTLE && e.target === fw.id && near < 30;
+    const inWay = e.role !== ROLE.FW && fw.mode === MODE.SPEED && ahead > 1 && ahead < 34 && dd < 9 && fw.speed <= e.speed + 8;
+    if ((onIt || inWay) && near < bestD) {
+      bestD = near;
+      best = inWay ? e.id : e.id + HELD_ON;
+    }
+  }
+  return best;
 }
 
 /**
@@ -122,6 +181,28 @@ function think(race: RaceState, track: Track, m: MechState): void {
 
   const ordered = tactic === TACTIC.BLITZ || tactic === TACTIC.MARK;
   const resting = !ordered && race.tick < ai.restUntil;
+  // Our forward held up: whoever is holding it, once it has lasted, is the
+  // support pilots' business (any lap, and from further off: they come back for it).
+  // (Kept through a moment's let-up: the gap and the speeds flicker about.)
+  const seen = !race.sprint && m.role !== ROLE.FW && fw && fw !== m ? holderOf(race, track, fw) : -1;
+  if (seen >= 0) {
+    if (seen !== ai.helpFor) {
+      ai.helpFor = seen;
+      ai.helpSince = race.tick;
+    }
+    ai.helpSeen = race.tick;
+  } else if (ai.helpFor >= 0 && race.tick - ai.helpSeen > HELP_LETUP) {
+    ai.helpFor = -1;
+  }
+  const held = ai.helpFor;
+  // Boxed in: come from anywhere near. Set upon by a support pilot: as for
+  // any fight. Under Shield: either, from anywhere near.
+  const shielding = tactic === TACTIC.SHIELD;
+  const lasted = held >= 0 && race.tick - ai.helpSince >= (shielding ? HELP_AFTER_SHIELD : HELP_AFTER) && hp >= 0.3;
+  const holder = held >= HELD_ON ? held - HELD_ON : held;
+  const setUpon = held >= HELD_ON;
+  const help = lasted && !setUpon ? holder : -1;
+  const helpRange = HELP_RANGE;
 
   let best = -1;
   let bestScore = 28;
@@ -132,8 +213,11 @@ function think(race: RaceState, track: Track, m: MechState): void {
     // In a Sprint whoever leads is the one to beat: they are run down from
     // much further off than anyone else is gone after.
     const hunt = race.sprint && e.place === 1 && m.place > 1;
-    if (dist > (hunt && !lap3 ? HUNT_RANGE : maxRange)) continue;
-    if (lap3) {
+    const helping = e.id === help;
+    if (dist > (helping ? helpRange : hunt && !lap3 ? HUNT_RANGE : maxRange)) continue;
+    if (helping) {
+      // (Clearing the way for our forward: on any lap, rested or not.)
+    } else if (lap3) {
       // The speed lap is for racing. Support pilots may pounce on a forward
       // as it comes through (in a Sprint, anyone on the leader); anyone may
       // answer an attacker on top of them.
@@ -184,6 +268,8 @@ function think(race: RaceState, track: Track, m: MechState): void {
     else if (tactic === TACTIC.RUN) sc += onMe ? -20 : -45;
     else if (tactic === TACTIC.SHIELD) sc += m.role === ROLE.FW ? -15 : onFw ? 35 : -25;
     else if (tactic === TACTIC.MARK) sc += e.id === ts.mark ? (m.role === ROLE.FW ? 20 : 55) : -18;
+    // Our forward held up: get that rival out of its way (more so under Shield).
+    if (helping) sc += shielding ? 100 : 75;
     if (lap3) sc += 20;
     if (hp < 0.3 && tactic !== TACTIC.BLITZ) sc -= 35;
     if (hpFraction(e) < 0.3) sc += 14;
@@ -208,7 +294,7 @@ function think(race: RaceState, track: Track, m: MechState): void {
       ai.intent = INTENT.RACE;
       ai.intentTarget = -1;
     }
-  } else if (tactic === TACTIC.SHIELD && m.role !== ROLE.FW && fw && fw !== m && fw.id !== race.lesson?.spar && distance(track, m, fw) < 150) {
+  } else if (tactic === TACTIC.SHIELD && m.role !== ROLE.FW && fw && fw !== m && fw.id !== race.lesson?.spar && distance(track, m, fw) < SHIELD_RANGE) {
     ai.intent = INTENT.ESCORT;
     ai.intentTarget = fw.id;
   } else {
@@ -297,10 +383,21 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
   const hot = tick < ai.hotUntil;
   // Running someone down from far off (a Sprint's leader): race the line,
   // gates and strips as usual, and boost to close the gap.
-  const far = !!chase && inPlay(chase) && !hot && Math.abs(deltaS(track, chase.s, m.s)) >= 160;
-  if (far) wantBoost = wantBoost || m.drive > 30;
+  const chaseDs = chase && inPlay(chase) ? deltaS(track, chase.s, m.s) : 0;
+  const far = !!chase && inPlay(chase) && !hot && Math.abs(chaseDs) >= 160;
+  if (far && chaseDs > 0) wantBoost = wantBoost || m.drive > 30;
+  // Coming back for our forward (it is held up, or under Shield): from well
+  // ahead, ease right off and let it come; it is worth more than our place.
+  const backUp = !!chase && (chase.id === ai.helpFor % HELD_ON || (ai.intent === INTENT.ESCORT && chase.team === m.team));
+  // (Well ahead, on the brake too: coasting back from a long way up the road takes too long.)
+  let backBrake = 0;
+  if (backUp && chaseDs < -12) {
+    throttle = chaseDs < -40 ? 0.45 : 0.8;
+    if (chaseDs < -90) backBrake = 0.5;
+    wantBoost = false;
+  }
   if (chase && inPlay(chase) && !far) {
-    const ds = deltaS(track, chase.s, m.s);
+    const ds = chaseDs;
     if (hot) {
       // Run up on the infield side, so the blow throws them at their barrier.
       const inside = chase.d - (chase.d >= 0 ? 1 : -1) * 5;
@@ -309,7 +406,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     } else {
       if (Math.abs(ds) < 160) dWant = lerp(dWant, chase.d, 0.6);
       if (ds > 20) wantBoost = wantBoost || m.drive > 30;
-      else if (ds < -12) throttle = 0.92; // ease off a touch and let them come
+      else if (ds < -12) throttle = Math.min(throttle, 0.92); // ease off a touch and let them come
     }
   } else if (!m.finished) {
     const ws = wrapS(track, m.s);
@@ -370,6 +467,66 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
       }
     }
   }
+  // --- the speed lap's duels: an attack timed for the line, a lead defended (LAP3_*)
+  let holdTow: MechState | null = null;
+  let reserve = 12;
+  if (lap3 && !m.finished && !chase && !race.lesson && race.phase === PHASE.RACING && m.skill >= LAP3_SKILL) {
+    const toLine = race.laps * track.length - m.s;
+    let prey: MechState | null = null;
+    let preyGap = Infinity;
+    let hunter: MechState | null = null;
+    let hunterGap = Infinity;
+    for (const o of race.mechs) {
+      if (o.team === m.team || !inPlay(o) || o.finished || o.mode !== MODE.SPEED || splitApart(track, m.s, m.d, o.s, o.d)) continue;
+      const ahead = deltaS(track, o.s, m.s);
+      if (ahead > 4 && ahead < rules.towRange3 && ahead < preyGap) {
+        prey = o;
+        preyGap = ahead;
+      }
+      if (ahead < -3 && ahead > -150 && -ahead < hunterGap) {
+        hunter = o;
+        hunterGap = -ahead;
+      }
+    }
+    // Attack: a rival as quick as us ahead, its tow to sit in. Wait for the run to the line.
+    if (prey && ownTopSpeed(race, prey, classOf(prey)) >= ownTopSpeed(race, m, c) - 2) {
+      const strike = toLine < LAP3_STRIKE + preyGap * 2 || prey.speed < ownTopSpeed(race, prey, classOf(prey)) * 0.9 || prey.act === ACT.STAGGER;
+      if (!strike) {
+        holdTow = prey;
+        dWant = prey.d;
+        // Hold station in the tow: no faster than closes to LAP3_GAP.
+        const capNow = cap * (1 + towBonus(race, m));
+        const want = prey.speed + clamp((preyGap - LAP3_GAP) * 1.2, -14, 25);
+        throttle = clamp(want / capNow, 0.3, 1);
+        // Slipping out of reach of the full tow: boost back in, if there is the Drive to spare.
+        wantBoost = preyGap > 70 && m.drive > LAP3_RESERVE + 10;
+      } else if (preyGap < 40) {
+        // The strike: out of the tow to the side with more road, and everything on it.
+        const room = (dir: number) => hwAt(track, m.s + preyGap) - dir * prey!.d;
+        dWant = prey.d + (room(1) >= room(-1) ? 1 : -1) * 10;
+        wantBoost = m.drive > 3;
+      }
+    }
+    // Defend: someone on our tail. Keep Drive back to answer a pass (spent on the run to the line).
+    if (hunter) {
+      if (toLine > 600) reserve = LAP3_RESERVE + 12;
+      const dd = hunter.d - m.d;
+      if (hunterGap < 22 && Math.abs(dd) >= DRAFT_WIDTH && hunter.speed > m.speed + 2) {
+        // A pass under way: lean toward its side (a few units: no chop) and answer it with the boost.
+        ai.defendD = m.d + Math.sign(dd) * Math.min(Math.abs(dd) - 5, 4);
+        ai.defendUntil = tick + 30;
+        wantBoost = m.drive > 5;
+      } else if (hunterGap < 64 && Math.abs(dd) < DRAFT_WIDTH && tick > ai.defendUntil + 120) {
+        // In our tow: one move across to break it, held a while.
+        const hw = hwAt(track, m.s + look);
+        const side = hw - m.d > hw + m.d ? 1 : -1;
+        ai.defendD = clamp(m.d + side * 10, -hw + 6, hw - 6);
+        ai.defendUntil = tick + 150;
+      }
+    }
+    if (tick < ai.defendUntil && !holdTow) dWant = ai.defendD;
+  }
+
   if (m.ramT > 0) {
     // Mid-ram: aim the charge at the nearest rival it has not hit yet.
     let nearest = 70;
@@ -399,6 +556,8 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     if (o.speed > m.speed + 4) continue;
     if (chase === o || ramAt === o) continue;
     if (threading && ahead > 7) continue;
+    // Sitting in a rival's tow for the strike: not past it yet (unless about to run into it).
+    if (holdTow === o && ahead > 8) continue;
     const side = dd === 0 ? (o.id < m.id ? 1 : -1) : dd > 0 ? -1 : 1;
     dWant = o.d + side * 9.5;
     break;
@@ -502,8 +661,13 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
     wantBoost = false;
   }
 
+  // Coming back for our forward from well up the road (see backUp): the
+  // brake, with the stick near the middle (further over it would carve).
+  if (backBrake > 0 && out.brake === 0 && !m.carving && Math.abs(out.mx) < CARVE_MIN_STEER) out.brake = backBrake;
+
   // --- boost on the speed lap when the road is straight enough
-  if (race.lapPhase >= 3 && !m.finished && kMax < 0.0022 && m.drive > 12) wantBoost = true;
+  // (Not while sitting in a tow for the strike, and keeping a reserve with a rival on our tail.)
+  if (race.lapPhase >= 3 && !m.finished && kMax < 0.0022 && m.drive > reserve && !holdTow) wantBoost = true;
   // At the brim, what the trickle brings in is spent rather than wasted: one
   // short burn (about the minimum) each time it fills, not a tap per tick.
   if (m.drive > 97 && kMax < 0.0015 && race.lapPhase >= 2) ai.boostFloor = Math.max(ai.boostFloor, 90);

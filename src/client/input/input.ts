@@ -1,7 +1,8 @@
 // Controller input. Gamepad first, keyboard as a full fallback. Produces the
 // MechInput the simulation wants, plus menu navigation and camera controls.
-import { BTN, emptyInput, type MechInput } from '../../sim/index';
+import { BTN, CARVE_MIN_STEER, emptyInput, type MechInput } from '../../sim/index';
 import { toggleFullscreen } from '../fullscreen';
+import { ACTIONS, actionKeys, padButton, settings, type ActionId } from '../settings';
 import type { TouchControls } from './touch';
 
 /** What was used last: the HUD and the menus show its buttons (touch: on-screen controls, no key glyphs). */
@@ -18,20 +19,11 @@ export function typing(): boolean {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
 }
 
-const KEY_BUTTONS: Record<string, number> = {
-  Space: BTN.A,
-  KeyJ: BTN.X,
-  KeyK: BTN.Y,
-  KeyL: BTN.GUARD,
-  ShiftLeft: BTN.GUARD,
-  ShiftRight: BTN.GUARD,
-  KeyQ: BTN.LOCK,
-  Tab: BTN.LOCK,
-  KeyE: BTN.ALLY,
-  KeyR: BTN.ABILITY,
-  KeyC: BTN.TNEXT,
-  KeyZ: BTN.TPREV,
-};
+/** The race buttons, by the action that presses them (see settings.ts: remappable). */
+const BUTTON_ACTIONS = ACTIONS.filter((a) => a.bit !== undefined) as ReadonlyArray<{ id: ActionId; bit: number }>;
+
+/** What a rebinding was given: a key, a gamepad button, or nothing (it was called off). */
+export type Captured = { key: string } | { pad: number } | { cancel: true };
 
 /**
  * Carving on the keys (S with A or D), a key held into the carve digs in
@@ -76,6 +68,14 @@ export class Input {
   /** A carve's direction key held (its sign, 0 for none), and since when (ms). */
   private digDir = 0;
   private digAt = 0;
+  /** Rebinding: called with the next key or gamepad button (see capture). */
+  private capturing: ((c: Captured) => void) | null = null;
+  /** Hold or toggle (settings): the guard toggled on, the carve held on, and the presses last frame. */
+  private guardOn = false;
+  private carveOn = false;
+  private carveOnFor = 0;
+  private prevGuardHeld = false;
+  private prevBrakeHeld = false;
   /** When the held flick next repeats (performance.now, ms). */
   private flickNext = 0;
   /** Buttons that were down when a menu closed: ignored until they are let go. */
@@ -107,6 +107,15 @@ export class Input {
       }
       if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (e.repeat) return;
+      // Rebinding: the next key is the binding (Esc calls it off), and nothing else.
+      if (this.capturing) {
+        e.preventDefault();
+        const cb = this.capturing;
+        this.capturing = null;
+        this.touch('keys');
+        cb(e.code === 'Escape' ? { cancel: true } : { key: e.code });
+        return;
+      }
       if (e.code === 'KeyF') this.toggleFullscreen();
       this.keys.add(e.code);
       this.tapped.add(e.code);
@@ -188,11 +197,12 @@ export class Input {
     // Held keys plus anything tapped since the last frame.
     const k = this.tapped;
     for (const code of this.keys) k.add(code);
-    // ---- keyboard
-    let mx = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
-    let my = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
-    let throttle = my > 0 ? 1 : 0;
-    let brake = my < 0 ? 1 : 0;
+    // ---- keyboard (its keys as remapped: settings.ts)
+    const held = (id: ActionId) => actionKeys(id).some((c) => k.has(c));
+    let mx = (held('right') ? 1 : 0) - (held('left') ? 1 : 0);
+    let my = (held('accel') ? 1 : 0) - (held('brake') ? 1 : 0);
+    let throttle = held('accel') ? 1 : 0;
+    let brake = held('brake') ? 1 : 0;
     // Carving on the keys: the direction key digs in over a moment (KEY_DIG_FROM).
     if (!this.battle && brake > 0 && mx !== 0) {
       const now = performance.now();
@@ -203,11 +213,11 @@ export class Input {
       mx *= Math.min(1, KEY_DIG_FROM + ((1 - KEY_DIG_FROM) * (now - this.digAt)) / (KEY_DIG_SECS * 1000));
     } else this.digDir = 0;
     let buttons = 0;
-    for (const code in KEY_BUTTONS) if (k.has(code)) buttons |= KEY_BUTTONS[code];
+    for (const a of BUTTON_ACTIONS) if (held(a.id)) buttons |= a.bit;
     let cmd = k.has('Digit1') ? 1 : k.has('Digit2') ? 2 : k.has('Digit3') ? 3 : k.has('Digit4') ? 4 : 0;
     let camX = 0;
     let camY = 0;
-    let lookBack = k.has('KeyV');
+    let lookBack = held('lookBack');
 
     // ---- gamepad
     const p = this.pad();
@@ -227,19 +237,22 @@ export class Input {
       }
       const rx = dead(p.axes[2] ?? 0, 0.2);
       const ry = dead(p.axes[3] ?? 0, 0.2);
-      const rt = v(PAD.RT);
-      let lt = v(PAD.LT);
+      // Its buttons as remapped (settings.ts). A trigger's value is how far
+      // it is pulled; a button's, all or nothing.
+      const value = (id: ActionId) => {
+        const i = padButton(id);
+        return i === null ? 0 : v(i) || (b(i) ? 1 : 0);
+      };
+      const rt = value('accel');
+      let lt = value('brake');
       let pb = 0;
       // Locked on there is nothing to brake or carve: the left trigger is the guard.
       if (this.battle && lt > 0.35) pb |= BTN.GUARD;
       if (this.battle) lt = 0;
-      if (b(PAD.A)) pb |= BTN.A;
-      if (b(PAD.X)) pb |= BTN.X;
-      if (b(PAD.Y)) pb |= BTN.Y;
-      if (b(PAD.RB)) pb |= BTN.GUARD;
-      if (b(PAD.LB)) pb |= BTN.LOCK;
-      if (b(PAD.B)) pb |= BTN.ABILITY;
-      if (b(PAD.LS)) pb |= BTN.ALLY;
+      for (const a of BUTTON_ACTIONS) {
+        const i = padButton(a.id);
+        if (i !== null && b(i)) pb |= a.bit;
+      }
       // Flick the right stick left or right to change target; hold it over
       // and it keeps stepping, a little under three targets a second.
       const flick = Math.abs(rx) > 0.6 ? Math.sign(rx) : 0;
@@ -270,11 +283,28 @@ export class Input {
         cmd = pc;
         camX = rx;
         camY = ry;
-        lookBack = b(PAD.RS);
+        const lb = padButton('lookBack');
+        lookBack = lb !== null && b(lb);
+      }
+      // Rebinding: the first button pressed is the binding (Start calls it off).
+      const edge = (i: number) => b(i) && !this.prevPad[i];
+      if (this.capturing) {
+        for (let i = 0; i < p.buttons.length; i++) {
+          if (!edge(i)) continue;
+          const cb = this.capturing;
+          this.capturing = null;
+          this.touch('pad');
+          cb(i === PAD.START ? { cancel: true } : { pad: i });
+          break;
+        }
+        for (let i = 0; i < p.buttons.length; i++) this.prevPad[i] = b(i);
+        this.prevStickX = Math.abs(lx) > 0.6 ? Math.sign(lx) : 0;
+        this.prevStickY = Math.abs(ly) > 0.6 ? Math.sign(ly) : 0;
+        this.tapped = new Set();
+        return;
       }
       // Menu edges.
       const m = this.menu;
-      const edge = (i: number) => b(i) && !this.prevPad[i];
       const sx = Math.abs(lx) > 0.6 ? Math.sign(lx) : 0;
       const sy = Math.abs(ly) > 0.6 ? Math.sign(ly) : 0;
       if (edge(PAD.UP) || (sy < 0 && this.prevStickY >= 0)) m.push('up');
@@ -312,6 +342,37 @@ export class Input {
     // Locked on, the keys and the touch screen hold full pace (the throttle is
     // the pace a lock carries you at); pushing toward a target behind eases off.
     if (this.battle && this.device !== 'pad') throttle = 1 - Math.max(0, my) * this.battleBehind;
+
+    // Hold or toggle (Settings, Accessibility). The guard: a press raises
+    // it, the next lowers it. The carve: a press with the stick over starts
+    // it and holds it on (while the race says it is carving), the next lets
+    // it go; a press with the stick near the middle still brakes, held.
+    if (settings.toggleGuard) {
+      const guardHeld = (buttons & BTN.GUARD) !== 0;
+      if (guardHeld && !this.prevGuardHeld) this.guardOn = !this.guardOn;
+      this.prevGuardHeld = guardHeld;
+      buttons = this.guardOn ? buttons | BTN.GUARD : buttons & ~BTN.GUARD;
+    } else this.guardOn = false;
+    if (settings.toggleCarve && !this.battle) {
+      const brakeHeld = brake > 0.5;
+      if (brakeHeld && !this.prevBrakeHeld) {
+        if (this.carveOn) this.carveOn = false;
+        else if (Math.abs(mx) >= CARVE_MIN_STEER) {
+          this.carveOn = true;
+          this.carveOnFor = 0;
+        }
+      }
+      this.prevBrakeHeld = brakeHeld;
+      if (this.carveOn) {
+        // (It has a moment to start; once the race says it is not carving, it is off.)
+        this.carveOnFor++;
+        if (!this.carving && this.carveOnFor > 12) this.carveOn = false;
+        else brake = 1;
+      }
+    } else this.carveOn = false;
+    // The look turned round (Settings, Camera).
+    if (settings.invertX) camX = -camX;
+    if (settings.invertY) camY = -camY;
 
     this.tapped = new Set();
     // A button still held from closing a menu is not a press in the race.
@@ -360,6 +421,35 @@ export class Input {
    * raises the guard (as RB does) instead of braking. Set by the game each frame.
    */
   battle = false;
+  /** The player's mech is carving (for a toggled carve: see poll). Set by the game each frame. */
+  carving = false;
+
+  /**
+   * Rebinding: the next key or gamepad button pressed goes to `cb` instead
+   * of the game (Esc or Start calls it off). Only one at a time.
+   */
+  capture(cb: (c: Captured) => void): void {
+    this.capturing = cb;
+    // (What is already held is not the answer: only a fresh press.)
+    const p = this.pad();
+    if (p) for (let i = 0; i < p.buttons.length; i++) this.prevPad[i] = !!p.buttons[i]?.pressed;
+  }
+
+  /** Called off from outside (the screen closed). */
+  cancelCapture(): void {
+    this.capturing = null;
+  }
+
+  /** Whether a rebinding is waiting for its press. */
+  get capturingNow(): boolean {
+    return this.capturing !== null;
+  }
+
+  /** The toggled guard and carve let go (a new race, a menu). */
+  resetToggles(): void {
+    this.guardOn = false;
+    this.carveOn = false;
+  }
   /**
    * Locked on, how far behind the mech its target is: 0 ahead or abreast, 1
    * dead astern. Set by the game each frame. The keys and the touch screen

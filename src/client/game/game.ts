@@ -98,7 +98,10 @@ import { inviteDialog, registerOnline } from '../ui/screens/online';
 import { gpBlocked, registerOnlineGp } from '../ui/screens/onlineGp';
 import { registerRace } from '../ui/screens/race';
 import { registerCeremony } from '../ui/screens/ceremony';
-import { registerVideo } from '../ui/screens/video';
+import { registerSettings } from '../ui/screens/settings';
+import { registerRecords } from '../ui/screens/records';
+import { settings, settingsListeners } from '../settings';
+import { applyBindingNames } from '../ui/keyNames';
 import { applyFrame, frame, FRAME_RATES, onFrame, RESOLUTIONS, saveVideo, video, type VideoSettings } from '../video';
 import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
@@ -109,7 +112,7 @@ import { Online, failure } from '../net/online';
 import { inKnockout } from './moments';
 import { NetSession } from './netSession';
 import { LocalSession } from './session';
-import { TUNE_GROUPS, Tuning } from './tuning';
+import { TUNE_GROUPS, Tuning, type FeelKey } from './tuning';
 import { CARD_MIN, Tutorial, type Coach } from './tutorial';
 import { FrameTip } from './primers';
 import { LEAD_IN, ReplaySession, makeReplay, type Replay } from './replay';
@@ -123,6 +126,7 @@ import { TitleCard } from '../ui/titleCard';
 import { CameraRig } from '../render/cameraRig';
 import { poseFor } from './podium';
 import { eventAward, eventCeremony, matchCeremony, type Ceremony } from './ceremony';
+import { LapTracer, RecordBook, type NewRecords } from './records';
 import { newlyEarned, type Progress, type Unlock } from './unlocks';
 import { isVictoryId, type VictoryId } from '../render/mech/victoryPoses';
 import { factionLook, teamLooks, type TeamLook } from '../ui/sides';
@@ -203,9 +207,9 @@ export interface GameOptions {
 
 const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
 /** Screens the results' music carries on under: the results, the award, and what opens over them. */
-const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'ceremony', 'controls', 'video', 'dialog', 'pause']);
+const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'ceremony', 'controls', 'settings', 'dialog', 'pause']);
 /** Screens that open over others: the music is the one for the screen under them. */
-const OVER_SCREENS = new Set<ScreenId>(['controls', 'video', 'dialog', 'pause']);
+const OVER_SCREENS = new Set<ScreenId>(['controls', 'settings', 'dialog', 'pause']);
 /** The custom mech editor's screens: the mech in the bay is turned by hand on them, not drifting round (naming it too). */
 const CUSTOM_SCREENS = new Set<ScreenId>(['custom', 'custom-parts', 'custom-paint', 'custom-livery']);
 const OVER_EDITOR = new Set<ScreenId>([...OVER_SCREENS, 'entry']);
@@ -441,7 +445,8 @@ export class Game {
     registerOnlineGp(this.menus, this);
     registerRace(this.menus, this);
     registerCeremony(this.menus, this);
-    registerVideo(this.menus, this);
+    registerSettings(this.menus, this);
+    registerRecords(this.menus, this);
     registerHowTo(this.menus, this);
     this.renderer.crt = video.crt;
     this.applyResolution();
@@ -458,6 +463,9 @@ export class Game {
     };
     this.input.rumbleScale = this.tuning.feel.rumble;
     this.applySound();
+    // The player's settings: the HUD, the controls' names, the look's flashes.
+    settingsListeners.push(() => this.applySettings());
+    this.applySettings();
     this.touchPad = new TouchControls(document.body);
     this.touchPad.frameRect = () => frame;
     this.input.attachTouch(this.touchPad);
@@ -477,7 +485,7 @@ export class Game {
       layout = now;
     });
     document.addEventListener('fullscreenchange', () => {
-      if (this.menus.screen === 'video') this.menus.refresh();
+      if (this.menus.screen === 'settings') this.menus.refresh();
     });
     this.input.onFirstGesture = () => this.audio.unlock();
     window.addEventListener('resize', () => this.view?.resize());
@@ -773,6 +781,8 @@ export class Game {
       this.raceFactions = [a, (a + 1 + ((Math.random() * (LIVERIES.length - 1)) | 0)) % LIVERIES.length];
     } else this.raceFactions = [...setup.factions];
     const { seats, localId } = this.seats(setup);
+    // (A toggled guard or carve does not carry into a new race.)
+    this.input.resetToggles();
     if (!keepTrack) this.useTrack(setup?.track ?? this.trackId, !!setup);
     // A Sprint's grid: by lot for its first race, then the standings reversed.
     const sprint = !!setup?.sprint;
@@ -780,6 +790,9 @@ export class Game {
     // The tutorial: a lesson round your seat, the rival forward its sparring partner.
     const lesson = setup?.lesson && localId >= 0 ? { pupil: localId, spar: seats.findIndex((x) => x.team !== seats[localId].team && x.role === ROLE.FW) } : undefined;
     const session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip, mode: sprint ? 'sprint' : 'teams', grid, lesson }, localId);
+    // A race that counts for the records (Free Play and the Grand Prix; not a lesson): your laps timed and traced.
+    if (setup && localId >= 0 && !lesson && (this.mode === 'free' || this.mode === 'gp')) session.tracer = new LapTracer(localId, session.track);
+    this.newRecords = null;
     this.attach(session, keepTrack);
   }
 
@@ -909,7 +922,7 @@ export class Game {
     // Off the results (or the ceremony) to anywhere but a dialog over them: the menu music again.
     if (this.musicNow === 'results' && id !== null && !RESULTS_MUSIC_SCREENS.has(id)) this.music('menu');
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
-      if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'video' || id === 'dialog' || id === 'primer') return;
+      if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'settings' || id === 'dialog' || id === 'primer') return;
     }
     if (id === null) return;
     if (id === 'title' || id === 'modes' || id === 'howto') {
@@ -1013,6 +1026,30 @@ export class Game {
     this.hud.showNotice(on ? 'Look: 80s anime' : 'Look: plain', false, 1.2);
     this.menus.refreshLook();
     return on;
+  }
+
+  // ---- settings ------------------------------------------------------------------
+
+  /** The player's settings, where they show: the HUD's size and hints, the menus' movement, the buttons' names, the look. */
+  private applySettings(): void {
+    const root = document.documentElement;
+    root.style.setProperty('--hud-scale', String(settings.hudScale));
+    root.classList.toggle('no-hints', !settings.hints);
+    root.classList.toggle('reduce-motion', settings.reduceMotion);
+    applyBindingNames();
+    readLook(this.tuning.feel);
+    this.input.resetToggles();
+    if (this.menus.screen === 'settings' || this.menus.screen === 'controls') this.menus.refresh();
+  }
+
+  /** A feel value, for the Settings screen. */
+  feelValue(key: FeelKey): number {
+    return this.tuning.feel[key];
+  }
+
+  /** A feel value from the Settings screen (kept with the tuning values). */
+  setFeel(key: FeelKey, value: number): void {
+    this.tuning.setFeel(key, value);
   }
 
   // ---- video settings -------------------------------------------------------
@@ -2641,6 +2678,30 @@ export class Game {
     return true;
   }
 
+  /** Your personal records (kept on this device). */
+  readonly records = new RecordBook();
+  /** What the race just run set in them (shown with its results), or null. */
+  newRecords: NewRecords | null = null;
+
+  /** A race that counts for the records, run to the flag: into the book (and the match's MVP, once it is decided). */
+  private bankRecords(race: RaceState): void {
+    const s = this.session;
+    if (!(s instanceof LocalSession) || !s.tracer) return;
+    const local = s.localId;
+    const me = race.mechs[local];
+    this.newRecords = this.records.addRace({
+      race,
+      track: s.track.def.id,
+      local,
+      mode: this.mode === 'gp' ? 'Grand Prix' : race.sprint ? 'Sprint' : 'Free Play',
+      laps: s.tracer.laps,
+      look: { faction: this.raceFactions[me.team] ?? 0, build: me.look, colour: me.colour, name: me.name },
+    });
+    if (this.mode === 'free' && this.match && this.match.winner >= 0) this.records.addMatch(this.match.pilots, local);
+    const n = this.newRecords;
+    if (n.lap || n.race) this.audio.play('award', { volume: 0.7 });
+  }
+
   /** The flag has fallen: bank the round (offline) and bring the results up in a moment. */
   private finishRound(): void {
     if (this.resultsAt > 0) return;
@@ -2654,6 +2715,7 @@ export class Game {
       this.roundScored = true;
       const round = recordRound(this.match, race);
       this.resultJingle(round.winner === race.mechs[this.session.localId].team);
+      this.bankRecords(race);
     }
     this.view.cam.mode = 'orbit';
     this.view.cam.shiftX = 0;
@@ -2799,6 +2861,8 @@ export class Game {
     this.renderer.moments = this.state === 'race' || this.state === 'replay';
     const mine = this.session.race.mechs[this.session.localId];
     this.input.battle = this.state === 'race' && !!mine && mine.mode === MODE.BATTLE && !mine.retired;
+    // (A toggled carve holds on while the race says it is carving: see Input.poll.)
+    this.input.carving = this.state === 'race' && !!mine && mine.carving;
     // Watching a replay, the pad does not shake with the blows.
     this.input.rumbleMuted = this.state === 'replay';
     // How far behind the mech the lock's target is (1 dead astern): on the

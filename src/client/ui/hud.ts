@@ -50,7 +50,7 @@ import { factionLook, teamLooks, type TeamLook } from './sides';
 import { COUNT, ICONS, type IconName } from './hudArt';
 import { Dash } from './dash';
 import type { Device } from '../input/input';
-import { KEYS } from './keyNames';
+import { KEYS, keysVersion } from './keyNames';
 import { frame } from '../video';
 
 const ORD = ['st', 'nd', 'rd', 'th', 'th', 'th'];
@@ -746,7 +746,7 @@ export class Hud {
     // On a small or narrow screen, only the few that matter most (the Controls screen has the rest).
     const compact = frame.compact || frame.narrow;
     const escorting = battle && race.mechs[me.target].team === me.team;
-    const hintKey = `${this.device}|${me.retired ? 'r' : battle ? (escorting ? 'e' : 'b') : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}|${shown}|${compact ? 'c' : ''}`;
+    const hintKey = `${keysVersion}|${this.device}|${me.retired ? 'r' : battle ? (escorting ? 'e' : 'b') : 's'}|${race.lapPhase}|${me.finished ? 'f' : ''}|${shown}|${compact ? 'c' : ''}`;
     if (hintKey !== this.hintKey) {
       this.hintKey = hintKey;
       let items: Array<[string, string]> = [];

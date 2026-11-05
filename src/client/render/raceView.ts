@@ -1,5 +1,6 @@
 // Draws one race: places the mechs from simulation state every frame, runs
 // their animation and effects, and turns simulation events into spectacle.
+import { settings } from '../settings';
 import * as THREE from 'three';
 import { updateMechDetail } from './mech/detail';
 import {
@@ -801,7 +802,8 @@ export class RaceView {
     this.renderer.setBloom(F.bloom);
     this.flashUniform = Math.max(0, this.flashUniform - dt * 4.5);
     this.hurt = Math.max(0, this.hurt - dt * 1.8);
-    u.uFlash.value = this.flashUniform * 0.55;
+    // (Reduce flashes, in Settings: a quarter as bright.)
+    u.uFlash.value = this.flashUniform * 0.55 * (settings.reduceFlashes ? 0.25 : 1);
     const critical = focus.hp < focus.maxHp * 0.25 && !focus.retired ? 0.35 + Math.sin(this.time * 6) * 0.15 : 0;
     u.uHurt.value = Math.max(this.hurt, critical);
 

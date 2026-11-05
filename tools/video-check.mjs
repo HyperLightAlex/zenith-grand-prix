@@ -20,12 +20,12 @@ const check = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (!
 await page.goto(base + '?mute=1');
 await page.waitForFunction(() => window.game !== undefined);
 await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); });
-await page.locator('.menu .item', { hasText: 'Video' }).click();
-await page.waitForFunction(() => window.game.menus.screen === 'video');
+await page.locator('.menu .item', { hasText: 'Settings' }).click();
+await page.waitForFunction(() => window.game.menus.screen === 'settings');
 const items = await page.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
-// Five settings and Done; Full screen only where the browser allows it.
+// Settings opens on its Video tab: six settings, Full screen only where the browser allows it.
 const full = items.some((t) => t.startsWith('Full screen'));
-check(items.length === (full ? 6 : 5) && items[items.length - 1] === 'Done', `the Video screen: ${items.join(' / ')}`);
+check(items.length === (full ? 7 : 6) && items[0].startsWith('Armor panel lines'), `the Video tab: ${items.join(' / ')}`);
 await page.waitForTimeout(2500);
 if (out) await page.screenshot({ path: `${out}/video-plain.png` });
 const click = (label) => page.locator('.menu .item', { hasText: label }).click();
@@ -57,15 +57,15 @@ await page.waitForTimeout(3000);
 await page.keyboard.press('Escape');
 await page.waitForFunction(() => window.game.menus.screen === 'pause');
 const pauseItems = await page.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
-check(pauseItems.some((t) => t === 'Video'), `Video in the pause menu (${pauseItems.join(' / ')})`);
-await page.locator('.menu .item', { hasText: 'Video' }).click();
-await page.waitForFunction(() => window.game.menus.screen === 'video');
+check(pauseItems.some((t) => t.startsWith('Settings')), `Settings in the pause menu (${pauseItems.join(' / ')})`);
+await page.locator('.menu .item', { hasText: 'Settings' }).click();
+await page.waitForFunction(() => window.game.menus.screen === 'settings');
 await click('Armor panel lines');
 await page.waitForTimeout(1500);
 check(await page.evaluate(() => JSON.parse(localStorage.getItem('zgp.video')).panels === true && window.game.debugState().state === 'paused'), 'panel lines back on mid-race, still paused');
-await page.waitForFunction(() => window.game.menus.screen === 'video');
+await page.waitForFunction(() => window.game.menus.screen === 'settings');
 await page.keyboard.press('Escape');
-await page.waitForFunction(() => window.game.menus.screen !== 'video', null, { timeout: 30000 }).catch(() => {});
+await page.waitForFunction(() => window.game.menus.screen !== 'settings', null, { timeout: 30000 }).catch(() => {});
 await page.waitForTimeout(1500);
 const after = await page.evaluate(() => ({ screen: window.game.menus.screen, state: window.game.debugState().state }));
 check(after.screen === 'pause' && after.state === 'paused', 'Back returns to the pause menu (' + JSON.stringify(after) + ')');

@@ -15,6 +15,7 @@ import {
   type AnyTrackDef,
 } from '../../sim/index';
 import { Recorder, quantize } from './replay';
+import { LapTracer } from './records';
 
 export interface Session {
   readonly track: Track;
@@ -61,6 +62,8 @@ export class LocalSession implements Session {
   private later = emptyInput();
   /** What was raced, for a replay: the setup, and the local seat's inputs tick by tick. */
   readonly recorder = new Recorder();
+  /** The local seat's laps, timed and traced for the records (a race that counts for them; null otherwise). */
+  tracer: LapTracer | null = null;
   readonly cfg: RaceConfig;
 
   constructor(readonly trackDef: AnyTrackDef, cfg: RaceConfig, readonly localId: number) {
@@ -121,6 +124,7 @@ export class LocalSession implements Session {
       this.recordStep();
       stepRace(this.race, this.track, this.inputs);
       this.recorder.after(this.race);
+      this.tracer?.after(this.race);
       for (const e of this.race.events) this.events.push(e);
       this.acc -= DT;
       steps++;
@@ -136,6 +140,7 @@ export class LocalSession implements Session {
       this.recordStep();
       stepRace(this.race, this.track, this.inputs);
       this.recorder.after(this.race);
+      this.tracer?.after(this.race);
     }
     this.snapshot();
   }

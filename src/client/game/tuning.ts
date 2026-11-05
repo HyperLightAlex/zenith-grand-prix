@@ -341,6 +341,16 @@ export class Tuning {
     this.onChange(item.kind);
   }
 
+  /** A feel value set from outside the panel (the Settings screen), held to its slider's range. */
+  setFeel(key: FeelKey, value: number): void {
+    const item = TUNE_GROUPS.flatMap((g) => g.items).find((i) => i.kind === 'feel' && i.key === key);
+    if (item) return this.set(item, value);
+    if (!Number.isFinite(value)) return;
+    this.feel[key] = value;
+    this.save();
+    this.onChange('feel');
+  }
+
   reset(): void {
     Object.assign(this.feel, DEFAULT_FEEL);
     this.rules = makeRules();

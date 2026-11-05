@@ -103,7 +103,7 @@ async function tour(name) {
   };
   await shot('title', () => g(() => window.game.menus.reset('title')));
   await shot('modes', () => g(() => window.game.menus.reset('modes', undefined, ['title'])));
-  await shot('video', () => g(() => window.game.menus.push('video')));
+  await shot('video', () => g(() => window.game.menus.push('settings')));
   await shot('controls', () => g(() => window.game.menus.reset('controls', undefined, ['title', 'modes'])));
   await shot('hangar', () => g(() => { window.game.menus.reset('modes', undefined, ['title']); window.game.openFreePlay(); }), 2500);
   await shot('pilot', () => g(() => window.game.menus.push('pilot')), 1500);

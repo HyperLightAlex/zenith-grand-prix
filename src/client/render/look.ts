@@ -7,6 +7,7 @@ import { geometryMarks, MECH_OUTLINE_DEFAULT } from './mech/ink';
 // shadow shifted toward violet, ink lines, poses and effects drawn on twos,
 // a film layer of grain and halation, and a few cuts of its own for big
 // moments. Everything here is presentation; the race never sees it.
+import { settings } from '../settings';
 import * as THREE from 'three';
 import type { Feel } from '../game/tuning';
 import type { Theme } from './themes';
@@ -56,7 +57,8 @@ export function readLook(f: Feel): void {
   look.ink = f.lookInk;
   look.boil = f.lookBoil;
   look.steps = Math.round(f.lookSteps);
-  look.impact = f.lookImpact >= 0.5;
+  // (Reduce flashes, in Settings: no impact frames.)
+  look.impact = f.lookImpact >= 0.5 && !settings.reduceFlashes;
   look.still = f.lookStill >= 0.5;
 }
 

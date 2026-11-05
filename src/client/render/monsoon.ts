@@ -18,6 +18,7 @@
 // cenote's wet rock and the canopy; low storm clouds stand round the
 // circuit, lit by the lightning, and each strike is the painted cloud with
 // the bolt out of its belly.
+import { settings } from '../settings';
 import * as THREE from 'three';
 import { moves } from './still';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -1684,6 +1685,8 @@ export function buildMonsoon(ctx: JungleCtx): void {
         const dt = t - at;
         if (dt >= 0) v = Math.max(v, Math.exp(-dt * 16));
       }
+      // (Reduce flashes, in Settings: the lightning dimmed.)
+      if (settings.reduceFlashes) v *= 0.3;
       bolt.visible = v > 0.3 && !(paintedOn && strikeCard);
       ctx.flash(v * 0.9, dir);
       rain.flash(v);

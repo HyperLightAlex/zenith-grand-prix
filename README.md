@@ -107,12 +107,23 @@ full screen. The menus work held either way round and scroll where they do
 not fit; races are played sideways (held upright, a race asks to be turned,
 and offline it waits). A handheld with its own controls, such as a Retroid
 Pocket, works as a gamepad on its own screen. The layouts follow the picture,
-so 16:9 and 4:3 (Video, Screen shape) both fit any screen. The picture is
-drawn at full resolution unless you choose otherwise: on a slower device,
-Video, Resolution trades sharpness for speed (85%, 70%, 55%, or Automatic,
-which follows the frame rate).
+so 16:9 and 4:3 (Settings, Video, Screen shape) both fit any screen. The
+picture is drawn at full resolution unless you choose otherwise: on a slower
+device, Settings, Video, Resolution trades sharpness for speed (85%, 70%,
+55%, or Automatic, which follows the frame rate).
+
+**Settings** (from the title's modes, or the pause menu) has five tabs:
+Video, Sound (the volumes), Camera (distance, field of view, shake, speed
+effects, the look inverted, rumble), Controls (remap any race action on the
+pad or the keyboard: pick it and press the new button) and Accessibility
+(fewer flashes, less motion, the HUD's size, the hints, guard and carve held
+or toggled). **Records** keeps your career and your fastest speed lap and
+race on each circuit in each frame, on this device; no account is needed.
 
 ## Controls
+
+As they come; Settings, Controls remaps the race's actions on the pad and the
+keyboard, and the hints follow.
 
 | | Gamepad | Keyboard | Touch |
 |---|---|---|---|
@@ -133,7 +144,7 @@ which follows the frame rate).
 | Team plays: Blitz, Run, Shield, Mark | D-pad up, right, down, left | 1 2 3 4 | Team, then the play |
 | Pause | Start | Esc | Pause (top right) |
 | Tuning panel | Back | T | |
-| Full screen | Video → Full screen | F | Video → Full screen |
+| Full screen | Settings → Video → Full screen | F | Settings → Video → Full screen |
 | Switch the look (80s anime / plain) | Pause → Look | G | |
 | Compare Sunhawk designs | Garage / Pause → Sunhawk design | B | |
 
@@ -375,7 +386,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run build` | Type-check, then build the game to `dist/` and the server to `dist-server/` |
 | `npm start` | Serve the built game and run the rooms on one port |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Test suite: simulation, Grand Prix, lobby and online races (1,000 tests) |
+| `npm test` | Test suite: simulation, Grand Prix, lobby and online races (about 1,770 tests) |
 | `npm run bots -- 6 4` | Four rooms of six bot players on a running server: a check and a load test |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |

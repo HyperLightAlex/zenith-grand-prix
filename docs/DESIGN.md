@@ -814,6 +814,31 @@ team whose people have all dropped out gets the computer captain.
 | Shield | Form up on their forward and hit anyone who comes close |
 | Mark | All go for your locked target (or the rival forward if you have none) |
 
+**A forward boxed in.** A forward can be shut in behind a rival
+midfielder or defender in the pack, unable to get round. When a rival
+support sits in front of their forward (1 to 34 units ahead, within 9 of
+its line, not pulling away) for 2 seconds, computer teammates up to 420
+units away come back for it: they ease off and brake to drop back, and
+the one who reaches it takes the blocker on. Under Shield they come after
+0.75 seconds, and Shield's escort reaches 400 units, dropping back as well
+as closing up. What they do not do is come back for a forward that is
+being *fought* (locked onto or hit): that is left to the doctrine above
+(midfielders back up whoever is in a fight), Shield included. An earlier
+version sent everyone back for a forward under attack, and it took about a
+third of the forwards' knockouts out of the battle lap; hunting the rival
+forward is the game's main team play, so a forward in a fight still has to
+be reached the ordinary way (`holderOf` in `src/sim/ai.ts`;
+`tests/team-ai.test.ts`).
+
+**The speed lap's duel.** On lap 3 a computer forward chasing within 160
+units sits in the tow rather than passing at once, with Drive held back,
+and strikes about 420 units from the line, when the slingshot carries it
+past. One leading keeps 30 Drive in hand (42 while the line is more than
+600 away), moves once off its line to break the chaser's tow, and covers a
+pass with a boost of its own. A close duel between equal pilots is now
+about even on every circuit (it ranged from 30% to 82% for the one ahead),
+and the lead changes hands about 1.5 times a speed lap rather than about 4.
+
 ### Scoring and matches
 
 - Placing points 15 / 7 / 5 / 3 / 2 / 1. A knocked-out mech gets none.
@@ -1014,6 +1039,57 @@ nearer or farther (the triggers, Z and C, the wheel or a pinch), a longer or
 wider lens and a tilt, with the HUD gone. The picture is saved as a PNG at
 2560 pixels on its long side whatever the screen, named for the circuit and
 the time; the hints can be hidden too.
+
+### Settings
+
+One screen, from the title's modes and the pause menu, with five tabs
+(LB and RB, Q and E, or a click on the tab). Everything applies at once and
+is kept on this device (`src/client/settings.ts`, `ui/screens/settings.ts`).
+
+- **Video**: what the Video screen had (panel lines, CRT, animation,
+  resolution, frame rate, screen shape, full screen).
+- **Sound**: master, music, effects, and the engine and wind under them, in
+  tenths. They are the tuning panel's feel values, so the panel and this
+  tab agree.
+- **Camera**: distance (four steps, the locked-on camera with it), field of
+  view (56° to 80°), speed effects and screen shake (off, low, full), the
+  look turned round on either axis, and the pad's rumble.
+- **Controls**: every race action on the gamepad and the keyboard. Choose
+  one, press its new button or key, and whatever had it takes the old one,
+  so nothing is left unbound. X puts one back as it came, Y all of them.
+  The game keeps Start, Back, the D-pad (team plays) and Escape, P, F, M,
+  1 to 4, T, G and the backquote for itself; menus keep their own buttons.
+  The steering is the stick's and stays there. The HUD's hints and the
+  tutorial name whatever the buttons now are. Touch is not remapped.
+- **Accessibility**: reduce flashes (the white flash on hits and boosts a
+  quarter as bright, no impact frames, Monsoon's lightning dimmed), reduce
+  motion (shake off, speed effects down, the menus and HUD still), the
+  HUD's size (85% to 130%), the hints on or off, and guard and carve held
+  or toggled.
+
+### Records
+
+Personal records, on this device, with no account (`src/client/game/records.ts`,
+saved as `zgp.records`). Every Free Play and Grand Prix race (not the
+tutorial, not online) adds to a **career**: races, wins, the first three,
+points, support points, knockouts made and taken, MVPs, and those by frame
+and circuit. Each circuit keeps, for each frame, the **fastest speed lap**
+(lap 3, flat out) and the **fastest race**. A new one is announced on the
+results, with the award chime. The Records screen shows the career,
+the medals and cups, and a table of circuits by frame. Clearing it leaves
+the Grand Prix medals alone.
+
+The speed lap record is kept with its lap as a **ghost**, ready for time
+trials. A `LapTracer` watches the local mech after every tick: it times
+each lap to the part of a tick (the three add up to the race time) and
+samples the lap ten times a second (distance along the road, offset from
+its line, height, facing, speed, and the pose flags). A ghost is those
+samples as 16-bit fixed-point numbers (the distance as the step from the
+last sample), in base64, about 8 kB for a speed lap of Meridian, with the circuit, frame, look
+and time. `ghostAt(ghost, t)` gives where it
+was at any moment, eased between samples. A time trial then needs only a
+mode that races one mech alone and draws `ghostAt` as a see-through mech;
+the record, the format and the timing are already there.
 
 ### Before the race
 
@@ -1314,9 +1390,13 @@ speed lap, the one behind on 50% armour and the leader on 90% (measured in
 | 300 units | No Cells | Out of reach of the tow: loses by about 3 s |
 | 300 units | One or two Cells | Catches up; wins a little under half |
 
-Computer pilots do not defend a lead (no weaving out of a chaser's line, no
-saved boost), so a person leading should do better than these figures and a
-person chasing should not expect it to be this even.
+Those figures predate the computer pilots' speed-lap duel (see Team plays):
+they now hold the tow and strike late when chasing, and keep Drive back and
+break the tow when leading. With it, over 100 races a circuit, a forward
+ahead at the start of the speed lap stays ahead of the rival forward 50% to
+61% of the time (77% to 100% from more than 120 units back), and the
+leader at the start of lap 3 wins 45% (Crucible) to 72% (Canyon).
+Knockouts are unchanged (Meridian 1.10 a race against 1.13 before).
 
 ## 5. What I could not judge
 
@@ -1452,16 +1532,21 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
 
 ## 7. Known gaps
 
-- Computer pilots do not defend a lead on lap 3 and do not time a slingshot
-  for the line.
-- Almost every knockout is a forward. Support mechs are rarely in danger, so
-  the "lose the round despite winning the race" result is possible but rare.
+- Knockouts fall on forwards and midfielders about equally (45 to 55 of
+  each per 100 races, fewer midfielders at Canyon); defenders go down 5 to
+  13 times per 100 races. The race winner's team loses the round 2%
+  (Canyon) to 20% (Meridian, Crucible) of the time. A balance pass is being
+  talked through; nothing is changed yet.
 - Computer pilots carve by the line they want rather than holding a carve
   tight, so they seldom reach the third tier except in long hairpins. They
   never play for a Lead-out (it almost never happens in their races) and use
   the guard swing only to slip a blow, not to get round a guard.
-- Support points are only shown in the results; there is nowhere to keep a
-  pilot's record by role until there are accounts.
+- Records are kept on the device only: nothing syncs between devices, and
+  online races are not counted. The speed lap ghosts are recorded but there
+  is no time trial to race them in yet.
+- Computer teammates come back for a forward boxed in behind a rival
+  support, but not one stuck behind the rival forward (that is a race, not
+  a block) and, on purpose, not one being fought (see Team plays).
 - Switching target is left and right only. There is no way to pick a target
   behind you, or one further than 125 units, without letting go first.
 - Computer pilots do not set up ring-outs on purpose, beyond running up on the
@@ -1473,7 +1558,9 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
   motion: the race does not wait for anyone. A late hit can look a moment
   late on the other person's screen (the server decides every hit).
 - Online rooms play the standard rules; there are no rule presets yet.
-- No options screen yet (volume, quality, remapping).
+- Remapping covers the race's actions on the pad and keyboard; the steering
+  stick, the menus and touch are fixed, and a pad that is not in the
+  standard layout gets the standard names.
 - Mech-to-mech contact is a simple circle push; only a Ram does damage.
 - The minimap marks a dark gate with an outline but does not show how long
   it has left.

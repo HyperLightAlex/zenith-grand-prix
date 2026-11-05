@@ -1453,6 +1453,8 @@ html.lay-cols .menu[data-screen='garage'] .panes { grid-template-columns: minmax
 html.lay-cols .menu:is([data-screen='room'], [data-screen='results'], [data-screen='controls']) .panes { grid-template-columns: minmax(0, 1fr); }
 html.lay-cols .menu:is([data-screen='briefing'], [data-screen='standings'], [data-screen='online']) .panes { grid-template-columns: minmax(0, 30em) minmax(0, 34em); }
 html.lay-cols .menu[data-screen='ceremony'] .panes { grid-template-columns: minmax(0, 32em) minmax(0, 40em); }
+html.lay-cols .menu[data-screen='settings'] .panes { grid-template-columns: minmax(0, 54em); }
+html.lay-cols .menu[data-screen='records'] .panes { grid-template-columns: minmax(0, 30em) minmax(0, 44em); }
 /* The hangar sits low, its panels on the floor either side of the mech. */
 html.lay-single .menu[data-screen='garage'] .panes::after { display: none; }
 
@@ -2234,3 +2236,58 @@ table.pilots tr.me .ptsbar { background: rgba(15, 21, 36, 0.14); }
 .menu .panel.ceremony-pilots.many .gptable { font-size: 1.05em; }
 html.compact .mention.mvp b { font-size: 1.4em; }
 html.compact .menu .col.ceremony h1 { font-size: 2.4em; }
+
+/* ---- Settings (screens/settings.ts) ------------------------------------------
+   One screen, its tabs along the top (LB and RB), the Controls tab a table:
+   each action, its gamepad button and its keys, the column being remapped lit. */
+.menu .col.settings { top: 2.2em; bottom: 4.4em; width: 40em; justify-content: safe center; gap: 0.5em; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.menu .col.settings.binds { width: 54em; }
+.menu .col.settings h1 { font-size: 3.4em; }
+.tabs { display: flex; align-items: center; gap: 0.3em; flex-wrap: wrap; font-size: 1.2em; }
+.tabs .key { font-size: 0.8em; }
+.tabs .tab { padding: 0.3em 0.9em 0.34em; background: rgba(255, 255, 255, 0.08); clip-path: polygon(0.4em 0, 100% 0, calc(100% - 0.4em) 100%, 0 100%); font-weight: 700; cursor: pointer; pointer-events: auto; }
+.tabs .tab.on { background: var(--signal); color: var(--ink); }
+.menu .col.settings .list { margin-top: 0.3em; }
+.menu .col.settings .item { font-size: 1.45em; }
+.menu .col.settings .match-blurb { margin-top: 0.4em; min-height: 3.6em; }
+.menu .bind { display: grid; grid-template-columns: minmax(0, 1fr) 8.5em 11em; align-items: center; gap: 0.6em; }
+.menu .bind.head { padding: 0 1.5em 0 1.3em; font-size: 1em; font-weight: 600; opacity: 0.7; }
+.menu .bind.head span:not(:first-child) { text-align: center; }
+.menu .bind.head span.on { color: var(--signal); opacity: 1; }
+.menu .col.settings .item.bind { font-size: 1.15em; padding-top: 0.3em; padding-bottom: 0.34em; }
+.menu .item.bind .cell { text-align: center; font-weight: 600; opacity: 0.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu .item.bind .cell.on { opacity: 1; }
+.menu .item.bind.sel .cell.on { background: var(--signal); color: var(--ink); clip-path: polygon(0.3em 0, 100% 0, calc(100% - 0.3em) 100%, 0 100%); }
+.menu .item.bind .cell.fixed { font-weight: 500; font-style: italic; }
+.menu .col.settings p.note { font-size: 1.15em; max-width: 34em; opacity: 0.85; }
+/* Waiting for the new button. */
+.menu .capture { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; gap: 0.4em; justify-items: center; padding: 1.4em 2.6em 1.5em; background: rgba(10, 15, 28, 0.95); box-shadow: inset 0 0.25em 0 var(--signal), 0 1em 3em rgba(0, 0, 0, 0.5); z-index: 5; text-align: center; }
+.menu .capture b { font-size: 2em; font-weight: 800; }
+.menu .capture p { font-size: 1.3em; max-width: none; }
+.menu .capture small { font-size: 1em; opacity: 0.7; }
+
+/* ---- Records (screens/records.ts) --------------------------------------------- */
+.menu .col.records { top: 2em; bottom: 4.4em; justify-content: safe center; gap: 0.6em; overflow-y: auto; scrollbar-width: thin; }
+.menu .col.records h2 { margin: 0.4em 0 0; font-size: 1.15em; font-weight: 800; color: var(--signal); }
+.menu .career { display: grid; grid-template-columns: max-content 1fr; gap: 0.25em 1.2em; font-size: 1.15em; }
+.menu .career span { font-weight: 500; opacity: 0.8; }
+.menu .career b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.menu .panel.records-table { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 44em; max-height: calc(100% - 7em); overflow-y: auto; scrollbar-width: thin; }
+.menu .panel.records-table p.note { font-size: 1em; max-width: none; opacity: 0.75; margin-bottom: 0.6em; }
+table.records { width: 100%; border-collapse: separate; border-spacing: 0 0.16em; font-size: 1.1em; }
+table.records th { text-align: left; font-weight: 500; opacity: 0.7; padding: 0 0.6em 0.1em; font-size: 0.8em; }
+table.records th.num, table.records td.num { text-align: right; }
+table.records td { padding: 0.28em 0.6em 0.32em; background: rgba(255, 255, 255, 0.06); font-variant-numeric: tabular-nums; font-weight: 700; }
+table.records td small { display: block; font-size: 0.7em; font-weight: 500; opacity: 0.65; }
+table.records td.none { opacity: 0.35; }
+table.records td.who { font-weight: 700; }
+
+/* A record the race just run set, on its results. */
+.results .recordline { display: inline-block; margin-top: 0.7em; padding: 0.35em 1em 0.4em; font-size: 1.2em; font-weight: 600; background: rgba(255, 201, 58, 0.16); box-shadow: inset 0.25em 0 0 var(--cell); }
+.results .recordline b { color: var(--cell); font-weight: 800; margin-right: 0.2em; }
+
+/* ---- The player's settings, where they show -------------------------------------
+   The race HUD's size; its button hints off; the menus' and the HUD's movement stilled. */
+.ui.hud { font-size: calc(var(--ui-em, clamp(11px, 1.75vmin, 24px)) * var(--hud-scale, 1)); }
+html.no-hints .hud .hints { display: none; }
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

@@ -4,6 +4,7 @@
 import { mechName } from '../../../custom/mechBuild';
 import { AWARD_NAMES, ROLE_NAMES, roundsToWin, standings, type MatchState, type RaceState } from '../../../sim/index';
 import type { Game } from '../../game/game';
+import { fmtRecord } from '../../game/records';
 import { factionName } from '../../render/palette';
 import { h } from '../dom';
 import { emblemUrl, faceUrl } from '../factionArt';
@@ -38,6 +39,17 @@ function sideStyle(el: HTMLElement, t: TeamLook): HTMLElement {
  * A Sprint's results: who won the race (and the Sprint, once decided),
  * your finish, the race's order, and over several races the standings.
  */
+/** A record the race just run set (your speed lap, your race), with what it beat; null for none. */
+function recordLine(g: Game): HTMLElement | null {
+  const n = g.newRecords;
+  if (!n || (!n.lap && !n.race)) return null;
+  const parts: string[] = [];
+  const was = (w: number | null) => (w === null ? '' : ` (was ${fmtRecord(w)})`);
+  if (n.lap) parts.push(`speed lap ${fmtRecord(n.lap.time)}${was(n.lap.was)}`);
+  if (n.race) parts.push(`race ${fmtRecord(n.race.time)}${was(n.race.was)}`);
+  return h('div.recordline', h('b', parts.length > 1 ? 'New records' : 'New record'), ` ${parts.join(', ')}. Kept under Records.`);
+}
+
 function sprintResults(g: Game, race: RaceState, match: MatchState | null, box: HTMLElement): void {
   const looks = teamLooks(race, g.factions);
   const youId = g.resultsLocal;
@@ -127,7 +139,7 @@ export function registerRace(m: Menus, g: Game): void {
       // What the frame you are flying is for (the other two a step away).
       const flying = g.session.race.mechs[g.session.localId];
       if (flying) m.button(list, `Frame guide: ${ROLE_NAMES[flying.role]}`, () => m.push<PrimerData>('primer', { role: flying.role, inRace: true }), { key: 'primer' });
-      m.button(list, 'Video', () => m.push('video'), { key: 'video' });
+      m.button(list, 'Settings', () => m.push('settings'), { key: 'settings', note: 'Video, sound, camera, controls, accessibility' });
       if (online) {
         const gp = !!g.online.lobby?.gp;
         m.button(list, gp ? 'Leave the Grand Prix' : 'Leave match', () => confirmDialog(m, gp ? 'Leave the Grand Prix?' : 'Leave the match?', gp ? 'Your squad carries on without you, and a computer pilot takes your frame.' : 'Your seat goes to a computer pilot for the rest of this match.', 'Leave', () => g.leaveMatch()), { key: 'leave' });
@@ -199,6 +211,8 @@ export function registerRace(m: Menus, g: Game): void {
       const box = h('div.results');
       if (race.sprint) {
         sprintResults(g, race, match, box);
+        const rec = recordLine(g);
+        if (rec) box.querySelector('.subline')?.after(rec);
         resultButtons(m, g, box, !match || match.winner >= 0, !match || (match.cfg.mode === 'races' && (match.cfg.races ?? 1) <= 1), true);
         m.root.append(h('div.shade.full'), m.panes(box));
         return;
@@ -250,6 +264,8 @@ export function registerRace(m: Menus, g: Game): void {
         if (round.tied) lines.push(`Level on points, so the round goes to ${names[round.winner]}, who came home first.`);
       }
       box.append(h('div.subline', lines.join(' ')));
+      const rec = recordLine(g);
+      if (rec) box.append(rec);
       if (g.mode === 'tutorial') {
         // The tutorial's last word, before the detail: how the points came, and where next.
         const lesson = h('div.lesson-debrief', h('h2', 'Tutorial complete'));

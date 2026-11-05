@@ -58,6 +58,18 @@ export interface AiState {
   holdUntil: number;
   /** A midfielder closing in for a kick, until this tick. */
   closeUntil: number;
+  /**
+   * The rival holding up this pilot's forward (in its way, or locked on to
+   * it), as last seen, and since when (-1: nobody). Support pilots come to
+   * clear the way once it has lasted (see think).
+   */
+  helpFor: number;
+  helpSince: number;
+  /** ...and when it was last seen doing it (it is kept through a moment's let-up). */
+  helpSeen: number;
+  /** On the speed lap: a move made to break a chaser's tow or cover its pass, held until this tick, and to where across. */
+  defendUntil: number;
+  defendD: number;
 }
 
 export interface MechState {

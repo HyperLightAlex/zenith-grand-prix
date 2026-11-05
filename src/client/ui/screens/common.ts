@@ -6,54 +6,60 @@ import { CALLSIGN_CHARS, CALLSIGN_MAX, CODE_CHARS, CODE_LENGTH } from '../../../
 import { h } from '../dom';
 import { COVER, LOGO } from '../keyArt';
 import { art, type Menus } from '../menus';
+import { actionKeys, keyName, padButton, padName, type ActionId } from '../../settings';
 
 const RECORDED_MUSIC = typeof location !== 'undefined' && new URLSearchParams(location.search).get('music') !== 'synth';
 
-const CONTROLS: Array<[string, Array<[string, string, string]>]> = [
-  [
-    'Racing',
+/** Every control, on the pad and the keys, as they are mapped now (remapped in Settings, or as they come). */
+function controlsRows(): Array<[string, Array<[string, string, string]>]> {
+  const p = (id: ActionId) => padName(padButton(id) ?? 0);
+  const k = (id: ActionId) => keyName(actionKeys(id)[0] ?? '');
+  return [
     [
-      ['Steer', 'Left stick', 'A D'],
-      ['Accelerate', 'RT', 'W'],
-      ['Brake', 'LT', 'S'],
-      ['Carve (hold through a corner, let go to burst)', 'LT + left stick', 'S + A or D'],
-      ['Boost (uses Drive)', 'A', 'Space'],
-      ['Ability (uses a Cell)', 'B', 'R'],
-      ['Look around', 'Right stick', ''],
-      ['Look back', 'R3', 'V'],
-      ['Pause', 'Start', 'Esc'],
-      ...(DEV_TOOLS ? [['Tuning panel', 'Back', 'T'] as [string, string, string], ['80s look on and off', '', 'G'] as [string, string, string]] : []),
-      ['Full screen', '', 'F'],
+      'Racing',
+      [
+        ['Steer', 'Left stick', `${k('left')} ${k('right')}`],
+        ['Accelerate', p('accel'), k('accel')],
+        ['Brake', p('brake'), k('brake')],
+        ['Carve (hold through a corner, let go to burst)', `${p('brake')} + left stick`, `${k('brake')} + ${k('left')} or ${k('right')}`],
+        ['Boost (uses Drive)', p('boost'), k('boost')],
+        ['Ability (uses a Cell)', p('ability'), k('ability')],
+        ['Look around', 'Right stick', ''],
+        ['Look back', p('lookBack'), k('lookBack')],
+        ['Pause', 'Start', 'Esc'],
+        ...(DEV_TOOLS ? [['Tuning panel', 'Back', 'T'] as [string, string, string], ['80s look on and off', '', 'G'] as [string, string, string]] : []),
+        ['Full screen', '', 'F'],
+      ],
     ],
-  ],
-  [
-    'Fighting',
     [
-      ['Lock on / let go', 'LB', 'Q'],
-      ['Move around the target', 'Left stick', 'W A S D'],
-      ['Ease off, so a target behind catches up', 'Let go of RT', 'W, with the target behind'],
-      ['Attack', 'X', 'J'],
-      ['Special', 'Y', 'K'],
-      ['Guard (tap late to parry)', 'LT (or RB)', 'L'],
-      ['Dash (at the target, hold to boost at it)', 'A', 'Space'],
-      ['Guard swing: arc round your target', 'Guard + stick ◀▶ + A', 'L + A/D + Space'],
-      ['Ability (a different one)', 'B', 'R'],
-      ['Switch target', 'Right stick', 'Z C'],
+      'Fighting',
+      [
+        ['Lock on / let go', p('lock'), k('lock')],
+        ['Move around the target', 'Left stick', `${k('accel')} ${k('left')} ${k('brake')} ${k('right')}`],
+        ['Ease off, so a target behind catches up', `Let go of ${p('accel')}`, `${k('accel')}, with the target behind`],
+        ['Attack', p('attack'), k('attack')],
+        ['Special', p('special'), k('special')],
+        ['Guard (tap late to parry)', `${p('brake')} (or ${p('guard')})`, k('guard')],
+        ['Dash (at the target, hold to boost at it)', p('boost'), k('boost')],
+        ['Guard swing: arc round your target', `Guard + stick ◀▶ + ${p('boost')}`, `${k('guard')} + ${k('left')}/${k('right')} + ${k('boost')}`],
+        ['Ability (a different one)', p('ability'), k('ability')],
+        ['Switch target', 'Right stick', `${k('targetPrev')} ${k('targetNext')}`],
+      ],
     ],
-  ],
-  [
-    'Team',
     [
-      ['Escort a teammate / back to the fight', 'L3', 'E'],
-      ['Blitz: everyone attacks', 'D-pad up', '1'],
-      ['Run: avoid fights, race', 'D-pad right', '2'],
-      ['Shield: protect our forward', 'D-pad down', '3'],
-      ['Mark: all on my target', 'D-pad left', '4'],
+      'Team',
+      [
+        ['Escort a teammate / back to the fight', p('escort'), k('escort')],
+        ['Blitz: everyone attacks', 'D-pad up', '1'],
+        ['Run: avoid fights, race', 'D-pad right', '2'],
+        ['Shield: protect our forward', 'D-pad down', '3'],
+        ['Mark: all on my target', 'D-pad left', '4'],
+      ],
     ],
-  ],
-  // The hangar's music is a setlist only with the recorded music (?music=suno).
-  ...(RECORDED_MUSIC ? [['Hangar', [['Next track', 'R3', 'M']]] as [string, Array<[string, string, string]>]] : []),
-];
+    // The hangar's music is a setlist only with the recorded music (?music=suno).
+    ...(RECORDED_MUSIC ? [['Hangar', [['Next track', 'R3', 'M']]] as [string, Array<[string, string, string]>]] : []),
+  ];
+}
 
 /** The same controls on the touch screen, by the rows' labels ('' for one with no touch control). */
 const TOUCH: Record<string, string> = {
@@ -147,7 +153,8 @@ export function registerCommon(m: Menus, g: Game): void {
         key: 'howto',
         note: g.tutorialDone ? 'The tutorial, what each frame does, the controls' : 'Start here: the tutorial, what each frame does, the controls',
       });
-      m.button(list, 'Video', () => m.push('video'), { key: 'video', note: 'Panel lines, CRT screen, animation, screen shape' });
+      m.button(list, 'Records', () => m.push('records'), { key: 'records', note: 'Your fastest laps and races, and your career' });
+      m.button(list, 'Settings', () => m.push('settings'), { key: 'settings', note: 'Video, sound, camera, controls, accessibility' });
       col.append(h('h1', 'Play'), list);
       m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, BACK));
     },
@@ -166,7 +173,7 @@ export function registerCommon(m: Menus, g: Game): void {
       const left = h('div');
       const right = h('div');
       const keycaps = (text: string) => h('span.keys', ...(text ? text.split(' ').map((part) => (/^(stick|up|down|left|right)$/i.test(part) ? h('span.word', part) : h('span.key', part))) : ['']));
-      CONTROLS.forEach(([title, rows], i) => {
+      controlsRows().forEach(([title, rows], i) => {
         const into = i === 0 ? left : right;
         into.append(h('h2', title));
         if (i < 2) into.append(h('div.rowc.head', h('span', ''), h('span', touch ? 'Touch' : 'Gamepad'), h('span', touch ? 'Gamepad' : 'Keyboard')));
