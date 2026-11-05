@@ -107,7 +107,7 @@ describe('the default rules', () => {
       pressureDamage: 90,
       backupDamage: 120,
       openerDamage: 60,
-      supportLoss: 0.5,
+      supportLoss: 0,
       assistSecs: 5,
     });
   });

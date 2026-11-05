@@ -326,8 +326,7 @@ placing points, and the team that knocked it out gets 3. So a team whose
 forward wins but whose other two mechs are knocked out loses the round, 15 to
 21, to a team that finished second, third and fourth.
 
-**Support points** count for the team too, up to 8 per pilot per race. A
-pilot that is knocked out loses half of its own (rounded against it):
+**Support points** count for the team too, up to 8 per pilot per race:
 
 | Who | For | Points |
 |---|---|---|

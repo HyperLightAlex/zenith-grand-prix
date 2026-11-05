@@ -146,7 +146,13 @@ export interface Rules {
   backupDamage: number;
   /** Damage teammates deal to a rival a Vector has snared, while it is snared, that earns the Vector one Opener point. */
   openerDamage: number;
-  /** The share of its support points a pilot loses when it is knocked out (0 keeps them all, 1 loses them all; rounded against the pilot). */
+  /**
+   * The share of its support points a pilot loses when it is knocked out (0
+   * keeps them all, 1 loses them all; rounded against the pilot). Off: a
+   * knockout already costs the placing and gives the rivals its points, so
+   * this made it a third penalty, mostly on the midfielder (tried at 0.5 in
+   * the balance pass, docs/DESIGN.md). Kept for the tuning panel.
+   */
   supportLoss: number;
   /** Seconds before a knockout that damage still counts as an assist. */
   assistSecs: number;
@@ -222,7 +228,7 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   pressureDamage: 90,
   backupDamage: 120,
   openerDamage: 60,
-  supportLoss: 0.5,
+  supportLoss: 0,
   assistSecs: 5,
 });
 

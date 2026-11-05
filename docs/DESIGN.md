@@ -99,11 +99,11 @@ Each award shows the moment it lands, the results break the score down by
 pilot and action, and a support pilot gets short prompts ("Your forward is
 under attack"). Computer pilots earn them by playing their roles.
 
-Since the balance pass, **a knockout costs support points**: the pilot
-knocked out loses half of its own (`rules.supportLoss`, 0.5, rounded against
-it; the Scoring tab has 0%, 25% ... 100%). It says so as it goes down, and the
-results show what went. See "Balance pass: the midfielder's job" in section
-4 for why, and what it did.
+A knocked-out pilot keeps the support points it earned. The balance pass
+tried taking half of them (`rules.supportLoss`, still on the Scoring tab,
+0% to 100%; at anything above 0 it says so as the pilot goes down and the
+results show what went) and turned it off: see "Balance pass: the
+midfielder's job" in section 4.
 
 **Circuits rebuilt for carving.** Each circuit gains corners tight enough
 that carving is the quick way round, with a straight after each to spend
@@ -1442,7 +1442,13 @@ The pass:
   name with the time left; the snarer's teammates are told to hit it. Computer
   midfielders Snare the rival forward with one Cell when a teammate is close
   enough to follow it in, and anyone close follows up a snared forward.
-- **A knockout costs support points**: half (`rules.supportLoss` 0.5).
+- **A knockout cost support points**: half (`rules.supportLoss` 0.5).
+  Turned off afterwards (0): a knockout already costs the knocked-out
+  pilot's team its placing and hands the rivals 3 points, and the pilot
+  earns nothing more; taking half its support points too made it a third
+  penalty (about 3 points more for a midfielder, whose knockout went from
+  about an 8-point swing to 11), falling mostly on the frame now asked to go
+  in and hunt.
 - **The Bulwark's armour is 1800** (was 2000), and the **Scatter Cannon's
   pellets do 5** (was 6): it was 40% of the defender's damage, more than
   either hammer blow, and the defender dealt half again the midfielder's.
@@ -1461,12 +1467,12 @@ After, the same 900 races:
 | Defender's damage per race | 1523 | 1372 |
 | Midfielder's support points from the hunt (Snare, Pressure, Opener) / Back-up | 1.1 / 3.4 | 2.4 / 2.1 |
 | Snares fired per midfielder per race | 0.7 | 1.1 |
-| Race winner's team loses the round | 12% | 15% (18% if a knockout cost them all) |
+| Race winner's team loses the round | 12% | 11% with support points kept (15% when a knockout cost half, 18% all) |
 
 Without the pellet trim (everything else as above) midfielders were knocked
 out 46 times per 100 races and defenders 21, and the defender dealt 1458 a
-race. By circuit the race winner's team loses 10% (Canyon) to 22%
-(Crucible) of rounds. Canyon's battle lap is the shortest (64 s against 66 to 75), so its
+race. By circuit, with support points kept, the race winner's team loses 6%
+(Canyon, Zenith) to 18% (Crucible) of rounds. Canyon's battle lap is the shortest (64 s against 66 to 75), so its
 supports are worn down least; its fights per second are no fewer.
 
 ## 5. What I could not judge
