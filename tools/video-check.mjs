@@ -53,7 +53,11 @@ check(kept.cls.includes('aspect-43') && kept.cls.includes('crt-on') && kept.step
 // In the pause menu too.
 await page.evaluate(() => window.game.startFree());
 await page.waitForFunction(() => window.game.debugState().state === 'race');
-await page.waitForTimeout(3000);
+// Past the flight over the circuit first (Esc during it only skips it): Enter skips it.
+await page.waitForTimeout(1500);
+await page.keyboard.press('Enter');
+await page.waitForFunction(() => window.game.flyover === null, null, { timeout: 300000 });
+await page.waitForTimeout(1000);
 await page.keyboard.press('Escape');
 await page.waitForFunction(() => window.game.menus.screen === 'pause');
 const pauseItems = await page.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
