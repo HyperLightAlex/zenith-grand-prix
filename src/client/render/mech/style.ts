@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { decodeBuild, LINES, PAINTS, raceNumber, styleOf, WEARS, type LiveryStyle } from '../../../custom/mechBuild';
 import type { Role } from '../../../sim/index';
+import { video } from '../../video';
 import type { Livery } from '../palette';
 import { buildCustomFrame } from './customFrame';
 import { buildFrame } from './frames';
@@ -58,7 +59,8 @@ export function wearRig(rig: MechRig, lost: number): void {
   const d = dressed.get(rig);
   if (!d) return;
   d.worst = Math.max(d.worst, Math.min(1, Math.max(0, lost)));
-  d.style.uWear.value = Math.min(1, d.base + d.worst * d.gain);
+  // Battle damage off (Settings, Video): the livery's own wear, nothing gathered.
+  d.style.uWear.value = Math.min(1, d.base + (video.damage ? d.worst * d.gain : 0));
 }
 
 /** Its material, freed with it. */

@@ -1054,7 +1054,9 @@ One screen, from the title's modes and the pause menu, with five tabs
 is kept on this device (`src/client/settings.ts`, `ui/screens/settings.ts`).
 
 - **Video**: what the Video screen had (panel lines, CRT, animation,
-  resolution, frame rate, screen shape, full screen).
+  resolution, frame rate, screen shape, full screen), and battle damage: the
+  scuffs and soot a mech's armour gathers as it is hurt, off for clean mechs
+  (a veteran livery's own wear stays, and a badly hurt mech still smokes).
 - **Sound**: master, music, effects, and the engine and wind under them, in
   tenths. They are the tuning panel's feel values, so the panel and this
   tab agree.

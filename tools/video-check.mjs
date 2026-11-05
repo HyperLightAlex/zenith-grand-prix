@@ -23,9 +23,9 @@ await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefi
 await page.locator('.menu .item', { hasText: 'Settings' }).click();
 await page.waitForFunction(() => window.game.menus.screen === 'settings');
 const items = await page.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
-// Settings opens on its Video tab: six settings, Full screen only where the browser allows it.
+// Settings opens on its Video tab: seven settings, Full screen only where the browser allows it.
 const full = items.some((t) => t.startsWith('Full screen'));
-check(items.length === (full ? 7 : 6) && items[0].startsWith('Armor panel lines'), `the Video tab: ${items.join(' / ')}`);
+check(items.length === (full ? 8 : 7) && items[0].startsWith('Armor panel lines') && items[1].startsWith('Battle damage'), `the Video tab: ${items.join(' / ')}`);
 await page.waitForTimeout(2500);
 if (out) await page.screenshot({ path: `${out}/video-plain.png` });
 const click = (label) => page.locator('.menu .item', { hasText: label }).click();

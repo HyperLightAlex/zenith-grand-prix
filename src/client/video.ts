@@ -3,6 +3,8 @@
 // (lookSteps), so the tuning panel and this agree; the rest live here.
 //
 //   panels  the panel lines on the mechs' armor
+//   damage  battle damage: the scuffs and soot a mech's armour gathers as it
+//           is hurt (a veteran livery's own wear stays either way)
 //   crt     the CRT screen: a pass on the 3D picture (render/lookPasses.ts)
 //           and a layer of scanlines, phosphor mask and vignette over
 //           everything (.crt-layer in styles.css)
@@ -45,6 +47,7 @@ export const FRAME_RATES: ReadonlyArray<{ id: FrameRate; label: string; cap: num
 
 export interface VideoSettings {
   panels: boolean;
+  damage: boolean;
   crt: boolean;
   aspect: Aspect;
   resolution: Resolution;
@@ -52,13 +55,14 @@ export interface VideoSettings {
 }
 
 const KEY = 'zgp.video';
-const DEFAULTS: VideoSettings = { panels: true, crt: false, aspect: 'wide', resolution: 'full', frameRate: 'screen' };
+const DEFAULTS: VideoSettings = { panels: true, damage: true, crt: false, aspect: 'wide', resolution: 'full', frameRate: 'screen' };
 
 function load(): VideoSettings {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}') as Partial<VideoSettings>;
     return {
       panels: typeof v.panels === 'boolean' ? v.panels : DEFAULTS.panels,
+      damage: typeof v.damage === 'boolean' ? v.damage : DEFAULTS.damage,
       crt: typeof v.crt === 'boolean' ? v.crt : DEFAULTS.crt,
       aspect: v.aspect === 'classic' ? 'classic' : 'wide',
       resolution: RESOLUTIONS.some((r) => r.id === v.resolution) ? (v.resolution as Resolution) : DEFAULTS.resolution,

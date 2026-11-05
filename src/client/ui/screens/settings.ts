@@ -34,6 +34,7 @@ export interface SettingsData {
 /** What the highlighted setting does. */
 const ABOUT: Record<string, string> = {
   panels: "The panel lines cut into the mechs' armor.",
+  damage: "The scuffs and soot a mech's armor gathers as it is hurt in a race. Off keeps every mech as clean as its livery (a veteran finish stays worn). A badly hurt mech still trails smoke either way.",
   crt: "A tube TV: scanlines, the phosphor mask, colour that bleeds along the line, and the tube's dark corners.",
   drawings: "How often the mechs' poses and the effects are redrawn. 12 is animation on twos, as the series was drawn; 30 is smoother. The race itself always runs at full speed.",
   resolution: 'How sharp the 3D picture is drawn. Full is the sharpest, with the mechs\' ink lines at their proper weight. A lower one runs faster on a slow device, but the picture and its lines come out softer and thinner. Automatic lowers it by itself whenever frames run slow.',
@@ -83,6 +84,7 @@ export function registerSettings(m: Menus, g: Game): void {
 
   function videoTab(list: HTMLElement): void {
     m.choice(list, 'Armor panel lines', onOff(video.panels), () => g.setVideo({ panels: !video.panels }), { key: 'panels' });
+    m.choice(list, 'Battle damage', onOff(video.damage), () => g.setVideo({ damage: !video.damage }), { key: 'damage' });
     m.choice(list, 'CRT screen', onOff(video.crt), () => g.setVideo({ crt: !video.crt }), { key: 'crt' });
     const steps = g.drawingsPerSecond;
     m.choice(list, 'Animation', `${steps} drawings a second`, () => g.setDrawings(steps === 30 ? 12 : 30), { key: 'drawings', locked: g.lookOn() ? null : 'The plain look always animates smoothly' });
