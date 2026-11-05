@@ -578,7 +578,11 @@ export const ATTACKS: AttackDef[] = [
     key: 'df_scatter', name: 'Scatter Cannon', kind: 'shot',
     windup: 13, active: 2, recovery: 26,
     reach: 0, arc: 0.5,
-    damage: 6, guardDamage: 5, stagger: 7, knockback: 5,
+    // 5 a pellet (it was 6: in bot races it was 40% of the defender's damage,
+    // more than either hammer blow, and the defender dealt half again the
+    // midfielder's damage; at 5 the defender deals 7% less, forwards are
+    // knocked out as often and midfielders a little less).
+    damage: 5, guardDamage: 5, stagger: 7, knockback: 5,
     // (Its cooldown was 160 ticks: at about 11 a second point blank it was the
     // weakest heavy of the three, and the defender's second button seldom
     // worth pressing.)

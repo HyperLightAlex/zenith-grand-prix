@@ -478,7 +478,7 @@ describe('shots and projectiles', () => {
     expect(foe.hp).toBe(CLASSES[foe.role].maxHp - 3 * ATTACKS[ATK.MF_BURST].damage);
   });
 
-  it('Defender secondary (Scatter Cannon) fires six pellets at once, 6 damage each', () => {
+  it('Defender secondary (Scatter Cannon) fires six pellets at once, scatter.damage (5) each', () => {
     const { a, vic } = duel(DF0, FW1, 15);
     const T = a.tap(DF0, BTN.Y);
     a.step(30);
@@ -488,8 +488,9 @@ describe('shots and projectiles', () => {
     const hits = a.events('hit');
     expect(hits.length).toBeGreaterThanOrEqual(CHAIN_LIMIT);
     expect(hits.length).toBeLessThanOrEqual(6);
-    expect(hits.every((e) => e.damage === 6 && e.heavy && e.victim === FW1)).toBe(true);
-    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - 6 * hits.length);
+    expect(scatter.damage).toBe(5);
+    expect(hits.every((e) => e.damage === scatter.damage && e.heavy && e.victim === FW1)).toBe(true);
+    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - scatter.damage * hits.length);
     expect(a.events('projEnd').length).toBe(6);
   });
 
@@ -498,13 +499,13 @@ describe('shots and projectiles', () => {
   // fifth pellet trips the victim's CHAIN_LIMIT escape and the sixth is
   // evaded: the full blast does 30, not 36, and hands the victim 50 ticks of
   // invulnerability. That may or may not be what "chain limit" is meant to do.
-  it('a point-blank Scatter Cannon lands all six pellets (36 damage)', () => {
+  it('a point-blank Scatter Cannon lands all six pellets (30 damage)', () => {
     const { a, vic } = duel(DF0, FW1, 15);
     a.tap(DF0, BTN.Y);
     a.step(30);
     expect(a.events('hit').length).toBe(6);
     expect(a.events('escape').length).toBe(0);
-    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - 36);
+    expect(vic.hp).toBe(CLASSES[vic.role].maxHp - 6 * scatter.damage);
   });
 
   it('the scatter pattern is too short-ranged to reach a distant target', () => {

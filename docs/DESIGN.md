@@ -654,7 +654,7 @@ Every attack has wind-up, active and recovery frames (60 ticks a second).
 |---|---|---|
 | Swift (forward) | Edge: three blade strikes, 20 / 22 / 40 damage | Lance Dash: armoured lunge across a 30 m gap, 56 damage, 12 Drive |
 | Vector (midfielder) | Carbine: three-round burst to 62 m, 8 a round, a burst every 0.45 s; hold the trigger to keep firing (about 53 a second, against the blades' 75 to 80; it was 7 a round every 0.55 s, 38 a second) | Stun Kick: 34 damage, big knockback |
-| Bulwark (defender) | Breaker: two hammer blows, 36 / 54, the second breaks guards | Scatter Cannon: six pellets inside 30 m, 6 each, ready again 1.5 s after the blast (it was 2.7 s) |
+| Bulwark (defender) | Breaker: two hammer blows, 36 / 54, the second breaks guards | Scatter Cannon: six pellets inside 30 m, 5 each (6 before the balance pass), ready again 1.5 s after the blast (it was 2.7 s) |
 
 - **Guard** (LT, or RB; L on the keyboard): hits from the front do 15%
   damage and drain the guard gauge. At zero, or against a guard-breaking
@@ -1441,7 +1441,9 @@ The pass:
   midfielders Snare the rival forward with one Cell when a teammate is close
   enough to follow it in, and anyone close follows up a snared forward.
 - **A knockout costs support points**: half (`rules.supportLoss` 0.5).
-- **The Bulwark's armour is 1800** (was 2000).
+- **The Bulwark's armour is 1800** (was 2000), and the **Scatter Cannon's
+  pellets do 5** (was 6): it was 40% of the defender's damage, more than
+  either hammer blow, and the defender dealt half again the midfielder's.
 
 Tried and left out: computer midfielders joining the forwards' duel. The
 rival forward turned its blades on the midfielder, forwards were knocked out
@@ -1451,16 +1453,18 @@ After, the same 900 races:
 
 | | Before | After |
 |---|---|---|
-| Forwards knocked out, per 100 races (lap 2) | 45 (36) | 41 (33), within the noise of 900 races |
-| Midfielders | 43 | 46 |
-| Defenders | 13 | 21 |
-| Defender's damage per race | 1523 | 1458 |
+| Forwards knocked out, per 100 races (lap 2) | 45 (36) | 40 (33), within the noise of 900 races |
+| Midfielders | 43 | 41 |
+| Defenders | 13 | 17 |
+| Defender's damage per race | 1523 | 1372 |
 | Midfielder's support points from the hunt (Snare, Pressure, Opener) / Back-up | 1.1 / 3.4 | 2.4 / 2.1 |
 | Snares fired per midfielder per race | 0.7 | 1.1 |
-| Race winner's team loses the round | 12% | 17% (20% if a knockout cost them all) |
+| Race winner's team loses the round | 12% | 15% (18% if a knockout cost them all) |
 
-By circuit the race winner's team now loses 7% (Canyon) to 32% (Crucible) of
-rounds. Canyon's battle lap is the shortest (64 s against 66 to 75), so its
+Without the pellet trim (everything else as above) midfielders were knocked
+out 46 times per 100 races and defenders 21, and the defender dealt 1458 a
+race. By circuit the race winner's team loses 10% (Canyon) to 22%
+(Crucible) of rounds. Canyon's battle lap is the shortest (64 s against 66 to 75), so its
 supports are worn down least; its fights per second are no fewer.
 
 ## 5. What I could not judge
@@ -1600,10 +1604,7 @@ mechs replacing the built-in ones (drop-in as glTF), spectating, replays.
 - Balance (see "Balance pass" in section 4) is measured with computer
   pilots, who follow fixed doctrine: they leave the rival forward to the
   forwards' duel unless a play says otherwise, so they hunt it far less
-  than a team of people will. The defender still deals about half again the
-  midfielder's damage, 40% of it the Scatter Cannon; trimming its pellets
-  from 6 to 5 was tried (7% less defender damage, forward knockouts
-  unchanged) and is not in.
+  than a team of people will.
 - Computer pilots carve by the line they want rather than holding a carve
   tight, so they seldom reach the third tier except in long hairpins. They
   never play for a Lead-out (it almost never happens in their races) and use
