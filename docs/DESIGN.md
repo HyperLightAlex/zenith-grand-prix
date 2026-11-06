@@ -1436,20 +1436,37 @@ livery is (CUSTOMIZATION.md, "Earned in the Grand Prix").
   race in progress, so both formats use the identical race.
 - **Feel is separate from rules.** Camera and effect settings are client
   values (`src/client/game/tuning.ts`); they never reach the simulation.
-- **Opening.** The page opens on the studio's card, Infinite Maybe Games:
-  the infinity draws on from left to right, the question mark's dot drops
-  into place, the name comes up under it, and after a beat the logo fades to
-  black and the black lifts off the boot screen (race control's computer
-  powering up while the game downloads), then the title. The card is plain
-  HTML and CSS in `index.html`, so it plays before any of the game has
-  arrived; its three layers are written into the page by
-  `tools/brand/layers.py` from the logo in `art/brand/`, so nothing is
-  fetched for it and the one-file build has it too. Any key, pad button,
-  click or tap skips it, and that press goes no further (the menus take no
-  pad presses while it is up). The boot screen waits for the
-  card and then stays up long enough to be seen. Automated runs and the dev
-  shortcuts (`?auto`, `?debug`, `?sprint` and the rest) go straight past it;
-  `?ident=1` shows it anyway.
+- **Opening.** The page opens on the studio's card, Infinite Maybe Games,
+  drawn by hand: a pen draws the infinity along its own line (from the
+  middle round the left loop, back through the middle and on into the
+  question mark's hook), a drop of ink swells out of the end of the hook,
+  hangs, pinches off and wobbles still as the question mark's dot, and the
+  name comes up under it. After a beat the logo fades to black and the black
+  lifts off the boot screen (race control's computer powering up while the
+  game downloads), then the title. About four seconds.
+
+  It is all in `index.html`, so it plays before any of the game has arrived.
+  `tools/brand/layers.py` works out, from the logo in `art/brand/`, the
+  pen's path (the line's centre, from its skeleton), the line in two layers
+  of ink (each pixel belongs to the nearest point of the path; the first
+  stretch of the path is one layer, so the pen starting by the crossing does
+  not show the line that crosses there before it comes back to it), the
+  outline of the hook's end and the dot, and writes them into the page, so
+  nothing is fetched for the card and the one-file build has it too. In the
+  page, a wide round-capped stroke along each stretch of the path, its dash
+  growing, cuts its layer out; the drip is drawn as distances to edges, the
+  drop blended into the hook's outline by a smooth minimum, so the liquid
+  flares from the hook itself and lets go as the blend does. Both are drawn
+  in a worker on canvases handed to it (the game loads on the page's own
+  thread meanwhile, in long stretches that would stall the drawing), on the
+  page's thread where a browser cannot, and as the still logo, fading in and
+  out, with reduced motion or if the drawing fails.
+
+  Any key, pad button, click or tap skips it, and that press goes no further
+  (the menus take no pad presses while it is up). The boot screen waits for
+  the card and then stays up long enough to be seen. Automated runs and the
+  dev shortcuts (`?auto`, `?debug`, `?sprint` and the rest) go straight past
+  it; `?ident=1` shows it anyway.
 - **Rendering.** Three.js with a short post chain (bloom, then a speed pass:
   radial blur, streaks, vignette, flash). The mechs are built in Blender
   from their model sheets and exported as GLBs at three levels of detail,
