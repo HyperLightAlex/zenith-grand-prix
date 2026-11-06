@@ -76,6 +76,12 @@ export class BootScreen {
     this.line('Pilots standing by', '');
     this.done = this.total;
     this.show();
+    // (Not while the studio's card is still up over it: index.html. Then it powers on again, to be seen.)
+    const ident = (window as unknown as { identDone?: Promise<void> }).identDone;
+    if (ident && document.getElementById('ident')) {
+      await ident;
+      if (!navigator.webdriver) await wait(reducedMotion() ? 300 : 700);
+    }
     // A beat to read it (not for automated runs, which only wait).
     if (!navigator.webdriver) await wait(550);
     this.root.classList.add('off');

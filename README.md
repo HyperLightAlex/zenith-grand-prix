@@ -103,6 +103,7 @@ npm run dev        # the game, with hot reload, on http://localhost:5173
 npm run server     # the room server on 8090 (the dev page finds it)
 ```
 
+The game opens on the studio's card; any key, button, click or tap skips it.
 Plug in a gamepad before or after the page loads and press any button. The
 keyboard works too, and the on-screen hints follow whichever you touched last.
 Menus work with either, or the mouse: A (Enter) confirms, B (Esc) goes back,
@@ -554,7 +555,9 @@ src/client/     Everything you see and hear.
                 synthesised engine, effects and music (?music=synth)
 tests/          Simulation, Grand Prix, lobby, online and model tests (vitest)
 tools/          Headless race runner, bots, track plotter, screenshot, online
-                and audio checks; music/ builds a recorded song's layers
+                and audio checks; music/ builds a recorded song's layers;
+                brand/ writes the studio card's layers into index.html
+art/brand/      The studio logo (Infinite Maybe Games)
 public/music/   Recorded race music, as tools/music builds it
 docs/           Design document, ONLINE.md, and ART.md for the anime look
 play/           Prebuilt single-file game

@@ -1436,6 +1436,20 @@ livery is (CUSTOMIZATION.md, "Earned in the Grand Prix").
   race in progress, so both formats use the identical race.
 - **Feel is separate from rules.** Camera and effect settings are client
   values (`src/client/game/tuning.ts`); they never reach the simulation.
+- **Opening.** The page opens on the studio's card, Infinite Maybe Games:
+  the infinity draws on from left to right, the question mark's dot drops
+  into place, the name comes up under it, and after a beat the logo fades to
+  black and the black lifts off the boot screen (race control's computer
+  powering up while the game downloads), then the title. The card is plain
+  HTML and CSS in `index.html`, so it plays before any of the game has
+  arrived; its three layers are written into the page by
+  `tools/brand/layers.py` from the logo in `art/brand/`, so nothing is
+  fetched for it and the one-file build has it too. Any key, pad button,
+  click or tap skips it, and that press goes no further (the menus take no
+  pad presses while it is up). The boot screen waits for the
+  card and then stays up long enough to be seen. Automated runs and the dev
+  shortcuts (`?auto`, `?debug`, `?sprint` and the rest) go straight past it;
+  `?ident=1` shows it anyway.
 - **Rendering.** Three.js with a short post chain (bloom, then a speed pass:
   radial blur, streaks, vignette, flash). The mechs are built in Blender
   from their model sheets and exported as GLBs at three levels of detail,

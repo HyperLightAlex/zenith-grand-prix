@@ -122,3 +122,26 @@ describe('touch controls', () => {
     expect(input.state.mx).toBeCloseTo(0.1);
   });
 });
+
+describe('the studio card', () => {
+  const press = (i: number, on: boolean) => {
+    (pad.buttons as unknown as { pressed: boolean; value: number }[])[i] = { pressed: on, value: on ? 1 : 0 } as never;
+  };
+
+  it('keeps the press that skips it from the menus, and the button held after it goes', () => {
+    let card: object | null = {};
+    vi.stubGlobal('document', { getElementById: (id: string) => (id === 'ident' ? card : null), activeElement: null });
+    const input = new Input();
+    press(0, true); // A, while the card is up: it skips the card and nothing else
+    input.poll();
+    expect(input.consumeMenu()).toEqual([]);
+    card = null; // the card is gone with A still held: still nothing
+    input.poll();
+    expect(input.consumeMenu()).toEqual([]);
+    press(0, false);
+    input.poll();
+    press(0, true); // a fresh press reaches the menus
+    input.poll();
+    expect(input.consumeMenu()).toEqual(['confirm']);
+  });
+});

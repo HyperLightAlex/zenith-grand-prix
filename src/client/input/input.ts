@@ -19,6 +19,11 @@ export function typing(): boolean {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
 }
 
+/** Whether the studio's card is up (index.html): the pad's presses are its own then (any button skips it). */
+export function studioCardUp(): boolean {
+  return typeof document !== 'undefined' && document.getElementById('ident') !== null;
+}
+
 /** The race buttons, by the action that presses them (see settings.ts: remappable). */
 const BUTTON_ACTIONS = ACTIONS.filter((a) => a.bit !== undefined) as ReadonlyArray<{ id: ActionId; bit: number }>;
 
@@ -304,8 +309,8 @@ export class Input {
         this.tapped = new Set();
         return;
       }
-      // Menu edges.
-      const m = this.menu;
+      // Menu edges (none while the studio's card is up: the press that skips it goes no further).
+      const m: MenuInput[] = studioCardUp() ? [] : this.menu;
       const sx = Math.abs(lx) > 0.6 ? Math.sign(lx) : 0;
       const sy = Math.abs(ly) > 0.6 ? Math.sign(ly) : 0;
       if (edge(PAD.UP) || (sy < 0 && this.prevStickY >= 0)) m.push('up');
