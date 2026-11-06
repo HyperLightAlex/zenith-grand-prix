@@ -13,6 +13,11 @@
 //
 // Everything is placed on the GPU from a few numbers a frame (the streaks)
 // or a few hundred splashes respawned as they play out, so it costs little.
+//
+// Under cover (a roofed hall, a lintel over the road, a deck of road above
+// another) there is no rain: the circuit hands over what is roofed (`cover`,
+// a grid of the cover's height), and no streak is drawn under it, nor any
+// splash. Without it the rain fell straight through Monsoon's halls.
 import * as THREE from 'three';
 import { frameAt, makeFrame, type Track } from '../../sim/track';
 
@@ -22,6 +27,68 @@ export interface RainCtx {
   updates: Array<(time: number, camera: THREE.Camera) => void>;
   /** Where on the road a splash can land at sample `i`: each lane's middle and half width, across from the centreline. */
   lanes(i: number): Array<{ d: number; half: number; rise: number }>;
+  /** What is roofed over: no rain under it (coverGrid). */
+  cover?: RainCover | null;
+}
+
+/** The cover over the ground: on a grid (cell `cell` from x0, z0), the height of the lowest roof over each cell (-Infinity: open sky). */
+export interface RainCover {
+  x0: number;
+  z0: number;
+  cell: number;
+  nx: number;
+  nz: number;
+  h: Float32Array;
+}
+
+/**
+ * The cover made by some roofs, each a flat four-cornered piece (world),
+ * on a grid of `cell`: each cell takes the highest roof whose piece covers
+ * its middle. A point lower than its cell's roof (by more than a whisker)
+ * is under cover.
+ */
+export function coverGrid(roofs: readonly THREE.Vector3[][], cell = 2): RainCover | null {
+  if (!roofs.length) return null;
+  let ax = Infinity, az = Infinity, bx = -Infinity, bz = -Infinity;
+  for (const q of roofs) for (const p of q) (ax = Math.min(ax, p.x)), (az = Math.min(az, p.z)), (bx = Math.max(bx, p.x)), (bz = Math.max(bz, p.z));
+  const x0 = Math.floor(ax / cell) * cell - cell;
+  const z0 = Math.floor(az / cell) * cell - cell;
+  const nx = Math.ceil((bx - x0) / cell) + 2;
+  const nz = Math.ceil((bz - z0) / cell) + 2;
+  const h = new Float32Array(nx * nz).fill(-Infinity);
+  const tri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => {
+    const det = (b.z - c.z) * (a.x - c.x) + (c.x - b.x) * (a.z - c.z);
+    if (Math.abs(det) < 1e-9) return;
+    const i0 = Math.max(0, Math.floor((Math.min(a.x, b.x, c.x) - x0) / cell));
+    const i1 = Math.min(nx - 1, Math.ceil((Math.max(a.x, b.x, c.x) - x0) / cell));
+    const k0 = Math.max(0, Math.floor((Math.min(a.z, b.z, c.z) - z0) / cell));
+    const k1 = Math.min(nz - 1, Math.ceil((Math.max(a.z, b.z, c.z) - z0) / cell));
+    for (let k = k0; k <= k1; k++) {
+      const z = z0 + (k + 0.5) * cell;
+      for (let i = i0; i <= i1; i++) {
+        const x = x0 + (i + 0.5) * cell;
+        const l1 = ((b.z - c.z) * (x - c.x) + (c.x - b.x) * (z - c.z)) / det;
+        const l2 = ((c.z - a.z) * (x - c.x) + (a.x - c.x) * (z - c.z)) / det;
+        const l3 = 1 - l1 - l2;
+        if (l1 < -1e-6 || l2 < -1e-6 || l3 < -1e-6) continue;
+        const y = l1 * a.y + l2 * b.y + l3 * c.y;
+        const o = k * nx + i;
+        if (y > h[o]) h[o] = y;
+      }
+    }
+  };
+  for (const q of roofs) {
+    tri(q[0], q[1], q[2]);
+    if (q.length > 3) tri(q[0], q[2], q[3]);
+  }
+  return { x0, z0, cell, nx, nz, h };
+}
+
+/** The roof over (x, z) (-Infinity if none). */
+export function coverAt(c: RainCover, x: number, z: number): number {
+  const i = Math.floor((x - c.x0) / c.cell);
+  const k = Math.floor((z - c.z0) / c.cell);
+  return i < 0 || k < 0 || i >= c.nx || k >= c.nz ? -Infinity : c.h[k * c.nx + i];
 }
 
 export interface Rain {
@@ -41,6 +108,9 @@ const STREAK_VERTEX = /* glsl */ `
   uniform float uShutter;
   uniform float uMaxLen;
   uniform vec2 uRes;
+  uniform sampler2D uCover;
+  uniform vec4 uCoverRect;
+  uniform float uCoverOn;
   varying float vAlpha;
   varying float vAcross;
   varying float vAlong;
@@ -71,6 +141,11 @@ const STREAK_VERTEX = /* glsl */ `
     vec3 e = abs(local) / (0.5 * uBox);
     vAlpha *= 1.0 - smoothstep(0.65, 1.0, max(max(e.x, e.y), e.z));
     vAlpha *= step(1.2, min(h.w, t.w));
+    // None under cover (a roof over its head higher than it is).
+    if (uCoverOn > 0.5) {
+      vec2 cuv = (head.xz - uCoverRect.xy) * uCoverRect.zw;
+      if (cuv.x > 0.0 && cuv.y > 0.0 && cuv.x < 1.0 && cuv.y < 1.0 && texture2D(uCover, cuv).r > head.y + 0.3) vAlpha = 0.0;
+    }
     vAcross = corner.x;
     vAlong = corner.y;
     #include <fog_vertex>
@@ -233,7 +308,23 @@ export function buildRain(ctx: RainCtx): Rain {
     streaks(4200, [140, 90, 140], { width: 1.3, opacity: 0.38, maxLen: 8, shutter: 0.06, colour: 0xc4d0d4 }),
     streaks(6000, [420, 180, 420], { width: 1.0, opacity: 0.24, maxLen: 18, shutter: 0.09, colour: 0xb4c2c6 }),
   ];
+  // The cover, as a texture of its heights (sampled exactly, cell by cell).
+  const cover = ctx.cover ?? null;
+  let coverTex: THREE.DataTexture | null = null;
+  if (cover) {
+    const data = new Float32Array(cover.h.length);
+    for (let o = 0; o < data.length; o++) data[o] = Number.isFinite(cover.h[o]) ? cover.h[o] : -1e6;
+    coverTex = new THREE.DataTexture(data, cover.nx, cover.nz, THREE.RedFormat, THREE.FloatType);
+    coverTex.minFilter = coverTex.magFilter = THREE.NearestFilter;
+    coverTex.needsUpdate = true;
+  }
   for (const l of layers) {
+    const u = l.mat.uniforms;
+    u.uCover = { value: coverTex };
+    u.uCoverOn = { value: coverTex ? 1 : 0 };
+    u.uCoverRect = { value: cover ? new THREE.Vector4(cover.x0, cover.z0, 1 / (cover.nx * cover.cell), 1 / (cover.nz * cover.cell)) : new THREE.Vector4() };
+    // (For a look from the console, or a test in the page.)
+    l.mesh.userData.cover = cover;
     group.add(l.mesh);
     // The streaks' widths are in pixels: the size it is drawn at, as it is drawn.
     l.mesh.onBeforeRender = (renderer) => {
@@ -333,7 +424,10 @@ export function buildRain(ctx: RainCtx): Rain {
         const ln = lanes[Math.floor(rnd() * lanes.length)];
         frameAt(track, i * track.ds, f);
         const d = ln.d + (rnd() * 2 - 1) * Math.max(0, ln.half - 0.8);
-        pos.setXYZ(k, f.px + f.rx * d + f.ux * ln.rise, f.py + f.ry * d + f.uy * ln.rise, f.pz + f.rz * d + f.uz * ln.rise);
+        const sx = f.px + f.rx * d + f.ux * ln.rise, sy = f.py + f.ry * d + f.uy * ln.rise, sz = f.pz + f.rz * d + f.uz * ln.rise;
+        // (No splash under cover: tried again next frame, somewhere else.)
+        if (cover && coverAt(cover, sx, sz) > sy + 1) continue;
+        pos.setXYZ(k, sx, sy, sz);
         up.setXYZ(k, f.ux, f.uy, f.uz);
         // (Started a little apart, so they do not all draw together.)
         born.setXY(k, time - rnd() * 0.08, 0.42 + rnd() * 0.5);

@@ -30,7 +30,7 @@ import { toonMaterial } from './palette';
 import { trackMatrix } from './trackSpace';
 import { KEEP_OUT } from './titan/keepout';
 import { box, column, frustum, shrine, steppedPyramid, type Put } from './monsoonTemples';
-import { buildRain } from './rain';
+import { buildRain, coverGrid } from './rain';
 
 /** What the world builder hands over (world.ts's context has all of it, and the lightning). */
 export interface JungleCtx {
@@ -694,6 +694,9 @@ export function buildMonsoon(ctx: JungleCtx): void {
   const lintelGlow: THREE.BufferGeometry[] = [];
   // (Doorways and the dark behind them.)
   const dark: THREE.BufferGeometry[] = [];
+  // What roofs the road over (the temple's lintel, the halls' vaults, the
+  // Corkscrew's shelf over the turn below, the lip): no rain under it (rain.ts).
+  const roofsOver: THREE.Vector3[][] = [];
   const keep = (g: THREE.BufferGeometry, c: number | THREE.Color, step = 3, list = stone) => {
     if (ctx.inRoad(g, step)) return false;
     list.push(colour(g, c));
@@ -912,6 +915,9 @@ export function buildMonsoon(ctx: JungleCtx): void {
     put(frustum(at(0, wallTop + 6), across, along, span + 1, DEPTH + 1, span - 10, DEPTH - 16, 9), tone.clone().multiplyScalar(0.95), 'carved');
     put(box(at(0, wallTop + 15.5), across, up, along, span - 9, 1.2, DEPTH - 15), tone.clone().multiplyScalar(0.8), 'stone');
     shrine(put, at(0, wallTop + 16), along, half * 1.6, 14, 18, tone.clone().multiplyScalar(0.92), true);
+    // (Under the lintel, wall to wall, its depth: roofed.)
+    const out = half + WALL;
+    roofsOver.push([at(-out, DOOR, -DEPTH / 2), at(out, DOOR, -DEPTH / 2), at(out, DOOR, DEPTH / 2), at(-out, DOOR, DEPTH / 2)]);
     const lintelY = deck + DOOR + 4;
     // A band of glyphs across the lintel, glowing faintly jade (the plain look; the painting carves its own).
     for (let k = -9; k <= 9; k++) {
@@ -1017,6 +1023,8 @@ export function buildMonsoon(ctx: JungleCtx): void {
       const inFoot = inTop.clone().setY(foot + 4);
       const wallFoot = at(Math.atan2(p.z - cz, p.x - cx), foot, wallR(foot) + 1);
       const ring = [inTop, outTop, wallTop, wallFoot, inFoot];
+      // (The deck and the shelf, its inside edge out to the wall: a roof over the turn below.)
+      if (prev) roofsOver.push([prev[0], ring[0], ring[2], prev[2]]);
       if (prev) {
         for (let q = 0; q < ring.length - 1; q++) {
           const g = quads([[prev[q], ring[q], ring[q + 1], prev[q + 1]]]);
@@ -1036,6 +1044,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
         // Top, underside and the front edge.
         tops.push([at(a, lip.top, lip.r), at(b, lip.top, lip.r), at(b, lip.top, R1), at(a, lip.top, R1)]);
         tops.push([at(a, lip.under, R1), at(b, lip.under, R1), at(b, lip.under, lip.r), at(a, lip.under, lip.r)]);
+        roofsOver.push(tops[tops.length - 1]);
         tops.push([at(a, lip.under, lip.r), at(b, lip.under, lip.r), at(b, lip.top, lip.r), at(a, lip.top, lip.r)]);
       }
       for (const [a, y0, y1] of [
@@ -1212,6 +1221,9 @@ export function buildMonsoon(ctx: JungleCtx): void {
       if (prev) {
         if (prev.roofed && cut.roofed) {
           colAt++;
+          // (Under the vault, wall to wall: roofed.)
+          const under = (q: Cut, sd: number) => q.c.clone().addScaledVector(q.across, sd * (q.half + T)).setY(wallTop(q));
+          roofsOver.push([under(prev, -1), under(prev, 1), under(cut, 1), under(cut, -1)]);
           for (const sd of [-1, 1]) {
             // (The courtyard side, toward the causeway: a column every third sample, open between.)
             const colonnade = sd < 0;
@@ -1568,7 +1580,7 @@ export function buildMonsoon(ctx: JungleCtx): void {
   }
 
   // ---- the rain, round the camera: streaks, and splashes on the road (rain.ts) ----
-  const rain = buildRain({ track, group, updates: ctx.updates, lanes: (i) => lanes(track, i) });
+  const rain = buildRain({ track, group, updates: ctx.updates, lanes: (i) => lanes(track, i), cover: coverGrid(roofsOver) });
 
   // ---- painted: low storm clouds round the circuit (J3), each turning about the upright to face the camera ----
   const storm: Array<{ m: THREE.Mesh; mat: THREE.ShaderMaterial; dir: THREE.Vector3 }> = [];

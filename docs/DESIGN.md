@@ -57,8 +57,9 @@ brakes. Free steering only.
 
 **Contested gates.** A gate pays a full Cell to the first mech through, half
 a Cell to each of its teammates, and goes dark for everyone for 4 seconds.
-A mech that could not bank a whole Cell passes through without using the
-gate up, so a leader with a full tank cannot shut gates on the chasers.
+A mech that could not bank a whole Cell tops up to full from it without
+using the gate up, so a leader with a full tank cannot shut gates on the
+chasers.
 
 **Armour down about 10%**: Swift and Vector 1600, Bulwark 2000, with an
 armour scale on the tuning panel.
@@ -129,6 +130,17 @@ coordinated team play online.
   Held from the start the revs reach the green in about a second: the time
   to press is around the "1", and the throttle can be feathered to stay in
   the green. The computer revs up too, aiming by skill.
+- **The grid** (`GRID`, sim/config.ts): rows of two, 10 back from the line
+  and 18 apart, in an inner lane (5 off the middle) and an outer one (15) by
+  turns, so nobody starts in the lane of the mech just ahead; the boxes on
+  the road follow it. A perfect launch closes on a plain start by tens of
+  units in its first second, and the grid was laid out before the rev start
+  (rows 12 apart, every mech straight behind another): a good launch ran
+  into the back of the mech in front and lost what it had won. Now the lane
+  ahead is clear for two rows (about 29 units to the mech there). Launched
+  perfectly behind plain starts and driven straight, the launcher ran into
+  someone 8 times in 12 before, 2 in 12 now (both from the back row, which
+  has time to steer round).
 - Three laps of one of four circuits, picked in the garage. On Meridian
   Skyway (8,640 units round) the leader's laps take about 80, 70 and 52
   seconds (the first counted from the start of the countdown) and the winner
@@ -352,7 +364,10 @@ Each circuit has its own setting (Monsoon Ruins: a jungle temple city in a
 downpour under a low storm sky, lightning now and then; the rain drawn as
 the anime drew it (`src/client/render/rain.ts`): streaks in three layers
 round the camera, raking in toward it at speed, crowns splashing on the
-road ahead over three drawings with rings spreading under them, the road
+road ahead over three drawings with rings spreading under them, none of
+either under cover (the summit temple's lintel, the Temple Halls' vaults,
+the Corkscrew's shelf over the turn below, the lip: a grid of their heights,
+`coverGrid`; it used to fall straight through the halls), the road
 wet (darker, puddles mirroring the sky, rings in them), spray thrown off
 the mechs' skates, and on the mechs a pale veil of spray over their tops
 with splashes breaking along their top edges (the film pass, from where the
@@ -546,9 +561,14 @@ A second resource, 0 to 3, starting at none, that pays for abilities.
 - **Contested.** The first mech through takes the gate and it goes dark for
   everyone for 4 seconds, glowing back up as it comes round to relighting.
   Two through on the same tick, the one in front has it. A mech that could
-  not bank a whole Cell (more than two in hand) passes through
-  without taking it, whatever its teammates hold, so a full leader cannot
-  shut gates on the chasers, and the lap 3 comeback stays open.
+  not bank a whole Cell (more than two in hand) tops up to full from it but
+  leaves it lit, and its teammates get no share (the gate is still the
+  team's to take this lap), whatever they hold: so a full leader cannot
+  shut gates on the chasers, and the lap 3 comeback stays open. (It used to
+  pass through and take nothing, so half a Cell short stayed half a Cell
+  short unless a teammate's gate paid it: in a Sprint, never.) In a Sprint
+  the same goes for a dark gate's half: two and a half in hand, following
+  someone through fills the last half.
 - Each sits where taking it costs something: across the road from a charge
   strip, on the outside of a corner, or on the long way round the hairpin.
   Computer pilots go for the gates their skill picks out, skip one that will

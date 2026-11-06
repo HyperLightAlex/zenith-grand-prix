@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { alsoWears, ownTextures } from './owned';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
+import { GRID } from '../../sim/config';
 import { look } from './look';
 import { paintedSignMaterial, paintedSurfaceMaterial, paintedTexture, paintedTrack, type PaintedSign } from './painted';
 import { frostOf } from './frost';
@@ -213,11 +214,13 @@ void main() {
   float onLine = box(sw, -3.0, 3.0) * (1.0 - shoulder);
   float chk = mod(floor(sw / 1.5) + floor(d / 1.5), 2.0);
   col = mix(col, mix(vec3(0.07), vec3(0.97), chk), onLine);
+  // (Where the sim stands them, GRID: the rows in inner and outer lanes by turns.)
   for (int row = 0; row < 3; row++) {
-    float gs = -(10.0 + float(row) * 12.0) + 4.5;
+    float gs = -(${GRID.front.toFixed(2)} + float(row) * ${GRID.row.toFixed(2)}) + 4.5;
+    float lane = mod(float(row), 2.0) > 0.5 ? ${GRID.outer.toFixed(2)} : ${GRID.inner.toFixed(2)};
     float lineS = band(sw, gs, 0.25);
     float sideS = box(sw, gs - 5.0, gs);
-    float gl = lineS * box(ad, 4.5, 13.5) + sideS * (band(ad, 4.5, 0.22) + band(ad, 13.5, 0.22));
+    float gl = lineS * box(ad, lane - 4.0, lane + 4.0) + sideS * (band(ad, lane - 4.0, 0.22) + band(ad, lane + 4.0, 0.22));
     col = mix(col, vec3(0.97, 0.98, 1.0), clamp(gl, 0.0, 1.0));
   }
 

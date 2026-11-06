@@ -338,17 +338,20 @@ vec3 styleSheen(vec3 wN, vec3 eyeDir, float fres, float isPaint, float fin) {
   vec3 pearl = 0.5 + 0.5 * cos(6.2831 * (fres * 1.3 + vec3(0.0, 0.33, 0.67)));
   return pearl * 0.3 * smoothstep(0.1, 0.7, fres) * isPaint;
 }
-// Chameleon: the paint's hue turned as the surface turns from the eye
-// (a third of the wheel by the silhouette), its lightness kept.
-vec3 chameleonShift(vec3 c, float fres, float k) {
-  if (k < 0.01) return c;
-  float a = (0.35 + fres * 2.2) * k;
+// A colour's hue turned by a (radians round the wheel), its lightness kept.
+vec3 hueTurn(vec3 c, float a) {
   const mat3 toYIQ = mat3(0.299, 0.596, 0.211, 0.587, -0.274, -0.523, 0.114, -0.322, 0.312);
   const mat3 toRGB = mat3(1.0, 1.0, 1.0, 0.956, -0.272, -1.106, 0.621, -0.647, 1.703);
   vec3 yiq = toYIQ * c;
   float cs = cos(a), sn = sin(a);
   yiq.yz = vec2(yiq.y * cs - yiq.z * sn, yiq.y * sn + yiq.z * cs) * 1.15;
   return max(toRGB * yiq, 0.0);
+}
+// Chameleon: the paint's hue turned as the surface turns from the eye
+// (a third of the wheel by the silhouette), its lightness kept.
+vec3 chameleonShift(vec3 c, float fres, float k) {
+  if (k < 0.01) return c;
+  return hueTurn(c, (0.35 + fres * 2.2) * k);
 }
 // The paint's own shadow colour (the anime look), under the pattern and the wear.
 vec3 celArmorShade() {

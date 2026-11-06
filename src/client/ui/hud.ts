@@ -571,8 +571,8 @@ export class Hud {
     // Cell gates still open to the player.
     const pilot = race.mechs[this.localId];
     const gateWorth = pilot.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
-    // (Only while there is room to bank one: fuller than that, a gate is passed by.)
-    if (pilot.lap < race.rules.gateLaps && gateWorth > 0 && !pilot.retired && !pilot.finished && race.rules.cellMax > 0 && pilot.cells <= race.rules.cellMax - Math.min(gateWorth, race.rules.cellMax)) {
+    // (Only while there is room to bank any: full, a gate is passed by.)
+    if (pilot.lap < race.rules.gateLaps && gateWorth > 0 && !pilot.retired && !pilot.finished && race.rules.cellMax > 0 && pilot.cells < race.rules.cellMax) {
       g.fillStyle = '#ffc93a';
       this.track.gates.forEach((gt, i) => {
         if (pilot.gateMask & (1 << i)) return;

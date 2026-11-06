@@ -234,6 +234,29 @@ if (uCel > 0.5) {
       celCol = mix(celCol, celLit * 1.3 + celAmb * 0.08, celStep(rim, 0.6) * celStep(celN.y, -0.2) * 0.55 * cPaint * cGloss);
       celCol = mix(celCol, mix(celShade, celLit, litK), cPaint * cMatte * 0.75);
       celCol += styleSheen(normalize(vWorldN), normalize(vWorldP - cameraPosition), rim, cPaint, cFin) * 1.4;
+      // Chrome, painted as anime chrome is: the paint a mirror cut hard in
+      // two at the horizon, sky above (pale, tinted by the paint) and the
+      // dark ground below, a white line of the horizon between, and a big
+      // hard glint. (The plain look's chrome is in its lighting, which this
+      // look paints over: without this, chrome looked like satin.)
+      float cChrome = 1.0 - step(0.5, abs(cFin - 5.0));
+      float cCham = 1.0 - step(0.5, abs(cFin - 6.0));
+      if (cPaint * cChrome > 0.01) {
+        float h = dot(reflect(-celV, celN), celUp);
+        vec3 sky = mix(celBase, vec3(1.0), 0.55) * (celSun * uKeyRef + celAmb) * RECIPROCAL_PI * 1.25;
+        vec3 ground = celBase * 0.16 + vec3(0.02, 0.022, 0.03);
+        vec3 chrome = mix(ground, sky, celStep(h, -0.02));
+        // (A band of the ground's darker brown just under the line, as the airbrush puts it.)
+        chrome = mix(chrome, ground * 0.55, (1.0 - celStep(h, -0.02)) * celStep(h, -0.16));
+        chrome = mix(chrome, vec3(1.0) * (celSun + celAmb) * RECIPROCAL_PI * 1.3, celStep(h, -0.02) * (1.0 - celStep(h, 0.06)));
+        chrome += celSun * RECIPROCAL_PI * celStep(nh, 0.9) * 0.9;
+        celCol = mix(celCol, chrome, cPaint * cChrome * 0.92);
+      }
+      // Chameleon, painted in hard bands: the paint's own colour face on, then
+      // a third of the way round the wheel, then two thirds, as the armour
+      // turns from the eye.
+      float camBand = celStep(rim, 0.32) + celStep(rim, 0.58);
+      celCol = mix(celCol, hueTurn(celCol, camBand * 2.09), cPaint * cCham);
     #endif
   #else
     vec3 celCol = mix(celLit * uBgShadeTint, celLit, litK);

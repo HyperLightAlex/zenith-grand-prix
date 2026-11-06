@@ -29,6 +29,7 @@ import {
   CLASSES,
   COAST_DRAG,
   COUNTDOWN_TICKS,
+  gridSlot,
   DASH_BLEED,
   DASH_OVER,
   DRAFT_MIN,
@@ -182,16 +183,15 @@ export function createRace(track: Track, cfg: RaceConfig): RaceState {
   }
   cfg.seats.forEach((seat, id) => {
     const c = CLASSES[seat.role];
-    // Grid: forwards on the front row, defenders at the back. The teams swap
-    // sides row by row so neither owns the inside line into turn one, and a
-    // match flips the whole grid from one round to the next.
-    let s = -(10 + seat.role * 12);
-    let d = ((seat.team === 0) !== (seat.role === 1) ? -9 : 9) * (cfg.gridFlip ? -1 : 1);
+    // Grid (GRID): forwards on the front row, defenders at the back, the rows
+    // in inner and outer lanes by turns. The teams swap sides row by row so
+    // neither owns the inside line into turn one, and a match flips the whole
+    // grid from one round to the next.
+    let { s, d } = gridSlot(seat.role, ((seat.team === 0) !== (seat.role === 1) ? -1 : 1) * (cfg.gridFlip ? -1 : 1));
     if (sprint) {
       // A Sprint's grid: two by two from pole, in the order given.
       const slot = cfg.grid ? Math.max(0, cfg.grid.indexOf(id)) : id;
-      s = -(10 + Math.floor(slot / 2) * 12);
-      d = slot % 2 ? 9 : -9;
+      ({ s, d } = gridSlot(Math.floor(slot / 2), slot % 2 ? 1 : -1));
     }
     // Which gates an AI pilot will bother with: the better the pilot, the more.
     let gates = 0;
@@ -1406,16 +1406,17 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     // Contested: the first mech through takes the gate and it goes dark for a
     // few seconds. Two through on the same tick, the one in front has it. A
     // mech that could not bank all the gate is worth (more than 2 Cells, as
-    // the rules stand) takes nothing and leaves the gate lit, whatever its
-    // teammates hold, so a leader with a full tank cannot shut gates on the
-    // chasers; nor does one through a gate its team has already scored this lap.
+    // the rules stand) tops up to full from it but leaves it lit, and its
+    // teammates get no share: so a leader near full cannot shut gates on the
+    // chasers, and half a Cell short is not stuck there. A full mech takes
+    // nothing; nor does one through a gate its team has already scored this lap.
     gateOrder.length = 0;
     for (const m of ms) gateOrder.push(m);
     gateOrder.sort((a, b) => b.s - a.s || a.id - b.id);
     for (const m of gateOrder) {
       const worth = m.lap <= 0 ? race.rules.gateValue : race.rules.gateValueLater;
-      // (Room for all of it, or for a full tank of a gate worth more than that.)
-      if (!inPlay(m) || m.lap >= race.rules.gateLaps || worth <= 0 || race.rules.cellMax <= 0 || m.cells > race.rules.cellMax - Math.min(worth, race.rules.cellMax)) continue;
+      // (Any room at all: what it can bank is settled below.)
+      if (!inPlay(m) || m.lap >= race.rules.gateLaps || worth <= 0 || race.rules.cellMax <= 0 || m.cells >= race.rules.cellMax) continue;
       // A Sprint has no teammates to share a gate with: one dark when you get
       // there still pays a share of it (rules.gateTrail), so the field is not
       // starved by whoever is in front.
@@ -1430,12 +1431,14 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
       if (g < 0) continue;
       m.gateMask |= 1 << g;
       const dark = race.gateDark[g] > tick;
+      // Short of room for all of a lit gate: a top-up, the gate left lit and the team's to take.
+      const topUp = !dark && m.cells > race.rules.cellMax - Math.min(worth, race.rules.cellMax);
       m.cells = Math.min(race.rules.cellMax, m.cells + (dark ? worth * trail : worth));
       // (Following someone through does not keep it dark any longer.)
-      if (!dark && race.rules.gateRelight > 0) race.gateDark[g] = tick + ticks(race.rules.gateRelight);
+      if (!dark && !topUp && race.rules.gateRelight > 0) race.gateDark[g] = tick + ticks(race.rules.gateRelight);
       race.events.push({ type: 'gate', mech: m.id, gate: g, cells: m.cells });
       // (With no share it is the old rule: each mech scores each gate once a lap.)
-      const share = worth * race.rules.gateShare;
+      const share = topUp ? 0 : worth * race.rules.gateShare;
       for (const t of share > 0 ? ms : []) {
         if (t === m || t.team !== m.team || !inPlay(t)) continue;
         t.gateMask |= 1 << g;

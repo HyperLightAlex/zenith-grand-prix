@@ -194,10 +194,12 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
 
     // Cells: every change is accounted for by a gate (+rules.gateValue on the
     // mech's first lap, +rules.gateValueLater after it, never past the cap,
-    // each gate once a lap for the team and only by a mech with room for it),
-    // a teammate's share of one (rules.gateShare of it, up to the cap), or an
-    // ability (-1, only with weapons free and a whole Cell in hand).
-    const gatesThisTick: Array<{ mech: number; gate: number }> = [];
+    // each gate once a lap for the team and only by a mech with room for it;
+    // with room for less than all of it, a top-up: the mech's alone, no share
+    // and the gate still the team's to take), a teammate's share of one
+    // (rules.gateShare of it, up to the cap), or an ability (-1, only with
+    // weapons free and a whole Cell in hand).
+    const gatesThisTick: Array<{ mech: number; gate: number; topUp: boolean }> = [];
     for (const e of race.events) {
       if (e.type === 'gateShare') {
         const from = race.mechs[e.from];
@@ -205,28 +207,29 @@ function runOne(seed: number, skill: readonly [number, number], gridFlip: boolea
         const want = Math.min(rules.cellMax, cells[e.mech] + worth);
         if (!sum.cellBreak) {
           if (from.team !== race.mechs[e.mech].team || e.from === e.mech) sum.cellBreak = `tick ${tick}: mech ${e.mech} was paid a share by mech ${e.from}, not a teammate`;
-          else if (!gatesThisTick.some((g) => g.mech === e.from && g.gate === e.gate)) sum.cellBreak = `tick ${tick}: a share of gate ${e.gate} with no gate taken`;
+          else if (!gatesThisTick.some((g) => g.mech === e.from && g.gate === e.gate && !g.topUp)) sum.cellBreak = `tick ${tick}: a share of gate ${e.gate} with no gate taken (or only topped up from)`;
           else if (Math.abs(e.cells - want) > 1e-9) sum.cellBreak = `tick ${tick}: share event says ${e.cells} cells after ${cells[e.mech]}`;
         }
         sum.shares[e.mech] += e.cells - cells[e.mech];
         if (lapBefore[e.mech] <= 0) sum.sharesLap1[e.mech] += e.cells - cells[e.mech];
         cells[e.mech] = e.cells;
       } else if (e.type === 'gate') {
-        gatesThisTick.push({ mech: e.mech, gate: e.gate });
+        const worth = lapBefore[e.mech] <= 0 ? rules.gateValue : rules.gateValueLater;
+        const topUp = cells[e.mech] > rules.cellMax - Math.min(worth, rules.cellMax);
+        gatesThisTick.push({ mech: e.mech, gate: e.gate, topUp });
         sum.gates[e.mech]++;
         if (lapBefore[e.mech] <= 0) sum.gatesLap1[e.mech]++;
-        const worth = lapBefore[e.mech] <= 0 ? rules.gateValue : rules.gateValueLater;
         const bit = 1 << e.gate;
         if (!sum.cellBreak) {
           if (lapBefore[e.mech] >= rules.gateLaps) sum.cellBreak = `tick ${tick}: mech ${e.mech} scored gate ${e.gate} on lap ${lapBefore[e.mech] + 1}`;
           else if (e.gate < 0 || e.gate >= TRACK.gates.length) sum.cellBreak = `tick ${tick}: gate ${e.gate} does not exist`;
           else if (gateSeen[e.mech] & bit) sum.cellBreak = `tick ${tick}: mech ${e.mech} scored gate ${e.gate} twice`;
-          else if (cells[e.mech] > rules.cellMax - Math.min(worth, rules.cellMax)) sum.cellBreak = `tick ${tick}: mech ${e.mech} took a gate with no room for it (${cells[e.mech]} cells)`;
+          else if (cells[e.mech] >= rules.cellMax) sum.cellBreak = `tick ${tick}: mech ${e.mech} took a gate with no room at all (${cells[e.mech]} cells)`;
           else if (e.cells !== Math.min(rules.cellMax, cells[e.mech] + worth)) sum.cellBreak = `tick ${tick}: gate event says ${e.cells} cells after ${cells[e.mech]}`;
         }
         gateSeen[e.mech] |= bit;
-        // ...and for its team: each gate pays each team once a lap.
-        if (rules.gateShare > 0) {
+        // ...and for its team: each gate pays each team once a lap (a top-up is the mech's alone).
+        if (rules.gateShare > 0 && !topUp) {
           for (const t of race.mechs) if (t.team === race.mechs[e.mech].team && !t.retired && !t.finished) gateSeen[t.id] |= bit;
         }
         cells[e.mech] = e.cells;

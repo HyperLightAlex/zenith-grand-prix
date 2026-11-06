@@ -53,6 +53,23 @@ export const PACK_BONUS = 0.14;
 export const MPH_PER_UNIT = 3;
 
 export const COUNTDOWN_TICKS = 4 * TICK_RATE;
+
+/**
+ * The starting grid, behind the line: rows of two, `front` back from it and
+ * `row` apart, in lanes `inner` and `outer` off the middle, inner and outer
+ * by turns, so no mech starts in the lane of the one just ahead of it. A
+ * good launch (the rev start) closes on a plain start ahead by tens of units
+ * in its first second: with the rows 12 apart and every mech straight
+ * behind another, a good launch ran into the back of the mech ahead and lost
+ * what it had won. Now the lane ahead is clear for two rows (about 29 units
+ * between the mechs) and the mech alongside is a lane over.
+ */
+export const GRID = { front: 10, row: 18, inner: 5, outer: 15 };
+
+/** A grid slot: row (0 the front) and side (-1 left, 1 right) to where it stands. */
+export function gridSlot(row: number, side: number): { s: number; d: number } {
+  return { s: -(GRID.front + row * GRID.row), d: side * (row % 2 ? GRID.outer : GRID.inner) };
+}
 /**
  * The rev-up on the grid. Through the countdown the throttle builds revs,
  * 0 to 1, shown on a gauge: they climb while it is held and fall while it

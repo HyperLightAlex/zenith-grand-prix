@@ -367,7 +367,13 @@ The Sprint series's ladder:
 | Sprint Tour | sunburst (pattern) | the double fist pump (pose) | the champion's flex (pose) and Champion Gold (paint) |
 
 Chrome is a tinted mirror (its paint dimmed, the sky and the ground in it);
-chameleon turns its paint's hue with the angle it is seen at. The victory
+chameleon turns its paint's hue with the angle it is seen at. In the anime
+look (the default) they are painted as an animator would: chrome cut hard
+at the horizon, pale tinted sky above and dark ground below with a white
+line between; chameleon in hard bands, the paint's own colour face on, a
+third of the way round the wheel toward the edges, two thirds at the
+silhouette. (At first both were only in the plain look's lighting, which
+the anime look paints over, so they looked like satin.) The victory
 poses never raise a single arm out ahead: one arm goes up only straight to
 the sky (pointing, or a fist), so none can be taken for a salute.
 

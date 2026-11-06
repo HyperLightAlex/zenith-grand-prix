@@ -2,7 +2,8 @@
 // inside its opening) earns a Cell, which pays for one ability
 // (abilities.test.ts). Gates are contested: the first mech through takes it
 // and it goes dark for rules.gateRelight seconds, but a mech that is already
-// full passes through without using it up.
+// full passes through without using it up, and one with room for less than
+// all of it tops up to full and leaves it lit.
 import { describe, expect, it } from 'vitest';
 import { BTN, CLASSES, DEFAULT_RULES, MERIDIAN, MODE, PHASE, buildTrack, gateCrossed, stepRace } from '../src/sim/index';
 import type { MechInput, Rules, TrackDef } from '../src/sim/index';
@@ -406,6 +407,23 @@ describe('gates in a Sprint (no teammates to share with)', () => {
     expect(late.cells).toBe(1);
   });
 
+  it('half a Cell short, following through a dark gate fills the last half', () => {
+    const a = new Arena(1, 1, {}, 'sprint');
+    approach(a, 0, 0);
+    const next = a.put(1, G0.s - 30, G0.d);
+    next.cells = 2.5;
+    a.step(40);
+    expect(next.cells).toBe(3);
+    expect(a.events('gate').map((e) => [e.mech, e.cells])).toEqual([[0, 1], [1, 3]]);
+    // ...and with a quarter to go, it fills that quarter.
+    const b = new Arena(1, 1, {}, 'sprint');
+    approach(b, 0, 0);
+    const last = b.put(1, G0.s - 30, G0.d);
+    last.cells = 2.75;
+    b.step(40);
+    expect(last.cells).toBe(3);
+  });
+
   it('pays nothing for a dark gate with the share off, and nothing in a team race', () => {
     const off = new Arena(1, 1, { gateTrail: 0 }, 'sprint');
     approach(off, 0, 0);
@@ -499,21 +517,45 @@ describe('contested gates', () => {
 });
 
 describe('the Cell cap', () => {
-  it('a gate is taken only by a mech that can bank all of it: up to the cap, never over', () => {
+  it('a gate is taken by a mech that can bank all of it: up to the cap, never over', () => {
     const a = new SoloArena(1);
     const m = approach(a, FW0, 0);
     m.cells = 2;
     a.step(4);
     expect(m.cells).toBe(3);
     expect(a.events('gate')).toMatchObject([{ gate: 0, cells: 3 }]);
-    // With 2.75 it could bank only a quarter: it passes, and the gate stays lit.
-    const b = new SoloArena(1);
-    const n = approach(b, FW0, 0);
-    n.cells = 2.75;
-    b.step(4);
-    expect(n.cells).toBe(2.75);
-    expect(b.events('gate')).toEqual([]);
-    expect(b.race.gateDark[0]).toBe(0);
+    expect(a.race.gateDark[0]).toBeGreaterThan(0);
+  });
+
+  it('with room for less than all of it, a mech tops up to full and leaves the gate lit for the next', () => {
+    for (const cells of [2.5, 2.75]) {
+      const b = new SoloArena(1);
+      const n = approach(b, FW0, 0);
+      n.cells = cells;
+      const next = b.put(FW1, G0.s - 30, G0.d);
+      b.step(4);
+      expect(n.cells).toBe(3);
+      expect(b.events('gate')).toMatchObject([{ mech: FW0, gate: 0, cells: 3 }]);
+      expect(b.race.gateDark[0]).toBe(0);
+      // ...so the mech behind still takes it whole.
+      b.step(30);
+      expect(next.cells).toBe(1);
+    }
+  });
+
+  it('a top-up is not the team\'s take: no share to teammates, and one of them can still take the gate this lap', () => {
+    const a = new Arena(1);
+    const m = approach(a, FW0, 0);
+    m.cells = 2.5;
+    const mate = a.put(MF0, G0.s - 30, G0.d);
+    const far = a.put(DF0, G0.s - 400, G0.d);
+    a.step(4);
+    expect(m.cells).toBe(3);
+    expect(a.events('gateShare')).toEqual([]);
+    expect(far.cells).toBe(0);
+    a.step(30);
+    expect(mate.cells).toBe(1);
+    expect(far.cells).toBe(DEFAULT_RULES.gateShare);
   });
 
   it('a full mech takes nothing: no Cell, no event, and the gate is not marked', () => {
@@ -1031,16 +1073,16 @@ describe('the share: a gate pays the whole team (rules.gateShare)', () => {
     expect(a.events('gate').map((e) => e.mech)).toEqual([FW0, FW1]);
   });
 
-  it('more than two Cells and it passes without taking the gate, whatever its teammates hold: the chaser behind finds it lit', () => {
+  it('more than two Cells and it only tops up, whatever its teammates hold: no share, and the chaser behind finds it lit', () => {
     const a = new Arena(1);
     const leader = approach(a, FW0, 0);
     leader.cells = 2.5;
     const chaser = approach(a, FW1, 0, 0, 12);
     a.step(12);
     expect(chaser.s - a.base).toBeGreaterThan(G0.s);
-    expect(leader.cells).toBe(2.5);
+    expect(leader.cells).toBe(3);
     expect(a.mech(MF0).cells).toBe(0);
-    expect(a.events('gate').map((e) => e.mech)).toEqual([FW1]);
+    expect(a.events('gate').map((e) => e.mech)).toEqual([FW0, FW1]);
     expect(chaser.cells).toBe(1);
   });
 
