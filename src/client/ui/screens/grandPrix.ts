@@ -45,7 +45,7 @@ export interface GpData {
 }
 
 export const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
-export const MEDAL_NAMES: Record<string, string> = { gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
+export const MEDAL_NAMES: Record<string, string> = { platinum: 'Platinum', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
 
 export function emblem(f: number): HTMLElement {
   const el = h('i.emb');
@@ -144,10 +144,21 @@ export function awardLines(ev: GpEvent, place: number, medal: string | null): HT
   let line: string;
   if (ev.sprint) {
     headline = medal ? `${MEDAL_NAMES[medal]} medal` : `${ORD[place - 1]} place`;
-    line = medal ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: you finish ${ORD[place - 1]}.` : `You finish ${ORD[place - 1]}: a medal needs the top three.`;
+    line =
+      medal === 'platinum'
+        ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: every race won.`
+        : medal
+          ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: you finish ${ORD[place - 1]}.${place === 1 ? ' Win every race for platinum.' : ''}`
+          : `You finish ${ORD[place - 1]}: a medal needs the top three.`;
   } else if (singleRaces(ev)) {
+    const yours = factionName(LIVERIES[ev.faction]);
     headline = medal ? `${MEDAL_NAMES[medal]} medal` : `${ORD[place - 1]} place`;
-    line = medal ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: ${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}: a medal needs the top three.`;
+    line =
+      medal === 'platinum'
+        ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: ${yours} win every round.`
+        : medal
+          ? `${eventName(ev)} at ${GP_DIFFICULTY[ev.difficulty]}: ${yours} finish ${ORD[place - 1]}.${place === 1 ? ' Win every round for platinum.' : ''}`
+          : `${yours} finish ${ORD[place - 1]}: a medal needs the top three.`;
   } else {
     headline = place === 1 ? 'The Zenith Cup' : `${ORD[place - 1]} in the season`;
     line = place === 1 ? `${factionName(LIVERIES[ev.faction])} top the table at ${GP_DIFFICULTY[ev.difficulty]}. The cup is yours.` : `${factionName(LIVERIES[ev.faction])} finish ${ORD[place - 1]}. Only the top of the table takes the cup.`;
@@ -169,20 +180,16 @@ function board(id: string): HTMLElement {
   return img;
 }
 
-/** The medals an event has given, one place for each difficulty. */
-function pips(won: Record<number, Medal | undefined> | undefined): HTMLElement {
-  return h(
-    'div.pips',
-    ...GP_DIFFICULTY.map((d, i) => {
-      const m = won?.[i];
-      const disc = h('i.' + (m ?? 'empty'));
-      // The league's badge struck into it.
-      if (m) disc.style.setProperty('--badge', `url(${medalBadgeUrl(m)})`);
-      const el = h('span.pip', disc, d);
-      el.title = `${d}: ${m ? MEDAL_NAMES[m] : 'no medal yet'}`;
-      return el;
-    }),
-  );
+/** The medal an event has given at a difficulty (the one picked in the menu): one disc, empty for none yet. */
+function pips(won: Record<number, Medal | undefined> | undefined, diff: number): HTMLElement {
+  const m = won?.[diff];
+  const d = GP_DIFFICULTY[diff];
+  const disc = h('i.' + (m ?? 'empty'));
+  // The league's badge struck into it.
+  if (m) disc.style.setProperty('--badge', `url(${medalBadgeUrl(m)})`);
+  const el = h('span.pip' + (m ? '.won' : ''), disc, m ? `${MEDAL_NAMES[m]} at ${d}` : `No medal at ${d}`);
+  el.title = m === 'platinum' ? `Platinum at ${d}: every race won` : m ? `${MEDAL_NAMES[m]} at ${d}` : `No medal yet at ${d}`;
+  return h('div.pips', el);
 }
 
 /** A trophy, in a cup's colours (or the Grand Tour's, or the Zenith Cup's). */
@@ -212,7 +219,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
     side.replaceChildren();
     if (key === 'cup') {
       const cupEv = g.gpEvent('cup');
-      side.append(h('h2', 'Cups'), h('p', 'Three races, each against a different faction: gold, silver or bronze for the top three. A medal opens the next cup.'));
+      side.append(h('h2', 'Cups'), h('p', 'Three races, each against a different faction: gold, silver or bronze for the top three, platinum for winning every round. A medal opens the next cup.'));
       CUPS.forEach((c, i) => {
         const open = cupOpen(c.id, medals.byCup);
         const going = cupEv && cupEv.cup === c.id && !isOver(cupEv) ? cupEv : null;
@@ -221,7 +228,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
             'div.prev-cup' + (open ? '' : '.locked'),
             trophy(c.id),
             h('div.prev-name', h('b', c.name), h('small', going ? `Under way: ${progress(going)}` : open ? '' : `A medal in the ${CUPS[i - 1].name} opens it`)),
-            pips(medals.byCup[c.id]),
+            pips(medals.byCup[c.id], diff),
             h('div.prev-boards', ...c.circuits.map(board)),
           ),
         );
@@ -233,11 +240,11 @@ export function registerGrandPrix(m: Menus, g: Game): void {
         h('h2', 'Grand Tour'),
         h('p', open ? 'Nine races, every circuit in turn. Each rival twice, then a decider at Zenith Ring against the team nearest you on the table.' : 'Opens with a medal in each of the three cups.'),
         h('div.prev-grid.nine' + (open ? '' : '.locked'), ...TRACKS.map((t) => board(t.id))),
-        h('div.prev-foot', trophy('tour'), tour && !isOver(tour) ? h('b', `Under way: ${progress(tour)}`) : pips(medals.byCup[TOUR_ID])),
+        h('div.prev-foot', trophy('tour'), tour && !isOver(tour) ? h('b', `Under way: ${progress(tour)}`) : pips(medals.byCup[TOUR_ID], diff)),
       );
     } else if (key === 'sprint-cup') {
       const cupEv = g.gpEvent('sprint-cup');
-      side.append(h('h2', 'Sprint Cups'), h('p', 'The cups as Sprints: three races, six Forwards, every pilot for themselves. Points by place; the leader starts at the back. Their own medals and their own ladder: a medal opens the next Sprint Cup.'));
+      side.append(h('h2', 'Sprint Cups'), h('p', 'The cups as Sprints: three races, six Forwards, every pilot for themselves. Points by place; the leader starts at the back. Their own medals (platinum for winning every race) and their own ladder: a medal opens the next Sprint Cup.'));
       CUPS.forEach((c, i) => {
         const open = cupOpen(c.id, medals.sprint);
         const going = cupEv && cupEv.cup === c.id && !isOver(cupEv) ? cupEv : null;
@@ -246,7 +253,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
             'div.prev-cup' + (open ? '' : '.locked'),
             trophy(c.id),
             h('div.prev-name', h('b', cupName(c.name, true)), h('small', going ? `Under way: ${progress(going)}` : open ? '' : `A medal in the ${cupName(CUPS[i - 1].name, true)} opens it`)),
-            pips(medals.sprint[c.id]),
+            pips(medals.sprint[c.id], diff),
             h('div.prev-boards', ...c.circuits.map(board)),
           ),
         );
@@ -258,7 +265,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
         h('h2', 'Sprint Tour'),
         h('p', open ? 'Nine Sprints, every circuit in turn. The last, at Zenith Ring, is the Showdown: double points, and the pilot nearest you on the table marked as your rival.' : 'Opens with a medal in each of the three Sprint Cups.'),
         h('div.prev-grid.nine' + (open ? '' : '.locked'), ...TRACKS.map((t) => board(t.id))),
-        h('div.prev-foot', trophy('tour'), tour && !isOver(tour) ? h('b', `Under way: ${progress(tour)}`) : pips(medals.sprint[TOUR_ID])),
+        h('div.prev-foot', trophy('tour'), tour && !isOver(tour) ? h('b', `Under way: ${progress(tour)}`) : pips(medals.sprint[TOUR_ID], diff)),
       );
     } else if (key === 'season') {
       const season = g.gpEvent('season');
@@ -353,7 +360,7 @@ export function registerGrandPrix(m: Menus, g: Game): void {
           trophy(c.id),
           h('h3', name),
           h('div.boards', ...c.circuits.map(board)),
-          pips(medals[c.id]),
+          pips(medals[c.id], diff),
           h('div.status', mine ? `Continue: ${progress(mine).toLowerCase()}` : open ? '' : opens),
         );
         m.addItem(

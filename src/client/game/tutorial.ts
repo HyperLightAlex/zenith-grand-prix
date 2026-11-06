@@ -546,7 +546,7 @@ function cardText(id: BeatId, race: RaceState, t: Tutorial, device: Device): Car
         title: 'Carve the corners',
         lines: [
           'Steer into a corner and hold [brake] to carve. You grip harder and build charge: cyan, then gold, then magenta.',
-          'Too hot for a hairpin? Push the stick into the turn: the carve bites, shedding speed to hold the line.',
+          'Too hot for a hairpin? Push the stick hard into the turn: the carve bites, shedding speed to hold the line.',
           'Let go as the corner opens for a burst of speed.',
         ],
       };

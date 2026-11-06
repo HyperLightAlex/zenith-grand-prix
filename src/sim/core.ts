@@ -113,10 +113,17 @@ export function carveSteer(dir: number, mx: number): number {
 
 /**
  * How hard a carve bites, 0 to 1: how far the stick is pushed into the turn
- * past the middle (none with it in the middle or eased out of the turn).
+ * past `from` (rules.carveBiteFrom), as a share of the rest of the way in;
+ * none short of it, in the middle or eased out of the turn. (A push short of
+ * it only tightens the carve: carveSteer.)
  */
-export function carveBite(dir: number, mx: number): number {
-  return clamp(mx * dir, 0, 1);
+export function carveBite(dir: number, mx: number, from = 0): number {
+  return clamp((mx * dir - from) / Math.max(1e-6, 1 - from), 0, 1);
+}
+
+/** The push into the turn (0 to 1) that bites this hard: the inverse of carveBite. */
+export function carveBiteLean(bite: number, from = 0): number {
+  return from + bite * (1 - from);
 }
 
 /**

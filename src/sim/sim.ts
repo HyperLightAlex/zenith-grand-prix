@@ -444,7 +444,8 @@ function stepSpeedMode(race: RaceState, track: Track, m: MechState, c: ClassDef,
   // at boost pace runs as wide as a plain turn without it. Biting, the carve
   // holds its line instead: too fast for the line the bite asks for (all
   // the way in, rules.carveBiteRadius), it sheds speed until it is not.
-  const bite = carving && !staggered ? carveBite(m.carveDir, input.mx) : 0;
+  // (Only past rules.carveBiteFrom: short of it a push only tightens the carve.)
+  const bite = carving && !staggered ? carveBite(m.carveDir, input.mx, race.rules.carveBiteFrom) : 0;
   const biteSpeed = carveBiteSpeed(grip * hold, race.rules.carveBiteRadius, bite);
 
   let cap = speedCap(race, m, c);

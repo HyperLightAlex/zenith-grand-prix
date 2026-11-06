@@ -18,7 +18,7 @@
 // Plain logic over the match's and the event's ledgers (sim/ledger.ts).
 
 import { AWARD_COUNT, ROLE, byPoints, mentions, standings as matchStandings, teamOrder, seatKey, type MatchState, type Mention, type PilotLine } from '../../sim/index';
-import { finalPlace, medalFor, singleRaces, sprintStandings, standings as eventStandings, type GpEvent, type Medal } from '../../gp/grandPrix';
+import { eventMedal, finalPlace, medalFor, singleRaces, sprintStandings, standings as eventStandings, type GpEvent, type Medal } from '../../gp/grandPrix';
 import { PILOT_NAMES } from '../../net/factions';
 
 export interface CeremonyStep {
@@ -106,7 +106,9 @@ export function eventCeremony(ev: GpEvent | null): Ceremony | null {
   if (ev.sprint) return sprintEventCeremony(ev);
   const table = eventStandings(ev, ev.rounds.length - 1);
   const medals = singleRaces(ev);
-  const steps = table.slice(0, 3).map((row, i) => ({ pilots: factionTeam(ev, row.faction), side: row.faction, medal: medals ? medalFor(i + 1) : null }));
+  // (The winners' step: platinum for a perfect run, which is yours.)
+  const top = eventMedal(ev) === 'platinum' ? 'platinum' : medalFor(1);
+  const steps = table.slice(0, 3).map((row, i) => ({ pilots: factionTeam(ev, row.faction), side: row.faction, medal: medals ? (i === 0 ? top : medalFor(i + 1)) : null }));
   const lines = [...(ev.pilots ?? [])].sort(byPoints);
   return { kind: 'event', layout: 'teams', steps, lines, mentions: mentions(lines), trophy: true };
 }
@@ -114,7 +116,7 @@ export function eventCeremony(ev: GpEvent | null): Ceremony | null {
 /** Where you finished an event, and your medal if any (as the award has it). */
 export function eventAward(ev: GpEvent): { place: number; medal: Medal | null } {
   const place = finalPlace(ev);
-  return { place, medal: singleRaces(ev) ? medalFor(place) : null };
+  return { place, medal: eventMedal(ev) };
 }
 
 /**
@@ -126,6 +128,7 @@ function sprintEventCeremony(ev: GpEvent): Ceremony {
   const table = sprintStandings(ev, ev.rounds.length - 1);
   const lineOf = (seat: number): PilotLine => (ev.pilots ?? []).find((l) => l.id === seat) ?? { ...standIn(seat - 1, ROLE.FW), id: seat, team: seat };
   const lines = table.map((row) => lineOf(row.seat));
-  const steps = table.slice(0, 3).map((row, i) => ({ pilots: [lineOf(row.seat)], side: row.seat, medal: medalFor(i + 1) }));
+  const top = eventMedal(ev) === 'platinum' ? 'platinum' : medalFor(1);
+  const steps = table.slice(0, 3).map((row, i) => ({ pilots: [lineOf(row.seat)], side: row.seat, medal: i === 0 ? top : medalFor(i + 1) }));
   return { kind: 'event', layout: 'pilots', steps, lines, mentions: mentions(lines), trophy: true };
 }

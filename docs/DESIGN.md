@@ -477,14 +477,20 @@ road. Less stick than 0.35 and the trigger is a brake.
   speed, so a carve on the boost (1.25 times the pace, 1.56 times the
   radius) ran about as wide as plain steering without one, and nothing
   could take Monsoon's Stairway hairpins (55 round, 40 wide) at a boosted
-  pace, or at all from lap 2. Pushed into the turn past the middle, the
-  carve bites: all the way in it holds a line `carveBiteRadius` (50) round,
+  pace, or at all from lap 2. Pushed into the turn more than halfway
+  (`carveBiteFrom`, 0.5; short of that a push only tightens the carve), the
+  carve bites, from nothing there to full all the way in. All the way in it
+  holds a line `carveBiteRadius` (50) round,
   and too fast for that it sheds speed at `carveBiteDrag` (150 u/s every
   second, harder than the brake: the skates turned across), down to the
   pace that holds it (about 91 for a Forward on the flat, more on a banked
   turn or in Overdrive). Pushed in part of the way it holds a wider line
   and sheds speed only above a higher pace, in proportion (`carveBiteSpeed`:
-  the full-push pace over how far in), and more gently. While it sheds, it
+  the full-push pace over how hard it bites), and more gently. At a
+  Forward's own pace (160, no boost) it first cuts speed with the stick
+  about four-fifths of the way in; on the boost, about three-quarters. (It
+  used to start at the middle, so it cut at three-fifths in at the
+  Forward's own pace: too easy to set off by just leaning into a carve.) While it sheds, it
   turns as tight as it will at that pace, not as wide as the speed it is
   shedding would leave it. Centred or eased out, nothing changes. A boost
   waits while the bite holds the mech under its pace (no Drive spent) and
@@ -493,8 +499,9 @@ road. Less stick than 0.35 and the trigger is a brake.
   Bite. Computer pilots bite only as hard as takes them down to the pace
   the bend ahead can be carved at. On the keys, which are all or nothing, a
   direction key held into a carve digs in over a moment, from 0.6 of the
-  way over to all the way in after 0.6 s (`KEY_DIG_FROM`, input.ts), so
-  a tap steers the carve without biting.
+  way over to all the way in after 0.9 s (`KEY_DIG_FROM`, input.ts), so
+  a tap steers the carve without biting, and a key held in starts cutting
+  speed at a Forward's own pace after about 0.4 s (it was at once).
 - **Charge.** Per second: how tight the carve is held (0.15 to 1) x the
   bend (250 / its radius, between 0.15 and 1.6; a straight or a carve
   against the bend counts 0.15) x the speed (full from 100 u/s). Tiers at
@@ -956,7 +963,8 @@ the team cups, with a ladder, medals and rewards of its own
   the timing tower edged in gold). The team Tour's decider
   is its match against the nearest team; this is the Sprint's.
 - **Medals**: the first three on the final table take gold, silver and
-  bronze, kept apart from the team series's. **Its own ladder**: the
+  bronze, kept apart from the team series's; first with every race won is
+  **platinum** (as a team cup's or Tour's is with every round won). **Its own ladder**: the
   Horizon Sprint Cup is open from the start, each next Sprint Cup opens
   with a Sprint medal in the one before, and the Sprint Tour with one in
   each. Team medals open nothing here, nor Sprint medals there.
@@ -1291,8 +1299,12 @@ Who stands on it (`game/ceremony.ts`):
   whole team to a tier on the wider **teams' podium**, each team's best in
   front and the other two either side behind. A faction you never raced
   stands its own three pilots. A cup's and the Grand Tour's medals are on
-  their cards, and the **trophy** (`art/blender/trophy/`) rises onto the
-  winners' tier as they strike their poses.
+  their cards (the winners' platinum for a perfect run: every round of
+  yours won, or in a Sprint event every race), and the **trophy**
+  (`art/blender/trophy/`) rises onto the winners' tier as they strike
+  their poses. The menus show each cup's (and Tour's) best medal at the
+  difficulty picked there, one disc, as Mario Kart shows a cup's trophy for
+  the engine class chosen; the medals are kept for each difficulty.
 
 The award comes up over it as the winners pose: an event's is yours (your
 medal, the Zenith Cup, or the place you finished), a match's is its MVP.

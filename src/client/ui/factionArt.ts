@@ -130,10 +130,11 @@ const STRUCK: Record<string, { ink: string; edge: string; star: string }> = {
   gold: { ink: 'rgba(110, 72, 4, 0.72)', edge: 'rgba(255, 248, 210, 0.75)', star: '#fffbe8' },
   silver: { ink: 'rgba(58, 66, 80, 0.7)', edge: 'rgba(255, 255, 255, 0.8)', star: '#ffffff' },
   bronze: { ink: 'rgba(78, 40, 14, 0.72)', edge: 'rgba(255, 228, 200, 0.7)', star: '#fff0e0' },
+  platinum: { ink: 'rgba(52, 70, 104, 0.72)', edge: 'rgba(235, 250, 255, 0.85)', star: '#ffffff' },
 };
 
 /**
- * The league's badge struck into a medal (gold, silver or bronze; the
+ * The league's badge struck into a medal (platinum, gold, silver or bronze; the
  * Zenith Cup takes the gold): cut in a darker shade of the metal, with the
  * light catching its lower edges, the star bright. An image URL, drawn once.
  */

@@ -15,7 +15,7 @@ This is version 0.5: nine circuits and three ways to play.
 - **Grand Prix**, offline: three **cups** of three races (the Horizon Cup,
   then the Frontier and the Ascent Cups, each opened by a medal in the one
   before), each race against a different faction, for gold, silver or
-  bronze; the **Grand Tour**, opened by a medal in all three: nine races,
+  bronze, and **platinum** for winning every round; the **Grand Tour**, opened by a medal in all three: nine races,
   every circuit from Meridian to Zenith Ring, the last a decider against
   the team nearest you on the table; or a **season**, a double round robin
   of ten matchdays, a best of 3 against each of the other four factions
@@ -26,7 +26,8 @@ This is version 0.5: nine circuits and three ways to play.
   your own Forward against one pilot from each faction, every pilot for
   themselves) and the **Sprint Tour** (nine Sprints, the last the
   Showdown: double points, your nearest rival on the table marked), with
-  their own medals and their own rewards.
+  their own medals (platinum for winning every race) and their own
+  rewards. Each cup shows the medal won at the difficulty picked.
 - **Free Play**: any circuit, rival and format against computer pilots.
 - **How to play**: the **tutorial**, a guided first race that stops at each
   new thing (revving, boosting, carving, gates, a duel with a sparring

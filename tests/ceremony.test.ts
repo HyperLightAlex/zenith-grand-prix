@@ -168,12 +168,21 @@ describe("a Grand Prix's ceremony", () => {
     expect(c.layout).toBe('teams');
     expect(c.trophy).toBe(true);
     expect(c.steps.map((s) => s.side)).toEqual(eventStandings(ev).slice(0, 3).map((r) => r.faction));
-    expect(c.steps.map((s) => s.medal)).toEqual(['gold', 'silver', 'bronze']);
+    // (Every round of yours won, and first: the winners' step is platinum.)
+    expect(c.steps.map((s) => s.medal)).toEqual(['platinum', 'silver', 'bronze']);
     for (const s of c.steps) {
       expect(s.pilots).toHaveLength(3);
       expect(new Set(s.pilots.map((p) => p.role)).size).toBe(3);
       for (const p of s.pilots) expect(p.faction).toBe(s.side);
     }
+  });
+
+  it('a cup won with a round lost: gold on the winners\' step', () => {
+    const ev = playCup();
+    ev.rounds[1].you!.result = { wins: [0, 1], points: [10, 30], races: 1, winner: 1 };
+    const c = eventCeremony(ev)!;
+    if (c.steps[0].side === ev.faction) expect(c.steps[0].medal).toBe('gold');
+    expect(c.steps.map((s) => s.medal)).not.toContain('platinum');
   });
 
   it("fills a faction you never raced with its own pilots, forward first", () => {

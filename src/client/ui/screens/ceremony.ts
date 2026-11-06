@@ -7,7 +7,7 @@
 // mech; and every pilot's points broken down, beside an event's final table.
 
 import { AWARD_NAMES, MENTION_NAMES, ROLE_NAMES, mentionLine, standings, type PilotLine } from '../../../sim/index';
-import { eventName, finalPlace, medalFor, singleRaces, type GpEvent } from '../../../gp/grandPrix';
+import { eventMedal, eventName, finalPlace, singleRaces, type GpEvent } from '../../../gp/grandPrix';
 import type { Game } from '../../game/game';
 import { h } from '../dom';
 import type { Menus } from '../menus';
@@ -133,7 +133,7 @@ function result(g: Game): HTMLElement[] {
   const ev: GpEvent | null = g.ceremonyEvent;
   if (ev) {
     const place = finalPlace(ev);
-    return awardLines(ev, place, singleRaces(ev) ? medalFor(place) : null);
+    return awardLines(ev, place, eventMedal(ev));
   }
   const m = g.match;
   const top = c.steps[0];

@@ -28,7 +28,7 @@ import {
   TACTIC,
   type Tactic,
 } from './config';
-import { carveBiteSpeed, carveStick, classOf, distance, hpFraction, inPlay, lockable, ownTopSpeed, sameRoute, setTarget, speedCap, towBonus } from './core';
+import { carveBiteLean, carveBiteSpeed, carveStick, classOf, distance, hpFraction, inPlay, lockable, ownTopSpeed, sameRoute, setTarget, speedCap, towBonus } from './core';
 import { clamp, lerp, rngNext, wrapAngle } from './math';
 import { setTactic } from './sim';
 import { deltaS, forkAt, gripAt, holdAt, hwAt, routeBendAt, kappaAheadAt, kappaAt, laneAt, lineAt, splitApart, wallAt, wrapS, type Fork, type Track } from './track';
@@ -646,7 +646,7 @@ function race_(race: RaceState, track: Track, m: MechState, out: MechInput): voi
       // down to the hairpin pace, bend or no bend).
       const lean = out.mx * m.carveDir;
       const fullBite = carveBiteSpeed(c.grip * carveGrip * gripAt(track, m.s) * holdAt(track, m.s), rules.carveBiteRadius, 1);
-      if (lean > 0) out.mx = m.carveDir * Math.min(lean, fullBite / Math.max(vCarve, 1));
+      if (lean > 0) out.mx = m.carveDir * Math.min(lean, carveBiteLean(fullBite / Math.max(vCarve, 1), rules.carveBiteFrom));
     }
     if (m.speed > vCarve + 3) throttle = 0;
     else if (m.speed > vCarve - 3) throttle = Math.min(throttle, 0.7);

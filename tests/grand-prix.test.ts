@@ -6,6 +6,7 @@ import {
   advance,
   betterMedal,
   cupOpen,
+  eventMedal,
   finalPlace,
   isOver,
   medalFor,
@@ -13,6 +14,7 @@ import {
   newSeason,
   newTour,
   pendingFixtures,
+  perfectRun,
   playedRounds,
   recordYours,
   roundComplete,
@@ -91,6 +93,37 @@ describe('cups', () => {
     expect(medalFor(4)).toBe(null);
     expect(betterMedal('bronze', 'silver')).toBe('silver');
     expect(betterMedal(null, 'bronze')).toBe('bronze');
+  });
+
+  it('platinum for a perfect run: first, with every round won; gold for first with a round lost', () => {
+    const perfect = newCup('horizon', 0, 1, 3);
+    fillBackground(perfect);
+    for (let r = 0; r < 3; r++) {
+      recordYours(perfect, win(40, 10));
+      advance(perfect);
+    }
+    expect(perfectRun(perfect)).toBe(true);
+    expect(eventMedal(perfect)).toBe('platinum');
+    // A place never earns platinum by itself, and it outranks gold.
+    expect(medalFor(1)).toBe('gold');
+    expect(betterMedal('gold', 'platinum')).toBe('platinum');
+    expect(betterMedal('platinum', 'gold')).toBe('platinum');
+
+    const dropped = newCup('horizon', 0, 1, 3);
+    fillBackground(dropped);
+    for (const [a, b] of [
+      [40, 10],
+      [24, 26],
+      [44, 6],
+    ]) {
+      recordYours(dropped, win(a, b));
+      advance(dropped);
+    }
+    expect(perfectRun(dropped)).toBe(false);
+    expect(finalPlace(dropped)).toBe(1);
+    expect(eventMedal(dropped)).toBe('gold');
+    // ...and a season gives no medal at all.
+    expect(eventMedal(newSeason(0, 1, 3))).toBe(null);
   });
 });
 
@@ -325,6 +358,16 @@ describe('the Sprint series', () => {
     expect(isOver(ev)).toBe(true);
     expect(finalPlace(ev)).toBe(1);
     expect(medalFor(finalPlace(ev))).toBe('gold');
+    // First, but beaten to a race by seat 2: gold, not platinum.
+    expect(perfectRun(ev)).toBe(false);
+    expect(eventMedal(ev)).toBe('gold');
+    // Every race won: platinum.
+    const perfect = newSprintCup('horizon', 1, 3);
+    for (let r = 0; r < 3; r++) {
+      recordSprint(perfect, placesOf([0, 1, 2, 3, 4, 5]));
+      advance(perfect);
+    }
+    expect(eventMedal(perfect)).toBe('platinum');
   });
 
   it('the first grid is drawn by lot, the same each time it is asked for; a race recorded twice keeps its pilots once', () => {

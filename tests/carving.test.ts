@@ -18,6 +18,8 @@ import {
   OVERDRIVE_CARVE_GRIP,
   ROLE,
   buildTrack,
+  carveBite,
+  carveBiteLean,
   carveBiteSpeed,
   carveSteer,
   carveStick,
@@ -310,9 +312,10 @@ describe('the burst', () => {
 });
 
 describe('the bite', () => {
-  // The stick pushed into a carve past the middle digs the skates in: too fast
-  // for the line it asks for, the carve sheds speed until it is not, rather
-  // than running wide. In the middle or eased out of the turn it does not.
+  // The stick pushed into a carve past carveBiteFrom (halfway in) digs the
+  // skates in: too fast for the line it asks for, the carve sheds speed until
+  // it is not, rather than running wide. Short of that, in the middle or eased
+  // out of the turn it does not: a push there only tightens the carve.
   const fullPush = (a: Arena) => carveBiteSpeed(CLASSES[ROLE.FW].grip * a.race.rules.carveGrip, a.race.rules.carveBiteRadius, 1);
 
   it('pushed all the way in, sheds speed about as hard as carveBiteDrag', () => {
@@ -356,20 +359,47 @@ describe('the bite', () => {
     }
   });
 
-  it('pushed in part of the way, it bites only at a higher pace', () => {
+  it('pushed in part of the way past where it starts, it bites only at a higher pace', () => {
     const a = new Arena(3);
+    expect(a.race.rules.carveBiteFrom).toBe(0.5);
     const m = a.put(FW0, 100, -14, 160);
-    carve(a, FW0, 0.75);
+    carve(a, FW0, 0.9);
     a.step(1);
-    // A three-quarter push holds its line up to a third more than a full one.
-    expect(fullPush(a) / 0.75).toBeLessThan(160);
-    expect(m.carveBite).toBeCloseTo(0.75, 6);
+    // Nine-tenths in is four-fifths of the bite: its line held up to a quarter faster than a full push.
+    expect(carveBite(1, 0.9, 0.5)).toBeCloseTo(0.8, 9);
+    expect(fullPush(a) / 0.8).toBeLessThan(160);
+    expect(m.carveBite).toBeCloseTo(0.8, 6);
     const b = new Arena(3);
     const n = b.put(FW0, 100, -14, 160);
-    carve(b, FW0, 0.4);
+    carve(b, FW0, 0.7);
     b.step(1);
-    expect(fullPush(b) / 0.4).toBeGreaterThan(160);
+    expect(fullPush(b) / carveBite(1, 0.7, 0.5)).toBeGreaterThan(160);
     expect(n.carveBite).toBe(0);
+  });
+
+  it('short of halfway in, no bite at any pace: the push only tightens the carve', () => {
+    for (const mx of [0.3, 0.5]) {
+      const a = new Arena(3);
+      const m = a.put(FW0, 100, -14, 200);
+      carve(a, FW0, 0.6);
+      a.step(1);
+      carve(a, FW0, mx);
+      a.step(10);
+      expect(m.carving).toBe(true);
+      expect(m.carveBite).toBe(0);
+      expect(carveBite(1, mx, a.race.rules.carveBiteFrom)).toBe(0);
+    }
+    // ...and the push for a bite is the inverse of the bite for a push.
+    for (const b of [0, 0.25, 0.8, 1]) expect(carveBite(1, carveBiteLean(b, 0.5), 0.5)).toBeCloseTo(b, 9);
+  });
+
+  it('at a Forward\'s own pace (no boost), a push has to be most of the way in to cut speed; with the boost, less', () => {
+    const a = new Arena(3);
+    const from = a.race.rules.carveBiteFrom;
+    // The push at which the bite starts shedding speed at a pace: the bite that holds its line there.
+    const cutsFrom = (pace: number) => carveBiteLean(fullPush(a) / pace, from);
+    expect(cutsFrom(CLASSES[ROLE.FW].topSpeed)).toBeGreaterThan(0.75);
+    expect(cutsFrom(CLASSES[ROLE.FW].topSpeed * a.race.rules.boostMult)).toBeLessThan(cutsFrom(CLASSES[ROLE.FW].topSpeed));
   });
 
   it('no bite and no limit without the grip: it follows the carve\'s, so Overdrive bites at a higher pace', () => {

@@ -18,12 +18,12 @@ export interface PodiumCard {
   /** Seconds after the podium goes up that the card shows. */
   at: number;
   /** An event's medal for the place, or none. */
-  medal?: 'gold' | 'silver' | 'bronze' | '';
+  medal?: 'platinum' | 'gold' | 'silver' | 'bronze' | '';
 }
 
 /** The award as it comes up: your medal or the cup (or neither), its title and a line under it. */
 export interface PodiumAward {
-  badge: 'gold' | 'silver' | 'bronze' | 'cup' | '';
+  badge: 'platinum' | 'gold' | 'silver' | 'bronze' | 'cup' | '';
   title: string;
   line: string;
   /** Seconds after the podium goes up. */

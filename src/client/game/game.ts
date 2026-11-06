@@ -48,7 +48,7 @@ import {
   finalPlace,
   isOver,
   matchFormat,
-  medalFor,
+  eventMedal,
   newCup,
   newSeason,
   newSprintCup,
@@ -1893,7 +1893,7 @@ export class Game {
     this.gpRunner.run(ev);
     if (isOver(ev)) {
       const place = finalPlace(ev);
-      const medal = singleRaces(ev) ? medalFor(place) : null;
+      const medal = eventMedal(ev);
       const before = this.progress;
       if (singleRaces(ev)) gpStore.awardMedal(ev.cup, ev.difficulty, medal, !!ev.sprint);
       else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
@@ -3385,7 +3385,8 @@ export class Game {
     const ev = this.ceremonyEvent;
     const m = this.match;
     // (The event's name is over it already: what the winners take.)
-    if (ev) return ev.kind === 'season' ? 'The Zenith Cup' : `${MEDAL_NAMES.gold} medal`;
+    // (Platinum, for the winners of a perfect run: theirs is the top step's.)
+    if (ev) return ev.kind === 'season' ? 'The Zenith Cup' : `${MEDAL_NAMES[c.steps[0]?.medal ?? 'gold']} medal`;
     if (!m) return '';
     if (c.kind === 'sprint') {
       const side = c.steps[0].side;
@@ -3401,6 +3402,7 @@ export class Game {
     if (ev?.sprint) {
       const { place, medal } = eventAward(ev);
       const at = Podium.STRIKE_AT[0] + 1.6;
+      if (medal === 'platinum') return { badge: medal, title: 'Platinum medal', line: 'Every race won', at };
       return medal ? { badge: medal, title: `${MEDAL_NAMES[medal]} medal`, line: `You finish ${ORD6[place - 1]}`, at } : { badge: '', title: `${ORD6[place - 1]} place`, line: 'A medal needs the top three', at };
     }
     if (ev) {
@@ -3408,6 +3410,7 @@ export class Game {
       const at = Podium.STRIKE_AT[0] + 1.6;
       const yours = factionName(LIVERIES[ev.faction] ?? LIVERIES[0]);
       if (ev.kind === 'season') return place === 1 ? { badge: 'cup', title: 'The Zenith Cup', line: `${yours} top the table`, at } : { badge: '', title: `${ORD[place - 1]} in the season`, line: `${yours}: only the top of the table takes the cup`, at };
+      if (medal === 'platinum') return { badge: medal, title: 'Platinum medal', line: `${yours} win every round`, at };
       return medal ? { badge: medal, title: `${MEDAL_NAMES[medal]} medal`, line: `${yours} finish ${ORD[place - 1]}`, at } : { badge: '', title: `${ORD[place - 1]} place`, line: `${yours}: a medal needs the top three`, at };
     }
     const mvp = c.mentions.find((m) => m.kind === 'mvp');

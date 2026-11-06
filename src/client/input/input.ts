@@ -28,12 +28,13 @@ export type Captured = { key: string } | { pad: number } | { cancel: true };
 /**
  * Carving on the keys (S with A or D), a key held into the carve digs in
  * over a moment, as a stick would be pushed: from this much of the way over
- * (just past the middle of a carve's range, nowhere near a bite at the
- * first laps' pace) to all the way in after KEY_DIG_SECS. A key is all or
- * nothing, and all the way in at once would bite every carve hard.
+ * (just past where the bite starts, rules.carveBiteFrom, and nowhere near
+ * cutting speed at racing pace) to all the way in after KEY_DIG_SECS. A key
+ * is all or nothing, and all the way in at once would bite every carve hard;
+ * at a Forward's own pace it starts to cut speed after about 0.4 s.
  */
 const KEY_DIG_FROM = 0.6;
-const KEY_DIG_SECS = 0.6;
+const KEY_DIG_SECS = 0.9;
 
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, LS: 10, RS: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 

@@ -1235,11 +1235,16 @@ html:is(.compact, .lay-cols, .lay-single) .item.cupcard { padding: 0.9em 0.8em; 
 .board { display: block; width: 100%; height: auto; user-select: none; }
 .board.plain { padding: 0.4em; background: #103b3f; color: #e9fbff; font-weight: 800; font-size: 0.8em; text-align: center; }
 
-/* Medals given, one place for each difficulty. */
+/* The medal given at the difficulty picked in the menu: one disc, its name and the difficulty beside it. */
 .pips { display: flex; justify-content: center; gap: 0.8em; }
-.pip { display: flex; flex-direction: column; align-items: center; gap: 0.2em; font-size: 0.85em; font-weight: 600; opacity: 0.9; }
-.pip i { --badge: none; width: 1.6em; height: 1.6em; border-radius: 50%; box-shadow: inset 0 0 0 0.12em rgba(0, 0, 0, 0.25); }
+.pip { display: flex; align-items: center; gap: 0.45em; font-size: 0.85em; font-weight: 600; opacity: 0.75; white-space: nowrap; }
+.pip.won { opacity: 1; }
+.pip i { --badge: none; flex: none; width: 1.6em; height: 1.6em; border-radius: 50%; box-shadow: inset 0 0 0 0.12em rgba(0, 0, 0, 0.25); }
 .pip i.empty { background: none; box-shadow: inset 0 0 0 0.14em rgba(255, 255, 255, 0.35); }
+/* Platinum (a perfect run): cool white with a pale sheen that turns blue to violet round the rim, and a glow. */
+.pip i.platinum, .medal.platinum { background: var(--badge) center / 84% no-repeat, radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 46%), conic-gradient(from 200deg, #e4f1fd, #9fb8d6, #eee6ff, #a9d3e8, #f4f8ff, #b7c3e6, #e4f1fd); }
+.pip i.platinum { box-shadow: inset 0 0 0 0.12em rgba(60, 86, 130, 0.35), 0 0 0.5em rgba(190, 225, 255, 0.6); }
+.medal.platinum { box-shadow: inset 0 0 0 0.35em rgba(60, 86, 130, 0.3), 0 0 1.4em rgba(190, 225, 255, 0.55), 0 0.4em 1.2em rgba(0, 0, 0, 0.4); }
 .pip i.gold { background: var(--badge) center / 84% no-repeat, radial-gradient(circle at 35% 30%, #fff6c8, #f2c133 45%, #a3740d); }
 .pip i.silver { background: var(--badge) center / 84% no-repeat, radial-gradient(circle at 35% 30%, #ffffff, #c4ccd8 45%, #77808f); }
 .pip i.bronze { background: var(--badge) center / 84% no-repeat, radial-gradient(circle at 35% 30%, #ffe0c4, #c9824a 45%, #7c4a22); }

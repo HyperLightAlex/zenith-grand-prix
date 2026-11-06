@@ -67,8 +67,11 @@ export const GP_SKILL = [0.28, 0.55, 0.82] as const;
 /** Your teammates' skill: the same at every difficulty, as in Free Play. */
 export const GP_TEAMMATE_SKILL = 0.6;
 
-export const MEDALS = ['gold', 'silver', 'bronze'] as const;
+/** The medals, best first. Platinum is gold won perfectly: every race (a Sprint event's) or every round of yours (a team cup's or Tour's) won. */
+export const MEDALS = ['platinum', 'gold', 'silver', 'bronze'] as const;
 export type Medal = (typeof MEDALS)[number];
+/** The medals a final place earns, first to third. */
+const PLACE_MEDALS = ['gold', 'silver', 'bronze'] as const;
 
 /** One race or match between two factions. */
 export interface GpFixture {
@@ -613,9 +616,26 @@ export function finalPlace(ev: GpEvent): number {
   return standings(ev, ev.rounds.length - 1).findIndex((r) => r.faction === ev.faction) + 1;
 }
 
-/** The cup's medal for a final place, or null. */
+/** The cup's medal for a final place, or null (platinum is not a place's: eventMedal). */
 export function medalFor(place: number): Medal | null {
-  return place >= 1 && place <= 3 ? MEDALS[place - 1] : null;
+  return place >= 1 && place <= 3 ? PLACE_MEDALS[place - 1] : null;
+}
+
+/**
+ * Whether a cup or Tour was won perfectly: in a Sprint event, you first in
+ * every race; in a team one, your team the winner of every round it raced.
+ */
+export function perfectRun(ev: GpEvent): boolean {
+  if (!singleRaces(ev)) return false;
+  const mine = ev.rounds.filter((r) => r.you || r.sprint);
+  return mine.length > 0 && mine.every((r) => (r.sprint ? r.sprint.result?.places[0] === 1 : r.you?.result?.winner === 0));
+}
+
+/** Your medal for a cup or Tour (none for a season): by your final place, and platinum for first with every race (or round) won. */
+export function eventMedal(ev: GpEvent): Medal | null {
+  if (!singleRaces(ev)) return null;
+  const place = finalPlace(ev);
+  return place === 1 && perfectRun(ev) ? 'platinum' : medalFor(place);
 }
 
 /** The better of two medals (null for none). */

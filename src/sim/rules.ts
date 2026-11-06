@@ -66,9 +66,13 @@ export interface Rules {
    * The bite: with the stick pushed all the way into a carve, the tightest
    * line it holds (its radius, u), and how hard it sheds speed to hold it
    * when going too fast for it (u/s^2; less pushed in less, in proportion).
+   * It starts only with the stick pushed in further than `carveBiteFrom` (0
+   * to 1 of the way in), and grows from none there to full all the way in:
+   * short of it, a push only tightens the carve.
    */
   carveBiteRadius: number;
   carveBiteDrag: number;
+  carveBiteFrom: number;
 
   // --- lock-on and fighting
   /** Scales how fast a mech moves around the thing it is locked on to. */
@@ -188,6 +192,7 @@ export const DEFAULT_RULES: Readonly<Rules> = Object.freeze({
   carveBurst: 1,
   carveBiteRadius: 50,
   carveBiteDrag: 150,
+  carveBiteFrom: 0.5,
 
   battleMove: 1.6,
   momentumSecs: 0.75,
@@ -270,6 +275,7 @@ export const RULE_LIMITS: Readonly<Record<RuleKey, readonly [number, number]>> =
   carveBurst: [0, 5],
   carveBiteRadius: [10, 1000],
   carveBiteDrag: [0, 400],
+  carveBiteFrom: [0, 0.95],
 
   battleMove: [0.1, 5],
   momentumSecs: [0, 10],

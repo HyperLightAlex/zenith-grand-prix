@@ -5,7 +5,7 @@
 // played in one sitting.
 
 import { ROLE, type Role } from '../../../sim/index';
-import { CUPS, GP_DIFFICULTY, eventName, finalPlace, medalFor, playedRounds, roundComplete, singleRaces, yourRoundNumber, type GpEvent, type GpKind } from '../../../gp/grandPrix';
+import { CUPS, GP_DIFFICULTY, eventMedal, eventName, finalPlace, playedRounds, roundComplete, singleRaces, yourRoundNumber, type GpEvent, type GpKind } from '../../../gp/grandPrix';
 import type { LobbyView } from '../../../net/protocol';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
@@ -151,7 +151,7 @@ export function renderGpRoom(m: Menus, g: Game, v: LobbyView): void {
   } else if (v.phase === 'award') {
     const place = finalPlace(ev);
     col.className = 'col gp-award';
-    col.append(h('div.context', `${eventName(ev)} · online`), ...awardLines(ev, place, cup ? medalFor(place) : null));
+    col.append(h('div.context', `${eventName(ev)} · online`), ...awardLines(ev, place, cup ? eventMedal(ev) : null));
     m.button(list, 'Back to Online', () => g.leaveRoom(), { key: 'done', go: true, note: 'Online results are not kept' });
     m.button(list, 'The ceremony', () => g.showEventCeremony(ev), { key: 'ceremony', note: 'The podium and the pilots' });
     side = h('div.panel.standings', h('h2', 'Final standings'), gpTable(ev, ev.rounds.length - 1));

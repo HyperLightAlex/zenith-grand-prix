@@ -70,11 +70,11 @@ describe('carving on the keys', () => {
     input.poll();
     expect(input.state.brake).toBe(1);
     expect(input.state.mx).toBeCloseTo(-0.6);
-    // ...all the way in after 0.6 s...
-    now += 300;
+    // ...all the way in after 0.9 s...
+    now += 450;
     input.poll();
     expect(input.state.mx).toBeCloseTo(-0.8);
-    now += 400;
+    now += 500;
     input.poll();
     expect(input.state.mx).toBe(-1);
     // ...and from the start again for the other key.
