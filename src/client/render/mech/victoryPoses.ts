@@ -3,10 +3,14 @@
 // fist pumped, a bounce, a breath. Angles as in rig.ts: an arm's x swings it
 // back (negative: forward and up), its z lifts it out to the side (the left
 // arm's positive, the right's negative); an elbow's x bends it.
+//
+// No arm is ever raised straight out ahead and up, still or on its way
+// anywhere: a single arm goes up only to the sky, near upright, bent or with
+// a fist. Nothing here can read as a salute.
 
 import { makePose, type Pose } from './rig';
 
-export const VICTORY_IDS = ['fist', 'arms', 'crossed', 'hips', 'point', 'bow'] as const;
+export const VICTORY_IDS = ['fist', 'arms', 'crossed', 'hips', 'point', 'bow', 'clap', 'pump', 'champion'] as const;
 export type VictoryId = (typeof VICTORY_IDS)[number];
 
 export const VICTORY_NAMES: Record<VictoryId, string> = {
@@ -16,6 +20,9 @@ export const VICTORY_NAMES: Record<VictoryId, string> = {
   point: 'Pointing to the sky',
   hips: 'Hands on hips',
   bow: 'A bow',
+  clap: 'Applause for the crowd',
+  pump: 'The double fist pump',
+  champion: "The champion's flex",
 };
 
 /** Upright, feet planted a little apart, chest out. */
@@ -68,13 +75,14 @@ const BASE: Record<VictoryId, Pose> = {
     footL: [1.3, 0, 0.2, 0, -0.2],
     footR: [-1.15, 0, -0.1, 0, 0.1],
   }),
+  // The right hand on high, straight up at the sky (upright: never out ahead), the left on the hip.
   point: makePose({
     ...stance,
-    chest: [-0.15, -0.15, 0],
-    head: [-0.45, -0.15, 0],
+    chest: [-0.15, -0.12, 0],
+    head: [-0.55, -0.1, 0],
     shL: [0.15, 0, 0.9],
     elL: [-0.3, 0, -1.5],
-    shR: [-2.45, 0, -0.55],
+    shR: [-3.02, 0, -0.16],
     elR: [-0.05, 0, 0],
   }),
   hips: makePose({
@@ -101,6 +109,44 @@ const BASE: Record<VictoryId, Pose> = {
     elR: [-1.5, 0, 0],
     footL: [0.9, 0, 0.05, 0, 0],
     footR: [-0.9, 0, 0.05, 0, 0],
+  }),
+  // Applauding the crowd: both hands together in front of the chest.
+  clap: makePose({
+    ...stance,
+    chest: [-0.16, 0, 0],
+    head: [-0.22, 0, 0],
+    shL: [-0.4, -0.9, 0.35],
+    elL: [-1.05, 0, 0],
+    shR: [-0.4, 0.9, -0.35],
+    elR: [-1.05, 0, 0],
+  }),
+  // Both fists pulled down to the waist, knees giving: "Yes!"
+  pump: makePose({
+    ...stance,
+    hips: [-0.3, 0, 0.0, 0, 0],
+    chest: [-0.1, 0, 0],
+    head: [-0.34, 0, 0],
+    shL: [0.3, 0, 0.32],
+    elL: [-1.9, 0, 0],
+    shR: [0.3, 0, -0.32],
+    elR: [-1.9, 0, 0],
+    footL: [1.4, 0, 0.18, 0, -0.18],
+    footR: [-1.4, 0, 0.18, 0, 0.18],
+  }),
+  // Both arms out, bent up at the elbows: the strongman's double flex.
+  champion: makePose({
+    ...stance,
+    hips: [-0.26, 0, 0.0, 0, 0],
+    chest: [-0.24, 0, 0],
+    head: [-0.3, 0, 0],
+    shL: [-0.15, 0, 1.35],
+    elL: [0, 0, 1.75],
+    shR: [-0.15, 0, -1.35],
+    elR: [0, 0, -1.75],
+    footL: [1.35, 0, 0.12, 0, -0.18],
+    footR: [-1.35, 0, 0.12, 0, 0.18],
+    wingL: [0.15, 0.6, 0.3],
+    wingR: [0.15, -0.6, -0.3],
   }),
 };
 
@@ -145,6 +191,33 @@ export function victoryPose(id: VictoryId, t: number, out: Pose): Pose {
       out.head[1] += Math.sin(t * 0.7) * 0.25;
       out.chest[1] += Math.sin(t * 0.7) * 0.06;
       break;
+    case 'clap': {
+      // Hands apart and together, three claps a second.
+      const c = Math.max(0, Math.sin(t * 18));
+      out.shL[1] += c * 0.2;
+      out.shR[1] -= c * 0.2;
+      out.head[1] += Math.sin(t * 0.6) * 0.18;
+      break;
+    }
+    case 'pump': {
+      // Pulled down hard, twice, then again now and then.
+      const k = Math.max(0, Math.sin(t * 8)) * Math.max(0.2, 1 - t / 2.2);
+      out.shL[0] += k * 0.3;
+      out.shR[0] += k * 0.3;
+      out.elL[0] -= k * 0.35;
+      out.elR[0] -= k * 0.35;
+      out.hips[0] -= k * 0.12;
+      out.head[0] -= k * 0.08;
+      break;
+    }
+    case 'champion': {
+      // The flex squeezed, twice a second for a moment, then held and breathing.
+      const squeeze = Math.max(0, Math.sin(t * 6)) * Math.max(0.15, 1 - t / 2.5);
+      out.elL[2] += squeeze * 0.22;
+      out.elR[2] -= squeeze * 0.22;
+      out.chest[0] -= squeeze * 0.05;
+      break;
+    }
     case 'bow': {
       // Down, held, and up again for a moment, every five seconds.
       const p = (t % 5) / 5;

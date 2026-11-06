@@ -24,12 +24,23 @@
 //           round robin, five matchdays, four circuits drawn for it, then
 //           Zenith Ring.
 //
+// The Sprint series (docs/DESIGN.md, "Sprint Grand Prix"): the cups and the
+// Tour again as Sprints, six Forwards, every pilot for themselves (you, seat
+// 0, and one pilot from each faction, seat f + 1, the same all event), on a
+// ladder of their own. Each round is one race the six run together; the
+// Sprint Tour's last is the Showdown (double points, your nearest rival
+// marked).
+//
 // This module is plain logic over plain data (no DOM), so it saves as JSON
 // and the background races can run in a worker or in a test.
 
-import { ROLE, addLines, createMatch, createRace, recordRound, seatKey, stepRace, sharedTrack, trackById, PHASE, TRACKS, type PilotLine, type SeatConfig, type MatchConfig } from '../sim/index';
+import { ROLE, SPRINT_POINTS, addLines, sprintGrid, createMatch, createRace, recordRound, seatKey, stepRace, sharedTrack, trackById, PHASE, TRACKS, type PilotLine, type SeatConfig, type MatchConfig } from '../sim/index';
 
 export type GpKind = 'cup' | 'tour' | 'season';
+
+/** Where an event is kept offline: the team series's cup, Tour and season, and the Sprint series's cup and Tour. */
+export type GpSlot = GpKind | 'sprint-cup' | 'sprint-tour';
+export const GP_SLOTS: readonly GpSlot[] = ['cup', 'tour', 'season', 'sprint-cup', 'sprint-tour'];
 
 export interface CupDef {
   id: string;
@@ -85,10 +96,48 @@ export interface GpRound {
   circuit: string;
   /** The Grand Tour's last round, its rival not yet chosen (it is the one nearest you on the table once the round before is in). */
   decider?: boolean;
-  /** Your fixture, or null on a matchday you sit out (a season's bye). */
+  /** Your fixture, or null on a matchday you sit out (a season's bye), and in a Sprint event (its race is `sprint`). */
   you: GpFixture | null;
-  /** The other factions' fixtures, raced in the background. */
+  /** The other factions' fixtures, raced in the background (none in a Sprint event). */
   others: GpFixture[];
+  /** A Sprint event's race: the six of the field together. */
+  sprint?: SprintRace;
+}
+
+/** A Sprint event's race. */
+export interface SprintRace {
+  seed: number;
+  /** The Sprint Tour's last: the Showdown (double points, your nearest rival marked). */
+  finale?: boolean;
+  /** The Showdown's marked rival (a seat), settled once the round before it is in. */
+  rival?: number;
+  result: SprintResult | null;
+}
+
+/** A Sprint race's result, by seat (0 you, f + 1 faction f's pilot). */
+export interface SprintResult {
+  /** Where each finished, 1 to 6; 0 knocked out. */
+  places: number[];
+  /** The points each took from it (the Showdown's doubled). */
+  points: number[];
+}
+
+/** A Sprint event's field: you (seat 0) and one pilot from each faction (seat f + 1), the same all event. */
+export interface SprintField {
+  /** Each faction's pilot's skill against the difficulty's, for this event (by faction). */
+  edge: number[];
+}
+
+export interface SprintRow {
+  /** 0 you, f + 1 faction f's pilot. */
+  seat: number;
+  points: number;
+  races: number;
+  wins: number;
+  /** Finishes in the first three. */
+  podiums: number;
+  /** Its place in the latest race it ran (0: knocked out). */
+  last: number;
 }
 
 export interface GpEvent {
@@ -104,6 +153,8 @@ export interface GpEvent {
   rounds: GpRound[];
   /** The round being played (equal to rounds.length once it is over). */
   current: number;
+  /** A Sprint event (its `faction` is -1: you fly for none). */
+  sprint?: SprintField;
   /**
    * The pilots of your races (yours and your rivals'), each its scoring and
    * contribution over the event (sim/ledger.ts), by its faction's seat
@@ -298,6 +349,118 @@ function settleDecider(ev: GpEvent, index: number): void {
   r.decider = false;
 }
 
+// ---- the Sprint series ---------------------------------------------------------
+
+/** The field of a Sprint event: you and one pilot from each faction. */
+export const SPRINT_FIELD = FACTIONS + 1;
+
+/** The spread of the five rivals' skill about the difficulty's: one favourite, one or two to beat. */
+export const SPRINT_EDGES = [0.06, 0.03, 0, -0.03, -0.06] as const;
+
+/** A Sprint event's rounds, a race on each circuit (the last the Showdown, when `finale`). */
+function sprintEvent(kind: 'cup' | 'tour', cup: string, circuits: readonly string[], difficulty: number, seed: number, finale: boolean): GpEvent {
+  const next = rng(seed);
+  const edge = shuffled(SPRINT_EDGES, next);
+  const rounds: GpRound[] = circuits.map((circuit, i) => ({
+    circuit,
+    you: null,
+    others: [],
+    sprint: { seed: Math.floor(next() * 1e9), ...(finale && i === circuits.length - 1 ? { finale: true } : {}), result: null },
+  }));
+  return { v: 1, kind, cup, difficulty: clampDifficulty(difficulty), faction: -1, rounds, current: 0, sprint: { edge } };
+}
+
+/** A new Sprint Cup: the cup's three circuits, the six of the field in each. */
+export function newSprintCup(cupId: string, difficulty: number, seed: number): GpEvent {
+  const cup = CUPS.find((c) => c.id === cupId) ?? CUPS[0];
+  return sprintEvent('cup', cup.id, cup.circuits, difficulty, seed, false);
+}
+
+/** A new Sprint Tour: every circuit in turn, the last (Zenith Ring) the Showdown. */
+export function newSprintTour(difficulty: number, seed: number): GpEvent {
+  return sprintEvent('tour', TOUR_ID, [...field(), FINALE], difficulty, seed, true);
+}
+
+/** A seat's pilot's skill in a Sprint event at its difficulty (yours: `own`). */
+export function sprintSkill(ev: GpEvent, seat: number, own: number, table: readonly number[] = GP_SKILL): number {
+  if (seat === 0) return own;
+  const base = table[ev.difficulty] ?? table[1];
+  return Math.max(0.05, Math.min(0.98, base + (ev.sprint?.edge[seat - 1] ?? 0)));
+}
+
+/** A Sprint event's favourite: the seat of the rival raced strongest. */
+export function sprintFavourite(ev: GpEvent): number {
+  const edge = ev.sprint?.edge ?? [];
+  let best = 0;
+  for (let f = 1; f < edge.length; f++) if (edge[f] > edge[best]) best = f;
+  return best + 1;
+}
+
+/** Points for a place in a Sprint event's race (0: knocked out), the Showdown's doubled. */
+export function sprintPoints(place: number, finale = false): number {
+  const p = place >= 1 ? (SPRINT_POINTS[place - 1] ?? 0) : 0;
+  return finale ? p * 2 : p;
+}
+
+/**
+ * Record the current round's race in a Sprint event: each seat's place (1 to
+ * 6, 0 knocked out), and its pilots' lines (the match's ledger: each seat its
+ * own team, 0 you) into the event's, the Showdown's placing doubled as its
+ * points are. A result set again replaces the result only.
+ */
+export function recordSprint(ev: GpEvent, places: readonly number[], pilots: readonly PilotLine[] = []): void {
+  const r = ev.rounds[ev.current];
+  if (!r?.sprint) return;
+  const finale = !!r.sprint.finale;
+  const first = !r.sprint.result;
+  r.sprint.result = { places: [...places], points: places.map((p) => sprintPoints(p, finale)) };
+  if (!first) return;
+  ev.pilots ??= [];
+  const lines = finale ? pilots.map((l) => ({ ...l, placing: l.placing * 2, points: l.points + l.placing })) : pilots;
+  addLines(ev.pilots, lines, (l) => l.team, (l) => (l.team > 0 ? l.team - 1 : -1));
+}
+
+/** A Sprint event's table after rounds 0..upTo (inclusive), best first: points, then wins, then the better finish in the latest race. */
+export function sprintStandings(ev: GpEvent, upTo = ev.current): SprintRow[] {
+  const rows: SprintRow[] = Array.from({ length: SPRINT_FIELD }, (_, seat) => ({ seat, points: 0, races: 0, wins: 0, podiums: 0, last: 0 }));
+  for (const r of ev.rounds.slice(0, upTo + 1)) {
+    const res = r.sprint?.result;
+    if (!res) continue;
+    rows.forEach((row) => {
+      const place = res.places[row.seat] ?? 0;
+      row.points += res.points[row.seat] ?? 0;
+      row.races++;
+      if (place === 1) row.wins++;
+      if (place >= 1 && place <= 3) row.podiums++;
+      row.last = place;
+    });
+  }
+  const finish = (row: SprintRow) => (row.last >= 1 ? row.last : 99);
+  return rows.sort((a, b) => b.points - a.points || b.wins - a.wins || finish(a) - finish(b) || a.seat - b.seat);
+}
+
+/** A Sprint event's grid for the current round, as seats from pole: by lot for the first (drawn from its race's seed, so the briefing can show it), then the table reversed. */
+export function sprintEventGrid(ev: GpEvent): number[] {
+  if (ev.current === 0) return sprintGrid(null, SPRINT_FIELD, ev.rounds[0]?.sprint?.seed ?? 1);
+  return sprintStandings(ev, ev.current - 1)
+    .map((r) => r.seat)
+    .reverse();
+}
+
+/** Your nearest rival on the table after rounds 0..upTo: the pilot just above you, or just below if you lead. */
+export function nearestRival(ev: GpEvent, upTo: number): number {
+  const table = sprintStandings(ev, upTo);
+  const at = table.findIndex((r) => r.seat === 0);
+  return table[at > 0 ? at - 1 : at + 1].seat;
+}
+
+/** The Showdown's marked rival, once the rounds before it are in. */
+function settleShowdown(ev: GpEvent, index: number): void {
+  const r = ev.rounds[index];
+  if (!r?.sprint?.finale || r.sprint.rival !== undefined) return;
+  r.sprint.rival = nearestRival(ev, index - 1);
+}
+
 function clampDifficulty(d: number): number {
   return Math.max(0, Math.min(GP_DIFFICULTY.length - 1, Math.round(d) || 0));
 }
@@ -307,16 +470,33 @@ export function singleRaces(ev: { kind: GpKind }): boolean {
   return ev.kind !== 'season';
 }
 
-/** The match format of an event's fixtures: a single race in a cup or the Grand Tour, best of 3 in a season. */
+/** The match format of an event's fixtures: a single race in a cup or the Grand Tour, best of 3 in a season; a Sprint event's, a single Sprint race. */
 export function matchFormat(ev: GpEvent): MatchConfig {
+  if (ev.sprint) return { mode: 'races', bestOf: 1, target: 0, races: 1 };
   return singleRaces(ev) ? { mode: 'series', bestOf: 1, target: 50 } : { mode: 'series', bestOf: 3, target: 50 };
 }
 
-/** Display name of an event: the cup's, the Grand Tour, or the season's. */
+/** Display name of an event: the cup's, the Grand Tour, or the season's (the Sprint series's: "Horizon Sprint Cup", "Sprint Tour"). */
 export function eventName(ev: GpEvent): string {
   if (ev.kind === 'season') return ev.short ? 'Zenith Cup short season' : 'Zenith Cup season';
-  if (ev.kind === 'tour') return 'Grand Tour';
-  return CUPS.find((c) => c.id === ev.cup)?.name ?? 'Cup';
+  if (ev.kind === 'tour') return ev.sprint ? 'Sprint Tour' : 'Grand Tour';
+  const name = CUPS.find((c) => c.id === ev.cup)?.name ?? 'Cup';
+  return ev.sprint ? name.replace(/ Cup$/, ' Sprint Cup') : name;
+}
+
+/** Where an event is kept: its kind, and the Sprint series's own. */
+export function slotOf(ev: { kind: GpKind; sprint?: unknown }): GpSlot {
+  return ev.sprint ? (ev.kind === 'tour' ? 'sprint-tour' : 'sprint-cup') : ev.kind;
+}
+
+/** A slot's kind of event. */
+export function kindOf(slot: GpSlot): GpKind {
+  return slot === 'sprint-cup' ? 'cup' : slot === 'sprint-tour' ? 'tour' : slot;
+}
+
+/** Whether a slot is the Sprint series's. */
+export function sprintSlot(slot: GpSlot): boolean {
+  return slot === 'sprint-cup' || slot === 'sprint-tour';
 }
 
 /** Whether a cup is open: the first always; each other once the one before it has given a medal (any, at any difficulty). */
@@ -333,12 +513,12 @@ export function tourOpen(medals: Record<string, Record<number, Medal | undefined
 
 /** Rounds in which you race (a season has one matchday off). */
 export function playedRounds(ev: GpEvent): number {
-  return ev.rounds.filter((r) => r.you).length;
+  return ev.rounds.filter((r) => r.you || r.sprint).length;
 }
 
 /** Your round number among the rounds you race in, for "Round 2 of 4". */
 export function yourRoundNumber(ev: GpEvent, index = ev.current): number {
-  return ev.rounds.slice(0, index + 1).filter((r) => r.you).length;
+  return ev.rounds.slice(0, index + 1).filter((r) => r.you || r.sprint).length;
 }
 
 export function isOver(ev: GpEvent): boolean {
@@ -353,6 +533,7 @@ export function pendingFixtures(ev: GpEvent): GpFixture[] {
 /** Whether every fixture of rounds up to and including `index` has a result (yours included). */
 export function roundComplete(ev: GpEvent, index: number): boolean {
   const r = ev.rounds[index];
+  if (r?.sprint) return !!r.sprint.result;
   return !!r && (!r.you || !!r.you.result) && r.others.every((f) => !!f.result);
 }
 
@@ -382,6 +563,7 @@ export function advance(ev: GpEvent): boolean {
   if (isOver(ev) || !roundComplete(ev, ev.current)) return false;
   ev.current++;
   settleDecider(ev, ev.current);
+  settleShowdown(ev, ev.current);
   return true;
 }
 
@@ -425,8 +607,9 @@ export function average(row: GpRow): number {
   return row.races > 0 ? row.points / row.races : 0;
 }
 
-/** Where you finished, 1 to 5, on the final table. */
+/** Where you finished on the final table (1 to 5; 1 to 6 in a Sprint event). */
 export function finalPlace(ev: GpEvent): number {
+  if (ev.sprint) return sprintStandings(ev, ev.rounds.length - 1).findIndex((r) => r.seat === 0) + 1;
   return standings(ev, ev.rounds.length - 1).findIndex((r) => r.faction === ev.faction) + 1;
 }
 

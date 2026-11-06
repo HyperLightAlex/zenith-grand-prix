@@ -402,6 +402,11 @@ html.crt-on .crt-layer {
 .plate .snarebadge { margin: 0 auto 0.25em; width: max-content; padding: 0.06em 0.6em; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 0.04em; background: var(--snare); color: var(--ink); font-variant-numeric: tabular-nums; clip-path: polygon(0.35em 0, 100% 0, calc(100% - 0.35em) 100%, 0 100%); }
 .plate .snarebadge[hidden] { display: none; }
 .plate.snared .tag { outline: 0.14em solid var(--snare); }
+/* The Showdown's marked rival (the Sprint Tour's last race): a badge over its plate, its line on the tower edged in the cells' gold. */
+.plate .rivalbadge { margin: 0 auto 0.25em; width: max-content; padding: 0.06em 0.6em; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 0.04em; background: var(--cell); color: var(--ink); clip-path: polygon(0.35em 0, 100% 0, calc(100% - 0.35em) 100%, 0 100%); }
+.plate.rival .tag { outline: 0.14em solid var(--cell); }
+.tower .row.rival { background: linear-gradient(90deg, rgba(255, 201, 58, 0.5), var(--ink-soft) 70%); }
+.tower .row.rival .who { color: var(--cell); }
 .plate .warn.parry { background: var(--hazard); }
 .plate .warn.dodge { background: var(--danger); color: #fff; }
 .plate .warn.block { background: var(--signal); }
@@ -715,6 +720,9 @@ html.crt-on .crt-layer {
 .menu .swatch { display: block; aspect-ratio: 1; border-radius: 0.25em; background: linear-gradient(135deg, var(--c) 0 58%, var(--s) 58% 100%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); opacity: 1; }
 .menu .swatches .swatch { cursor: pointer; }
 .menu .swatches .swatch.on { outline: 0.16em solid var(--signal); outline-offset: 0.1em; }
+/* A paint the Grand Prix has yet to open: there to see, dimmed, a lock on it. */
+.menu .swatches .swatch.locked { position: relative; opacity: 0.45; cursor: not-allowed; }
+.menu .swatches .swatch.locked::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(45deg, rgba(15, 21, 36, 0.75) 0 0.12em, transparent 0.12em 0.42em); }
 .menu.anime .swatches .swatch.on { outline-color: var(--phos); box-shadow: 0 0 0.8em var(--phos-dim); }
 .menu .kit .swatch { opacity: 1; }
 /* The Pilot screen's gallery: every portrait, the one you wear lit. */
@@ -1158,6 +1166,28 @@ html.narrow:not(.compact):not(.portrait) .controls .grid { grid-template-columns
 .gptable td.pos { width: 1.6em; font-weight: 800; }
 .gptable td.team { font-weight: 700; white-space: nowrap; }
 .gptable tr.me td { background: var(--paper); color: var(--ink); }
+/* The Sprint series's table: a pilot each, their team under the name, the favourite and the Showdown's rival tagged. */
+.gptable.sprint td.team > span { display: inline-flex; flex-direction: column; vertical-align: middle; line-height: 1.05; }
+.gptable.sprint td.team small { font-size: 0.68em; font-weight: 500; opacity: 0.7; }
+.menu .tag { display: inline-block; margin-left: 0.5em; padding: 0.05em 0.45em; font-size: 0.62em; font-weight: 800; letter-spacing: 0.03em; vertical-align: middle; background: rgba(255, 255, 255, 0.14); color: var(--paper); }
+.menu tr.me .tag, .menu .me .tag { background: rgba(15, 21, 36, 0.16); color: var(--ink); }
+.menu .tag.rival { background: var(--cell); color: var(--ink); }
+/* You in a Sprint event: the league's emblem on your colour. */
+.menu .emb.you { border-radius: 50%; background-color: var(--tc, var(--paper)); background-size: 78%; }
+/* A Sprint event's grid, from pole, and a race's order. */
+.sprintgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3em 0.5em; font-size: 1.1em; }
+.sprintgrid .slot { display: flex; align-items: center; gap: 0.4em; padding: 0.3em 0.6em; background: var(--ink-soft); white-space: nowrap; overflow: hidden; }
+.sprintgrid .slot b { min-width: 1.8em; color: var(--signal); font-weight: 800; }
+.sprintgrid .slot .emb { margin: 0; }
+.sprintgrid .slot.me { background: var(--paper); color: var(--ink); }
+.sprintgrid .slot.me b { color: var(--ink); }
+.col.briefing.sprint h2 { margin: 0.4em 0 0.3em; font-size: 1.05em; font-weight: 800; color: var(--signal); }
+.fixture.place { grid-template-columns: 2.8em 1.4em 1fr auto; }
+.fixture.place > span:nth-of-type(1) { text-align: left; }
+.fixture.place b:first-child { min-width: 0; text-align: left; color: var(--paper); }
+.fixture.place.me { background: var(--paper); color: var(--ink); }
+.fixture.place.me b { color: var(--ink); }
+.versus.rival { font-size: 1.6em; }
 .menu .emb { display: inline-block; width: 1.1em; height: 1.1em; margin-right: 0.35em; vertical-align: -0.2em; background: center / contain no-repeat; }
 .versus { display: flex; align-items: center; gap: 0.5em; font-size: 2em; font-weight: 800; }
 .versus .emb { width: 1.4em; height: 1.4em; margin: 0; }
@@ -1229,6 +1259,9 @@ html:is(.compact, .lay-cols, .lay-single) .item.cupcard { padding: 0.9em 0.8em; 
 
 /* The cup select: the three cups side by side, the highlighted one lifted. */
 .menu .col.gp-cups-side { width: 26em; }
+/* The Grand Prix hub: both series, the difficulty and the rewards (seven items), a little closer together. */
+.menu .col.gp .list { gap: 0.25em; }
+.menu .col.gp .item { font-size: 1.5em; padding-top: 0.32em; padding-bottom: 0.38em; }
 .menu .panel.cups { position: absolute; left: 33em; right: 3em; top: 50%; transform: translateY(-50%); padding: 0; background: none; border: 0; }
 .cuprow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.3em; align-items: stretch; }
 .item.cupcard { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0.75em; padding: 1.2em 1.1em 1.1em; font-size: 1em; clip-path: polygon(0.9em 0, 100% 0, calc(100% - 0.9em) 100%, 0 100%); transition: transform 0.14s ease-out; }
@@ -2121,6 +2154,11 @@ html.compact .podium .podium-btns { right: calc(1 * var(--ui-em) + var(--sr, 0px
 .menu .panel.gp-rewards { position: absolute; right: 3em; top: 50%; transform: translateY(-50%); width: 34em; display: flex; flex-direction: column; gap: 0.3em; }
 .menu .panel.gp-rewards h2 { margin: 0 0 0.2em; font-size: 1.4em; }
 .menu .panel.gp-rewards .reward { font-size: 1.05em; }
+/* The two series's rewards, each under its own heading; the list scrolls if it must. */
+.menu .panel.gp-rewards { max-height: calc(100% - 9em); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.menu .rewards h3 { display: flex; justify-content: space-between; align-items: baseline; margin: 0.5em 0 0.1em; font-size: 1.1em; font-weight: 800; color: var(--signal); }
+.menu .rewards h3:first-child { margin-top: 0; }
+.menu .rewards h3 small { font-size: 0.85em; font-weight: 600; color: var(--paper); opacity: 0.75; }
 .menu :is(.gp-award, .ceremony) .unlocked { margin-top: 1em; padding: 0.6em 0.9em; background: rgba(53, 240, 255, 0.12); box-shadow: inset 0.25em 0 0 var(--charge); }
 .menu :is(.gp-award, .ceremony) .unlocked h2 { margin: 0 0 0.3em; font-size: 1.1em; color: var(--charge); }
 .menu :is(.gp-award, .ceremony) .unlocked div { font-size: 1.1em; font-weight: 700; }

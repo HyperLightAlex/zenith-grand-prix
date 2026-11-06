@@ -21,7 +21,12 @@ This is version 0.5: nine circuits and three ways to play.
   of ten matchdays, a best of 3 against each of the other four factions
   twice, each half ending at Zenith Ring, for the Zenith Cup (saved between
   sittings). The other factions race each other in the background, so the
-  table is real.
+  table is real. Beside them, the **Sprint series**, on a ladder of its
+  own: the three cups again as **Sprint Cups** (three Sprints each, you in
+  your own Forward against one pilot from each faction, every pilot for
+  themselves) and the **Sprint Tour** (nine Sprints, the last the
+  Showdown: double points, your nearest rival on the table marked), with
+  their own medals and their own rewards.
 - **Free Play**: any circuit, rival and format against computer pilots.
 - **How to play**: the **tutorial**, a guided first race that stops at each
   new thing (revving, boosting, carving, gates, a duel with a sparring
@@ -52,8 +57,10 @@ This is version 0.5: nine circuits and three ways to play.
   desert, a salvage camp by the fallen titan, a polar station on the ice.
 - **Your mech's livery**: on a custom mech, a pattern over its main paint
   (stripes, chevrons, camo, checks and more), its race number, a finish
-  (gloss, matte, metal flake, pearl) and how the race wears it; some of the
-  patterns, finishes and poses are earned with medals in the Grand Prix.
+  (gloss, matte, metal flake, pearl, chrome, chameleon) and how the race
+  wears it; some of the patterns, finishes, paints and poses are earned
+  with medals in the Grand Prix (the team series's and the Sprint
+  series's each their own), for a custom mech of any frame.
 - **Online**: private rooms for up to six people, joined by code or invite
   link, with computer pilots in the empty seats. Friends can form a squad of
   up to three that stays together from room to room.
@@ -389,7 +396,7 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 | `npm run build` | Type-check, then build the game to `dist/` and the server to `dist-server/` |
 | `npm start` | Serve the built game and run the rooms on one port |
 | `npm run build:single` | Type-check, then build the one-file version to `play/` |
-| `npm test` | Test suite: simulation, Grand Prix, lobby and online races (about 1,770 tests) |
+| `npm test` | Test suite: simulation, Grand Prix, lobby and online races (about 1,790 tests) |
 | `npm run bots -- 6 4` | Four rooms of six bot players on a running server: a check and a load test |
 | `npm run sim` | Run a race with computer pilots in every seat and print what happened |
 | `npm run sim -- 100` | Run 100 races and print balance statistics |
@@ -524,7 +531,7 @@ src/sim/        The race itself: track, physics, combat, AI, scoring. No DOM,
   tracks/       The circuits: meridian.ts, canyon.ts, helios.ts, crucible.ts
   match.ts      Series and points-race scoring across rounds
   snapshot.ts   Copying a race and putting it back, and its checksum
-src/gp/         Grand Prix: cups and seasons, standings, the background races
+src/gp/         Grand Prix: cups, seasons and the Sprint series, standings, the background races
 src/net/        Online, shared by the game and the server (no DOM):
   protocol.ts   Messages, codes, inputs on the wire
   lobby.ts      A room's lobby rules: seats, captains, shot callers, squads

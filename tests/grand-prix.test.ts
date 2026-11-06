@@ -247,3 +247,145 @@ describe('background races', () => {
     expect(simulateFixture(fx, cfg, 0.55)).toEqual(first);
   });
 });
+
+// ---- the Sprint series ----------------------------------------------------------
+
+import {
+  SPRINT_EDGES,
+  SPRINT_FIELD,
+  TOUR_ID,
+  eventName as gpEventName,
+  kindOf,
+  nearestRival,
+  newSprintCup,
+  newSprintTour,
+  recordSprint,
+  slotOf,
+  sprintEventGrid,
+  sprintFavourite,
+  sprintPoints,
+  sprintSkill,
+  sprintStandings,
+  GP_SKILL,
+} from '../src/gp/grandPrix';
+
+/** A race's places by seat (1 to 6, 0 knocked out), from a finishing order of seats (anyone left out knocked out). */
+const placesOf = (order: number[]): number[] => Array.from({ length: SPRINT_FIELD }, (_, seat) => order.indexOf(seat) + 1);
+
+describe('the Sprint series', () => {
+  it('a Sprint Cup: the cup circuits, one race of the six each, no faction for you, the five rivals spread about the difficulty', () => {
+    const ev = newSprintCup('frontier', 2, 11);
+    expect(ev.kind).toBe('cup');
+    expect(ev.faction).toBe(-1);
+    expect(ev.rounds.map((r) => r.circuit)).toEqual(CUPS[1].circuits);
+    expect(ev.rounds.every((r) => r.sprint && !r.you && r.others.length === 0 && !r.sprint.finale)).toBe(true);
+    expect([...ev.sprint!.edge].sort()).toEqual([...SPRINT_EDGES].sort());
+    expect(gpEventName(ev)).toBe('Frontier Sprint Cup');
+    expect(slotOf(ev)).toBe('sprint-cup');
+    expect(kindOf('sprint-cup')).toBe('cup');
+    expect(playedRounds(ev)).toBe(3);
+    expect(pendingFixtures(ev)).toEqual([]);
+    // Your skill is yours; theirs the difficulty's, each with its edge; the favourite the strongest.
+    expect(sprintSkill(ev, 0, 0.6)).toBe(0.6);
+    const fav = sprintFavourite(ev);
+    expect(sprintSkill(ev, fav, 0.6)).toBeCloseTo(GP_SKILL[2] + 0.06, 6);
+    for (let seat = 1; seat < SPRINT_FIELD; seat++) expect(sprintSkill(ev, seat, 0.6)).toBeLessThanOrEqual(sprintSkill(ev, fav, 0.6));
+  });
+
+  it('a Sprint Tour: every circuit in turn, the last at Zenith Ring the Showdown', () => {
+    const ev = newSprintTour(1, 5);
+    expect(ev.kind).toBe('tour');
+    expect(ev.cup).toBe(TOUR_ID);
+    expect(ev.rounds.map((r) => r.circuit)).toEqual(TRACKS.map((t) => t.id).filter((id) => id !== FINALE).concat(FINALE));
+    expect(ev.rounds.map((r) => !!r.sprint!.finale)).toEqual([false, false, false, false, false, false, false, false, true]);
+    expect(gpEventName(ev)).toBe('Sprint Tour');
+    expect(slotOf(ev)).toBe('sprint-tour');
+  });
+
+  it('scores each race by Sprint points, the table by points, then wins, then the latest finish', () => {
+    const ev = newSprintCup('horizon', 1, 3);
+    // Race 1: you win, seat 2 second, seat 5 knocked out.
+    recordSprint(ev, placesOf([0, 2, 1, 3, 4]));
+    expect(ev.rounds[0].sprint!.result!.points).toEqual([10, 6, 8, 4, 2, 0]);
+    expect(advance(ev)).toBe(true);
+    // Race 2: seat 2 wins, you second.
+    recordSprint(ev, placesOf([2, 0, 1, 3, 4, 5]));
+    const table = sprintStandings(ev, 1);
+    // You and seat 2 level on 18 and a win each: seat 2 finished the latest race ahead.
+    expect(table.slice(0, 2).map((r) => [r.seat, r.points, r.wins])).toEqual([
+      [2, 18, 1],
+      [0, 18, 1],
+    ]);
+    expect(table.find((r) => r.seat === 5)!.points).toBe(1);
+    // The grid for race 3: the table reversed, the leader at the back.
+    expect(advance(ev)).toBe(true);
+    expect(sprintEventGrid(ev)).toEqual(table.map((r) => r.seat).reverse());
+    recordSprint(ev, placesOf([0, 1, 2, 3, 4, 5]));
+    expect(advance(ev)).toBe(true);
+    expect(isOver(ev)).toBe(true);
+    expect(finalPlace(ev)).toBe(1);
+    expect(medalFor(finalPlace(ev))).toBe('gold');
+  });
+
+  it('the first grid is drawn by lot, the same each time it is asked for; a race recorded twice keeps its pilots once', () => {
+    const ev = newSprintCup('ascent', 0, 9);
+    const lot = sprintEventGrid(ev);
+    expect([...lot].sort()).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(sprintEventGrid(ev)).toEqual(lot);
+    const line = (team: number, placing: number) => ({ id: team, name: `P${team}`, team, role: 0, human: team === 0, portrait: -1, look: '', colour: -1, faction: -1, races: 1, wins: placing === 10 ? 1 : 0, podiums: 1, placing, koPts: 0, support: 0, awards: [], kos: 0, out: 0, dmgDealt: 0, dmgTaken: 0, points: placing });
+    recordSprint(ev, placesOf([0, 1, 2, 3, 4, 5]), [line(0, 10), line(1, 8)]);
+    recordSprint(ev, placesOf([0, 1, 2, 3, 4, 5]), [line(0, 10), line(1, 8)]);
+    expect(ev.pilots!.map((l) => [l.id, l.points, l.faction])).toEqual([
+      [0, 10, -1],
+      [1, 8, 0],
+    ]);
+  });
+
+  it('the Showdown: double points, and your nearest rival marked once the rounds before it are in', () => {
+    const ev = newSprintTour(1, 21);
+    // Eight races: seat 3 wins each, you second.
+    for (let i = 0; i < 8; i++) {
+      recordSprint(ev, placesOf([3, 0, 1, 2, 4, 5]));
+      expect(advance(ev)).toBe(true);
+    }
+    const last = ev.rounds[8].sprint!;
+    expect(last.finale).toBe(true);
+    // You are second: the rival is the leader just above you.
+    expect(last.rival).toBe(3);
+    expect(nearestRival(ev, 7)).toBe(3);
+    // Double points: you win it, seat 3 is knocked out, and you take the Tour.
+    const line = (team: number, placing: number) => ({ id: team, name: '', team, role: 0, human: team === 0, portrait: -1, look: '', colour: -1, faction: -1, races: 1, wins: 0, podiums: 0, placing, koPts: 0, support: 0, awards: [], kos: 0, out: 0, dmgDealt: 0, dmgTaken: 0, points: placing });
+    const pointsBefore = sprintStandings(ev, 7).find((r) => r.seat === 0)!.points;
+    recordSprint(ev, placesOf([0, 1, 2, 4, 5]), [line(0, 10)]);
+    expect(last.result!.points[0]).toBe(sprintPoints(1, true));
+    expect(sprintPoints(1, true)).toBe(20);
+    expect(sprintStandings(ev, 8).find((r) => r.seat === 0)!.points).toBe(pointsBefore + 20);
+    // (Its pilots' lines scored as the table does: doubled.)
+    expect(ev.pilots!.find((l) => l.id === 0)!.points).toBe(20);
+    expect(advance(ev)).toBe(true);
+    expect(finalPlace(ev)).toBe(1);
+  });
+
+  it('leading into the Showdown, your rival is the one just below you', () => {
+    const ev = newSprintTour(1, 4);
+    for (let i = 0; i < 8; i++) {
+      recordSprint(ev, placesOf([0, 4, 1, 2, 3, 5]));
+      advance(ev);
+    }
+    expect(ev.rounds[8].sprint!.rival).toBe(4);
+  });
+
+  it('its own ladder: Sprint medals open the Sprint Cups and the Sprint Tour, and team medals open none of them', () => {
+    const team = { horizon: { 0: 'gold' as const }, frontier: { 1: 'bronze' as const }, ascent: { 2: 'silver' as const } };
+    const sprint: Record<string, Record<number, 'gold' | 'silver' | 'bronze'>> = {};
+    expect(cupOpen('frontier', sprint)).toBe(false);
+    expect(tourOpen(sprint)).toBe(false);
+    expect(tourOpen(team)).toBe(true);
+    sprint.horizon = { 1: 'bronze' };
+    expect(cupOpen('frontier', sprint)).toBe(true);
+    expect(cupOpen('ascent', sprint)).toBe(false);
+    sprint.frontier = { 0: 'silver' };
+    sprint.ascent = { 2: 'gold' };
+    expect(tourOpen(sprint)).toBe(true);
+  });
+});

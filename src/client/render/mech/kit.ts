@@ -293,21 +293,62 @@ float patternMask() {
     float broken = step(0.38, sNoise(vec3(uv * 1.4, 7.0)));
     return (1.0 - sEdge(0.11, abs(fract(v) - 0.5))) * broken;
   }
-  // Digital camo: square pixels, in clumps.
-  vec2 c1 = floor(uv / 0.16);
-  vec2 c2 = floor(uv / 0.48);
-  return step(0.62, sHash2(c1 + c2 * 7.3) * 0.45 + sHash2(c2) * 0.6);
+  if (id < 7.5) {
+    // Digital camo: square pixels, in clumps.
+    vec2 c1 = floor(uv / 0.16);
+    vec2 c2 = floor(uv / 0.48);
+    return step(0.62, sHash2(c1 + c2 * 7.3) * 0.45 + sHash2(c2) * 0.6);
+  }
+  if (id < 8.5) {
+    // Racing flames: tongues licking up each part from its bottom edge,
+    // tapered to points and wavering, as a hot rod's.
+    float t = fract(vObjPos.x * 2.4 + vObjPos.z * 1.1 + 0.37);
+    float tongue = pow(1.0 - abs(t * 2.0 - 1.0), 1.6);
+    float edge = -0.32 + tongue * 0.62 + 0.1 * sNoise(vec3(vObjPos.x * 3.0, vObjPos.z * 3.0, 4.0));
+    return 1.0 - sEdge(edge, vObjPos.y);
+  }
+  if (id < 9.5) {
+    // Pinstripes: a fine pair each side of the middle, on the front, back and top.
+    float x = abs(vObjPos.x);
+    float a = sEdge(0.13, x) * (1.0 - sEdge(0.155, x));
+    float b = sEdge(0.19, x) * (1.0 - sEdge(0.205, x));
+    return (1.0 - side) * clamp(a + b, 0.0, 1.0);
+  }
+  if (id < 10.5) {
+    // A lightning bolt across each part: a zigzag on the slant, thick to thin.
+    vec2 q = mat2(0.87, 0.5, -0.5, 0.87) * uv;
+    float zig = abs(fract(q.x * 2.2) * 2.0 - 1.0) - 0.5;
+    float w = 0.07 * (0.55 + 0.45 * clamp(0.5 - q.x * 0.6, 0.0, 1.0));
+    return 1.0 - sEdge(w, abs(q.y - zig * 0.22));
+  }
+  // Sunburst: rays from each face's middle, every other one in the pattern's paint.
+  float ang = atan(uv.y, uv.x);
+  float ray = fract(ang * 1.9098593 + 0.25);
+  return (1.0 - sEdge(0.5, ray)) * sEdge(0.06, length(uv));
 }
 // Metal flake's sparkle (it twinkles as the view moves) and pearl's colours
-// running round the silhouette, on paint.
+// running round the silhouette, on paint. (Chrome and chameleon are in the
+// lighting itself: chameleonShift.)
 vec3 styleSheen(vec3 wN, vec3 eyeDir, float fres, float isPaint, float fin) {
-  if (isPaint < 0.01 || fin < 2.5) return vec3(0.0);
+  if (isPaint < 0.01 || fin < 2.5 || fin > 4.5) return vec3(0.0);
   if (fin < 3.5) {
     float glint = step(0.968, sHash3(floor(vObjPos * 24.0) + floor(dot(eyeDir, vec3(7.0, 11.0, 13.0)) * 3.0)));
     return mix(uEnvHigh, vec3(1.0), 0.5) * glint * 0.85 * isPaint;
   }
   vec3 pearl = 0.5 + 0.5 * cos(6.2831 * (fres * 1.3 + vec3(0.0, 0.33, 0.67)));
   return pearl * 0.3 * smoothstep(0.1, 0.7, fres) * isPaint;
+}
+// Chameleon: the paint's hue turned as the surface turns from the eye
+// (a third of the wheel by the silhouette), its lightness kept.
+vec3 chameleonShift(vec3 c, float fres, float k) {
+  if (k < 0.01) return c;
+  float a = (0.35 + fres * 2.2) * k;
+  const mat3 toYIQ = mat3(0.299, 0.596, 0.211, 0.587, -0.274, -0.523, 0.114, -0.322, 0.312);
+  const mat3 toRGB = mat3(1.0, 1.0, 1.0, 0.956, -0.272, -1.106, 0.621, -0.647, 1.703);
+  vec3 yiq = toYIQ * c;
+  float cs = cos(a), sn = sin(a);
+  yiq.yz = vec2(yiq.y * cs - yiq.z * sn, yiq.y * sn + yiq.z * cs) * 1.15;
+  return max(toRGB * yiq, 0.0);
 }
 // The paint's own shadow colour (the anime look), under the pattern and the wear.
 vec3 celArmorShade() {
@@ -463,9 +504,14 @@ export function armorMat(style: ArmorStyle = PLAIN_ARMOR): THREE.MeshToonMateria
         float fin = floor( uFinish + 0.5 );
         float isGloss = 1.0 - step( 0.5, abs( fin - 1.0 ) );
         float isMatte = 1.0 - step( 0.5, abs( fin - 2.0 ) );
-        float isFlake = step( 2.5, fin );
-        material.spec *= 1.0 + isPaint * ( isGloss * 2.2 - isMatte * 0.85 + isFlake * 0.6 );
-        material.shine *= 1.0 + isPaint * ( isGloss * 2.5 - isFlake * 0.4 );
+        float isFlake = step( 2.5, fin ) * ( 1.0 - step( 4.5, fin ) );
+        // Chrome: the paint a tinted mirror (its own colour dimmed, the sky
+        // and the ground in it); chameleon: a gloss whose hue turns with the view.
+        float isChrome = 1.0 - step( 0.5, abs( fin - 5.0 ) );
+        float isChameleon = 1.0 - step( 0.5, abs( fin - 6.0 ) );
+        material.diffuseColor *= 1.0 - isPaint * isChrome * 0.55;
+        material.spec *= 1.0 + isPaint * ( isGloss * 2.2 - isMatte * 0.85 + isFlake * 0.6 + isChrome * 3.2 + isChameleon * 1.8 );
+        material.shine *= 1.0 + isPaint * ( isGloss * 2.5 - isFlake * 0.4 + isChrome * 3.0 + isChameleon * 2.0 );
         `,
       )
       .replace(
@@ -480,14 +526,17 @@ export function armorMat(style: ArmorStyle = PLAIN_ARMOR): THREE.MeshToonMateria
         vec3 R = reflect( eyeDir, wN );
         vec3 env = mix( uEnvLow, uEnvHigh, smoothstep( -0.25, 0.35, R.y ) );
         float envK = mix( mix( mix( 0.07, 0.3, isMetal ), 0.04, isDark ), 0.55, isGlass );
-        envK *= 1.0 + isPaint * ( isGloss * 2.4 - isMatte * 0.8 + isFlake * 0.9 );
+        envK *= 1.0 + isPaint * ( isGloss * 2.4 - isMatte * 0.8 + isFlake * 0.9 + isChrome * 7.5 + isChameleon * 2.0 );
+        // (Chrome's reflection tinted by its paint, as a coloured chrome's is.)
+        vec3 envTint = mix( vec3( 1.0 ), diffuseColor.rgb * 1.6 + 0.15, isPaint * isChrome );
         vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular
-          + totalEmissiveRadiance + rim * ( 1.0 - isPaint * isMatte * 0.6 ) + env * envK * mix( 0.6, 1.0, fres );
+          + totalEmissiveRadiance + rim * ( 1.0 - isPaint * isMatte * 0.6 ) + env * envTint * envK * mix( 0.6, 1.0, fres );
         outgoingLight += styleSheen( wN, eyeDir, fres, isPaint, fin );
+        outgoingLight = mix( outgoingLight, chameleonShift( outgoingLight, fres, 1.0 ), isPaint * isChameleon );
         `,
       );
   };
-  mat.customProgramCacheKey = () => 'zgp-armor-v4';
+  mat.customProgramCacheKey = () => 'zgp-armor-v5';
   // The anime look paints the armour's metal and glass (see look.ts).
   mat.userData.celArmor = true;
   if (style === PLAIN_ARMOR) armorMaterial = mat;

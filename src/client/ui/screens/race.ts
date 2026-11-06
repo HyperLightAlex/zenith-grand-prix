@@ -71,6 +71,9 @@ function sprintResults(g: Game, race: RaceState, match: MatchState | null, box: 
   const lines: string[] = [];
   if (me) {
     lines.push(me.retired ? 'You were knocked out and scored nothing.' : `You finished ${ORD[me.place - 1]} for ${me.points} point${me.points === 1 ? '' : 's'}.`);
+    // (A Sprint event's Showdown: what it is worth on the event's table.)
+    const note = me.retired ? '' : g.sprintGpNote(me.points);
+    if (note) lines.push(note);
   }
   if (several && match) {
     const order = standings(match);

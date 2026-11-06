@@ -51,13 +51,24 @@ import {
   medalFor,
   newCup,
   newSeason,
+  newSprintCup,
+  newSprintTour,
   newTour,
   playedRounds,
   singleRaces,
+  recordSprint,
   recordYours,
+  sprintEventGrid,
+  sprintSkill,
+  sprintSlot,
+  sprintStandings,
+  kindOf,
   yourRoundNumber,
+  GP_SLOTS,
+  SPRINT_FIELD,
   type GpEvent,
   type GpKind,
+  type GpSlot,
   type Medal,
 } from '../../gp/grandPrix';
 import { normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
@@ -129,7 +140,7 @@ import { eventAward, eventCeremony, matchCeremony, type Ceremony } from './cerem
 import { LapTracer, RecordBook, type NewRecords } from './records';
 import { newlyEarned, type Progress, type Unlock } from './unlocks';
 import { isVictoryId, type VictoryId } from '../render/mech/victoryPoses';
-import { factionLook, teamLooks, type TeamLook } from '../ui/sides';
+import { factionLook, independent, teamLooks, type TeamLook } from '../ui/sides';
 import { mechName } from '../../custom/mechBuild';
 import type { CameraMode } from '../render/cameraRig';
 import { registerHowTo, type PrimerData } from '../ui/screens/howto';
@@ -144,7 +155,7 @@ const CEREMONY_AFTER = 6;
 
 /** An event's identity, to know its ceremony has come up (a room's copy is new with every update). */
 function eventKey(ev: GpEvent): string {
-  return `${ev.kind}:${ev.cup}:${ev.faction}:${ev.rounds.map((r) => r.you?.seed ?? r.others[0]?.seed ?? 0).join(',')}`;
+  return `${ev.sprint ? 'sprint:' : ''}${ev.kind}:${ev.cup}:${ev.faction}:${ev.rounds.map((r) => r.you?.seed ?? r.others[0]?.seed ?? r.sprint?.seed ?? 0).join(',')}`;
 }
 
 /** Photo mode at the podium: in front of it, all of it in the picture, and room to stand back. */
@@ -205,6 +216,8 @@ export interface GameOptions {
   audio?: AudioEngine;
 }
 
+/** Places in a Sprint's field, in words. */
+const ORD6 = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 const ABILITY_SFX: SfxName[] = ['overdrive', 'breakaway', 'snare_shot', 'pulse', 'ram', 'aegis'];
 /** Screens the results' music carries on under: the results, the award, and what opens over them. */
 const RESULTS_MUSIC_SCREENS = new Set<ScreenId>(['results', 'ceremony', 'controls', 'settings', 'dialog', 'pause']);
@@ -257,6 +270,8 @@ interface RoundSetup {
   cfg: MatchConfig;
   /** The tutorial race: a lesson round your seat (RaceConfig.lesson), against the rival forward. */
   lesson?: boolean;
+  /** A Sprint Grand Prix's race: each seat's skill (yours first), its grid (seats from pole) and the Showdown's marked rival (a seat). */
+  gp?: { skills: number[]; grid: number[]; rival?: number };
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -304,9 +319,9 @@ export class Game {
   loadout: { team: number; role: Role } = readJson('zgp.loadout', { team: 0, role: ROLE.FW as Role });
   /** Free Play's setup, remembered. */
   free: GarageChoice = readJson('zgp.free', { role: ROLE.FW as Role, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian', mode: 'teams', sprint: 1 });
-  private gpEvents: Record<GpKind, GpEvent | null> = { cup: gpStore.loadEvent('cup'), tour: gpStore.loadEvent('tour'), season: gpStore.loadEvent('season') };
-  /** The Grand Prix event being played. */
-  gpKind: GpKind = 'cup';
+  private gpEvents = Object.fromEntries(GP_SLOTS.map((slot) => [slot, gpStore.loadEvent(slot)])) as Record<GpSlot, GpEvent | null>;
+  /** The Grand Prix event being played (where it is kept: the team series's cup, Tour or season, the Sprint series's cup or Tour). */
+  gpSlot: GpSlot = 'cup';
   private setup: RoundSetup | null = null;
   /** The match being played: one or more rounds between the same two teams. */
   match: MatchState | null = null;
@@ -721,7 +736,7 @@ export class Game {
     const seats: SeatConfig[] = [
       { team: 0, role: ROLE.FW, human: true, name: pilotName(), portrait: pilotPortrait(), look: this.sprintMech(), colour: pilotColour(), skill: setup.teamSkill },
     ];
-    LIVERIES.forEach((l, f) => seats.push({ team: f + 1, role: ROLE.FW, human: false, name: l.pilots[ROLE.FW], skill: setup.rivalSkill }));
+    LIVERIES.forEach((l, f) => seats.push({ team: f + 1, role: ROLE.FW, human: false, name: l.pilots[ROLE.FW], skill: setup.gp?.skills[f + 1] ?? setup.rivalSkill }));
     return { seats, localId: 0 };
   }
 
@@ -786,7 +801,7 @@ export class Game {
     if (!keepTrack) this.useTrack(setup?.track ?? this.trackId, !!setup);
     // A Sprint's grid: by lot for its first race, then the standings reversed.
     const sprint = !!setup?.sprint;
-    const grid = sprint ? sprintGrid(this.match, seats.length, seed) : undefined;
+    const grid = sprint ? (setup?.gp?.grid ?? sprintGrid(this.match, seats.length, seed)) : undefined;
     // The tutorial: a lesson round your seat, the rival forward its sparring partner.
     const lesson = setup?.lesson && localId >= 0 ? { pupil: localId, spar: seats.findIndex((x) => x.team !== seats[localId].team && x.role === ROLE.FW) } : undefined;
     const session = new LocalSession(trackById(this.trackId) ?? TRACKS[0], { seed, seats, rules: { ...this.tuning.rules }, gridFlip, mode: sprint ? 'sprint' : 'teams', grid, lesson }, localId);
@@ -938,19 +953,21 @@ export class Game {
     const room = this.online.lobby;
     const sprintRoom = this.menus.has('room') && !!room && !room.gp && room.settings.mode === 'sprint';
     const sprintSetup = this.menus.has('setup') && this.free.mode === 'sprint' && this.mode === 'free';
+    // (And the Sprint series's cups and Tour: its briefing and standings.)
+    const sprintGp = this.mode === 'gp' && (id === 'briefing' || id === 'standings' || this.menus.has('briefing')) && !!this.gpEvents[this.gpSlot]?.sprint;
     // The editor: the mech being edited (from a Sprint, lit as it races there).
     if (CUSTOM_SCREENS.has(id)) {
       const d = this.menus.data as { role?: Role; team?: number } | undefined;
-      if (d?.role !== undefined) return { team: d.team ?? this.loadout.team, role: d.role, sprint: (sprintSetup || sprintRoom) && d.role === ROLE.FW };
+      if (d?.role !== undefined) return { team: d.team ?? this.loadout.team, role: d.role, sprint: (sprintSetup || sprintRoom || sprintGp) && d.role === ROLE.FW };
     }
-    if (sprintRoom) return { team: this.loadout.team, role: ROLE.FW, sprint: true };
+    if (sprintRoom || sprintGp) return { team: this.loadout.team, role: ROLE.FW, sprint: true };
     if (id === 'room' || this.menus.has('room')) {
       const v = this.online.lobby;
       const me = v?.players.find((p) => p.pid === this.online.pid);
       if (v && me && me.side >= 0) return { team: v.sides[me.side].faction, role: me.role };
     }
     if (id === 'briefing' || id === 'standings' || this.menus.has('briefing')) {
-      const ev = this.gpEvents[this.gpKind];
+      const ev = this.gpEvents[this.gpSlot];
       if (ev) return { team: ev.faction, role: this.loadout.role };
     }
     if ((id === 'online' || this.menus.has('online')) && this.online.squadView && this.online.squadSize > 1) {
@@ -1159,8 +1176,10 @@ export class Game {
       this.mode = null;
       this.menus.reset('modes', undefined, ['title']);
     } else if (this.mode === 'gp') {
-      const ev = this.gpEvents[this.gpKind];
-      if (ev && ev.rounds[ev.current]?.you && !ev.rounds[ev.current].you!.result) this.menus.reset('briefing', { kind: this.gpKind }, ['title', 'modes', 'gp']);
+      const ev = this.gpEvents[this.gpSlot];
+      const r = ev?.rounds[ev.current];
+      // (Back to the briefing while the round is still to race.)
+      if (r && ((r.you && !r.you.result) || (r.sprint && !r.sprint.result))) this.menus.reset('briefing', { slot: this.gpSlot }, ['title', 'modes', 'gp']);
       else this.menus.reset('gp', undefined, ['title', 'modes']);
     } else {
       this.mode = 'free';
@@ -1193,17 +1212,33 @@ export class Game {
   private matchLabel(): string {
     if (this.mode === 'tutorial') return 'Tutorial race';
     const m = this.match;
-    if (this.session.race.sprint) return m ? this.sprintLabel(m) : 'Sprint';
+    const ev = this.mode === 'gp' ? this.gpEvents[this.gpSlot] : this.mode === 'online' ? this.online.lobby?.gp : null;
+    if (this.session.race.sprint) return ev?.sprint ? this.sprintGpLabel(ev) : m ? this.sprintLabel(m) : 'Sprint';
     const a = factionName(LIVERIES[this.raceFactions[0]]);
     const b = factionName(LIVERIES[this.raceFactions[1]]);
     let gp = '';
-    const ev = this.mode === 'gp' ? this.gpEvents[this.gpKind] : this.mode === 'online' ? this.online.lobby?.gp : null;
     if (ev) gp = `${eventName(ev)}, round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`;
     if (!m || (m.cfg.mode === 'series' && m.cfg.bestOf === 1)) return gp;
     const round = `Round ${m.rounds.length + 1}`;
     const pre = gp ? `${gp} · ` : '';
     if (m.cfg.mode === 'series') return `${pre}Best of ${m.cfg.bestOf} · ${round} · ${a} ${m.wins[0]}–${m.wins[1]} ${b}`;
     return `${pre}First to ${m.cfg.target} · ${round} · ${a} ${m.totals[0]}–${m.totals[1]} ${b}`;
+  }
+
+  /**
+   * A Sprint Grand Prix's line under the score: the event and the race,
+   * where you stand on its table; in the Showdown, the double points and
+   * your rival.
+   */
+  private sprintGpLabel(ev: GpEvent): string {
+    const r = ev.rounds[ev.current]?.sprint;
+    const head = `${eventName(ev)} · Race ${yourRoundNumber(ev)} of ${playedRounds(ev)}`;
+    const name = (seat: number) => this.session.race.mechs.find((x) => x.team === seat)?.name ?? '';
+    if (r?.finale) return `${eventName(ev)} · The Showdown, double points${r.rival !== undefined ? ` · Your rival: ${name(r.rival)}` : ''}`;
+    if (ev.current === 0) return head;
+    const table = sprintStandings(ev, ev.current - 1);
+    const at = table.findIndex((row) => row.seat === 0);
+    return `${head} · You ${ORD6[at] ?? ''} on ${table[at]?.points ?? 0} pts`;
   }
 
   /**
@@ -1224,7 +1259,7 @@ export class Game {
     if (!m.rounds.length) return head;
     if (!me) return `${head} · ${name(lead)} leads, ${score(lead)}`;
     const place = order.indexOf(me.team) + 1;
-    const you = `You ${['1st', '2nd', '3rd', '4th', '5th', '6th'][place - 1]}, ${score(me.team)}`;
+    const you = `You ${ORD6[place - 1]}, ${score(me.team)}`;
     return lead === me.team ? `${head} · ${you}` : `${head} · ${you} · ${name(lead)} leads, ${score(lead)}`;
   }
 
@@ -1255,6 +1290,9 @@ export class Game {
   private beginRace(): void {
     this.hud.begin(this.session.race, this.session.track, this.session.localId, this.raceFactions);
     this.hud.setMatch(this.matchLabel());
+    // The Showdown: your rival marked (its plate and its line on the tower).
+    const rival = this.mode === 'gp' && this.session instanceof LocalSession ? this.setup?.gp?.rival : undefined;
+    if (rival !== undefined) this.hud.markRival(rival);
     this.hud.setDevice(this.input.device);
     this.view.cam.reset();
     this.view.cam.mode = this.session.race.phase === PHASE.COUNTDOWN ? 'intro' : 'play';
@@ -1696,8 +1734,8 @@ export class Game {
 
   // ---- Grand Prix ----------------------------------------------------------------
 
-  gpEvent(kind: GpKind): GpEvent | null {
-    return this.gpEvents[kind];
+  gpEvent(slot: GpSlot): GpEvent | null {
+    return this.gpEvents[slot];
   }
 
   gpDifficulty(): number {
@@ -1709,9 +1747,9 @@ export class Game {
     this.menus.refresh();
   }
 
-  /** Medals won, by cup id (and the Grand Tour's), each by difficulty; Zenith Cups won, by difficulty. */
-  gpMedals(): { byCup: Record<string, Record<number, Medal | undefined>>; season: Record<number, number> } {
-    return { byCup: gpStore.medals(), season: gpStore.cupsWon() };
+  /** Medals won, by cup id (and the Grand Tour's), each by difficulty; Zenith Cups won, by difficulty; and the Sprint series's medals, its own. */
+  gpMedals(): { byCup: Record<string, Record<number, Medal | undefined>>; season: Record<number, number>; sprint: Record<string, Record<number, Medal | undefined>> } {
+    return { byCup: gpStore.medals(), season: gpStore.cupsWon(), sprint: gpStore.sprintMedals() };
   }
 
   /** Whether the mechs' panel lines are drawn on this device (Video). */
@@ -1719,28 +1757,37 @@ export class Game {
     return video.panels;
   }
 
-  /** What the Grand Prix has earned so far (game/unlocks.ts). */
+  /** What the Grand Prix has earned so far (game/unlocks.ts): the team series's medals and cups, and the Sprint series's medals. */
   get progress(): Progress {
-    return { byCup: gpStore.medals(), season: gpStore.cupsWon() };
+    return { byCup: gpStore.medals(), season: gpStore.cupsWon(), sprint: gpStore.sprintMedals() };
   }
 
   /** What the award just seen opened for your mech (shown on it). */
   justEarned: Unlock[] = [];
 
   /**
-   * From the hub: carry on with the event, or pick a faction and start one
-   * (`cup`: which cup; one cup is under way at a time, and the hub asks
-   * before another is started in its place).
+   * From the hub: carry on with the event, or start one (`cup`: which cup;
+   * one cup of each series is under way at a time, and the hub asks before
+   * another is started in its place). The team series's: pick the faction
+   * you race for first. The Sprint series's: straight to its briefing (you
+   * race for no faction, in your own Forward).
    */
-  openGp(kind: GpKind, cup = CUPS[0].id): void {
+  openGp(slot: GpSlot, cup = CUPS[0].id): void {
     this.mode = 'gp';
-    this.gpKind = kind;
-    const ev = this.gpEvents[kind];
+    this.gpSlot = slot;
+    const kind = kindOf(slot);
+    const ev = this.gpEvents[slot];
     if (ev && (kind !== 'cup' || ev.cup === cup)) {
       this.gpRunner.run(ev);
+      const r = ev.rounds[ev.current];
       if (isOver(ev)) this.showEventCeremony(ev);
-      else if (ev.rounds[ev.current].you?.result) this.menus.push('standings', { kind });
-      else this.menus.push('briefing', { kind });
+      else if (r.you?.result || r.sprint?.result) this.menus.push('standings', { slot });
+      else this.menus.push('briefing', { slot });
+      return;
+    }
+    if (sprintSlot(slot)) {
+      this.newGp(slot, cup);
+      this.menus.push('briefing', { slot });
       return;
     }
     const name = kind === 'cup' ? (CUPS.find((c) => c.id === cup)?.name ?? 'Cup') : kind === 'tour' ? 'Grand Tour' : 'Zenith Cup season';
@@ -1748,32 +1795,45 @@ export class Game {
       context: `Grand Prix · ${name} · pick the faction you will race for`,
       confirm: kind === 'cup' ? 'Start the cup' : kind === 'tour' ? 'Start the Grand Tour' : 'Start the season',
       onConfirm: () => {
-        this.newGp(kind, cup);
-        this.menus.replace('briefing', { kind });
+        this.newGp(slot, cup);
+        this.menus.replace('briefing', { slot });
       },
     });
   }
 
-  newGp(kind: GpKind, cup = CUPS[0].id): void {
+  newGp(slot: GpSlot, cup = CUPS[0].id): void {
     const seed = (Math.random() * 1e9) | 0;
     const team = this.loadout.team;
     const diff = this.gpDifficulty();
-    const ev = kind === 'cup' ? newCup(cup, team, diff, seed) : kind === 'tour' ? newTour(team, diff, seed) : newSeason(team, diff, seed);
+    const ev =
+      slot === 'sprint-cup'
+        ? newSprintCup(cup, diff, seed)
+        : slot === 'sprint-tour'
+          ? newSprintTour(diff, seed)
+          : slot === 'cup'
+            ? newCup(cup, team, diff, seed)
+            : slot === 'tour'
+              ? newTour(team, diff, seed)
+              : newSeason(team, diff, seed);
+    // (A Sprint is raced in your own Forward: made now from your faction's if you have none.)
+    if (ev.sprint) this.sprintMech();
     gpStore.saveEvent(ev);
-    this.gpEvents[kind] = ev;
-    this.gpKind = kind;
+    this.gpEvents[slot] = ev;
+    this.gpSlot = slot;
     this.gpRunner.run(ev);
   }
 
-  abandonGp(kind: GpKind): void {
-    gpStore.clearEvent(kind);
-    this.gpEvents[kind] = null;
-    if (this.gpKind === kind) this.gpRunner.run(null);
+  abandonGp(slot: GpSlot): void {
+    gpStore.clearEvent(slot);
+    this.gpEvents[slot] = null;
+    if (this.gpSlot === slot) this.gpRunner.run(null);
   }
 
-  openGpHangar(kind: GpKind): void {
-    const ev = this.gpEvents[kind];
-    if (!ev) return;
+  /** The hangar for a team event: your frame (your faction is fixed for the event). */
+  openGpHangar(slot: GpSlot): void {
+    const ev = this.gpEvents[slot];
+    if (!ev || ev.sprint) return;
+    const kind = ev.kind;
     this.menus.push<HangarData>('hangar', {
       context: `${eventName(ev)} · round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`,
       confirm: 'Done',
@@ -1784,36 +1844,49 @@ export class Game {
     });
   }
 
-  startGpRound(kind: GpKind): void {
-    const ev = this.gpEvents[kind];
+  startGpRound(slot: GpSlot): void {
+    const ev = this.gpEvents[slot];
     const r = ev?.rounds[ev.current];
-    if (!ev || !r?.you) return;
+    if (!ev || !r || !(r.you || r.sprint)) return;
     this.mode = 'gp';
-    this.gpKind = kind;
+    this.gpSlot = slot;
     const cfg = matchFormat(ev);
-    this.setup = { factions: [ev.faction, r.you.b], role: this.loadout.role, rivalSkill: GP_SKILL[ev.difficulty] ?? 0.55, teamSkill: GP_TEAMMATE_SKILL, track: r.circuit, cfg };
-    this.match = createMatch(cfg);
+    const rivalSkill = GP_SKILL[ev.difficulty] ?? 0.55;
+    if (r.sprint) {
+      // The six of the field, each rival at its own skill for the event; the grid by lot, then the table reversed.
+      const skills = Array.from({ length: SPRINT_FIELD }, (_, seat) => sprintSkill(ev, seat, GP_TEAMMATE_SKILL));
+      this.setup = { factions: [-1, ...LIVERIES.map((_, f) => f)], sprint: true, role: ROLE.FW, rivalSkill, teamSkill: GP_TEAMMATE_SKILL, track: r.circuit, cfg, gp: { skills, grid: sprintEventGrid(ev), rival: r.sprint.rival } };
+      this.match = createMatch(cfg, SPRINT_FIELD);
+    } else {
+      this.setup = { factions: [ev.faction, r.you!.b], role: this.loadout.role, rivalSkill, teamSkill: GP_TEAMMATE_SKILL, track: r.circuit, cfg };
+      this.match = createMatch(cfg);
+    }
     this.gpRunner.run(ev);
     this.startRound();
   }
 
-  /** Your match of this round is decided: bank it and show the standings. */
+  /** Your match of this round is decided (a Sprint event's race run): bank it and show the standings. */
   private gpMatchDone(): void {
-    const ev = this.gpEvents[this.gpKind];
+    const ev = this.gpEvents[this.gpSlot];
     const m = this.match;
     if (!ev || !m) return;
-    recordYours(ev, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 }, m.pilots);
+    if (ev.rounds[ev.current]?.sprint) {
+      // Each seat's place (0: knocked out, its placing worth nothing).
+      const last = m.rounds[m.rounds.length - 1];
+      const places = Array.from({ length: SPRINT_FIELD }, (_, seat) => (last && (last.place[seat] ?? 0) > 0 ? last.rank[seat] : 0));
+      recordSprint(ev, places, m.pilots);
+    } else recordYours(ev, { wins: [m.wins[0], m.wins[1]], points: [m.totals[0], m.totals[1]], races: m.rounds.length, winner: m.winner === 1 ? 1 : 0 }, m.pilots);
     gpStore.saveEvent(ev);
     this.match = null;
     this.state = 'garage';
     this.hud.hide();
     this.music('menu');
-    this.menus.reset('standings', { kind: this.gpKind }, ['title', 'modes', 'gp']);
+    this.menus.reset('standings', { slot: this.gpSlot }, ['title', 'modes', 'gp']);
   }
 
   /** On from the standings (or a matchday off): the next briefing, or the ceremony. */
-  gpAdvance(kind: GpKind): void {
-    const ev = this.gpEvents[kind];
+  gpAdvance(slot: GpSlot): void {
+    const ev = this.gpEvents[slot];
     if (!ev || !advance(ev)) return;
     gpStore.saveEvent(ev);
     // (The Grand Tour's decider only now has its other race to run.)
@@ -1822,23 +1895,30 @@ export class Game {
       const place = finalPlace(ev);
       const medal = singleRaces(ev) ? medalFor(place) : null;
       const before = this.progress;
-      if (singleRaces(ev)) gpStore.awardMedal(ev.cup, ev.difficulty, medal);
+      if (singleRaces(ev)) gpStore.awardMedal(ev.cup, ev.difficulty, medal, !!ev.sprint);
       else if (place === 1) gpStore.awardZenithCup(ev.difficulty);
       this.justEarned = newlyEarned(before, this.progress);
-      // The ceremony: the first three factions on the podium, the award, then the readout.
+      // The ceremony: the first three on the podium, the award, then the readout.
       this.showEventCeremony(ev);
       // (The music first: the jingle is only for the synthesised music.)
       this.music('results', place === 1 ? 'win' : 'loss');
       this.resultJingle(place === 1);
     } else {
-      this.menus.replace('briefing', { kind });
+      this.menus.replace('briefing', { slot });
     }
+  }
+
+  /** Under a Sprint event's race results: what the race is worth on the event's table, when it is not as shown (the Showdown's double points). */
+  sprintGpNote(points: number): string {
+    const ev = this.mode === 'gp' ? this.gpEvents[this.gpSlot] : null;
+    if (!ev?.sprint || !ev.rounds[ev.current]?.sprint?.finale) return '';
+    return `The Showdown counts double: ${points * 2} on the ${eventName(ev)} table.`;
   }
 
   /** On from an event's ceremony: offline, the event put away; online, out of the room. */
   ceremonyOver(): void {
     if (this.mode === 'online') return this.leaveRoom();
-    this.finishGp(this.gpKind);
+    this.finishGp(this.gpSlot);
   }
 
   /** The circuit last raced (or on show), by name. */
@@ -1847,10 +1927,10 @@ export class Game {
   }
 
   /** The ceremony seen: the event is put away, its medals and cups kept. */
-  finishGp(kind: GpKind): void {
+  finishGp(slot: GpSlot): void {
     this.justEarned = [];
-    gpStore.clearEvent(kind);
-    this.gpEvents[kind] = null;
+    gpStore.clearEvent(slot);
+    this.gpEvents[slot] = null;
     if (!this.menus.popTo('gp')) this.menus.reset('gp', undefined, ['title', 'modes']);
   }
 
@@ -2693,7 +2773,7 @@ export class Game {
       race,
       track: s.track.def.id,
       local,
-      mode: this.mode === 'gp' ? 'Grand Prix' : race.sprint ? 'Sprint' : 'Free Play',
+      mode: this.mode === 'gp' ? (race.sprint ? 'Sprint Grand Prix' : 'Grand Prix') : race.sprint ? 'Sprint' : 'Free Play',
       laps: s.tracer.laps,
       look: { faction: this.raceFactions[me.team] ?? 0, build: me.look, colour: me.colour, name: me.name },
     });
@@ -3201,6 +3281,8 @@ export class Game {
 
   /** How a match's side looks (a team, or a Sprint's pilot), or an event's faction. */
   private sideLook(race: RaceState, side: number): TeamLook {
+    // (A Sprint event's sides are its seats: you in your colour, each faction's pilot in theirs.)
+    if (this.ceremonyEvent?.sprint) return side === 0 ? independent(pilotColour()) : factionLook(side - 1);
     if (this.ceremonyEvent) return factionLook(side);
     const looks = teamLooks(race, this.factions);
     return looks[side] ?? looks[0];
@@ -3281,6 +3363,8 @@ export class Game {
   ceremonyMe(): number {
     const ev = this.ceremonyEvent;
     if (!ev) return this.resultsLocal;
+    // (A Sprint event's lines are its seats: yours is 0.)
+    if (ev.sprint) return 0;
     const room = this.online.lobby;
     const role = this.mode === 'online' ? (room?.players.find((p) => p.pid === this.online.pid)?.role ?? this.loadout.role) : this.loadout.role;
     return seatKey(ev.faction, role);
@@ -3290,6 +3374,7 @@ export class Game {
   private ceremonyHeadline(c: Ceremony, race: RaceState): string {
     const ev = this.ceremonyEvent;
     const top = c.steps[0];
+    if (ev?.sprint) return `${top.pilots[0]?.name ?? ''} wins`;
     if (ev) return `${factionName(LIVERIES[top.side] ?? LIVERIES[0])} win`;
     if (c.kind === 'sprint') return `${top.pilots[0]?.name ?? ''} wins`;
     return `${this.sideLook(race, top.side).name} win`;
@@ -3313,6 +3398,11 @@ export class Game {
   /** The award as it comes up on the podium: yours (an event's medal or cup), or the MVP's mention (a match's). */
   private ceremonyAward(c: Ceremony): PodiumAward | null {
     const ev = this.ceremonyEvent;
+    if (ev?.sprint) {
+      const { place, medal } = eventAward(ev);
+      const at = Podium.STRIKE_AT[0] + 1.6;
+      return medal ? { badge: medal, title: `${MEDAL_NAMES[medal]} medal`, line: `You finish ${ORD6[place - 1]}`, at } : { badge: '', title: `${ORD6[place - 1]} place`, line: 'A medal needs the top three', at };
+    }
     if (ev) {
       const { place, medal } = eventAward(ev);
       const at = Podium.STRIKE_AT[0] + 1.6;

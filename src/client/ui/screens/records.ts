@@ -22,6 +22,8 @@ export function registerRecords(m: Menus, g: Game): void {
       const medals = { gold: 0, silver: 0, bronze: 0 };
       for (const cup of Object.values(g.progress.byCup)) for (const medal of Object.values(cup)) if (medal in medals) medals[medal as keyof typeof medals]++;
       const cups = Object.values(g.progress.season).reduce((a, b) => a + b, 0);
+      const sprint = { gold: 0, silver: 0, bronze: 0 };
+      for (const cup of Object.values(g.progress.sprint ?? {})) for (const medal of Object.values(cup)) if (medal in sprint) sprint[medal as keyof typeof sprint]++;
       const facts: Array<[string, string]> = [
         ['Races', String(c.races)],
         ['Wins', c.races ? `${c.wins} (${pct(c.wins, c.races)})` : '0'],
@@ -33,6 +35,7 @@ export function registerRecords(m: Menus, g: Game): void {
         ['MVP of a match', String(c.mvps)],
         ['Grand Prix medals', `${medals.gold} gold, ${medals.silver} silver, ${medals.bronze} bronze`],
         ['Zenith Cups', String(cups)],
+        ['Sprint series medals', `${sprint.gold} gold, ${sprint.silver} silver, ${sprint.bronze} bronze`],
       ];
       const dl = h('div.career');
       for (const [k, v] of facts) dl.append(h('span', k), h('b', v));

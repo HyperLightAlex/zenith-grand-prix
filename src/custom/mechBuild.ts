@@ -88,6 +88,11 @@ export const PAINTS: readonly Paint[] = [
   { name: 'Sakura', color: 0xf4a6c4, shade: 0xb770a5 },
   { name: 'Graphite', color: 0x3a3f4b, shade: 0x242239 },
   { name: 'Matte Black', color: 0x1a1b22, shade: 0x100f1a },
+  // Earned on the Sprint ladder (client/game/unlocks.ts): the louder paints.
+  { name: 'Electric Blue', color: 0x16b8ff, shade: 0x2858b0 },
+  { name: 'Hot Pink', color: 0xff2d95, shade: 0x9a1f86 },
+  { name: 'Acid Green', color: 0x8cff1f, shade: 0x3f9a2a },
+  { name: 'Champion Gold', color: 0xffc21f, shade: 0xb86a1a },
 ];
 
 /**
@@ -141,8 +146,8 @@ export interface MechBuild {
 
 // ---- the livery: a pattern, the race number, the finish and the wear ----------
 
-/** Patterns laid over the main paint, in a paint of their own. */
-export const PATTERNS = ['none', 'stripes', 'chevrons', 'splinter', 'checks', 'hex', 'slashes', 'digital'] as const;
+/** Patterns laid over the main paint, in a paint of their own (new ones only ever added at the end: a build names one by its place). */
+export const PATTERNS = ['none', 'stripes', 'chevrons', 'splinter', 'checks', 'hex', 'slashes', 'digital', 'flames', 'pinstripes', 'lightning', 'sunburst'] as const;
 export type PatternId = (typeof PATTERNS)[number];
 export const PATTERN_NAMES: Record<PatternId, string> = {
   none: 'None',
@@ -153,10 +158,14 @@ export const PATTERN_NAMES: Record<PatternId, string> = {
   hex: 'Hex weave',
   slashes: 'Tiger slashes',
   digital: 'Digital camo',
+  flames: 'Racing flames',
+  pinstripes: 'Pinstripes',
+  lightning: 'Lightning bolt',
+  sunburst: 'Sunburst',
 };
 
-/** How the paint is finished: satin is the paint as it has always been. */
-export const FINISHES = ['satin', 'gloss', 'matte', 'flake', 'pearl'] as const;
+/** How the paint is finished: satin is the paint as it has always been (new ones only ever added at the end). */
+export const FINISHES = ['satin', 'gloss', 'matte', 'flake', 'pearl', 'chrome', 'chameleon'] as const;
 export type FinishId = (typeof FINISHES)[number];
 export const FINISH_NAMES: Record<FinishId, string> = {
   satin: 'Satin',
@@ -164,6 +173,8 @@ export const FINISH_NAMES: Record<FinishId, string> = {
   matte: 'Matte',
   flake: 'Metal flake',
   pearl: 'Pearl',
+  chrome: 'Chrome',
+  chameleon: 'Chameleon',
 };
 
 /** How the race shows on it: scuffed and scorched as its armour goes, never, or worn from the start. */

@@ -449,6 +449,16 @@ export class Hud {
     this.frame = 0;
   }
 
+  /** The Showdown's marked rival (a mech): a badge over its plate, its line on the tower picked out. */
+  markRival(id: number): void {
+    const pl = this.plates[id];
+    const row = this.rows[id];
+    if (!pl || !row || pl.el.classList.contains('rival')) return;
+    pl.el.classList.add('rival');
+    pl.el.prepend(h('div.rivalbadge', 'Your rival'));
+    row.el.classList.add('rival');
+  }
+
   hide(): void {
     this.root.hidden = true;
   }

@@ -924,7 +924,70 @@ A Sprint's formats (`src/sim/match.ts`, each pilot a side):
 
 Online, the host sets a room to a Sprint (see [ONLINE.md](ONLINE.md)): its
 places are fixed for the match when it starts, so the standings follow
-each pilot. The Grand Prix stays a team event.
+each pilot. The online Grand Prix stays a team event.
+
+### Sprint Grand Prix
+
+The Grand Prix's second series, offline: the Sprint as an event, beside
+the team cups, with a ladder, medals and rewards of its own
+(`src/gp/grandPrix.ts`, the `sprint` events).
+
+- **Events**: three **Sprint Cups** (the Horizon, Frontier and Ascent
+  Sprint Cups: the cups' circuits, three races) and the **Sprint Tour**
+  (nine races, every circuit in turn, the last at Zenith Ring). No Sprint
+  season.
+- **The field**: you in your own Forward (your custom one, as in any
+  Sprint) in your pilot colour, and one pilot from each faction in its stock
+  Forward: the same five all event, so they are rivals with names and a
+  place on the table. They race at the difficulty's skill, spread from
+  +0.06 to -0.06 (drawn for each event): one of them is the **favourite**,
+  named in the briefing.
+- **Scoring**: a Sprint's points for each race (10 / 8 / 6 / 4 / 2 / 1; a
+  knocked-out pilot none). The table ranks by points, then wins, then the
+  better finish in the latest race.
+- **The grid**: drawn by lot for the first race (from its race's seed, so
+  the briefing shows it before the start), then the table reversed, so
+  whoever leads starts at the back (as a Sprint's).
+- **The Showdown** (the Sprint Tour's last race, at Zenith Ring): **double
+  points** (20 / 16 / 12 / 8 / 4 / 2), so a pilot within 20 points of the
+  lead can still take the Tour; and your **nearest rival** on the table
+  (the pilot just above you; just below, if you lead) is named in the
+  briefing and marked in the race (a badge over their mech, their line on
+  the timing tower edged in gold). The team Tour's decider
+  is its match against the nearest team; this is the Sprint's.
+- **Medals**: the first three on the final table take gold, silver and
+  bronze, kept apart from the team series's. **Its own ladder**: the
+  Horizon Sprint Cup is open from the start, each next Sprint Cup opens
+  with a Sprint medal in the one before, and the Sprint Tour with one in
+  each. Team medals open nothing here, nor Sprint medals there.
+- **Rewards**: the Sprint ladder earns its own thirteen, for a custom mech
+  of any frame (new patterns, finishes, paints and victory poses: see
+  CUSTOMIZATION.md, "Earned in the Grand Prix").
+- **Each round**: a briefing (the circuit, the grid from pole with the
+  favourite and the rival tagged, the table so far, your Forward to edit),
+  the race, then the table after it (this race's
+  places and points, the standings); at the end, the ceremony: the pilots'
+  podium (a mech to a step) with the medals on the steps and the trophy on
+  the winner's, the mentions, and the final table.
+- **Saves**: one Sprint Cup and the Sprint Tour can be under way, beside
+  the team cup, Tour and season; each keeps between sittings. Its races
+  count in Records (as the Sprint Grand Prix), and its medals have a line
+  of their own there.
+
+Measured with bots (a computer pilot in your seat at 0.6, as your
+teammates race; 24 Sprint Cups at each difficulty, 72 races; bots are not
+people, so this is a floor to start from, not a verdict):
+
+| Difficulty | Gold | Any medal | Your race wins | You knocked out |
+|---|---|---|---|---|
+| Rookie | 38% | 79% | 21% | 19% |
+| Pro | 8% | 46% | 10% | 17% |
+| Ace | 25% | 58% | 14% | 19% |
+
+Rookie is plainly easier. Pro and Ace are not told apart at this size (a
+Sprint is a scramble: the favourite, +0.06, won 15% of races, about its
+one-in-six share), so whether Ace needs a wider gap is a question for
+playtests and a longer run.
 
 ### The tutorial
 

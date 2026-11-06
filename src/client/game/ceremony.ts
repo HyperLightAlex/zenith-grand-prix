@@ -10,11 +10,15 @@
 //                 team to a step (the teams' podium), each its best first;
 //                 a cup's or the Grand Tour's medals on them, and the
 //                 trophy on the winners'.
+//   A Sprint      (the Sprint series's cups and Tour) its first three pilots
+//   event         by its final table, a mech to a step (the pilots'
+//                 podium), their medals on them and the trophy on the
+//                 winner's.
 //
 // Plain logic over the match's and the event's ledgers (sim/ledger.ts).
 
 import { AWARD_COUNT, ROLE, byPoints, mentions, standings as matchStandings, teamOrder, seatKey, type MatchState, type Mention, type PilotLine } from '../../sim/index';
-import { finalPlace, medalFor, singleRaces, standings as eventStandings, type GpEvent, type Medal } from '../../gp/grandPrix';
+import { finalPlace, medalFor, singleRaces, sprintStandings, standings as eventStandings, type GpEvent, type Medal } from '../../gp/grandPrix';
 import { PILOT_NAMES } from '../../net/factions';
 
 export interface CeremonyStep {
@@ -99,6 +103,7 @@ export function factionTeam(ev: GpEvent, faction: number): PilotLine[] {
 /** The ceremony at an event's end (none before). */
 export function eventCeremony(ev: GpEvent | null): Ceremony | null {
   if (!ev || ev.current < ev.rounds.length) return null;
+  if (ev.sprint) return sprintEventCeremony(ev);
   const table = eventStandings(ev, ev.rounds.length - 1);
   const medals = singleRaces(ev);
   const steps = table.slice(0, 3).map((row, i) => ({ pilots: factionTeam(ev, row.faction), side: row.faction, medal: medals ? medalFor(i + 1) : null }));
@@ -110,4 +115,17 @@ export function eventCeremony(ev: GpEvent | null): Ceremony | null {
 export function eventAward(ev: GpEvent): { place: number; medal: Medal | null } {
   const place = finalPlace(ev);
   return { place, medal: singleRaces(ev) ? medalFor(place) : null };
+}
+
+/**
+ * A Sprint event's: its first three pilots by the final table, a mech to a
+ * step; and every pilot read out in the table's order (each its line in the
+ * event, by seat: 0 you, f + 1 faction f's pilot).
+ */
+function sprintEventCeremony(ev: GpEvent): Ceremony {
+  const table = sprintStandings(ev, ev.rounds.length - 1);
+  const lineOf = (seat: number): PilotLine => (ev.pilots ?? []).find((l) => l.id === seat) ?? { ...standIn(seat - 1, ROLE.FW), id: seat, team: seat };
+  const lines = table.map((row) => lineOf(row.seat));
+  const steps = table.slice(0, 3).map((row, i) => ({ pilots: [lineOf(row.seat)], side: row.seat, medal: medalFor(i + 1) }));
+  return { kind: 'event', layout: 'pilots', steps, lines, mentions: mentions(lines), trophy: true };
 }

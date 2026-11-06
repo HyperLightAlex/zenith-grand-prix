@@ -11,9 +11,9 @@ import { eventName, finalPlace, medalFor, singleRaces, type GpEvent } from '../.
 import type { Game } from '../../game/game';
 import { h } from '../dom';
 import type { Menus } from '../menus';
-import { factionLook, teamLooks, type TeamLook } from '../sides';
+import { factionLook, independent, teamLooks, type TeamLook } from '../sides';
 import { SELECT } from './common';
-import { awardLines, gpTable } from './grandPrix';
+import { awardLines, gpTable, sprintTable } from './grandPrix';
 import { unlockName } from '../../game/unlocks';
 
 const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
@@ -21,6 +21,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 /** A pilot's side as it looks (its colour and emblem): a match's team (a Sprint's pilot), an event's faction. */
 function lookOf(g: Game, l: PilotLine): TeamLook {
+  // (A Sprint event's: you in your colour, for no faction.)
+  if (g.ceremonyEvent?.sprint && l.faction < 0) return independent(l.colour);
   if (g.ceremonyEvent) return factionLook(Math.max(0, l.faction));
   const race = g.resultsRace;
   const looks = race ? teamLooks(race, g.factions) : [];
@@ -191,8 +193,8 @@ export function registerCeremony(m: Menus, g: Game): void {
       col.append(list);
       // (An event's pilots, many of them: a closer table.)
       const side = h('div.panel.ceremony-pilots' + (c.lines.length > 8 ? '.many' : ''));
-      if (ev) side.append(h('h2', 'Final standings'), gpTable(ev, ev.rounds.length - 1));
-      side.append(h('h2', ev ? 'The pilots of your races' : 'The pilots'), h('p.key', 'Points from', h('i.placing'), 'placing', h('i.ko'), 'knockouts', h('i.support'), 'support'), pilotTable(g, me));
+      if (ev) side.append(h('h2', 'Final standings'), ev.sprint ? sprintTable(g, ev, ev.rounds.length - 1) : gpTable(ev, ev.rounds.length - 1));
+      side.append(h('h2', ev && !ev.sprint ? 'The pilots of your races' : 'The pilots'), h('p.key', 'Points from', h('i.placing'), 'placing', h('i.ko'), 'knockouts', h('i.support'), 'support'), pilotTable(g, me));
       m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT));
     },
     back: () => {},

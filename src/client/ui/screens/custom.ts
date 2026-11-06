@@ -33,7 +33,7 @@ import {
 } from '../../../custom/mechBuild';
 import { CALLSIGN_MAX } from '../../../net/protocol';
 import type { Game } from '../../game/game';
-import { UNLOCKS, earned, howTo, openOf, unlockName } from '../../game/unlocks';
+import { UNLOCKS, earned, howTo, lockedWhy, openOf, paintOpen, unlockName, type UnlockKind } from '../../game/unlocks';
 import { partChannels } from '../../render/mech/customFrame';
 import { LIVERIES, factionName } from '../../render/palette';
 import { h, setClass, setText } from '../dom';
@@ -70,7 +70,7 @@ function swatch(p: Paint, follow = false): HTMLElement {
 }
 
 /** What the Grand Prix still has to earn of these kinds, and how (for the side panel). */
-export function toEarn(g: Game, kinds: ReadonlyArray<'pattern' | 'finish' | 'wear' | 'pose'>): HTMLElement[] {
+export function toEarn(g: Game, kinds: ReadonlyArray<UnlockKind>): HTMLElement[] {
   const left = UNLOCKS.filter((u) => kinds.includes(u.kind) && !earned(u, g.progress));
   if (!left.length) return [];
   return [h('h2', 'Earned in the Grand Prix'), h('div.rewards', ...left.map((u) => h('div.reward', h('b', unlockName(u)), h('span', howTo(u)))))];
@@ -255,7 +255,12 @@ export function registerCustom(m: Menus, g: Game): void {
       const p = g.progress;
       const s = style();
       m.choice(list, 'Pattern', PATTERN_NAMES[PATTERNS[s.pattern]], (dir) => set({ pattern: next(PATTERNS, openOf('pattern', PATTERNS, p), s.pattern, dir) }), { key: 'pattern' });
-      m.choice(list, 'Pattern paint', PAINTS[s.patternPaint].name, (dir) => set({ patternPaint: step(s.patternPaint, dir, PAINTS.length) }), {
+      m.choice(list, 'Pattern paint', PAINTS[s.patternPaint].name, (dir) => {
+        let i = s.patternPaint;
+        do i = step(i, dir, PAINTS.length);
+        while (!paintOpen(i, p) && i !== s.patternPaint);
+        set({ patternPaint: i });
+      }, {
         key: 'patternPaint',
         locked: s.pattern === 0 ? 'Choose a pattern first' : null,
       });
@@ -333,15 +338,24 @@ export function registerCustom(m: Menus, g: Game): void {
         d.target = targets[(targets.indexOf(d.target) + dir + targets.length) % targets.length];
         show();
       }, { key: 'target' });
+      // (A paint the Grand Prix has not yet opened is stepped over: the side lists how to earn it.)
+      const usable = (ch: Channel, i: number) => ch === 'frame' || paintOpen(i, g.progress);
       for (const ch of CHANNELS) {
         const n = listOf(ch).length;
         m.choice(list, CHANNEL_NAMES[ch], '', (dir) => {
           const v = current(ch);
-          if (!part()) return setPaint(ch, ((((v ?? 0) + dir) % n) + n) % n);
+          if (!part()) {
+            let i = v ?? 0;
+            do i = (((i + dir) % n) + n) % n;
+            while (!usable(ch, i) && i !== (v ?? 0));
+            return setPaint(ch, i);
+          }
           // A part's choices: the mech's paint, then every paint.
-          const i = v === undefined ? 0 : v + 1;
-          const next = (((i + dir) % (n + 1)) + n + 1) % (n + 1);
-          setPaint(ch, next === 0 ? undefined : next - 1);
+          let i = v === undefined ? 0 : v + 1;
+          const from = i;
+          do i = (((i + dir) % (n + 1)) + n + 1) % (n + 1);
+          while (i > 0 && !usable(ch, i - 1) && i !== from);
+          setPaint(ch, i === 0 ? undefined : i - 1);
         }, { key: ch, open: () => openChips() });
       }
       m.button(list, '', () => {
@@ -386,10 +400,26 @@ export function registerCustom(m: Menus, g: Game): void {
         if (id !== chipsFor) {
           chipsFor = id;
           setText(chipsTitle, ch === 'frame' ? 'Metals' : 'Paints');
-          cells = listOf(ch).map((p) => swatch(p));
+          cells = listOf(ch).map((p, i) => {
+            const sw = swatch(p);
+            // Not yet earned: shown, locked, and what opens it on it.
+            if (ch !== 'frame' && !paintOpen(i, g.progress)) {
+              sw.classList.add('locked');
+              sw.title = `${p.name}: ${lockedWhy('paint', p.name, g.progress) ?? ''}`;
+            }
+            return sw;
+          });
           if (part()) cells.unshift(swatch(mechPaint(ch), true));
           chips.replaceChildren(...cells);
-          openChips = m.grid({ cells, on: () => cellOn(ch), set: (i) => setPaint(ch, cellValue(i)) });
+          openChips = m.grid({
+            cells,
+            on: () => cellOn(ch),
+            set: (i) => {
+              const v = cellValue(i);
+              if (v !== undefined && !usable(ch, v)) return void m.toast(`${PAINTS[v].name}: ${lockedWhy('paint', PAINTS[v].name, g.progress) ?? 'not yet earned'}`);
+              setPaint(ch, v);
+            },
+          });
         }
         const on = cellOn(ch);
         cells.forEach((c, i) => setClass(c, 'on', i === on));
@@ -421,7 +451,7 @@ export function registerCustom(m: Menus, g: Game): void {
         showSide(m.selectedKey);
       };
 
-      const side = h('div.kit.custom-sheet', chipsTitle, chips, summary, h('div.note', 'Each swatch is the paint over the shadow colour mixed for it.'));
+      const side = h('div.kit.custom-sheet', chipsTitle, chips, summary, h('div.note', 'Each swatch is the paint over the shadow colour mixed for it.'), ...toEarn(g, ['paint']));
       m.root.append(bayShade(g), m.panes(col, h('div.hangar-side', side)), m.footer(TURN, { pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));
       show();
     },

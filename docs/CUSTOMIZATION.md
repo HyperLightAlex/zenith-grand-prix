@@ -12,7 +12,7 @@ faction's frames have the same stats), so none of it needs balancing.
 | Paint catalogue (each part paintable) | built: 33 paints and 9 metals, the whole mech and any part; one open question (below) |
 | Livery: patterns, race number, finish, wear | built: eight patterns, any race number to 99, panel lines on or off, five finishes, three wears (below: "Livery") |
 | Victory poses | built: six, chosen in the hangar, struck on the podium (DESIGN.md, "The podium") |
-| Earned in the Grand Prix | built: thirteen patterns, finishes, a wear and poses opened by medals (below) |
+| Earned in the Grand Prix | built: thirteen patterns, finishes, a wear and poses opened by the team series's medals, and thirteen more (patterns, finishes, paints and poses) by the Sprint series's (below) |
 | Pilot portraits | the gallery is the fifteen faction pilots; more, and recolouring, to come |
 | Gameplay customization (tuning, loadouts) | not planned for now |
 
@@ -336,13 +336,18 @@ the servers and rooms read both.
 
 ## Earned in the Grand Prix
 
-Some of the livery and the poses are earned (`client/game/unlocks.ts`), by
-a medal this good or better in a cup or the Grand Tour at any difficulty, or
-a Zenith Cup; the rest are open from the start (two patterns, satin and
-matte, the race and clean wears, three poses). Nothing is kept of its own:
-what is open follows from the medals won. The award screen says what it has
-just opened; the Grand Prix menu's Rewards lists them all, and the editor
-and the hangar list what is left to earn beside their choices.
+Some of the livery, the paints and the poses are earned
+(`client/game/unlocks.ts`), by a medal this good or better in a cup or the
+Grand Tour at any difficulty, or a Zenith Cup; or by the Sprint series's
+medals (its Sprint Cups and the Sprint Tour: DESIGN.md, "Sprint Grand
+Prix"). The rest are open from the start (two patterns, satin and matte,
+the race and clean wears, three poses, every paint but four). Everything
+earned is for a custom mech of any frame, whichever series earned it.
+Nothing is kept of its own: what is open follows from the medals won. The
+award screen says what it has just opened; the Grand Prix menu's Rewards
+lists them all by series, and the editor and the hangar list what is left
+to earn beside their choices (a paint still to earn is hatched in the
+swatches and passed over when cycling).
 
 | Opened by | Pattern | Finish | Pose | Wear |
 |---|---|---|---|---|
@@ -351,6 +356,20 @@ and the hangar list what is left to earn beside their choices.
 | Ascent Cup | bronze: hex weave, silver: tiger slashes | gold: pearl | | |
 | Grand Tour | bronze: digital camo | | gold: a bow | |
 | Zenith Cup | | | hands on hips | battle-worn |
+
+The Sprint series's ladder:
+
+| Opened by | Bronze | Silver | Gold |
+|---|---|---|---|
+| Horizon Sprint Cup | racing flames (pattern) | Electric Blue (paint) | applause for the crowd (pose) |
+| Frontier Sprint Cup | pinstripes (pattern) | chrome (finish) | Hot Pink (paint) |
+| Ascent Sprint Cup | lightning bolt (pattern) | Acid Green (paint) | chameleon (finish) |
+| Sprint Tour | sunburst (pattern) | the double fist pump (pose) | the champion's flex (pose) and Champion Gold (paint) |
+
+Chrome is a tinted mirror (its paint dimmed, the sky and the ground in it);
+chameleon turns its paint's hue with the angle it is seen at. The victory
+poses never raise a single arm out ahead: one arm goes up only straight to
+the sky (pointing, or a fist), so none can be taken for a salute.
 
 ## Pilot portraits
 
