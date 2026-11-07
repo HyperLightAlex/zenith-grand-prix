@@ -27,8 +27,8 @@ five teams' colours (a preview, made by recolouring the key colours).
   Sirocco's locs are redrawn a little. Outside the suit and headset the
   original can be used instead, since the framing matches.
 - Lark's collar lining was blue and came back in the inner suit's dark key.
-  Solstice's own colours map that key to its blue, so in Solstice it looks
-  as before.
+  On Solstice he is shown as painted, so it looks as before; on other teams
+  it is their dark inner suit.
 - Team emblems worn by a pilot: Squall's headband bolt (Tempest) is out of
   the player's version, on every team: `pilot-squall-plain.png`, painted out
   here (the headband's own white fitted over it); the computer Squall keeps
