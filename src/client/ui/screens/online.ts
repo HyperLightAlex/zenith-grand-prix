@@ -19,10 +19,10 @@ import { gpBlocked, renderGpRoom } from './onlineGp';
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 const SHORT = ['FW', 'MF', 'DF'];
 
-/** A seat's face: a person's own portrait, or (at -1) the faction's pilot for the seat. */
-export function face(f: number, role: Role, portrait = -1): HTMLElement {
+/** A seat's face: a person's own portrait in the seat's colours (faction `f`, or -1 and pilot colour `colour`), or (at -1) the faction's pilot for the seat. */
+export function face(f: number, role: Role, portrait = -1, colour = -1): HTMLElement {
   const el = h('i.face');
-  el.style.backgroundImage = `url(${faceUrl(f, role, portrait)})`;
+  el.style.backgroundImage = `url(${faceUrl(f, role, portrait, colour)})`;
   return el;
 }
 
@@ -376,7 +376,7 @@ function renderSprintRoom(m: Menus, g: Game, v: LobbyView): void {
     const row = h(
       'div.seat' + (mine ? '.mine' : ''),
       h('span.tint'),
-      face(0, ROLE.FW, p.portrait),
+      face(-1, ROLE.FW, p.portrait, colour),
       h('span.who', h('b', p.callsign), badges, h('small', `${mech}, in ${PILOT_COLOUR_NAMES[colour]?.toLowerCase() ?? 'colour'}${ping}`)),
       h('span.state' + (p.ready && !inMatch ? '.ready' : ''), status),
     );

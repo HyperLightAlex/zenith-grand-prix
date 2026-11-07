@@ -13,7 +13,7 @@ faction's frames have the same stats), so none of it needs balancing.
 | Livery: patterns, race number, finish, wear | built: eight patterns, any race number to 99, panel lines on or off, five finishes, three wears (below: "Livery") |
 | Victory poses | built: six, chosen in the hangar, struck on the podium (DESIGN.md, "The podium") |
 | Earned in the Grand Prix | built: thirteen patterns, finishes, a wear and poses opened by the team series's medals, and thirteen more (patterns, finishes, paints and poses) by the Sprint series's (below) |
-| Pilot portraits | the gallery is the fifteen faction pilots; more, and recolouring, to come |
+| Pilot portraits | the gallery is the fifteen faction pilots, worn in your team's colours (in a Sprint, the league's in your pilot colour); the face creator to come |
 | Gameplay customization (tuning, loadouts) | not planned for now |
 
 ## Parts
@@ -379,10 +379,30 @@ the sky (pointing, or a fist), so none can be taken for a salute.
 
 ## Pilot portraits
 
-A gallery of pilots: the fifteen faction pilots now, and more painted the
-same way (through `art/faction-sheets`), each painted for recolouring (hair,
-flight suit) as the effects are. Until there are more, a player may wear
-the face of one of the computer pilots racing beside them.
+A gallery of pilots: the fifteen faction pilots now; a face creator (parts
+painted on one template head, `art/portraits/README.md`) to come. Until
+then a player may wear the face of one of the computer pilots racing beside
+them.
+
+**In your team's colours.** A portrait is worn in the colours of the seat's
+team: the suit and the headset repainted, over that team's ground. On the
+pilot's own team it is the painting itself; in a Sprint, where you fly for
+no team, it is the league's grey suit lit in your pilot colour, over a
+ground in that colour. The computer pilots keep their own paintings. Squall
+is worn without his Tempest headband bolt, on every team (his computer
+pilot keeps it). Anvil's cloud brooch and Dune's scarab are still worn,
+taking each team's trim colour.
+
+How: each pilot was repainted in ChatGPT with the suit and headset in key
+colours (`art/portraits/keyed/`, see its NOTES.md).
+`python3 tools/portraits/suits.py` builds from those, into
+`src/client/ui/art/pilots/`: each pilot cut out of its ground, a map of its
+suit pixels (which key, and how far from the ink to the key's colour), each
+team's ground and suit colours (taken from its own three pilots), and the
+league's ground in grey. The game loads them at boot and paints a portrait
+the first time it is shown on a team (`ui/portraits.ts`, through `faceUrl`
+in `ui/factionArt.ts`), keeping it for the visit. If they fail to load, a
+portrait is shown as painted.
 
 ## The pilot profile
 

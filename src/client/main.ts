@@ -13,6 +13,7 @@ import { loadGrandstand } from './render/grandstand/grandstand';
 import { loadHoverScreen } from './render/screens/hoverScreens';
 import { loadOutposts } from './render/outposts/outposts';
 import { BootScreen } from './ui/boot';
+import { preparePortraits } from './ui/portraits';
 import { setRosterModel } from './render/mech/rosterSelection';
 import { isSunhawkModel, setSunhawkModel, setSunhawkPanels } from './render/mech/sunhawkSelection';
 import { installFrame, video } from './video';
@@ -80,6 +81,9 @@ async function boot(): Promise<void> {
       loadGrandstand(),
       loadHoverScreen(),
       loadOutposts(),
+      // The portraits' pictures, to wear a cast pilot's portrait in any
+      // team's colours (as painted until they are in, or if they fail).
+      preparePortraits(),
     ]);
   } catch (error) {
     console.error('Mech model loading failed', error);

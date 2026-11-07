@@ -924,8 +924,9 @@ what changes is who is on whose side.
   custom one (made from their faction's stock Forward if they have none; a
   Sprint uses it whether or not they fly it in a team race), lit in their
   **pilot colour** (eyes, thrusters, trails), with the Zenith GP league's
-  badge where a faction's emblem goes, and their name plate, running-order
-  flag, standings line and room seat in the same colour. The colour is
+  badge where a faction's emblem goes, their portrait in the league's suit
+  lit in that colour, and their name plate, running-order flag, standings
+  line and room seat in the same colour. The colour is
   picked on the Pilot screen; until then it is their portrait's background's
   (the first five colours are the factions'). Computer pilots fill the
   places nobody has: each a faction's stock Forward in its livery (Kite in a

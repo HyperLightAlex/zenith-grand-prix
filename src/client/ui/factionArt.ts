@@ -2,8 +2,10 @@
 // LIVERIES), painted, from hudArt.ts (the HUD and faction sheets). A faction
 // added before its art is painted gets a stand-in drawn here in its own
 // colours: a badge for the emblem, and the badge on a dark card for a pilot.
+import { portraitColour } from '../../net/protocol';
 import { LIVERIES } from '../render/palette';
 import { EMBLEMS, PILOTS } from './hudArt';
+import { teamFace } from './portraits';
 
 const drawn = new Map<string, string>();
 
@@ -177,10 +179,13 @@ export function emblemUrlFor(id: string): string {
 
 /**
  * A seat's portrait: the person's own (`portrait`, an index into the
- * gallery) or, at -1, the faction's pilot for the seat.
+ * gallery) in the colours of the seat's team (`f`; -1 for none, then the
+ * league's in pilot colour `colour`, by default the portrait's own: see
+ * portraits.ts) or, at -1, the faction's pilot for the seat.
  */
-export function faceUrl(f: number, role: number, portrait = -1): string {
-  return (portrait >= 0 && PILOTS[portrait]) || pilotUrl(Math.max(0, f), role);
+export function faceUrl(f: number, role: number, portrait = -1, colour = -1): string {
+  if (portrait >= 0 && PILOTS[portrait]) return teamFace(portrait, f, colour >= 0 ? colour : portraitColour(portrait)) ?? PILOTS[portrait];
+  return pilotUrl(Math.max(0, f), role);
 }
 
 /** A faction pilot's portrait, as an image URL: painted, or the faction's badge on a dark card. */

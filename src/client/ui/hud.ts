@@ -130,7 +130,7 @@ const lookOf = (team: number) => looks[team] ?? factionLook(team);
 
 /** A seat's portrait: its person's own, or its faction's pilot. */
 function pilotOf(m: MechState): string {
-  return faceUrl(lookOf(m.team).faction, m.role, m.portrait);
+  return faceUrl(lookOf(m.team).faction, m.role, m.portrait, m.colour);
 }
 
 /** Colour an element (a running order row, a name plate, a radio line) for a team: its colour and emblem. */

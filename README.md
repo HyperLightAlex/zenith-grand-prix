@@ -556,8 +556,10 @@ src/client/     Everything you see and hear.
 tests/          Simulation, Grand Prix, lobby, online and model tests (vitest)
 tools/          Headless race runner, bots, track plotter, screenshot, online
                 and audio checks; music/ builds a recorded song's layers;
-                brand/ builds the studio card into index.html
+                brand/ builds the studio card into index.html; portraits/
+                the pilot portraits' pictures for team colours
 art/brand/      The studio logo (Infinite Maybe Games)
+art/portraits/  The pilots keyed for team colours, and the face creator's brief
 public/music/   Recorded race music, as tools/music builds it
 docs/           Design document, ONLINE.md, and ART.md for the anime look
 play/           Prebuilt single-file game

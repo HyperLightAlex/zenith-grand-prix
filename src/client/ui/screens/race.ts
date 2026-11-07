@@ -101,7 +101,7 @@ function sprintResults(g: Game, race: RaceState, match: MatchState | null, box: 
     const t = looks[x.team];
     const tr = h<'tr'>('tr' + (me && x.id === me.id ? '.me' : '') + (x.retired ? '.out' : ''));
     const faceEl = h('i');
-    faceEl.style.backgroundImage = `url(${faceUrl(t.faction, x.role, x.portrait)})`;
+    faceEl.style.backgroundImage = `url(${faceUrl(t.faction, x.role, x.portrait, x.colour)})`;
     tr.append(
       h<'td'>('td.flag'),
       h<'td'>('td', String(x.place)),
@@ -314,7 +314,7 @@ export function registerRace(m: Menus, g: Game): void {
           else time = fmt(x.finishTime - 4);
         }
         const faceEl = h('i');
-        faceEl.style.backgroundImage = `url(${faceUrl(factions[x.team], x.role, x.portrait)})`;
+        faceEl.style.backgroundImage = `url(${faceUrl(factions[x.team] ?? -1, x.role, x.portrait, x.colour)})`;
         tr.append(
           h<'td'>('td.flag'),
           h<'td'>('td', String(x.place)),
