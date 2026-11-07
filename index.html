@@ -158,10 +158,10 @@
       .ident-logo canvas.drip { inset: auto; }
       /* Drawn (the canvases), or where it cannot be (or should not move), the pictures as they are. */
       .ident.drawn .ident-logo :is(.ink1, .ink2, .dot), .ident:not(.drawn) .ident-logo canvas { visibility: hidden; }
-      .ident.go.drawn .ident-logo canvas.ink { animation: ident-glow 1.7s ease-out 0.15s both; }
+      /* (The pen's glow is drawn by the script, in the canvas: a filter animated on the canvas kept it
+         from showing at all while the game loaded beside it, until the line was nearly drawn.) */
       .ident.go .ident-logo .words { animation: ident-words 0.6s ease-out 2.05s both; }
       .ident.skip { animation: ident-out 0.22s ease-in both; }
-      @keyframes ident-glow { 0% { filter: drop-shadow(0 0 0.5em rgba(255, 255, 255, 0.5)); } 100% { filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0)); } }
       @keyframes ident-words { from { opacity: 0; transform: translateY(2.5%); } to { opacity: 1; transform: none; } }
       @keyframes ident-out { to { opacity: 0; visibility: hidden; } }
 
@@ -225,12 +225,21 @@
         // The drawing, in two canvases: the pen drawing the line, then the
         // drip. It runs in a worker where it can (the game is loading on this
         // thread meanwhile, in long stretches that would stall it), here
-        // otherwise. Times are from the card starting (.go), in ms.
+        // otherwise. Times are from the card's first frame on screen (the
+        // first after .go, as its CSS animations are), in ms: until then the
+        // page may be too busy to show it, and it waits rather than be found
+        // half drawn. Likewise a stall on the way (no frame for a while, the
+        // game loading beside it) holds the drawing rather than skipping it.
         //
         // The pen: the line is in two layers of ink, and each shows only
         // where a wide round-capped stroke along its stretch of the pen's
         // path has reached (its dash growing; the two keep step, the second
-        // starting half a stroke before the first ends).
+        // starting half a stroke before the first ends). A white glow round
+        // the ink fades as it goes (GLOW: from, for): each layer's glow is
+        // blurred once, at the start, and shown through the same stroke a
+        // little wider. (Not blurred again each frame, nor as a CSS filter:
+        // either kept the canvas from showing at all while the game loaded
+        // beside it, until the line was nearly drawn.)
         //
         // The drip: distances to edges, in the canvas over the hook's end. A
         // drop swells out of the end of the hook, blended into it (a smooth
@@ -241,6 +250,7 @@
         const card = (scope) => {
           const PEN = [150, 1200];
           const DRIP = [1300, 1000];
+          const GLOW = [150, 1700];
           const clamp = (v) => Math.min(1, Math.max(0, v));
           const mix = (a, b, t) => a + (b - a) * t;
           const smooth = (t) => t * t * (3 - 2 * t);
@@ -255,6 +265,7 @@
             return 3 * y1 * t * (1 - t) ** 2 + 3 * y2 * t * t * (1 - t) + t ** 3;
           };
           const penEase = bezier(0.4, 0, 0.2, 1);
+          const glowEase = bezier(0, 0, 0.58, 1);
           const swell = bezier(0.2, 0.6, 0.35, 1);
           const sag = bezier(0.45, 0, 0.55, 1);
           const surface = (w, h) => (typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h }));
@@ -262,8 +273,8 @@
           const frame = typeof requestAnimationFrame === 'function' ? (f) => requestAnimationFrame(f) : (f) => setTimeout(f, 16);
           let s;
 
-          const setup = ({ ink, drip, bitmaps, spec, epoch }) => {
-            const { scale, length, width, box, inkH } = spec;
+          const setup = ({ ink, drip, bitmaps, spec }) => {
+            const { scale, length, width, box, inkH, glow } = spec;
             const [dx, dy, dr, yb] = spec.drip;
             const tail = spec.tail;
             const foot = tail.filter(([, y]) => y > yb - 1.5);
@@ -272,7 +283,21 @@
               const pts = d.slice(1).split(' ').map((p) => p.split(',').map(Number));
               let len = 0;
               for (let n = 1; n < pts.length; n++) len += Math.hypot(pts[n][0] - pts[n - 1][0], pts[n][1] - pts[n - 1][1]);
-              return { path: new Path2D(d), from, len, bitmap: bitmaps[i] };
+              // Its glow: the layer's white shadow alone, blurred once (the
+              // layer drawn a canvas's width off to the left, its shadow
+              // thrown back over), and only outside the line, so none of it
+              // shows the way ahead of the pen.
+              const halo = surface(ink.width, ink.height);
+              const hctx = halo.getContext('2d');
+              hctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+              hctx.shadowBlur = glow;
+              hctx.shadowOffsetX = ink.width;
+              hctx.setTransform(scale, 0, 0, scale, 0, 0);
+              hctx.drawImage(bitmaps[i], -ink.width / scale, 0, 1100, 861);
+              hctx.shadowColor = 'transparent';
+              hctx.globalCompositeOperation = 'destination-out';
+              for (const b of bitmaps.slice(0, 2)) hctx.drawImage(b, 0, 0, 1100, 861);
+              return { path: new Path2D(d), from, len, bitmap: bitmaps[i], halo };
             });
             const ictx = ink.getContext('2d');
             const scratch = surface(ink.width, ink.height).getContext('2d');
@@ -300,40 +325,66 @@
                 hookD[j * drip.width + i] = inside ? -best : best;
               }
             }
-            s = { ink, drip, ictx, scratch, dctx, img, pix, hookD, pens, scale, length, width, inkH, x0, y0, dx, dy, dr, yb, tx, dot: bitmaps[2], epoch, last: [] };
+            s = { ink, drip, ictx, scratch, dctx, img, pix, hookD, pens, scale, length, width, inkH, glow, x0, y0, dx, dy, dr, yb, tx, dot: bitmaps[2], epoch: undefined, clock: 0, last: [] };
           };
 
-          const drawPen = (a) => {
-            const { ictx, scratch, pens, scale, length, width, ink } = s;
+          // A layer (or its glow, `device`: in the canvas's pixels) where the
+          // pen's stroke, `lw` wide, has reached along its stretch.
+          const reached = (k, src, lw, v, device) => {
+            const { scratch, scale, ink } = s;
+            scratch.setTransform(1, 0, 0, 1, 0, 0);
+            scratch.globalCompositeOperation = 'source-over';
+            scratch.clearRect(0, 0, ink.width, ink.height);
+            scratch.setTransform(scale, 0, 0, scale, 0, 0);
+            scratch.strokeStyle = '#fff';
+            scratch.lineCap = 'round';
+            scratch.lineJoin = 'round';
+            scratch.lineWidth = lw;
+            scratch.setLineDash([v, k.len + 999]);
+            scratch.stroke(k.path);
+            scratch.globalCompositeOperation = 'source-in';
+            if (device) {
+              scratch.setTransform(1, 0, 0, 1, 0, 0);
+              scratch.drawImage(src, 0, 0);
+            } else scratch.drawImage(src, 0, 0, 1100, 861);
+            return scratch.canvas;
+          };
+          // Under what is drawn, the glow (g: 1 to 0, its strength).
+          const under = (src, g) => {
+            const { ictx } = s;
+            ictx.setTransform(1, 0, 0, 1, 0, 0);
+            ictx.globalCompositeOperation = 'destination-over';
+            ictx.globalAlpha = g;
+            ictx.drawImage(src, 0, 0);
+            ictx.globalAlpha = 1;
+            ictx.globalCompositeOperation = 'source-over';
+          };
+
+          const drawPen = (a, g) => {
+            const { ictx, pens, scale, length, width, ink } = s;
             const at = penEase(a) * length;
             s.reached = at;
             ictx.setTransform(1, 0, 0, 1, 0, 0);
             ictx.clearRect(0, 0, ink.width, ink.height);
-            ictx.setTransform(scale, 0, 0, scale, 0, 0);
             if (a >= 1) {
               // All drawn: the line itself.
+              ictx.setTransform(scale, 0, 0, scale, 0, 0);
               for (const k of pens) ictx.drawImage(k.bitmap, 0, 0, 1100, 861);
+              if (g > 0) for (const k of pens) under(k.halo, g);
               return;
             }
             for (const k of pens) {
               const v = Math.min(k.len, at - k.from);
               if (v <= 0) continue;
-              scratch.setTransform(1, 0, 0, 1, 0, 0);
-              scratch.globalCompositeOperation = 'source-over';
-              scratch.clearRect(0, 0, ink.width, ink.height);
-              scratch.setTransform(scale, 0, 0, scale, 0, 0);
-              scratch.strokeStyle = '#fff';
-              scratch.lineCap = 'round';
-              scratch.lineJoin = 'round';
               // The pen touching down: its stroke spreads to full over the first stretch.
-              scratch.lineWidth = k === pens[0] ? width * (0.35 + 0.65 * smooth(clamp(at / 80))) : width;
-              scratch.setLineDash([v, k.len + 999]);
-              scratch.stroke(k.path);
-              scratch.globalCompositeOperation = 'source-in';
-              scratch.drawImage(k.bitmap, 0, 0, 1100, 861);
+              const lw = k === pens[0] ? width * (0.35 + 0.65 * smooth(clamp(at / 80))) : width;
               ictx.setTransform(1, 0, 0, 1, 0, 0);
-              ictx.drawImage(scratch.canvas, 0, 0);
-              ictx.setTransform(scale, 0, 0, scale, 0, 0);
+              ictx.drawImage(reached(k, k.bitmap, lw, v), 0, 0);
+              // Its glow, round the line as far as it spreads, and round the
+              // pen as far as the ink has reached (its wider stroke a spread
+              // short of the pen, so their round ends meet).
+              const m = s.glow / scale;
+              if (g > 0 && v > m) under(reached(k, k.halo, lw + 2 * m, v - m, true), g);
             }
           };
 
@@ -408,22 +459,34 @@
           };
 
           const render = () => {
-            const t = s.fixed ?? now() - s.epoch;
+            const t = s.fixed ?? s.clock;
             const a = clamp((t - PEN[0]) / PEN[1]);
             const b = clamp((t - DRIP[0]) / DRIP[1]);
-            if (a !== s.last[0]) drawPen(a);
+            const g = 1 - glowEase(clamp((t - GLOW[0]) / GLOW[1]));
+            if (a !== s.last[0] || g !== s.last[2]) drawPen(a, g);
             if (a !== s.last[0] || b !== s.last[1]) drawDrip(b);
-            s.last = [a, b];
-            return a >= 1 && b >= 1;
+            s.last = [a, b, g];
+            return a >= 1 && b >= 1 && g <= 0;
           };
           const loop = () => {
-            if (s.fixed === undefined && render()) return;
+            if (s.fixed === undefined) {
+              if (s.epoch !== undefined) {
+                // Real time, a frame at a time, but no more than a tenth of a second a frame.
+                const n = now();
+                s.clock += Math.min(100, Math.max(0, n - (s.prev ?? s.epoch)));
+                s.prev = n;
+              }
+              if (render()) return;
+            }
             frame(loop);
           };
           const message = (m) => {
-            if (m.at === undefined) {
+            if (m.spec) {
               setup(m);
               loop();
+            } else if (m.epoch !== undefined) {
+              // The first frame with the card on screen: its clock starts.
+              if (s && s.epoch === undefined) s.epoch = m.epoch;
             } else if (s) {
               // (Held at a moment, for looking at frames: ?ident=1, el.identAt.)
               s.fixed = m.at;
@@ -438,6 +501,7 @@
         const ink = el.querySelector('canvas.ink');
         const drip = el.querySelector('canvas.drip');
         const layers = ['ink1', 'ink2', 'dot'].map((c) => el.querySelector('img.' + c));
+        let send;
         const start = async () => {
           if (!el.isConnected) return;
           let drawn = !matchMedia('(prefers-reduced-motion: reduce)').matches && typeof createImageBitmap === 'function' && typeof Path2D === 'function';
@@ -448,7 +512,8 @@
               // The drip's box (in the logo's 1100 x 861): from a little above
               // the hook's end to under the dot, with room for its wobble.
               const box = [dx - dr * 1.35 - 4, yb - 70, dx + dr * 1.35 + 4, dy + dr * 1.25 + 4];
-              const inkH = 480;
+              // (The line ends above 480; the rest is room for its glow.)
+              const inkH = 500;
               Object.assign(drip.style, { left: box[0] / 11 + '%', top: box[1] / 8.61 + '%', width: (box[2] - box[0]) / 11 + '%', height: (box[3] - box[1]) / 8.61 + '%' });
               ink.style.height = inkH / 8.61 + '%';
               ink.width = Math.ceil(1100 * scale);
@@ -464,11 +529,11 @@
                 pens: [{ d: ink.dataset.pen1, from: 0 }, { d: ink.dataset.pen2, from: +ink.dataset.from2 }],
                 drip: [dx, dy, dr, yb],
                 tail: drip.dataset.tail.split(' ').map((p) => p.split(',').map(Number)),
+                // The glow's blur at its widest: half the logo's em, in the canvas's pixels.
+                glow: 0.5 * (parseFloat(getComputedStyle(logo).fontSize) || 16) * (devicePixelRatio || 1),
               };
               const bitmaps = await Promise.all(layers.map((im) => createImageBitmap(im)));
               if (!el.isConnected) return;
-              const epoch = performance.timeOrigin + performance.now();
-              let send;
               if (typeof ink.transferControlToOffscreen === 'function' && typeof Worker === 'function') {
                 try {
                   const offInk = ink.transferControlToOffscreen();
@@ -479,7 +544,7 @@
                     drawn = false;
                     el.classList.remove('drawn');
                   };
-                  worker.postMessage({ ink: offInk, drip: offDrip, bitmaps, spec, epoch }, [offInk, offDrip, ...bitmaps]);
+                  worker.postMessage({ ink: offInk, drip: offDrip, bitmaps, spec }, [offInk, offDrip, ...bitmaps]);
                   send = (m) => worker.postMessage(m);
                 } catch {
                   worker = undefined;
@@ -487,7 +552,7 @@
               }
               if (!send) {
                 send = card(null);
-                send({ ink, drip, bitmaps, spec, epoch });
+                send({ ink, drip, bitmaps, spec });
               }
               el.identAt = (t) => send({ at: t });
             } catch {
@@ -496,6 +561,8 @@
           }
           el.classList.toggle('drawn', drawn);
           el.classList.add('go');
+          // Its first frame: the drawing's clock starts with the CSS's.
+          requestAnimationFrame((ts) => send?.({ epoch: performance.timeOrigin + ts }));
         };
         // It plays once its pictures are decoded (they are in the page, so at
         // once); if that fails or stalls, no card.
