@@ -142,19 +142,21 @@ export function registerCommon(m: Menus, g: Game): void {
     render(m) {
       const col = h('div.col.modes');
       const list = h('div.list');
-      m.button(list, 'Grand Prix', () => m.push('gp'), { key: 'gp', note: 'Cups and the Grand Tour for medals, or a season for the Zenith Cup' });
-      m.button(list, 'Free Play', () => g.openFreePlay(), { key: 'free', note: 'Any circuit, any rival, any format' });
+      // (What each is shows under it while it is highlighted: seven, with a line each, would not fit a small screen.)
+      m.button(list, 'Grand Prix', () => m.push('gp'), { key: 'gp', hint: 'Cups and the Grand Tour for medals, or a season for the Zenith Cup' });
+      m.button(list, 'Free Play', () => g.openFreePlay(), { key: 'free', hint: 'Any circuit, any rival, any format' });
       m.button(list, 'Online', () => g.openOnline(), {
         key: 'online',
-        note: g.online.available ? 'Private rooms with friends, by code or link' : 'Needs the game from its server: not this saved copy',
+        hint: g.online.available ? 'Private rooms with friends, by code or link' : 'Needs the game from its server: not this saved copy',
       });
+      m.button(list, 'Hangar', () => g.openHangar(), { key: 'hangar', hint: 'Your pilot and your own mechs, for any team' });
       // The tutorial, each frame's role, and the controls.
       m.button(list, 'How to play', () => m.push('howto'), {
         key: 'howto',
-        note: g.tutorialDone ? 'The tutorial, what each frame does, the controls' : 'Start here: the tutorial, what each frame does, the controls',
+        hint: g.tutorialDone ? 'The tutorial, what each frame does, the controls' : 'Start here: the tutorial, what each frame does, the controls',
       });
-      m.button(list, 'Records', () => m.push('records'), { key: 'records', note: 'Your fastest laps and races, and your career' });
-      m.button(list, 'Settings', () => m.push('settings'), { key: 'settings', note: 'Video, sound, camera, controls, accessibility' });
+      m.button(list, 'Records', () => m.push('records'), { key: 'records', hint: 'Your fastest laps and races, and your career' });
+      m.button(list, 'Settings', () => m.push('settings'), { key: 'settings', hint: 'Video, sound, camera, controls, accessibility' });
       col.append(h('h1', 'Play'), list);
       m.root.append(h('div.shade'), m.panes(col), m.footer(SELECT, BACK));
     },

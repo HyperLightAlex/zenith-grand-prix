@@ -105,9 +105,10 @@ async function tour(name) {
   await shot('modes', () => g(() => window.game.menus.reset('modes', undefined, ['title'])));
   await shot('video', () => g(() => window.game.menus.push('settings')));
   await shot('controls', () => g(() => window.game.menus.reset('controls', undefined, ['title', 'modes'])));
-  await shot('hangar', () => g(() => { window.game.menus.reset('modes', undefined, ['title']); window.game.openFreePlay(); }), 2500);
+  await shot('hangar', () => g(() => { window.game.menus.reset('modes', undefined, ['title']); window.game.openHangar(); }), 2500);
   await shot('pilot', () => g(() => window.game.menus.push('pilot')), 1500);
-  await shot('setup', () => g(() => { if (window.game.menus.has('pilot')) window.game.menus.pop(); window.game.menus.push('setup'); }), 1500);
+  await shot('setup', () => g(() => { window.game.menus.reset('modes', undefined, ['title']); window.game.openFreePlay(); }), 1500);
+  await shot('paddock', () => g(() => window.game.openFreePaddock()), 2500);
   await shot('gp', () => g(() => window.game.menus.reset('gp', undefined, ['title', 'modes'])), 1500);
   await shot('gp-season', () => g(() => window.game.menus.focus('season')), 500);
   // The cups with a medal won in the first (so the second is open, the third not yet).

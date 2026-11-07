@@ -8,10 +8,10 @@ faction's frames have the same stats), so none of it needs balancing.
 | Feature | Status |
 |---|---|
 | The pilot profile | begun: your callsign and portrait, worn by your seat everywhere, and the Pilot screen (below: "The pilot profile") |
-| Swappable parts | built: the hangar's editor, your custom mech raced in every mode, offline and online (below: "The game's side") |
+| Swappable parts | built: the Hangar's editor, your custom mech raced in every mode, offline and online (below: "The game's side") |
 | Paint catalogue (each part paintable) | built: 33 paints and 9 metals, the whole mech and any part; one open question (below) |
 | Livery: patterns, race number, finish, wear | built: eight patterns, any race number to 99, panel lines on or off, five finishes, three wears (below: "Livery") |
-| Victory poses | built: six, chosen in the hangar, struck on the podium (DESIGN.md, "The podium") |
+| Victory poses | built: six, chosen in the Hangar, struck on the podium (DESIGN.md, "The podium") |
 | Earned in the Grand Prix | built: thirteen patterns, finishes, a wear and poses opened by the team series's medals, and thirteen more (patterns, finishes, paints and poses) by the Sprint series's (below) |
 | Pilot portraits | the gallery is the fifteen faction pilots, worn in your team's colours (in a Sprint, the league's in your pilot colour); the face creator to come |
 | Gameplay customization (tuning, loadouts) | not planned for now |
@@ -61,7 +61,7 @@ again as wide as a Swift's), and nothing would fit.
 | Shins (both legs) | `shins` | `kneeL`, `kneeR`, with the knee armour and the calf thrusters |
 | Feet (both legs) | `feet` | `ankleL`, `ankleR`: the skates |
 
-Each arm is set on its own; the hangar links them by default (one choice
+Each arm is set on its own; the editor links them by default (one choice
 sets both, and they can be unlinked). The shoulders, thighs, shins and feet
 are each one choice for both sides.
 
@@ -253,9 +253,21 @@ writes `render/mech/headSeats.ts` (run it again when the models change;
 `--check` says whether the table is up to date); the mech viewer's
 `?debug=mechs&role=0&heads=3` shows a chest with each head of its frame.
 
-**The hangar**: the Mech row (your custom mech of the frame, or the stock
-one of the faction you fly for), Customize (made from the stock mech in
-view the first time) and the editor: Parts (each slot, both arms at once or
+**The Hangar and the Paddock.** What is yours and what you race this time
+are two places. The **Hangar** (`ui/screens/hangar.ts`; on the Play menu,
+and Y in any Paddock) holds your pilot and your own mech of each frame,
+made and changed for no faction: the league's hangar, the mech lit in your
+colour, the cards in the league's badge. A frame you have no mech of yet
+shows the stock one it would start as: that of the faction you last raced
+for in a team race (`zgp.lastFaction`), or before your first, one drawn at
+random; making it keeps it, and every change after. The **Paddock**
+(`ui/screens/paddock.ts`) is the last stop before every race, in every mode,
+after the mode's own setup: Team, Frame and the Mech row (your own mech of
+the frame, or the stock one of the faction you race for; locked, with why,
+until you have made one); in a Sprint, your own Forward. In a team race your
+own mech is lit in your team's colour; in a Sprint, in yours.
+
+The Hangar's editor: Parts (each slot, both arms at once or
 each), Paint (the whole mech or any part; a part's colours it does not have
 are locked; a swatch grid to pick by sight), the name, start again from
 stock, delete. In the editor the mech stands still in the bay and the right
@@ -409,20 +421,21 @@ portrait is shown as painted.
 Each player has one pilot, kept on the device until there are accounts:
 
 - **A callsign and a portrait**, worn by the player's seat everywhere it
-  shows, offline and online: the hangar's card, the radio, the target
+  shows, offline and online: the Paddock's card, the radio, the target
   panel, the results, the room's seats and the squad's bays. The computer
   pilots keep their factions' names and faces (and a demo race keeps the
   faction pilot on the player's seat, so captures repeat). The game makes
   up a callsign and picks a portrait on the first run, so nobody is held
   up before their first race; Online asks for a callsign the first time,
   offering the made-up one.
-- **Up to three custom mechs, one per frame** (parts and paint). In the
-  hangar, each frame offers the stock mech of the faction being flown, or
-  the player's custom mech of that frame. Custom mechs race in
-  every mode. A custom mech may be named; the pilot shown with it is
-  always the player's callsign. A Sprint (DESIGN.md, "Sprint") is always
-  raced in the custom Forward, flown or not, made from the faction's stock
-  Forward the first time it is needed; its setup has Edit for it.
+- **Up to three custom mechs, one per frame** (parts and paint), made in
+  the Hangar for no faction. In the Paddock, each frame offers the stock
+  mech of the faction being flown, or the player's own mech of that frame.
+  Custom mechs race in every mode. A custom mech may be named; the pilot
+  shown with it is always the player's callsign. A Sprint (DESIGN.md,
+  "Sprint") is always raced in the custom Forward, flown or not, made from
+  the stock Forward of the faction last raced for the first time it is
+  needed; its Paddock shows it, and Y opens the Hangar to change it.
 - **A colour**, worn where the pilot flies for no faction (a Sprint): the
   mech's lights, the name plate, the running order and standings, the
   room's seat. One of ten (`PILOT_COLOURS` in protocol.ts), picked on the
@@ -436,8 +449,10 @@ survives cleared browser data, until there are accounts.
 
 **Built so far**: the callsign and portrait (`net/identity.ts`, kept as
 `zgp.pilot` beside `zgp.callsign`, with the custom mechs: each frame's as
-text, and whether it is flown); the Pilot screen off the hangar
-(`ui/screens/pilot.ts`) and the editor (`ui/screens/custom.ts`); seats and
+text, and whether it is flown); the Hangar (`ui/screens/hangar.ts`) with
+the Pilot screen (`ui/screens/pilot.ts`, the portraits shown for no
+faction: in the league's suit, lit in your colour) and the editor
+(`ui/screens/custom.ts`); the Paddock (`ui/screens/paddock.ts`); seats and
 mechs carry a `portrait` (an index into the gallery, `PORTRAITS` in
 protocol.ts, or -1 for the faction pilot) and a `look`; rooms and squads
 carry each person's portrait. See docs/ONLINE.md for the wire.

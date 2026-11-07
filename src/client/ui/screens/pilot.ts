@@ -1,12 +1,14 @@
-// The Pilot screen, off the hangar: who you are on the grid. Your callsign
-// and portrait are worn by your seat everywhere it shows (the radio, the
-// target panel, the results, the hangar's card), offline and online; your
-// colour where you fly for no faction (a Sprint): your mech's lights, your
-// name plate, your line in the standings and your seat in a room.
+// The Pilot screen, in the Hangar: who you are on the grid, whatever team you
+// race for. Your callsign and portrait are worn by your seat everywhere it
+// shows (the radio, the target panel, the results, the Paddock's card),
+// offline and online, the portrait in your team's colours; your colour
+// where you fly for no faction (a Sprint): your mech's lights, your name
+// plate, your line in the standings and your seat in a room. Here the
+// portraits are shown for no faction: in the league's suit, lit in your colour.
 
 import { PILOT_COLOURS, PILOT_COLOUR_NAMES, PORTRAITS, portraitColour } from '../../../net/protocol';
 import type { Game } from '../../game/game';
-import { LIVERIES } from '../../render/palette';
+import { leagueLivery } from '../../render/palette';
 import { h, setClass } from '../dom';
 import { colourCss } from '../sides';
 import { emblemUrl, faceUrl } from '../factionArt';
@@ -16,14 +18,15 @@ import { BACK, CHANGE, SELECT } from './common';
 export function registerPilot(m: Menus, g: Game): void {
   m.register('pilot', {
     render(m) {
-      const team = g.loadout.team;
-      const role = g.loadout.role;
-      const livery = LIVERIES[team] ?? LIVERIES[0];
+      const role = g.hangarRole;
+      const livery = leagueLivery(PILOT_COLOURS[g.pilotColour] ?? PILOT_COLOURS[0]);
       const chosen = g.callsign !== '';
+      /** A portrait as shown here: for no faction, in your colour. */
+      const look = (i: number) => `url(${faceUrl(-1, role, i, g.pilotColour)})`;
 
       // The hangar computer's card (the anime look): your face and callsign.
       const emblem = h('i');
-      emblem.style.backgroundImage = `url(${emblemUrl(team)})`;
+      emblem.style.backgroundImage = `url(${emblemUrl(-1)})`;
       const face = h('i');
       const faceName = h('span');
       const head = h(
@@ -37,7 +40,7 @@ export function registerPilot(m: Menus, g: Game): void {
       const cells: HTMLElement[] = [];
       for (let i = 0; i < PORTRAITS; i++) {
         const f = h('i.face');
-        f.style.backgroundImage = `url(${faceUrl(team, role, i)})`;
+        f.style.backgroundImage = look(i);
         f.title = `Face ${i + 1}`;
         cells.push(f);
         faces.append(f);
@@ -49,9 +52,19 @@ export function registerPilot(m: Menus, g: Game): void {
         g.setPortrait(p);
         show();
       };
+      // The gallery in a new colour once the colour settles (fifteen portraits to paint).
+      let painted = g.pilotColour;
+      let repaint = 0;
       const show = () => {
         const p = g.portrait;
-        face.style.backgroundImage = `url(${faceUrl(team, role, p)})`;
+        face.style.backgroundImage = look(p);
+        if (g.pilotColour !== painted) {
+          clearTimeout(repaint);
+          repaint = window.setTimeout(() => {
+            painted = g.pilotColour;
+            if (cells[0]?.isConnected) cells.forEach((c, i) => (c.style.backgroundImage = look(i)));
+          }, 180);
+        }
         faceName.textContent = `Face ${p + 1}`;
         m.update('portrait', { value: `${p + 1} of ${PORTRAITS}` });
         cells.forEach((c, i) => setClass(c, 'on', i === p));
@@ -93,7 +106,7 @@ export function registerPilot(m: Menus, g: Game): void {
         hint: chosen ? undefined : 'Made up for you until you pick one',
       });
       m.button(list, 'Done', () => m.pop(), { key: 'done', go: true });
-      col.append(h('div.context', 'Hangar'), head, h('h1', 'Pilot'), h('p', 'Your seat wears your callsign and portrait on the radio, the target panel and the results, offline and online. In a Sprint you fly for no faction: your colour lights your mech and marks your name.'), list);
+      col.append(h('div.context', 'Hangar'), head, h('h1', 'Pilot'), h('p', "Your seat wears your callsign and portrait on the radio, the target panel and the results, offline and online, the portrait in your team's colours. In a Sprint you fly for no faction: your colour lights your mech and marks your name."), list);
 
       const gallery = h('div.kit.pilot-gallery', h('h2', 'Portraits'), faces, h('h2', 'Colour'), colours);
       m.root.append(h('div.shade'), m.panes(col, h('div.hangar-side', gallery)), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));

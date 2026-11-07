@@ -13,7 +13,6 @@ import { emblemUrl, faceUrl } from '../factionArt';
 import { MODE_NAMES, SPRINT_TAGLINE, type Menus } from '../menus';
 import { colourCss } from '../sides';
 import { BACK, SELECT, confirmDialog, type DialogData } from './common';
-import { openCustom } from './custom';
 import { gpBlocked, renderGpRoom } from './onlineGp';
 
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
@@ -117,12 +116,12 @@ export function registerOnline(m: Menus, g: Game): void {
         );
       }
       const panel = h('div.panel.squad', h('h2', members.length > 1 ? `Your squad · ${factionName(LIVERIES[faction])}` : 'Your squad'), bays);
-      if (sq) panel.append(h('div.match-blurb', members.length > 1 ? `Squad code ${sq.code}. Pick your frame in the hangar (Y); in a room, Ready locks it in. ${lead ? 'You lead: you pick the faction and take everyone into rooms.' : 'Your leader picks the faction and takes everyone into rooms.'}` : `Squad code ${sq.code}. Invite friends to fly with you: a squad stays together on one team.`));
-      m.root.append(h('div.shade'), m.panes(col, panel), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
+      if (sq) panel.append(h('div.match-blurb', members.length > 1 ? `Squad code ${sq.code}. Pick your frame in the Paddock (Y); in a room, Ready locks it in. ${lead ? 'You lead: you pick the faction and take everyone into rooms.' : 'Your leader picks the faction and takes everyone into rooms.'}` : `Squad code ${sq.code}. Invite friends to fly with you: a squad stays together on one team.`));
+      m.root.append(h('div.shade'), m.panes(col, panel), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Paddock', press: 'y' }, BACK));
     },
     press(m, key) {
       if (key === 'y') {
-        g.openOnlineHangar();
+        g.openOnlinePaddock();
         return true;
       }
       return false;
@@ -282,7 +281,7 @@ export function registerOnline(m: Menus, g: Game): void {
       }
       if (!inMatch) extra.push(h('div.room-hint', `Pick a frame on either team to fly it; Ready locks it in, and the first to lock a frame keeps it.${host ? " As host you set both teams' factions: pick a team's name." : me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
       const col = h('div.room', top, sides, ...extra, h('div.bottom', panel, h('div.panel.actions-panel', list)));
-      m.root.append(h('div.shade.full'), m.panes(col), m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your frame', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
+      m.root.append(h('div.shade.full'), m.panes(col), m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your frame', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Paddock', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
     },
     press(m, key) {
       const o = g.online;
@@ -290,7 +289,7 @@ export function registerOnline(m: Menus, g: Game): void {
       const me = v?.players.find((p) => p.pid === o.pid);
       if (v?.settings.mode === 'sprint' && !v.gp) {
         if (key === 'x' && me) m.focus(`pilot-${me.pid}`);
-        else if (key === 'y') m.push('pilot');
+        else if (key === 'y') g.openRoomPaddock();
         else return false;
         return true;
       }
@@ -299,7 +298,7 @@ export function registerOnline(m: Menus, g: Game): void {
         return true;
       }
       if (key === 'y') {
-        g.openRoomHangar();
+        g.openRoomPaddock();
         return true;
       }
       if ((key === 'lb' || key === 'rb') && me && !v?.gp) {
@@ -409,7 +408,7 @@ function renderSprintRoom(m: Menus, g: Game, v: LobbyView): void {
     m.button(list, me.ready ? 'Not ready' : 'Ready', () => o.sendRoom('ready', { ready: !me.ready }), { key: 'ready', go: !me.ready });
     const everyone = people.filter((p) => p.connected);
     if (host && everyone.length > 0 && everyone.every((p) => p.ready)) m.button(list, 'Start now', () => o.sendRoom('start'), { key: 'start', go: true });
-    m.button(list, `Edit ${customName(ROLE.FW, g.customMech(ROLE.FW))}`, () => openCustom(m, g, ROLE.FW, g.loadout.team), { key: 'custom', note: 'Your own Forward' });
+    m.button(list, 'Paddock', () => g.openRoomPaddock(), { key: 'custom', note: `Your own Forward, ${customName(ROLE.FW, g.customMech(ROLE.FW))}` });
   }
   m.button(list, 'Invite', () => inviteDialog(m, g, 'room', v.code), { key: 'invite' });
   if (host && inMatch) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the lobby.', 'End match', () => o.sendRoom('endMatch')), { key: 'end' });

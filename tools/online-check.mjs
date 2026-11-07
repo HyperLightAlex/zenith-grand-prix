@@ -33,19 +33,19 @@ await a.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined
 await a.waitForFunction(() => window.game.online.squad, null, { timeout: 60000 });
 check(true, 'Online opens and makes a squad of one');
 
-// A squad: Charlie joins Alpha's and keeps the hangar open while Alpha, the
-// leader, changes the faction. Charlie's hangar has to follow.
+// A squad: Charlie joins Alpha's and keeps the Paddock open while Alpha, the
+// leader, changes the faction. Charlie's Paddock has to follow.
 {
   const squadCode = await a.evaluate(() => window.game.online.squad.roomId);
   const c = await player('Charlie', `${base}?mute=1&squad=${squadCode}`);
   const joined = await c.waitForFunction(() => window.game.online.squadView?.members.length === 2 && window.game.menus.screen === 'online', null, { timeout: 60000 }).then(() => true, () => false);
   check(joined, 'the squad link joins the squad');
   await c.keyboard.press('KeyY');
-  await c.waitForFunction(() => window.game.menus.screen === 'hangar', null, { timeout: 20000 });
+  await c.waitForFunction(() => window.game.menus.screen === 'paddock', null, { timeout: 20000 });
   const teamText = (p) => p.locator('.menu .item', { hasText: 'Team' }).first().locator('.choice .val').textContent();
   const cBefore = await teamText(c);
   await a.keyboard.press('KeyY');
-  await a.waitForFunction(() => window.game.menus.screen === 'hangar', null, { timeout: 20000 });
+  await a.waitForFunction(() => window.game.menus.screen === 'paddock', null, { timeout: 20000 });
   await a.evaluate(() => window.game.menus.focus('team'));
   await a.keyboard.press('ArrowRight');
   await a.waitForFunction(([w]) => {
@@ -58,7 +58,7 @@ check(true, 'Online opens and makes a squad of one');
     const el = [...document.querySelectorAll('.menu .item')].find((x) => x.textContent.startsWith('Team'));
     return el?.querySelector('.choice .val')?.textContent === want && window.game.garageShown?.team === window.game.online.squadView.faction;
   }, aAfter, { timeout: 20000 }).then(() => true, () => false);
-  check(aAfter !== cBefore && followed, `a member's open hangar follows the leader's faction (${cBefore} -> ${aAfter})`);
+  check(aAfter !== cBefore && followed, `a member's open Paddock follows the leader's faction (${cBefore} -> ${aAfter})`);
   // A third: the buttons that still apply to a full squad.
   const d = await player('Delta', `${base}?mute=1&squad=${squadCode}`);
   const three = await d.waitForFunction(() => window.game.online.squadView?.members.length === 3, null, { timeout: 60000 }).then(() => true, () => false);
@@ -67,16 +67,16 @@ check(true, 'Online opens and makes a squad of one');
   await a.waitForFunction(() => window.game.menus.screen === 'online', null, { timeout: 20000 });
   const hub = await a.evaluate(() => [...document.querySelectorAll('.menu .item')].map((x) => x.textContent));
   check(!hub.some((t) => /Invite to squad|Join a squad/.test(t)) && hub.some((t) => /Leave squad/.test(t)), `a full squad: no Invite or Join a squad, Leave squad there (${hub.filter((t) => t.length < 30).join(' / ')})`);
-  // Everyone's hangar shows their own pick, and picks are free: Charlie takes Delta's frame, no questions asked.
+  // Everyone's Paddock shows their own pick, and picks are free: Charlie takes Delta's frame, no questions asked.
   await d.keyboard.press('KeyY');
-  await d.waitForFunction(() => window.game.menus.screen === 'hangar', null, { timeout: 20000 });
+  await d.waitForFunction(() => window.game.menus.screen === 'paddock', null, { timeout: 20000 });
   const ownFrame = (p) => p.evaluate(() => window.game.garageShown?.role === window.game.loadout.role && document.querySelector('.menu .hh-name b')?.textContent);
   const cFrame = await until(c, () => window.game.garageShown?.role === window.game.loadout.role);
   const dFrame = await until(d, () => window.game.garageShown?.role === window.game.loadout.role);
-  check(cFrame && dFrame, `each hangar shows its own pick (Charlie: ${await ownFrame(c)}, Delta: ${await ownFrame(d)})`);
+  check(cFrame && dFrame, `each Paddock shows its own pick (Charlie: ${await ownFrame(c)}, Delta: ${await ownFrame(d)})`);
   const crew = await c.evaluate(() => [...document.querySelectorAll('.menu .crew-row b')].map((x) => x.textContent).join(', '));
-  check(['Alpha', 'Charlie', 'Delta'].every((n) => crew.includes(n)), `the hangar shows who picked what (${crew})`);
-  // Everyone on a different frame (from the hangar's Frame row): no marks.
+  check(['Alpha', 'Charlie', 'Delta'].every((n) => crew.includes(n)), `the Paddock shows who picked what (${crew})`);
+  // Everyone on a different frame (from the Paddock's Frame row): no marks.
   // One press at a time, each waited for: rebuilding the hangar's mech stalls a software-rendered page.
   const setFrame = async (p, want) => {
     await p.evaluate(() => window.game.menus.focus('frame'));
@@ -92,12 +92,12 @@ check(true, 'Online opens and makes a squad of one');
   await setFrame(c, (aRoleSq + 1) % 3);
   await setFrame(d, (aRoleSq + 2) % 3);
   check(await until(a, () => !document.querySelector('.menu .bay-card em.clash')), 'three frames, no marks');
-  // Charlie takes Delta's frame: allowed, shown in the hangar, marked on the squad panel, nobody asked.
+  // Charlie takes Delta's frame: allowed, shown in the Paddock, marked on the squad panel, nobody asked.
   const picked = await setFrame(c, (aRoleSq + 2) % 3);
-  check(picked && (await until(c, (r) => window.game.garageShown?.role === r, (aRoleSq + 2) % 3)), "Charlie picks Delta's frame and sees it in the hangar");
+  check(picked && (await until(c, (r) => window.game.garageShown?.role === r, (aRoleSq + 2) % 3)), "Charlie picks Delta's frame and sees it in the Paddock");
   check(await until(a, () => !!document.querySelector('.menu .bay-card em.clash')), 'the squad panel marks the two on one frame');
   await d.waitForTimeout(1000);
-  check((await d.evaluate(() => window.game.menus.screen)) === 'hangar', 'and nobody is asked anything');
+  check((await d.evaluate(() => window.game.menus.screen)) === 'paddock', 'and nobody is asked anything');
   await d.evaluate(() => window.game.leaveSquad());
   await d.context().close();
   await c.evaluate(() => window.game.leaveSquad());
@@ -166,10 +166,10 @@ check(await until(b, () => { const o = window.game.online; return o.lobby.player
 // Alpha lets go (Not ready), so the countdown doesn't start yet.
 await a.locator('.menu .item', { hasText: /^Not ready/ }).click();
 await until(a, () => { const o = window.game.online; return !o.lobby.players.find((x) => x.pid === o.pid).ready; });
-// Each hangar shows its own pick.
+// Each Paddock shows its own pick.
 for (const p of [a, b]) await p.keyboard.press('KeyY');
-const hangarsOk = (await until(a, () => window.game.menus.screen === 'hangar' && window.game.garageShown?.role === window.game.online.lobby.players.find((x) => x.pid === window.game.online.pid).role)) && (await until(b, () => window.game.menus.screen === 'hangar' && window.game.garageShown?.role === window.game.online.lobby.players.find((x) => x.pid === window.game.online.pid).role));
-check(hangarsOk, 'in the room, each hangar shows its own frame');
+const hangarsOk = (await until(a, () => window.game.menus.screen === 'paddock' && window.game.garageShown?.role === window.game.online.lobby.players.find((x) => x.pid === window.game.online.pid).role)) && (await until(b, () => window.game.menus.screen === 'paddock' && window.game.garageShown?.role === window.game.online.lobby.players.find((x) => x.pid === window.game.online.pid).role));
+check(hangarsOk, 'in the room, each Paddock shows its own frame');
 check(await b.evaluate(() => [...document.querySelectorAll('.menu .item.locked')].some((x) => x.textContent.startsWith('Frame'))), "a locked-in player's Frame row is locked");
 for (const p of [a, b]) await p.keyboard.press('Escape');
 await until(a, () => window.game.menus.screen === 'room');

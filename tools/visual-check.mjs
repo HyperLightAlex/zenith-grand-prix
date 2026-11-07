@@ -157,7 +157,7 @@ for (const [key, cases] of groups) {
           g.startAttract();
           if (screen === 'title') g.menus.reset('title');
           else if (screen === 'modes') g.menus.reset('modes', undefined, ['title']);
-          else if (screen === 'hangar') { g.menus.reset('modes', undefined, ['title']); g.openFreePlay(); }
+          else if (screen === 'hangar') { g.menus.reset('modes', undefined, ['title']); g.openFreePlay(); g.openFreePaddock(); }
           else if (screen === 'gp') g.menus.reset('gp', undefined, ['title', 'modes']);
         }, screen);
         await settle();

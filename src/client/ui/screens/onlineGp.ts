@@ -17,7 +17,7 @@ import { face } from './online';
 
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 const SHORT = ['FW', 'MF', 'DF'];
-const HANGAR = { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' as const };
+const HANGAR = { pad: 'Y', keys: 'Y', label: 'Paddock', press: 'y' as const };
 const LEAVE = { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' as const };
 
 /** Why the squad's Grand Prix cannot be started from here, or null if it can. */
@@ -54,7 +54,7 @@ export function registerOnlineGp(m: Menus, g: Game): void {
     },
     press(m, key) {
       if (key === 'y') {
-        g.openOnlineHangar();
+        g.openOnlinePaddock();
         return true;
       }
       return false;

@@ -21,12 +21,13 @@ import type { Device, MenuInput } from '../input/input';
 import { h, setClass } from './dom';
 
 /** The screens on the hangar computer: styled as the hangar is (data-screen 'garage'). */
-const HANGAR_COMPUTER = new Set<string>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'custom-livery', 'primer']);
+const HANGAR_COMPUTER = new Set<string>(['hangar', 'paddock', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'custom-livery', 'primer']);
 
 export type ScreenId =
   | 'title'
   | 'modes'
   | 'hangar'
+  | 'paddock'
   | 'pilot'
   | 'custom'
   | 'custom-parts'
@@ -55,7 +56,7 @@ export type ScreenId =
   | 'highlights'
   | 'photo';
 
-/** The old single-screen names, still used by tools that drive the game: 'garage' is the hangar. */
+/** The old single-screen names, still used by tools that drive the game: 'garage' is the Paddock (once the hangar, before the Hangar became the place for your own mechs). */
 export type Screen = ScreenId | 'garage' | null;
 
 export interface GarageChoice {
@@ -308,7 +309,7 @@ export class Menus {
 
   /** The old one-screen call: a fresh stack with this screen alone (null closes the menus). */
   show(screen: Screen): void {
-    this.reset(screen === 'garage' ? 'hangar' : screen);
+    this.reset(screen === 'garage' ? 'paddock' : screen);
   }
 
   private open(): void {

@@ -1554,7 +1554,7 @@ html.compact .menu .context { font-size: 1em; }
 html.compact .menu .col { gap: 0.75em; }
 html.compact .list { gap: 0.28em; margin-top: 0.35em; }
 html.compact .item { font-size: 1.38em; padding: 0.36em 1.2em 0.42em 1.05em; }
-html.compact .menu .col.modes .item { font-size: 1.55em; }
+html.compact .menu .col.modes .item { font-size: 1.38em; }
 html.compact .menu .col.modes .item small { font-size: 0.56em; }
 html.compact .match-blurb { font-size: 1em; }
 html.compact .menu .footer-hints { font-size: 1em; }

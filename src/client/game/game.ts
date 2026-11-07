@@ -71,7 +71,7 @@ import {
   type GpSlot,
   type Medal,
 } from '../../gp/grandPrix';
-import { normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
+import { PILOT_COLOURS, normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
 import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
 import { Input, type Device, type MenuInput } from '../input/input';
 import { TouchControls } from '../input/touch';
@@ -92,7 +92,7 @@ import { DRAWN_FLAMES } from '../render/mech/parts';
 import { useOldSwift } from '../render/mech/frames';
 import { cycleSunhawkModel, getSunhawkModel, setSunhawkPanels, SUNHAWK_LABELS } from '../render/mech/sunhawkSelection';
 import { toggleRosterModel, rosterLabel } from '../render/mech/rosterSelection';
-import { LIVERIES, factionName } from '../render/palette';
+import { LIVERIES, factionName, leagueLivery } from '../render/palette';
 import { trackMatrix } from '../render/trackSpace';
 import { Eyecatch } from '../ui/eyecatch';
 import { NowPlaying } from '../ui/nowPlaying';
@@ -101,7 +101,8 @@ import { MEDAL_NAMES, ORD } from '../ui/screens/grandPrix';
 import { Hud, abilityShown } from '../ui/hud';
 import { MATCH_OPTIONS, Menus, SPRINT_OPTIONS, type GarageChoice, type ScreenId } from '../ui/menus';
 import { confirmDialog, messageDialog, registerCommon, type DialogData, type EntryData } from '../ui/screens/common';
-import { registerGarage, type HangarData } from '../ui/screens/garage';
+import { registerPaddock, type PaddockData } from '../ui/screens/paddock';
+import { registerHangar } from '../ui/screens/hangar';
 import { registerPilot } from '../ui/screens/pilot';
 import { registerCustom } from '../ui/screens/custom';
 import { registerGrandPrix } from '../ui/screens/grandPrix';
@@ -118,7 +119,7 @@ import { TuningPanel } from '../ui/tuningPanel';
 import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
 import { callsign as savedCallsign, colourFromPortrait, customLook, customMech, fliesCustom, pilotColour, pilotName, portrait as pilotPortrait, seatLook, setCallsign, setCustomMech, setFliesCustom, setPilotColour, setPortrait as savePortrait } from '../net/identity';
-import { stockBuild, type MechBuild } from '../../custom/mechBuild';
+import { encodeBuild, stockBuild, type MechBuild } from '../../custom/mechBuild';
 import { Online, failure } from '../net/online';
 import { inKnockout } from './moments';
 import { NetSession } from './netSession';
@@ -186,7 +187,7 @@ function garageShift(): [number, number] {
   return [GARAGE_SHIFT, 0];
 }
 /** Screens shown over the hangar, with your mech in its bay. */
-const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'custom-livery', 'setup', 'gp', 'gp-rewards', 'briefing', 'standings', 'online', 'online-gp', 'room', 'primer']);
+const HANGAR_SCREENS = new Set<ScreenId>(['hangar', 'paddock', 'pilot', 'custom', 'custom-parts', 'custom-paint', 'custom-livery', 'setup', 'gp', 'gp-rewards', 'briefing', 'standings', 'online', 'online-gp', 'room', 'primer']);
 
 export interface GameOptions {
   /** Start a race at once in this role (dev shortcut). */
@@ -226,6 +227,8 @@ const OVER_SCREENS = new Set<ScreenId>(['controls', 'settings', 'dialog', 'pause
 /** The custom mech editor's screens: the mech in the bay is turned by hand on them, not drifting round (naming it too). */
 const CUSTOM_SCREENS = new Set<ScreenId>(['custom', 'custom-parts', 'custom-paint', 'custom-livery']);
 const OVER_EDITOR = new Set<ScreenId>([...OVER_SCREENS, 'entry']);
+/** The Hangar's screens (your pilot and your own mechs): for no faction, in the league's hangar, lit in your colour. */
+const HUB_SCREENS = new Set<ScreenId>(['hangar', 'pilot', ...CUSTOM_SCREENS]);
 /**
  * Semitones to move the race stingers by on each circuit so they land in the
  * key its music is in (they are written for Meridian's A minor, B minor and
@@ -317,6 +320,12 @@ export class Game {
   mode: GameMode | null = null;
   /** Your faction and frame, remembered, and the default in every mode. */
   loadout: { team: number; role: Role } = readJson('zgp.loadout', { team: 0, role: ROLE.FW as Role });
+  /** The frame the Hangar shows in its bay (the one last looked at there). */
+  hangarRole: Role = this.loadout.role;
+  /** The faction you last raced for in a team race (-1: none yet): a new mech of your own starts as its stock one. */
+  private lastFaction: number = readJson('zgp.lastFaction', -1);
+  /** Before your first team race: the faction a new mech of your own starts from, drawn once. */
+  private firstFaction = -1;
   /** Free Play's setup, remembered. */
   free: GarageChoice = readJson('zgp.free', { role: ROLE.FW as Role, team: 0, rival: -1, rivals: 1, match: 1, track: 'meridian', mode: 'teams', sprint: 1 });
   private gpEvents = Object.fromEntries(GP_SLOTS.map((slot) => [slot, gpStore.loadEvent(slot)])) as Record<GpSlot, GpEvent | null>;
@@ -353,7 +362,7 @@ export class Game {
   private worldTime = 0;
   private ownLock = -1;
   private ownLockAt = 0;
-  private garageShown: { team: number; role: Role; sprint: boolean; colour: number } | null = null;
+  private garageShown: { team: number; role: Role; sprint: boolean; free: boolean; colour: number } | null = null;
   /** The race behind the title is on screen. */
   private attracting = false;
   /** The tutorial's director, during the tutorial race (null otherwise). */
@@ -452,7 +461,8 @@ export class Game {
       screenChanged: (id) => this.screenChanged(id),
     });
     registerCommon(this.menus, this);
-    registerGarage(this.menus, this);
+    registerPaddock(this.menus, this);
+    registerHangar(this.menus, this);
     registerPilot(this.menus, this);
     registerCustom(this.menus, this);
     registerGrandPrix(this.menus, this);
@@ -602,16 +612,55 @@ export class Game {
   setPilotColour(c: number): void {
     setPilotColour(c);
     this.tellPilotSoon();
+    this.recolourBay();
+  }
+
+  private colourTimer = 0;
+  /** A bay lit in your colour (the Hangar's, a Sprint's) in your new one, once the choice settles. */
+  private recolourBay(): void {
+    clearTimeout(this.colourTimer);
+    this.colourTimer = window.setTimeout(() => {
+      const shown = this.garageShown;
+      if (this.state !== 'garage' || !shown || !(shown.free || shown.sprint)) return;
+      this.showGarage(shown);
+    }, 250);
   }
 
   /**
-   * Your custom Forward, made from your faction's stock one if you have
-   * none: a Sprint is raced in it (every person in their own mech, flying
-   * for no faction). Returns it as a seat carries it.
+   * Your custom Forward, made from the stock one of the faction you last
+   * raced for if you have none: a Sprint is raced in it (every person in
+   * their own mech, flying for no faction). Returns it as a seat carries it.
    */
   sprintMech(): string {
-    if (!customMech(ROLE.FW)) setCustomMech(ROLE.FW, stockBuild(this.loadout.team));
+    if (!customMech(ROLE.FW)) setCustomMech(ROLE.FW, stockBuild(this.startingFaction()));
     return customLook(ROLE.FW);
+  }
+
+  /**
+   * The faction a new mech of your own starts from (its stock mech of the
+   * frame): the one you last raced for in a team race, or before your first,
+   * one drawn at random (once).
+   */
+  startingFaction(): number {
+    if (this.lastFaction >= 0 && this.lastFaction < LIVERIES.length) return this.lastFaction;
+    if (this.firstFaction < 0) this.firstFaction = (Math.random() * LIVERIES.length) | 0;
+    return this.firstFaction;
+  }
+
+  /** Your own mech of a frame as the Hangar shows it: the one you made, or the stock one it would start as. */
+  hangarBuild(role: Role): MechBuild {
+    return customMech(role) ?? stockBuild(this.startingFaction());
+  }
+
+  /** The Hangar: your pilot and your own mechs (from the Play menu, or the Paddock's Y). */
+  openHangar(): void {
+    this.menus.push('hangar');
+  }
+
+  /** The frame the Hangar shows in its bay. */
+  setHangarRole(role: Role): void {
+    this.hangarRole = role;
+    this.preview({ team: -1, role, free: true });
   }
 
   // ---- your custom mechs (docs/CUSTOMIZATION.md) ----------------------------
@@ -669,8 +718,9 @@ export class Game {
       if (this.state !== 'garage' || !this.session) return;
       const m = this.session.race.mechs[this.session.localId];
       if (!m) return;
-      // (Behind a Sprint's setup: your own Forward, flown or not.)
-      m.look = this.garageShown?.sprint ? customLook(m.role) : seatLook(m.role);
+      // (In the Hangar: your own mech, or the stock one it would start as; behind a Sprint's setup: your own Forward, flown or not.)
+      const shown = this.garageShown;
+      m.look = shown?.free ? encodeBuild(this.hangarBuild(m.role)) : shown?.sprint ? customLook(m.role) : seatLook(m.role);
       this.view?.refreshMechModels('all');
     }, 200);
   }
@@ -692,8 +742,12 @@ export class Game {
     writeJson('zgp.free', this.free);
   }
 
-  /** Show this faction and frame in the hangar behind the menus (`sprint`: your own Forward, as a Sprint is raced in). */
-  preview(l: { team: number; role: Role; sprint?: boolean }): void {
+  /**
+   * Show this faction and frame in the hangar behind the menus (`sprint`:
+   * your own Forward, as a Sprint is raced in; `free`: the Hangar's, your own
+   * mech of the frame for no faction).
+   */
+  preview(l: { team: number; role: Role; sprint?: boolean; free?: boolean }): void {
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') return;
     this.showGarage(l);
   }
@@ -948,18 +1002,18 @@ export class Game {
   }
 
   /** Whose mech the hangar shows for a screen. */
-  private previewLoadout(id: ScreenId): { team: number; role: Role; sprint?: boolean } {
+  private previewLoadout(id: ScreenId): { team: number; role: Role; sprint?: boolean; free?: boolean } {
+    // The Hangar: your own mech of a frame (the one being edited), for no faction.
+    if (HUB_SCREENS.has(id)) {
+      const d = this.menus.data as { role?: Role } | undefined;
+      return { team: -1, role: CUSTOM_SCREENS.has(id) && d?.role !== undefined ? d.role : this.hangarRole, free: true };
+    }
     // A Sprint (Free Play's setup, or a room set to one): your own Forward, in your colour.
     const room = this.online.lobby;
     const sprintRoom = this.menus.has('room') && !!room && !room.gp && room.settings.mode === 'sprint';
     const sprintSetup = this.menus.has('setup') && this.free.mode === 'sprint' && this.mode === 'free';
     // (And the Sprint series's cups and Tour: its briefing and standings.)
     const sprintGp = this.mode === 'gp' && (id === 'briefing' || id === 'standings' || this.menus.has('briefing')) && !!this.gpEvents[this.gpSlot]?.sprint;
-    // The editor: the mech being edited (from a Sprint, lit as it races there).
-    if (CUSTOM_SCREENS.has(id)) {
-      const d = this.menus.data as { role?: Role; team?: number } | undefined;
-      if (d?.role !== undefined) return { team: d.team ?? this.loadout.team, role: d.role, sprint: (sprintSetup || sprintRoom || sprintGp) && d.role === ROLE.FW };
-    }
     if (sprintRoom || sprintGp) return { team: this.loadout.team, role: ROLE.FW, sprint: true };
     if (id === 'room' || this.menus.has('room')) {
       const v = this.online.lobby;
@@ -973,7 +1027,7 @@ export class Game {
     if ((id === 'online' || this.menus.has('online')) && this.online.squadView && this.online.squadSize > 1) {
       return { team: this.online.squadView.faction, role: this.loadout.role };
     }
-    if (id === 'setup' && sprintSetup) return { team: this.loadout.team, role: ROLE.FW, sprint: true };
+    if ((id === 'setup' || id === 'paddock') && sprintSetup) return { team: this.loadout.team, role: ROLE.FW, sprint: true };
     // A frame's primer: that frame, in your colours.
     if (id === 'primer') {
       const d = this.menus.data as PrimerData | undefined;
@@ -993,30 +1047,38 @@ export class Game {
     this.attractTimer = 0;
   }
 
-  /** Your mech, alone, in your team's hangar. */
-  showGarage(l: { team: number; role: Role; sprint?: boolean }): void {
+  /**
+   * Your mech, alone, in your team's hangar; or for no faction (a Sprint's
+   * Forward, the Hangar's mechs) in the league's, lit in your colour.
+   */
+  showGarage(l: { team: number; role: Role; sprint?: boolean; free?: boolean }): void {
     const started = this.renderer.reviewProbe ? performance.now() : 0;
     // A change of circuit, rival or match changes nothing on screen: only a
     // new team or frame (or your Sprint mech for the stock one) rebuilds the scene.
-    const sprint = !!l.sprint;
-    // (A Sprint's mech is lit in your colour: a new colour shows it again.)
-    const colour = sprint ? pilotColour() : -1;
+    const sprint = !!l.sprint && !l.free;
+    const free = !!l.free;
+    const league = sprint || free;
+    const team = free ? -1 : l.team;
+    // (A mech for no faction is lit in your colour: a new colour shows it again.)
+    const colour = league ? pilotColour() : -1;
     const shown = this.garageShown;
-    if (this.state === 'garage' && shown && shown.team === l.team && shown.role === l.role && shown.sprint === sprint && shown.colour === colour) return;
+    if (this.state === 'garage' && shown && shown.team === team && shown.role === l.role && shown.sprint === sprint && shown.free === free && shown.colour === colour) return;
     this.state = 'garage';
     this.hud.hide();
     // The grid, stationary, with your mech in front of the camera, on whichever circuit is built.
-    // (A Sprint's mech flies for no faction: lit in your colour.)
-    const setup: RoundSetup = { factions: [sprint ? -1 : l.team, (l.team + 1) % LIVERIES.length], role: l.role, rivalSkill: 0.55, teamSkill: 0.6, track: this.trackId, cfg: MATCH_OPTIONS[0].cfg, look: sprint ? this.sprintMech() : undefined };
+    // (A mech for no faction: lit in your colour. The Hangar's: your own, or the stock one it would start as.)
+    const look = free ? encodeBuild(this.hangarBuild(l.role)) : sprint ? this.sprintMech() : undefined;
+    const other = ((free ? this.startingFaction() : l.team) + 1) % LIVERIES.length;
+    const setup: RoundSetup = { factions: [league ? -1 : l.team, other], role: l.role, rivalSkill: 0.55, teamSkill: 0.6, track: this.trackId, cfg: MATCH_OPTIONS[0].cfg, look };
     this.setSession(setup, 1, false, true);
-    this.garageShown = { team: l.team, role: l.role, sprint, colour };
+    this.garageShown = { team, role: l.role, sprint, free, colour };
     this.view.cam.mode = 'orbit';
     [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift();
     this.view.cam.reset();
     const m = this.session.race.mechs[this.session.localId];
-    const livery = LIVERIES[l.team] ?? LIVERIES[0];
+    const livery = league ? leagueLivery(PILOT_COLOURS[colour] ?? PILOT_COLOURS[0]) : (LIVERIES[l.team] ?? LIVERIES[0]);
     trackMatrix(this.session.track, m.s, m.d, 0, m.facing, this.hangarFrame);
-    this.hangar.setTeam({ id: livery.id, name: factionName(livery).toUpperCase(), css: livery.css, glow: livery.glow, emblem: emblemUrl(l.team) });
+    this.hangar.setTeam({ id: livery.id, name: factionName(livery).toUpperCase(), css: livery.css, glow: livery.glow, emblem: emblemUrl(league ? -1 : l.team) });
     this.hangar.setBay(l.role + 1);
     this.hangar.show(this.hangarFrame);
     this.trackVis.group.visible = false;
@@ -1137,13 +1199,26 @@ export class Game {
 
   // ---- Free Play -----------------------------------------------------------------
 
-  private freeHangar(): HangarData {
-    return { context: 'Free Play', confirm: 'Match setup', onConfirm: () => this.menus.push('setup') };
-  }
-
+  /** Free Play: the match setup first, then the Paddock, then the race. */
   openFreePlay(): void {
     this.mode = 'free';
-    this.menus.push<HangarData>('hangar', this.freeHangar());
+    this.menus.push('setup');
+  }
+
+  /** From Free Play's match setup on to the Paddock (not on the rival's faction), and from there the race. */
+  openFreePaddock(): void {
+    const taken = (f: number) => this.free.mode !== 'sprint' && f === this.free.rival;
+    if (taken(this.loadout.team)) {
+      const t = LIVERIES.map((_, k) => (this.loadout.team + 1 + k) % LIVERIES.length).find((f) => !taken(f)) ?? 0;
+      this.setLoadout({ team: t, role: this.loadout.role });
+    }
+    this.menus.push<PaddockData>('paddock', {
+      context: () => (this.free.mode === 'sprint' ? 'Free Play · Sprint' : 'Free Play'),
+      confirm: 'Start',
+      onConfirm: () => this.startFree(),
+      sprint: () => this.free.mode === 'sprint',
+      factionTaken: (f) => (taken(f) ? 'Your rival this match (pick another in Match setup)' : null),
+    });
   }
 
   /** A Free Play match in the format picked in setup, starting with round one. */
@@ -1183,7 +1258,7 @@ export class Game {
       else this.menus.reset('gp', undefined, ['title', 'modes']);
     } else {
       this.mode = 'free';
-      this.menus.reset('setup', undefined, ['title', 'modes', { id: 'hangar', data: this.freeHangar() }]);
+      this.menus.reset('setup', undefined, ['title', 'modes']);
     }
     this.music('menu');
   }
@@ -1288,6 +1363,13 @@ export class Game {
 
   /** The HUD, camera and music for a race just put on screen. */
   private beginRace(): void {
+    // The faction you race for (a team race, flown by you): a new mech of your own starts as its stock one.
+    const me = this.session instanceof ReplaySession ? undefined : this.session.race.mechs[this.session.localId];
+    const faction = me && me.human && this.mode !== 'tutorial' ? (this.raceFactions[me.team] ?? -1) : -1;
+    if (faction >= 0 && faction !== this.lastFaction) {
+      this.lastFaction = faction;
+      writeJson('zgp.lastFaction', faction);
+    }
     this.hud.begin(this.session.race, this.session.track, this.session.localId, this.raceFactions);
     this.hud.setMatch(this.matchLabel());
     // The Showdown: your rival marked (its plate and its line on the tower).
@@ -1404,7 +1486,7 @@ export class Game {
     this.music('menu');
     if (to === 'free') {
       this.mode = 'free';
-      this.menus.reset<HangarData>('hangar', this.freeHangar(), ['title', 'modes']);
+      this.menus.reset('setup', undefined, ['title', 'modes']);
     } else {
       this.mode = null;
       this.menus.reset('gp', undefined, ['title', 'modes']);
@@ -1791,7 +1873,7 @@ export class Game {
       return;
     }
     const name = kind === 'cup' ? (CUPS.find((c) => c.id === cup)?.name ?? 'Cup') : kind === 'tour' ? 'Grand Tour' : 'Zenith Cup season';
-    this.menus.push<HangarData>('hangar', {
+    this.menus.push<PaddockData>('paddock', {
       context: `Grand Prix · ${name} · pick the faction you will race for`,
       confirm: kind === 'cup' ? 'Start the cup' : kind === 'tour' ? 'Start the Grand Tour' : 'Start the season',
       onConfirm: () => {
@@ -1829,12 +1911,19 @@ export class Game {
     if (this.gpSlot === slot) this.gpRunner.run(null);
   }
 
-  /** The hangar for a team event: your frame (your faction is fixed for the event). */
-  openGpHangar(slot: GpSlot): void {
+  /**
+   * The Paddock for an event's next race: in a team event your frame (your
+   * faction is fixed for the event); in a Sprint event your own Forward.
+   */
+  openGpPaddock(slot: GpSlot): void {
     const ev = this.gpEvents[slot];
-    if (!ev || ev.sprint) return;
+    if (!ev) return;
     const kind = ev.kind;
-    this.menus.push<HangarData>('hangar', {
+    if (ev.sprint) {
+      this.menus.push<PaddockData>('paddock', { context: `${eventName(ev)} · race ${yourRoundNumber(ev)} of ${playedRounds(ev)}`, confirm: 'Done', onConfirm: () => this.menus.pop(), sprint: true });
+      return;
+    }
+    this.menus.push<PaddockData>('paddock', {
       context: `${eventName(ev)} · round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`,
       confirm: 'Done',
       onConfirm: () => this.menus.pop(),
@@ -2099,13 +2188,14 @@ export class Game {
     await this.ensureSquad();
   }
 
-  openOnlineHangar(): void {
+  /** The Paddock from Online: your squad's faction and your frame. */
+  openOnlinePaddock(): void {
     // Read the squad as it is at each update: the leader may change the
     // faction, people may join, leave or pick other frames.
     const o = this.online;
     const grouped = () => !!o.squadView && o.squadView.members.length > 1;
     const following = () => grouped() && !o.leading;
-    this.menus.push<HangarData>('hangar', {
+    this.menus.push<PaddockData>('paddock', {
       context: () => (grouped() ? `Online · your squad · ${factionName(LIVERIES[o.squadView!.faction])}` : 'Online'),
       confirm: 'Done',
       onConfirm: () => this.menus.pop(),
@@ -2128,9 +2218,14 @@ export class Game {
     });
   }
 
-  openRoomHangar(): void {
+  /** A room's Paddock: your team's faction and your frame (a Sprint room: your own Forward). */
+  openRoomPaddock(): void {
     const v = this.online.lobby;
     const me = v?.players.find((p) => p.pid === this.online.pid);
+    if (v && !v.gp && v.settings.mode === 'sprint') {
+      this.menus.push<PaddockData>('paddock', { context: `Room ${v.code} · Sprint`, confirm: 'Done', onConfirm: () => this.menus.pop(), sprint: true });
+      return;
+    }
     if (!v || !me || me.side < 0) return;
     if (v.phase !== 'lobby' && v.phase !== 'countdown') return this.menus.toast(v.gp ? 'Frames change at the next briefing' : 'Seats change between matches');
     // Everything is read from the room as it is at each update: the captain
@@ -2146,7 +2241,7 @@ export class Game {
       const s = seat();
       return !!s && !s.now.gp && (s.side.captain === o.pid || s.now.host === o.pid);
     };
-    this.menus.push<HangarData>('hangar', {
+    this.menus.push<PaddockData>('paddock', {
       context: () => {
         const s = seat();
         if (s?.now.gp) return `${eventName(s.now.gp)} · ${factionName(LIVERIES[s.side.faction])} · online`;
@@ -2356,7 +2451,7 @@ export class Game {
         const l = this.previewLoadout('room');
         this.preview(l);
       } else if ((s === 'results' || s === 'ceremony') && this.mode === 'online') this.menus.refresh();
-      else if (s === 'hangar' && this.menus.has('room')) this.menus.refresh();
+      else if (s === 'paddock' && this.menus.has('room')) this.menus.refresh();
       this.syncRequests();
     });
     o.on('matchStart', (msg) => this.startNetRound(msg));
@@ -2402,10 +2497,10 @@ export class Game {
     o.on('squad', (v) => {
       this.syncRequests();
       // A squad is one team: members fly the leader's faction. The hub, or
-      // the hangar opened from it, shows the squad as it is now (a room
+      // the Paddock opened from it, shows the squad as it is now (a room
       // above them shows the room's teams instead).
       if (!this.menus.has('online') || this.menus.has('room')) return;
-      if (this.menus.screen === 'online' || this.menus.screen === 'online-gp' || this.menus.screen === 'hangar') this.menus.refresh();
+      if (this.menus.screen === 'online' || this.menus.screen === 'online-gp' || this.menus.screen === 'paddock') this.menus.refresh();
       this.preview(this.previewLoadout(this.menus.screen ?? 'online'));
     });
     o.on('follow', ({ code, size }) => {

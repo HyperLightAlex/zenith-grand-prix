@@ -37,7 +37,6 @@ import { TRACK_BLURBS, type Menus } from '../menus';
 import { colourCss } from '../sides';
 import type { Medal } from '../../../gp/grandPrix';
 import { BACK, CHANGE, SELECT, confirmDialog } from './common';
-import { openCustom } from './custom';
 import { customName } from '../../../custom/mechBuild';
 
 export interface GpData {
@@ -413,17 +412,15 @@ export function registerGrandPrix(m: Menus, g: Game): void {
         col.append(fx);
         m.button(list, ready ? 'Continue' : 'Waiting for the other races…', () => (ready ? g.gpAdvance(d.slot) : m.toast('The other races are still running')), { key: 'start', go: ready });
       }
-      m.button(list, 'Hangar', () => g.openGpHangar(d.slot), { key: 'hangar' });
+      m.button(list, 'Paddock', () => g.openGpPaddock(d.slot), { key: 'hangar', hint: 'Your frame, and your own mech or the stock one' });
       abandonButton(m, g, list, ev, d.slot);
       col.append(list);
       const side = h('div.panel.standings', h('h2', ev.current > 0 ? `Standings after ${singleRaces(ev) ? 'round' : 'matchday'} ${ev.current}` : 'Standings'), gpTable(ev, ev.current - 1));
-      m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
+      m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Paddock', press: 'y' }, BACK));
     },
-    press(m, key, d) {
+    press(_m, key, d) {
       if (key === 'y') {
-        const ev = g.gpEvent(d.slot);
-        if (ev?.sprint) openCustom(m, g, ROLE.FW, g.loadout.team);
-        else g.openGpHangar(d.slot);
+        g.openGpPaddock(d.slot);
         return true;
       }
       return false;
@@ -543,10 +540,10 @@ function sprintBriefing(m: Menus, g: Game, ev: GpEvent, slot: GpSlot): void {
   col.append(h('h2', 'The grid'), slots);
   const list = h('div.list');
   m.button(list, race.finale ? 'Start the Showdown' : 'Start race', () => g.startGpRound(slot), { key: 'start', go: true });
-  m.button(list, `Edit ${mine}`, () => openCustom(m, g, ROLE.FW, g.loadout.team), { key: 'hangar', hint: 'The Sprint series is raced in your own Forward' });
+  m.button(list, 'Paddock', () => g.openGpPaddock(slot), { key: 'hangar', hint: `The Sprint series is raced in your own Forward, ${mine}` });
   abandonButton(m, g, list, ev, slot);
   col.append(list);
   const side = h('div.panel.standings', h('h2', ev.current > 0 ? `Standings after race ${ev.current}` : 'The field'), sprintTable(g, ev, ev.current - 1));
   if (ev.current === 0) side.append(h('p.note', `The same five all ${ev.kind === 'tour' ? 'Tour' : 'cup'}, one from each faction. ${seatName(g, fav)} of ${seatTeam(fav)} is the favourite.`));
-  m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: `Edit ${mine}`, press: 'y' }, BACK));
+  m.root.append(h('div.shade'), m.panes(col, side), m.footer(SELECT, { pad: 'Y', keys: 'Y', label: 'Paddock', press: 'y' }, BACK));
 }

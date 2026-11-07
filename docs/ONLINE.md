@@ -72,7 +72,7 @@ two players.
   the results), offline too. The game makes up a callsign and picks a
   portrait on the first run; Online asks you to choose a callsign (3 to 16
   characters, passed through a short word filter) the first time, offered
-  the made-up one. Both change on the hangar's Pilot screen (the callsign
+  the made-up one. Both change on the Hangar's Pilot screen (the callsign
   on the hub as well); a room or squad you are in hears of it at once
   (the `pilot` message, checked as a join is) and a race already begun
   keeps the old. The portrait is an index into the gallery (`PORTRAITS` in
@@ -89,8 +89,10 @@ two players.
   other team, that moves you there if it has a free place). **Ready locks
   your frame in**: it is refused while a teammate has that frame locked, so
   the first to lock a frame keeps it, and Not ready unlocks it. Picking is
-  free, so anyone can look at any frame in the hangar (Y), with its stats
-  and kit; while you are locked in, the hangar's Frame row is locked too.
+  free, so anyone can look at any frame in the Paddock (Y), with its stats
+  and kit; while you are locked in, the Paddock's Frame row is locked too.
+  A Sprint room's Paddock is your own Forward; the Paddock's Y opens the
+  Hangar (your pilot and your own mechs).
   The host can remove someone from their frame's menu. A team's faction is
   picked with its name above its frames: by its captain (whoever joined it
   first), or by the host, who can set both teams', including a team of
@@ -139,7 +141,7 @@ two players.
   that still joins the squad's team if it has a place free. Someone who
   joins the squad while the leader is already in a room is taken into it
   too, onto the squad's team (until the leader is back at the hub). Everyone picks
-  whatever frame they like in the hangar; two of a frame is marked on the
+  whatever frame they like in the Paddock (Y on the hub); two of a frame is marked on the
   Online screen, not refused, and Ready sorts it out in the room. (For
   matchmaking, when there is some, the squad will have to be on different
   frames to queue.) Invite to squad shows while there is an open place,

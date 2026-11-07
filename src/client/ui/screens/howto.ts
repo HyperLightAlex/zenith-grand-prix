@@ -9,7 +9,7 @@ import { PRIMERS } from '../../game/primers';
 import { h } from '../dom';
 import type { Menus } from '../menus';
 import { BACK, CHANGE, SELECT } from './common';
-import { frameCard } from './garage';
+import { frameCard } from './paddock';
 
 export interface PrimerData {
   role: Role;

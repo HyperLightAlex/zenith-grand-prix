@@ -1,18 +1,20 @@
-// The hangar (who you race as: faction and frame, shared by every mode) and
-// Free Play's match setup (what you play).
+// The Paddock, the last stop before every race, in every mode: what you race
+// in this time (your team's faction, your frame, and your own mech or the
+// stock one; in a Sprint, your own Forward, for no faction). What is yours
+// whatever team you race for (your pilot, your own mechs) is the Hangar's
+// (hangar.ts), opened from here with Y. And Free Play's match setup (what
+// you play), which goes on to the Paddock.
 
 import { ABILITIES, ATTACKS, CLASSES, ROLE, ROLE_NAMES, TRACKS, type Role } from '../../../sim/index';
-import { PILOT_COLOUR_NAMES } from '../../../net/protocol';
+import { PILOT_COLOURS, PILOT_COLOUR_NAMES } from '../../../net/protocol';
 import type { Game } from '../../game/game';
-import { LIVERIES, factionName } from '../../render/palette';
+import { LIVERIES, factionName, leagueLivery } from '../../render/palette';
 import { h } from '../dom';
 import { emblemUrl, faceUrl } from '../factionArt';
 import { STAT_LABELS, frameStats } from '../frameStats';
 import { MATCH_OPTIONS, MODE_NAMES, RIVALS, SPRINT_OPTIONS, SPRINT_TAGLINE, TRACK_BLURBS, type Menus } from '../menus';
 import { BACK, CHANGE, SELECT } from './common';
-import { customName, openCustom } from './custom';
-import { VICTORY_IDS, VICTORY_NAMES } from '../../render/mech/victoryPoses';
-import { openOf } from '../../game/unlocks';
+import { customName } from './custom';
 
 const KIT_TEXT: Record<number, [string, string]> = {
   0: ['Three quick blade strikes. Light, fast, hard to interrupt you out of.', 'An armoured lunge that closes a 30 m gap. Costs Drive.'],
@@ -20,12 +22,15 @@ const KIT_TEXT: Record<number, [string, string]> = {
   2: ['Two heavy blows. The second one breaks a guard.', 'A close-range blast. Works at racing speed.'],
 };
 
-/** A value, or a function giving it as it is now (for a room or squad that changes while the hangar is open). */
+/** A value, or a function giving it as it is now (for a room or squad that changes while the Paddock is open). */
 type Live<T> = T | (() => T);
 const now = <T,>(v: Live<T>): T => (typeof v === 'function' ? (v as () => T)() : v);
 
-/** Why the hangar is open, and what its choices may be. */
-export interface HangarData {
+/** Y: the Hangar, from the Paddock. */
+export const HANGAR_PROMPT = { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' as const };
+
+/** Why the Paddock is open, and what its choices may be. */
+export interface PaddockData {
   /** The context strip: where you came from ("Free Play", "Grand Prix · Round 2 of 4"...). */
   context: Live<string>;
   /** The confirm item: named for what happens next. */
@@ -33,8 +38,10 @@ export interface HangarData {
   onConfirm(): void;
   /** Set when the mode has fixed the faction: the reason. */
   factionLock?: Live<string | null>;
+  /** A Sprint: you race your own Forward, for no faction (no team or frame to pick). */
+  sprint?: Live<boolean>;
   /**
-   * What a room or squad says your faction and frame are now. The hangar shows
+   * What a room or squad says your faction and frame are now. The Paddock shows
    * it on every update, so a captain's or leader's change reaches it, except
    * for a moment after a change of your own while the server catches up.
    */
@@ -45,7 +52,7 @@ export interface HangarData {
   factionTaken?: (faction: number) => string | null;
   /**
    * A squad or a room team: who has picked (or locked in) each frame, shown
-   * beside the hangar. Your own frame is free to change, unless `frameLock`
+   * beside the Paddock. Your own frame is free to change, unless `frameLock`
    * says why not (in a room, while you are locked in).
    */
   crew?: {
@@ -60,16 +67,21 @@ export interface HangarData {
   onChange?: (team: number, role: Role) => void;
 }
 
-/** The hangar computer's card and the frame's panels, for whichever faction and frame, with you as its pilot. */
-export function frameCard(m: Menus, g: Game, team: number, role: Role, screen = 'Frame setup'): { head: HTMLElement; info: HTMLElement; kit: HTMLElement; blurb: HTMLElement; bay: HTMLElement } {
+/**
+ * The hangar computer's card and the frame's panels, for whichever faction
+ * and frame, with you as its pilot. `team` -1: for no faction (the Hangar, a
+ * Sprint): the league's, lit in your colour. `model`: the mech's name (by
+ * default your own mech of the frame if you fly it, else the faction's stock one).
+ */
+export function frameCard(m: Menus, g: Game, team: number, role: Role, screen = 'Frame setup', model?: string): { head: HTMLElement; info: HTMLElement; kit: HTMLElement; blurb: HTMLElement; bay: HTMLElement } {
   const c = CLASSES[role];
-  const livery = LIVERIES[team] ?? LIVERIES[0];
-  // Your custom mech of the frame, if you fly it; the faction's stock one otherwise.
-  const model = g.fliesCustom(role) ? customName(role, g.customMech(role)) : livery.models[c.role];
+  const league = team < 0;
+  const livery = league ? leagueLivery(PILOT_COLOURS[g.pilotColour] ?? PILOT_COLOURS[0]) : (LIVERIES[team] ?? LIVERIES[0]);
+  model ??= g.fliesCustom(role) ? customName(role, g.customMech(role)) : livery.models[c.role];
   const emblem = h('i');
-  emblem.style.backgroundImage = `url(${emblemUrl(team)})`;
+  emblem.style.backgroundImage = `url(${emblemUrl(league ? -1 : team)})`;
   const pilot = h('i');
-  pilot.style.backgroundImage = `url(${faceUrl(team, c.role, g.portrait)})`;
+  pilot.style.backgroundImage = `url(${faceUrl(league ? -1 : team, c.role, g.portrait, league ? g.pilotColour : -1)})`;
   const name = h('b', model);
   const head = h(
     'div.hh',
@@ -110,11 +122,28 @@ export function frameCard(m: Menus, g: Game, team: number, role: Role, screen = 
   return { head, info, kit, blurb: h('p', c.blurb), bay: h('div.bay', h('span.bay-label', `Bay ${c.role + 1}: ${model}`)) };
 }
 
-export function registerGarage(m: Menus, g: Game): void {
-  m.register<HangarData>('hangar', {
+export function registerPaddock(m: Menus, g: Game): void {
+  m.register<PaddockData>('paddock', {
     render(m, data) {
-      // Opened with nothing said about why (an old tool's menus.show('garage')): a plain hangar.
-      const d = data ?? { context: 'Hangar', confirm: 'Done', onConfirm: () => m.pop() };
+      // Opened with nothing said about why (an old tool's menus.show('garage')): a plain Paddock.
+      const d = data ?? { context: 'Paddock', confirm: 'Done', onConfirm: () => m.pop() };
+      const sprint = now(d.sprint ?? false);
+      const col = h('div.col');
+      const list = h('div.list');
+      const strip = h('div.context', now(d.context));
+      const hangar = () => g.openHangar();
+      if (sprint) {
+        // A Sprint: your own Forward, lit in your colour, for no faction.
+        const mine = customName(ROLE.FW, g.customMech(ROLE.FW));
+        const card = frameCard(m, g, -1, ROLE.FW, 'Paddock', mine);
+        m.button(list, `Your Forward: ${mine}`, hangar, { key: 'mech', hint: 'A Sprint is raced in your own Forward, for no faction: change it in the Hangar' });
+        m.button(list, 'Hangar', hangar, { key: 'hangar', hint: 'Your pilot and your own mechs' });
+        m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
+        const colour = PILOT_COLOUR_NAMES[g.pilotColour].toLowerCase();
+        col.append(strip, card.head, h('h1', 'Paddock'), h('p', `You race your own Forward, lit in ${colour}: every pilot for themselves, nobody's team.`), list, card.info);
+        m.root.append(h('div.shade'), card.bay, m.panes(col, h('div.hangar-side', card.kit)), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, SELECT, HANGAR_PROMPT, BACK));
+        return;
+      }
       const live = d.live?.() ?? null;
       const yours = d.changedAt !== undefined && performance.now() - d.changedAt < 2000;
       if (live && !yours) {
@@ -134,9 +163,7 @@ export function registerGarage(m: Menus, g: Game): void {
         g.preview({ team: t, role: r });
         m.refresh();
       };
-      const card = frameCard(m, g, team, role);
-      const col = h('div.col');
-      const list = h('div.list');
+      const card = frameCard(m, g, team, role, 'Paddock');
       const n = LIVERIES.length;
       m.choice(
         list,
@@ -159,30 +186,22 @@ export function registerGarage(m: Menus, g: Game): void {
         (dir) => set(team, ((((role + dir) % 3) + 3) % 3) as Role),
         { key: 'frame', locked: d.crew?.frameLock?.() ?? null },
       );
-      // Your custom mech of this frame, or the stock one; and the editor.
+      // Your own mech of this frame (from the Hangar), or the faction's stock one.
       const mine = g.customMech(role);
-      if (mine) {
-        m.choice(list, 'Mech', g.fliesCustom(role) ? customName(role, mine) : `Stock ${LIVERIES[team].models[role]}`, () => {
+      const stock = `Stock ${LIVERIES[team].models[role]}`;
+      m.choice(
+        list,
+        'Mech',
+        mine && g.fliesCustom(role) ? customName(role, mine) : stock,
+        () => {
           g.setFliesCustom(role, !g.fliesCustom(role));
           m.refresh();
-        }, { key: 'mech' });
-      }
-      m.button(list, mine ? `Edit ${customName(role, mine)}` : `Customize a ${CLASSES[role].frame}`, () => openCustom(m, g, role, team), {
-        key: 'custom',
-        hint: mine ? undefined : `Start from this ${LIVERIES[team].models[role]}: swap its parts for other teams' and paint it`,
-      });
-      m.button(list, `Pilot: ${g.pilotName}`, () => m.push('pilot'), { key: 'pilot' });
-      // (Through the poses open: the rest the Grand Prix earns.)
-      m.choice(list, 'Victory pose', VICTORY_NAMES[g.victoryPose], (dir) => {
-        const open = openOf('pose', VICTORY_IDS, g.progress);
-        const i = open.indexOf(g.victoryPose);
-        g.setVictoryPose(open[i < 0 ? 0 : (i + dir + open.length) % open.length]);
-        m.refresh();
-      }, { key: 'pose' });
+        },
+        { key: 'mech', locked: mine ? null : `You have no ${CLASSES[role].frame} of your own yet: make one in the Hangar (Y)` },
+      );
+      m.button(list, 'Hangar', hangar, { key: 'hangar', hint: 'Your pilot, and your own mechs to race in any team' });
       m.button(list, d.confirm, () => d.onConfirm(), { key: 'go', go: true });
-      // (Controls: from the title's menu and the pause menu, not here.)
-      const strip = h('div.context', now(d.context));
-      col.append(strip, card.head, h('h1', 'Hangar'), card.blurb, list, card.info);
+      col.append(strip, card.head, h('h1', 'Paddock'), card.blurb, list, card.info);
       // Who flies what: your squad, or your team in a room.
       let crew: HTMLElement | string = '';
       if (d.crew) {
@@ -202,7 +221,12 @@ export function registerGarage(m: Menus, g: Game): void {
           );
         }
       }
-      m.root.append(h('div.shade'), card.bay, m.panes(col, h('div.hangar-side', crew, card.kit)), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));
+      m.root.append(h('div.shade'), card.bay, m.panes(col, h('div.hangar-side', crew, card.kit)), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, HANGAR_PROMPT, BACK));
+    },
+    press(_m, key) {
+      if (key !== 'y') return false;
+      g.openHangar();
+      return true;
     },
   });
 
@@ -223,7 +247,7 @@ export function registerGarage(m: Menus, g: Game): void {
       m.choice(list, 'Mode', MODE_NAMES[c.mode], () => {
         c.mode = sprint ? 'teams' : 'sprint';
         g.saveFree();
-        // A Sprint is raced in your own Forward: the bay shows it (made from your faction's if you have none).
+        // A Sprint is raced in your own Forward: the bay shows it (made from the stock one of your last faction if you have none).
         g.previewSetup();
         m.refresh();
       }, { key: 'mode' });
@@ -233,8 +257,9 @@ export function registerGarage(m: Menus, g: Game): void {
         save();
       }, { key: 'track' });
       if (!sprint) {
+        // (Your own team is picked in the Paddock, after: not the rival's.)
         m.choice(list, 'Rival team', c.rival >= 0 ? factionName(LIVERIES[c.rival]) : 'Random', (dir) => {
-          const options = [-1, ...LIVERIES.map((_, f) => f).filter((f) => f !== g.loadout.team)];
+          const options = [-1, ...LIVERIES.map((_, f) => f)];
           const i = Math.max(0, options.indexOf(c.rival));
           c.rival = options[(i + dir + options.length) % options.length];
           save();
@@ -249,22 +274,12 @@ export function registerGarage(m: Menus, g: Game): void {
         else c.match = (c.match + dir + MATCH_OPTIONS.length) % MATCH_OPTIONS.length;
         save();
       }, { key: 'match' });
-      // Your mech in a Sprint: your own Forward, whatever you fly in a team race.
-      const mine = sprint ? customName(ROLE.FW, g.customMech(ROLE.FW)) : '';
-      if (sprint) m.button(list, `Edit ${mine}`, () => openCustom(m, g, ROLE.FW, g.loadout.team), { key: 'custom', hint: 'A Sprint is raced in your own Forward' });
-      m.button(list, 'Start', () => g.startFree(), { key: 'start', go: true });
-      const livery = LIVERIES[g.loadout.team];
-      const you = h('div.context', sprint ? `Free Play · Sprint · ${mine}, in ${PILOT_COLOUR_NAMES[g.pilotColour].toLowerCase()}` : `Free Play · ${factionName(livery)}, ${livery.models[g.loadout.role]}`);
+      // On to the Paddock: your team and frame (a Sprint: your own Forward), then the race.
+      m.button(list, 'Paddock', () => g.openFreePaddock(), { key: 'start', go: true, hint: sprint ? 'Your own Forward, then the race' : 'Your team, your frame and your mech, then the race' });
+      const you = h('div.context', sprint ? 'Free Play · Sprint' : 'Free Play');
       const blurb = sprint ? `${SPRINT_TAGLINE} You in your own Forward against a computer pilot from each faction. ${opt.blurb}` : `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`;
       col.append(you, h('h1', sprint ? 'Sprint setup' : 'Match setup'), list, h('div.match-blurb', blurb));
-      m.root.append(h('div.shade'), m.panes(col), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, { pad: 'Y', keys: 'Y', label: 'Hangar', press: 'y' }, BACK));
-    },
-    press(m, key) {
-      if (key === 'y') {
-        m.pop();
-        return true;
-      }
-      return false;
+      m.root.append(h('div.shade'), m.panes(col), m.footer({ pad: 'D-pad', keys: '↑ ↓', label: 'Choose' }, CHANGE, SELECT, BACK));
     },
   });
 }

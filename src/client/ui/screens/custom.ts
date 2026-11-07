@@ -1,7 +1,9 @@
-// The custom mech editor, off the hangar (docs/CUSTOMIZATION.md): your mech
+// The custom mech editor, off the Hangar (docs/CUSTOMIZATION.md): your mech
 // of a frame, its parts (each from any design of the frame) and its paint
-// (a scheme for the whole mech, and any part's own). Every change shows at
-// once on the mech in the bay and is kept in your pilot record.
+// (a scheme for the whole mech, and any part's own). It belongs to no
+// faction: the bay is the league's, the mech lit in your colour (in a team
+// race it is lit in your team's). Every change shows at once on the mech in
+// the bay and is kept in your pilot record.
 
 import { CLASSES, ROLE_NAMES, type Role } from '../../../sim/index';
 import {
@@ -31,20 +33,19 @@ import {
   type Paint,
   type PartSlot,
 } from '../../../custom/mechBuild';
-import { CALLSIGN_MAX } from '../../../net/protocol';
+import { CALLSIGN_MAX, PILOT_COLOURS } from '../../../net/protocol';
 import type { Game } from '../../game/game';
 import { UNLOCKS, earned, howTo, lockedWhy, openOf, paintOpen, unlockName, type UnlockKind } from '../../game/unlocks';
 import { partChannels } from '../../render/mech/customFrame';
-import { LIVERIES, factionName } from '../../render/palette';
+import { LIVERIES, factionName, leagueLivery } from '../../render/palette';
 import { h, setClass, setText } from '../dom';
 import { emblemUrl, faceUrl } from '../factionArt';
 import type { Menus } from '../menus';
 import { BACK, CHANGE, SELECT, type DialogData, type EntryData } from './common';
 
-/** Which of your mechs the editor is on: a frame, and the faction you fly for (its glow and markings). */
+/** Which of your mechs the editor is on: a frame. */
 export interface CustomData {
   role: Role;
-  team: number;
 }
 
 /** What the paint screen is painting: the whole mech, or one part. */
@@ -114,13 +115,13 @@ const hasOrHave = (s: PartSlot) => (PLURAL_PARTS.has(s) ? 'have' : 'has');
 
 const listOf = (ch: Channel): readonly Paint[] => (ch === 'frame' ? METALS : PAINTS);
 
-/** The hangar computer's card for your custom mech (the anime look). */
+/** The hangar computer's card for your custom mech (the anime look): the league's, for no faction, in your colour. */
 function card(g: Game, d: CustomData, b: MechBuild, bar: string): HTMLElement {
-  const livery = LIVERIES[d.team] ?? LIVERIES[0];
+  const livery = leagueLivery(PILOT_COLOURS[g.pilotColour] ?? PILOT_COLOURS[0]);
   const emblem = h('i');
-  emblem.style.backgroundImage = `url(${emblemUrl(d.team)})`;
+  emblem.style.backgroundImage = `url(${emblemUrl(-1)})`;
   const face = h('i');
-  face.style.backgroundImage = `url(${faceUrl(d.team, d.role, g.portrait)})`;
+  face.style.backgroundImage = `url(${faceUrl(-1, d.role, g.portrait, g.pilotColour)})`;
   return h(
     'div.hh.custom-heading',
     h('div.hh-bar', h('span', `${livery.name.replace('Team ', '')} hangar`), h('span', bar)),
@@ -129,7 +130,7 @@ function card(g: Game, d: CustomData, b: MechBuild, bar: string): HTMLElement {
 }
 
 export function registerCustom(m: Menus, g: Game): void {
-  const mech = (d: CustomData): MechBuild => g.customMech(d.role) ?? stockBuild(d.team);
+  const mech = (d: CustomData): MechBuild => g.hangarBuild(d.role);
   /** Keep a change: the mech in the bay shows it; each screen shows it in place (nothing is drawn again). */
   const save = (d: CustomData, b: MechBuild) => g.setCustomMech(d.role, b);
 
@@ -157,13 +158,15 @@ export function registerCustom(m: Menus, g: Game): void {
           },
         });
       }, { key: 'name' });
-      const stock = `${factionName(LIVERIES[d.team])} ${designName(d.role, d.team)}`;
+      // (From the stock mech of the faction you last raced for.)
+      const from = g.startingFaction();
+      const stock = `${factionName(LIVERIES[from])} ${designName(d.role, from)}`;
       m.button(list, `Start again from the ${stock}`, () => {
         m.push<DialogData>('dialog', {
           title: 'Start again?',
           text: `Your ${customName(d.role, b)} becomes the stock ${stock} again, in its colours. Its name stays.`,
           options: [
-            { label: 'Start again', go: true, run: () => { save(d, { ...stockBuild(d.team), name: mech(d).name }); m.pop(); } },
+            { label: 'Start again', go: true, run: () => { save(d, { ...stockBuild(from), name: mech(d).name }); m.pop(); } },
             { label: 'Keep it', run: () => m.pop() },
           ],
         });
@@ -179,7 +182,7 @@ export function registerCustom(m: Menus, g: Game): void {
         });
       }, { key: 'delete' });
       m.button(list, 'Done', () => m.pop(), { key: 'done', go: true });
-      col.append(h('div.context', 'Hangar'), card(g, d, b, 'Custom mech'), h('h1', customName(d.role, b)), list);
+      col.append(h('div.context', 'Hangar'), card(g, d, b, 'Your mech'), h('h1', customName(d.role, b)), list);
 
       // What it is made of, and its colours.
       const side = h('div.kit.custom-sheet', h('h2', 'Parts'));
@@ -446,7 +449,7 @@ export function registerCustom(m: Menus, g: Game): void {
             ? missing.length
               ? `The ${designName(d.role, b.parts[p])}'s ${PART_NAMES[p].toLowerCase()} ${hasOrHave(p)} no ${missing.join(' or ')} to paint.`
               : `Anything left as the mech's follows the whole mech's paint.`
-            : "Main, accent and trim are paints; the frame is bare metal. The glow and the lenses stay your team's colour.",
+            : "Main, accent and trim are paints; the frame is bare metal. The glow and the lenses are your team's colour in a team race, and your own in a Sprint.",
         );
         showSide(m.selectedKey);
       };
@@ -461,10 +464,13 @@ export function registerCustom(m: Menus, g: Game): void {
   });
 }
 
-/** Open the editor on your custom mech of a frame, making it from the stock mech you were looking at if you have none, and flying it. */
-export function openCustom(m: Menus, g: Game, role: Role, team: number): void {
-  if (!g.customMech(role)) g.setCustomMech(role, stockBuild(team));
+/**
+ * Open the editor on your own mech of a frame, making it if you have none
+ * (from the stock mech of the faction you last raced for) and flying it.
+ */
+export function openCustom(m: Menus, g: Game, role: Role): void {
+  if (!g.customMech(role)) g.setCustomMech(role, stockBuild(g.startingFaction()));
   g.setFliesCustom(role, true);
-  m.push<CustomData>('custom', { role, team });
+  m.push<CustomData>('custom', { role });
 }
 

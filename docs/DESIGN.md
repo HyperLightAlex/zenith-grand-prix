@@ -1383,7 +1383,7 @@ the room waits for everyone to go back to it (or a minute). A Grand Prix
 room's ends with the ceremony for everyone at the award, which brings it
 back too.
 
-Your **victory pose** is chosen in the hangar (the mech in the bay strikes
+Your **victory pose** is chosen in the Hangar (the mech in the bay strikes
 it as you choose): a fist in the air, both arms up, arms crossed, hands on
 hips, pointing to the sky or a bow. Each is a held pose with a little
 movement (the fist pumped, a bounce, a nod, a look round the crowd, a bow
@@ -1701,7 +1701,9 @@ are in [ART.md](ART.md), the way its art is made in
 [VISUAL-WORKFLOW.md](VISUAL-WORKFLOW.md).
 
 **M2 and M3, done: modes and online (0.5).** The garage split into a shared
-hangar and a setup for each mode; Grand Prix (cups for medals, a season for
+hangar and a setup for each mode (since split again: the Hangar for your
+pilot and your own mechs, for no faction, and the Paddock before every
+race for your team, frame and mech); Grand Prix (cups for medals, a season for
 the Zenith Cup, the other factions' races run in the background); online
 private rooms on a Colyseus server that runs `stepRace` as the authority,
 with prediction on the clients, reconnecting, and squads of up to three

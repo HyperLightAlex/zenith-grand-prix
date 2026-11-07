@@ -66,8 +66,11 @@ This is version 0.5: nine circuits and three ways to play.
   link, with computer pilots in the empty seats. Friends can form a squad of
   up to three that stays together from room to room.
 
-The garage is now a **hangar** (your faction and frame, shared by every mode)
-and a setup screen for each mode. How online works and how to host it is in
+Every mode ends at the **Paddock**, the last stop before a race (your
+team's faction, your frame, and your own mech or the stock one; in a Sprint,
+your own Forward), after its own setup. The **Hangar** (on the Play menu,
+and Y in any Paddock) is what is yours whatever team you race for: your
+pilot and your own mechs, made and painted there for no faction. How online works and how to host it is in
 [docs/ONLINE.md](docs/ONLINE.md); the rest of the design is in
 [docs/DESIGN.md](docs/DESIGN.md).
 
