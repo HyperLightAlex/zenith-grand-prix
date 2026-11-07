@@ -275,7 +275,8 @@ export function registerPaddock(m: Menus, g: Game): void {
         save();
       }, { key: 'match' });
       // On to the Paddock: your team and frame (a Sprint: your own Forward), then the race.
-      m.button(list, 'Paddock', () => g.openFreePaddock(), { key: 'start', go: true, hint: sprint ? 'Your own Forward, then the race' : 'Your team, your frame and your mech, then the race' });
+      // ("Continue": not everyone knows what a paddock is; the screen says when they get there.)
+      m.button(list, 'Continue', () => g.openFreePaddock(), { key: 'start', go: true, hint: sprint ? 'Your own Forward, then the race' : 'Your team, your frame and your mech, then the race' });
       const you = h('div.context', sprint ? 'Free Play · Sprint' : 'Free Play');
       const blurb = sprint ? `${SPRINT_TAGLINE} You in your own Forward against a computer pilot from each faction. ${opt.blurb}` : `${TRACK_BLURBS[circuit.id] ?? ''} ${opt.blurb}`;
       col.append(you, h('h1', sprint ? 'Sprint setup' : 'Match setup'), list, h('div.match-blurb', blurb));
