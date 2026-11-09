@@ -137,7 +137,9 @@ check(await until(b, ([s, f]) => window.game.online.lobby.sides[s].faction !== f
 const g0 = (await mine(a)).factions[1 - aSide];
 await head(a, 1 - aSide).click();
 check(await until(b, ([s, f]) => window.game.online.lobby.sides[s].faction !== f, [1 - aSide, g0]), "the host changes the computer pilots' faction");
-// Bravo is neither: both stay.
+// Bravo is neither: both stay. (From where Alpha's own view has the change too: the
+// two hear of it separately, and a view a moment behind would look like Bravo's doing.)
+await until(a, ([s, f]) => window.game.online.lobby.sides[s].faction !== f, [1 - aSide, g0]);
 const fs = (await mine(a)).factions;
 await head(b, aSide).click();
 await head(b, 1 - aSide).click();
