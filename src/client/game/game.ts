@@ -182,10 +182,11 @@ const GARAGE_SHIFT = 0.07;
  * Where the hangar's mech sits for the layout in use, as [right of centre,
  * above centre] in fractions of the screen: clear of the menu's panels.
  * (`editing`: the mech editor, which on a small screen is one narrow column
- * on the left: the mech in the middle of the rest, its changes in view.)
+ * on the left, and upright the lower half: the mech in the middle of the
+ * rest, its changes in view.)
  */
 function garageShift(editing = false): [number, number] {
-  if (frame.portrait) return [0, 0.24];
+  if (frame.portrait) return [0, editing ? 0.25 : 0.24];
   if (editing && frame.layout !== 'roomy') return [0.22, 0];
   if (frame.layout === 'single') return [0.26, 0];
   if (frame.layout === 'cols') return [0.03, 0];
@@ -3055,8 +3056,10 @@ export class Game {
     // The hangar's mech, clear of the panels for the layout in use.
     if (this.state === 'garage' && this.view.cam.mode === 'orbit') {
       const under = this.menus.under(OVER_EDITOR);
-      [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift(under !== null && CUSTOM_SCREENS.has(under));
-      this.view.cam.orbitFov = frame.portrait ? 72 : 50;
+      const editing = under !== null && CUSTOM_SCREENS.has(under);
+      [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift(editing);
+      // (Upright, editing: the whole mech in the top half, over the editor.)
+      this.view.cam.orbitFov = frame.portrait ? (editing ? 86 : 72) : 50;
     } else this.view.cam.orbitFov = 50;
   }
 

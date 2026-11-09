@@ -341,6 +341,8 @@ export class Menus {
     // The styles lay each screen out by name.
     // The Pilot screen and the custom mech editor are the hangar computer's, styled as the hangar is.
     R.dataset.screen = HANGAR_COMPUTER.has(top.id) ? 'garage' : top.id;
+    // (And which screen it is, whatever it is styled as.)
+    R.dataset.page = top.id;
     setClass(R, 'anime', this.host.lookOn());
     setClass(R, 'still', again);
     this.items = [];

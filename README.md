@@ -514,8 +514,18 @@ picture has not changed. Rules the code keeps for a phone's sake:
   mesh that changes material with the look, names what it holds (`ownTextures`,
   `alsoWears` in `render/owned.ts`), so a change of circuit frees it.
 - A circuit's song is downloaded when the circuit is named for a race, and only
-  that circuit's song is kept; shaders compile in the background as soon as a
-  scene is built (`Renderer.precompile`).
+  that circuit's song is kept (decoded, a song is hundreds of MB: it is let go
+  at the title and the Play menu, and the results songs are decoded only at the
+  finish); shaders compile in the background as soon as a scene is built
+  (`Renderer.precompile`), and a race waits behind its loading card until its
+  loads are in and its shaders and textures are ready (`Renderer.prepare`).
+- Still scenery built a piece at a time (a billboard, a brake board, a gate's
+  frame) is merged by material with `mergeStatic` (`render/mergeStatic.ts`):
+  one draw call a material, not one a piece. What moves, blinks or is looked
+  up by name afterwards stays separate.
+- An instanced mesh is disposed with its own `dispose()` (its geometry's and
+  material's leave its instances' buffers behind), and a material's `dispose()`
+  leaves its map: the `gpu` audit's totals after each circuit show what was missed.
 
 To reproduce preparation from the archived study: run `polish_updated.py`, then
 `fix_hands.py`; generate the atlas with `paint_details.py` (Python + Pillow), run

@@ -1424,7 +1424,7 @@ html.lay-cols .menu .hangar-side > :is(.kit, .crew), html.lay-single .menu .hang
 /* The mech editor on a small screen: one narrow column on the left (the list, its sheet under it,
    scrolling), so the mech stands clear of it on the right (game.ts garageShift) and its changes
    can be seen. */
-html:is(.lay-cols, .lay-single):not(.portrait) .menu:is([data-screen='custom'], [data-screen='custom-parts'], [data-screen='custom-paint'], [data-screen='custom-livery']) .panes {
+html:is(.lay-cols, .lay-single):not(.portrait) .menu:is([data-page='custom'], [data-page='custom-parts'], [data-page='custom-paint'], [data-page='custom-livery']) .panes {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -1436,7 +1436,9 @@ html:is(.lay-cols, .lay-single):not(.portrait) .menu:is([data-screen='custom'], 
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
-html:is(.lay-cols, .lay-single):not(.portrait) .menu:is([data-screen='custom'], [data-screen='custom-parts'], [data-screen='custom-paint'], [data-screen='custom-livery']) .panes > :is(.col, .hangar-side) { max-height: none; overflow: visible; flex: none; }
+html:is(.lay-cols, .lay-single):not(.portrait) .menu:is([data-page='custom'], [data-page='custom-parts'], [data-page='custom-paint'], [data-page='custom-livery']) .panes > :is(.col, .hangar-side) { max-height: none; overflow: visible; flex: none; }
+/* Upright: the editor in the lower half, scrolling, the mech in the top half (game.ts garageShift). */
+html.portrait .menu:is([data-page='custom'], [data-page='custom-parts'], [data-page='custom-paint'], [data-page='custom-livery']) .panes { top: 47%; }
 /* In a pane the highlight does not step sideways (it would run past the pane's edge). */
 html.lay-cols .item.sel, html.lay-single .item.sel { transform: none; }
 
