@@ -222,7 +222,11 @@ export class Crowd {
   }
 
   dispose(): void {
-    this.group.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+    this.group.traverse((o) => {
+      (o as THREE.Mesh).geometry?.dispose();
+      // (A flag's instances: their matrices and colours, which the renderer holds until told.)
+      if ((o as THREE.InstancedMesh).isInstancedMesh) (o as THREE.InstancedMesh).dispose();
+    });
     for (const m of this.materials) m.dispose();
   }
 }
