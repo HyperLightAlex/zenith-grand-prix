@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { Track } from '../../../sim/track';
 import { titanGround, type TitanGround } from './placeholder';
-import { readTitanLevel, topGridHeights, type TitanAsset, type TitanPartGeometry, type TitanSlot, type TitanTopGrid } from './read';
+import { mergeTriangles, readTitanLevel, topGridHeights, type TitanAsset, type TitanPartGeometry, type TitanSlot, type TitanTopGrid } from './read';
 
 export { readTitanLevel, slotOf, TITAN_SLOTS, type TitanAsset, type TitanPartGeometry, type TitanSlot } from './read';
 
@@ -67,14 +67,53 @@ export function loadTitan(): Promise<TitanAsset | null> {
 }
 
 /**
- * The model as scenery: one LOD per part, each level a mesh per slot in the
- * given materials. A part switches to its next level further off the bigger
- * it is.
+ * The part a part is drawn with: a finger's joints with their hand. Thirty
+ * small parts, each a draw call a slot (some ninety in all), drawn as two
+ * hands' worth; the rest each their own.
+ */
+const drawnWith = (part: string): string => {
+  const finger = /^(?:thumb|index|middle|ring|pinky)\.\d+\.([LR])$/.exec(part);
+  return finger ? `hand.${finger[1]}` : part;
+};
+
+/** The parts as drawn (drawnWith): each one's levels, its members' geometry in each slot together. */
+function drawnParts(asset: TitanAsset): Map<string, TitanPartGeometry[]> {
+  const members = new Map<string, TitanPartGeometry[][]>();
+  for (const [part, levels] of asset.parts) {
+    const key = drawnWith(part);
+    const list = members.get(key) ?? [];
+    list.push(levels);
+    members.set(key, list);
+  }
+  const out = new Map<string, TitanPartGeometry[]>();
+  for (const [key, list] of members) {
+    if (list.length === 1) {
+      out.set(key, list[0]);
+      continue;
+    }
+    const levels: TitanPartGeometry[] = [];
+    const n = Math.max(...list.map((l) => l.length));
+    for (let k = 0; k < n; k++) {
+      const level: TitanPartGeometry = {};
+      for (const slot of new Set(list.flatMap((l) => Object.keys(l[k] ?? {}) as TitanSlot[]))) {
+        level[slot] = mergeTriangles(list.map((l) => l[k]?.[slot]).filter((g): g is THREE.BufferGeometry => !!g));
+      }
+      levels.push(level);
+    }
+    out.set(key, levels);
+  }
+  return out;
+}
+
+/**
+ * The model as scenery: one LOD per part (the fingers with their hands),
+ * each level a mesh per slot in the given materials. A part switches to its
+ * next level further off the bigger it is.
  */
 export function titanModel(asset: TitanAsset, material: (slot: TitanSlot) => THREE.Material, onMesh?: (mesh: THREE.Mesh, slot: TitanSlot) => void): THREE.Group {
   const group = new THREE.Group();
   group.name = 'titan';
-  for (const [part, levels] of asset.parts) {
+  for (const [part, levels] of drawnParts(asset)) {
     const lod = new THREE.LOD();
     lod.name = `titan/${part}`;
     // Centre the LOD on the part, so its distance is measured from the part itself.

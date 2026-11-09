@@ -85,7 +85,8 @@ function sliceTriangles(g: THREE.BufferGeometry, start: number, count: number): 
   return out;
 }
 
-function mergeTriangles(gs: THREE.BufferGeometry[]): THREE.BufferGeometry {
+/** Non-indexed geometries (positions and normals) as one. */
+export function mergeTriangles(gs: THREE.BufferGeometry[]): THREE.BufferGeometry {
   if (gs.length === 1) return gs[0];
   const n = gs.reduce((a, g) => a + g.attributes.position.count, 0);
   const P = new Float32Array(n * 3);
