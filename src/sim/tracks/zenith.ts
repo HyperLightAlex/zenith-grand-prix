@@ -128,3 +128,42 @@ export const ZENITH_RING: CircuitDef = {
     { piece: 38, at: 0.4, len: 50, d: 12, halfW: 6 }, // the run to the line: the pad on the right, or the strip on the left
   ],
 };
+
+// ---- Möbius tests --------------------------------------------------------------
+// Two other ways round the core, to drive before one replaces the Möbius
+// above (whose three quick rolls are disjointed and disorienting). Offered
+// in Free Play only (TEST_TRACKS), as Zenith Ring with its Möbius changed
+// and the rest of the lap as it is: the pieces keep their numbers, so the
+// gates, strips and pads stay where they are.
+
+const withMobius = (id: string, name: string, mobius: CircuitDef['pieces']): CircuitDef => ({
+  ...ZENITH_RING,
+  id,
+  name,
+  pieces: ZENITH_RING.pieces.map((p, i) => (i >= 14 && i <= 16 ? mobius[i - 14] : p)),
+});
+
+/**
+ * A: one loop round the core whose road half-twists as it goes, one slow
+ * roll from the start of the loop to its end, so you go up its inside and
+ * come out of it on the road's far face, upside down under it; along the
+ * far face, then a roll the same way round brings you upright.
+ */
+export const ZENITH_MOBIUS_LOOP = withMobius('zenith-a', 'Möbius test A: one loop', [
+  { twist: [MOBIUS.radius + 10, 360, 180, MOBIUS.across], width: 20, name: 'the Möbius' },
+  { straight: 80, hold: true, width: 20, name: 'the far face' },
+  { roll: [170, 180], width: 20, name: 'over and out' },
+]);
+
+/**
+ * B: round the core twice on one twisted band, a Möbius strip: one slow
+ * roll over both times round, half a turn each, so the first time round
+ * is on the inside and the second on the outside (upside down at the
+ * bottom, the Earth overhead), and you come out upright beside where you
+ * went in (the band moves along the core as it goes).
+ */
+export const ZENITH_MOBIUS_RING = withMobius('zenith-b', 'Möbius test B: twice round', [
+  { twist: [MOBIUS.radius + 20, 720, 360, 130], width: 20, name: 'the Möbius' },
+  { straight: 20 },
+  { straight: 20 },
+]);

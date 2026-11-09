@@ -12,7 +12,7 @@ export { fastestFlight, type Flight } from './flight';
 export * from './snapshot';
 export * from './match';
 export * from './ledger';
-export { MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ABYSS_LINE, MONSOON_RUINS, ZENITH_RING, TRACKS, trackById, type AnyTrackDef } from './tracks/index';
+export { MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ABYSS_LINE, MONSOON_RUINS, ZENITH_RING, TRACKS, TEST_TRACKS, trackById, type AnyTrackDef } from './tracks/index';
 export { MOBIUS, RING } from './tracks/zenith';
 export { DOME, TWIST } from './tracks/abyss';
 export { CORKSCREW, STAIRWAY, STONE_RING } from './tracks/monsoon';

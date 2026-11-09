@@ -40,6 +40,23 @@ export interface StationCtx {
 const f = makeFrame();
 const v3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 
+/**
+ * The Möbius's loop round the core as a layout has it: the radius of its
+ * first twist, and how far along the core its twists move the road in all.
+ */
+function mobiusOf(def: CircuitDef): { radius: number; across: number } {
+  const i = def.pieces.findIndex((p) => p.name === 'the Möbius');
+  let radius = MOBIUS.radius;
+  let across = 0;
+  for (let k = i; k >= 0 && k < def.pieces.length; k++) {
+    const pc = def.pieces[k];
+    if (!('twist' in pc)) break;
+    if (k === i) radius = pc.twist[0];
+    across += pc.twist[3] ?? 0;
+  }
+  return i < 0 ? MOBIUS : { radius, across };
+}
+
 /** Where the stretch called `name` runs along the lap: [start, end). */
 function rangeOf(track: Track, starts: number[], name: string): [number, number] | null {
   const def = track.def as CircuitDef;
@@ -342,12 +359,14 @@ export function buildZenith(ctx: StationCtx): void {
   if (mob && rf) {
     const { p } = frameVecs(track, mob[0]);
     const { r: right, u } = frameVecs(track, mob[0] - 20);
-    const centre = p.clone().addScaledVector(u, MOBIUS.radius);
+    // Its measures as this layout has them (a test layout's loop is not the circuit's: see TEST_TRACKS).
+    const measures = mobiusOf(def);
+    const centre = p.clone().addScaledVector(u, measures.radius);
     const CORE = 66;
     const along = (a: number) => centre.clone().addScaledVector(right, a);
     // Round the road's loop (it moves `across` along the core on the way round).
-    const a0 = Math.min(0, MOBIUS.across) - 36;
-    const a1 = Math.max(0, MOBIUS.across) + 36;
+    const a0 = Math.min(0, measures.across) - 36;
+    const a1 = Math.max(0, measures.across) + 36;
     keep('plating', rod(along(a0), along(a1), CORE, 32), HULL);
     for (let a = a0 + 14; a < a1 - 6; a += 24) keep('glow', rod(along(a - 1.5), along(a + 1.5), CORE + 0.8, 32), 0x7ff4ff);
     // The reactor past it, away from the hub, and its glowing end.
