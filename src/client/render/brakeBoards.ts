@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { hwAt, wrapS, type Track } from '../../sim/index';
 import { trackMatrix } from './trackSpace';
+import { mergeStatic } from './mergeStatic';
 
 /** A corner this tight (1/m) or tighter, after this long (m) with nothing half as tight: boards before it. */
 const TIGHT = 0.004;
@@ -102,5 +103,8 @@ export function buildBrakeBoards(track: Track): THREE.Group {
       group.add(board);
     });
   }
+  // All of them as four meshes (the three faces' and the backs'), not four a board.
+  const boards = [...group.children];
+  if (boards.length) group.add(mergeStatic(boards, group, 'brake boards'));
   return group;
 }

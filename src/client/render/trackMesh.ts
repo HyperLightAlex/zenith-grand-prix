@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { alsoWears, ownTextures } from './owned';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeStatic } from './mergeStatic';
 import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { GRID } from '../../sim/config';
 import { look } from './look';
@@ -1179,6 +1180,9 @@ export function buildTrackVisual(
       group.add(g);
       return g;
     };
+    // (Each board's pieces, merged once all are up: a few draw calls for them all, not four a board.)
+    const boardsPlain: THREE.Object3D[] = [];
+    const boardsPainted: THREE.Object3D[] = [];
     let k = 0;
     for (let s = 150; s < track.length - 100; s += 170) {
       const i = Math.floor(wrapS(track, s) / track.ds);
@@ -1190,9 +1194,9 @@ export function buildTrackVisual(
       const side = track.kappa[i] > 0.0004 ? -1 : track.kappa[i] < -0.0004 ? 1 : k % 2 === 0 ? 1 : -1;
       if (!plain(i) || !(side < 0 ? track.wallL[i] : track.wallR[i])) continue;
       if (rockBehind(i, side)) {
-        plainOnly.push(onWall(s, side, 30, mats[k % mats.length]));
+        boardsPlain.push(onWall(s, side, 30, mats[k % mats.length]));
         const sg = signs[k % signs.length];
-        paintedOnly.push(onWall(s, side, sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
+        boardsPainted.push(onWall(s, side, sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
         k++;
         continue;
       }
@@ -1216,10 +1220,16 @@ export function buildTrackVisual(
         group.add(g);
         return g;
       };
-      plainOnly.push(stand(30, mats[k % mats.length]));
+      boardsPlain.push(stand(30, mats[k % mats.length]));
       const sg = signs[k % signs.length];
-      paintedOnly.push(stand(sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
+      boardsPainted.push(stand(sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
       k++;
+    }
+    for (const [list, shown] of [[boardsPlain, plainOnly], [boardsPainted, paintedOnly]] as const) {
+      if (!list.length) continue;
+      const merged = mergeStatic(list, group, 'billboards');
+      group.add(merged);
+      shown.push(merged);
     }
 
     // Grandstands either side of the start: the Blender model's stand

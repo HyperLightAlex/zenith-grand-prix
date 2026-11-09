@@ -3,6 +3,7 @@
 // the opening, a spinning cell above it and a tall beacon so it can be picked
 // out from a long way back.
 import * as THREE from 'three';
+import { mergeStatic } from './mergeStatic';
 import { moves } from './still';
 import type { Track } from '../../sim/track';
 import { COLORS, toonMaterial } from './palette';
@@ -78,6 +79,8 @@ export function buildGates(track: Track): GateVisual {
   const frame = toonMaterial({ vertexColors: false, color: 0x2c3442 });
   const m = new THREE.Matrix4();
   let last = 0;
+  // (Merged once built: every gate's posts and feet as one mesh, each gate's lit frame as one.)
+  const frames: THREE.Mesh[] = [];
 
   track.gates.forEach((g) => {
     const node = new THREE.Group();
@@ -94,20 +97,24 @@ export function buildGates(track: Track): GateVisual {
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.9, top, 1.6), frame);
       post.position.set(side * half, top / 2, 0);
       node.add(post);
+      frames.push(post);
       // Swept-back foot, so the arch reads as built for speed.
       const foot = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.9, 4.2), frame);
       foot.position.set(side * half, 0.45, -1.1);
       node.add(foot);
+      frames.push(foot);
     }
     const glow = new THREE.MeshBasicMaterial({ color: gold.clone().multiplyScalar(1.7), toneMapped: false });
     glows.push(glow);
     const lintel = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 0.9, 0.7, 1.2), glow);
     lintel.position.set(0, top, 0);
     node.add(lintel);
+    const lights = [lintel];
     for (const side of [-1, 1]) {
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.22, top - 1, 0.5), glow);
       stripe.position.set(side * (half - 0.56), top / 2 + 0.3, 0.6);
       node.add(stripe);
+      lights.push(stripe);
     }
 
     const film = new THREE.ShaderMaterial({
@@ -133,7 +140,10 @@ export function buildGates(track: Track): GateVisual {
       const beam = new THREE.Mesh(new THREE.BoxGeometry(0.5, room, 0.5), glow);
       beam.position.set(0, top + 0.5 + room / 2, 0);
       node.add(beam);
+      lights.push(beam);
     }
+    // (Its own glow: lit and dimmed as the gate is.)
+    node.add(mergeStatic(lights, node, 'gate light'));
 
     const icon = new THREE.Mesh(new THREE.OctahedronGeometry(1.5, 0), glow);
     icon.position.set(0, top + 3.4, 0);
@@ -146,6 +156,7 @@ export function buildGates(track: Track): GateVisual {
     want.push(1);
     pulses.push(0);
   });
+  if (frames.length) group.add(mergeStatic(frames, group, 'gate frames'));
 
   return {
     group,
