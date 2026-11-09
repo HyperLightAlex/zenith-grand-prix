@@ -1328,10 +1328,16 @@ What is round the road says what the race has done and what is coming:
   scene and the ground drawn as the painted ground round it is, unlit; the
   car park is laid out by its painted square, so the cars stand in its bays.
 - **The crowd** (`render/crowd.ts`): cameras flashing all over the
-  grandstands and flags in the two teams' colours waved along the front
-  rows, going up (more flashes, flags waved harder) at the start, a lap
-  begun, the flag, and a knockout or ring-out in front of them, then dying
-  away over a few seconds.
+  grandstands (each a quick flash) and fans down the front rows holding up
+  the racing teams' banners on poles: each team's emblem on its colours,
+  banded in its glow (in a Sprint, an independent pilot's is the league's
+  badge banded in their own colour), the teams in turn along each stand.
+  The banners are lit as the stand's crowd is, their cloth rippling and
+  the poles swung from the fans' hands. It goes up (more flashes, banners
+  swung harder) at the start, a lap begun, the flag, and a knockout or
+  ring-out in front of them, then dies away over a few seconds. The
+  painted crowd on the rows is drawn a little softer as it gets small, so
+  a stand of tiny figures does not crawl as it goes by.
 
 ### The ceremony and the podium
 

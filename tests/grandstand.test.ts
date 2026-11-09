@@ -112,8 +112,14 @@ describe('the grandstands on the circuits', () => {
       }
       // No more than the crowd can take, and the crowd takes them.
       expect(stands.length).toBeLessThanOrEqual(8);
-      const crowd = new Crowd(vis.group, [0xff0000, 0x0000ff]);
+      const crowd = new Crowd(vis.group, [
+        { field: 0xff0000, band: 0xffffff, emblem: '' },
+        { field: 0x0000ff, band: 0xffffff, emblem: '' },
+      ]);
       expect(crowd.group.children.length, def.id).toBe(2);
+      // Both teams' banners are waved, on every stand.
+      const banners = crowd.group.getObjectByName('banners') as THREE.InstancedMesh;
+      expect([...new Set(banners.geometry.getAttribute('aBanner').array)].sort(), def.id).toEqual([0, 1]);
       crowd.dispose();
     }
   }, 300_000);

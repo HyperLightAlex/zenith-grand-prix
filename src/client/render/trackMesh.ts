@@ -419,6 +419,8 @@ const CROWD_ROW_START = 0.084;
 const CROWD_TILE = 12;
 /** How much of its own colour the crowd shows in the shade. */
 const CROWD_GLOW = 0.35;
+/** How much softer the crowd is drawn as it gets small: a bias to its texture's mip level. */
+const CROWD_SOFT = 0.6;
 
 const worldUp = new THREE.Vector3(0, 1, 0);
 const standAt = new THREE.Vector3();
@@ -1252,6 +1254,15 @@ export function buildTrackVisual(
       crowdPainted.offset.set(0, CROWD_ROW_START);
     } else crowdPainted.repeat.set(120 / (18 * kit.crowdAspect), 26 / 18);
     ownTextures(standMat, crowdPainted, crowdTex);
+    // Its people drawn a little softer off in the distance than the
+    // texture's own mips would (CROWD_SOFT): a stand of tiny figures, every
+    // one in its own colours, otherwise crawls with noise as it goes by.
+    standMat.onBeforeCompile = (sh) => {
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <map_fragment>', THREE.ShaderChunk.map_fragment.replace('texture2D( map, vMapUv )', `texture2D( map, vMapUv, ${CROWD_SOFT.toFixed(2)} )`))
+        .replace('#include <emissivemap_fragment>', THREE.ShaderChunk.emissivemap_fragment.replace('texture2D( emissiveMap, vEmissiveMapUv )', `texture2D( emissiveMap, vEmissiveMapUv, ${CROWD_SOFT.toFixed(2)} )`));
+    };
+    standMat.customProgramCacheKey = () => 'crowd-soft';
     swaps.push((on) => {
       standMat.map = on ? crowdPainted : crowdTex;
       if (model) standMat.emissiveMap = standMat.map;

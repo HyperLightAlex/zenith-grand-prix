@@ -51,7 +51,7 @@ This is version 0.5: nine circuits and three ways to play.
 - **The trackside**: each race opens with a flight over the circuit under
   its title card; the race leaves its marks (carve lines, burns, scorches,
   soot, a knockout's pieces), brake boards count down to the tight corners,
-  and the crowd's flashes and flags go up at the big moments in roofed,
+  and the crowd's flashes and the racing teams' banners go up at the big moments in roofed,
   terraced grandstands along the start straight, under hover screens
   showing them the race live. Out in the wild, the settlements that explain
   a circuit stand round it: a paddock, car park and fuel stop in the

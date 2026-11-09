@@ -15,7 +15,10 @@ interface Clocks {
 
 describe('the crowd', () => {
   it('waves no faster as a cheer dies away, however late in the race', () => {
-    const crowd = new Crowd(undefined, [0xff0000, 0x0000ff]);
+    const crowd = new Crowd(undefined, [
+      { field: 0xff0000, band: 0xffffff, emblem: '' },
+      { field: 0x0000ff, band: 0xffffff, emblem: '' },
+    ]);
     const c = crowd as unknown as Clocks;
     const dt = 1 / 60;
     // Five minutes in, then a big cheer, then watch it die away.
