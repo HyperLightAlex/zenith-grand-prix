@@ -40,7 +40,7 @@ for (const [tag, base] of Object.entries(builds)) {
         Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
         window.requestAnimationFrame=()=>0;
       });
-      const url=new URL(base);url.searchParams.set('mute','1');url.searchParams.set('seed','5');
+      const url=new URL(base);url.searchParams.set('mute','1');url.searchParams.set('instant','1');url.searchParams.set('seed','5');
       if(process.env.LOOK)url.searchParams.set('look',process.env.LOOK);
       await page.goto(url.href);
       await page.waitForFunction(() => window.game !== undefined, null, { timeout: 180000, polling:100 });

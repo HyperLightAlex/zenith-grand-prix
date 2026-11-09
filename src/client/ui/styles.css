@@ -1232,8 +1232,11 @@ html:is(.compact, .lay-cols, .lay-single) .item.cupcard { padding: 0.9em 0.8em; 
 .prev-levels > div { display: grid; grid-template-columns: 5em 1fr; align-items: baseline; gap: 0.6em; padding: 0.35em 0.7em; background: rgba(255, 255, 255, 0.06); font-size: 1.15em; }
 .prev-levels > div.on { background: var(--paper); color: var(--ink); }
 .prev-levels small { font-size: 0.9em; opacity: 0.85; }
-.board { display: block; width: 100%; height: auto; user-select: none; }
-.board.plain { padding: 0.4em; background: #103b3f; color: #e9fbff; font-weight: 800; font-size: 0.8em; text-align: center; }
+/* A circuit's board: every one the same shape (the paintings run from 2.3 to 3.3 wide to 1 tall),
+   each painting fitted inside and the rest filled with its own ground (set by the script). */
+.board { display: block; width: 100%; aspect-ratio: 2.6; overflow: hidden; background: #103b3f; user-select: none; }
+.board img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.board.plain { display: flex; align-items: center; justify-content: center; padding: 0.4em; color: #e9fbff; font-weight: 800; font-size: 0.8em; text-align: center; }
 
 /* The medal given at the difficulty picked in the menu: one disc, its name and the difficulty beside it. */
 .pips { display: flex; justify-content: center; gap: 0.8em; }
@@ -1418,6 +1421,22 @@ html.lay-single .menu .panes > :is(.col, .hangar-side, .panel, .controls, .resul
 html.lay-cols .menu .panes > .col, html.lay-single .menu .panes > .col { justify-content: flex-start; }
 html.lay-cols .menu .panes > .hangar-side, html.lay-single .menu .panes > .hangar-side { display: flex; flex-direction: column; gap: 0.9em; }
 html.lay-cols .menu .hangar-side > :is(.kit, .crew), html.lay-single .menu .hangar-side > :is(.kit, .crew) { position: static; width: auto; }
+/* The mech editor on a small screen: one narrow column on the left (the list, its sheet under it,
+   scrolling), so the mech stands clear of it on the right (game.ts garageShift) and its changes
+   can be seen. */
+html:is(.lay-cols, .lay-single):not(.portrait) .menu:is([data-screen='custom'], [data-screen='custom-parts'], [data-screen='custom-paint'], [data-screen='custom-livery']) .panes {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 1em;
+  right: auto;
+  width: min(42%, 30em);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+html:is(.lay-cols, .lay-single):not(.portrait) .menu:is([data-screen='custom'], [data-screen='custom-parts'], [data-screen='custom-paint'], [data-screen='custom-livery']) .panes > :is(.col, .hangar-side) { max-height: none; overflow: visible; flex: none; }
 /* In a pane the highlight does not step sideways (it would run past the pane's edge). */
 html.lay-cols .item.sel, html.lay-single .item.sel { transform: none; }
 
@@ -2203,6 +2222,28 @@ html.compact .podium .podium-btns { right: calc(1 * var(--ui-em) + var(--sr, 0px
 @keyframes tc-out { to { opacity: 0; transform: translateX(-2em); } }
 html.compact .titlecard .tc-band { min-width: 0; right: 0; font-size: 0.8em; }
 @media (prefers-reduced-motion: reduce) { .titlecard.in .tc-band, .titlecard.in .tc-band > *, .titlecard.out .tc-band { animation: none; } }
+
+/* While a race loads (ui/loadingCard.ts): the dark over the circuit as it comes in, and the title
+   card's band (where the flight's title card then stands) with how far it has got. */
+.loadcard { z-index: 6; pointer-events: auto; background: radial-gradient(120% 95% at 25% 75%, #16223d 0%, #0a0f1c 72%); transition: opacity 0.35s ease; }
+.loadcard.out { opacity: 0; pointer-events: none; }
+.loadcard .tc-band {
+  position: absolute;
+  left: 0;
+  bottom: calc(14% + var(--sb, 0px));
+  padding: 0.9em 3.2em 1.1em calc(2.4 * var(--ui-em, 1em) + var(--sl, 0px));
+  box-shadow: inset 0 0.25em 0 var(--charge);
+  display: grid;
+  gap: 0.25em;
+  min-width: 30em;
+}
+.loadcard .tc-event { font-size: 1.05em; font-weight: 700; color: var(--charge); }
+.loadcard .tc-name { font-size: 3.6em; font-weight: 800; line-height: 0.95; letter-spacing: 0.01em; }
+.loadcard .lc-what { margin-top: 0.5em; font-size: 1.1em; font-weight: 600; opacity: 0.75; }
+.loadcard .lc-bar { height: 0.32em; margin-top: 0.15em; background: rgba(243, 245, 250, 0.14); overflow: hidden; }
+.loadcard .lc-bar i { display: block; width: 0; height: 100%; background: var(--charge); transition: width 0.2s ease-out; }
+html.compact .loadcard .tc-band { min-width: 0; right: 0; font-size: 0.8em; }
+@media (prefers-reduced-motion: reduce) { .loadcard, .loadcard .lc-bar i { transition: none; } }
 
 /* The ceremony's podium (game/ceremony.ts): an event's medal on each card that has one, and the
    award as the winners strike their poses (your medal or the cup, or a match's MVP), high in the middle. */

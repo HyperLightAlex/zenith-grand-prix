@@ -135,6 +135,8 @@ import { PhotoPanel } from '../ui/photoPanel';
 import { Podium, type PodiumBill, type PodiumPilot, type PodiumStep } from '../render/podium/podium';
 import { PodiumPanel, type PodiumAward, type PodiumCard } from '../ui/podiumPanel';
 import { TitleCard } from '../ui/titleCard';
+import { LoadingCard } from '../ui/loadingCard';
+import { loadsDone, loadsMark, loadsSettled } from '../render/loads';
 import { CameraRig } from '../render/cameraRig';
 import { poseFor } from './podium';
 import { eventAward, eventCeremony, matchCeremony, type Ceremony } from './ceremony';
@@ -179,9 +181,12 @@ const GARAGE_SHIFT = 0.07;
 /**
  * Where the hangar's mech sits for the layout in use, as [right of centre,
  * above centre] in fractions of the screen: clear of the menu's panels.
+ * (`editing`: the mech editor, which on a small screen is one narrow column
+ * on the left: the mech in the middle of the rest, its changes in view.)
  */
-function garageShift(): [number, number] {
+function garageShift(editing = false): [number, number] {
   if (frame.portrait) return [0, 0.24];
+  if (editing && frame.layout !== 'roomy') return [0.22, 0];
   if (frame.layout === 'single') return [0.26, 0];
   if (frame.layout === 'cols') return [0.03, 0];
   return [GARAGE_SHIFT, 0];
@@ -196,6 +201,11 @@ export interface GameOptions {
   demo?: boolean;
   /** Skip ahead this many seconds before showing the race. */
   skip?: number;
+  /**
+   * A race starts there and then, with no loading card first (the tools that
+   * drive the game: a session to use as soon as a race is started).
+   */
+  instant?: boolean;
   seed?: number;
   team?: number;
   /** The rival team (a faction index); otherwise one is picked at random. */
@@ -400,6 +410,17 @@ export class Game {
   /** The next race goes straight to the grid (a restart). */
   private noFlyover = false;
   private readonly titleCard: TitleCard;
+  /** While a race loads, before its start (loadRace). */
+  private readonly loadingCard: LoadingCard;
+  /** The race loading now (its token), or null: the race waits on its grid, behind the loading card. */
+  private raceLoad: object | null = null;
+  /**
+   * While a race loads, the views to draw behind the card, one a frame (the
+   * flight's shots, the grid's), so what they show is on the GPU before the
+   * race does (nothing else is drawn while it loads); and who waits for them.
+   */
+  private warmViews: Array<number | 'grid'> = [];
+  private warmed: (() => void) | null = null;
   /** The victory pose you strike on the podium, chosen in the hangar. */
   victoryPose: VictoryId = ((v) => (isVictoryId(v) ? v : 'fist'))(readJson<unknown>('zgp.victory', 'fist'));
   /** The frames whose first-race tip has been shown, on this device. */
@@ -447,6 +468,7 @@ export class Game {
     this.photoPanel = new PhotoPanel(uiRoot, (a) => this.photoAction(a));
     this.podiumPanel = new PodiumPanel(uiRoot, { go: () => this.leavePodium(), photo: () => this.openPhoto() });
     this.titleCard = new TitleCard(uiRoot);
+    this.loadingCard = new LoadingCard(uiRoot);
     this.renderer.scene.add(this.podium.root);
     this.podium.preload();
     // Each takes their place with a sting; the winner's sets the confetti off.
@@ -796,6 +818,13 @@ export class Game {
 
   /** Put a session on screen: its view, effects, the scenery back. */
   private attach(session: LocalSession | NetSession | ReplaySession, previewOnly: boolean): void {
+    // (A race loading is gone with its session.)
+    if (this.raceLoad) {
+      this.raceLoad = null;
+      this.loadingCard.drop();
+    }
+    this.warmViews = [];
+    this.warmed = null;
     this.view?.dispose();
     this.podium.hide();
     this.podiumPanel.close();
@@ -813,7 +842,7 @@ export class Game {
     // The mechs (and anything else the view made) take the cel shading too.
     celify(this.renderer.scene);
     // Their shaders compiling in the background before the first frame needs them.
-    this.renderer.precompile();
+    void this.renderer.precompile();
     this.view.onImpact = (strength) => {
       // Only the race you are flying shakes the pad: not the race behind the
       // menus, nor yours run on by the computer behind the results.
@@ -1091,7 +1120,7 @@ export class Game {
     this.view.solo = true;
     this.view.cam.orbitFrame = this.hangarFrame;
     // The hangar's shaders too, now it is on show.
-    this.renderer.precompile();
+    void this.renderer.precompile();
     this.renderer.reviewProbe?.recordPreview(performance.now() - started);
   }
 
@@ -1350,6 +1379,24 @@ export class Game {
     this.state = 'race';
     this.menus.show(null);
     this.input.swallowHeld();
+    if (this.opts.instant || this.opts.skip) return this.buildRound(setup);
+    // The loading card up first, and the circuit built behind it once it is
+    // on screen (building one takes a moment, which the screen would
+    // otherwise sit through on the menu just left). The race waits meanwhile.
+    const token = {};
+    this.raceLoad = token;
+    this.hud.root.hidden = true;
+    this.loadingCard.show({ event: this.matchLabel() || (setup.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : 'Free Play'), circuit: trackById(setup.track ?? this.trackId)?.name ?? '' });
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (this.raceLoad === token && this.setup === setup) this.buildRound(setup);
+      }),
+    );
+  }
+
+  /** The round's race built and begun (from startRound, behind the loading card unless instant). */
+  private buildRound(setup: RoundSetup): void {
+    if (!this.match) return;
     // The teams swap sides of the grid from one round to the next.
     const round = this.match.rounds.length;
     this.setSession(setup, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
@@ -1384,12 +1431,63 @@ export class Game {
     this.music('race', this.session.track.def.theme ?? 'meridian');
     this.flyover = null;
     this.titleCard.hide();
-    // Offline, from the grid: first the flight over the circuit, its name on
-    // a title card. (Not the tutorial, which gets on with it; nor online,
-    // where the race does not wait.)
+    // Offline, from the grid: loaded first, behind the loading card, then the
+    // flight over the circuit, its name on a title card. (Not the tutorial's
+    // flight, which gets on with it; nor online, where the race does not wait.)
     const race = this.session.race;
-    if (this.session instanceof LocalSession && this.mode !== 'tutorial' && race.phase === PHASE.COUNTDOWN && race.tick === 0 && !this.opts.skip && !this.noFlyover) this.startFlyover();
+    const fresh = this.session instanceof LocalSession && race.phase === PHASE.COUNTDOWN && race.tick === 0 && !this.opts.skip;
+    const fly = fresh && this.mode !== 'tutorial' && !this.noFlyover;
     this.noFlyover = false;
+    // (The tools' races: no loading, the flight at once.)
+    if (fresh && this.opts.instant) {
+      if (fly) this.startFlyover();
+    } else if (fresh) this.loadRace(fly);
+  }
+
+  /**
+   * Hold the race on its grid, behind the loading card, until its circuit is
+   * all in (every model and picture its building asked for: Titan's Rest's
+   * titan, the painted textures) and ready to draw (its shaders compiled,
+   * its textures on the GPU); then the flight over it (`fly`), or the race.
+   * The scene is drawn behind the card meanwhile, which readies what is in
+   * view of the grid as well.
+   */
+  private loadRace(fly: boolean): void {
+    const token = {};
+    this.raceLoad = token;
+    this.hud.root.hidden = true;
+    const race = this.session.race;
+    this.loadingCard.show({ event: this.matchLabel() || (race.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : 'Free Play'), circuit: this.session.track.def.name });
+    const from = loadsMark();
+    const ticker = window.setInterval(() => {
+      if (this.raceLoad === token) this.loadingCard.progress(0.4 * loadsDone(from));
+    }, 100);
+    void (async () => {
+      try {
+        await loadsSettled();
+        clearInterval(ticker);
+        if (this.raceLoad !== token) return;
+        this.loadingCard.progress(0.4, 'Getting it ready to draw');
+        await this.renderer.prepare((f) => {
+          if (this.raceLoad === token) this.loadingCard.progress(0.4 + 0.55 * f);
+        });
+        if (this.raceLoad !== token) return;
+        // The flight's shots and the grid drawn once each, behind the card.
+        this.warmViews = fly ? [0, 2.7, 2.8, CameraRig.FLYOVER - 0.1, 'grid'] : ['grid'];
+        await new Promise<void>((res) => (this.warmed = res));
+        this.loadingCard.progress(1);
+      } catch (err) {
+        console.warn('race loading:', err);
+      } finally {
+        clearInterval(ticker);
+      }
+      if (this.raceLoad !== token) return;
+      await this.loadingCard.hide();
+      if (this.raceLoad !== token) return;
+      this.raceLoad = null;
+      if (fly) this.startFlyover();
+      else this.hud.root.hidden = false;
+    })();
   }
 
   private startFlyover(): void {
@@ -2926,7 +3024,7 @@ export class Game {
     if (this.state !== 'paused') this.rotatePaused = false;
     this.rotateEl.hidden = !(upright && this.rotatePaused);
     // The controls.
-    const racing = this.state === 'race' && !!me && !upright && !this.cardHeld;
+    const racing = this.state === 'race' && !!me && !upright && !this.cardHeld && !this.raceLoad;
     this.touchPad.show(touch && racing);
     if (touch && racing && me) {
       const battle = me.mode === MODE.BATTLE && me.target >= 0 && !me.retired;
@@ -2956,7 +3054,8 @@ export class Game {
     if (Math.abs(this.turnRate) > 1e-3 || Math.abs(this.elevationRate) > 1e-3) this.view.cam.turn(this.turnRate * dt, this.elevationRate * dt);
     // The hangar's mech, clear of the panels for the layout in use.
     if (this.state === 'garage' && this.view.cam.mode === 'orbit') {
-      [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift();
+      const under = this.menus.under(OVER_EDITOR);
+      [this.view.cam.shiftX, this.view.cam.shiftY] = garageShift(under !== null && CUSTOM_SCREENS.has(under));
       this.view.cam.orbitFov = frame.portrait ? 72 : 50;
     } else this.view.cam.orbitFov = 50;
   }
@@ -3125,6 +3224,11 @@ export class Game {
         simDt = dt;
         break;
       case 'race': {
+        if (this.raceLoad) {
+          // Loading: the race waits on its grid, behind the card.
+          simDt = 0;
+          break;
+        }
         if (this.flyover) {
           // The flight over the circuit: the race waits on the grid.
           this.flyover.t += dt;
@@ -3229,8 +3333,23 @@ export class Game {
     // A painted still holds everything, the camera and the sparks included.
     const viewDt = this.renderer.stillShowing ? 0 : simDt * (this.state === 'race' ? this.session.timeScale : 1);
     const watching = this.state === 'replay';
+    // A race loading: nothing drawn behind the card but the views it asks for, one a frame.
+    let warmDraw = false;
+    if (this.raceLoad && this.warmViews.length) {
+      const v = this.warmViews.shift()!;
+      if (v === 'grid') this.view.cam.mode = 'intro';
+      else {
+        this.view.cam.mode = 'flyover';
+        this.view.cam.flyT = v;
+      }
+      warmDraw = true;
+    } else if (this.warmed && !this.warmViews.length) {
+      const done = this.warmed;
+      this.warmed = null;
+      done();
+    }
     this.view.update(viewDt, flyingNow ? this.input.camX : 0, flyingNow ? this.input.camY : 0, flyingNow && this.input.lookBack);
-    if ((this.state === 'race' || watching || (this.state === 'paused' && online)) && drawDt > 0 && !this.photo.active) this.hud.update(this.cardHeld || (watching && simDt === 0) ? 0 : drawDt, cur, this.view.plates, this.view.focusId);
+    if ((this.state === 'race' || watching || (this.state === 'paused' && online)) && drawDt > 0 && !this.photo.active && !this.raceLoad) this.hud.update(this.cardHeld || (watching && simDt === 0) ? 0 : drawDt, cur, this.view.plates, this.view.focusId);
     // The scenery's own motion (water, lights) holds for a painted still too.
     if (!this.renderer.stillShowing) this.worldTime += dt;
     this.trackVis.update(this.worldTime);
@@ -3275,7 +3394,7 @@ export class Game {
     sc.finished = (!!own && own.finished) || cur.phase === PHASE.FINISHED;
     this.audio.update(dt, sc);
 
-    if (drawDt > 0 && !this.titleCovered()) {
+    if (drawDt > 0 && !this.titleCovered() && (!this.raceLoad || warmDraw)) {
       this.renderer.reviewProbe?.setContext(`${this.state} · tick ${cur.tick} · lap ${f.lap}`, this.view.reviewDetailLevels());
       // A photo is drawn larger than the screen shows (its long side 2560 px, as far as 3x), then saved.
       const shoot = this.captureNext;

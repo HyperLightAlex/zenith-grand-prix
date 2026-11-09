@@ -449,7 +449,10 @@ loops to the finish. The Crucible's, Neon Fire (D minor, about 193
 BPM), loops 50 bars (62 s) from after its first chorus through its second;
 Frostline's, Aurora Dash (C# minor, 150 BPM), 45 bars (72 s). All
 the circuits but Abyss Line and Monsoon Ruins have one; only the circuit
-coming up has its song decoded.
+coming up has its song decoded, and none once the menus' title theme is
+back (at the title or the Play menu); the results' two songs are decoded
+as a race ends and let go of as the next starts (decoded, a race's song is
+130 to 300 MB, the results' 74 MB: on a phone, most of what the page holds).
 While a song plays the stingers can take keys of its own (Helios's E minor,
 Canyon's G minor rising to A minor, the Crucible's D minor ending in D
 major, Frostline's C# minor ending in C# major, Titan's Rest's and Zenith
@@ -1194,7 +1197,21 @@ the record, the format and the timing are already there.
 
 ### Before the race
 
-Offline, a race opens with a **flight over the circuit**, the race held on
+Offline, a race first **loads** behind a card (`ui/loadingCard.ts`): the
+event and the circuit's name in the title card's band, and a bar for how
+far it has got. It comes up as Start is pressed, the circuit is built
+behind it, and the race waits on its grid until the circuit is all in
+(every model and picture its building asked for: Titan's Rest's titan,
+the painted textures; `render/loads.ts` counts them) and ready to draw:
+each shader compiled (a few a frame, so the card keeps moving), each
+texture sent to the GPU, and the flight's shots and the grid drawn once
+behind the card. So the race opens on a whole circuit, not one filling in
+during the flight over it, and the flight does not stall on a shader
+compiling as each new thing comes into view. A circuit already loaded
+passes in a moment (the card stays up long enough to read). The tools that
+drive the game (`?instant`, `?perf`, `?demo`) start their races at once.
+
+Then a race opens with a **flight over the circuit**, the race held on
 the grid: high over the start straight looking down it, then a cut to low
 and fast up the road behind the grid, the field ahead (5.4 seconds, the
 camera's `flyover`), under the circuit's **title card**: what is being raced
@@ -1265,7 +1282,9 @@ What is round the road says what the race has done and what is coming:
   and the racing: on the way down the straight they sit high at the top of
   the picture. The feed is the scene drawn again from its own camera into
   a 384 by 216 picture, 6, 10 or 15 times a second by the video quality,
-  and only while a screen is in view; out on the lap it costs nothing.
+  and only while a screen is in view and within 500 m (some 4 degrees
+  across: further off it keeps its last picture, each drawing of the feed
+  being a frame half as long again); out on the lap it costs nothing.
 - **The outposts** (`render/outposts/outposts.ts`, built in Blender by
   `art/blender/outposts/build_outposts.py`): what explains a circuit out in
   the wild, who built it and how everyone gets there. Corkscrew Canyon's

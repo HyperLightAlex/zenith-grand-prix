@@ -168,15 +168,46 @@ export function awardLines(ev: GpEvent, place: number, medal: string | null): HT
   return [badge, h('h1', headline), h('p', line)];
 }
 
-/** A circuit's board (its name and emblem, painted), for the cups and the previews. */
+/** Each board's own ground colour (its corner's), once read: the frame round it is filled with it. */
+const boardGround = new Map<string, string>();
+
+/**
+ * A circuit's board (its name and emblem, painted), for the cups and the
+ * previews: every one the same shape (BOARD_ASPECT in the styles), the
+ * painting fitted inside it and the rest filled with its own ground, so a
+ * list of them lines up whatever each painting's proportions.
+ */
 function board(id: string): HTMLElement {
   const own = paintedTrack.circuits[id];
-  if (!own) return h('div.board.plain', circuitName(id));
-  const img = h<'img'>('img.board');
+  if (!own) return h('div.board.plain', h('span', circuitName(id)));
+  const img = h<'img'>('img');
   img.src = own.url;
   img.alt = circuitName(id);
   img.draggable = false;
-  return img;
+  const frame = h('div.board', img);
+  const known = boardGround.get(id);
+  if (known) frame.style.background = known;
+  else
+    img.addEventListener(
+      'load',
+      () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = c.height = 1;
+          const g = c.getContext('2d', { willReadFrequently: true });
+          if (!g) return;
+          g.drawImage(img, 3, 3, 1, 1, 0, 0, 1, 1);
+          const [r, gg, b] = g.getImageData(0, 0, 1, 1).data;
+          const css = `rgb(${r}, ${gg}, ${b})`;
+          boardGround.set(id, css);
+          frame.style.background = css;
+        } catch {
+          // (The default ground, then.)
+        }
+      },
+      { once: true },
+    );
+  return frame;
 }
 
 /** The medal an event has given at a difficulty (the one picked in the menu): one disc, empty for none yet. */

@@ -17,7 +17,7 @@ const problems = [];
 page.on('pageerror', (e) => problems.push('pageerror ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error') problems.push('console ' + m.text().slice(0, 200)); });
 const check = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (!ok) problems.push(what); };
-await page.goto(base + '?mute=1');
+await page.goto(base + '?mute=1&instant=1');
 await page.waitForFunction(() => window.game !== undefined);
 await page.evaluate(() => { const g = window.game; g.menus.reset('modes', undefined, ['title']); });
 await page.locator('.menu .item', { hasText: 'Settings' }).click();
