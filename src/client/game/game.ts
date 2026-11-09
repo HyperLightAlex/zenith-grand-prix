@@ -990,6 +990,9 @@ export class Game {
   private screenChanged(id: ScreenId | null): void {
     // Off the results (or the ceremony) to anywhere but a dialog over them: the menu music again.
     if (this.musicNow === 'results' && id !== null && !RESULTS_MUSIC_SCREENS.has(id)) this.music('menu');
+    // At the title or the Play menu (never shown in a race: it is over), between
+    // visits: the music of races gone by let go of (decoded, a race's song is 130 to 300 MB).
+    if (id === 'title' || id === 'modes') this.audio.releaseRaceMusic?.();
     if (this.state === 'race' || this.state === 'paused' || this.state === 'results') {
       if (id === null || id === 'pause' || id === 'results' || id === 'controls' || id === 'settings' || id === 'dialog' || id === 'primer') return;
     }

@@ -113,6 +113,12 @@ export interface AudioEngine {
    */
   prepareMusic?(style: string): void;
   /**
+   * Back at the title or the Play menu, between visits: let go of any race's
+   * music held decoded (and the results'), the most of what the page holds.
+   * Optional, as prepareMusic.
+   */
+  releaseRaceMusic?(): void;
+  /**
    * Semitones to move each race stinger by, when the music playing has keys
    * of its own for them (a recorded song); null to use the circuit's.
    */

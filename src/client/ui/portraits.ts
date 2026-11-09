@@ -89,9 +89,10 @@ export function repaint(px: Uint8ClampedArray, map: Uint8Array | Uint8ClampedArr
 
 // ---- the pictures, loaded once --------------------------------------------------
 
+/** A pilot's pictures, decoded: read for their pixels when a portrait is made (not kept: some 20 MB for the cast). */
 interface Source {
-  face: ImageData;
-  map: Uint8Array;
+  face: HTMLImageElement;
+  map: HTMLImageElement;
 }
 let sources: Source[] | null = null;
 let grounds: HTMLImageElement[] = [];
@@ -106,6 +107,9 @@ const image = (src: string): Promise<HTMLImageElement> =>
     img.src = src;
   });
 
+/** The canvas the pixels are read through (one, kept). */
+let reader: CanvasRenderingContext2D | null = null;
+
 function canvas(size: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement('canvas');
   c.width = c.height = size;
@@ -115,9 +119,10 @@ function canvas(size: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
 }
 
 function pixels(img: HTMLImageElement): ImageData {
-  const [, g] = canvas(SRC);
-  g.drawImage(img, 0, 0, SRC, SRC);
-  return g.getImageData(0, 0, SRC, SRC);
+  reader ??= canvas(SRC)[1];
+  reader.clearRect(0, 0, SRC, SRC);
+  reader.drawImage(img, 0, 0, SRC, SRC);
+  return reader.getImageData(0, 0, SRC, SRC);
 }
 
 /**
@@ -132,12 +137,7 @@ export function preparePortraits(): Promise<void> {
         Promise.all(SUITS.cast.map((n) => image(url(MAPS, `suit-${n}.png`)))),
         Promise.all([...TEAM_GROUNDS, 'league'].map((n) => image(url(GROUNDS, `ground-${n}.webp`)))),
       ]);
-      sources = faces.map((face, i) => {
-        const m = pixels(maps[i]).data;
-        const map = new Uint8Array(SRC * SRC);
-        for (let p = 0; p < map.length; p++) map[p] = m[p * 4];
-        return { face: pixels(face), map };
-      });
+      sources = faces.map((face, i) => ({ face, map: maps[i] }));
       grounds = gs;
     } catch (error) {
       console.warn('Portraits stay as painted:', error);
@@ -165,8 +165,11 @@ export function teamFace(portrait: number, faction: number, colour: number): str
   let done = made.get(key);
   if (done) return done;
   const src = sources[portrait];
-  const face = new ImageData(new Uint8ClampedArray(src.face.data), SRC, SRC);
-  repaint(face.data, src.map, suitColours(team, colour));
+  const face = pixels(src.face);
+  const m = pixels(src.map).data;
+  const map = new Uint8Array(SRC * SRC);
+  for (let p = 0; p < map.length; p++) map[p] = m[p * 4];
+  repaint(face.data, map, suitColours(team, colour));
   const [fc, fg] = canvas(SRC);
   fg.putImageData(face, 0, 0);
   const [c, g] = canvas(SIZE);
