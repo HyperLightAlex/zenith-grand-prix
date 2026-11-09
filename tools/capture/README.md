@@ -26,6 +26,7 @@ pip install pillow                  # for the sheets
 | `scan.mjs <seed> <out.json> [team] [rival] [track]` | A whole race's events and mech states, for `fights.py` |
 | `fights.py <scans...>` | Finds the fights in scans, scored for how they would read on screen |
 | `sprite-probe.mjs <seed> <track> <from> <to> [kind]` | Prints how a pointing effect is turned, frame by frame (finds flipping) |
+| `loading-shots.json`, `loading-shots.py <dir>` | The loading card's pictures of each circuit: capture the shots file, then this makes `src/client/ui/art/circuits/<circuit>-<n>.webp` from the frames |
 
 Settings: `BASE=http://host:port/` for another server, `AUTO=MF` (or `DF`)
 to follow that role's mech with the game camera, `QUERY='&look=plain'` (or

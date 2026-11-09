@@ -39,6 +39,7 @@ import {
   type SeatConfig,
   type SimEvent,
 } from '../../sim/index';
+import type { Track } from '../../sim/track';
 import {
   CUPS,
   GP_SKILL,
@@ -135,7 +136,8 @@ import { PhotoPanel } from '../ui/photoPanel';
 import { Podium, type PodiumBill, type PodiumPilot, type PodiumStep } from '../render/podium/podium';
 import { PodiumPanel, type PodiumAward, type PodiumCard } from '../ui/podiumPanel';
 import { TitleCard } from '../ui/titleCard';
-import { LoadingCard } from '../ui/loadingCard';
+import { LoadingCard, preloadCircuitShots } from '../ui/loadingCard';
+import { tipsFor } from '../ui/loadingTips';
 import { loadsDone, loadsMark, loadsSettled } from '../render/loads';
 import { CameraRig } from '../render/cameraRig';
 import { poseFor } from './podium';
@@ -286,6 +288,31 @@ interface RoundSetup {
   lesson?: boolean;
   /** A Sprint Grand Prix's race: each seat's skill (yours first), its grid (seats from pole) and the Showdown's marked rival (a seat). */
   gp?: { skills: number[]; grid: number[]; rival?: number };
+}
+
+/**
+ * A circuit's plan for the loading card: x and z, 0 to 1 across (the
+ * longer side), the shorter centred, from the line round as it is raced.
+ */
+function circuitPlan(t: Track, n = 240): Float32Array {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (let i = 0; i < t.n; i++) {
+    minX = Math.min(minX, t.px[i]);
+    maxX = Math.max(maxX, t.px[i]);
+    minZ = Math.min(minZ, t.pz[i]);
+    maxZ = Math.max(maxZ, t.pz[i]);
+  }
+  const span = Math.max(maxX - minX, maxZ - minZ) || 1;
+  const out = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    const j = Math.floor((i / n) * t.n);
+    out[i * 2] = (t.px[j] - (minX + maxX) / 2) / span + 0.5;
+    out[i * 2 + 1] = (t.pz[j] - (minZ + maxZ) / 2) / span + 0.5;
+  }
+  return out;
 }
 
 /** The most a race waits behind its loading card, ms (each step's own limit: LOAD_STEP). */
@@ -443,6 +470,8 @@ export class Game {
    */
   private warmViews: Array<number | 'grid'> = [];
   private warmed: (() => void) | null = null;
+  /** A round's race being built behind its loading card (the card is kept as its session attaches). */
+  private buildingRound = false;
   /** The victory pose you strike on the podium, chosen in the hangar. */
   victoryPose: VictoryId = ((v) => (isVictoryId(v) ? v : 'fist'))(readJson<unknown>('zgp.victory', 'fist'));
   /** The frames whose first-race tip has been shown, on this device. */
@@ -840,10 +869,10 @@ export class Game {
 
   /** Put a session on screen: its view, effects, the scenery back. */
   private attach(session: LocalSession | NetSession | ReplaySession, previewOnly: boolean): void {
-    // (A race loading is gone with its session.)
+    // (A race loading is gone with its session; its card stays for the race built in its place.)
     if (this.raceLoad) {
       this.raceLoad = null;
-      this.loadingCard.drop();
+      if (!this.buildingRound) this.loadingCard.drop();
     }
     this.warmViews = [];
     this.warmed = null;
@@ -960,6 +989,8 @@ export class Game {
   circuitAhead(id: string): void {
     const def = trackById(id);
     if (def) this.audio.prepareMusic?.(def.theme ?? 'meridian');
+    // (And the loading card's pictures of it.)
+    if (def) preloadCircuitShots(def.id);
   }
 
   showTitle(): void {
@@ -1417,7 +1448,9 @@ export class Game {
     // hangar's or the title's, and its factions say nothing of this race.
     // The match's own line replaces it once the race is built: loadRace.)
     const event = setup.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : this.mode === 'gp' ? 'Grand Prix' : 'Free Play';
-    this.loadingCard.show({ event, circuit: trackById(setup.track ?? this.trackId)?.name ?? '' });
+    const def = trackById(setup.track ?? this.trackId);
+    const track = def?.id ?? '';
+    this.loadingCard.show({ event, circuit: def?.name ?? '', track, device: this.input.device, tips: tipsFor({ sprint: !!setup.sprint, role: setup.role, track, device: this.input.device }) });
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         if (this.raceLoad !== token || this.setup !== setup) return;
@@ -1439,7 +1472,12 @@ export class Game {
     if (!this.match) return;
     // The teams swap sides of the grid from one round to the next.
     const round = this.match.rounds.length;
-    this.setSession(setup, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
+    this.buildingRound = true;
+    try {
+      this.setSession(setup, this.opts.seed !== undefined ? this.opts.seed + round : (Math.random() * 1e9) | 0, round % 2 === 1);
+    } finally {
+      this.buildingRound = false;
+    }
     const local = this.session as LocalSession;
     if (this.opts.demo) local.race.mechs[local.localId].human = false;
     // The tutorial starts over with the race (a restart teaches it again).
@@ -1497,8 +1535,19 @@ export class Game {
     this.raceLoad = token;
     this.hud.root.hidden = true;
     const race = this.session.race;
-    const circuit = this.session.track.def.name;
-    this.loadingCard.show({ event: this.matchLabel() || (race.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : 'Free Play'), circuit });
+    const track = this.session.track;
+    const circuit = track.def.name;
+    const me = race.mechs[this.session.localId];
+    const device = this.input.device;
+    // (Up already, from startRound: only its line changes, to the match's.)
+    this.loadingCard.show({
+      event: this.matchLabel() || (race.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : 'Free Play'),
+      circuit,
+      track: track.def.id,
+      device,
+      tips: tipsFor({ sprint: race.sprint, role: me?.role ?? ROLE.FW, track: track.def.id, device }),
+    });
+    this.loadingCard.outline(circuitPlan(track), `${race.laps} laps · ${(track.length / 1000).toFixed(1)} km`);
     const from = loadsMark();
     const ticker = window.setInterval(() => {
       if (this.raceLoad === token) this.loadingCard.progress(0.4 * loadsDone(from));

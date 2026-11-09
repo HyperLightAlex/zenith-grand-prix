@@ -1198,8 +1198,18 @@ the record, the format and the timing are already there.
 ### Before the race
 
 Offline, a race first **loads** behind a card (`ui/loadingCard.ts`): the
-event and the circuit's name in the title card's band, and a bar for how
-far it has got. It comes up as Start is pressed, the circuit is built
+event and the circuit's name in the title card's band, over pictures of
+the circuit taken in the game (three a circuit, `ui/art/circuits`, from
+`tools/capture/loading-shots.json`; crossfading every 6.5 s with a slow
+drift, still under reduced motion; the circuit's first two fetched ahead
+when it is named, with its song); top right, the circuit's plan, drawn in
+from the start line as the loading gets on (it is the progress: a dot at
+its head), with its laps and length; and bottom right a **tip**, a new one
+every 7 s (`ui/loadingTips.ts`: about forty, true to these rules, each for
+the races it fits: a team race or a Sprint, your frame, the circuit;
+the controls named as your device has them; half the time the first is
+about your frame or the circuit, and the ones shown lately go to the back).
+It comes up as Start is pressed, the circuit is built
 behind it, and the race waits on its grid until the circuit is all in
 (every model and picture its building asked for: Titan's Rest's titan,
 the painted textures; `render/loads.ts` counts them) and ready to draw:
@@ -1208,7 +1218,7 @@ texture sent to the GPU, and the flight's shots and the grid drawn once
 behind the card. So the race opens on a whole circuit, not one filling in
 during the flight over it, and the flight does not stall on a shader
 compiling as each new thing comes into view. A circuit already loaded
-passes in a moment (the card stays up long enough to read). The tools that
+passes in a moment (the card stays up 1.2 s, so it does not just flash). The tools that
 drive the game (`?instant`, `?perf`, `?demo`) start their races at once.
 
 Then a race opens with a **flight over the circuit**, the race held on
