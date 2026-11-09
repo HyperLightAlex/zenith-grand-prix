@@ -48,6 +48,7 @@ import {
   LOCK_BREAK_TICKS,
   MAX_HEADING,
   MAX_RACE_TICKS,
+  raceTickLimit,
   MODE,
   OVERCAP_DRAG,
   OVERDRIVE_ACCEL,
@@ -1572,6 +1573,6 @@ export function stepRace(race: RaceState, track: Track, inputs: ReadonlyArray<Me
     const flagAt = home ? (home.finished ? Math.ceil(home.finishTime / DT) + LESSON_GRACE_TICKS : -1) : race.firstFinishTick >= 0 ? race.firstFinishTick + FINISH_GRACE_TICKS : -1;
     if (flagAt >= 0 && tick >= flagAt) finalize(race);
     else if (race.endTick >= 0 && tick >= race.endTick) finalize(race);
-    else if (tick >= MAX_RACE_TICKS) finalize(race);
+    else if (tick >= (lesson ? MAX_RACE_TICKS : raceTickLimit(race.laps, track.length))) finalize(race);
   }
 }

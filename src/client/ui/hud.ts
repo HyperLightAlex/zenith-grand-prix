@@ -449,6 +449,12 @@ export class Hud {
     this.frame = 0;
   }
 
+  /** Who is away (online, idle mid-race: the computer flies them): marked on the running order and over their name tag. */
+  setAway(ids: ReadonlySet<number>): void {
+    this.rows.forEach((r, id) => setClass(r.el, 'away', ids.has(id)));
+    this.plates.forEach((p, id) => setClass(p.el, 'away', ids.has(id)));
+  }
+
   /** The Showdown's marked rival (a mech): a badge over its plate, its line on the tower picked out. */
   markRival(id: number): void {
     const pl = this.plates[id];

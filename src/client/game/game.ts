@@ -1489,8 +1489,32 @@ export class Game {
     this.beginRace();
   }
 
+  /** The away seats as the HUD shows them, and whether you are away (an online race). */
+  private awayShown = '';
+  private awayMine = false;
+
+  /**
+   * Online: who is away (idle mid-race, flown by the computer) marked on
+   * the running order and the name tags; you told when you are, and when
+   * a touch of the controls has you back.
+   */
+  private syncAway(s: NetSession): void {
+    const key = [...s.away].sort((a, b) => a - b).join(',');
+    if (key !== this.awayShown) {
+      this.awayShown = key;
+      this.hud.setAway(s.away);
+    }
+    if (s.awayMode !== this.awayMine) {
+      this.awayMine = s.awayMode;
+      if (s.awayMode) this.hud.showNotice('You were idle, so your computer pilot is flying. Touch any control to take over.', false, 6);
+      else this.hud.showNotice('Back in control', false, 1.6);
+    }
+  }
+
   /** The HUD, camera and music for a race just put on screen. */
   private beginRace(): void {
+    this.awayShown = '';
+    this.awayMine = false;
     // The faction you race for (a team race, flown by you): a new mech of your own starts as its stock one.
     const me = this.session instanceof ReplaySession ? undefined : this.session.race.mechs[this.session.localId];
     const faction = me && me.human && this.mode !== 'tutorial' ? (this.raceFactions[me.team] ?? -1) : -1;
@@ -3375,6 +3399,7 @@ export class Game {
         if (tut && !online) this.session.timeScale *= tut.timeScale;
         const flying = me.human && !me.retired && !me.finished;
         this.session.update(dt, flying || me.retired ? this.input.state : null);
+        if (this.session instanceof NetSession) this.syncAway(this.session);
         for (const e of this.session.events) this.onEvent(e);
         tut?.update(race, this.session.events, dt);
         // Out of the race: the lock button changes whose camera you ride.

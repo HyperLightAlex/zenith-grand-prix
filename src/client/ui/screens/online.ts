@@ -317,6 +317,7 @@ export function registerOnline(m: Menus, g: Game): void {
 function statusOf(v: LobbyView, p: LobbyPlayer, sprint = false): string {
   if (!p.connected) return 'Reconnecting';
   if (p.nextRound) return sprint ? 'Next Sprint' : 'Next round';
+  if (v.phase === 'race' && p.away) return 'Away';
   if (v.phase === 'race' && p.autopilot) return 'Paused';
   if (v.phase === 'results' || v.phase === 'final') return v.continued.includes(p.pid) ? 'Continued' : '';
   if (v.phase === 'race') return 'Racing';

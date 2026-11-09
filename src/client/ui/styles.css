@@ -182,6 +182,8 @@ html.crt-on .crt-layer {
 .tower .row.t1 .flag { background: var(--tc, var(--team1)); }
 .tower .row .who { white-space: nowrap; overflow: hidden; }
 .tower .row .who small { font-size: 0.78em; opacity: 0.65; margin-left: 0.4em; font-weight: 500; }
+.tower .row.away { opacity: 0.6; }
+.tower .row.away .who small::after { content: ' Away'; font-weight: 700; opacity: 1; }
 .tower .row .hp { height: 0.36em; }
 .tower .row .gap { text-align: right; font-weight: 500; font-size: 0.92em; opacity: 0.9; font-variant-numeric: tabular-nums; }
 .tower .row.me { background: var(--paper); color: var(--ink); }
@@ -388,6 +390,8 @@ html.crt-on .crt-layer {
 
 .plate { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); text-align: center; font-size: 0.95em; white-space: nowrap; text-shadow: 0 0.08em 0.12em rgba(15, 21, 36, 0.9); will-change: transform; }
 .plate .tag { display: inline-block; padding: 0.08em 0.55em 0.1em; background: var(--tc, var(--team0)); color: #fff; clip-path: polygon(0.3em 0, 100% 0, calc(100% - 0.3em) 100%, 0 100%); }
+/* Away (online, idle mid-race: the computer flies them): said on the tag and the running order, the row dimmed. */
+.plate.away .tag::after { content: 'Away'; margin-left: 0.45em; padding: 0 0.3em; background: rgba(15, 21, 36, 0.75); font-size: 0.8em; font-weight: 700; }
 .plate.t1 .tag { background: var(--tc, var(--team1)); }
 .plate .bar { width: 4.6em; height: 0.3em; margin: 0.18em auto 0; }
 .plate[hidden] { display: none; }

@@ -156,7 +156,13 @@ coordinated team play online.
 | 3 | Speed | Free | Limiter off: each frame's own top speed |
 
 - The race stays open for 25 seconds after the winner finishes. Anyone still
-  running then is classified by distance and still scores.
+  running then is classified by distance and still scores. A race nobody
+  finishes (every pilot a person, all stopped) is flagged the same way at
+  about twice a winning time (`raceTickLimit`: the countdown, then twice the
+  laps at 120 u/s; 7 to 8 minutes over three laps, never more than the hard
+  stop of 10, which a tutorial race keeps). Online, a person who stops is
+  flown by their computer pilot after 20 seconds (see ONLINE.md), so one
+  idle player can neither hold a race up nor leave their team a mech short.
 - Past the line a mech, a person's included, is driven on by the computer
   round a cool-down lap at three-quarters of the limiter, as in a kart
   racer: it never stops dead on the road.

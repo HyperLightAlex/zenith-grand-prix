@@ -24,6 +24,12 @@ export const KEYFRAME_TICKS = 300;
 export const CHECKSUM_TICKS = 30;
 /** How long a dropped person's seat is kept for them (seconds). */
 export const RECONNECT_SECONDS = 60;
+/**
+ * Mid-race, a person whose controls have not changed for this long (seconds)
+ * is away: their seat's computer pilot flies until a control changes again,
+ * so a player who stops (or walks off) cannot hold up their team or a race.
+ */
+export const IDLE_SECONDS = 20;
 /** The countdown once everyone is ready (seconds). */
 export const READY_COUNTDOWN = 5;
 /** Between rounds: the next starts when everyone continues, or after this long (seconds). */
@@ -319,6 +325,8 @@ export interface LobbyPlayer {
   nextRound: boolean;
   /** In the pause menu: the seat's computer pilot is flying for them. */
   autopilot: boolean;
+  /** Away (idle mid-race, IDLE_SECONDS): the seat's computer pilot is flying until a control changes. */
+  away: boolean;
 }
 
 export interface SideView {
@@ -421,6 +429,8 @@ export interface TickMsg {
   ops?: Array<[number, number, number]>;
   /** [tick, raceChecksum] after that tick ran. */
   sum?: [number, number];
+  /** The seats whose people are away (IDLE_SECONDS), when that changes (and with each keyframe while any are). */
+  away?: number[];
 }
 
 export interface KeyMsg {
