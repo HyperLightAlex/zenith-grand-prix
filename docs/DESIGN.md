@@ -219,17 +219,19 @@ climbs, widening as it goes: `spiralRun` cuts one into several pieces that
 climb at one steady grade, so a stretch of it can have an open edge),
 barrels (a roll round an axis off the road) and twists (a pitch whose road
 rolls over as it goes, and can move out from the arc's centre: Zenith Ring's
-Hatch, from the inside of its band to the outside, and the top of its
-Möbius), each of which can set the road's width and banking, cut a gap,
+Hatch, from the inside of its band to the outside, and its Möbius, a band
+twice round the core with a half twist to each time round), each of which can set the road's width and banking, cut a gap,
 leave an edge open, split the road (its two routes drawn apart, or twisted
 round each other as a double helix: Abyss Line's Braid; or on a bend, so its
 inside route is the shorter way round and the tighter: Monsoon Ruins' Temple
 Halls) or hold mechs to it whatever their
 speed (the outside of Zenith Ring's band). Where a twist's road is rolled
-across its arc, the arc turns under a mech: the Möbius barrel rolls the
-whole way round, but a full turn to each third of the loop, so each roll
-turns the road about 25 degrees one way and back (one slow roll over the
-whole loop turned it nearly 80).
+across its arc, the arc turns under a mech, so the Möbius rolls slowly:
+half a turn each time round, eased in and out, inside the first time
+round, outside (upside down at its foot, the Earth overhead) as it comes
+round, inside again the second. (It was a single loop with a full roll to
+each third, which drivers found disjointed and disorienting; a single loop
+half twisted and this were raced side by side, and this was kept.)
 On a barrel or a twist the bend a mech steers by is the road's own turn
 within its surface, worked out from the built road (a barrel's plan has
 none, but its road swings out round its column or tube and back: the Sword
@@ -324,8 +326,11 @@ and the side of the road they favour; in 100 races about 63% of passes take
 the busier route.
 
 Charge strips are spread so that no stretch of a lap goes long without one:
-the longest gap is 16% of the lap on Meridian, 26% on Canyon and 19% on
-Helios. Helios had 39% (from T1's exit, up the climb, over the Drop and
+the longest gap is 16% of the lap on Meridian, 26% on Canyon, 19% on
+Helios and 19% on Zenith Ring. Zenith's went to 27% when the Möbius went
+twice round the core (a kilometre and a half with nothing on it); its
+foot, upside down, now has a strip on one side and a gate on the other,
+the gate moved from T3, where it stood 300 units after the Dock's. Helios had 39% (from T1's exit, up the climb, over the Drop and
 round to after the Loop) until playtesters said they ran out of Drive
 there; it now has strips up the long climb, down off the Drop and on
 closing A, nine in all (two of them on the two routes of Split Decision).

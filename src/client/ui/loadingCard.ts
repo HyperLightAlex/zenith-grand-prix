@@ -20,8 +20,7 @@ for (const path of Object.keys(SHOT_FILES).sort()) {
 
 /** A circuit's pictures (none: the card's dark ground alone). */
 export function circuitShots(track: string): readonly string[] {
-  // (A layout on trial, 'zenith-a', has its circuit's.)
-  return SHOTS.get(track) ?? SHOTS.get(track.split('-')[0]) ?? [];
+  return SHOTS.get(track) ?? [];
 }
 
 const fetched = new Set<string>();

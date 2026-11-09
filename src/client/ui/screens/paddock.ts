@@ -5,10 +5,7 @@
 // (hangar.ts), opened from here with Y. And Free Play's match setup (what
 // you play), which goes on to the Paddock.
 
-import { ABILITIES, ATTACKS, CLASSES, ROLE, ROLE_NAMES, TEST_TRACKS, TRACKS, type Role } from '../../../sim/index';
-
-/** Free Play's circuits: every one, and the layouts on trial after them. */
-const FREE_TRACKS = [...TRACKS, ...TEST_TRACKS];
+import { ABILITIES, ATTACKS, CLASSES, ROLE, ROLE_NAMES, TRACKS, type Role } from '../../../sim/index';
 import { PILOT_COLOURS, PILOT_COLOUR_NAMES } from '../../../net/protocol';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName, leagueLivery } from '../../render/palette';
@@ -238,7 +235,7 @@ export function registerPaddock(m: Menus, g: Game): void {
       const c = g.free;
       const col = h('div.col');
       const list = h('div.list');
-      const circuit = FREE_TRACKS.find((t) => t.id === c.track) ?? TRACKS[0];
+      const circuit = TRACKS.find((t) => t.id === c.track) ?? TRACKS[0];
       g.circuitAhead(circuit.id);
       const sprint = c.mode === 'sprint';
       const opt = sprint ? (SPRINT_OPTIONS[c.sprint] ?? SPRINT_OPTIONS[0]) : (MATCH_OPTIONS[c.match] ?? MATCH_OPTIONS[0]);
@@ -255,8 +252,8 @@ export function registerPaddock(m: Menus, g: Game): void {
         m.refresh();
       }, { key: 'mode' });
       m.choice(list, 'Circuit', circuit.name, (dir) => {
-        const i = Math.max(0, FREE_TRACKS.findIndex((t) => t.id === c.track));
-        c.track = FREE_TRACKS[(i + dir + FREE_TRACKS.length) % FREE_TRACKS.length].id;
+        const i = Math.max(0, TRACKS.findIndex((t) => t.id === c.track));
+        c.track = TRACKS[(i + dir + TRACKS.length) % TRACKS.length].id;
         save();
       }, { key: 'track' });
       if (!sprint) {

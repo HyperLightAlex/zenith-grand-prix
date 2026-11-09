@@ -9,21 +9,15 @@ import { MERIDIAN } from './meridian';
 import { MONSOON_RUINS } from './monsoon';
 import { ABYSS_LINE } from './abyss';
 import { TITANS_REST } from './titan';
-import { ZENITH_MOBIUS_LOOP, ZENITH_MOBIUS_RING, ZENITH_RING } from './zenith';
+import { ZENITH_RING } from './zenith';
 
 export type AnyTrackDef = TrackDef | CircuitDef;
 
 export const TRACKS: readonly AnyTrackDef[] = [MERIDIAN, CANYON, HELIOS, CRUCIBLE, FROSTLINE, TITANS_REST, ABYSS_LINE, MONSOON_RUINS, ZENITH_RING];
 
-/**
- * Layouts on trial: offered in Free Play only (not the cups, the records or
- * online), to drive before one replaces part of a circuit.
- */
-export const TEST_TRACKS: readonly AnyTrackDef[] = [ZENITH_MOBIUS_LOOP, ZENITH_MOBIUS_RING];
-
-/** The circuit with this id (a test layout's too), or Meridian. */
+/** The circuit with this id, or Meridian. */
 export function trackById(id: string | undefined | null): AnyTrackDef {
-  return TRACKS.find((t) => t.id === id) ?? TEST_TRACKS.find((t) => t.id === id) ?? MERIDIAN;
+  return TRACKS.find((t) => t.id === id) ?? MERIDIAN;
 }
 
 export { ABYSS_LINE, CANYON, CRUCIBLE, FROSTLINE, HELIOS, MERIDIAN, MONSOON_RUINS, TITANS_REST, ZENITH_RING };

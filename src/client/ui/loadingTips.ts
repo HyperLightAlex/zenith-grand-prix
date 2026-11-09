@@ -73,7 +73,7 @@ export const TIPS: readonly Tip[] = [
   { id: 'titan', text: 'The road climbs the fallen titan: up the Palm, along the Arm and over the Shoulder.', track: 'titan' },
   { id: 'abyss', text: 'The Trench Leap is open underneath. Hit the pad with your speed up and fly it.', track: 'abyss' },
   { id: 'monsoon', text: 'The Stairway’s hairpins are too tight to take flat. Push all the way into the carve so it bites.', track: 'monsoon' },
-  { id: 'zenith', text: 'The Möbius barrel rolls the road round. Hands off, you run wide: steer through it.', track: 'zenith' },
+  { id: 'zenith', text: 'At the foot of the Möbius you are upside down: a charge strip on one side, a gold gate on the other. Pick one.', track: 'zenith' },
 ];
 
 /** The control names a tip can ask for, on a device. */

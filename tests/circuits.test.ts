@@ -1196,28 +1196,55 @@ describe('Zenith Ring', () => {
     expect(round(c, axis, at(b)).along - round(c, axis, i0).along).toBeCloseTo(RING.across, 0);
   });
 
-  it('turns over round the core in the Möbius: up its inside, over the top on its outside, down its inside', () => {
-    const [a] = piece('the Möbius');
-    const [o0, o1] = piece('over the core');
+  it('goes twice round the core in the Möbius on one twisted band: inside, then outside at its foot upside down, then inside again', () => {
+    const [a, b] = piece('the Möbius');
     const f0 = frameAt(t, a, makeFrame());
     const fs = frameAt(t, a - 20, makeFrame());
     const i0 = at(a);
     const c: V = [f0.px + fs.ux * MOBIUS.radius, f0.py + fs.uy * MOBIUS.radius, f0.pz + fs.uz * MOBIUS.radius];
     const axis: V = [fs.rx, fs.ry, fs.rz];
-    const end = starts[def.pieces.findIndex((p) => p.name === 'over the core') + 2];
-    for (let s = a + 8; s < end - 8; s += 4) {
-      const { r } = round(c, axis, at(s));
+    // Round one centre the whole way, twice.
+    let turned = 0;
+    let last = round(c, axis, at(a + 4)).out;
+    for (let s = a + 8; s < b - 8; s += 4) {
+      const { r, out } = round(c, axis, at(s));
       expect(Math.abs(r - MOBIUS.radius)).toBeLessThan(1);
-      if (s > o0 && s < o1) expect(t.mag[at(s)]).toBe(1);
+      turned += Math.acos(Math.min(1, dot(out, last)));
+      last = out;
     }
-    // At the top, upright on the outside, over the core.
-    const top = at((o0 + o1) / 2);
-    expect(t.uy[top]).toBeGreaterThan(0.99);
-    expect(dot(up(top), round(c, axis, top).out)).toBeGreaterThan(0.99);
-    // Out where it went in, moved along the core, the right way up.
-    expect(t.uy[at(end)]).toBeGreaterThan(0.99);
-    expect(Math.abs(t.py[at(end)] - t.py[i0])).toBeLessThan(1);
-    expect(Math.abs(round(c, axis, at(end)).along - round(c, axis, i0).along)).toBeCloseTo(MOBIUS.across, 0);
+    expect(turned / (2 * Math.PI)).toBeGreaterThan(1.95);
+    // Early on, its up toward the core (the inside); at its foot, one time
+    // round, away from it (the outside), upside down, the Earth overhead,
+    // and held there; late on, toward it again.
+    const early = at(a + (b - a) * 0.06);
+    const foot = at((a + b) / 2);
+    const late = at(a + (b - a) * 0.94);
+    expect(-dot(up(early), round(c, axis, early).out)).toBeGreaterThan(0.9);
+    expect(dot(up(foot), round(c, axis, foot).out)).toBeGreaterThan(0.99);
+    expect(t.uy[foot]).toBeLessThan(-0.99);
+    expect(t.mag[foot]).toBe(1);
+    expect(-dot(up(late), round(c, axis, late).out)).toBeGreaterThan(0.9);
+    // Out upright, as high as it went in, moved along the core clear of where it went in.
+    expect(t.uy[at(b)]).toBeGreaterThan(0.99);
+    expect(Math.abs(t.py[at(b)] - t.py[i0])).toBeLessThan(1);
+    expect(Math.abs(round(c, axis, at(b)).along - round(c, axis, i0).along)).toBeCloseTo(MOBIUS.across, 0);
+  });
+
+  it('has a gate across from a charge strip at the Möbius\'s foot, so a long way round is never without either', () => {
+    const [a, b] = piece('the Möbius');
+    const mid = (a + b) / 2;
+    const gate = t.gates.find((g) => g.s > a && g.s < b)!;
+    const strip = t.strips.find((st) => st.s0 > a && st.s1 < b)!;
+    expect(Math.abs(gate.s - mid)).toBeLessThan(5);
+    expect(strip.s0).toBeLessThan(mid);
+    expect(strip.s1).toBeGreaterThan(mid);
+    expect(Math.sign(gate.d)).toBe(-Math.sign(strip.d));
+    // No stretch of the lap goes more than a fifth of it without a charge strip.
+    const st = [...t.strips].sort((p, q) => p.s0 - q.s0);
+    st.forEach((p, i) => {
+      const q = st[(i + 1) % st.length];
+      expect((((q.s0 - p.s1) % t.length) + t.length) % t.length, `after the strip at ${Math.round(p.s0)}`).toBeLessThan(t.length * 0.2);
+    });
   });
 
   it('splits through the Dock: over its back, open on the outside, with the pad; through it, walled, with the gate', () => {
