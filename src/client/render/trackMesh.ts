@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { alsoWears, ownTextures } from './owned';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeStatic } from './mergeStatic';
 import { frameAt, hwAt, makeFrame, wrapS, type Track } from '../../sim/track';
 import { GRID } from '../../sim/config';
 import { look } from './look';
@@ -418,6 +419,8 @@ const CROWD_ROW_START = 0.084;
 const CROWD_TILE = 12;
 /** How much of its own colour the crowd shows in the shade. */
 const CROWD_GLOW = 0.35;
+/** How much softer the crowd is drawn as it gets small: a bias to its texture's mip level. */
+const CROWD_SOFT = 0.6;
 
 const worldUp = new THREE.Vector3(0, 1, 0);
 const standAt = new THREE.Vector3();
@@ -1179,6 +1182,9 @@ export function buildTrackVisual(
       group.add(g);
       return g;
     };
+    // (Each board's pieces, merged once all are up: a few draw calls for them all, not four a board.)
+    const boardsPlain: THREE.Object3D[] = [];
+    const boardsPainted: THREE.Object3D[] = [];
     let k = 0;
     for (let s = 150; s < track.length - 100; s += 170) {
       const i = Math.floor(wrapS(track, s) / track.ds);
@@ -1190,9 +1196,9 @@ export function buildTrackVisual(
       const side = track.kappa[i] > 0.0004 ? -1 : track.kappa[i] < -0.0004 ? 1 : k % 2 === 0 ? 1 : -1;
       if (!plain(i) || !(side < 0 ? track.wallL[i] : track.wallR[i])) continue;
       if (rockBehind(i, side)) {
-        plainOnly.push(onWall(s, side, 30, mats[k % mats.length]));
+        boardsPlain.push(onWall(s, side, 30, mats[k % mats.length]));
         const sg = signs[k % signs.length];
-        paintedOnly.push(onWall(s, side, sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
+        boardsPainted.push(onWall(s, side, sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
         k++;
         continue;
       }
@@ -1216,10 +1222,16 @@ export function buildTrackVisual(
         group.add(g);
         return g;
       };
-      plainOnly.push(stand(30, mats[k % mats.length]));
+      boardsPlain.push(stand(30, mats[k % mats.length]));
       const sg = signs[k % signs.length];
-      paintedOnly.push(stand(sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
+      boardsPainted.push(stand(sg ? 9.4 * sg.aspect : 30, signMats[k % signs.length]));
       k++;
+    }
+    for (const [list, shown] of [[boardsPlain, plainOnly], [boardsPainted, paintedOnly]] as const) {
+      if (!list.length) continue;
+      const merged = mergeStatic(list, group, 'billboards');
+      group.add(merged);
+      shown.push(merged);
     }
 
     // Grandstands either side of the start: the Blender model's stand
@@ -1242,6 +1254,15 @@ export function buildTrackVisual(
       crowdPainted.offset.set(0, CROWD_ROW_START);
     } else crowdPainted.repeat.set(120 / (18 * kit.crowdAspect), 26 / 18);
     ownTextures(standMat, crowdPainted, crowdTex);
+    // Its people drawn a little softer off in the distance than the
+    // texture's own mips would (CROWD_SOFT): a stand of tiny figures, every
+    // one in its own colours, otherwise crawls with noise as it goes by.
+    standMat.onBeforeCompile = (sh) => {
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <map_fragment>', THREE.ShaderChunk.map_fragment.replace('texture2D( map, vMapUv )', `texture2D( map, vMapUv, ${CROWD_SOFT.toFixed(2)} )`))
+        .replace('#include <emissivemap_fragment>', THREE.ShaderChunk.emissivemap_fragment.replace('texture2D( emissiveMap, vEmissiveMapUv )', `texture2D( emissiveMap, vEmissiveMapUv, ${CROWD_SOFT.toFixed(2)} )`));
+    };
+    standMat.customProgramCacheKey = () => 'crowd-soft';
     swaps.push((on) => {
       standMat.map = on ? crowdPainted : crowdTex;
       if (model) standMat.emissiveMap = standMat.map;

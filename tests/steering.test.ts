@@ -54,7 +54,7 @@ const rolled = TRACKS.flatMap((def) => {
 describe('steering on rolled road', () => {
   it('there are barrels and twists to steer through', () => {
     expect(rolled.filter((r) => r.kind === 'barrel').map((r) => `${r.def.id} ${r.name}`)).toEqual(['titan the Sword', 'abyss the Twist']);
-    expect(rolled.filter((r) => r.kind === 'twist').length).toBeGreaterThanOrEqual(3);
+    expect(rolled.filter((r) => r.kind === 'twist').map((r) => `${r.def.id} ${r.name}`)).toEqual(['zenith the Hatch', 'zenith the Möbius']);
   });
 
   for (const r of rolled) {

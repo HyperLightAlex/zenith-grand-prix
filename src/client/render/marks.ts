@@ -94,7 +94,12 @@ class Layer {
 
   dispose(): void {
     this.mesh.geometry.dispose();
-    (this.mesh.material as THREE.Material).dispose();
+    const mat = this.mesh.material as THREE.MeshBasicMaterial;
+    // (Its picture too: a material's dispose leaves its map. Shared by two layers, disposed twice: harmless.)
+    mat.map?.dispose();
+    mat.dispose();
+    // Its instances' matrices and colours, which the renderer holds until told.
+    this.mesh.dispose();
   }
 }
 

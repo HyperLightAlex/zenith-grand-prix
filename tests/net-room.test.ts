@@ -3,7 +3,7 @@ import { CALLER, PHASE, ROLE, TACTIC, emptyInput, raceChecksum, type MechInput }
 import { TestNet, type TestClient } from './netHarness';
 import { steerToward, makeRandom, mash } from './helpers';
 import { cleanWire } from '../src/net/roomCore';
-import { CEREMONY_SECONDS, READY_COUNTDOWN } from '../src/net/protocol';
+import { CEREMONY_SECONDS, IDLE_SECONDS, READY_COUNTDOWN } from '../src/net/protocol';
 
 /** A person who keeps to the racing line, with some random button presses. */
 function pilot(seed: number): (c: TestClient) => MechInput {
@@ -164,6 +164,30 @@ describe('an online room', () => {
     const before = net.core.race!.mechs[0].s;
     net.run(2000);
     expect(net.core.race!.mechs[0].s).toBeGreaterThan(before + 50);
+  }, 60_000);
+
+  it('hands an idle player to the computer pilot until a control changes', () => {
+    const net = new TestNet({ laps: 1 });
+    const a = net.join('a');
+    a.drive = pilot(9);
+    readyUp(net, a);
+    net.run(6000);
+    // Hands off the controls (the same input, tick after tick): the mech slows to a stop, then, IDLE_SECONDS on, is flown.
+    const still = { ...emptyInput() };
+    a.drive = () => still;
+    net.run((IDLE_SECONDS - 2) * 1000);
+    expect(a.lobby?.players[0].away).toBe(false);
+    net.run(3000);
+    expect(a.lobby?.players[0].away).toBe(true);
+    const seat = net.core.seatPid.indexOf('a');
+    const before = net.core.race!.mechs[seat].s;
+    net.run(2000);
+    expect(net.core.race!.mechs[seat].s).toBeGreaterThan(before + 50);
+    // Any control changing: back to them.
+    a.drive = pilot(9);
+    net.run(500);
+    expect(a.lobby?.players[0].away).toBe(false);
+    expect(a.resyncs).toBe(0);
   }, 60_000);
 
   it('starts only when everyone has locked in a frame of their own', () => {

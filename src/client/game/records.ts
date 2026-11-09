@@ -264,6 +264,28 @@ export class LapTracer {
 
 const KEY = 'zgp.records';
 
+/**
+ * When a circuit's road was last laid differently (ms since 1970): its
+ * records from before then were set on another road, and are let go when
+ * the book is read (with their ghosts, which would run off the new one).
+ */
+export const RELAID: Readonly<Record<string, number>> = {
+  // Zenith Ring's Möbius, twice round the core: a kilometre more a lap.
+  zenith: Date.UTC(2026, 10, 9, 20, 30),
+};
+
+/** The records in `book` still set on their circuit's road as it is. */
+function onTheRoad<R extends { at: number }>(book: unknown): Record<string, R> {
+  const out: Record<string, R> = {};
+  if (typeof book !== 'object' || !book) return out;
+  for (const [key, rec] of Object.entries(book as Record<string, R>)) {
+    const relaid = RELAID[key.split('|')[0]];
+    if (relaid !== undefined && !(rec && rec.at >= relaid)) continue;
+    out[key] = rec;
+  }
+  return out;
+}
+
 /** What a race left in the book: the records it set (and what they beat). */
 export interface NewRecords {
   lap: { time: number; was: number | null } | null;
@@ -379,7 +401,7 @@ export class RecordBook {
       const career = { ...base.career, ...(d.career ?? {}) };
       if (!Array.isArray(career.byRole) || career.byRole.length < 3) career.byRole = base.career.byRole;
       if (typeof career.byTrack !== 'object' || career.byTrack === null) career.byTrack = {};
-      return { v: 1, laps: typeof d.laps === 'object' && d.laps ? d.laps : {}, races: typeof d.races === 'object' && d.races ? d.races : {}, career };
+      return { v: 1, laps: onTheRoad<LapRecord>(d.laps), races: onTheRoad<RaceRecord>(d.races), career };
     } catch {
       return emptyRecords();
     }

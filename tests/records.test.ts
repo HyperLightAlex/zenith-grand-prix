@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { COUNTDOWN_TICKS, DT, ROLE, stepRace } from '../src/sim/index';
-import { GHOST_RATE, LapTracer, RecordBook, ghostAt, packGhost, recordKey, unpackGhost, type Ghost } from '../src/client/game/records';
+import { GHOST_RATE, LapTracer, RELAID, RecordBook, ghostAt, packGhost, recordKey, unpackGhost, type Ghost } from '../src/client/game/records';
 import { FW0, TRACK, newRace } from './helpers';
 
 /** A race run to its end by the computer pilots, its forward's laps traced (the first race from `seed` on in which the forward reaches the flag). */
@@ -122,6 +122,30 @@ describe('the record book', () => {
     // Saved, and read back.
     const again2 = new RecordBook(store);
     expect(again2.data).toEqual(book.data);
+  });
+
+  it('lets go of a circuit\'s records set before its road was laid again, and keeps the rest', () => {
+    const when = RELAID.zenith;
+    const lap = (at: number) => ({ time: 60, at, mode: 'Free Play', ghost: null });
+    const race = (at: number) => ({ time: 200, at, mode: 'Free Play', place: 1 });
+    const store = new MemoryStorage();
+    store.setItem(
+      'zgp.records',
+      JSON.stringify({
+        v: 1,
+        laps: { [recordKey('zenith', ROLE.FW)]: lap(when - 1), [recordKey('zenith', ROLE.MF)]: lap(when + 1), [recordKey('meridian', ROLE.FW)]: lap(0) },
+        races: { [recordKey('zenith', ROLE.FW)]: race(when - 1000), [recordKey('meridian', ROLE.DF)]: race(0) },
+        career: { races: 4 },
+      }),
+    );
+    const book = new RecordBook(store);
+    expect(book.lap('zenith', ROLE.FW)).toBeNull();
+    expect(book.lap('zenith', ROLE.MF)?.time).toBe(60);
+    expect(book.lap('meridian', ROLE.FW)?.time).toBe(60);
+    expect(book.raceBest('zenith', ROLE.FW)).toBeNull();
+    expect(book.raceBest('meridian', ROLE.DF)?.place).toBe(1);
+    // The career's totals stay.
+    expect(book.data.career.races).toBe(4);
   });
 
   it('starts empty from nothing or from anything that is not a record book', () => {

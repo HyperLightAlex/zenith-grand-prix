@@ -537,6 +537,10 @@ uniform vec3 uSunDir;
 uniform float uTime;
 uniform float uPainted;
 uniform sampler2D uSeaMap;
+// The road's shadow on the cloud tops (roadShadow): the mask over the box (x, z, 1/width, 1/depth), and its shade.
+uniform sampler2D uShadowMap;
+uniform vec4 uShadowBox;
+uniform vec3 uShadowTint;
 varying vec3 vWorld;
 #include <common>
 #include <fog_pars_fragment>
@@ -545,6 +549,17 @@ ${UNTONE}
 void main() {
   vec2 p = vWorld.xz * 0.0011 + vec2(uTime * 0.004, uTime * 0.0016);
   float c = fbm(p) * 0.8 + noise(p * 6.0) * 0.2;
+  // The road's shadow, where it falls: a cel shadow, its edge crisp (a
+  // little softened) and its depth the mask's (fainter under road high
+  // above), a little less where the cloud is thin and it falls on through.
+  // Laid on the cloud's own colour, before the painted look's untoning.
+  vec3 shade = vec3(1.0);
+  vec2 suv = (vWorld.xz - uShadowBox.xy) * uShadowBox.zw;
+  if (suv.x > 0.0 && suv.x < 1.0 && suv.y > 0.0 && suv.y < 1.0) {
+    float m = texture2D(uShadowMap, suv).r;
+    float sh = smoothstep(0.1, 0.24, m) * clamp(m * 1.15, 0.35, 0.85) * mix(0.7, 1.0, smoothstep(0.2, 0.34, c));
+    shade = mix(vec3(1.0), uShadowTint, sh);
+  }
   vec3 col;
   if (uPainted > 0.5) {
     // The painted cloud sea, drifting, at two sizes blended by a slow noise
@@ -555,7 +570,7 @@ void main() {
     col = mix(a, b, smoothstep(0.3, 0.7, noise(vWorld.xz * 0.0016)));
     col *= 0.9 + 0.16 * smoothstep(0.35, 0.65, c);
     // Thin places: the blue far below shows through.
-    col = unTone(mix(uDeep, col, smoothstep(0.27, 0.33, c)));
+    col = unTone(mix(uDeep, col, smoothstep(0.27, 0.33, c)) * shade);
   } else {
     // Lit where the billows rise toward the sun, shaded where they fall away.
     float c2 = fbm(p + normalize(uSunDir.xz) * 0.025) * 0.8 + noise((p + normalize(uSunDir.xz) * 0.025) * 6.0) * 0.2;
@@ -563,7 +578,7 @@ void main() {
     col = mix(uShade, uLit, smoothstep(0.4, 0.62, c));
     col *= mix(0.78, 1.04, lit);
     // Thin places: the blue far below shows through.
-    col = mix(uDeep, col, smoothstep(0.28, 0.36, c));
+    col = mix(uDeep, col, smoothstep(0.28, 0.36, c)) * shade;
   }
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -982,6 +997,80 @@ function groundMaterial(ctx: Ctx, fragment: string, uniforms: Record<string, THR
     mat.uniforms.uTime.value = time;
   });
   return mat;
+}
+
+/**
+ * The road's shadow on a ground far below it (Helios's cloud tops): its
+ * plan, each stretch cast down along the light (`toSun`) onto the plane at
+ * `groundY`, drawn once into a mask (soft at the edges, fainter the higher
+ * the road is over the ground), and the box it covers in plan as the
+ * shader wants it (x, z, 1/width, 1/depth).
+ */
+function roadShadow(track: Track, groundY: number, toSun: THREE.Vector3, size = 1024): { texture: THREE.Texture; box: THREE.Vector4 } {
+  const lean = toSun.y > 0.05 ? toSun.y : 0.05;
+  const cast = (x: number, y: number, z: number, out: number[]) => {
+    const k = (y - groundY) / lean;
+    out.push(x - toSun.x * k, z - toSun.z * k);
+  };
+  // Each sample's two edges, cast down.
+  const edges: number[] = [];
+  const heights: number[] = [];
+  const step = 2;
+  for (let i = 0; i < track.n; i += step) {
+    const hw = track.hw[i];
+    const [x, y, z] = [track.px[i], track.py[i], track.pz[i]];
+    cast(x - track.rx[i] * hw, y - track.ry[i] * hw, z - track.rz[i] * hw, edges);
+    cast(x + track.rx[i] * hw, y + track.ry[i] * hw, z + track.rz[i] * hw, edges);
+    heights.push(y - groundY);
+  }
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (let k = 0; k < edges.length; k += 2) {
+    minX = Math.min(minX, edges[k]);
+    maxX = Math.max(maxX, edges[k]);
+    minZ = Math.min(minZ, edges[k + 1]);
+    maxZ = Math.max(maxZ, edges[k + 1]);
+  }
+  const pad = 120;
+  minX -= pad;
+  minZ -= pad;
+  const span = Math.max(maxX + pad - minX, maxZ + pad - minZ);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const g = canvas.getContext('2d');
+  const box = new THREE.Vector4(minX, minZ, 1 / span, 1 / span);
+  if (!g) return { texture: blankTexture(), box: new THREE.Vector4(0, 0, 0, 0) };
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, size, size);
+  // Overlaps keep the darker of the two (the lighter mask), not the sum.
+  g.globalCompositeOperation = 'lighten';
+  // (Soft at the edges, where the browser can blur.)
+  g.filter = 'blur(2px)';
+  const at = (k: number): [number, number] => [((edges[k] - minX) / span) * size, ((edges[k + 1] - minZ) / span) * size];
+  const n = heights.length;
+  for (let j = 0; j < n; j++) {
+    const a = j * 4;
+    const b = ((j + 1) % n) * 4;
+    // Fainter, the higher the road: dark close over the cloud, a soft grey high above it.
+    const h = Math.max(0, (heights[j] + heights[(j + 1) % n]) / 2);
+    const v = Math.round(255 * Math.max(0.3, Math.min(0.95, 0.95 - h / 700)));
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.beginPath();
+    g.moveTo(...at(a));
+    g.lineTo(...at(a + 2));
+    g.lineTo(...at(b + 2));
+    g.lineTo(...at(b));
+    g.closePath();
+    g.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.NoColorSpace;
+  // (Rows down the canvas are z up the box, as the shader reads it.)
+  texture.flipY = false;
+  texture.anisotropy = 4;
+  return { texture, box };
 }
 
 /** A ground plane far wider than the view, drawn with one of the ground shaders. */
@@ -1889,6 +1978,7 @@ function buildHelios(ctx: Ctx): void {
   const tex = (name: string, repeat = true) => (surf?.[name] ? paintedTexture(surf[name], { repeat }) : null);
 
   // ---- the sea of cloud ----------------------------------------------------
+  const shadow = roadShadow(track, theme.groundY, discDir(theme.id));
   const seaMat = groundPlane(
     ctx,
     cloudFragment,
@@ -1898,6 +1988,10 @@ function buildHelios(ctx: Ctx): void {
       uDeep: { value: new THREE.Color(0x2a58a8) },
       uPainted: { value: 0 },
       uSeaMap: { value: null },
+      uShadowMap: { value: shadow.texture },
+      uShadowBox: { value: shadow.box },
+      // A cool blue shade, as the anime paints a shadow on white.
+      uShadowTint: { value: new THREE.Vector3(0.34, 0.44, 0.8) },
     },
     theme.groundY,
   );

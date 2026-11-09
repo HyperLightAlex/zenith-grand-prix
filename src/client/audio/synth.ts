@@ -144,10 +144,13 @@ export class SynthAudio implements AudioEngine {
    * files are in. Each is downloaded and decoded when its circuit is named
    * for a race (one at a time, the others' files let go of: see
    * prepareSong), and a circuit with one plays it instead of its synthesised
-   * music. `screenSongs`: songs for screens (see SCREEN_SONGS in song.ts),
-   * decoded as soon as there is an audio context, and kept (they start at
-   * once whenever they are wanted); the title theme's files are downloaded
-   * straight away, while the page is still loading. `sfx`: where the recorded
+   * music. `screenSongs`: songs for screens (see SCREEN_SONGS in song.ts):
+   * the title theme decoded as soon as there is an audio context (its files
+   * downloaded straight away, while the page is still loading), let go of
+   * through a race and decoded again as it ends; the results' songs decoded
+   * as a race ends, and let go of once the next race starts or the menus are
+   * back (decoded, the three take over 100 MB; a race's song, kept for the
+   * race and its results, 130 to 300 MB more). `sfx`: where the recorded
    * sound effects are; each sound with recordings plays one of them instead
    * of its recipe.
    */
@@ -232,8 +235,9 @@ export class SynthAudio implements AudioEngine {
       const ahead = LOOKAHEAD + 2 * this.frameGap;
       this.lapPhase = finite(scene.lapPhase, 1);
       this.finished = scene.finished === true;
-      // Over the line: the title theme back for what follows the song's ending.
-      if (this.finished) this.screenSongs.get('title')?.decode(g.ctx);
+      // Over the line: the title theme back for what follows the song's
+      // ending, and the results' songs (which one is not known here yet).
+      if (this.finished) for (const s of this.screenSongs.values()) s.decode(g.ctx);
       g.layers.update(now, clamp(finite(dt, 0), 0, 0.25), scene, ahead);
       if (this.track) {
         this.track.schedule(now, this.lapPhase, ahead, this.finished);
@@ -503,9 +507,10 @@ export class SynthAudio implements AudioEngine {
     this.g = { ctx, live, rng, white, pink, bank: this.bank, master, mix, musicBus, musicSend, musicIn, musicWetIn, sfxBus, sfxSend, engineBus, layers };
     this.bank?.decode(ctx);
     // A song is decoded for the circuit named ahead (prepareMusic), or when a
-    // race asks for one; the screens' songs (small) straight away.
+    // race asks for one; the title theme straight away (the results' songs
+    // as a race ends).
     if (this.nextSong) this.prepareSong(this.nextSong);
-    for (const s of this.screenSongs.values()) s.decode(ctx);
+    this.screenSongs.get('title')?.decode(ctx);
     this.applyMusic();
   }
 
@@ -636,6 +641,25 @@ export class SynthAudio implements AudioEngine {
     return RACE_STYLES.includes(this.wantStyle) ? this.wantStyle : 'meridian';
   }
 
+  private releaseResults(): void {
+    for (const [id, s] of this.screenSongs) if (id !== 'title') s.release();
+  }
+
+  /**
+   * Back at the title or the Play menu, between visits: no race's song held
+   * (its download kept: a race on that circuit decodes it again from it),
+   * nor the results' songs.
+   */
+  releaseRaceMusic(): void {
+    this.guard(() => {
+      if (this.prepareTimer !== null) clearTimeout(this.prepareTimer);
+      this.prepareTimer = null;
+      this.nextSong = null;
+      for (const song of this.songs.values()) song.release();
+      this.releaseResults();
+    });
+  }
+
   /** `fresh`: asked for by a race starting, so a recorded song starts again from its top. */
   private applyMusic(fresh = false): void {
     const g = this.g;
@@ -643,6 +667,8 @@ export class SynthAudio implements AudioEngine {
     // The results' music only where there is a song for the outcome (the
     // style, 'win' or 'loss'); otherwise the menu music plays (or carries on).
     const results = this.screenSongs.get(`results-${this.wantStyle}`);
+    // (What was asked for: the results falling back to the menu music are still between races.)
+    const asked = this.want;
     if (this.want === 'results' && (!results || results.state === 'failed')) this.want = 'menu';
     // The hangar's setlist likewise.
     if (this.want === 'hangar' && (!this.setlist || this.setlist.state === 'failed')) this.want = 'menu';
@@ -656,6 +682,8 @@ export class SynthAudio implements AudioEngine {
     const title = this.screenSongs.get('title');
     if (title && this.want === 'race') title.release();
     else title?.decode(g.ctx);
+    // The results' songs are not held through a race either (decoded again as it ends).
+    if (asked === 'race') this.releaseResults();
     const same = (this.track ? this.track.name : null) === this.want && (!this.track || this.track.style === style);
     if (same && !(fresh && this.track?.restartsWithRace)) return;
     const now = g.ctx.currentTime;

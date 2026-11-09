@@ -96,8 +96,25 @@ export const LAUNCH_PERFECT = { speed: 44, drive: 10 } as const;
 export const BOG_TICKS = 30;
 /** Seconds the race stays open after the winner crosses the line. */
 export const FINISH_GRACE_TICKS = 25 * TICK_RATE;
-/** Hard stop: a race that somehow has no finisher is flagged after this long. */
+/** Hard stop: a race that somehow has no finisher is flagged after this long, whatever the circuit (and a lesson's). */
 export const MAX_RACE_TICKS = 10 * 60 * TICK_RATE;
+/**
+ * The pace (units a second) a race is reckoned at for its time limit: a
+ * little under a leader's average (about 125 to 145 over three laps), so the
+ * reckoning is a little over a winner's time.
+ */
+export const LIMIT_PACE = 120;
+
+/**
+ * When a race with no winner (or a winner and nobody to wait for) is
+ * flagged: about twice as long as it takes to win, after the countdown, so
+ * a race nobody will finish (everyone stopped) ends rather than running on
+ * to the hard stop. Never more than MAX_RACE_TICKS.
+ */
+export function raceTickLimit(laps: number, length: number): number {
+  const race = (2 * Math.max(1, laps) * length) / LIMIT_PACE;
+  return Math.min(MAX_RACE_TICKS, COUNTDOWN_TICKS + Math.ceil(race * TICK_RATE));
+}
 /** A lesson (RaceConfig.lesson): the race stays open this long after the pupil is home. */
 export const LESSON_GRACE_TICKS = 10 * TICK_RATE;
 /** ...and the pupil keeps this share of its armour whatever hits it: it cannot be knocked out. */

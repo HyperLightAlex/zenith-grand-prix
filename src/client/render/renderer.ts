@@ -4,6 +4,7 @@ import { configureMechInk, resizeMechInk, geometryMarks } from './mech/ink';
 // tone-mapped output.
 import * as THREE from 'three';
 import { ReviewProbe } from './reviewProbe';
+import './loads';
 import { fitCameraToViewport } from './viewport';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
@@ -444,19 +445,21 @@ export class Renderer {
    * Everything in the scene is compiled, hidden or not; a material on no
    * mesh just now (the other look's) still compiles when first drawn, as
    * before. Without the extension it does nothing: compiling now would only
-   * move the stall.
+   * move the stall. Resolves once they are compiled, or after `wait` ms
+   * however far they have got (never later: see compiled).
    */
-  precompile(): void {
+  precompile(force = false, wait = 8000): Promise<void> {
     const r = this.renderer;
-    if (!r.extensions.has('KHR_parallel_shader_compile')) return;
+    if (!force && !r.extensions.has('KHR_parallel_shader_compile')) return Promise.resolve();
     const prev = r.getRenderTarget();
     const { quad, flat } = this.compileQuad;
+    let materials = new Set<THREE.Material>();
     try {
       // As the scene is drawn: into the composer's buffer (which decides the
       // shaders' output: no tone mapping, linear colour), and its travellers
       // in their flat white.
       r.setRenderTarget(this.composer.sceneTarget);
-      void r.compileAsync(this.scene, this.camera).catch(() => {});
+      materials = r.compile(this.scene, this.camera);
       const passes: THREE.Material[] = [
         this.travelMat,
         this.inkPass.material,
@@ -481,6 +484,105 @@ export class Renderer {
     } finally {
       r.setRenderTarget(prev);
     }
+    return this.compiled(materials, wait);
+  }
+
+  /**
+   * Until the shaders of `materials` compiling in the background are done,
+   * or `ms` has passed. (Not three's compileAsync: it asks after each until
+   * every one says it is done, and one that never does, its context lost or
+   * its driver at fault, would keep it asking, and a race waiting, for ever.)
+   */
+  private async compiled(materials: Set<THREE.Material>, ms: number): Promise<void> {
+    const r = this.renderer;
+    if (!r.extensions.has('KHR_parallel_shader_compile')) return;
+    const end = performance.now() + ms;
+    const pending = new Set(materials);
+    for (;;) {
+      for (const m of pending) {
+        const program = (r.properties.get(m) as { currentProgram?: { isReady(): boolean } }).currentProgram;
+        if (!program || program.isReady()) pending.delete(m);
+      }
+      if (!pending.size) return;
+      if (performance.now() > end) {
+        console.warn(`[load] ${pending.size} shaders were still compiling after ${ms / 1000} s`);
+        return;
+      }
+      await new Promise((res) => setTimeout(res, 16));
+    }
+  }
+
+  /**
+   * Everything on show made ready before it is first drawn, as a race is
+   * loading: the shaders compiled (waited for, where the browser compiles in
+   * the background; otherwise compiled now), then each texture sent to the
+   * GPU, a few a frame. `progress` hears how far it is (0 to 1).
+   */
+  async prepare(progress: (f: number) => void = () => {}): Promise<void> {
+    const r = this.renderer;
+    progress(0);
+    const frame = () => new Promise((res) => requestAnimationFrame(() => res(undefined)));
+    // The shaders, a material at a time (where the browser cannot compile in
+    // the background, each compiles there and then: a few a frame, so the
+    // card moves), each where it is drawn and lit as in the scene; then all
+    // of them waited for, and the passes'.
+    const first = new Map<THREE.Material, THREE.Object3D>();
+    this.scene.traverseVisible((o) => {
+      const mat = (o as THREE.Mesh).material;
+      if (mat) for (const m of Array.isArray(mat) ? mat : [mat]) if (!first.has(m)) first.set(m, o);
+    });
+    const objects = [...first.values()];
+    let at = performance.now();
+    const prev = r.getRenderTarget();
+    r.setRenderTarget(this.composer.sceneTarget);
+    try {
+      for (let i = 0; i < objects.length; i++) {
+        try {
+          r.compile(objects[i], this.camera, this.scene);
+        } catch {
+          // (Compiled when first drawn instead.)
+        }
+        if (performance.now() - at > 25) {
+          r.setRenderTarget(prev);
+          progress((0.4 * (i + 1)) / objects.length);
+          await frame();
+          r.setRenderTarget(this.composer.sceneTarget);
+          at = performance.now();
+        }
+      }
+    } finally {
+      r.setRenderTarget(prev);
+    }
+    await this.precompile(true);
+    progress(0.5);
+    const textures = new Set<THREE.Texture>();
+    const take = (v: unknown) => {
+      if (v && (v as THREE.Texture).isTexture && !(v as THREE.Texture & { isRenderTargetTexture?: boolean }).isRenderTargetTexture) textures.add(v as THREE.Texture);
+    };
+    this.scene.traverseVisible((o) => {
+      const mat = (o as THREE.Mesh).material;
+      if (!mat) return;
+      for (const m of Array.isArray(mat) ? mat : [mat]) {
+        for (const v of Object.values(m)) take(v);
+        const u = (m as THREE.ShaderMaterial).uniforms;
+        if (u) for (const x of Object.values(u)) take(x?.value);
+      }
+    });
+    const list = [...textures].filter((t) => t.image !== null && t.image !== undefined);
+    at = performance.now();
+    for (let i = 0; i < list.length; i++) {
+      try {
+        r.initTexture(list[i]);
+      } catch {
+        // (One that cannot go up now goes up when first drawn, as before.)
+      }
+      if (performance.now() - at > 12) {
+        progress(0.5 + (0.5 * (i + 1)) / list.length);
+        await frame();
+        at = performance.now();
+      }
+    }
+    progress(1);
   }
 
   /**

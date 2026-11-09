@@ -156,7 +156,13 @@ coordinated team play online.
 | 3 | Speed | Free | Limiter off: each frame's own top speed |
 
 - The race stays open for 25 seconds after the winner finishes. Anyone still
-  running then is classified by distance and still scores.
+  running then is classified by distance and still scores. A race nobody
+  finishes (every pilot a person, all stopped) is flagged the same way at
+  about twice a winning time (`raceTickLimit`: the countdown, then twice the
+  laps at 120 u/s; 7 to 8 minutes over three laps, never more than the hard
+  stop of 10, which a tutorial race keeps). Online, a person who stops is
+  flown by their computer pilot after 20 seconds (see ONLINE.md), so one
+  idle player can neither hold a race up nor leave their team a mech short.
 - Past the line a mech, a person's included, is driven on by the computer
   round a cool-down lap at three-quarters of the limiter, as in a kart
   racer: it never stops dead on the road.
@@ -213,17 +219,19 @@ climbs, widening as it goes: `spiralRun` cuts one into several pieces that
 climb at one steady grade, so a stretch of it can have an open edge),
 barrels (a roll round an axis off the road) and twists (a pitch whose road
 rolls over as it goes, and can move out from the arc's centre: Zenith Ring's
-Hatch, from the inside of its band to the outside, and the top of its
-Möbius), each of which can set the road's width and banking, cut a gap,
+Hatch, from the inside of its band to the outside, and its Möbius, a band
+twice round the core with a half twist to each time round), each of which can set the road's width and banking, cut a gap,
 leave an edge open, split the road (its two routes drawn apart, or twisted
 round each other as a double helix: Abyss Line's Braid; or on a bend, so its
 inside route is the shorter way round and the tighter: Monsoon Ruins' Temple
 Halls) or hold mechs to it whatever their
 speed (the outside of Zenith Ring's band). Where a twist's road is rolled
-across its arc, the arc turns under a mech: the Möbius barrel rolls the
-whole way round, but a full turn to each third of the loop, so each roll
-turns the road about 25 degrees one way and back (one slow roll over the
-whole loop turned it nearly 80).
+across its arc, the arc turns under a mech, so the Möbius rolls slowly:
+half a turn each time round, eased in and out, inside the first time
+round, outside (upside down at its foot, the Earth overhead) as it comes
+round, inside again the second. (It was a single loop with a full roll to
+each third, which drivers found disjointed and disorienting; a single loop
+half twisted and this were raced side by side, and this was kept.)
 On a barrel or a twist the bend a mech steers by is the road's own turn
 within its surface, worked out from the built road (a barrel's plan has
 none, but its road swings out round its column or tube and back: the Sword
@@ -318,8 +326,11 @@ and the side of the road they favour; in 100 races about 63% of passes take
 the busier route.
 
 Charge strips are spread so that no stretch of a lap goes long without one:
-the longest gap is 16% of the lap on Meridian, 26% on Canyon and 19% on
-Helios. Helios had 39% (from T1's exit, up the climb, over the Drop and
+the longest gap is 16% of the lap on Meridian, 26% on Canyon, 19% on
+Helios and 19% on Zenith Ring. Zenith's went to 27% when the Möbius went
+twice round the core (a kilometre and a half with nothing on it); its
+foot, upside down, now has a strip on one side and a gate on the other,
+the gate moved from T3, where it stood 300 units after the Dock's. Helios had 39% (from T1's exit, up the climb, over the Drop and
 round to after the Loop) until playtesters said they ran out of Drive
 there; it now has strips up the long climb, down off the Drop and on
 closing A, nine in all (two of them on the two routes of Split Decision).
@@ -449,7 +460,10 @@ loops to the finish. The Crucible's, Neon Fire (D minor, about 193
 BPM), loops 50 bars (62 s) from after its first chorus through its second;
 Frostline's, Aurora Dash (C# minor, 150 BPM), 45 bars (72 s). All
 the circuits but Abyss Line and Monsoon Ruins have one; only the circuit
-coming up has its song decoded.
+coming up has its song decoded, and none once the menus' title theme is
+back (at the title or the Play menu); the results' two songs are decoded
+as a race ends and let go of as the next starts (decoded, a race's song is
+130 to 300 MB, the results' 74 MB: on a phone, most of what the page holds).
 While a song plays the stingers can take keys of its own (Helios's E minor,
 Canyon's G minor rising to A minor, the Crucible's D minor ending in D
 major, Frostline's C# minor ending in C# major, Titan's Rest's and Zenith
@@ -1194,7 +1208,31 @@ the record, the format and the timing are already there.
 
 ### Before the race
 
-Offline, a race opens with a **flight over the circuit**, the race held on
+Offline, a race first **loads** behind a card (`ui/loadingCard.ts`): the
+event and the circuit's name in the title card's band, over pictures of
+the circuit taken in the game (three a circuit, `ui/art/circuits`, from
+`tools/capture/loading-shots.json`; crossfading every 6.5 s with a slow
+drift, still under reduced motion; the circuit's first two fetched ahead
+when it is named, with its song); top right, the circuit's plan, drawn in
+from the start line as the loading gets on (it is the progress: a dot at
+its head), with its laps and length; and bottom right a **tip**, a new one
+every 7 s (`ui/loadingTips.ts`: about forty, true to these rules, each for
+the races it fits: a team race or a Sprint, your frame, the circuit;
+the controls named as your device has them; half the time the first is
+about your frame or the circuit, and the ones shown lately go to the back).
+It comes up as Start is pressed, the circuit is built
+behind it, and the race waits on its grid until the circuit is all in
+(every model and picture its building asked for: Titan's Rest's titan,
+the painted textures; `render/loads.ts` counts them) and ready to draw:
+each shader compiled (a few a frame, so the card keeps moving), each
+texture sent to the GPU, and the flight's shots and the grid drawn once
+behind the card. So the race opens on a whole circuit, not one filling in
+during the flight over it, and the flight does not stall on a shader
+compiling as each new thing comes into view. A circuit already loaded
+passes in a moment (the card stays up 1.2 s, so it does not just flash). The tools that
+drive the game (`?instant`, `?perf`, `?demo`) start their races at once.
+
+Then a race opens with a **flight over the circuit**, the race held on
 the grid: high over the start straight looking down it, then a cut to low
 and fast up the road behind the grid, the field ahead (5.4 seconds, the
 camera's `flyover`), under the circuit's **title card**: what is being raced
@@ -1265,7 +1303,9 @@ What is round the road says what the race has done and what is coming:
   and the racing: on the way down the straight they sit high at the top of
   the picture. The feed is the scene drawn again from its own camera into
   a 384 by 216 picture, 6, 10 or 15 times a second by the video quality,
-  and only while a screen is in view; out on the lap it costs nothing.
+  and only while a screen is in view and within 500 m (some 4 degrees
+  across: further off it keeps its last picture, each drawing of the feed
+  being a frame half as long again); out on the lap it costs nothing.
 - **The outposts** (`render/outposts/outposts.ts`, built in Blender by
   `art/blender/outposts/build_outposts.py`): what explains a circuit out in
   the wild, who built it and how everyone gets there. Corkscrew Canyon's
@@ -1293,10 +1333,16 @@ What is round the road says what the race has done and what is coming:
   scene and the ground drawn as the painted ground round it is, unlit; the
   car park is laid out by its painted square, so the cars stand in its bays.
 - **The crowd** (`render/crowd.ts`): cameras flashing all over the
-  grandstands and flags in the two teams' colours waved along the front
-  rows, going up (more flashes, flags waved harder) at the start, a lap
-  begun, the flag, and a knockout or ring-out in front of them, then dying
-  away over a few seconds.
+  grandstands (each a quick flash) and fans down the front rows holding up
+  the racing teams' banners on poles: each team's emblem on its colours,
+  banded in its glow (in a Sprint, an independent pilot's is the league's
+  badge banded in their own colour), the teams in turn along each stand.
+  The banners are lit as the stand's crowd is, their cloth rippling and
+  the poles swung from the fans' hands. It goes up (more flashes, banners
+  swung harder) at the start, a lap begun, the flag, and a knockout or
+  ring-out in front of them, then dies away over a few seconds. The
+  painted crowd on the rows is drawn a little softer as it gets small, so
+  a stand of tiny figures does not crawl as it goes by.
 
 ### The ceremony and the podium
 

@@ -11,7 +11,8 @@
 // any other stretch of road near them, so they never stand between a pilot
 // and the racing. The feed is the scene drawn again from its own camera,
 // small and six to fifteen times a second (by the video quality), and only
-// while a screen is in view (so out on the lap, it costs nothing).
+// while a screen is in view and near enough to make out (so out on the lap,
+// it costs nothing).
 //
 // The model is Blender's (art/blender/hoverscreen/build_hoverscreen.py); the
 // game paints its slots and draws what the screen shows.
@@ -47,10 +48,17 @@ const EXTENT = { x: 23, below: 21, above: 16, z: 4.5 };
 /** The stands by the start: on each side, the two nearest the line's stretch (its middle this far along), none further than this from it. */
 const LINE_MIDDLE = -60;
 const NEAR_LINE = 200;
-/** The feed: its size, how often it is drawn, and how far off a screen may be for it to be worth drawing. */
+/**
+ * The feed: its size, how often it is drawn, and how far off a screen may
+ * be for it to be worth drawing. Each drawing is the scene drawn again (a
+ * frame half as long again, every few frames), so only while a screen is
+ * near enough to make out what it shows: within 500 m it is some 4 degrees
+ * across or more (on a phone, 50 pixels); further off it keeps its last
+ * picture.
+ */
 const FEED_W = 384;
 const FEED_H = 216;
-const FEED_RANGE = 1400;
+const FEED_RANGE = 500;
 /** How many times a second the feed is drawn, by the video quality. */
 export const FEED_FPS = { low: 6, medium: 10, high: 15 } as const;
 /** How long each shot of the feed holds. */

@@ -55,8 +55,19 @@ describe('still scenery', () => {
       freezeStill(vis.group);
       const frozen = new Map<THREE.Object3D, number[]>();
       const pose = (o: THREE.Object3D) => [...o.position.toArray(), ...o.quaternion.toArray(), ...o.scale.toArray()];
-      let movers = 0;
-      for (const g of [world.group, vis.group]) g.traverse((o) => (o.matrixAutoUpdate ? movers++ : frozen.set(o, pose(o))));
+      // (What is drawn, counted by its vertices: still pieces are merged, so a count of objects says little.)
+      let moving = 0;
+      let still = 0;
+      const verts = (o: THREE.Object3D) => ((o as THREE.Mesh).geometry?.attributes?.position?.count ?? 0) * Math.max(1, (o as THREE.InstancedMesh).count ?? 1);
+      for (const g of [world.group, vis.group]) {
+        g.traverse((o) => {
+          if (o.matrixAutoUpdate) moving += verts(o);
+          else {
+            frozen.set(o, pose(o));
+            still += verts(o);
+          }
+        });
+      }
       expect(frozen.size).toBeGreaterThan(50);
       const cam = new THREE.PerspectiveCamera(66, 16 / 9, 0.5, 40000);
       const f = makeFrame();
@@ -77,7 +88,7 @@ describe('still scenery', () => {
       }
       expect([...moved], 'moved by the updates but frozen: mark them with moves() where they are made').toEqual([]);
       // (And not everything marked: the point is that most of it stands still.)
-      expect(movers).toBeLessThan(frozen.size / 4);
+      expect(moving).toBeLessThan(still / 4);
     });
   }
 

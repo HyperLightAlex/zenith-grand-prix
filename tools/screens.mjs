@@ -50,7 +50,7 @@ async function tour(name) {
   page.on('pageerror', (e) => problems.push(`${name} [pageerror] ${e.message}`));
   const aspect = process.env.ASPECT === 'classic' ? 'classic' : 'wide';
   await page.addInitScript((aspect) => { try { localStorage.setItem('zgp.callsign', 'Alpha'); localStorage.setItem('zgp.pilot', JSON.stringify({ v: 1, portrait: 0, made: 'Comet' })); localStorage.setItem('zgp.video', JSON.stringify({ panels: true, crt: false, aspect })); } catch {} }, aspect);
-  await page.goto(base + '?mute=1&seed=5' + (process.env.LOOK ? `&look=${process.env.LOOK}` : ''));
+  await page.goto(base + '?mute=1&instant=1&seed=5' + (process.env.LOOK ? `&look=${process.env.LOOK}` : ''));
   await page.waitForFunction(() => window.game !== undefined);
   const g = (fn, arg) => page.evaluate(fn, arg);
   // Draw only when a screenshot is taken: software rendering is slow.

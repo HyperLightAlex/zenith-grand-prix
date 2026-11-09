@@ -123,6 +123,17 @@ two players.
   your seat's computer pilot flies until you resume. Hit-stop and the
   knockout still only hold your picture, which then catches up. There is no
   slow motion online.
+- **Away.** Mid-race, controls that have not changed for 20 seconds
+  (`IDLE_SECONDS`: someone who stopped, or walked off) hand the seat to its
+  computer pilot until a control changes, so nobody can hold up a race or
+  leave their team a mech short by sitting still. The server decides it (the
+  same input, tick after tick; nothing sent, or the pause menu, changes
+  nothing) and says who is away with the ticks (`TickMsg.away`); their
+  name tag and running-order line say Away, the room's list too, and the
+  player is told, then told again when a touch of the controls has them
+  back (their client stops sending and predicts the computer pilot meanwhile,
+  so nothing jumps). A race nobody finishes is flagged at about twice a
+  winning time (see the design document's race rules).
 - **Dropping out.** Your seat is kept for 60 seconds, with its computer pilot
   flying. Reloading the page, or opening the invite link again, puts you
   back. After 60 seconds the computer keeps the seat until the match ends.

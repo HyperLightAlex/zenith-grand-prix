@@ -394,7 +394,8 @@ export function buildZenith(ctx: StationCtx): void {
   const driver = range('the Mass Driver');
   const coils: THREE.BufferGeometry[] = [];
   if (driver) {
-    const from = starts[def.pieces.findIndex((pc) => pc.name === 'the Mass Driver') - 1];
+    // (From 60 units before it: clear of the Möbius's band.)
+    const from = driver[0] - 60;
     const lip = range('lip');
     const to = lip ? lip[1] : driver[1];
     keep('machinery', sweep(track, from, to, 8, () => [[-26, -9], [26, -9], [20, -30], [-20, -30]]), HULL_DARK);

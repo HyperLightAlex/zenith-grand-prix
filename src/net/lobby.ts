@@ -271,6 +271,7 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
     squad: squad ? squad.id : null,
     nextRound: midMatch,
     autopilot: false,
+    away: false,
     joinedAt: ++lobby.arrivals,
     droppedAt: -1,
     loadout,
@@ -478,7 +479,7 @@ export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: 
   ) as [SideView, SideView];
   const players: LobbyPlayer[] = [...lobby.members]
     .sort((a, b) => a.joinedAt - b.joinedAt)
-    .map(({ pid, callsign, portrait, colour, side, role, ready, connected, ping, squad, nextRound, autopilot }) => ({ pid, callsign, portrait, colour, side, role, ready, connected, ping, squad, nextRound, autopilot }));
+    .map(({ pid, callsign, portrait, colour, side, role, ready, connected, ping, squad, nextRound, autopilot, away }) => ({ pid, callsign, portrait, colour, side, role, ready, connected, ping, squad, nextRound, autopilot, away }));
   return {
     code: lobby.code,
     version: lobby.version,

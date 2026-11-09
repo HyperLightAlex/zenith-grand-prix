@@ -129,6 +129,8 @@ async function boot(): Promise<void> {
     auto: auto && auto in roles ? roles[auto] : undefined,
     demo: q.has('demo'),
     skip: q.has('skip') ? Number(q.get('skip')) : undefined,
+    // (The tools that drive the game: its races start at once, no loading card.)
+    instant: q.has('instant') || q.has('perf') || q.has('demo'),
     seed: q.has('seed') ? Number(q.get('seed')) : undefined,
     team: q.has('team') ? Number(q.get('team')) : undefined,
     rival: q.has('rival') ? Number(q.get('rival')) : undefined,

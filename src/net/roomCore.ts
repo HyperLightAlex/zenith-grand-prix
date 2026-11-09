@@ -22,6 +22,8 @@ import {
   PHASE,
   ROLE,
   TRACKS,
+  TICK_RATE,
+  isActive,
   sharedTrack,
   createMatch,
   createRace,
@@ -86,6 +88,7 @@ import {
   FINAL_SECONDS,
   GP_BACKGROUND_MS,
   GP_BACKGROUND_TICKS,
+  IDLE_SECONDS,
   KEYFRAME_TICKS,
   MATCH_FORMATS,
   READY_COUNTDOWN,
@@ -99,6 +102,7 @@ import {
   TICKS_PER_PACKET,
   packInput,
   pilotChange,
+  sameWire,
   portraitColour,
   unpackInput,
   type ClientMessages,
@@ -127,6 +131,8 @@ const QUEUE_SOFT = 6;
 const QUEUE_HARD = 60;
 /** A seat with no input for this many ticks is flown by its computer pilot until inputs come again. */
 const STARVED_TICKS = 30;
+/** A seat whose controls have not changed for this many ticks mid-race is away (IDLE_SECONDS). */
+const IDLE_TICKS = IDLE_SECONDS * TICK_RATE;
 const ROLES: Role[] = [ROLE.FW, ROLE.MF, ROLE.DF];
 
 interface Queued {
@@ -172,6 +178,12 @@ export class RoomCore {
   private last: WireInput[] = [];
   private acks: number[] = [];
   private starved: number[] = [];
+  /** Each seat's input as last applied before any takeover, how many ticks it has stayed the same, and whether its person is away. */
+  private prevWire: WireInput[] = [];
+  private idle: number[] = [];
+  private away: boolean[] = [];
+  /** The away seats as last sent ('' none). */
+  private awaySent = '';
   /** Each seat's current epoch (see MatchStartMsg.epoch). */
   private epochs: number[] = [];
   private epochCount = 0;
@@ -638,6 +650,10 @@ export class RoomCore {
     this.queue = seats.map(() => []);
     this.acks = seats.map(() => 0);
     this.starved = seats.map(() => 0);
+    this.prevWire = seats.map(() => 0);
+    this.idle = seats.map(() => 0);
+    this.away = seats.map(() => false);
+    this.awaySent = '';
     this.epochs = seats.map(() => ++this.epochCount);
     this.last = this.seatPid.map((pid) => (pid && member(this.lobby, pid)?.connected ? packInput(emptyInput()) : 0));
     this.rows = [];
@@ -750,7 +766,26 @@ export class RoomCore {
       }
       // Inputs stopped coming (a hidden tab, a stalled connection): the
       // computer pilot flies until they start again.
-      const wire = this.starved[m.id] > STARVED_TICKS ? 0 : this.last[m.id];
+      let wire = this.starved[m.id] > STARVED_TICKS ? 0 : this.last[m.id];
+      // Controls unchanged for IDLE_SECONDS mid-race (someone who stopped,
+      // or walked off): away, and the computer pilot flies until a control
+      // changes. (Nothing sent, or the pause menu's nothing, is no change of
+      // mind: it leaves them as they were.)
+      if (wire !== 0) {
+        if (sameWire(wire, this.prevWire[m.id])) this.idle[m.id]++;
+        else {
+          this.idle[m.id] = 0;
+          this.away[m.id] = false;
+        }
+        this.prevWire[m.id] = wire;
+      }
+      if (this.idle[m.id] > IDLE_TICKS && race.phase === PHASE.RACING && isActive(m)) this.away[m.id] = true;
+      if (!isActive(m)) this.away[m.id] = false;
+      if (this.away[m.id]) wire = 0;
+      if (this.away[m.id] !== who.away) {
+        who.away = this.away[m.id];
+        this.dirty = true;
+      }
       const auto = wire === 0;
       if (auto !== who.autopilot) {
         who.autopilot = auto;
@@ -776,6 +811,12 @@ export class RoomCore {
     });
     const msg: TickMsg = { t: this.rows[0].tick, i: this.rows.map((r) => r.row), a };
     if (this.opsOut.length) msg.ops = this.opsOut;
+    // Who is away, when it changes (and now and then while anyone is, for anyone who missed it).
+    const away = this.away.flatMap((on, seat) => (on ? [seat] : [])).join(',');
+    if (away !== this.awaySent || (away && this.rows[0].tick % KEYFRAME_TICKS < TICKS_PER_PACKET)) {
+      msg.away = away ? away.split(',').map(Number) : [];
+      this.awaySent = away;
+    }
     if (this.sum) msg.sum = this.sum;
     this.io.broadcast('tick', msg);
     this.rows = [];
@@ -812,6 +853,7 @@ export class RoomCore {
     for (const m of this.lobby.members) {
       m.nextRound = false;
       m.autopilot = false;
+      m.away = false;
     }
     this.io.broadcast('lobbyAgain', { reason });
     this.dirty = true;

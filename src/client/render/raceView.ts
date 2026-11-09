@@ -246,7 +246,8 @@ export class RaceView {
     private readonly previewOnly = false,
   ) {
     const race = session.race;
-    this.liveries = teamLooks(race, factions).map((t) => t.livery);
+    const looks = teamLooks(race, factions);
+    this.liveries = looks.map((t) => t.livery);
     this.dust = DUST[session.track.def.theme ?? 'meridian'] ?? DUST.meridian;
     this.wet = session.track.def.theme === 'monsoon';
     this.focusId = session.localId >= 0 ? session.localId : 0;
@@ -311,7 +312,11 @@ export class RaceView {
       this.plates[m.id] = { id: m.id, x: 0, y: 0, cx: 0, cy: 0, dist: 0, visible: false, ex: 0, ey: 0 };
     }
     this.marks = new TrackMarks(session.track);
-    this.crowd = new Crowd(trackVis.group, this.liveries.map((l) => l.glow));
+    // The fans wave the racing teams' banners (an independent's: the league's badge on its pilot's colour).
+    this.crowd = new Crowd(
+      trackVis.group,
+      looks.map((t) => ({ field: t.livery.primary, band: t.livery.glow, emblem: t.emblem })),
+    );
     this.group.add(this.ring, this.fx.group, this.marks.group, this.crowd.group);
     this.screens = previewOnly ? null : new HoverScreens(session.track, trackVis.group, session.track.def.name, this.liveries.map((l) => l.glow));
     if (this.screens?.count) {

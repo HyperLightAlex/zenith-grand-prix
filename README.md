@@ -51,7 +51,7 @@ This is version 0.5: nine circuits and three ways to play.
 - **The trackside**: each race opens with a flight over the circuit under
   its title card; the race leaves its marks (carve lines, burns, scorches,
   soot, a knockout's pieces), brake boards count down to the tight corners,
-  and the crowd's flashes and flags go up at the big moments in roofed,
+  and the crowd's flashes and the racing teams' banners go up at the big moments in roofed,
   terraced grandstands along the start straight, under hover screens
   showing them the race live. Out in the wild, the settlements that explain
   a circuit stand round it: a paddock, car park and fuel stop in the
@@ -414,7 +414,9 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 The browser-driving helpers in `tools/` (`shot.mjs`, `screens.mjs`,
 `playtest.mjs`, `audio-check.mjs`, `song-check.mjs`, `online-check.mjs` and
 `online-gp-check.mjs`, which take two browsers through an online room and a
-squad's Grand Prix, and the capture tools in `tools/capture`, which render
+squad's Grand Prix, `start-check.mjs`, which starts races from the Paddock
+through the loading card as a player does (the other tools skip the loading
+with `?instant`), and the capture tools in `tools/capture`, which render
 the game through scripted cameras for checking and footage) need
 Playwright, which is not a dependency of the project:
 `npm i -D playwright && npx playwright install chromium` if you want them.
@@ -514,8 +516,18 @@ picture has not changed. Rules the code keeps for a phone's sake:
   mesh that changes material with the look, names what it holds (`ownTextures`,
   `alsoWears` in `render/owned.ts`), so a change of circuit frees it.
 - A circuit's song is downloaded when the circuit is named for a race, and only
-  that circuit's song is kept; shaders compile in the background as soon as a
-  scene is built (`Renderer.precompile`).
+  that circuit's song is kept (decoded, a song is hundreds of MB: it is let go
+  at the title and the Play menu, and the results songs are decoded only at the
+  finish); shaders compile in the background as soon as a scene is built
+  (`Renderer.precompile`), and a race waits behind its loading card until its
+  loads are in and its shaders and textures are ready (`Renderer.prepare`).
+- Still scenery built a piece at a time (a billboard, a brake board, a gate's
+  frame) is merged by material with `mergeStatic` (`render/mergeStatic.ts`):
+  one draw call a material, not one a piece. What moves, blinks or is looked
+  up by name afterwards stays separate.
+- An instanced mesh is disposed with its own `dispose()` (its geometry's and
+  material's leave its instances' buffers behind), and a material's `dispose()`
+  leaves its map: the `gpu` audit's totals after each circuit show what was missed.
 
 To reproduce preparation from the archived study: run `polish_updated.py`, then
 `fix_hands.py`; generate the atlas with `paint_details.py` (Python + Pillow), run

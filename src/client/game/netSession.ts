@@ -9,7 +9,7 @@
 
 import { DT, PHASE, assignData, cloneRace, emptyInput, type MechInput, type RaceState, type SimEvent, type Track } from '../../sim/index';
 import { Predictor } from '../../net/prediction';
-import type { KeyMsg, MatchStartMsg, TickMsg, WireInput } from '../../net/protocol';
+import { packInput, sameWire, type KeyMsg, type MatchStartMsg, type TickMsg, type WireInput } from '../../net/protocol';
 import type { Session } from './session';
 
 /** Corrections this large are snapped, not eased (a recovery drone, a respawn). */
@@ -44,6 +44,16 @@ export class NetSession implements Session {
   private lastTick: number;
   /** Your inputs go to the computer pilot while true (the pause menu). */
   autopilot = false;
+  /** The seats whose people are away (the server's say: idle mid-race), the computer pilot flying them. */
+  readonly away = new Set<number>();
+  /**
+   * You are away: your computer pilot flies (predicted so, and nothing sent
+   * but that) until a control changes from `awayFrom`, the controls as
+   * they were when you went away.
+   */
+  awayMode = false;
+  private awayFrom: WireInput = 0;
+  private awayWas = false;
 
   constructor(
     start: MatchStartMsg,
@@ -82,6 +92,17 @@ export class NetSession implements Session {
 
   /** The server's ticks: the confirmed race moves on and the prediction is replayed. */
   onTicks(msg: TickMsg): void {
+    if (msg.away) {
+      this.away.clear();
+      for (const s of msg.away) this.away.add(s);
+      // (Into away as the server says so; out of it at a touch of the controls, here, not when it says.)
+      const now = this.away.has(this.localId);
+      if (now && !this.awayWas) {
+        this.awayMode = true;
+        this.awayFrom = 0;
+      }
+      this.awayWas = now;
+    }
     const before = this.positions();
     this.incoming.push(...this.predictor.applyTicks(msg));
     this.absorb(before);
@@ -126,6 +147,12 @@ export class NetSession implements Session {
 
   update(dt: number, input: MechInput | null): void {
     this.events.length = 0;
+    if (this.awayMode && input) {
+      const wire = packInput(input);
+      if (this.awayFrom === 0) this.awayFrom = wire;
+      else if (!sameWire(wire, this.awayFrom)) this.awayMode = false;
+    }
+    if (this.awayMode) input = null;
     if (input) {
       this.latched |= input.buttons;
       if (input.cmd) this.latchedCmd = input.cmd;
@@ -149,7 +176,7 @@ export class NetSession implements Session {
             this.latched = 0;
             this.latchedCmd = 0;
           }
-        } else if (!this.autopilot) inp = emptyInput();
+        } else if (!this.autopilot && !this.awayMode) inp = emptyInput();
         for (const e of p.step(inp)) this.events.push(e);
       }
       this.acc -= DT;
