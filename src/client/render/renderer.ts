@@ -445,20 +445,21 @@ export class Renderer {
    * Everything in the scene is compiled, hidden or not; a material on no
    * mesh just now (the other look's) still compiles when first drawn, as
    * before. Without the extension it does nothing: compiling now would only
-   * move the stall.
+   * move the stall. Resolves once they are compiled, or after `wait` ms
+   * however far they have got (never later: see compiled).
    */
-  precompile(force = false): Promise<void> {
+  precompile(force = false, wait = 8000): Promise<void> {
     const r = this.renderer;
     if (!force && !r.extensions.has('KHR_parallel_shader_compile')) return Promise.resolve();
     const prev = r.getRenderTarget();
     const { quad, flat } = this.compileQuad;
-    let done: Promise<void> = Promise.resolve();
+    let materials = new Set<THREE.Material>();
     try {
       // As the scene is drawn: into the composer's buffer (which decides the
       // shaders' output: no tone mapping, linear colour), and its travellers
       // in their flat white.
       r.setRenderTarget(this.composer.sceneTarget);
-      done = r.compileAsync(this.scene, this.camera).then(() => {}, () => {});
+      materials = r.compile(this.scene, this.camera);
       const passes: THREE.Material[] = [
         this.travelMat,
         this.inkPass.material,
@@ -483,7 +484,32 @@ export class Renderer {
     } finally {
       r.setRenderTarget(prev);
     }
-    return done;
+    return this.compiled(materials, wait);
+  }
+
+  /**
+   * Until the shaders of `materials` compiling in the background are done,
+   * or `ms` has passed. (Not three's compileAsync: it asks after each until
+   * every one says it is done, and one that never does, its context lost or
+   * its driver at fault, would keep it asking, and a race waiting, for ever.)
+   */
+  private async compiled(materials: Set<THREE.Material>, ms: number): Promise<void> {
+    const r = this.renderer;
+    if (!r.extensions.has('KHR_parallel_shader_compile')) return;
+    const end = performance.now() + ms;
+    const pending = new Set(materials);
+    for (;;) {
+      for (const m of pending) {
+        const program = (r.properties.get(m) as { currentProgram?: { isReady(): boolean } }).currentProgram;
+        if (!program || program.isReady()) pending.delete(m);
+      }
+      if (!pending.size) return;
+      if (performance.now() > end) {
+        console.warn(`[load] ${pending.size} shaders were still compiling after ${ms / 1000} s`);
+        return;
+      }
+      await new Promise((res) => setTimeout(res, 16));
+    }
   }
 
   /**

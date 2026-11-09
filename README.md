@@ -414,7 +414,9 @@ flying the mech. Opened from the pause menu it also takes the pad or keys.
 The browser-driving helpers in `tools/` (`shot.mjs`, `screens.mjs`,
 `playtest.mjs`, `audio-check.mjs`, `song-check.mjs`, `online-check.mjs` and
 `online-gp-check.mjs`, which take two browsers through an online room and a
-squad's Grand Prix, and the capture tools in `tools/capture`, which render
+squad's Grand Prix, `start-check.mjs`, which starts races from the Paddock
+through the loading card as a player does (the other tools skip the loading
+with `?instant`), and the capture tools in `tools/capture`, which render
 the game through scripted cameras for checking and footage) need
 Playwright, which is not a dependency of the project:
 `npm i -D playwright && npx playwright install chromium` if you want them.

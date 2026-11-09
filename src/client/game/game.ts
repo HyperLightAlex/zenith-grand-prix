@@ -288,6 +288,27 @@ interface RoundSetup {
   gp?: { skills: number[]; grid: number[]; rival?: number };
 }
 
+/** The most a race waits behind its loading card, ms (each step's own limit: LOAD_STEP). */
+const LOAD_LIMIT = 40000;
+const LOAD_STEP = 15000;
+
+/** Whether `p` settled within `ms` (it is waited for no longer; what it does carries on). */
+function within(p: Promise<unknown>, ms: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), ms);
+    p.then(
+      () => {
+        clearTimeout(timer);
+        resolve(true);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(true);
+      },
+    );
+  });
+}
+
 function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -1322,8 +1343,13 @@ export class Game {
     const m = this.match;
     const ev = this.mode === 'gp' ? this.gpEvents[this.gpSlot] : this.mode === 'online' ? this.online.lobby?.gp : null;
     if (this.session.race.sprint) return ev?.sprint ? this.sprintGpLabel(ev) : m ? this.sprintLabel(m) : 'Sprint';
-    const a = factionName(LIVERIES[this.raceFactions[0]]);
-    const b = factionName(LIVERIES[this.raceFactions[1]]);
+    // (A side with no faction, a league seat, goes by no name rather than failing.)
+    const side = (i: number) => {
+      const l = LIVERIES[this.raceFactions[i]];
+      return l ? factionName(l) : '';
+    };
+    const a = side(0);
+    const b = side(1);
     let gp = '';
     if (ev) gp = `${eventName(ev)}, round ${yourRoundNumber(ev)} of ${playedRounds(ev)}`;
     if (!m || (m.cfg.mode === 'series' && m.cfg.bestOf === 1)) return gp;
@@ -1387,10 +1413,23 @@ export class Game {
     const token = {};
     this.raceLoad = token;
     this.hud.root.hidden = true;
-    this.loadingCard.show({ event: this.matchLabel() || (setup.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : 'Free Play'), circuit: trackById(setup.track ?? this.trackId)?.name ?? '' });
+    // (Named from the setup: the session on screen is still the last one, the
+    // hangar's or the title's, and its factions say nothing of this race.
+    // The match's own line replaces it once the race is built: loadRace.)
+    const event = setup.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : this.mode === 'gp' ? 'Grand Prix' : 'Free Play';
+    this.loadingCard.show({ event, circuit: trackById(setup.track ?? this.trackId)?.name ?? '' });
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        if (this.raceLoad === token && this.setup === setup) this.buildRound(setup);
+        if (this.raceLoad !== token || this.setup !== setup) return;
+        try {
+          this.buildRound(setup);
+        } catch (err) {
+          // (Not left behind the card: what was on screen comes back, and the error is reported.)
+          if (this.raceLoad === token) this.raceLoad = null;
+          this.loadingCard.drop();
+          this.hud.root.hidden = false;
+          console.error('[load] the race could not be built:', err);
+        }
       }),
     );
   }
@@ -1458,36 +1497,59 @@ export class Game {
     this.raceLoad = token;
     this.hud.root.hidden = true;
     const race = this.session.race;
-    this.loadingCard.show({ event: this.matchLabel() || (race.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : 'Free Play'), circuit: this.session.track.def.name });
+    const circuit = this.session.track.def.name;
+    this.loadingCard.show({ event: this.matchLabel() || (race.sprint ? 'Sprint' : this.mode === 'tutorial' ? 'Tutorial' : 'Free Play'), circuit });
     const from = loadsMark();
     const ticker = window.setInterval(() => {
       if (this.raceLoad === token) this.loadingCard.progress(0.4 * loadsDone(from));
     }, 100);
-    void (async () => {
-      try {
-        await loadsSettled();
-        clearInterval(ticker);
-        if (this.raceLoad !== token) return;
-        this.loadingCard.progress(0.4, 'Getting it ready to draw');
-        await this.renderer.prepare((f) => {
-          if (this.raceLoad === token) this.loadingCard.progress(0.4 + 0.55 * f);
-        });
-        if (this.raceLoad !== token) return;
-        // The flight's shots and the grid drawn once each, behind the card.
-        this.warmViews = fly ? [0, 2.7, 2.8, CameraRig.FLYOVER - 0.1, 'grid'] : ['grid'];
-        await new Promise<void>((res) => (this.warmed = res));
-        this.loadingCard.progress(1);
-      } catch (err) {
-        console.warn('race loading:', err);
-      } finally {
-        clearInterval(ticker);
-      }
+    // How long each step took (reported with the race's start, for a load that is slow somewhere).
+    const steps: string[] = [];
+    let at = performance.now();
+    const step = (what: string, gaveUp = false) => {
+      steps.push(`${what} ${((performance.now() - at) / 1000).toFixed(1)} s${gaveUp ? ' (gave up waiting)' : ''}`);
+      at = performance.now();
+    };
+    // The race starts whatever happens: each wait has its limit, and so has the whole.
+    let over = false;
+    const start = async () => {
+      if (over) return;
+      over = true;
+      clearInterval(ticker);
+      clearTimeout(watchdog);
+      this.warmViews = [];
+      this.warmed = null;
       if (this.raceLoad !== token) return;
+      console.info(`[load] ${circuit}: ${steps.join(', ')}`);
+      this.loadingCard.progress(1);
       await this.loadingCard.hide();
       if (this.raceLoad !== token) return;
       this.raceLoad = null;
       if (fly) this.startFlyover();
       else this.hud.root.hidden = false;
+    };
+    const watchdog = window.setTimeout(() => {
+      console.warn(`[load] ${circuit}: still loading after ${LOAD_LIMIT / 1000} s, starting anyway (${steps.join(', ') || 'no step done'})`);
+      void start();
+    }, LOAD_LIMIT);
+    void (async () => {
+      try {
+        step('files', !(await within(loadsSettled(), LOAD_STEP)));
+        clearInterval(ticker);
+        if (over || this.raceLoad !== token) return;
+        this.loadingCard.progress(0.4, 'Getting it ready to draw');
+        const ready = this.renderer.prepare((f) => {
+          if (this.raceLoad === token && !over) this.loadingCard.progress(0.4 + 0.55 * f);
+        });
+        step('shaders and textures', !(await within(ready, LOAD_STEP)));
+        if (over || this.raceLoad !== token) return;
+        // The flight's shots and the grid drawn once each, behind the card.
+        this.warmViews = fly ? [0, 2.7, 2.8, CameraRig.FLYOVER - 0.1, 'grid'] : ['grid'];
+        step('first views', !(await within(new Promise<void>((res) => (this.warmed = res)), 8000)));
+      } catch (err) {
+        console.warn('[load] race loading:', err);
+      }
+      await start();
     })();
   }
 
