@@ -76,5 +76,5 @@ both and depends on neither:
 - Akeru publishes a game whose rights are not formally reviewed by a recorded
   decision for one commit, on the strength of a record of where everything in
   it came from (the route its Dead End Dash took: a `docs/ASSETS.md` in the
-  game, a `RELEASE.md` in the package). This repository has no such record
-  yet for its models, artwork, portraits, music and sounds.
+  game, a `RELEASE.md` in the package). This repository's record is
+  [ASSETS.md](ASSETS.md); the request to publish a commit is still to make.
