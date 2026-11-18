@@ -24,6 +24,8 @@ export interface OnlineEvents {
   squad: SquadView;
   follow: SquadServerMessages['follow'];
   squadLeft: { text: string | null };
+  /** Quick Play: this lobby is being folded into a fuller one; search again to be put there. */
+  requeue: ServerMessages['requeue'];
 }
 
 type Handler<K extends keyof OnlineEvents> = (msg: OnlineEvents[K]) => void;
@@ -144,6 +146,29 @@ export class Online {
     }
   }
   private joining: { code: string; done: Promise<void> } | null = null;
+
+  /**
+   * Quick Play: into a room of `playlist` with places for you (and, leading
+   * a squad, for all of it on one team), found by the server or made new.
+   * A place can go to someone else between the finding and the joining:
+   * then it is searched for again, a few times.
+   */
+  async quickPlay(playlist: string, loadout: Loadout, squad?: SquadTicket): Promise<void> {
+    await this.leaveRoom();
+    const party = Math.max(1, Math.min(3, squad?.size ?? 1));
+    let last: unknown = new Error('No race found');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        this.attachRoom(await inTime(this.sdk().joinOrCreate('quick', { ...this.options(loadout, squad), quick: playlist, [`fit${party}`]: true })));
+        return;
+      } catch (e) {
+        last = e;
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/full|free place/i.test(msg)) break;
+      }
+    }
+    throw last;
+  }
   /** Waiting for the room's view after joining: ask again, then give up. */
   private viewWait = 0;
 
@@ -190,7 +215,7 @@ export class Online {
       this.rtt = Math.max(0, performance.now() - m.t);
     });
     room.onMessage('error', (m: { code: string; text: string }) => mine() && this.emit('error', m));
-    for (const t of ['matchStart', 'tick', 'key', 'roundEnd', 'lobbyAgain', 'callerAsk', 'notice'] as const) {
+    for (const t of ['matchStart', 'tick', 'key', 'roundEnd', 'lobbyAgain', 'callerAsk', 'notice', 'requeue'] as const) {
       room.onMessage(t, (m: never) => mine() && this.emit(t, m));
     }
     room.onDrop(() => {

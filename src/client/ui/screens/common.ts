@@ -147,7 +147,7 @@ export function registerCommon(m: Menus, g: Game): void {
       m.button(list, 'Free Play', () => g.openFreePlay(), { key: 'free', hint: 'Any circuit, any rival, any format' });
       m.button(list, 'Online', () => g.openOnline(), {
         key: 'online',
-        hint: g.online.available ? 'Private rooms with friends, by code or link' : 'Needs the game from its server: not this saved copy',
+        hint: g.online.available ? 'Quick Play against whoever is racing, or private rooms with friends' : 'Needs the game from its server: not this saved copy',
       });
       m.button(list, 'Hangar', () => g.openHangar(), { key: 'hangar', hint: 'Your pilot and your own mechs, for any team' });
       // The tutorial, each frame's role, and the controls.

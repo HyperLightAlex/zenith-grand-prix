@@ -62,9 +62,12 @@ This is version 0.5: nine circuits and three ways to play.
   wears it; some of the patterns, finishes, paints and poses are earned
   with medals in the Grand Prix (the team series's and the Sprint
   series's each their own), for a custom mech of any frame.
-- **Online**: private rooms for up to six people, joined by code or invite
-  link, with computer pilots in the empty seats. Friends can form a squad of
-  up to three that stays together from room to room.
+- **Online**: Quick Play (pick a playlist, a mode and a way of winning, and
+  you are put in a race with whoever else is searching it) and private
+  rooms for up to six people, joined by code or invite link, with computer
+  pilots in the empty seats either way. Friends can form a squad of up to
+  three that stays together from room to room, and on one team in Quick
+  Play.
 
 Every mode ends at the **Paddock**, the last stop before a race (your
 team's faction, your frame, and your own mech or the stock one; in a Sprint,

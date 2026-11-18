@@ -1,10 +1,12 @@
 # Online play: how it works and how to host it
 
-Zenith GP's online mode is private rooms for up to six people, found by a
-5-character code or an invite link, with computer pilots in the empty places.
+Zenith GP's online mode is **Quick Play** (matchmaking: pick a playlist and
+you are put in a race with whoever else is searching it) and private rooms
+for up to six people, found by a 5-character code or an invite link. Either
+way computer pilots fly the empty places, so a race is always six mechs.
 Friends can form a **squad** of up to three that moves from room to room
-together and always takes the same team. There is no matchmaking yet, and
-no accounts.
+together and always takes the same team, in Quick Play too. There are no
+accounts.
 
 ## Hosting it
 
@@ -42,7 +44,7 @@ Endpoints:
 |---|---|
 | `GET /` and static files | The built game. Hashed assets are cached for a year; everything else is revalidated. The build writes a brotli and a gzip copy of each file (26 MB of game goes as 7), which are sent as they are: the server never compresses anything large itself |
 | `GET /health` (and `/healthz`) | `ok` |
-| `/matchmake/...` | Colyseus: create a room or squad, join one by code |
+| `/matchmake/...` | Colyseus: create a room or squad, join one by code, and Quick Play's search (`joinOrCreate/quick`) |
 | WebSocket `/<process>/<room>` | Colyseus: a room's connection |
 
 `SIGTERM` closes the rooms cleanly. A restart ends every room in progress;
@@ -64,9 +66,42 @@ two players.
 
 ## What a player sees
 
-- **Online hub.** Your squad's three positions, with Create room, Join
-  room, Grand Prix, Invite to squad, Join a squad and your callsign. Entering Online
-  makes you the leader of a squad of one.
+- **Online hub.** Your squad's three positions, with Quick Play, Create
+  room, Join room, Grand Prix, Invite to squad, Join a squad and your
+  callsign. Entering Online makes you the leader of a squad of one.
+- **Quick Play.** Pick a playlist (`PLAYLISTS` in protocol.ts): each is a
+  mode and a way of winning.
+
+  | Playlist | Mode | Won by |
+  |---|---|---|
+  | Team Race | Three against three | One race |
+  | Team Series | Three against three | Best of three races |
+  | Points Race | Three against three | The first team to 50 points |
+  | Sprint | Six Forwards, every pilot for themselves | One race |
+  | Sprint Series | Every pilot for themselves | Most points over three races |
+
+  You are put in a lobby with whoever else is searching that playlist: on
+  the team with fewer people, or with your squad together on one team (the
+  leader searches, and the squad follows as into any room; a squad of three
+  is a whole team). Nobody is host. The circuit is drawn by lot, a new one
+  for every match, and nobody changes the settings or removes anyone. The
+  race starts by itself 20 seconds after the first person arrives
+  (`QUICK_GATHER_SECONDS`), or 5 seconds after the lobby is full of people
+  or everyone in it is ready, with a Pro computer pilot in every place
+  nobody has. Picking a frame and Ready work as in any room: Ready locks
+  your frame in, the first to lock one keeps it, and anyone who has not
+  locked in when the race starts gets a frame nobody on their team has. A
+  team's first person is its captain and picks its faction. Nobody is put
+  into a race under way. After the match its results and ceremony stay up
+  until everyone has continued (30 seconds at most), then the same people
+  are a lobby again for 25 seconds, open to new searches, and the next
+  race starts; leave whenever you like. Someone who never touched the
+  controls in the match's last race is taken out of the lobby and told
+  why, so nobody absent holds a place. When a lobby opens again with few
+  people in it and another of its playlist has room for all of them, it is
+  folded into that one: everyone is told "Joining a fuller lobby…" and
+  arrives there together (a squad with its leader), and that lobby waits
+  for them.
 - **Your pilot.** A callsign and a portrait, worn by your seat everywhere it
   shows (the room's seats, the squad's bays, the radio, the target panel,
   the results), offline too. The game makes up a callsign and picks a
@@ -248,6 +283,24 @@ two players.
   building one takes 60 to 120 ms, which used to land mid-update for every
   fixture and every round. A Continue carries the phase it was pressed
   in, so a late press on a match's results cannot skip the standings.
+- **Quick Play** is the same room with `quick` set (its playlist): the
+  lobby's rules give it no host and fix its settings (`setPlaylist` in
+  lobby.ts), and the room starts its own races, opens again after each and
+  drops whoever was absent (`quickLobby`, `backToLobby` in roomCore.ts).
+  The search is Colyseus's `joinOrCreate` on the `quick` room type
+  (server/rooms.ts), filtered by the playlist, the build and one of
+  `fit1`, `fit2`, `fit3` (the size of the party coming), and sorted
+  fullest first. Each room keeps its listing up to date (`listing` in
+  raceRoom.ts): whether it has places for a party of one, two and three
+  on one team (none while it races) and how many people are in it. A place
+  can go between the finding and the joining; the client then searches
+  again, three times at most. Folding (`fold` in raceRoom.ts) is looked at
+  once each time a room becomes a lobby again: the other lobby must have at
+  least as many people and places for every party here, and of two alike
+  the one with the earlier code stays, so two never fold into each other.
+  All of this is within one server process: the rooms know of each other
+  directly. More than one process would need Colyseus's Redis presence and
+  driver, and the folding moved onto them.
 - **The lobby rules** (teams and places, frame picks and lock-in, captains,
   factions, shot callers, squads) are plain functions in `src/net/lobby.ts`.
   When a match starts, `settleFrames` gives each person their locked-in
@@ -260,6 +313,7 @@ two players.
 |---|---|
 | People per room | 6 (a 7th sees "Room full") |
 | Squad | 3 |
+| Quick Play | 5 playlists; a lobby waits 20 s for more people (5 s once full or all ready), and 25 s between matches |
 | Codes | 5 characters from 31 that cannot be misread (no 0/O, 1/I/L): about 28 million |
 | Code guessing | 30 room codes a minute per address, when `FORWARDED_HOPS` is set |
 | A dropped seat | Kept 60 s |
@@ -269,6 +323,12 @@ two players.
 Codes are an invitation, not a secret. Anyone with a code can join until the
 room is full. The host can remove people, and a removed device cannot come
 back to that room.
+
+In Quick Play nobody can remove anyone, and there is no chat: what one
+stranger can show another is a callsign (filtered), a portrait from the
+game's gallery and a mech made from the game's own parts and paints. With
+no accounts there is nothing to ban but a device key, which a cleared
+browser replaces.
 
 **Trust model.** The server decides everything that happens in the race; a
 modified client can only send inputs, and those are clamped. Names are only
@@ -323,6 +383,18 @@ On this sandbox's 2-core Linux machine, with Node 22:
 - `npm run bots -- 6 4` puts four rooms of six bots on a running server
   (`npm start`, or `npm run server`), races them, and reports resyncs. It is
   also the load test.
+- `tests/net-quick.test.ts` is Quick Play's room on the fake network (its
+  playlist's settings, no host, the clock that starts the race, computer
+  pilots in the free places, a squad on one team, the lobby again after a
+  match, whoever was absent dropped, folding). `tests/quick-server.test.ts`
+  is the search through the real Colyseus server on a local port: one room
+  for a playlist's searchers, another for another playlist's, a squad of
+  three given a room with a whole team free, the fullest room that fits,
+  and a lobby folded into a fuller one.
+- `node tools/quick-check.mjs` drives three browsers through Quick Play
+  (a squad of two and someone alone, into one lobby; the race starting by
+  itself; the lobby again after it, without the one who never touched the
+  controls). It needs the server started with `TEST_LAPS=1`.
 - `node tools/online-check.mjs` drives real browsers through the hub, a
   squad of three, a room, the invite link, frame picks and lock-in,
   factions, shot calling, a race, the results and back to the room, with

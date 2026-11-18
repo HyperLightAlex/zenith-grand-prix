@@ -4,7 +4,7 @@
 // themselves).
 
 import { ROLE, ROLE_NAMES, TRACKS, standings, type Role } from '../../../sim/index';
-import { MATCH_FORMATS, PILOT_COLOUR_NAMES, ROOM_SIZE, SKILL_NAMES, SPRINT_FORMATS, portraitColour, type LobbyPlayer, type LobbyView } from '../../../net/protocol';
+import { MATCH_FORMATS, PILOT_COLOUR_NAMES, PLAYLISTS, QUICK_GATHER_SECONDS, ROOM_SIZE, SKILL_NAMES, SPRINT_FORMATS, playlistById, playlistFormat, portraitColour, type LobbyPlayer, type LobbyView } from '../../../net/protocol';
 import { customName } from '../../../custom/mechBuild';
 import type { Game } from '../../game/game';
 import { LIVERIES, factionName } from '../../render/palette';
@@ -78,7 +78,13 @@ export function registerOnline(m: Menus, g: Game): void {
       const members = sq?.members ?? [];
       const faction = sq ? sq.faction : g.loadout.team;
       const follow = !lead ? "Your squad's leader takes the squad into rooms" : null;
-      m.button(list, 'Create room', () => void g.createRoom(), { key: 'create', go: true, locked: follow });
+      m.button(list, 'Quick Play', () => (m.push('quick'), m.focus(g.quickPlaylist)), {
+        key: 'quick',
+        go: true,
+        locked: !lead ? "Your squad's leader starts the search: you go with them" : null,
+        hint: members.length > 1 ? 'A race against whoever is searching: your squad stays together on one team' : 'A race against whoever is searching, computer pilots in the free places',
+      });
+      m.button(list, 'Create room', () => void g.createRoom(), { key: 'create', locked: follow });
       m.button(list, 'Join room', () => g.askRoomCode(), { key: 'join', locked: follow });
       // Always there; open to a squad of two or three, from its leader.
       const gpWhy = gpBlocked(g);
@@ -129,6 +135,34 @@ export function registerOnline(m: Menus, g: Game): void {
     back: () => g.leaveOnline(),
   });
 
+  // Quick Play: what to search for. Each playlist is a mode and a way of
+  // winning; the search puts you in a room with whoever else is searching it.
+  m.register('quick', {
+    render(m) {
+      const o = g.online;
+      const col = h('div.col.online');
+      const list = h('div.list');
+      col.append(h('div.context', 'Online'), h('h1', 'Quick Play'));
+      if (g.onlineStatus) col.append(h('p.status', g.onlineStatus));
+      const searching = !!g.onlineStatus;
+      const why = searching ? 'Searching…' : !o.leading ? "Your squad's leader starts the search" : null;
+      for (const p of PLAYLISTS) m.button(list, p.name, () => void g.quickPlay(p.id), { key: p.id, go: p.id === g.quickPlaylist, locked: why, hint: p.blurb });
+      col.append(list);
+      const size = o.squadSize;
+      const panel = h(
+        'div.panel.squad',
+        h('h2', 'How it works'),
+        h(
+          'div.match-blurb',
+          `Pick what to race and you are put in a lobby with whoever else is searching for it. The race starts by itself in about ${QUICK_GATHER_SECONDS} seconds, sooner when the lobby is full or everyone is ready, on a circuit drawn by lot, with a computer pilot in every place nobody takes. Afterwards the lobby stays together for the next race. `,
+          size > 1 ? `Your squad of ${size} goes in together, on one team${PLAYLISTS.some((p) => p.mode === 'sprint') ? ' (in a Sprint, into the same race: every pilot is for themselves there)' : ''}.` : 'Invite friends to your squad first to be put in together, on one team.',
+        ),
+      );
+      m.root.append(h('div.shade'), m.panes(col, panel), m.footer(SELECT, BACK));
+    },
+    back: () => m.pop(),
+  });
+
   m.register('room', {
     initialFocus: 'ready',
     // A Grand Prix room moves on by itself: each stage starts on its own button.
@@ -152,7 +186,7 @@ export function registerOnline(m: Menus, g: Game): void {
       const byPid = new Map(v.players.map((p) => [p.pid, p] as [string, LobbyPlayer]));
       const host = v.host === o.pid;
       const inMatch = v.phase === 'race' || v.phase === 'results' || v.phase === 'final';
-      const top = h('div.roombar', h('b', `Room ${v.code}`), h('span', phaseText(v, me)), h('span', `Host: ${byPid.get(v.host ?? '')?.callsign ?? '–'}`));
+      const top = roomBar(v, me, byPid);
       const sides = h('div.sides');
       const list = h('div.list.actions');
       // Team by team in the highlight order: the team's name (its faction:
@@ -238,7 +272,7 @@ export function registerOnline(m: Menus, g: Game): void {
       }
       // The settings: the host changes them, everyone sees them.
       const settings = h('div.list.settings');
-      const lockSet = host ? null : 'Only the host changes the settings';
+      const lockSet = v.quick ? QUICK_SETS : host ? null : 'Only the host changes the settings';
       const ti = Math.max(0, TRACKS.findIndex((t) => t.id === v.settings.track));
       g.circuitAhead(TRACKS[ti].id);
       modeChoice(m, g, v, settings, lockSet ?? (inMatch ? 'Not during a match' : null));
@@ -269,17 +303,18 @@ export function registerOnline(m: Menus, g: Game): void {
           }
         }
       }
-      m.button(list, 'Invite', () => inviteDialog(m, g, 'room', v.code), { key: 'invite' });
+      if (!v.quick) m.button(list, 'Invite', () => inviteDialog(m, g, 'room', v.code), { key: 'invite' });
       if (host && inMatch) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the lobby.', 'End match', () => o.sendRoom('endMatch')), { key: 'end' });
-      m.button(list, 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
-      const panel = h('div.panel.settings-panel', h('h2', host ? 'Room settings: yours to change' : 'Room settings, changed by the host'), settings);
+      m.button(list, v.quick ? 'Leave' : 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
+      const panel = h('div.panel.settings-panel', h('h2', settingsTitle(v, host)), settings);
       const extra: HTMLElement[] = [];
       if (inMatch) {
         const mt = v.match;
         const score = mt ? (mt.cfg.mode === 'series' ? `${mt.wins[0]}–${mt.wins[1]}` : `${mt.totals[0]}–${mt.totals[1]}`) : '';
         extra.push(h('div.matchcard', h('b', `Match under way${mt ? `: round ${mt.rounds.length + (v.phase === 'race' ? 1 : 0)}` : ''}`), h('span', `${factionName(LIVERIES[v.sides[0].faction])} ${score} ${factionName(LIVERIES[v.sides[1].faction])}`), h('small', me?.nextRound ? 'You race from the next round.' : 'Back in a moment.')));
       }
-      if (!inMatch) extra.push(h('div.room-hint', `Pick a frame on either team to fly it; Ready locks it in, and the first to lock a frame keeps it.${host ? " As host you set both teams' factions: pick a team's name." : me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
+      if (!inMatch && v.quick) extra.push(h('div.room-hint', `${playlistById(v.quick)?.blurb ?? ''} The race starts by itself, with a computer pilot in every free place. Pick a frame on your team to fly it; Ready locks it in, and the first to lock a frame keeps it.${me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
+      else if (!inMatch) extra.push(h('div.room-hint', `Pick a frame on either team to fly it; Ready locks it in, and the first to lock a frame keeps it.${host ? " As host you set both teams' factions: pick a team's name." : me && me.side >= 0 && v.sides[me.side].captain === o.pid ? " As your team's captain you set its faction: pick its name." : ''}`));
       const col = h('div.room', top, sides, ...extra, h('div.bottom', panel, h('div.panel.actions-panel', list)));
       m.root.append(h('div.shade.full'), m.panes(col), m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your frame', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Paddock', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));
     },
@@ -335,11 +370,30 @@ function phaseText(v: LobbyView, me: LobbyPlayer | undefined): string {
     case 'final':
       return `Back to the lobby in ${Math.max(0, v.timer)}`;
     default: {
+      if (v.quick) {
+        const people = v.players.filter((p) => p.side >= 0).length;
+        const more = people < ROOM_SIZE ? ' · finding more pilots' : '';
+        return v.timer >= 0 ? `Race starts in ${v.timer}${more}` : `Starting…${more}`;
+      }
       const waiting = v.players.filter((p) => p.side >= 0 && p.connected && !p.ready).length;
       if (me && !me.ready) return 'Ready up to start';
       return waiting ? `Waiting for ${waiting} to ready up` : 'Starting…';
     }
   }
+}
+
+/** Why a Quick Play room's settings are nobody's to change. */
+const QUICK_SETS = 'Quick Play sets this';
+
+/** The bar across the top of a room: which room (its code, or Quick Play's playlist), where it is, and whose it is. */
+function roomBar(v: LobbyView, me: LobbyPlayer | undefined, byPid: Map<string, LobbyPlayer>): HTMLElement {
+  const list = playlistById(v.quick);
+  if (list) return h('div.roombar.quick', h('b', `Quick Play · ${list.name}`), h('span', phaseText(v, me)), h('span', playlistFormat(list)));
+  return h('div.roombar', h('b', `Room ${v.code}`), h('span', phaseText(v, me)), h('span', `Host: ${byPid.get(v.host ?? '')?.callsign ?? '–'}`));
+}
+
+function settingsTitle(v: LobbyView, host: boolean): string {
+  return v.quick ? 'This race: set by the playlist' : host ? 'Room settings: yours to change' : 'Room settings, changed by the host';
 }
 
 /** The room's mode (team race or Sprint): the host's to change, between matches. */
@@ -360,7 +414,7 @@ function renderSprintRoom(m: Menus, g: Game, v: LobbyView): void {
   const byPid = new Map(v.players.map((p) => [p.pid, p] as [string, LobbyPlayer]));
   const host = v.host === o.pid;
   const inMatch = v.phase === 'race' || v.phase === 'results' || v.phase === 'final';
-  const top = h('div.roombar', h('b', `Room ${v.code}`), h('span', phaseText(v, me)), h('span', `Host: ${byPid.get(v.host ?? '')?.callsign ?? '–'}`));
+  const top = roomBar(v, me, byPid);
   const seats = h('div.seats');
   const col = h('div.side.sprint', h('div.side-head', h('b', 'Sprint'), h('span', SPRINT_TAGLINE)), seats);
   const people = v.players.filter((p) => p.side >= 0);
@@ -390,11 +444,11 @@ function renderSprintRoom(m: Menus, g: Game, v: LobbyView): void {
   // The places nobody has: a computer pilot each, from a faction drawn by lot when the Sprint starts.
   for (let i = people.length; i < ROOM_SIZE; i++) {
     const row = h('div.seat.cpu', h('span.tint'), h('i.face'), h('span.who', h('b', 'Computer pilot'), h('small', `A faction's Forward, ${SKILL_NAMES[v.settings.skill]}`)), h('span.state', ''));
-    m.addItem(seats, row, () => m.toast('A computer pilot races here unless a friend joins'), undefined, { key: `cpu-${i}` });
+    m.addItem(seats, row, () => m.toast(v.quick ? 'A computer pilot races here unless someone searching is put in' : 'A computer pilot races here unless a friend joins'), undefined, { key: `cpu-${i}` });
   }
   // The settings: the host changes them, everyone sees them.
   const settings = h('div.list.settings');
-  const lockSet = host ? null : 'Only the host changes the settings';
+  const lockSet = v.quick ? QUICK_SETS : host ? null : 'Only the host changes the settings';
   const not = lockSet ?? (inMatch ? 'Not during a match' : null);
   const ti = Math.max(0, TRACKS.findIndex((t) => t.id === v.settings.track));
   g.circuitAhead(TRACKS[ti].id);
@@ -411,10 +465,10 @@ function renderSprintRoom(m: Menus, g: Game, v: LobbyView): void {
     if (host && everyone.length > 0 && everyone.every((p) => p.ready)) m.button(list, 'Start now', () => o.sendRoom('start'), { key: 'start', go: true });
     m.button(list, 'Paddock', () => g.openRoomPaddock(), { key: 'custom', note: `Your own Forward, ${customName(ROLE.FW, g.customMech(ROLE.FW))}` });
   }
-  m.button(list, 'Invite', () => inviteDialog(m, g, 'room', v.code), { key: 'invite' });
+  if (!v.quick) m.button(list, 'Invite', () => inviteDialog(m, g, 'room', v.code), { key: 'invite' });
   if (host && inMatch) m.button(list, 'End match for everyone', () => confirmDialog(m, 'End the match?', 'Everyone goes back to the lobby.', 'End match', () => o.sendRoom('endMatch')), { key: 'end' });
-  m.button(list, 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
-  const panel = h('div.panel.settings-panel', h('h2', host ? 'Room settings: yours to change' : 'Room settings, changed by the host'), settings);
+  m.button(list, v.quick ? 'Leave' : 'Leave room', () => g.confirmLeaveRoom(), { key: 'leave' });
+  const panel = h('div.panel.settings-panel', h('h2', settingsTitle(v, host)), settings);
   const extra: HTMLElement[] = [];
   if (inMatch) {
     const mt = v.match;
@@ -426,7 +480,7 @@ function renderSprintRoom(m: Menus, g: Game, v: LobbyView): void {
     }
     extra.push(h('div.matchcard', h('b', `Sprint under way${mt ? `: race ${mt.rounds.length + (v.phase === 'race' ? 1 : 0)}` : ''}`), h('span', line), h('small', me?.nextRound ? 'You race in the next Sprint.' : 'Back in a moment.')));
   } else {
-    extra.push(h('div.room-hint', `Six Forwards, every pilot for themselves: each person in their own Forward and their colour, computer pilots in the rest. ${SPRINT_FORMATS[v.settings.sprint]?.label ?? ''}.`));
+    extra.push(h('div.room-hint', `Six Forwards, every pilot for themselves: each person in their own Forward and their colour, computer pilots in the rest. ${SPRINT_FORMATS[v.settings.sprint]?.label ?? ''}.${v.quick ? ' The race starts by itself.' : ''}`));
   }
   const room = h('div.room', top, h('div.sides.sprint', col), ...extra, h('div.bottom', panel, h('div.panel.actions-panel', list)));
   m.root.append(h('div.shade.full'), m.panes(room), m.footer(SELECT, { pad: 'X', keys: 'X', label: 'Your place', press: 'x' }, { pad: 'Y', keys: 'Y', label: 'Your pilot', press: 'y' }, { pad: 'B', keys: 'Esc', label: 'Leave', press: 'back' }));

@@ -1753,8 +1753,11 @@ race for your team, frame and mech); Grand Prix (cups for medals, a season for
 the Zenith Cup, the other factions' races run in the background); online
 private rooms on a Colyseus server that runs `stepRace` as the authority,
 with prediction on the clients, reconnecting, and squads of up to three
-that move between rooms together. Matchmaking is still to come. How online
-works, and how to host it, is in [ONLINE.md](ONLINE.md).
+that move between rooms together; then Quick Play, matchmaking by playlist
+(a mode and a way of winning) into rooms with no host that start their own
+races, a squad kept together on one team and computer pilots in every
+place nobody has. How online works, and how to host it, is in
+[ONLINE.md](ONLINE.md).
 
 **A squad's Grand Prix online.** A squad of two or three races a cup, the
 Grand Tour or a short season (one round robin: five matchdays, four

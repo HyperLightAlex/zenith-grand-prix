@@ -26,6 +26,7 @@ const HANGAR_COMPUTER = new Set<string>(['hangar', 'paddock', 'pilot', 'custom',
 export type ScreenId =
   | 'title'
   | 'modes'
+  | 'quick'
   | 'hangar'
   | 'paddock'
   | 'pilot'

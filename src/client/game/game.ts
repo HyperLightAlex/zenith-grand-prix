@@ -72,7 +72,7 @@ import {
   type GpSlot,
   type Medal,
 } from '../../gp/grandPrix';
-import { PILOT_COLOURS, normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
+import { PILOT_COLOURS, PLAYLISTS, normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
 import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
 import { Input, type Device, type MenuInput } from '../input/input';
 import { TouchControls } from '../input/touch';
@@ -2333,6 +2333,33 @@ export class Game {
     });
   }
 
+  /** The playlist last searched: where Quick Play's list opens. */
+  quickPlaylist: string = readJson('zgp.quick', PLAYLISTS[0].id);
+
+  /**
+   * Quick Play: search `playlist` for a race. You are put into a room with
+   * whoever else is searching it (your squad with you, on your team), and
+   * its race starts by itself.
+   */
+  async quickPlay(playlist: string, again = false): Promise<void> {
+    this.quickPlaylist = playlist;
+    writeJson('zgp.quick', playlist);
+    this.onlineStatus = again ? 'Joining a fuller lobby…' : 'Finding a race…';
+    this.menus.refresh();
+    try {
+      await this.online.quickPlay(playlist, this.loadoutMsg(), this.squadTicket());
+      this.onlineStatus = '';
+      if (this.squadTicket() && this.online.room) this.online.sendSquad('go', { code: this.online.room.roomId });
+      this.toRoom();
+    } catch (e) {
+      this.onlineStatus = '';
+      // (Out of the lobby that was folded away, and no other to be had: the hub.)
+      if (again) this.menus.reset('online', undefined, ['title', 'modes']);
+      else this.menus.refresh();
+      this.menus.toast(failure(e), 4);
+    }
+  }
+
   async createRoom(): Promise<void> {
     this.onlineStatus = 'Making a room…';
     this.menus.refresh();
@@ -2528,7 +2555,9 @@ export class Game {
       return confirmDialog(this.menus, 'Leave the Grand Prix?', 'Your squad carries on without you, and a computer pilot takes your frame.', 'Leave', () => this.leaveRoom());
     }
     const inMatch = !!v && v.phase !== 'lobby' && v.phase !== 'countdown';
-    confirmDialog(this.menus, 'Leave the room?', inMatch ? 'Your seat goes to a computer pilot for the rest of this match.' : 'You can come back with its code while it is open.', 'Leave', () => this.leaveRoom());
+    // (A Quick Play lobby: nothing is lost by leaving it, so nothing is asked.)
+    if (v?.quick && !inMatch) return this.leaveRoom();
+    confirmDialog(this.menus, v?.quick ? 'Leave the race?' : 'Leave the room?', inMatch ? 'Your seat goes to a computer pilot for the rest of this match.' : 'You can come back with its code while it is open.', 'Leave', () => this.leaveRoom());
   }
 
   leaveMatch(): void {
@@ -2715,8 +2744,17 @@ export class Game {
       if (this.state === 'race') this.hud.showNotice(text, false, 2.2);
       else this.menus.toast(text);
     });
+    o.on('requeue', ({ playlist }) => {
+      // This lobby is being folded into a fuller one. On your own, or leading
+      // your squad: search again, which puts you there (the squad follows).
+      // A squad's member waits for their leader, as ever.
+      if (!this.menus.has('room')) return;
+      if (o.leading) void this.quickPlay(playlist, true);
+      else this.menus.toast('Your leader is taking the squad to a fuller lobby');
+    });
     o.on('error', ({ code, text }) => {
-      if (code === 'kicked' || code === 'replaced') return;
+      // (Said again as the room is left: the dialog there is enough.)
+      if (code === 'kicked' || code === 'replaced' || code === 'idle') return;
       if (this.state === 'race') this.hud.showNotice(text, true, 3);
       else this.menus.toast(text, 4);
     });
