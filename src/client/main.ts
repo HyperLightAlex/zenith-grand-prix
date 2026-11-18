@@ -3,6 +3,8 @@ import '@fontsource/barlow-condensed/latin-500-italic.css';
 import '@fontsource/barlow-condensed/latin-700-italic.css';
 import '@fontsource/barlow-condensed/latin-800-italic.css';
 import './ui/styles.css';
+import { registerFonts } from './fonts';
+import { hosted } from './platform';
 import { ROLE, type Role } from '../sim/index';
 import { NullAudio, type AudioEngine } from './audio/audio';
 import { Game } from './game/game';
@@ -98,7 +100,9 @@ async function boot(): Promise<void> {
     return;
   }
   // The trackside boards and number decals draw text to canvases, so the
-  // font has to be ready first.
+  // font has to be ready first. (Inside a host the stylesheets' fonts may be
+  // refused: registered from their files instead.)
+  if (hosted) await registerFonts();
   try {
     await Promise.all([document.fonts.load('italic 800 40px "Barlow Condensed"'), document.fonts.load('italic 700 20px "Barlow Condensed"')]);
   } catch {
