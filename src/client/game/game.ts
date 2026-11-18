@@ -1271,7 +1271,7 @@ export class Game {
   /** Volumes and the layer mix from the tuning panel's Sound tab. */
   private applySound(): void {
     const f = this.tuning.feel;
-    this.audio.setVolumes(f.volMaster, f.volMusic, f.volEffects);
+    this.audio.setVolumes(this.soundOn ? f.volMaster : 0, f.volMusic, f.volEffects);
     this.audio.setLayerMix({
       engine: f.mixEngine,
       wind: f.mixWind,
@@ -3286,6 +3286,21 @@ export class Game {
   }
 
   // ---- frame --------------------------------------------------------------
+
+  /** Sound as a whole, on or off for this visit (a host's menu has the switch): off, the volumes set in Settings are kept and nothing sounds. */
+  soundOn = true;
+  setSound(on: boolean): void {
+    this.soundOn = on;
+    this.applySound();
+  }
+
+  /** A host's menu asks for the race to be started again: done if there is one of your own to restart (not online, not at a menu). */
+  hostRestart(): boolean {
+    if (this.mode === 'online' || (this.state !== 'race' && this.state !== 'paused')) return false;
+    if (this.state === 'paused') this.resume();
+    this.restart();
+    return true;
+  }
 
   /** A host has paused the game (its own menu is open, or its page is hidden): see setHostPaused. */
   private hostPaused = false;

@@ -51,11 +51,13 @@ describe('the platform', () => {
     const used = new Set<string>();
     for (const file of sources('src')) {
       if (file.endsWith('platform.ts')) continue;
-      for (const m of readFileSync(file, 'utf8').matchAll(/['"`](zgp\.[A-Za-z.]+)['"`]/g)) used.add(m[1]);
+      for (const m of readFileSync(file, 'utf8').matchAll(/['"`]((?:zgp|zenith-gp)\.[A-Za-z0-9.]+)['"`]/g)) used.add(m[1]);
     }
     // (Kept for the visit, in the session; and the ghosts' keys are made from a circuit's id.)
     used.delete('zgp.resume');
     used.delete('zgp.ghosts.');
+    // (The tuning as it was once kept: read once, to carry it over; never written.)
+    used.delete('zenith-gp.tuning.v2');
     expect(used.size).toBeGreaterThan(15);
     for (const key of used) expect(SAVE_KEYS, key).toContain(key);
     for (const key of SAVE_KEYS) if (!key.startsWith('zgp.ghosts.')) expect([...used], key).toContain(key);

@@ -130,7 +130,8 @@ export default defineConfig(({ mode, command }) => {
     // synthesised race music.
     publicDir: single ? false : 'public',
     define: { __BUILD__: JSON.stringify(build) },
-    plugins: single ? [inlineEverything()] : [buildInfo(build), precompress()],
+    // (--mode hosted: a build for a host that serves and compresses the files itself, Akeru: no compressed copies.)
+    plugins: single ? [inlineEverything()] : mode === 'hosted' ? [buildInfo(build)] : [buildInfo(build), precompress()],
     build: {
       target: 'es2022',
       outDir: single ? 'play' : 'dist',

@@ -60,6 +60,8 @@ export interface Platform {
 export const SAVE_KEYS: readonly string[] = [
   'zgp.settings',
   'zgp.video',
+  // (The volumes and the other Settings kept with the tuning: tuning.ts.)
+  'zenith-gp.tuning.v3',
   'zgp.device',
   'zgp.callsign',
   'zgp.pilot',
