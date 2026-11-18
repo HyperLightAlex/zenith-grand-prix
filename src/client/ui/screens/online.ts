@@ -79,11 +79,13 @@ export function registerOnline(m: Menus, g: Game): void {
       const lead = o.leading;
       const members = sq?.members ?? [];
       const faction = sq ? sq.faction : g.loadout.team;
-      const follow = !lead ? "Your squad's leader takes the squad into rooms" : null;
+      // Full: nothing new can be started until the game gets its own place (it keeps trying).
+      const full = g.serversFull ? 'The servers are full right now' : null;
+      const follow = full ?? (!lead ? "Your squad's leader takes the squad into rooms" : null);
       m.button(list, 'Quick Play', () => (m.push('quick'), m.focus(g.quickPlaylist)), {
         key: 'quick',
         go: true,
-        locked: !lead ? "Your squad's leader starts the search: you go with them" : null,
+        locked: full ?? (!lead ? "Your squad's leader starts the search: you go with them" : null),
         hint: members.length > 1 ? 'A race against whoever is searching: your squad stays together on one team' : 'A race against whoever is searching, computer pilots in the free places',
       });
       m.button(list, 'Create room', () => void g.createRoom(), { key: 'create', locked: follow });
@@ -92,8 +94,8 @@ export function registerOnline(m: Menus, g: Game): void {
       const gpWhy = gpBlocked(g);
       m.button(list, 'Grand Prix', () => g.openOnlineGp(), { key: 'gp', locked: gpWhy, hint: gpWhy ?? 'A cup, the Grand Tour or a short season together, against computer pilots' });
       // Invite while there is an open position; join someone else's squad only while on your own.
-      if (members.length < 3) m.button(list, 'Invite to squad', () => void g.inviteToSquad(), { key: 'invite' });
-      if (members.length <= 1) m.button(list, 'Join a squad', () => g.askSquadCode(), { key: 'joinsquad' });
+      if (members.length < 3) m.button(list, 'Invite to squad', () => void g.inviteToSquad(), { key: 'invite', locked: full });
+      if (members.length <= 1) m.button(list, 'Join a squad', () => g.askSquadCode(), { key: 'joinsquad', locked: full });
       if (members.length > 1) m.button(list, 'Leave squad', () => void g.leaveSquad(), { key: 'leavesquad' });
       m.button(list, `Callsign: ${g.callsign || '(none)'}`, () => g.askCallsign(() => m.refresh()), { key: 'callsign' });
       col.append(list);
@@ -147,7 +149,7 @@ export function registerOnline(m: Menus, g: Game): void {
       col.append(h('div.context', 'Online'), h('h1', 'Quick Play'));
       if (g.onlineStatus) col.append(h('p.status', g.onlineStatus));
       const searching = !!g.onlineStatus;
-      const why = searching ? 'Searching…' : !o.leading ? "Your squad's leader starts the search" : null;
+      const why = g.serversFull ? 'Waiting for a place on the servers: Back stops the search' : searching ? 'Searching…' : !o.leading ? "Your squad's leader starts the search" : null;
       for (const p of PLAYLISTS) m.button(list, p.name, () => void g.quickPlay(p.id), { key: p.id, go: p.id === g.quickPlaylist, locked: why, hint: p.blurb });
       col.append(list);
       const size = o.squadSize;
@@ -162,7 +164,8 @@ export function registerOnline(m: Menus, g: Game): void {
       );
       m.root.append(h('div.shade'), m.panes(col, panel), m.footer(SELECT, BACK));
     },
-    back: () => m.pop(),
+    // (Backing out stops a search that is waiting for a place on full servers.)
+    back: () => (g.stopWaiting(), m.pop()),
   });
 
   m.register('room', {

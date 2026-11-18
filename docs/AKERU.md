@@ -56,13 +56,25 @@ The same package builds this repository's server (`ROOMS_ONLY`, `GAME_BUILD`,
 as the title's own service. Online play there is off until that service is
 deployed and its address is put in the package.
 
+## Start and the stick clicks
+
+What reaches the game depends on where Akeru is running, so the game takes
+both and depends on neither:
+
+- **Start** opens Akeru's own menu in a browser and is not passed on, so the
+  game's pause is on View there (`hostMenu`). In Akeru's phone app, whose
+  menu is the app's, Start is passed on, and pauses the game too.
+- **Stick clicks** (Escort a teammate on L3, Look back on R3) are passed on
+  to a title that asks for them with a reviewed input mapping, which Akeru's
+  package for this game does (`host/input.js` there). The phone app's
+  on-screen pad sends them to every title.
+
 ## Still open
 
-- **Escort a teammate** (L3) and **Look back** (R3) have no button inside
-  Akeru, which does not forward stick clicks: rebind them in Settings, or use
-  touch.
-- Quick Play places players with strangers. Whether Akeru allows that for a
-  title is its decision.
-- The game's repository states no licence and records no provenance for its
-  art, models and music, which Akeru's review asks for before a title is
-  published.
+- Quick Play places players with strangers: it is this game's online mode,
+  and the package says so plainly for Akeru's review.
+- Akeru publishes a game whose rights are not formally reviewed by a recorded
+  decision for one commit, on the strength of a record of where everything in
+  it came from (the route its Dead End Dash took: a `docs/ASSETS.md` in the
+  game, a `RELEASE.md` in the package). This repository has no such record
+  yet for its models, artwork, portraits, music and sounds.

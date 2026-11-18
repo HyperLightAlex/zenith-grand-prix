@@ -346,6 +346,15 @@ export const PLAYLISTS: readonly Playlist[] = [
 /** Quick Play's computer pilots (an index into SKILL_NAMES). */
 export const QUICK_SKILL = 1;
 
+/**
+ * What a full server answers a search, a new room or a join with. The game
+ * knows a full server by these words (the SDK hands on only the text), so
+ * they are said in one place.
+ */
+export const FULL_TEXT = 'The servers are at capacity';
+/** Seconds between a game's tries while the servers are full. */
+export const FULL_RETRY_SECONDS = 15;
+
 export function playlistById(id: unknown): Playlist | undefined {
   return typeof id === 'string' ? PLAYLISTS.find((p) => p.id === id) : undefined;
 }

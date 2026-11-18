@@ -35,7 +35,7 @@ if the proxy passes that path through.
 | `FORWARDED_HOPS` | unset | Where a player's address is: `0` if players connect straight to this server, `1` behind one proxy you run (read from `X-Forwarded-For`), and so on. Unset, the per-address limit on trying codes is off, because behind a proxy every player shares one address |
 | `ROOMS_ONLY` | unset | `1`: serve the rooms and the health check, no game files |
 | `GAME_BUILD` | unset | The build of the game this server is for (`0.5.0+abc1234`), when it serves no game files to read it from (`ROOMS_ONLY`). Players on another build are told the game has been updated |
-| `MAX_SOCKETS` | no limit | The most connections held at once; more are refused |
+| `MAX_SOCKETS` | no limit | The most connections held at once. At the limit the server is **full**: nobody racing is disturbed, and anyone new is told so and gets in as places free up (see "When the servers are full") |
 | `STATIC_DIR` | `dist/` | Where the built game is |
 | `QUIET` | unset | `1`: no log lines |
 | `TEST_LAPS` | unset | Testing only: races of this many laps |
@@ -319,8 +319,33 @@ two players.
 | Codes | 5 characters from 31 that cannot be misread (no 0/O, 1/I/L): about 28 million |
 | Code guessing | 30 room codes a minute per address, when `FORWARDED_HOPS` is set |
 | A dropped seat | Kept 60 s |
+| Connections | `MAX_SOCKETS`, when set: someone online holds one for their squad and one more while in a room, so a limit of 96 is about 48 people racing |
 | A squad's Grand Prix | Its squad only; the rivals' team is computer pilots |
 | Inbound message | 16 KB at most |
+
+### When the servers are full
+
+A server run with `MAX_SOCKETS` is full when it holds that many connections.
+Nothing changes for the people already on it. Anyone who then asks for
+something new (going online, a search, a new room, joining one) is answered
+`503` with the words in `FULL_TEXT`, in a reply the game can read from
+another site, and the game shows it rather than an error:
+
+- **Arriving at Online:** "The servers are full: you get in when a place frees
+  up. Trying again in 15 s…" on the hub, with Quick Play, Create room, Join
+  room and the squad buttons locked and saying why. The game asks again every
+  15 seconds by itself and opens the hub up when it is in. Everything
+  offline plays meanwhile.
+- **Searching in Quick Play:** the same notice on the playlist screen, and
+  the search goes on by itself until there is a place. Back stops it.
+- **A room by code, or a friend's invitation:** "The servers are full right
+  now. Try again in a few minutes."
+
+Someone whose connection drops mid-race gets back in as long as their place
+has not been taken in that moment. The server logs, once a minute, how many
+people it turned away: the sign that it is time for a bigger one. Rooms live
+in one process, so more capacity today is a bigger machine and a higher
+limit, not a second server.
 
 Codes are an invitation, not a secret. Anyone with a code can join until the
 room is full. The host can remove people, and a removed device cannot come
@@ -397,6 +422,12 @@ On this sandbox's 2-core Linux machine, with Node 22:
   (a squad of two and someone alone, into one lobby; the race starting by
   itself; the lobby again after it, without the one who never touched the
   controls). It needs the server started with `TEST_LAPS=1`.
+- `node tools/capacity-check.mjs` drives two browsers against a server with
+  room for two connections (`MAX_SOCKETS=2`): a search told the servers are
+  full that says so, counts down and gets in by itself when a place frees
+  up, and someone arriving at a full server, with the hub locked until then.
+- `tests/capacity.test.ts` is the reply itself and how the game tells it
+  from a full room and from no server.
 - `node tools/online-check.mjs` drives real browsers through the hub, a
   squad of three, a room, the invite link, frame picks and lock-in,
   factions, shot calling, a race, the results and back to the room, with

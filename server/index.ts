@@ -6,7 +6,8 @@
 // Endpoints:  GET /             the built game, from dist/
 //             GET /health       "ok" (also /healthz)
 //             /matchmake/...    Colyseus: create and join rooms by code,
-//                               and Quick Play's search for a room
+//                               and Quick Play's search for a room.
+//                               503 while the server is full (MAX_SOCKETS)
 //             WS  /<id>/<room>  Colyseus: a room's connection
 //
 // Settings come from the environment: see server/config.ts.
@@ -19,6 +20,7 @@ import { staticFiles } from './static';
 import { setServerBuild } from './raceRoom';
 import { defineRooms } from './rooms';
 import { codesInUse } from './codes';
+import { atCapacity, fullReply, readable } from './capacity';
 import { log } from './log';
 import { TRACKS, sharedTrack } from '../src/sim/index';
 
@@ -36,7 +38,7 @@ const transport = new WebSocketTransport({
   // Keyframes go out, not in: what comes in is small.
   maxPayload: 16 * 1024,
   // Who may connect (a browser on one of the allowed sites), and how many at once.
-  verifyClient: ORIGINS.length || MAX_SOCKETS ? (info: { origin: string }) => (!ORIGINS.length || ORIGINS.includes(info.origin)) && (!MAX_SOCKETS || sockets() < MAX_SOCKETS) : undefined,
+  verifyClient: ORIGINS.length || MAX_SOCKETS ? (info: { origin: string }) => (!ORIGINS.length || ORIGINS.includes(info.origin)) && !atCapacity(sockets(), MAX_SOCKETS) : undefined,
 });
 /** Connections held now. */
 const sockets = (): number => (transport as unknown as { wss: { clients: Set<unknown> } }).wss.clients.size;
@@ -75,6 +77,8 @@ defineRooms(gameServer);
  * FORWARDED_HOPS set, one address may try 30 codes a minute.
  */
 const tries = new Map<string, { n: number; since: number }>();
+/** Times a player was told the server is full, since the last line in the log. */
+let fullTold = 0;
 const TRIES_PER_MINUTE = 30;
 function refused(req: http.IncomingMessage, res: http.ServerResponse): boolean {
   const path = (req.url || '/').split('?')[0];
@@ -85,6 +89,16 @@ function refused(req: http.IncomingMessage, res: http.ServerResponse): boolean {
     res.end(JSON.stringify({ code: 403, error: 'Not allowed from this site' }));
     return true;
   }
+  // Full: said here, where the game can read it and tell its player, not
+  // left to the connection being refused (which reads as no server at all).
+  // (A browser's question before the request itself is let through.)
+  if (req.method !== 'OPTIONS' && atCapacity(sockets(), MAX_SOCKETS)) {
+    const full = fullReply(origin, ORIGINS);
+    res.writeHead(full.status, full.headers);
+    res.end(full.body);
+    fullTold++;
+    return true;
+  }
   if (!path.startsWith('/matchmake/joinById')) return false;
   const who = playerAddress(req.headers, req.socket.remoteAddress);
   if (who === null) return false;
@@ -92,7 +106,7 @@ function refused(req: http.IncomingMessage, res: http.ServerResponse): boolean {
   const t = tries.get(who);
   if (!t || now - t.since > 60_000) tries.set(who, { n: 1, since: now });
   else if (++t.n > TRIES_PER_MINUTE) {
-    res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '60' });
+    res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '60', ...readable(origin, ORIGINS) });
     res.end(JSON.stringify({ code: 429, error: 'Too many room codes tried. Wait a minute.' }));
     return true;
   }
@@ -113,3 +127,8 @@ console.log(`Zenith GP server listening on http://${HOST === '0.0.0.0' ? 'localh
 if (MAX_SOCKETS) console.log(`At most ${MAX_SOCKETS} connections at once.`);
 if (HOPS === null) console.log('Per-address limits are off. Set FORWARDED_HOPS (0 if players connect straight to this server) to turn them on.');
 setInterval(() => log('codes in use', codesInUse()), 10 * 60 * 1000).unref();
+// How often the limit was reached: what says it is time for a bigger server.
+setInterval(() => {
+  if (fullTold) log('at capacity', `${fullTold} turned away in the last minute (${sockets()} of ${MAX_SOCKETS} connections)`);
+  fullTold = 0;
+}, 60 * 1000).unref();

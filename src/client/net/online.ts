@@ -70,15 +70,7 @@ function inTime(join: Promise<Room>): Promise<Room> {
   });
 }
 
-/** A failed create or join, in words a player can act on. */
-export function failure(e: unknown): string {
-  const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : String((e as { message?: string })?.message ?? e);
-  if (/not found|does not exist|no rooms? (found|available)/i.test(msg)) return 'No room with that code. Check it and try again.';
-  if (/locked|maxClients|is full/i.test(msg)) return 'Room full';
-  if (/fetch|network|ECONNREFUSED|Failed to|NetworkError|load failed/i.test(msg)) return "Can't reach the game server. Check your connection and try again.";
-  if (/Too many/i.test(msg)) return 'Too many room codes tried. Wait a minute.';
-  return msg || 'Something went wrong.';
-}
+export { FULL_NOTICE, failure, isFull } from './failure';
 
 export class Online {
   readonly endpoint: string | null;

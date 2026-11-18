@@ -73,7 +73,7 @@ import {
   type GpSlot,
   type Medal,
 } from '../../gp/grandPrix';
-import { PILOT_COLOURS, PLAYLISTS, normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
+import { FULL_RETRY_SECONDS, PILOT_COLOURS, PLAYLISTS, normalizeCode, type Loadout, type MatchStartMsg, type SquadTicket } from '../../net/protocol';
 import { NullAudio, type AudioEngine, type AudioScene, type SfxName } from '../audio/audio';
 import { Input, type Device, type MenuInput } from '../input/input';
 import { TouchControls } from '../input/touch';
@@ -122,7 +122,7 @@ import { GpRunner } from '../gp/gpRunner';
 import * as gpStore from '../gp/gpStore';
 import { callsign as savedCallsign, colourFromPortrait, customLook, customMech, fliesCustom, pilotColour, pilotName, portrait as pilotPortrait, seatLook, setCallsign, setCustomMech, setFliesCustom, setPilotColour, setPortrait as savePortrait } from '../net/identity';
 import { encodeBuild, stockBuild, type MechBuild } from '../../custom/mechBuild';
-import { Online, failure } from '../net/online';
+import { Online, failure, isFull } from '../net/online';
 import { inKnockout } from './moments';
 import { NetSession } from './netSession';
 import { LocalSession } from './session';
@@ -400,6 +400,42 @@ export class Game {
   resultsLocal = 0;
   /** Online: what the hub and room say while something is under way. */
   onlineStatus = '';
+  /** The servers are full, and the game is trying again by itself every few seconds. */
+  serversFull = false;
+  private placeTimer = 0;
+
+  /**
+   * The servers are full: say so on the Online screens and do `again` every
+   * few seconds, for as long as the player stays there. `doing`: what is
+   * being tried ('Trying', 'Searching').
+   */
+  private waitForPlace(doing: string, again: () => void): void {
+    this.stopWaiting();
+    this.serversFull = true;
+    let left = FULL_RETRY_SECONDS;
+    const say = (): void => {
+      this.onlineStatus = `The servers are full: you get in when a place frees up. ${doing} again in ${left} s…`;
+      // (Not under a dialog: redrawing would take what is being typed.)
+      if (this.menus.screen === 'online' || this.menus.screen === 'quick') this.menus.refresh();
+    };
+    say();
+    this.placeTimer = window.setInterval(() => {
+      // Gone from Online, or in a room after all (a friend's invitation): no more tries.
+      if (!this.menus.has('online') || this.online.room) return this.stopWaiting();
+      if (--left > 0) return say();
+      window.clearInterval(this.placeTimer);
+      this.placeTimer = 0;
+      again();
+    }, 1000);
+  }
+
+  /** No longer waiting for a place on the servers (in, or the player went elsewhere). */
+  stopWaiting(): void {
+    if (this.placeTimer) window.clearInterval(this.placeTimer);
+    this.placeTimer = 0;
+    if (this.serversFull) this.onlineStatus = '';
+    this.serversFull = false;
+  }
   private rumbleT = 0;
   private time = 0;
   private last = performance.now();
@@ -2295,9 +2331,11 @@ export class Game {
       this.menus.refresh();
       try {
         await this.online.createSquad(this.loadoutMsg());
+        this.stopWaiting();
         this.onlineStatus = '';
       } catch (e) {
-        this.onlineStatus = failure(e);
+        if (isFull(e)) this.waitForPlace('Trying', () => void this.ensureSquad());
+        else this.onlineStatus = failure(e);
       }
       this.squadMaking = null;
       if (this.menus.screen === 'online') this.menus.refresh();
@@ -2309,6 +2347,7 @@ export class Game {
   leaveOnline(): void {
     const others = this.online.squadSize > 1;
     const go = () => {
+      this.stopWaiting();
       void this.online.leaveRoom();
       void this.online.leaveSquad();
       this.mode = null;
@@ -2347,14 +2386,18 @@ export class Game {
   async quickPlay(playlist: string, again = false): Promise<void> {
     this.quickPlaylist = playlist;
     writeJson('zgp.quick', playlist);
+    this.stopWaiting();
     this.onlineStatus = again ? 'Joining a fuller lobby…' : 'Finding a race…';
     this.menus.refresh();
     try {
       await this.online.quickPlay(playlist, this.loadoutMsg(), this.squadTicket());
+      this.stopWaiting();
       this.onlineStatus = '';
       if (this.squadTicket() && this.online.room) this.online.sendSquad('go', { code: this.online.room.roomId });
       this.toRoom();
     } catch (e) {
+      // Full: the search goes on by itself until there is a place, or the player backs out.
+      if (isFull(e) && !again && this.menus.has('online')) return this.waitForPlace('Searching', () => void this.quickPlay(playlist));
       this.onlineStatus = '';
       // (Out of the lobby that was folded away, and no other to be had: the hub.)
       if (again) this.menus.reset('online', undefined, ['title', 'modes']);
