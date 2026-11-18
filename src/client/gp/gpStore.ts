@@ -2,6 +2,7 @@
 // season in progress (one of each), the Sprint series's cup and Tour, the
 // medals won (each series's apart) and the Zenith Cups.
 
+import { platform } from '../platform';
 import type { GpEvent, GpSlot, Medal } from '../../gp/grandPrix';
 import { betterMedal, kindOf, slotOf, sprintSlot } from '../../gp/grandPrix';
 
@@ -19,7 +20,7 @@ const KEYS = {
 
 function read<T>(k: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(k);
+    const raw = platform.storage.getItem(k);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
@@ -28,8 +29,8 @@ function read<T>(k: string, fallback: T): T {
 
 function write(k: string, v: unknown): void {
   try {
-    if (v === null) localStorage.removeItem(k);
-    else localStorage.setItem(k, JSON.stringify(v));
+    if (v === null) platform.storage.removeItem(k);
+    else platform.storage.setItem(k, JSON.stringify(v));
   } catch {
     /* storage full or blocked: this visit only */
   }

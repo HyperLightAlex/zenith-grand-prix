@@ -6,6 +6,7 @@
 //   Grand Prix  cups and the season (src/gp/), with the other factions'
 //               races run in the background.
 //   Online      private rooms on the game server, with squads.
+import { platform } from '../platform';
 import { DEV_TOOLS } from '../devTools';
 import * as THREE from 'three';
 import {
@@ -338,7 +339,7 @@ function within(p: Promise<unknown>, ms: number): Promise<boolean> {
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = platform.storage.getItem(key);
     return raw ? { ...fallback, ...(JSON.parse(raw) as T) } : fallback;
   } catch {
     return fallback;
@@ -347,7 +348,7 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson(key: string, v: unknown): void {
   try {
-    localStorage.setItem(key, JSON.stringify(v));
+    platform.storage.setItem(key, JSON.stringify(v));
   } catch {
     /* storage blocked: this visit only */
   }
@@ -1987,6 +1988,8 @@ export class Game {
 
   /** Photo mode: over the race held by the pause menu (offline), or over a replay. */
   get canPhoto(): boolean {
+    // (A picture is saved as a file: only where the page may save one.)
+    if (!platform.downloads) return false;
     return (this.state === 'paused' && !(this.session instanceof NetSession)) || this.state === 'replay' || this.state === 'podium';
   }
 
@@ -3284,8 +3287,31 @@ export class Game {
 
   // ---- frame --------------------------------------------------------------
 
+  /** A host has paused the game (its own menu is open, or its page is hidden): see setHostPaused. */
+  private hostPaused = false;
+
+  /**
+   * A host pauses the game, or lets it go on (Akeru: its menu opening and
+   * closing). Paused, nothing moves, sounds or is drawn, and no control is
+   * held; a race offline is left at its pause menu, so letting go does not
+   * drop the player straight back into it. (Online the race is the room's
+   * and goes on: the seat's computer pilot flies while no inputs come.)
+   */
+  setHostPaused(on: boolean): void {
+    if (on === this.hostPaused) return;
+    this.hostPaused = on;
+    this.audio.hold?.(on);
+    this.input.release();
+    if (on && this.state === 'race' && !(this.session instanceof NetSession) && !this.photo.active) this.pause();
+  }
+
   private frame(now: number): void {
     requestAnimationFrame((t) => this.frame(t));
+    if (this.hostPaused) {
+      // (Time does not pass: the next frame after it is an ordinary one.)
+      this.last = now;
+      return;
+    }
     const dt = Math.min(0.1, Math.max(0.0005, (now - this.last) / 1000));
     this.last = now;
     this.time += dt;

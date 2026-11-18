@@ -5,6 +5,7 @@
 // "feel" values in game/tuning.ts, which the Settings screen sets.)
 
 import { BTN } from '../sim/index';
+import { platform } from './platform';
 
 /** What can be remapped. Menus keep their own buttons whatever is done here. */
 export type ActionId = 'accel' | 'brake' | 'left' | 'right' | 'boost' | 'attack' | 'special' | 'guard' | 'lock' | 'ability' | 'escort' | 'lookBack' | 'targetPrev' | 'targetNext';
@@ -81,7 +82,7 @@ export const settingsListeners: Array<(s: Settings) => void> = [];
 function load(): Settings {
   const base = defaultSettings();
   try {
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(KEY) : null;
+    const raw = platform.storage.getItem(KEY);
     if (!raw) return base;
     const d = JSON.parse(raw) as Partial<Settings>;
     if (!d || typeof d !== 'object' || d.v !== 1) return base;
@@ -104,7 +105,7 @@ function load(): Settings {
 
 function save(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(settings));
+    platform.storage.setItem(KEY, JSON.stringify(settings));
   } catch {
     /* kept for this visit */
   }

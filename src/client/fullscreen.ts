@@ -2,10 +2,13 @@
 // Browsers allow both only from a tap or a key press, and some views (an
 // embedded page, an iPhone's Safari) not at all; failing quietly is fine.
 
+import { platform } from './platform';
+
 type LockableOrientation = ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
 
 export function canFullscreen(): boolean {
-  return typeof document !== 'undefined' && !!document.documentElement.requestFullscreen && document.fullscreenEnabled !== false;
+  // (Not inside a host: the frame is the host's to size.)
+  return platform.fullscreen && typeof document !== 'undefined' && !!document.documentElement.requestFullscreen && document.fullscreenEnabled !== false;
 }
 
 export function isFullscreen(): boolean {
@@ -14,6 +17,7 @@ export function isFullscreen(): boolean {
 
 /** Full screen on or off. Resolves once the browser has answered. */
 export async function setFullscreen(on: boolean): Promise<void> {
+  if (!canFullscreen()) return;
   try {
     if (on && !document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
     else if (!on && document.fullscreenElement) await document.exitFullscreen();

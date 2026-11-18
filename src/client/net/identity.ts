@@ -6,6 +6,7 @@
 // ?player=2 (any word) on the URL keeps a separate identity, so two tabs of
 // one browser can be two players when testing.
 
+import { platform } from '../platform';
 import { PORTRAITS, callsignProblem, cleanCallsign, cleanColour, cleanPortrait, portraitColour } from '../../net/protocol';
 import { decodeBuild, encodeBuild, type MechBuild } from '../../custom/mechBuild';
 import type { Role } from '../../sim/config';
@@ -16,7 +17,7 @@ const key = (k: string) => (suffix ? `${k}.${suffix}` : k);
 
 function read(k: string): string | null {
   try {
-    return localStorage.getItem(key(k));
+    return platform.storage.getItem(key(k));
   } catch {
     return null;
   }
@@ -24,8 +25,8 @@ function read(k: string): string | null {
 
 function write(k: string, v: string | null): void {
   try {
-    if (v === null) localStorage.removeItem(key(k));
-    else localStorage.setItem(key(k), v);
+    if (v === null) platform.storage.removeItem(key(k));
+    else platform.storage.setItem(key(k), v);
   } catch {
     /* private window: kept for this visit only */
   }
@@ -211,7 +212,7 @@ export interface Resume {
 
 export function readResume(): Resume {
   try {
-    return JSON.parse(sessionStorage.getItem(key('zgp.resume')) || '{}') as Resume;
+    return JSON.parse(platform.session.getItem(key('zgp.resume')) || '{}') as Resume;
   } catch {
     return {};
   }
@@ -219,7 +220,7 @@ export function readResume(): Resume {
 
 export function writeResume(r: Resume): void {
   try {
-    sessionStorage.setItem(key('zgp.resume'), JSON.stringify(r));
+    platform.session.setItem(key('zgp.resume'), JSON.stringify(r));
   } catch {
     /* nothing to do */
   }

@@ -13,6 +13,8 @@ import { defineConfig, type Plugin } from 'vite';
  * the server reads dist/build.json to know which build it serves.
  */
 function buildName(): string {
+  // (Named from outside: a build made away from the repository, from one of its commits, says which.)
+  if (process.env.ZGP_BUILD) return process.env.ZGP_BUILD;
   const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
   let commit = 'local';
   try {

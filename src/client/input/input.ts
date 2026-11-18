@@ -1,5 +1,6 @@
 // Controller input. Gamepad first, keyboard as a full fallback. Produces the
 // MechInput the simulation wants, plus menu navigation and camera controls.
+import { platform } from '../platform';
 import { BTN, CARVE_MIN_STEER, emptyInput, type MechInput } from '../../sim/index';
 import { toggleFullscreen } from '../fullscreen';
 import { ACTIONS, actionKeys, padButton, settings, type ActionId } from '../settings';
@@ -191,7 +192,8 @@ export class Input {
   }
 
   private pad(): Gamepad | null {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    // (The platform's: the browser's own, or a host's that owns the controller.)
+    const pads = platform.getGamepads();
     for (const p of pads) if (p && p.connected && p.mapping === 'standard') return p;
     for (const p of pads) if (p && p.connected) return p;
     return null;
@@ -199,6 +201,7 @@ export class Input {
 
   /** Read the devices. Call once per frame before using `state`. */
   poll(): void {
+    platform.beginInputFrame();
     const s = this.state;
     // Held keys plus anything tapped since the last frame.
     const k = this.tapped;
@@ -278,7 +281,7 @@ export class Input {
       const pc = b(PAD.UP) ? 1 : b(PAD.RIGHT) ? 2 : b(PAD.DOWN) ? 3 : b(PAD.LEFT) ? 4 : 0;
       // Use the same dead zones for device selection and movement. A second,
       // larger threshold silently discarded gentle steering after key navigation.
-      const active = lx !== 0 || ly !== 0 || rt > 0.1 || lt > 0.1 || pb !== 0 || pc !== 0 || rx !== 0 || ry !== 0 || b(PAD.START);
+      const active = lx !== 0 || ly !== 0 || rt > 0.1 || lt > 0.1 || pb !== 0 || pc !== 0 || rx !== 0 || ry !== 0 || b(PAD.START) || (platform.hostMenu && b(PAD.BACK));
       if (active) this.touch('pad');
       if (this.device === 'pad') {
         mx = lx;
@@ -300,7 +303,7 @@ export class Input {
           const cb = this.capturing;
           this.capturing = null;
           this.touch('pad');
-          cb(i === PAD.START ? { cancel: true } : { pad: i });
+          cb(i === PAD.START || (platform.hostMenu && i === PAD.BACK) ? { cancel: true } : { pad: i });
           break;
         }
         for (let i = 0; i < p.buttons.length; i++) this.prevPad[i] = b(i);
@@ -319,13 +322,14 @@ export class Input {
       if (edge(PAD.RIGHT) || (sx > 0 && this.prevStickX <= 0)) m.push('right');
       if (edge(PAD.A)) m.push('confirm');
       if (edge(PAD.B)) m.push('back');
-      if (edge(PAD.START)) m.push('pause');
+      // Pause: Start, or View where a host keeps Start for its own menu (platform.hostMenu).
+      if (edge(PAD.START) || (platform.hostMenu && edge(PAD.BACK))) m.push('pause');
       if (edge(PAD.X)) m.push('x');
       if (edge(PAD.Y)) m.push('y');
       if (edge(PAD.LB)) m.push('lb');
       if (edge(PAD.RB)) m.push('rb');
       if (edge(PAD.RS)) m.push('track');
-      if (edge(PAD.BACK)) m.push('tune');
+      if (edge(PAD.BACK) && !platform.hostMenu) m.push('tune');
       this.prevStickX = sx;
       this.prevStickY = sy;
       for (let i = 0; i < p.buttons.length; i++) this.prevPad[i] = b(i);
@@ -406,6 +410,13 @@ export class Input {
    * (the button that picked "Resume", say) is ignored until it is released,
    * so it cannot fire a boost, a dash or an ability.
    */
+  /** Nothing is held any more: the keys let go of too (a host's pause: no key-up comes while its menu has the keyboard). */
+  release(): void {
+    this.keys.clear();
+    this.tapped.clear();
+    this.swallowHeld();
+  }
+
   swallowHeld(): void {
     this.poll();
     this.swallow = this.state.buttons | this.swallow;
@@ -485,6 +496,8 @@ export class Input {
 
   private pulse(strong: number, weak: number, ms: number): void {
     if (this.device !== 'pad' || this.rumbleScale <= 0) return;
+    // (Through the host, where it owns the controller.)
+    if (platform.rumble) return platform.rumble(Math.min(1, strong * this.rumbleScale), Math.min(1, weak * this.rumbleScale), ms);
     const p = this.pad() as (Gamepad & { vibrationActuator?: { playEffect?: (type: string, params: object) => Promise<unknown> } }) | null;
     const act = p?.vibrationActuator;
     if (act?.playEffect) {

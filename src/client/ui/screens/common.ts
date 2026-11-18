@@ -1,5 +1,6 @@
 // The title, the mode select, the controls, dialogs and text entry.
 
+import { hosted, platform } from '../../platform';
 import { DEV_TOOLS } from '../../devTools';
 import type { Game } from '../../game/game';
 import { CALLSIGN_CHARS, CALLSIGN_MAX, CODE_CHARS, CODE_LENGTH } from '../../../net/protocol';
@@ -26,9 +27,9 @@ function controlsRows(): Array<[string, Array<[string, string, string]>]> {
         ['Ability (uses a Cell)', p('ability'), k('ability')],
         ['Look around', 'Right stick', ''],
         ['Look back', p('lookBack'), k('lookBack')],
-        ['Pause', 'Start', 'Esc'],
+        ['Pause', platform.hostMenu ? 'View' : 'Start', 'Esc'],
         ...(DEV_TOOLS ? [['Tuning panel', 'Back', 'T'] as [string, string, string], ['80s look on and off', '', 'G'] as [string, string, string]] : []),
-        ['Full screen', '', 'F'],
+        ...(platform.fullscreen ? [['Full screen', '', 'F'] as [string, string, string]] : []),
       ],
     ],
     [
@@ -147,7 +148,7 @@ export function registerCommon(m: Menus, g: Game): void {
       m.button(list, 'Free Play', () => g.openFreePlay(), { key: 'free', hint: 'Any circuit, any rival, any format' });
       m.button(list, 'Online', () => g.openOnline(), {
         key: 'online',
-        hint: g.online.available ? 'Quick Play against whoever is racing, or private rooms with friends' : 'Needs the game from its server: not this saved copy',
+        hint: g.online.available ? 'Quick Play against whoever is racing, or private rooms with friends' : hosted ? 'Not switched on here yet' : 'Needs the game from its server: not this saved copy',
       });
       m.button(list, 'Hangar', () => g.openHangar(), { key: 'hangar', hint: 'Your pilot and your own mechs, for any team' });
       // The tutorial, each frame's role, and the controls.

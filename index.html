@@ -177,6 +177,12 @@
     </style>
   </head>
   <body>
+    <!--
+      studio-card: from here to /studio-card is the studio's card and the
+      script that plays it. A host that shows the game in a frame of its own
+      (Akeru) cuts it out whole: it has its own launch screen, and allows no
+      script in the page itself. ui/boot.ts carries on without it.
+    -->
     <div id="ident" class="ident" role="img" aria-label="Infinite Maybe Games">
       <div class="ident-logo">
         <img class="ink1" src="data:image/webp;base64,UklGRvIGAABXRUJQVlA4TOUGAAAvSwTXENWO4raRlEz/ZS8c4ysiJgDULckG1lu/4jJ91gBFtKVtUyQp93/V78F6d+VR/sH+ybqQG4174v5GJDQuPxESGAAgGym2bdu2bdu2bdu2bdu27bdtVBMAFIi//0gtIjLv+99///3333///fff/2iXQSQCCRB5SyF4YQT/gZVTrIOIKlV+0AdbCKEKBKA8JT6A8OalgGxhGkVYQ/lGB+yxg7ex1lQeicwEJWzwDmu7WUUlgwg3f5R35IEdNHjHNWcpu2jEEGpN5T0ZEYN3R0tZQDqGuHEpr0iOFryH/OefMotUFAFcS3lJeKTgPV7L9ROMUYRO5QzDKMETXEM+kwZq/hND1Oa3MglP/hMfgJxmLeUOywwPPdXa5XtkRhECqTIOV2zgSZdyjXYYceMb+AYGICe/HJSAF0b4UBmFMyjwDAGvUw5RjiKscZFXOEYEnuccV/lJcuY/IYQ1r0oTVPkiFvB850VZQSKDCJ3K4/+hgOc9lc8EBQIe4HoftDiilBoIggCPcCv90IURLmURnggA5CDXlJMHYYRjyxPUuz+Ps4a8/TCMcPNLfuDd93mktd92ExFFCLS+tv7t+DzWWvuhkh1EWHM9VKog6fQ83Fr7ogzDnC8iCKvmKNlEJF/0dx7zGsoNqtnde+SfoR9HzPINzDo7j0zlK5YJSgxx0/c+zI7egy/lB7ZhxI1X3Lo5G1jOX8OIcippfZxtXEohGGGEQ6kEr3+zmbukGeIoomqXdEDaudnOqjVlCLauzZaWa8kmfEGEOrdcINmv2dya/vxNGKFDPmPSqdni2n79bxihywuOPZqNnlcXTmGEtV34dWc2/KKExBFzKHF9Wc1ql+6SzK5sXFfLFr9Kcl70Y9zrmFa1yhol+eB0Yw9+442OPZtl8Wf5weu9WCZ6jA5rV7vWdUs71N1Y/oD3d7pWNUrrOmQRjm4sExqSuddVrRJoLH962Y9l/vI5X3TN2SadQ56j2pFlYsGSjutsVAEM+Y5xT5aQvM8rXY2yquQ3Bh0ZKJmoMm3D5/Dyqh+7EWyiudM127T2cr3qyjK/pW/onC1StxdM+7JM/LnQ62jTvFg4d2YJB638dM42zaEEdGaZv7OvVQ2quS5KGqidWUJH1Xu62mNVLaUUjM4s88MHOgBWa25cSh0EvVlC/9vVy2jRLKUXst4sE09uFaBBN2UO2u4sEf1M92xRKXswdGf59BXfrRbdyBU83Vnmh9yBNJs3iPdn+RvLarWo5DMq/VlCSPnXIFaDnD78sj/LxIUXOnY1x10Tkw4tkWVbr7M9rim2/dkP+enny73a45r+3Z3dSNgbjt0eqySqR0s0OdRqjzUlA8wOLWF8xyavJfUQd2gJOqXDao9z+g4UHVrmx3xSqzUW/3wJTY+WGPBUZ3Pcwy++6dESSfZt8RxyA0+HBmpCyySIa7fG/bA+/K0/y8xHNExXtWbu6+IXCj1aJskPnWO1RdfDLYZdWuLGR/dozVxbsenSElWurTHbcuO0T0u4WRf4OtszO7WEhD5rNEd7tcxX5agwIokf7jgi8XnbGUckth9acUS+ySsDiUSWm0gi4WEnkkhomIkkEhIGG5IdPPh0aIUR+ee7WmFEgkKFzjAik6IykEhSlrMOL/t5AreBROLCf2eFEYkT/5xxRH69Pfbs7HFfzhlG5BfLiiMSr6lVB5UdPp6AlmFEfg1gIJFfT6uOKDt9vMpAIgnQOp7s94nRGUcksVbFEfmds44l+34yjSTyfasOJLt/8gQ8juz/P6DKiiMSAnqtg8gQEGpmrTgioWfVOoKMAuHiTKDzyzgQfm6tc8tIEGGeWnFEIs0bV51TBoOo88N9RhkOYrJq1blkQPhA/l3meWRISLDXUXUGGRR+7ttjnl6GhaTLz12nloEh+b6952llZAgmTX69TypjQ4jfkT8nlOEhDJw6AOeJZID4Hh+91GlkiIjG0qp7l1EidjrXPcs4ES+r7lGGikRb1j3IYBHUh+67l/Hio28ddylDRogYdtyNjBqfsOuoO8jIETbuBLytDB4R5/eqW2QAiZFbzSjyh7zvf//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//9999///3333///ffff//999//16wNAA==" alt="" />
@@ -587,6 +593,7 @@
         });
       })();
     </script>
+    <!-- /studio-card -->
     <div id="boot" class="boot">
       <div class="boot-tube">
         <div class="boot-head"><span>Zenith race control</span><b>Frame link</b></div>

@@ -10,6 +10,12 @@
 //                    per-address limit on trying room codes is off.
 //   ROOMS_ONLY=1     serve the rooms and the health check, no game files
 //   STATIC_DIR       the built game (default: dist/ beside this server)
+//   GAME_BUILD       the build of the game this server is for, when it
+//                    serves no game files to read it from (ROOMS_ONLY: the
+//                    game is hosted elsewhere). Players on another build
+//                    are told the game has been updated. Unset there, any
+//                    build may come, and a room keeps to the build that
+//                    made it.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,6 +48,7 @@ export const TEST_LAPS = Number(process.env.TEST_LAPS) > 0 ? Math.min(9, Number(
  * remembers the build that made it, and everyone in it must be on the same.
  */
 export function readBuild(): string {
+  if (process.env.GAME_BUILD) return process.env.GAME_BUILD;
   try {
     const info = JSON.parse(fs.readFileSync(path.join(STATIC_DIR, 'build.json'), 'utf8')) as { build?: string };
     if (typeof info.build === 'string' && info.build) return info.build;

@@ -5,6 +5,7 @@
 //
 // When a set of values feels right, "Copy values" on the panel gives a small
 // block of text to paste back so they can be made the defaults.
+import { platform } from '../platform';
 import { DEFAULT_RULES, MPH_PER_UNIT, RULE_KEYS, makeRules, type RuleKey, type Rules } from '../../sim/index';
 
 export interface Feel {
@@ -413,9 +414,9 @@ export class Tuning {
   // previews), so the game must work the same without it.
   private load(): void {
     try {
-      const raw = window.localStorage.getItem(STORE_KEY);
+      const raw = platform.storage.getItem(STORE_KEY);
       if (!raw) {
-        const old = window.localStorage.getItem(OLD_STORE_KEY);
+        const old = platform.storage.getItem(OLD_STORE_KEY);
         if (old) this.takeFeel((JSON.parse(old) as { feel?: Partial<Feel> }).feel);
         return;
       }
@@ -429,7 +430,7 @@ export class Tuning {
 
   private save(): void {
     try {
-      window.localStorage.setItem(STORE_KEY, JSON.stringify(this.changes()));
+      platform.storage.setItem(STORE_KEY, JSON.stringify(this.changes()));
     } catch {
       /* not remembered this time */
     }

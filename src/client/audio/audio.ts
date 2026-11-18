@@ -136,6 +136,12 @@ export interface AudioEngine {
   nowPlaying?(): { id: string; title: string } | null;
   /** The hangar's setlist: on to the next track. */
   skipTrack?(): void;
+  /**
+   * Held silent (a host has paused the game) or let go again: while held,
+   * nothing sounds and nothing wakes the audio up. Optional: an engine with
+   * no sound has nothing to hold.
+   */
+  hold?(on: boolean): void;
 }
 
 /** Silent stand-in: with &mute=1, where there is no Web Audio, and in tests. */

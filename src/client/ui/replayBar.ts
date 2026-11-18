@@ -2,6 +2,7 @@
 // a row of controls, each with its key or button for the device in hand (and
 // each a button to click or tap).
 
+import { platform } from '../platform';
 import type { Device } from '../input/input';
 import type { Highlight } from '../game/replay';
 import { h, setClass, setText } from './dom';
@@ -36,7 +37,7 @@ export interface ReplayBarActions {
 type Control = 'play' | 'seek' | 'speed' | 'pilot' | 'camera' | 'look' | 'moment' | 'menu';
 
 const KEYS: Record<Device, Record<Control, string>> = {
-  pad: { play: 'A', seek: '◀ ▶', speed: '▲ ▼', pilot: 'LB RB', camera: 'X', look: 'RS', moment: 'Y', menu: 'Start' },
+  pad: { play: 'A', seek: '◀ ▶', speed: '▲ ▼', pilot: 'LB RB', camera: 'X', look: 'RS', moment: 'Y', menu: platform.hostMenu ? 'View' : 'Start' },
   keys: { play: 'Space', seek: 'A D', speed: 'W S', pilot: 'Q E', camera: 'X', look: 'Drag', moment: 'Y', menu: 'Esc' },
   touch: { play: '', seek: '', speed: '', pilot: '', camera: '', look: 'Drag', moment: '', menu: '' },
 };

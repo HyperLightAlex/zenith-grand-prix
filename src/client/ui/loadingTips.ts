@@ -2,6 +2,7 @@
 // docs/DESIGN.md), each for the races it fits (a team race or a Sprint, a
 // frame, a circuit) and naming the controls as the player's device has them.
 
+import { platform } from '../platform';
 import type { Device } from '../input/input';
 import { KEYS } from './keyNames';
 
@@ -100,7 +101,7 @@ const SEEN_KEEP = 16;
 
 function seen(): string[] {
   try {
-    const v = JSON.parse(localStorage.getItem(SEEN_KEY) ?? '[]');
+    const v = JSON.parse(platform.storage.getItem(SEEN_KEY) ?? '[]');
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
   } catch {
     return [];
@@ -111,7 +112,7 @@ function seen(): string[] {
 export function markSeen(id: string): void {
   try {
     const list = [id, ...seen().filter((x) => x !== id)].slice(0, SEEN_KEEP);
-    localStorage.setItem(SEEN_KEY, JSON.stringify(list));
+    platform.storage.setItem(SEEN_KEY, JSON.stringify(list));
   } catch {
     // (Not kept: the next load may show it again.)
   }

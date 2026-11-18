@@ -3,6 +3,7 @@
 // or set to a Sprint, the six places in one column, every pilot for
 // themselves).
 
+import { hosted } from '../../platform';
 import { ROLE, ROLE_NAMES, TRACKS, standings, type Role } from '../../../sim/index';
 import { MATCH_FORMATS, PILOT_COLOUR_NAMES, PLAYLISTS, QUICK_GATHER_SECONDS, ROOM_SIZE, SKILL_NAMES, SPRINT_FORMATS, playlistById, playlistFormat, portraitColour, type LobbyPlayer, type LobbyView } from '../../../net/protocol';
 import { customName } from '../../../custom/mechBuild';
@@ -33,28 +34,29 @@ function emblem(f: number): HTMLElement {
 
 /** The invite: the code large enough to read out, and the link to copy. */
 export function inviteDialog(m: Menus, g: Game, kind: 'room' | 'squad', code: string): void {
+  // (No link where the page's address is not one to share: the code alone.)
   const link = g.online.link(kind, code);
-  const text = h(
-    'div.invite',
-    h('div.code', code),
-    h('p', kind === 'room' ? 'Friends enter this code under Online, Join room, or open the link.' : 'Friends enter this code under Online, Join a squad, or open the link.'),
-    h('div.link', link),
-  );
+  const where = kind === 'room' ? 'Online, Join room' : 'Online, Join a squad';
+  const text = h('div.invite', h('div.code', code), h('p', link ? `Friends enter this code under ${where}, or open the link.` : `Friends enter this code under ${where}.`), link ? h('div.link', link) : null);
   m.push<DialogData>('dialog', {
     title: kind === 'room' ? 'Invite to this room' : 'Invite to your squad',
     text,
     options: [
-      {
-        label: 'Copy link',
-        go: true,
-        run: () => {
-          void navigator.clipboard?.writeText(link).then(
-            () => m.toast('Link copied'),
-            () => m.toast('Copying is blocked here: read out the code instead'),
-          );
-        },
-      },
-      { label: 'Close', run: () => m.pop() },
+      ...(link
+        ? [
+            {
+              label: 'Copy link',
+              go: true,
+              run: () => {
+                void navigator.clipboard?.writeText(link).then(
+                  () => m.toast('Link copied'),
+                  () => m.toast('Copying is blocked here: read out the code instead'),
+                );
+              },
+            },
+          ]
+        : []),
+      { label: 'Close', go: !link, run: () => m.pop() },
     ],
   });
 }
@@ -67,7 +69,7 @@ export function registerOnline(m: Menus, g: Game): void {
       const list = h('div.list');
       col.append(h('div.context', 'Online'), h('h1', 'Online'));
       if (!o.available) {
-        col.append(h('p', 'Online play needs the game opened from its server, not this saved copy. Open it from the address you were given.'));
+        col.append(h('p', hosted ? 'Online play is not switched on here yet.' : 'Online play needs the game opened from its server, not this saved copy. Open it from the address you were given.'));
         m.root.append(h('div.shade'), m.panes(col), m.footer(BACK));
         return;
       }

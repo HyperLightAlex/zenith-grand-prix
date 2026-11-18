@@ -2,6 +2,7 @@
 // Built on the Colyseus client; everything above this file sees plain
 // messages and events.
 
+import { hosted, platform } from '../platform';
 import { Client, type Room } from '@colyseus/sdk';
 import { JOIN_TIMEOUT_SECONDS, NET_PROTOCOL, VIEW_RETRY_SECONDS, type GpRequest, type JoinOptions, type LobbyView, type Loadout, type ServerMessages, type SquadServerMessages, type SquadTicket, type SquadView } from '../../net/protocol';
 import { callsign, customLook, deviceId, pilotColour, portrait, readResume, seatLook, writeResume } from './identity';
@@ -30,10 +31,11 @@ export interface OnlineEvents {
 
 type Handler<K extends keyof OnlineEvents> = (msg: OnlineEvents[K]) => void;
 
-/** Where the server is: ?server=, else the page's own address (the dev server's port 8090 in development). */
+/** Where the server is: ?server=, else what the platform says (a host's address for it, or none), else the page's own address (the dev server's port 8090 in development). */
 export function serverEndpoint(): string | null {
   const q = new URLSearchParams(location.search).get('server');
-  if (q) return q;
+  if (q && !hosted) return q;
+  if (platform.server !== undefined) return platform.server;
   if (location.protocol === 'file:') return null;
   if (import.meta.env.DEV) return `${location.protocol}//${location.hostname}:8090`;
   // Served below a path (example.com/zenith/): the server is there too.
@@ -427,8 +429,9 @@ export class Online {
     return back;
   }
 
-  /** The invite link for a room or squad code: this page's address with ?room= or ?squad=. */
+  /** The invite link for a room or squad code: this page's address with ?room= or ?squad= ('' where the page's address is not one to share: inside a host). */
   link(kind: 'room' | 'squad', code: string): string {
+    if (!platform.links) return '';
     const u = new URL(location.href);
     u.search = '';
     u.hash = '';

@@ -3,8 +3,9 @@
 // a ghost, and the career's totals; all of it saved, and read back safely.
 
 import { describe, expect, it } from 'vitest';
-import { COUNTDOWN_TICKS, DT, ROLE, stepRace } from '../src/sim/index';
-import { GHOST_RATE, LapTracer, RELAID, RecordBook, ghostAt, packGhost, recordKey, unpackGhost, type Ghost } from '../src/client/game/records';
+import { COUNTDOWN_TICKS, DT, ROLE, TRACKS, stepRace } from '../src/sim/index';
+import { GHOST_RATE, LapTracer, RELAID, RecordBook, ghostAt, ghostKey, packGhost, recordKey, unpackGhost, type Ghost } from '../src/client/game/records';
+import { SAVE_KEYS } from '../src/client/platform';
 import { FW0, TRACK, newRace } from './helpers';
 
 /** A race run to its end by the computer pilots, its forward's laps traced (the first race from `seed` on in which the forward reaches the flag). */
@@ -27,6 +28,9 @@ class MemoryStorage {
   }
   setItem(k: string, v: string): void {
     this.map.set(k, v);
+  }
+  removeItem(k: string): void {
+    this.map.delete(k);
   }
 }
 
@@ -122,6 +126,28 @@ describe('the record book', () => {
     // Saved, and read back.
     const again2 = new RecordBook(store);
     expect(again2.data).toEqual(book.data);
+    // The ghost is kept apart from the book, with its circuit's: no one value holds every circuit's.
+    expect(JSON.parse(store.getItem('zgp.records')!).laps[recordKey('meridian', ROLE.FW)].ghost).toBeNull();
+    expect(JSON.parse(store.getItem(ghostKey('meridian'))!)[ROLE.FW].data).toBe(rec.ghost === null ? '' : again2.lap('meridian', ROLE.FW)!.ghost!.data);
+    expect(SAVE_KEYS).toContain(ghostKey('meridian'));
+    for (const def of TRACKS) expect(SAVE_KEYS, def.id).toContain(ghostKey(def.id));
+    // Nothing the game keeps is longer than a host's value may be (128 KB): a circuit's three ghosts, at their longest.
+    const worst = JSON.stringify(Object.fromEntries([0, 1, 2].map((r) => [r, { ...rec.ghost!, data: 'A'.repeat(Math.ceil((150 * GHOST_RATE * 12 * 4) / 3)) }])));
+    expect(worst.length).toBeLessThan(131072);
+    // A book from before (its ghosts in it) reads the same, and is kept apart from then on.
+    const old = new MemoryStorage();
+    old.setItem('zgp.records', JSON.stringify(book.data));
+    const read = new RecordBook(old);
+    expect(read.data).toEqual(book.data);
+    read.addMatch([], 0);
+    expect(old.getItem(ghostKey('meridian'))).toBeNull();
+    read.addRace({ race, track: 'meridian', local: FW0, mode: 'Free Play', laps: tracer.laps, look });
+    expect(JSON.parse(old.getItem('zgp.records')!).laps[recordKey('meridian', ROLE.FW)].ghost).toBeNull();
+    expect(new RecordBook(old).lap('meridian', ROLE.FW)!.ghost!.data).toBe(book.lap('meridian', ROLE.FW)!.ghost!.data);
+    // Cleared: the ghosts go too.
+    read.clear();
+    expect(new RecordBook(old).lap('meridian', ROLE.FW)).toBeNull();
+    expect(old.getItem(ghostKey('meridian'))).toBeNull();
   });
 
   it('lets go of a circuit\'s records set before its road was laid again, and keeps the rest', () => {

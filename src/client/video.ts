@@ -22,6 +22,8 @@
 // classes set here, never off the window, so a 4:3 picture on a wide screen
 // and a 4:3 screen get the same layout.
 
+import { platform } from './platform';
+
 export type Aspect = 'wide' | 'classic';
 
 /** How sharp the 3D picture is drawn (see RESOLUTIONS). */
@@ -59,7 +61,7 @@ const DEFAULTS: VideoSettings = { panels: true, damage: true, crt: false, aspect
 
 function load(): VideoSettings {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) || '{}') as Partial<VideoSettings>;
+    const v = JSON.parse(platform.storage.getItem(KEY) || '{}') as Partial<VideoSettings>;
     return {
       panels: typeof v.panels === 'boolean' ? v.panels : DEFAULTS.panels,
       damage: typeof v.damage === 'boolean' ? v.damage : DEFAULTS.damage,
@@ -77,7 +79,7 @@ export const video: VideoSettings = load();
 
 export function saveVideo(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(video));
+    platform.storage.setItem(KEY, JSON.stringify(video));
   } catch {
     /* private window: kept for this visit */
   }

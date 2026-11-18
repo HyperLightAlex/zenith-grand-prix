@@ -3,6 +3,7 @@
 // screen's buttons by their names ('' where touch has none: the throttle is
 // held for you). The pad's and the keyboard's follow the controls as
 // remapped in Settings (see applyBindingNames).
+import { platform } from '../platform';
 import type { Device } from '../input/input';
 import { keysLabel, padButton, padName, type ActionId } from '../settings';
 
@@ -21,6 +22,8 @@ export function applyBindingNames(): void {
   const p = (id: ActionId) => padName(padButton(id) ?? 0);
   const k = keysLabel;
   Object.assign(KEYS.pad, {
+    // (Where a host keeps Start for its own menu, the game's pause is on View.)
+    pause: platform.hostMenu ? 'View' : 'Start',
     accel: p('accel'),
     brake: p('brake'),
     carve: `${p('brake')} + stick`,

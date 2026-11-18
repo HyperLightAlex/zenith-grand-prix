@@ -445,15 +445,25 @@ export class SynthAudio implements AudioEngine {
 
   private readonly wake = (): void => {
     const live = this.g?.live;
-    if (live && live.state !== 'running' && live.state !== 'closed' && !document.hidden) live.resume().catch(() => {});
+    if (live && live.state !== 'running' && live.state !== 'closed' && !document.hidden && !this.held) live.resume().catch(() => {});
   };
+
+  /** Held silent by the host's pause (see AudioEngine.hold). */
+  private held = false;
+  hold(on: boolean): void {
+    this.held = on;
+    const live = this.g?.live;
+    if (!live || live.state === 'closed') return;
+    if (on) live.suspend().catch(() => {});
+    else if (!document.hidden) live.resume().catch(() => {});
+  }
 
   /** Stop sounding while the page is hidden: the game loop is not running to steer it. */
   private readonly onVisibility = (): void => {
     const live = this.g?.live;
     if (!live || live.state === 'closed') return;
     if (document.hidden) live.suspend().catch(() => {});
-    else live.resume().catch(() => {});
+    else if (!this.held) live.resume().catch(() => {});
   };
 
   private boot(ctx: Ctx, live: AudioContext | null): void {

@@ -12,6 +12,7 @@
 // for: the first two run at a limiter, so they say little about the pilot,
 // and a time trial will be raced flat out as the speed lap is.
 
+import { platform } from '../platform';
 import { COUNTDOWN_TICKS, DT, mentions, type MechState, type PilotLine, type RaceState, type Role, type Track } from '../../sim/index';
 
 /** Samples a second in a ghost. */
@@ -263,6 +264,16 @@ export class LapTracer {
 // ---- the book --------------------------------------------------------------------
 
 const KEY = 'zgp.records';
+/**
+ * The lap ghosts are kept apart from the book, a key to a circuit (its
+ * frames' ghosts, by frame): a ghost is about 11 KB, and a book with every
+ * circuit's in it would be too much for one value where a host keeps the
+ * game's saves (platform.ts: SAVE_KEYS).
+ */
+export const ghostKey = (track: string): string => `zgp.ghosts.${track}`;
+
+/** Where the book is kept: a browser's Storage, or the part of one a test or a host gives. */
+export type RecordStore = Pick<Storage, 'getItem' | 'setItem'> & Partial<Pick<Storage, 'removeItem'>>;
 
 /**
  * When a circuit's road was last laid differently (ms since 1970): its
@@ -308,7 +319,10 @@ export interface RaceDone {
 export class RecordBook {
   data: RecordsFile;
 
-  constructor(private readonly storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage !== 'undefined' ? localStorage : null) {
+  /** Each circuit's ghosts as last written (or read), so only what changed is written. */
+  private ghostsKept = new Map<string, string>();
+
+  constructor(private readonly storage: RecordStore | null = platform.storage) {
     this.data = this.load();
   }
 
@@ -401,17 +415,61 @@ export class RecordBook {
       const career = { ...base.career, ...(d.career ?? {}) };
       if (!Array.isArray(career.byRole) || career.byRole.length < 3) career.byRole = base.career.byRole;
       if (typeof career.byTrack !== 'object' || career.byTrack === null) career.byTrack = {};
-      return { v: 1, laps: onTheRoad<LapRecord>(d.laps), races: onTheRoad<RaceRecord>(d.races), career };
+      const laps = onTheRoad<LapRecord>(d.laps);
+      // Each lap's ghost, from its circuit's (a book from before they were kept apart has them in it).
+      const ghosts = new Map<string, Record<string, Ghost>>();
+      for (const [key, lap] of Object.entries(laps)) {
+        if (lap.ghost) continue;
+        const [track, role] = key.split('|');
+        if (!ghosts.has(track)) ghosts.set(track, this.readGhosts(track));
+        lap.ghost = ghosts.get(track)![role] ?? null;
+      }
+      return { v: 1, laps, races: onTheRoad<RaceRecord>(d.races), career };
     } catch {
       return emptyRecords();
     }
   }
 
-  private save(): void {
+  private readGhosts(track: string): Record<string, Ghost> {
     try {
-      this.storage?.setItem(KEY, JSON.stringify(this.data));
+      const raw = this.storage?.getItem(ghostKey(track));
+      if (!raw) return {};
+      this.ghostsKept.set(track, raw);
+      const d = JSON.parse(raw) as Record<string, Ghost>;
+      return d && typeof d === 'object' ? d : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private save(): void {
+    // The book without its ghosts, then each circuit's ghosts where they changed.
+    const byTrack = new Map<string, Record<string, Ghost>>();
+    const laps: Record<string, LapRecord> = {};
+    for (const [key, lap] of Object.entries(this.data.laps)) {
+      laps[key] = { ...lap, ghost: null };
+      if (!lap.ghost) continue;
+      const [track, role] = key.split('|');
+      byTrack.set(track, { ...(byTrack.get(track) ?? {}), [role]: lap.ghost });
+    }
+    try {
+      this.storage?.setItem(KEY, JSON.stringify({ ...this.data, laps }));
     } catch {
       /* full or blocked: kept for this visit */
+    }
+    for (const track of new Set([...byTrack.keys(), ...this.ghostsKept.keys()])) {
+      const ghosts = byTrack.get(track);
+      const text = ghosts ? JSON.stringify(ghosts) : '';
+      if (text === (this.ghostsKept.get(track) ?? '')) continue;
+      try {
+        if (text) this.storage?.setItem(ghostKey(track), text);
+        else if (this.storage?.removeItem) this.storage.removeItem(ghostKey(track));
+        else this.storage?.setItem(ghostKey(track), '{}');
+        if (text) this.ghostsKept.set(track, text);
+        else this.ghostsKept.delete(track);
+      } catch {
+        /* full or blocked: the time is kept, its ghost for this visit */
+      }
     }
   }
 }
