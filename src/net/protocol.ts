@@ -13,8 +13,8 @@ import type { MatchConfig, MatchState, MechInput, RaceState, Role, RoundResult, 
 import { CUPS, type GpEvent, type GpKind } from '../gp/grandPrix';
 import { decodeBuild } from '../custom/mechBuild';
 
-/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits; 4: custom mechs; 5: Sprint, and pilots' colours.) */
-export const NET_PROTOCOL = 5;
+/** Bumped when a message changes shape: a client and a room must agree on it. (2: the squad's Grand Prix; 3: pilots' portraits; 4: custom mechs; 5: Sprint, and pilots' colours; 6: Quick Play.) */
+export const NET_PROTOCOL = 6;
 
 /** The server sends the inputs it used every this many ticks (30 packets a second). */
 export const TICKS_PER_PACKET = 2;
@@ -58,6 +58,20 @@ export const VIEW_RETRY_SECONDS = 2;
 export const JOIN_TIMEOUT_SECONDS = 20;
 /** Seats held for a squad's members while they follow their leader in (seconds). */
 export const SQUAD_HOLD_SECONDS = 20;
+/**
+ * Quick Play (a matchmade room: see PLAYLISTS). Its lobby starts the race by
+ * itself: this long after the first person arrives (seconds), so others
+ * searching can be put in with them...
+ */
+export const QUICK_GATHER_SECONDS = 20;
+/** ...or this long after the room is full of people, or everyone in it is ready, if that is sooner. */
+export const QUICK_READY_SECONDS = 5;
+/** After a Quick Play match: its results and ceremony, until everyone has gone back to the lobby or this long (seconds). */
+export const QUICK_CEREMONY_SECONDS = 30;
+/** Then the lobby again, open to people searching, and the next match after this long (seconds). */
+export const QUICK_NEXT_SECONDS = 25;
+/** A lobby taking in another lobby's people (see RoomCore.expect) waits at least this long for them (seconds). */
+export const QUICK_MERGE_SECONDS = 10;
 /** At most this many people in a room. */
 export const ROOM_SIZE = 6;
 /** At most this many in a squad: one team. */
@@ -237,6 +251,12 @@ export interface JoinOptions {
   squad?: SquadTicket;
   /** With a create: the room is the squad's Grand Prix, against computer pilots. */
   gp?: GpRequest;
+  /** Quick Play: the playlist searched (PLAYLISTS), with a room to be found or made for it. */
+  quick?: string;
+  /** Quick Play: the one that says how many are coming (a squad's size, or 1), so the room found has places for all of them on one team. */
+  fit1?: true;
+  fit2?: true;
+  fit3?: true;
 }
 
 /** A squad's Grand Prix: a cup (which), the Grand Tour or a (short) season, at a difficulty, for the leader's faction. */
@@ -300,6 +320,41 @@ export const SPRINT_FORMATS: Array<{ label: string; cfg: MatchConfig }> = [
   { label: 'First to 2 wins', cfg: { mode: 'wins', bestOf: 1, target: 0, wins: 2 } },
   { label: 'First to 3 wins', cfg: { mode: 'wins', bestOf: 1, target: 0, wins: 3 } },
 ];
+/**
+ * Quick Play's playlists: what a search is for. Each is a mode and a way of
+ * winning (a format of that mode's); the room draws its circuits by lot, a
+ * new one for every match, and fills every place nobody has with a computer
+ * pilot (QUICK_SKILL), so a race is always six mechs however few people
+ * are searching.
+ */
+export interface Playlist {
+  id: string;
+  name: string;
+  /** What it is, in a line: shown where it is picked and in its lobby. */
+  blurb: string;
+  mode: 'teams' | 'sprint';
+  /** An index into MATCH_FORMATS (teams) or SPRINT_FORMATS (sprint). */
+  format: number;
+}
+export const PLAYLISTS: readonly Playlist[] = [
+  { id: 'team-race', name: 'Team Race', blurb: 'Three against three, one race. The team with more points wins.', mode: 'teams', format: 0 },
+  { id: 'team-series', name: 'Team Series', blurb: 'Three against three, best of three races.', mode: 'teams', format: 1 },
+  { id: 'team-points', name: 'Points Race', blurb: 'Three against three, race after race: the first team to 50 points.', mode: 'teams', format: 3 },
+  { id: 'sprint', name: 'Sprint', blurb: 'Six Forwards, every pilot for themselves, one race.', mode: 'sprint', format: 0 },
+  { id: 'sprint-series', name: 'Sprint Series', blurb: 'Every pilot for themselves over three races: most points wins.', mode: 'sprint', format: 1 },
+];
+/** Quick Play's computer pilots (an index into SKILL_NAMES). */
+export const QUICK_SKILL = 1;
+
+export function playlistById(id: unknown): Playlist | undefined {
+  return typeof id === 'string' ? PLAYLISTS.find((p) => p.id === id) : undefined;
+}
+
+/** A playlist's way of winning, in words (its format's label). */
+export function playlistFormat(p: Playlist): string {
+  return (p.mode === 'sprint' ? SPRINT_FORMATS : MATCH_FORMATS)[p.format]?.label ?? '';
+}
+
 export const SKILL_NAMES = ['Rookie', 'Pro', 'Ace'] as const;
 export const SKILL_VALUES = [0.28, 0.55, 0.82] as const;
 /** Computer teammates on a team with people on it fly at this skill, as in Free Play. */
@@ -359,6 +414,8 @@ export interface LobbyView {
   gp: GpEvent | null;
   /** A Sprint under way: who is in each of its places (the match's sides), by name, or null. */
   sprint: string[] | null;
+  /** A Quick Play room: its playlist's id (see PLAYLISTS), or null. It has no host, its settings are its playlist's, and its lobby starts by itself (`timer`). */
+  quick: string | null;
 }
 
 // ---- messages -------------------------------------------------------------------
@@ -443,7 +500,7 @@ export interface RoundEndMsg {
 }
 
 export interface ErrorMsg {
-  code: 'full' | 'version' | 'started' | 'squad' | 'kicked' | 'replaced' | 'closed' | 'bad' | 'host' | 'gp';
+  code: 'full' | 'version' | 'started' | 'squad' | 'kicked' | 'replaced' | 'closed' | 'bad' | 'host' | 'gp' | 'idle';
   text: string;
 }
 
@@ -461,6 +518,12 @@ export interface ServerMessages {
   notice: { text: string };
   error: ErrorMsg;
   pong: { t: number };
+  /**
+   * Quick Play: this lobby is being folded into a fuller one of the same
+   * playlist. Search again (a squad's leader for the squad; its members
+   * follow as ever) and you are put there.
+   */
+  requeue: { playlist: string };
 }
 
 /** "This room is on a newer version" and the like, for a version mismatch either way. */

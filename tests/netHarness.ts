@@ -20,6 +20,8 @@ export class TestClient {
   roundEnds: RoundEndMsg[] = [];
   notices: string[] = [];
   errors: string[] = [];
+  /** Told to search again (Quick Play): the playlist. */
+  requeued: string | null = null;
   received: Array<keyof ServerMessages> = [];
   /** Inputs for this client's mech, tick by tick (null: let the computer fly). */
   drive: (c: TestClient) => MechInput | null = () => emptyInput();
@@ -70,6 +72,9 @@ export class TestClient {
       case 'error':
         this.errors.push((m as ServerMessages['error']).text);
         break;
+      case 'requeue':
+        this.requeued = (m as ServerMessages['requeue']).playlist;
+        break;
       default:
         break;
     }
@@ -99,7 +104,8 @@ export class TestNet {
   private mail: Letter[] = [];
   readonly random = makeRandom(77);
 
-  constructor(opts: { laps?: number; faction?: number; gp?: GpRequest } = {}) {
+  /** `quick`: a Quick Play room, for that playlist. `clock`: where its clock starts (to share one with another room). */
+  constructor(opts: { laps?: number; faction?: number; gp?: GpRequest; quick?: string; code?: string } = {}) {
     const io: CoreIO = {
       send: (pid, type, msg) => {
         const c = this.clients.get(pid);
@@ -117,7 +123,7 @@ export class TestNet {
       now: () => this.clock,
       random: this.random,
     };
-    this.core = new RoomCore('K7Q2X', 'test', io, opts.faction ?? 0, { laps: opts.laps, gp: opts.gp });
+    this.core = new RoomCore(opts.code ?? 'K7Q2X', 'test', io, opts.faction ?? 0, { laps: opts.laps, gp: opts.gp, quick: opts.quick });
   }
 
   post(delay: number, run: () => void): void {

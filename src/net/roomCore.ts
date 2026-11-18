@@ -15,6 +15,18 @@
 // event, sets each round up from it (its circuit, format and rival), races
 // the other factions' fixtures a slice at a time between everything else,
 // and goes briefing (the lobby), match, standings, briefing... to the award.
+//
+// Or a Quick Play room (`quick`: a playlist): a matchmade room, with nobody
+// as host. Its mode and format are its playlist's and its circuit is drawn
+// by lot, a new one for every match. Its lobby starts the race by itself:
+// QUICK_GATHER_SECONDS after the first person arrives, sooner once it is
+// full of people or everyone in it is ready, with a computer pilot in every
+// place nobody has. After a match it is a lobby again for
+// QUICK_NEXT_SECONDS, open to people searching, and so on for as long as
+// anyone is in it. Someone who never touched the controls all match is taken
+// out of it, so a place is not held by nobody. A lobby with few people in
+// it can be folded into a fuller one of the same playlist (`requeue`, on
+// the server's say: it knows the other rooms).
 
 import {
   BTN_MASK,
@@ -60,6 +72,10 @@ import {
   addMember,
   allReady,
   callerAction,
+  couldSeat,
+  parties,
+  partyFits,
+  setPlaylist,
   callerOf,
   clearReady,
   createLobby,
@@ -91,6 +107,11 @@ import {
   IDLE_SECONDS,
   KEYFRAME_TICKS,
   MATCH_FORMATS,
+  QUICK_CEREMONY_SECONDS,
+  QUICK_GATHER_SECONDS,
+  QUICK_MERGE_SECONDS,
+  QUICK_NEXT_SECONDS,
+  QUICK_READY_SECONDS,
   READY_COUNTDOWN,
   RECONNECT_SECONDS,
   RESULTS_SECONDS,
@@ -102,6 +123,7 @@ import {
   TICKS_PER_PACKET,
   packInput,
   pilotChange,
+  playlistById,
   sameWire,
   portraitColour,
   unpackInput,
@@ -184,6 +206,11 @@ export class RoomCore {
   private away: boolean[] = [];
   /** The away seats as last sent ('' none). */
   private awaySent = '';
+  /** How many times each seat's controls have changed this round (the first input counts as one): under two, nobody is at them. */
+  private moves: number[] = [];
+  /** Quick Play: how many matches this room has run, and whether it has told its people to search again (`requeue`). */
+  matches = 0;
+  private folding = false;
   /** Each seat's current epoch (see MatchStartMsg.epoch). */
   private epochs: number[] = [];
   private epochCount = 0;
@@ -208,10 +235,12 @@ export class RoomCore {
     readonly version: string,
     private io: CoreIO,
     firstFaction = 0,
-    /** Test settings: shorter races. `gp`: the room is a squad's Grand Prix. */
-    private opts: { laps?: number; gp?: GpRequest } = {},
+    /** Test settings: shorter races. `gp`: the room is a squad's Grand Prix. `quick`: a Quick Play room, for this playlist. */
+    private opts: { laps?: number; gp?: GpRequest; quick?: string } = {},
   ) {
     this.lobby = createLobby(code, version, firstFaction);
+    const playlist = playlistById(opts.quick);
+    if (playlist) setPlaylist(this.lobby, playlist, this.drawCircuit(null));
     const req = opts.gp;
     if (req && (req.kind === 'cup' || req.kind === 'tour' || req.kind === 'season')) {
       const faction = this.lobby.factions[0];
@@ -240,6 +269,74 @@ export class RoomCore {
   private now(): number {
     return this.io.now();
   }
+
+  // ---- Quick Play -----------------------------------------------------------
+
+  /** A circuit by lot, other than `was` (the one just raced). */
+  private drawCircuit(was: string | null): string {
+    const others = TRACKS.filter((t) => t.id !== was);
+    return others[Math.floor(this.io.random() * others.length) % others.length].id;
+  }
+
+  /**
+   * A Quick Play room as a search sees it: whether it is taking people now
+   * (a lobby, not being folded away), which sizes of party it has places
+   * for, how many people are in it, and their parties.
+   */
+  quickState(): { open: boolean; fits: [boolean, boolean, boolean]; people: number; parties: number[] } {
+    const open = !!this.lobby.quick && this.phase === 'lobby' && !this.folding;
+    const fits = open ? partyFits(this.lobby, this.now()) : ([false, false, false] as [boolean, boolean, boolean]);
+    return { open, fits, people: seated(this.lobby).length, parties: parties(this.lobby) };
+  }
+
+  /** Whether everyone in `sizes` (parties, largest first) could be seated here now, each party together. */
+  couldTake(sizes: readonly number[]): boolean {
+    return this.quickState().open && couldSeat(this.lobby, sizes, this.now());
+  }
+
+  /** People are on their way from a lobby folded into this one: the race waits for them (QUICK_MERGE_SECONDS at least). */
+  expect(): void {
+    if (!this.lobby.quick || this.phase !== 'lobby') return;
+    this.timerEnd = Math.max(this.timerEnd, this.now() + QUICK_MERGE_SECONDS * 1000);
+    this.dirty = true;
+  }
+
+  /** Fold this lobby into a fuller one: everyone is told to search again, and it takes nobody more. */
+  requeue(): void {
+    if (!this.lobby.quick || this.phase !== 'lobby' || this.folding) return;
+    this.folding = true;
+    this.timerEnd = -1;
+    this.io.broadcast('requeue', { playlist: this.lobby.quick });
+    this.dirty = true;
+  }
+
+  /** A Quick Play lobby's clock: the race starts by itself. */
+  private quickLobby(now: number): void {
+    // (Being folded away: its people are leaving. Anyone still here in a while is raced after all.)
+    const people = seated(this.lobby).filter((m) => m.connected);
+    if (!people.length) {
+      this.timerEnd = -1;
+      this.folding = false;
+      return;
+    }
+    if (this.folding) {
+      if (this.foldedAt < 0) this.foldedAt = now;
+      if (now - this.foldedAt < QUICK_MERGE_SECONDS * 1000) return;
+      this.folding = false;
+    }
+    this.foldedAt = -1;
+    if (this.timerEnd < 0) {
+      this.timerEnd = now + QUICK_GATHER_SECONDS * 1000;
+      this.dirty = true;
+    }
+    const soon = now + QUICK_READY_SECONDS * 1000;
+    if ((people.length >= ROOM_SIZE || people.every((m) => m.ready)) && this.timerEnd > soon) {
+      this.timerEnd = soon;
+      this.dirty = true;
+    }
+    if (now >= this.timerEnd) this.startMatch();
+  }
+  private foldedAt = -1;
 
   // ---- people ---------------------------------------------------------------
 
@@ -391,6 +488,7 @@ export class RoomCore {
         return;
       case 'start':
         if (!inLobby) return;
+        if (this.lobby.quick) return report({ ok: false, text: 'A Quick Play race starts by itself' });
         if (this.lobby.host !== pid) return report({ ok: false, text: 'Only the host starts early' });
         if (!allReady(this.lobby)) return report({ ok: false, text: 'Not everyone is ready' });
         this.startMatch();
@@ -417,6 +515,7 @@ export class RoomCore {
         return;
       case 'endMatch':
         if (this.gp) return report({ ok: false, text: 'A Grand Prix match plays to its end' });
+        if (this.lobby.quick) return report({ ok: false, text: 'A Quick Play match plays to its end' });
         if (this.lobby.host !== pid) return report({ ok: false, text: 'Only the host ends the match' });
         if (!inLobby) this.backToLobby('ended');
         return;
@@ -496,6 +595,10 @@ export class RoomCore {
     if (this.gp) this.raceBackground();
     switch (this.phase) {
       case 'lobby':
+        if (this.lobby.quick) {
+          this.quickLobby(now);
+          break;
+        }
         if (allReady(this.lobby)) {
           this.phase = 'countdown';
           this.timerEnd = now + READY_COUNTDOWN * 1000;
@@ -538,7 +641,8 @@ export class RoomCore {
     }
     // The lobby goes out on any change, and every two seconds for the pings.
     if (this.dirtyPing && now - this.lastLobbySend > 2000) this.dirty = true;
-    if (this.dirty || ((this.phase === 'countdown' || this.phase === 'results' || this.phase === 'final' || (this.phase === 'standings' && this.timerEnd > 0)) && now - this.lastLobbySend > 1000)) this.sendLobby();
+    const counting = this.phase === 'countdown' || this.phase === 'results' || this.phase === 'final' || ((this.phase === 'standings' || (this.phase === 'lobby' && !!this.lobby.quick)) && this.timerEnd > 0);
+    if (this.dirty || (counting && now - this.lastLobbySend > 1000)) this.sendLobby();
   }
 
   private toLobbyPhase(): void {
@@ -651,6 +755,7 @@ export class RoomCore {
     this.acks = seats.map(() => 0);
     this.starved = seats.map(() => 0);
     this.prevWire = seats.map(() => 0);
+    this.moves = seats.map(() => 0);
     this.idle = seats.map(() => 0);
     this.away = seats.map(() => false);
     this.awaySent = '';
@@ -776,6 +881,7 @@ export class RoomCore {
         else {
           this.idle[m.id] = 0;
           this.away[m.id] = false;
+          this.moves[m.id]++;
         }
         this.prevWire[m.id] = wire;
       }
@@ -831,10 +937,14 @@ export class RoomCore {
     this.io.broadcast('roundEnd', { round: result, match: this.match });
     const over = this.match.winner >= 0;
     this.phase = over ? 'final' : 'results';
-    this.timerEnd = this.now() + (over ? (this.gp ? FINAL_SECONDS : CEREMONY_SECONDS) : RESULTS_SECONDS) * 1000;
+    this.timerEnd = this.now() + (over ? (this.gp ? FINAL_SECONDS : this.lobby.quick ? QUICK_CEREMONY_SECONDS : CEREMONY_SECONDS) : RESULTS_SECONDS) * 1000;
     this.continued.clear();
+    // Quick Play: whoever never touched the controls in the match's last race is not there.
+    this.absent = over && this.lobby.quick ? this.seatPid.filter((pid, seat): pid is string => !!pid && (this.moves[seat] ?? 0) < 2) : [];
     this.dirty = true;
   }
+  /** Quick Play: the people to take out of the room when it is a lobby again (see endRound). */
+  private absent: string[] = [];
 
   private nextRound(): void {
     this.startRound();
@@ -857,6 +967,24 @@ export class RoomCore {
     }
     this.io.broadcast('lobbyAgain', { reason });
     this.dirty = true;
+    if (!this.lobby.quick) return;
+    // Quick Play: a lobby again, on a new circuit, open to people searching
+    // until the next match starts by itself; without anyone who was not at
+    // their controls.
+    this.matches++;
+    this.lobby.settings = { ...this.lobby.settings, track: this.drawCircuit(this.lobby.settings.track) };
+    this.timerEnd = this.now() + QUICK_NEXT_SECONDS * 1000;
+    for (const pid of this.absent) {
+      const m = member(this.lobby, pid);
+      if (!m) continue;
+      const text = 'You were away for the whole race, so your place went back to the search.';
+      this.io.send(pid, 'error', { code: 'idle', text });
+      this.io.disconnect?.(pid, text);
+      removeMember(this.lobby, pid);
+      this.continued.delete(pid);
+    }
+    this.absent = [];
+    if (this.lobby.members.length === 0) this.empty = true;
   }
 
   // ---- the Grand Prix -----------------------------------------------------------------

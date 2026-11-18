@@ -1,10 +1,17 @@
 // The Colyseus room around RoomCore: it maps connections to people and
 // passes everything else straight through.
+//
+// Defined twice (server/index.ts): 'race', a private room found by its
+// code, and 'quick', a Quick Play room, which a search is put into
+// (Colyseus's joinOrCreate, by the playlist, the build and a place for the
+// size of party coming: see `listing`). A Quick Play lobby that opens again
+// after a match with few people in it is folded into a fuller one of its
+// playlist (`fold`).
 
 import crypto from 'node:crypto';
 import { Room, ServerError, type Client } from '@colyseus/core';
 import { RoomCore } from '../src/net/roomCore';
-import { NET_PROTOCOL, RECONNECT_SECONDS, callsignProblem, cleanCallsign, cleanColour, cleanGpRequest, cleanLook, cleanLooks, cleanPortrait, versionText, type ClientMessages, type JoinOptions } from '../src/net/protocol';
+import { NET_PROTOCOL, RECONNECT_SECONDS, callsignProblem, cleanCallsign, cleanColour, cleanGpRequest, cleanLook, cleanLooks, cleanPortrait, playlistById, versionText, type ClientMessages, type JoinOptions } from '../src/net/protocol';
 import { claimCode, releaseCode } from './codes';
 import { log } from './log';
 import { TEST_LAPS } from './config';
@@ -29,17 +36,29 @@ export function checkOptions(options: Partial<JoinOptions> | undefined, roomVers
   if (problem) throw new ServerError(ERR.BAD, `Callsign: ${problem}`);
 }
 
+/** The Quick Play rooms in this process (one process runs every room). */
+const QUICK_ROOMS = new Set<RaceRoom>();
+
 export class RaceRoom extends Room {
   override maxClients = 16;
   private core!: RoomCore;
+  /** A Quick Play room: its playlist's id. */
+  private quick: string | undefined;
+  /** What a search was last told of this room, and the matches it had run when it was last looked at for folding. */
+  private listed = '';
+  private foldChecked = 0;
   /** sessionId to pid, and pid to the connection that holds the seat now. */
   private pidOf = new Map<string, string>();
   private holder = new Map<string, Client>();
 
   override onCreate(options: JoinOptions): void {
+    if (this.roomName === 'quick') {
+      this.quick = playlistById(options?.quick)?.id;
+      if (!this.quick) throw new ServerError(ERR.BAD, 'No such playlist');
+    }
     const code = claimCode();
     this.roomId = code;
-    void this.setPrivate(true);
+    void this.setPrivate(!this.quick);
     // A slow phone can take a while to open its connection after the code is accepted.
     this.seatReservationTimeout = 30;
     const version = typeof options?.version === 'string' ? options.version : SERVER_BUILD;
@@ -57,16 +76,66 @@ export class RaceRoom extends Room {
           c.leave(4001, text);
         }
       },
-    }, Number(options?.loadout?.faction) || 0, { laps: TEST_LAPS, gp: cleanGpRequest(options?.gp) });
+    }, Number(options?.loadout?.faction) || 0, { laps: TEST_LAPS, gp: this.quick ? undefined : cleanGpRequest(options?.gp), quick: this.quick });
+    if (this.quick) {
+      QUICK_ROOMS.add(this);
+      this.listing();
+    }
     this.setSimulationInterval((dt) => {
       this.core.update(dt);
+      this.listing();
+      if (this.quick) this.fold();
       if (this.core.empty && this.clients.length === 0) void this.disconnect();
     }, 1000 / 60);
     this.onMessage('*', (client, type, msg) => {
       const pid = this.pidOf.get(client.sessionId);
       if (pid && typeof type === 'string') this.core.message(pid, type as keyof ClientMessages, msg as never);
     });
-    log('room', code, 'created', this.core.gp ? `grand prix (${this.core.gp.event.kind})` : '');
+    log('room', code, 'created', this.core.gp ? `grand prix (${this.core.gp.event.kind})` : this.quick ? `quick play (${this.quick})` : '');
+  }
+
+  /**
+   * What a search is matched against, kept up with the room: its playlist
+   * and build, whether it has places now for a party of one, two and three
+   * (none while it races), and how many people are in it (the fullest room
+   * that fits is the one a search is put into).
+   */
+  private listing(): void {
+    if (!this.quick) return;
+    const s = this.core.quickState();
+    const meta = { quick: this.quick, version: this.core.version, fit1: s.fits[0], fit2: s.fits[1], fit3: s.fits[2], people: s.people };
+    const key = JSON.stringify(meta);
+    if (key === this.listed) return;
+    this.listed = key;
+    void this.setMetadata(meta);
+  }
+
+  /**
+   * Once each time this room becomes a lobby again after a match: if another
+   * lobby of its playlist and build has at least as many people and places
+   * for everyone here (each squad together), everyone here is sent to
+   * search again, which puts them there; so two rooms of a few people
+   * become one, rather than each racing computer pilots beside the other.
+   */
+  private fold(): void {
+    if (this.core.matches === this.foldChecked) return;
+    this.foldChecked = this.core.matches;
+    const mine = this.core.quickState();
+    if (!mine.open || mine.people === 0) return;
+    let best: RaceRoom | null = null;
+    for (const other of QUICK_ROOMS) {
+      if (other === this || other.quick !== this.quick || other.core.version !== this.core.version) continue;
+      const theirs = other.core.quickState();
+      // (Of two alike, the one with the earlier code stays: they never fold into each other.)
+      if (theirs.people < mine.people || (theirs.people === mine.people && other.roomId > this.roomId)) continue;
+      if (!other.core.couldTake(mine.parties)) continue;
+      if (!best || theirs.people > best.core.quickState().people) best = other;
+    }
+    if (!best) return;
+    log('room', this.roomId, 'folded into', best.roomId);
+    best.core.expect();
+    this.core.requeue();
+    this.listing();
   }
 
   override onAuth(_client: Client, options: JoinOptions): boolean {
@@ -104,6 +173,8 @@ export class RaceRoom extends Room {
       throw new ServerError(ERR.REFUSED, res.text);
     }
     this.pidOf.set(client.sessionId, pid);
+    // (At once, not on the next update: the next search must see the places as they are now.)
+    this.listing();
     log('room', this.roomId, existing ? 'back' : 'join', pid, this.core.lobby.members.length);
   }
 
@@ -135,10 +206,12 @@ export class RaceRoom extends Room {
     if (!pid || this.holder.get(pid) !== client) return;
     this.holder.delete(pid);
     this.core.leave(pid);
+    this.listing();
     log('room', this.roomId, 'leave', pid);
   }
 
   override onDispose(): void {
+    QUICK_ROOMS.delete(this);
     releaseCode(this.roomId);
     log('room', this.roomId, 'closed');
   }

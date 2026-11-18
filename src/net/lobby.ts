@@ -24,10 +24,17 @@
 //              keep their places on the teams for the next team race, and
 //              Ready locks in nothing). Everyone flies their own Forward in
 //              their colour; computer pilots in their factions' fill the rest.
+//   Quick Play A matchmade room (`quick`: its playlist): nobody is host, so
+//              nobody changes its settings (its playlist's, and a circuit
+//              drawn by lot) or removes anyone, and its race starts by
+//              itself (RoomCore). People searching are put on the team with
+//              fewer people, a squad together on one team; a team's first
+//              person still picks its faction, and Ready still locks a frame.
 
 import { ROLE, TRACKS, type Role } from '../sim/index';
 import {
   MATCH_FORMATS,
+  QUICK_SKILL,
   ROOM_SIZE,
   SKILL_NAMES,
   SPRINT_FORMATS,
@@ -36,6 +43,7 @@ import {
   type LobbyView,
   type Loadout,
   type Looks,
+  type Playlist,
   type RoomPhase,
   type RoomSettings,
   type SideView,
@@ -88,6 +96,8 @@ export interface Lobby {
   arrivals: number;
   /** A squad's Grand Prix: factions and settings come from the event, and only side 0 takes people. */
   fixed: boolean;
+  /** A Quick Play room: its playlist's id. No host; its settings are the playlist's. */
+  quick: string | null;
 }
 
 export interface JoinInfo {
@@ -131,7 +141,56 @@ export function createLobby(code: string, version: string, firstFaction = 0): Lo
     callerAsks: [null, null],
     arrivals: 0,
     fixed: false,
+    quick: null,
   };
+}
+
+/** Why something Quick Play decides cannot be changed by hand. */
+const QUICK_TEXT = 'Quick Play sets this';
+
+/** Make a lobby a Quick Play room's: its playlist's mode and format, on `track`. */
+export function setPlaylist(lobby: Lobby, playlist: Playlist, track: string): void {
+  lobby.quick = playlist.id;
+  lobby.host = null;
+  lobby.settings = { track, match: playlist.mode === 'teams' ? playlist.format : lobby.settings.match, skill: QUICK_SKILL, mode: playlist.mode, sprint: playlist.mode === 'sprint' ? playlist.format : lobby.settings.sprint };
+}
+
+/**
+ * Whether a party of one, two and three could be seated now, together on
+ * one team (as addMember seats them): what a search for a room is matched
+ * against.
+ */
+export function partyFits(lobby: Lobby, now: number): [boolean, boolean, boolean] {
+  expireHolds(lobby, now);
+  const room = ROOM_SIZE - seated(lobby).length;
+  const most = Math.max(...openSides(lobby).map((s) => placesFree(lobby, s)));
+  return [1, 2, 3].map((n) => room >= n && most >= n) as [boolean, boolean, boolean];
+}
+
+/**
+ * The parties in a lobby, by size: each squad's people together, everyone
+ * else alone. (To see whether another lobby could take them all in.)
+ */
+export function parties(lobby: Lobby): number[] {
+  const bySquad = new Map<string, number>();
+  let n = 0;
+  const add = (key: string) => bySquad.set(key, (bySquad.get(key) ?? 0) + 1);
+  for (const m of seated(lobby)) add(m.squad ?? `solo-${n++}`);
+  // (A squad's members still on their way in are coming too.)
+  for (const h of lobby.holds) add(h.squad);
+  return [...bySquad.values()].sort((a, b) => b - a);
+}
+
+/** Whether a lobby could seat all of `sizes` (parties, largest first), each together on a team. */
+export function couldSeat(lobby: Lobby, sizes: readonly number[], now: number): boolean {
+  expireHolds(lobby, now);
+  const free = [0, 1].map((s) => (openSides(lobby).includes(s) ? placesFree(lobby, s) : 0));
+  for (const n of sizes) {
+    const side = free[0] >= free[1] ? 0 : 1;
+    if (free[side] < n) return false;
+    free[side] -= n;
+  }
+  return true;
 }
 
 /** The sides people may sit on: both, or in a Grand Prix only the squad's. */
@@ -279,7 +338,7 @@ export function addMember(lobby: Lobby, info: JoinInfo, now: number, midMatch = 
     sprint: info.sprint ?? '',
   };
   lobby.members.push(m);
-  if (!lobby.host) lobby.host = m.pid;
+  if (!lobby.host && !lobby.quick) lobby.host = m.pid;
   becameCaptain(lobby, m);
   // A squad's leader starts as its team's shot caller.
   if (squad && !hold && squad.size > 1 && !squad.follow) lobby.callers[side] = m.pid;
@@ -296,6 +355,7 @@ export function removeMember(lobby: Lobby, pid: string): Member | undefined {
     if (lobby.callerAsks[s] === pid) lobby.callerAsks[s] = null;
   }
   if (lobby.host === pid) lobby.host = nextHost(lobby);
+  if (lobby.quick) lobby.host = null;
   return m;
 }
 
@@ -368,6 +428,7 @@ export function setFaction(lobby: Lobby, pid: string, faction: number, side?: nu
 /** The host changes the circuit, the format or the computer pilots' skill. Everyone's ready mark clears. */
 export function setSettings(lobby: Lobby, pid: string, s: Partial<RoomSettings>): Outcome {
   if (lobby.fixed) return no(FIXED_TEXT);
+  if (lobby.quick) return no(QUICK_TEXT);
   if (lobby.host !== pid) return no('Only the host changes the settings');
   const next = { ...lobby.settings };
   if (s.track !== undefined) {
@@ -458,6 +519,7 @@ export function callerAction(lobby: Lobby, pid: string, action: 'pass' | 'ask' |
 
 /** The host removes someone, who cannot come back. */
 export function kick(lobby: Lobby, pid: string, target: string): Outcome {
+  if (lobby.quick) return no('Nobody is removed from a Quick Play room');
   if (lobby.host !== pid) return no('Only the host removes people');
   if (pid === target) return no("You can't remove yourself");
   const t = member(lobby, target);
@@ -494,5 +556,6 @@ export function lobbyView(lobby: Lobby, phase: RoomPhase, timer: number, match: 
     continued: [...continued],
     gp,
     sprint: sprint ? [...sprint] : null,
+    quick: lobby.quick,
   };
 }

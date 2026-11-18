@@ -5,7 +5,8 @@
 //
 // Endpoints:  GET /             the built game, from dist/
 //             GET /health       "ok" (also /healthz)
-//             /matchmake/...    Colyseus: create and join rooms by code
+//             /matchmake/...    Colyseus: create and join rooms by code,
+//                               and Quick Play's search for a room
 //             WS  /<id>/<room>  Colyseus: a room's connection
 //
 // Settings come from the environment: see server/config.ts.
@@ -15,8 +16,8 @@ import { Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { HOST, HOPS, ORIGINS, PORT, ROOMS_ONLY, STATIC_DIR, playerAddress, readBuild } from './config';
 import { staticFiles } from './static';
-import { RaceRoom, setServerBuild } from './raceRoom';
-import { SquadRoom } from './squadRoom';
+import { setServerBuild } from './raceRoom';
+import { defineRooms } from './rooms';
 import { codesInUse } from './codes';
 import { log } from './log';
 import { TRACKS, sharedTrack } from '../src/sim/index';
@@ -63,8 +64,7 @@ const t0 = Date.now();
 for (const def of TRACKS) sharedTrack(def);
 log('server', `circuits built in ${Date.now() - t0} ms`);
 
-gameServer.define('race', RaceRoom);
-gameServer.define('squad', SquadRoom);
+defineRooms(gameServer);
 
 /**
  * Codes are an invitation, not a secret: what stands between a stranger and
