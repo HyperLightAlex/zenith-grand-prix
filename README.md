@@ -75,7 +75,8 @@ your own Forward), after its own setup. The **Hangar** (on the Play menu,
 and Y in any Paddock) is what is yours whatever team you race for: your
 pilot and your own mechs, made and painted there for no faction. How online works and how to host it is in
 [docs/ONLINE.md](docs/ONLINE.md); the rest of the design is in
-[docs/DESIGN.md](docs/DESIGN.md).
+[docs/DESIGN.md](docs/DESIGN.md). How the game runs inside a host (Backbone's
+Akeru) is in [docs/AKERU.md](docs/AKERU.md).
 
 **The look.** The game is drawn as an 80s mecha anime: cel shading and
 ink, film grain and halation, poses and effects on twos, drawn speed lines

@@ -34,6 +34,8 @@ if the proxy passes that path through.
 | `ALLOWED_ORIGINS` | any | Comma-separated origins allowed to create and join rooms (set it on a public server, e.g. `https://zenith.example.com`) |
 | `FORWARDED_HOPS` | unset | Where a player's address is: `0` if players connect straight to this server, `1` behind one proxy you run (read from `X-Forwarded-For`), and so on. Unset, the per-address limit on trying codes is off, because behind a proxy every player shares one address |
 | `ROOMS_ONLY` | unset | `1`: serve the rooms and the health check, no game files |
+| `GAME_BUILD` | unset | The build of the game this server is for (`0.5.0+abc1234`), when it serves no game files to read it from (`ROOMS_ONLY`). Players on another build are told the game has been updated |
+| `MAX_SOCKETS` | no limit | The most connections held at once; more are refused |
 | `STATIC_DIR` | `dist/` | Where the built game is |
 | `QUIET` | unset | `1`: no log lines |
 | `TEST_LAPS` | unset | Testing only: races of this many laps |

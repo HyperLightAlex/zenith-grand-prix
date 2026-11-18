@@ -14,7 +14,7 @@
 import http from 'node:http';
 import { Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
-import { HOST, HOPS, ORIGINS, PORT, ROOMS_ONLY, STATIC_DIR, playerAddress, readBuild } from './config';
+import { HOST, HOPS, MAX_SOCKETS, ORIGINS, PORT, ROOMS_ONLY, STATIC_DIR, playerAddress, readBuild } from './config';
 import { staticFiles } from './static';
 import { setServerBuild } from './raceRoom';
 import { defineRooms } from './rooms';
@@ -35,8 +35,11 @@ const transport = new WebSocketTransport({
   pingMaxRetries: 3,
   // Keyframes go out, not in: what comes in is small.
   maxPayload: 16 * 1024,
-  verifyClient: ORIGINS.length ? (info: { origin: string }) => ORIGINS.includes(info.origin) : undefined,
+  // Who may connect (a browser on one of the allowed sites), and how many at once.
+  verifyClient: ORIGINS.length || MAX_SOCKETS ? (info: { origin: string }) => (!ORIGINS.length || ORIGINS.includes(info.origin)) && (!MAX_SOCKETS || sockets() < MAX_SOCKETS) : undefined,
 });
+/** Connections held now. */
+const sockets = (): number => (transport as unknown as { wss: { clients: Set<unknown> } }).wss.clients.size;
 const files = ROOMS_ONLY ? null : staticFiles(STATIC_DIR);
 
 const gameServer = new Server({
@@ -107,5 +110,6 @@ httpServer.on('request', (req, res) => {
 });
 
 console.log(`Zenith GP server listening on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}  (${ROOMS_ONLY ? 'rooms only' : 'static: ' + STATIC_DIR}; build ${build})`);
+if (MAX_SOCKETS) console.log(`At most ${MAX_SOCKETS} connections at once.`);
 if (HOPS === null) console.log('Per-address limits are off. Set FORWARDED_HOPS (0 if players connect straight to this server) to turn them on.');
 setInterval(() => log('codes in use', codesInUse()), 10 * 60 * 1000).unref();

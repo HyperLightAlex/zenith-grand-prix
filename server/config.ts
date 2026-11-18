@@ -8,6 +8,9 @@
 //                    straight to this server, 1 behind one proxy you run
 //                    (then read from X-Forwarded-For), and so on. Unset, the
 //                    per-address limit on trying room codes is off.
+//   MAX_SOCKETS      the most connections held at once (a room's players,
+//                    squads, people being turned away); more are refused.
+//                    Unset: no limit.
 //   ROOMS_ONLY=1     serve the rooms and the health check, no game files
 //   STATIC_DIR       the built game (default: dist/ beside this server)
 //   GAME_BUILD       the build of the game this server is for, when it
@@ -32,6 +35,8 @@ export const ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .map((s) => s.trim())
   .filter(Boolean);
 export const ROOMS_ONLY = process.env.ROOMS_ONLY === '1';
+/** The most connections held at once (0: no limit). */
+export const MAX_SOCKETS = Number.isInteger(Number(process.env.MAX_SOCKETS)) && Number(process.env.MAX_SOCKETS) > 0 ? Number(process.env.MAX_SOCKETS) : 0;
 export const STATIC_DIR = path.resolve(process.env.STATIC_DIR || path.join(REPO, 'dist'));
 
 export function parseHops(v: string | undefined): number | null {
