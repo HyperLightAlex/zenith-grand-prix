@@ -119,8 +119,9 @@ Make G1 first and check it before the others.
 | G3 Arm and sword | model-g3-titan-arm.png | The right arm and hand, and the sword. The palm is one broad plate, the fingers ivory in three segments. The blade is about 19 times as long as it is wide, as asked; the guard is a crescent swept toward the point rather than flat-topped, and the road passes over its middle. The flat and edge views line up pommel to point |
 | G4 Inside its chest | model-g4-titan-chest.png | The inside: an oval section with the armour shell, ring frames, a great open chamber above the spine (room for the Ribcage loop) and the two corridors either side of the spine; the wound's peeled plates, snapped ribs, hanging cables and drifted sand; a corridor lit through its roof; a rib's joint. Panels two to four came out as full pictures rather than on the grey, which does not matter for a reference |
 
-Image model: record the model, its version and the image size here when the
-sheets are made.
+Image model: ChatGPT (Pro plan), as for every painted sheet in the game
+(docs/ASSETS.md). Its version and the image size were not recorded when the
+sheets were made.
 
 ### The prompts
 
