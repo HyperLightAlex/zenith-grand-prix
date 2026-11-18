@@ -46,9 +46,10 @@ Hosted, the fonts are registered from their files by script (`fonts.ts`).
 
 ## Akeru's package
 
-The adapter, build recipe, release packager and tests live in Akeru's
-repository (`packages/zenith-grand-prix`), following its Lumen Run and
-Ironwing Cup packages. It pins a commit of this repository, builds it with the
+The adapter, build recipe, release packager and tests are written for Akeru's
+repository (`packages/zenith-grand-prix` there, following its Lumen Run and
+Ironwing Cup packages); they are a branch handed to Akeru's maintainers, not
+yet part of it. The package pins a commit of this repository, builds it with the
 hosted build above, and packages the result with the title's content policy.
 The same package builds this repository's server (`ROOMS_ONLY`, `GAME_BUILD`,
 `ALLOWED_ORIGINS`, `MAX_SOCKETS`, `FORWARDED_HOPS`: see [ONLINE.md](ONLINE.md))
